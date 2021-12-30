@@ -1,8 +1,6 @@
 # Welcome to the MeshLib!
 
-[![windows-build-test](https://github.com/MeshRUs/MeshLib/actions/workflows/windows-build-test.yml/badge.svg?branch=master)](https://github.com/MeshRUs/MeshLib/actions/workflows/windows-build-test.yml?branch=master)
-[![ubuntu-build-test](https://github.com/MeshRUs/MeshLib/actions/workflows/ubuntu-build-test.yml/badge.svg?branch=master)](https://github.com/MeshRUs/MeshLib/actions/workflows/ubuntu-build-test.yml?branch=master)
-[![fedora-build-test](https://github.com/MeshRUs/MeshLib/actions/workflows/fedora-build-test.yml/badge.svg?branch=master)](https://github.com/MeshRUs/MeshLib/actions/workflows/fedora-build-test.yml?branch=master)
+[![build-test-distribute](https://github.com/MeshRUs/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshRUs/MeshLib/actions/workflows/build-test-distribute.yml?branch=master)
 
 
 ## Build with VS2019 on Windows

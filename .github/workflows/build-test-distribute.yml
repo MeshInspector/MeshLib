@@ -1,0 +1,370 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build Test Distribute
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master, distribution_update ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  windows-build-test:
+    timeout-minutes: 40
+    # The type of runner that the job will run on
+    runs-on: [self-hosted, windows, x64]
+    strategy:
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - name: Clear workspace
+        run: |
+          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive          
+        
+      - name: Update thirdparty
+        run: thirdparty\install.bat
+
+      - name: Integrate vcpkg
+        run: vcpkg integrate install
+        
+      - name: Build
+        run: py -3 scripts\build_script.py ${{ matrix.config }}
+        
+      - name: Unit Tests
+        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+
+      - name: Python Tests
+        working-directory: source\x64\${{ matrix.config }}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' }}
+        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
+        
+      - name: Upload Windows Binaries Archive
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: WindowsArchive${{ matrix.config }}
+          path: MREDist_${{ matrix.config }}.zip
+          retention-days: 1
+
+      - name: Clear workspace
+        run: |
+          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+
+  ubuntu-build-test:
+    timeout-minutes: 40
+    runs-on: [self-hosted, linux, x64, ubuntu-20-lts]
+    strategy:
+      matrix:
+        config: [Debug, Release]
+        compiler: [Сlang 11, GCC 10]
+        include:
+          - compiler: Сlang 11
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
+          - compiler: GCC 10
+            cxx-compiler: /usr/bin/g++-10
+            c-compiler: /usr/bin/gcc-10
+
+    steps:
+      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ./scripts/runner_install_thirdparty.sh
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+        
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        run: tar -cvf Deb${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+        
+      - name: Upload Ubuntu Binaries Archive
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Deb${{matrix.config}}BinArchive
+          path: Deb${{matrix.config}}Bin.tar
+          retention-days: 1
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
+  fedora-build-test:
+    timeout-minutes: 60
+    runs-on: [self-hosted, linux, x64, fedora35]
+    strategy:
+      matrix:
+        config: [Debug, Release]
+        compiler: [Сlang 13, GCC 11]
+        include:
+          - compiler: Сlang 13
+            cxx-compiler: /usr/bin/clang++-13
+            c-compiler: /usr/bin/clang-13
+          - compiler: GCC 11
+            cxx-compiler: /usr/bin/g++
+            c-compiler: /usr/bin/gcc
+            
+    steps:
+      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ./scripts/runner_install_thirdparty.sh
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        run: tar -cvf Rpm${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+        
+      - name: Upload Fedora Binaries Archive
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Rpm${{matrix.config}}BinArchive
+          path: Rpm${{matrix.config}}Bin.tar
+          retention-days: 1
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
+  versioning-and-release-url:
+    if: ${{ github.event_name == 'push' }}
+    timeout-minutes: 10
+    runs-on: [self-hosted]
+    needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
+    outputs:
+      version_tag: ${{ steps.version.outputs.version}}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          fetch-depth: 0
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        
+      - name: Versioning
+        uses: paulhatch/semantic-version@v4.0.2
+        id: version
+        with:
+          format: "v${major}.${minor}.${patch}.${increment}"
+          short_tags: false
+          bump_each_commit: false
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        with:
+          tag_name: ${{steps.version.outputs.version }}
+          release_name: Release ${{steps.version.outputs.version}}
+          body: Autogenerated release
+          draft: true
+          prerelease: false
+
+  update-win-version-and-distribute:
+    if: ${{ github.event_name == 'push' }}
+    timeout-minutes: 15
+    runs-on: [self-hosted, windows, x64]
+    needs: [versioning-and-release-url]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          submodules: recursive
+          
+      - name: Download Windows Debug Binaries Archive
+        uses: actions/download-artifact@v2
+        with:
+          name: WindowsArchiveDebug
+
+      - name: Download Windows Release Binaries Archive
+        uses: actions/download-artifact@v2
+        with:
+          name: WindowsArchiveRelease
+
+      - name: Extract Windows Debug Binaries Archive
+        run: tar -xvzf MREDist_Release.zip
+
+      - name: Extract Windows Release Binaries Archive
+        run: tar -xvzf MREDist_Debug.zip
+
+      - name: Make Install Folder
+        run: python scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
+
+      - name: Distribute
+        run: python scripts\zip_distribution.py MeshLibDist.zip
+        
+      - name: Upload Windows Distribution
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        with:
+          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: MeshLibDist.zip
+          asset_name: MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
+          asset_content_type: application/zip
+          
+  update-deb-version-and-distribute:
+    if: ${{ github.event_name == 'push' }}
+    timeout-minutes: 10
+    runs-on: [self-hosted, linux, x64, ubuntu-20-lts]
+    needs: versioning-and-release-url
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          submodules: recursive
+
+      - name: Download Ubuntu Binaries Archive
+        uses: actions/download-artifact@v2
+        with:
+          name: DebReleaseBinArchive
+
+      - name: Extract Ubuntu Binaries Archive
+        run: tar -xvf DebReleaseBin.tar
+
+      - name: Create Deb
+        run: ./distribution.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
+        env:
+          MESHRUS_BUILD_RELEASE: ON
+          MESHRUS_BUILD_DEBUG: OFF
+
+      - name: Upload Ubuntu Developer Distribution
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        with:
+          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./distr/meshlib-dev.deb
+          asset_name: meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb
+          asset_content_type: application/vnd.debian.binary-package         
+          
+  update-rpm-version-and-distribute:
+    if: ${{ github.event_name == 'push' }}
+    timeout-minutes: 10
+    runs-on: [self-hosted, linux, x64, fedora35]
+    needs: versioning-and-release-url
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          submodules: recursive
+
+      - name: Download Fedora Binaries Archive
+        uses: actions/download-artifact@v2
+        with:
+          name: RpmReleaseBinArchive
+
+      - name: Extract Fedora Binaries Archive
+        run: tar -xvf RpmReleaseBin.tar
+
+      - name: Create RPM
+        run: ./distribution_rpm.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
+        env:
+          MESHRUS_BUILD_RELEASE: ON
+          MESHRUS_BUILD_DEBUG: OFF
+
+      - name: Upload Fedora Developer Distribution
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        with:
+          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: meshlib-dev.rpm
+          asset_name: meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+          asset_content_type: application/octet-stream       
+
+  delete-artifacts:
+    timeout-minutes: 15
+    runs-on: [self-hosted]
+    needs: [update-win-version-and-distribute, update-deb-version-and-distribute, update-rpm-version-and-distribute]
+    if: always()
+    steps:
+        # all Windows
+      - name: Delete Windows Debug Install Archive artifact
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: WindowsArchiveDebug
+          failOnError: false
+
+      - name: Delete Windows Release Install Archive artifact
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: WindowsArchiveRelease
+          failOnError: false
+          
+        # all Ubuntu
+      - name: Delete Ubuntu Binaries artifact
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: DebReleaseBinArchive
+          failOnError: false
+
+        # all RPM
+      - name: Delete Fedora Binaries artifact
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: RpmReleaseBinArchive
+          failOnError: false

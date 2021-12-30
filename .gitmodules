@@ -1,0 +1,18 @@
+[submodule "thirdparty/cpr"]
+	path = thirdparty/cpr
+	url = https://github.com/whoshuu/cpr.git
+[submodule "thirdparty/parallel-hashmap"]
+	path = thirdparty/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git
+[submodule "thirdparty/openvdb"]
+	path = thirdparty/openvdb
+	url = https://github.com/AcademySoftwareFoundation/openvdb.git
+[submodule "thirdparty/eigen"]
+	path = thirdparty/eigen
+	url = https://gitlab.com/cantonios/eigen.git
+[submodule "thirdparty/pybind11"]
+	path = thirdparty/pybind11
+	url = https://github.com/pybind/pybind11.git
+[submodule "thirdparty/expected"]
+	path = thirdparty/expected
+	url = https://github.com/Developer-Ecosystem-Engineering/expected.git

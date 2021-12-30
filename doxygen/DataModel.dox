@@ -1,0 +1,84 @@
+namespace MR {
+
+/** \page DataModel Data model class hierarchy
+
+All data in MeshRUs are stored in objects. Each object can have it own type derived from Object:
+
+               Object (Simple object can be selected or hidden)
+                 |
+            VisualObject (Object with common visualize properties, which are used in ObjectMesh and ObjectPoints)
+             /        \
+      ObjectMesh     ObjectPoints
+          /
+    JawScan, Tooth, ...
+
+\section DataModelScene Scene
+Scene in MeshRUs consists of a tree of object with one root, and all others objects are children or some grandchildren of scene root. Each object has its own name (e.g. Upper Jaw), transform, visibility, selected and ancillary flags. Ancillary objects are not shown in UI list but rendered in 3D and cannot be selected. For example, a scene can look like:
+
+                    Root
+                     |
+                    Case
+                     |
+                   Mouth
+                  /     \
+          Upper Jaw     Lower Jaw
+            /      \
+        Jaw Scan   Tooth UL1 ...
+             
+Objects inherit parameters from scene parent, for example transform and visibility. So all children are hidden if their parent is hidden irrespective of their own visibility field. And each object transform is the transform from local object space into parent's space. So if parent is moved, all objects are moved with it.
+
+\section DataModelSerialization Serialization
+To serialize object tree one needs to call
+\code
+// saves object subtree in given scene file (zip/mru)
+// format specification:
+//  children are saved under folder with name of their parent object
+//  all objects parameters are saved in one JSON file in the root folder
+//  
+// saving is controlled with Object::serializeModel_ and Object::serializeFields_
+MRMESH_API tl::expected<void, std::string> serializeObjectTree( const Object& object, 
+    const std::filesystem::path& path, ProgressCallback progress = {} );
+\endcode
+
+And to deserialize object tree:
+\code
+// loads objects tree from given scene file (zip/mru)
+// format specification:
+//  children are saved under folder with name of their parent object
+//  all objects parameters are saved in one JSON file in the root folder
+//  
+// loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
+MRMESH_API tl::expected<Object, std::string> deserializeObjectTree(const std::filesystem::path& path);
+\endcode
+
+\section DataModelInheritance Inheritance
+To create your own object type you need to make class derived from one of base class: 
+1. If you need object with mesh and some extra methods and fields you should derive from ObjectMesh
+2. If you need object with voxels and some extra methods and fields you should derive from ObjectVoxels
+3. If you need object that has no visual representation you should derive from Object
+4. If you need object that has visual representation different from mesh or voxels you should derive from VisualObject but a support in Viewer of this new type might not be present yet.
+
+To be able to use serialization and deserialization you have to do:
+1. Register new data model unit in class factory by adding 
+\code
+MR_ADD_CLASS_FACTORY( MyCustomObject );
+\endcode
+2. Override following functions
+\code
+    // Creates future to save object model (e.g. mesh) in given file
+    MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const;
+
+    // Write parameters to given Json::Value,
+    // if you override this method, please call Base::serializeFields_(root) in the beginning
+    MRMESH_API virtual void serializeFields_( Json::Value& root ) const;
+
+    // Reads model from file
+    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path );
+
+    // Reads parameters from json value
+    // if you override this method, please call Base::deserializeFields_(root) in the beginning
+    MRMESH_API virtual void deserializeFields_( const Json::Value& root );
+\endcode
+*/
+
+}

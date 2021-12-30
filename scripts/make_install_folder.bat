@@ -1,0 +1,1 @@
+py -3 %0\..\make_install_folder.py

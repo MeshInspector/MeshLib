@@ -1,0 +1,42 @@
+namespace MR {
+
+/** \page CodingStyleHelp Coding style
+
+\section TabsSpaces Tabs vs Spaces
+
+Indentation must be made with \c spaces, \c not \c tabs. If you program in Visual Studio then please configure it to insert 4 spaces as an indentation in `Options/Text Editor/C++/Tabs`.
+
+\section BracesLocation Location of braces
+
+Braces must be put on the new line, not at the end of the current line:
+
+\b Wrong
+\code
+void foo() {
+}
+\endcode
+\b Right
+\code
+void foo() 
+{
+}
+\endcode
+
+\section CodeStatenebts Code statements
+
+Do not put many statements in one code line. The only exception could be inline function definition in a class, to make class definition more compact and easily observable.
+
+\b Wrong
+\code
+ProgressBar::nextTask( "Converting object A" ); auto gridA = convert( *objA_->objectMesh );
+\endcode
+
+\b Right
+\code
+ProgressBar::nextTask( "Converting object A" ); 
+auto gridA = convert( *objA_->objectMesh );
+\endcode
+
+*/
+
+}

@@ -1,0 +1,57 @@
+namespace MR {
+
+/** \page EmbendedPythonOverview Python overview
+
+Python is one of the most popular and widely used programming language in scientific researches, machine learning, data analysis and advanced testing.\n
+\b Requires \b python \b 3.10 (3.8 on linux)
+
+MeshRUs library allows you to call python scripts directly from the command line or use particular functions by `import mrmeshpy`. 
+
+\b Usage
+
+MeshRUs provides several usage options\n
+1. Directly from system python
+\code
+import mrmeshpy
+
+mesh = mrmeshpy.load_mesh("mesh.stl")
+# ...
+# some mesh modifications can be perform here
+# ...
+mrmeshpy.save_mesh("mesh.ply")
+\endcode
+2. Run scritp with MeshRUs executable file (MeshRUs.exe on windows or ./MRApp on linux)
+\code
+$ ./MRApp script_path.py
+\endcode
+\note Script should still import mrmeshpy module
+3. Run script from c++ code
+\code
+MR::runScript("script.py"); // or MR::runString( stringWithScript )
+\endcode
+
+\b Exposing
+
+You can expose your c++ functions and classes to python
+\code
+#include "MRPython.h"
+void pythonExample( float arg )
+{
+    doSomething(arg);
+}
+
+//init sould be called only once for each module
+MR_INIT_PYTHON_MODULE( moduleName )
+
+MR_ADD_PYTHON_FUNCTION( moduleName, examplePythonFunc, pythonExample);
+\endcode
+
+\b Functions
+\c MeshRUs/pythonScripts folder contain scripts which could be used as examples for developers or testers. \b Python \b library allows to list all `mrmeshpy.*` functions with standart `print(dir(mrmeshpy))` call.
+You can list all available python functuins by running `python MeshRUs/python_scripts/functions_list.py`
+
+\note Not all functions are available anytime, for example functions that triggers rendering are not available in direct python call, but available with executable run
+
+*/
+
+}

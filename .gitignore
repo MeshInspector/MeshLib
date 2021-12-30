@@ -1,0 +1,16 @@
+.vs
+x64
+__pycache__
+install
+*.vcxproj.user
+*.orig
+*.aps
+MRLog*.txt
+build/*
+install.log
+installError.log
+lib/*
+.vscode/*
+distr/*
+*.log
+/docker/logs/

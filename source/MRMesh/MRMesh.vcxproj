@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MRAABBTreePolyline.h" />
+    <ClInclude Include="MRAffineXf.h" />
+    <ClInclude Include="MRAffineXf2.h" />
+    <ClInclude Include="MR2DContoursTriangulation.h" />
+    <ClInclude Include="MRAABBTreeMaker.h" />
+    <ClInclude Include="MRAABBTreeNode.h" />
+    <ClInclude Include="MRAABBTreePoints.h" />
+    <ClInclude Include="MRAABBTreePolyline3.h" />
+    <ClInclude Include="MRAABBTreePolyline2.h" />
+    <ClInclude Include="MRBase64.h" />
+    <ClInclude Include="MRBestFitQuadric.h" />
+    <ClInclude Include="MRChangeMeshAction.h" />
+    <ClInclude Include="MRChangeSelectionAction.h" />
+    <ClInclude Include="MRChangeObjectAction.h" />
+    <ClInclude Include="MRChangeSceneAction.h" />
+    <ClInclude Include="MRChangeXfAction.h" />
+    <ClInclude Include="MRCombinedHistoryAction.h" />
+    <ClInclude Include="MRConfig.h" />
+    <ClInclude Include="MRContour.h" />
+    <ClInclude Include="MRContoursStitch.h" />
+    <ClInclude Include="MRDenseBox.h" />
+    <ClInclude Include="MRDistanceMap.h" />
+    <ClInclude Include="MRDistanceMapLoad.h" />
+    <ClInclude Include="MRDistanceMapParams.h" />
+    <ClInclude Include="MRDistanceMapSave.h" />
+    <ClInclude Include="MRFile.h" />
+    <ClInclude Include="MRFillContour.h" />
+    <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFloatGridComponents.h" />
+    <ClInclude Include="MRGTest.h" />
+    <ClInclude Include="MRHash.h" />
+    <ClInclude Include="MRHistoryAction.h" />
+    <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRImage.h" />
+    <ClInclude Include="MRImageLoad.h" />
+    <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRIntersection.h" />
+    <ClInclude Include="MRIntersectionPrecomputes.h" />
+    <ClInclude Include="MRIOFormatsRegistry.h" />
+    <ClInclude Include="MRIRenderObject.h" />
+    <ClInclude Include="MRLine3.h" />
+    <ClInclude Include="MRLineSegm.h" />
+    <ClInclude Include="MRLineSegm3.h" />
+    <ClInclude Include="MRLog.h" />
+    <ClInclude Include="MRMakeRigidXf.h" />
+    <ClInclude Include="MRMatrix.h" />
+    <ClInclude Include="MRMatrix2.h" />
+    <ClInclude Include="MRMatrix4.h" />
+    <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRPartMapping.h" />
+    <ClInclude Include="MRPdf.h" />
+    <ClInclude Include="MRPointCloudRelax.h" />
+    <ClInclude Include="MRPolyline2.h" />
+    <ClInclude Include="MRPolyline2Project.h" />
+    <ClInclude Include="MRPolylineTopology.h" />
+    <ClInclude Include="MRPrecisePredicates2.h" />
+    <ClInclude Include="MRPrimitiveMapsComposition.h" />
+    <ClInclude Include="MRRestoringStreamsSink.h" />
+    <ClInclude Include="MRString.h" />
+    <ClInclude Include="MRSurfaceDistanceBuilder.h" />
+    <ClInclude Include="MRSymMatrix2.h" />
+    <ClInclude Include="MRTunnelDetector.h" />
+    <ClInclude Include="MRMeshDirMax.h" />
+    <ClInclude Include="MRMeshIntersect.h" />
+    <ClInclude Include="MRMeshToPointCloud.h" />
+    <ClInclude Include="miniply.h" />
+    <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRBitSetParallelFor.h" />
+    <ClInclude Include="MRClosestPointInTriangle.h" />
+    <ClInclude Include="MRArrow.h" />
+    <ClInclude Include="MRColor.h" />
+    <ClInclude Include="MRConstants.h" />
+    <ClInclude Include="MRBoolean.h" />
+    <ClInclude Include="MREdgeIterator.h" />
+    <ClInclude Include="MRAffineXf3.h" />
+    <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRBitSet.h" />
+    <ClInclude Include="MRBox.h" />
+    <ClInclude Include="MRCube.h" />
+    <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MREdgePaths.h" />
+    <ClInclude Include="MRExpandShrink.h" />
+    <ClInclude Include="MRExtractIsolines.h" />
+    <ClInclude Include="MRFixUndercuts.h" />
+    <ClInclude Include="MRFloatGrid.h" />
+    <ClInclude Include="MRGridSampling.h" />
+    <ClInclude Include="MRHeap.h" />
+    <ClInclude Include="MRHighPrecision.h" />
+    <ClInclude Include="MRHistogram.h" />
+    <ClInclude Include="MRICP.h" />
+    <ClInclude Include="MRId.h" />
+    <ClInclude Include="MRIOFilters.h" />
+    <ClInclude Include="MRIteratorRange.h" />
+    <ClInclude Include="MRLaplacian.h" />
+    <ClInclude Include="MRMeshCollide.h" />
+    <ClInclude Include="MRMeshColors.h" />
+    <ClInclude Include="MRMeshComponents.h" />
+    <ClInclude Include="MRMeshDiff.h" />
+    <ClInclude Include="MRMeshDistance.h" />
+    <ClInclude Include="MRMeshEdgePoint.h" />
+    <ClInclude Include="MRMeshFixer.h" />
+    <ClInclude Include="MRMeshLabel.h" />
+    <ClInclude Include="MRMeshMetrics.h" />
+    <ClInclude Include="MRMeshPart.h" />
+    <ClInclude Include="MRMeshProject.h" />
+    <ClInclude Include="MRMeshTexture.h" />
+    <ClInclude Include="MRObjectFactory.h" />
+    <ClInclude Include="MRObjectLines.h" />
+    <ClInclude Include="MRObjectMesh.h" />
+    <ClInclude Include="MRMakePlane.h" />
+    <ClInclude Include="MRObjectPoints.h" />
+    <ClInclude Include="MRObjectsAccess.h" />
+    <ClInclude Include="MRObjectsAccess.hpp" />
+    <ClInclude Include="MROffset.h" />
+    <ClInclude Include="MRPlanarPath.h" />
+    <ClInclude Include="MRPointCloud.h" />
+    <ClInclude Include="MRPointCloudMakeNormals.h" />
+    <ClInclude Include="MRPointCloudRadius.h" />
+    <ClInclude Include="MRPointsInBall.h" />
+    <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRPointsSave.h" />
+    <ClInclude Include="MRPolyline.h" />
+    <ClInclude Include="MRPolylineProject.h" />
+    <ClInclude Include="MRPrecisePredicates3.h" />
+    <ClInclude Include="MRPython.h" />
+    <ClInclude Include="MRRegularMapMesher.h" />
+    <ClInclude Include="MRRegularGridMesh.h" />
+    <ClInclude Include="MRSceneRoot.h" />
+    <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRTupleBindings.h" />
+    <ClInclude Include="MRUniformSampling.h" />
+    <ClInclude Include="MRQuadraticForm.h" />
+    <ClInclude Include="MRQuaternion.h" />
+    <ClInclude Include="MRRayBoxIntersection.h" />
+    <ClInclude Include="MRRegionBoundary.h" />
+    <ClInclude Include="MRMeshTriPoint.h" />
+    <ClInclude Include="MRSerializer.h" />
+    <ClInclude Include="MRSurfaceDistance.h" />
+    <ClInclude Include="MRStringConvert.h" />
+    <ClInclude Include="MRSurfacePath.h" />
+    <ClInclude Include="MRSymMatrix3.h" />
+    <ClInclude Include="MRFreeFormDeformer.h" />
+    <ClInclude Include="MRToFromEigen.h" />
+    <ClInclude Include="MRTriangleIntersection.h" />
+    <ClInclude Include="MRTriMath.h" />
+    <ClInclude Include="MRTriPoint.h" />
+    <ClInclude Include="MRUnionFind.h" />
+    <ClInclude Include="MRVector2.h" />
+    <ClInclude Include="MRViewportId.h" />
+    <ClInclude Include="MRVolumeIndexer.h" />
+    <ClInclude Include="MRVoxelGraphCut.h" />
+    <ClInclude Include="MRVoxelPath.h" />
+    <ClInclude Include="MRVisualObject.h" />
+    <ClInclude Include="MRVolumeSegment.h" />
+    <ClInclude Include="MRVoxelsLoad.h" />
+    <ClInclude Include="MRMatrix3.h" />
+    <ClInclude Include="MRMesh.h" />
+    <ClInclude Include="MRAlignTextToMesh.h" />
+    <ClInclude Include="MRAligningTransform.h" />
+    <ClInclude Include="MRMeshBoundary.h" />
+    <ClInclude Include="MRMeshDelete.h" />
+    <ClInclude Include="MRMeshDelone.h" />
+    <ClInclude Include="MRMeshDelone.hpp" />
+    <ClInclude Include="MRMeshEigen.h" />
+    <ClInclude Include="MRMeshFillHole.h" />
+    <ClInclude Include="MRMeshNormals.h" />
+    <ClInclude Include="MRMeshRelax.h" />
+    <ClInclude Include="MRMeshSave.h" />
+    <ClInclude Include="MRMeshSubdivide.h" />
+    <ClInclude Include="MRObjectVoxels.h" />
+    <ClInclude Include="MRProgressCallback.h" />
+    <ClInclude Include="MRVoxelsSave.h" />
+    <ClInclude Include="MRSimpleVolume.h" />
+    <ClInclude Include="MRSymbolMesh.h" />
+    <ClInclude Include="MRSystem.h" />
+    <ClInclude Include="MRTorus.h" />
+    <ClInclude Include="MRUVSphere.h" />
+    <ClInclude Include="MRVDBConversions.h" />
+    <ClInclude Include="MRMeshTopology.h" />
+    <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRMeshFwd.h" />
+    <ClInclude Include="MRMeshLoad.h" />
+    <ClInclude Include="MRObject.h" />
+    <ClInclude Include="MRObjectLoad.h" />
+    <ClInclude Include="MRphmap.h" />
+    <ClInclude Include="MRPlane3.h" />
+    <ClInclude Include="MRPositionVertsSmoothly.h" />
+    <ClInclude Include="MRRingIterator.h" />
+    <ClInclude Include="MRTimer.h" />
+    <ClInclude Include="MRVector.h" />
+    <ClInclude Include="MRVector3.h" />
+    <ClInclude Include="MRVector4.h" />
+    <ClInclude Include="MRTriDist.h" />
+    <ClInclude Include="MRPointOnFace.h" />
+    <ClInclude Include="MRStreamOperators.h" />
+    <ClInclude Include="MRUniqueThreadSafeOwner.h" />
+    <ClInclude Include="MRObjectDistanceMap.h" />
+    <ClInclude Include="MRVoxelsVolume.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MR2DContoursTriangulation.cpp" />
+    <ClCompile Include="MRAABBTreeMaker.cpp" />
+    <ClCompile Include="miniply.cpp" />
+    <ClCompile Include="MRAABBTree.cpp" />
+    <ClCompile Include="MRAABBTreePoints.cpp" />
+    <ClCompile Include="MRAABBTreePolyline.cpp" />
+    <ClCompile Include="MRAABBTreePolyline3.cpp" />
+    <ClCompile Include="MRAABBTreePolyline2.cpp" />
+    <ClCompile Include="MRAffineXf2.cpp" />
+    <ClCompile Include="MRAlignTextToMesh.cpp" />
+    <ClCompile Include="MRArrow.cpp" />
+    <ClCompile Include="MRBestFitQuadric.cpp" />
+    <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRChangeSceneAction.cpp" />
+    <ClCompile Include="MRCombinedHistoryAction.cpp" />
+    <ClCompile Include="MRConfig.cpp" />
+    <ClCompile Include="MRContour.cpp" />
+    <ClCompile Include="MRContoursStitch.cpp" />
+    <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRDenseBox.cpp" />
+    <ClCompile Include="MRDistanceMap.cpp" />
+    <ClCompile Include="MRAffineXf3.cpp" />
+    <ClCompile Include="MRBestFit.cpp" />
+    <ClCompile Include="MRBitSet.cpp" />
+    <ClCompile Include="MRBoolean.cpp" />
+    <ClCompile Include="MRBox.cpp" />
+    <ClCompile Include="MRBase64.cpp" />
+    <ClCompile Include="MRCube.cpp" />
+    <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MRDistanceMapLoad.cpp" />
+    <ClCompile Include="MRDistanceMapParams.cpp" />
+    <ClCompile Include="MRDistanceMapSave.cpp" />
+    <ClCompile Include="MRDistanceMapTests.cpp" />
+    <ClCompile Include="MREdgePaths.cpp" />
+    <ClCompile Include="MRExpandShrink.cpp" />
+    <ClCompile Include="MRExtractIsolines.cpp" />
+    <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFile.cpp" />
+    <ClCompile Include="MRFillContour.cpp" />
+    <ClCompile Include="MRFixUndercuts.cpp" />
+    <ClCompile Include="MRFloatGrid.cpp" />
+    <ClCompile Include="MRFloatGridComponents.cpp" />
+    <ClCompile Include="MRGridSampling.cpp" />
+    <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRImageLoad.cpp" />
+    <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRIntersection.cpp" />
+    <ClCompile Include="MRIOFormatsRegistry.cpp" />
+    <ClCompile Include="MRIRenderObject.cpp" />
+    <ClCompile Include="MRLog.cpp" />
+    <ClCompile Include="MRMakeRigidXf.cpp" />
+    <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshDirMax.cpp" />
+    <ClCompile Include="MRMeshIntersect.cpp" />
+    <ClCompile Include="MRMeshToPointCloud.cpp" />
+    <ClCompile Include="MRObjectPoints.cpp" />
+    <ClCompile Include="MRPartMapping.cpp" />
+    <ClCompile Include="MRPdf.cpp" />
+    <ClCompile Include="MRPointCloud.cpp" />
+    <ClCompile Include="MRPointCloudMakeNormals.cpp" />
+    <ClCompile Include="MRPointCloudRadius.cpp" />
+    <ClCompile Include="MRPointCloudRelax.cpp" />
+    <ClCompile Include="MRPointsInBall.cpp" />
+    <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsSave.cpp" />
+    <ClCompile Include="MRPolyline.cpp" />
+    <ClCompile Include="MRPolyline2.cpp" />
+    <ClCompile Include="MRPolyline2Project.cpp" />
+    <ClCompile Include="MRPolylineProject.cpp" />
+    <ClCompile Include="MRPolylineTopology.cpp" />
+    <ClCompile Include="MRPrecisePredicates2.cpp" />
+    <ClCompile Include="MRPrecisePredicates3.cpp" />
+    <ClCompile Include="MRHistogram.cpp" />
+    <ClCompile Include="MRICP.cpp" />
+    <ClCompile Include="MRId.cpp" />
+    <ClCompile Include="MRLaplacian.cpp" />
+    <ClCompile Include="MRMathInstatiate.cpp" />
+    <ClCompile Include="MRMeshCollide.cpp" />
+    <ClCompile Include="MRMeshColors.cpp" />
+    <ClCompile Include="MRMeshComponents.cpp" />
+    <ClCompile Include="MRMeshDistance.cpp" />
+    <ClCompile Include="MRMeshEdgePoint.cpp" />
+    <ClCompile Include="MRMeshMetrics.cpp" />
+    <ClCompile Include="MRMeshProject.cpp" />
+    <ClCompile Include="MRMeshTriPoint.cpp" />
+    <ClCompile Include="MRMakePlane.cpp" />
+    <ClCompile Include="MROffset.cpp" />
+    <ClCompile Include="MRPlanarPath.cpp" />
+    <ClCompile Include="MRPrimitiveMapsComposition.cpp" />
+    <ClCompile Include="MRPython.cpp" />
+    <ClCompile Include="MRRegularMapMesher.cpp" />
+    <ClCompile Include="MRRegularGridMesh.cpp" />
+    <ClCompile Include="MRRestoringStreamsSink.cpp" />
+    <ClCompile Include="MRSceneRoot.cpp" />
+    <ClCompile Include="MRString.cpp" />
+    <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
+    <ClCompile Include="MRTunnelDetector.cpp" />
+    <ClCompile Include="MRTupleBindings.cpp" />
+    <ClCompile Include="MRUniformSampling.cpp" />
+    <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
+    <ClCompile Include="MRQuadraticForm.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
+      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IntrinsicFunctions>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="MRFreeFormDeformer.cpp" />
+    <ClCompile Include="MRStreamOperators.cpp" />
+    <ClCompile Include="MRSurfaceDistance.cpp" />
+    <ClCompile Include="MRStringConvert.cpp" />
+    <ClCompile Include="MRSurfacePath.cpp" />
+    <ClCompile Include="MRTriangleIntersection.cpp" />
+    <ClCompile Include="MRTriDist.cpp" />
+    <ClCompile Include="MRViewportId.cpp" />
+    <ClCompile Include="MRVolumeIndexer.cpp" />
+    <ClCompile Include="MRVoxelGraphCut.cpp" />
+    <ClCompile Include="MRObjectLines.cpp" />
+    <ClCompile Include="MRVoxelPath.cpp" />
+    <ClCompile Include="MRMeshDiff.cpp" />
+    <ClCompile Include="MRMeshFixer.cpp" />
+    <ClCompile Include="MRObjectFactory.cpp" />
+    <ClCompile Include="MRObjectMesh.cpp" />
+    <ClCompile Include="MRRegionBoundary.cpp" />
+    <ClCompile Include="MRSerializer.cpp" />
+    <ClCompile Include="MRVisualObject.cpp" />
+    <ClCompile Include="MRVolumeSegment.cpp" />
+    <ClCompile Include="MRVoxelsLoad.cpp" />
+    <ClCompile Include="MRMesh.cpp" />
+    <ClCompile Include="MRAligningTransform.cpp" />
+    <ClCompile Include="MRMeshBoundary.cpp" />
+    <ClCompile Include="MRMeshBuildDeleteTest.cpp" />
+    <ClCompile Include="MRMeshDelete.cpp" />
+    <ClCompile Include="MRMeshDelone.cpp" />
+    <ClCompile Include="MRMeshEigen.cpp" />
+    <ClCompile Include="MRMeshFillHole.cpp" />
+    <ClCompile Include="MRMeshLoadSaveTest.cpp" />
+    <ClCompile Include="MRMeshNormals.cpp" />
+    <ClCompile Include="MRMeshRelax.cpp" />
+    <ClCompile Include="MRMeshSave.cpp" />
+    <ClCompile Include="MRMeshSubdivide.cpp" />
+    <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRMeshTopology.cpp" />
+    <ClCompile Include="MRMeshBuilder.cpp" />
+    <ClCompile Include="MRMeshLoad.cpp" />
+    <ClCompile Include="MRObject.cpp" />
+    <ClCompile Include="MRObjectLoad.cpp" />
+    <ClCompile Include="MRObjectVoxels.cpp" />
+    <ClCompile Include="MRVoxelsSave.cpp" />
+    <ClCompile Include="MRSymbolMesh.cpp" />
+    <ClCompile Include="MRSystem.cpp" />
+    <ClCompile Include="MRTimer.cpp" />
+    <ClCompile Include="MRPositionVertsSmoothly.cpp" />
+    <ClCompile Include="MRTorus.cpp" />
+    <ClCompile Include="MRUVSphere.cpp" />
+    <ClCompile Include="MRVDBConversions.cpp" />
+    <ClCompile Include="MRObjectDistanceMap.cpp" />
+    <ClCompile Include="MRVoxelsVolume.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\OpenCTM\OpenCTM.vcxproj">
+      <Project>{2b2a22c0-f6a7-473b-8849-e1d9cb2b5793}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{C7780500-CA0E-4F5F-8423-D7AB06078B14}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MRMesh</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <Import Project="$(ProjectDir)\..\common.props" />
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>MRMESH_EXPORT;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)$(Platform)\Release\OpenCTM.dll $(TargetDir)OpenCTM.dll
+copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
+copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
+copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
+copy $(VcpkgCurrentInstalledDir)\bin\python310.dll $(TargetDir)python310.dll
+copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
+copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>MRMESH_EXPORT;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

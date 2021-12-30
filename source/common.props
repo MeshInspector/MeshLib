@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <_PropertySheetDisplayName>Common properties</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals">
+    <CustomPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRProps.props))</CustomPropertyDir>
+    <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <VcpkgTriplet>x64-windows-meshrus</VcpkgTriplet>
+    <MeshLibSourceDir>$(MSBuildThisFileDirectory)</MeshLibSourceDir>
+    <MeshLibDir>$(MeshLibSourceDir)\..\</MeshLibDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(CustomPropertyDir)' == ''">
+    <ClCompile>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(CustomPropertyDir)\CustomMRProps.props" Condition="'$(CustomPropertyDir)' != ''"/>
+  <PropertyGroup>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Label="Globals">
+    <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>NOMINMAX;_CRT_SECURE_NO_DEPRECATE;ImDrawIdx=unsigned;SPDLOG_COMPILED_LIB;SPDLOG_SHARED_LIB;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(VcpkgCurrentInstalledDir)\include\python3.10\;$(MeshLibDir)thirdparty\parallel-hashmap\;$(MeshLibDir)thirdparty\pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <!-- 
+           warning C4061: enumerator V in switch of enum E is not explicitly handled by a case label
+           warning C4250: 'class1': inherits 'class2' via dominance
+           warning C4324: structure was padded due to alignment specifier
+           warning C4365: conversion from 'unsigned int' to 'int', signed/unsigned mismatch
+           warning C4371: layout of class may have changed from a previous version of the compiler due to better packing of member
+           warning C4388: '<': signed/unsigned mismatch
+           warning C4435: Object layout under /vd2 will change due to virtual base
+           warning C4514: unreferenced inline function has been removed
+           warning C4582: constructor is not implicitly called
+           warning C4583: destructor is not implicitly called
+           warning C4599: command line argument number N does not match precompiled header
+           warning C4605: 'MACRO' specified on current command line, but was not specified when precompiled header was built
+           warning C4623: default constructor was implicitly defined as deleted
+           warning C4625: copy constructor was implicitly defined as deleted
+           warning C4626: assignment operator was implicitly defined as deleted
+           warning C4668: MACRO is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
+           warning C4710: function not inlined
+           warning C4711: function selected for automatic inline expansion
+           warning C4820: N bytes padding added after data member
+           warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
+           warning C5026: move constructor was implicitly defined as deleted
+           warning C5027: move assignment operator was implicitly defined as deleted
+           warning C5031: #pragma warning(pop): likely mismatch, popping warning state pushed in different file
+           warning C5039: pointer or reference to potentially throwing function passed to 'extern "C"' function under -EHc. Undefined behavior may occur if this function throws an exception.
+           warning C5045: Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+           warning C5104: found 'L#x' in macro replacement list, did you mean 'L""#x'? 
+           warning C5105: macro expansion producing 'defined' has undefined behavior
+           warning C5219: implicit conversion from 'int' to 'float', possible loss of data
+           warning C5243: using incomplete class can cause potential one definition rule violation due to ABI limitation
+           warning C5246: the initialization of a subobject should be wrapped in braces
+           warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
+      -->
+      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4710;4711;4820;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <AdditionalDependencies>$(VcpkgCurrentInstalledDir)\lib\python310.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

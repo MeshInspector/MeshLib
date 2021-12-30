@@ -1,0 +1,18 @@
+from helper import *
+
+torus = mrmesh.make_torus(2, 1, 10, 10, None)
+torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
+
+transVector = mrmesh.Vector3()
+transVector.x = 0.5
+transVector.y = 1
+transVector.z = 1
+diffXf = mrmesh.AffineXf3.translation(transVector)
+torus2.transform(diffXf)
+
+xf = mrmesh.AffineXf3()
+torus1 = torus
+pairs = mrmesh.find_colliding_faces(torus1, torus2, None, False)
+
+# at least 100 triangles should collide for that transforms
+assert (len(pairs) > 100)

@@ -1,0 +1,166 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRMeshMetrics.h"
+#include <functional>
+#include <memory>
+
+namespace MR
+{
+
+/** \defgroup FillHoleGroup Fill/Stitch Holes overview
+  * \brief This chapter represents documentation about hole triangulations or stitching two holes
+  */
+
+/** \struct MR::FillHoleParams
+  * \brief Parameters structure for MR::fillHole\n
+  * \ingroup FillHoleGroup
+  * Structure has some options to control MR::fillHole
+  * 
+  * \sa \ref fillHole
+  * \sa \ref FillHoleMetric
+  */
+struct FillHoleParams
+{
+    /** Specifies triangulation metric\n
+      * default for MR::fillHole: CircumscribedFillMetric\n
+      * \sa \ref FillHoleMetric
+      */
+    std::unique_ptr<FillHoleMetric> metric{};
+    /// If not nullptr accumulate new faces
+    FaceBitSet* outNewFaces{ nullptr };
+    /** If true makes additional efforts to avoid creating multiple edges, 
+      * in some rare cases it is not possible (cases with extremely bad topology), 
+      * if you faced one try to use \ref MR::duplicateMultiHoleVertices before \ref MR::fillHole
+      */
+    bool avoidMultipleEdges{ false };
+    /** If true creates degenerate faces band around hole to have sharp angle visualization
+      * \warning This flag bad for result topology, most likely you do not need it
+      */
+    bool makeDegenerateBand{ false };
+};
+
+/** \struct MR::StitchHolesParams
+  * \brief Parameters structure for MR::buildCylinderBetweenTwoHoles\n
+  * \ingroup FillHoleGroup
+  * Structure has some options to control MR::buildCylinderBetweenTwoHoles
+  *
+  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref FillHoleMetric
+  */
+struct StitchHolesParams
+{
+    /** Specifies triangulation metric\n
+      * default for MR::buildCylinderBetweenTwoHoles: ComplexStitchMetric
+      * \sa \ref FillHoleMetric
+      */
+    std::unique_ptr<FillHoleMetric> metric{};
+    /// If not nullptr accumulate new faces
+    FaceBitSet* outNewFaces{ nullptr };
+};
+
+/** \brief Stitches two holes in Mesh\n
+  * \ingroup FillHoleGroup
+  *
+  * Build cylindrical patch to fill space between two holes represented by one of their edges each,\n
+  * default metric: ComplexStitchMetric
+  *
+  * \image html fill/before_stitch.png "Before" width = 250cm
+  * \image html fill/stitch.png "After" width = 250cm
+  * 
+  * Next picture show, how newly generated faces can be smoothed
+  * \ref MR::positionVertsSmoothly
+  * \ref MR::subdivideMesh
+  * \image html fill/stitch_smooth.png "Stitch with smooth" width = 250cm
+  * 
+  * \param mesh mesh with hole
+  * \param a EdgeId which represents 1st hole
+  * \param b EdgeId which represents 2nd hole
+  * \param params parameters of holes stitching
+  *
+  * \sa \ref fillHole
+  * \sa \ref StitchHolesParams
+  */
+MRMESH_API void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a, EdgeId b, const StitchHolesParams& params = {} );
+
+/// this version finds holes in the mesh by itself and returns false if they are not found
+MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params = {} );
+
+
+/** \brief Fills hole in mesh\n
+  * \ingroup FillHoleGroup
+  * 
+  * Fills given hole represented by one of its edges (having no valid left face),\n
+  * uses fillHoleTrivially if cannot fill hole without multiple edges,\n
+  * default metric: CircumscribedFillMetric
+  * 
+  * \image html fill/before_fill.png "Before" width = 250cm
+  * \image html fill/fill.png "After" width = 250cm
+  *
+  * Next picture show, how newly generated faces can be smoothed
+  * \ref MR::positionVertsSmoothly
+  * \ref MR::subdivideMesh
+  * \image html fill/fill_smooth.png "Fill with smooth" width = 250cm
+  * 
+  * \param mesh mesh with hole
+  * \param a EdgeId which represents hole
+  * \param params parameters of hole filling
+  * 
+  * \sa \ref buildCylinderBetweenTwoHoles
+  * \sa \ref fillHoleTrivially
+  * \sa \ref FillHoleParams
+  */
+MRMESH_API void fillHole( Mesh& mesh, EdgeId a, const FillHoleParams& params = {} );
+
+/** \brief Fills hole in mesh trivially\n
+  * \ingroup FillHoleGroup
+  *
+  * Fills given hole represented by one of its edges (having no valid left face)\n
+  * by creating one new vertex in the centroid of boundary vertices and connecting new vertex with all boundary vertices.
+  *
+  * \image html fill/before_fill.png "Before" width = 250cm
+  * \image html fill/fill_triv.png "After" width = 250cm
+  *
+  * Next picture show, how newly generated faces can be smoothed
+  * \ref MR::positionVertsSmoothly
+  * \ref MR::subdivideMesh
+  * \image html fill/fill_triv_smooth.png "Trivial fill with smooth" width = 250cm
+  *
+  * \param mesh mesh with hole
+  * \param a EdgeId which represents hole
+  * \param outNewFaces optional output newly generated faces
+  * \return new vertex
+  * 
+  * \sa \ref fillHole
+  */
+MRMESH_API VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
+
+// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
+// by adding new vertices located in given plane and 2 * number_of_hole_edge triangles;
+// returns the edge of new hole opposite to input edge (a)
+MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces = nullptr );
+
+// adds extension of given hole represented by one of its edges (having no valid left face)
+// by adding new vertices located at getVertPos( existing vertex position );
+// returns the edge of new hole opposite to input edge (a)
+MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos, FaceBitSet * outNewFaces = nullptr );
+
+// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
+// by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;
+// returns the edge of new hole opposite to input edge (a)
+MRMESH_API EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, FaceBitSet* outNewFaces = nullptr );
+
+// creates a band of degenerate triangles around given hole;
+// returns the edge of new hole opposite to input edge (a)
+MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
+
+// creates a bridge between two boundary edges a and b (both having no valid left face);
+// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
+// the function returns false if bridge cannot be created because otherwise multiple edges appear
+MRMESH_API bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
+
+// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
+// the function returns invalid id if bridge cannot be created because otherwise multiple edges appear
+MRMESH_API EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b );
+
+} //namespace MR

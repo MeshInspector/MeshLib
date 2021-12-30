@@ -1,0 +1,110 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRId.h"
+#include "MRMeshTopology.h"
+#include "MRVector.h"
+#include <vector>
+
+namespace MR
+{
+
+/** \namespace MR::MeshBuilder
+  *
+  * \brief Building topologies by triangles
+  *
+  * This namespace provides API for building meshes.
+  * 
+  * Simple example with key steps
+  * \code
+  * std::vector<MR::MeshBuilder::Triangle> tris;
+  * // add siple plane triangles
+  * tris.push_back({0_v,1_v,2_v,0_f});
+  * tris.push_back({2_v,1_v,3_v,1_f});
+  * // make topology
+  * auto topology = MR::MeshBuilder::fromTriangles(tris);
+  * \endcode
+  *
+  * \warning Vertices of triangles should have consistent bypass direction
+  *
+  * \note It is better to store topology directly in mesh
+  *
+  * \sa \ref MeshTopology
+  */
+namespace MeshBuilder
+{
+
+struct Triangle
+{
+    Triangle() noexcept = default;
+    Triangle( VertId a, VertId b, VertId c, FaceId f ) : f(f) { v[0] = a; v[1] = b; v[2] = c; }
+    VertId v[3];
+    FaceId f;
+
+    bool operator==( const Triangle& other )const
+    {
+        return f == other.f && v[0] == other.v[0] && v[1] == other.v[1] && v[2] == other.v[2];
+    }
+};
+
+// construct mesh from a set of triangles with given ids;
+// if skippedTris is given then it receives all input triangles not added in the resulting topology
+MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
+
+struct VertDuplication
+{
+    VertId srcVert; // original vertex before duplication
+    VertId dupVert; // new vertex after duplication
+};
+
+// resolve non-manifold vertices by creating duplicate vertices
+// return number of duplicated vertices
+MRMESH_API size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris,
+    std::vector<VertDuplication>* dups = nullptr );
+
+// construct mesh from a set of triangles with given ids;
+// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
+MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( const std::vector<Triangle> & tris,
+    std::vector<VertDuplication> * dups = nullptr,
+    std::vector<Triangle> * skippedTris = nullptr );
+
+// construct mesh from vertex-index triples
+MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples );
+
+// a part of a whole mesh to be constructed
+struct MeshPiece
+{
+    FaceMap fmap; // face of part -> face of whole mesh
+    VertMap vmap; // vert of part -> vert of whole mesh
+    MeshTopology topology;
+    std::vector<Triangle> tris; // remaining triangles, not in topology
+};
+
+// construct mesh in parallel from given disjoint mesh pieces (which do not have any shared vertex)
+// and some additional triangles that join the pieces
+MRMESH_API MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, VertId maxVertId, FaceId maxFaceId,
+    std::vector<Triangle> & borderTris ); //< on output borderTris will contain not added triangles
+
+// adds triangles in the existing topology, given face indecies must be free;
+// tris on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh
+MRMESH_API void addTriangles( MeshTopology & res, std::vector<Triangle> & tris );
+
+// adds triangles in the existing topology, auto selecting face ids for them;
+// vertTriples on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh
+MRMESH_API void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
+    FaceBitSet * createdFaces = nullptr ); //< this set receives indices of added triangles
+
+// each face is surrounded by a closed contour of vertices [fistVertex, lastVertex)
+struct FaceRecord
+{
+    FaceId face;
+    int firstVertex = 0;
+    int lastVertex = 0;
+};
+
+// construct mesh from face soup, where each face can have arbitrary degree (not only triangles)
+MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces );
+
+} //namespace MeshBuilder
+
+} //namespace MR

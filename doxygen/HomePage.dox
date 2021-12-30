@@ -1,0 +1,63 @@
+namespace MR {
+
+/** \mainpage Overview
+
+\section WhatAreMeshRUs MeshRUs
+MeshRUs is 3D geometry library that allows you to make your applications based on it or perform some 3D operations using it as application or library with c++ or python
+
+\section HomePageBuildWin Build with VS2019 on Windows
+
+\code
+$ git clone https://github.com/MeshRUs/MeshLib.git
+$ cd MeshLib
+$ git submodule update --init --recursive
+\endcode
+
+\b Preparing \b Third \b Parties \n
+Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules. \n \n
+
+\b Vcpkg:
+1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English laguage pack installed in Visual Studio):
+\code
+$ git clone https://github.com/Microsoft/vcpkg.git
+$ cd vcpkg
+$ git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
+$ .\bootstrap-vcpkg.bat
+$ .\vcpkg integrate install (with admin rights)
+\endcode
+More details here: [vcpkg](https://github.com/microsoft/vcpkg)
+2. Copy \b thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake  to \b vcpkg/triplets folder of vcpkg installation.
+3. Execute install.bat
+\code
+$ cd vcpkg # or add vcpcg to PATH
+$ work/MeshLib/thirdparty/install.bat
+\endcode
+
+\section HomePageBuildLin Build with CMake on Linux
+This installation was checked on Ubuntu 20.04.4 with cmake 3.19.3 and gcc 9.3.0.\n
+Installation process is automated, but takes ~40 minutes if no required packages are already installed.. \n
+\b Install/Build \b dependencies. \b Build \b project. \b Run \b Test \b Application Run the following in terminal:
+\code
+$ git clone https://github.com/MeshRUs/MeshLib.git
+$ cd MeshLib
+$ ./scripts/install_requirements.sh
+$ ./scripts/build.sh
+$ ./scripts/install_MR.sh #optional
+$ ./build/Release/bin/MRTest
+\endcode
+\parblock
+\note ./scripts/install*.sh scripts required root access sometimes during installation. However, it's not recommended to run the whole script with sudo.
+\endparblock
+\parblock
+\note You could specify build type to Debug by \c export \c MESHRUS_BUILD_TYPE=Debug , \a Release is default.
+\endparblock
+
+Find more:
+  - \link DataModel Data model overview \endlink
+  - \link EmbendedPythonOverview Python overview \endlink
+  - \link FillHoleGroup Fill Hole overview \endlink
+  - \link MeshBuilder Mesh Building \endlink
+
+*/
+
+}

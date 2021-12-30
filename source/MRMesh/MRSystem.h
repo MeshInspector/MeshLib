@@ -1,0 +1,47 @@
+#pragma once
+#include "MRMeshFwd.h"
+#include "MRColor.h"
+#include <filesystem>
+#include <string>
+
+namespace MR
+{
+
+// sets debug name for the current thread
+MRMESH_API void SetCurrentThreadName( const char * name );
+
+// returns path of current exe directory
+MRMESH_API std::filesystem::path GetExeDirectory();
+
+// returns path of resource files directory
+// .json and .png files
+MRMESH_API std::filesystem::path GetResourcesDirectory();
+
+// returns path of font files directory
+// .ttf files
+MRMESH_API std::filesystem::path GetFontsDirectory();
+
+// returns path of lib files directory
+// .dll .so files
+MRMESH_API std::filesystem::path GetLibsDirectory();
+
+// returns path of config file in APPDATA
+MRMESH_API std::filesystem::path getUserConfigFilePath( const std::string& appName );
+
+// returns temp directory
+MRMESH_API std::filesystem::path GetTempDirectory();
+
+#ifdef _WIN32
+// returns the folder where Windows installed, typically "C:\Windows"
+MRMESH_API std::filesystem::path GetWindowsInstallDirectory();
+#endif //_WIN32
+
+// returns version of MR
+MRMESH_API std::string GetMRVersionString();
+
+// returns string identification of the CPU
+MRMESH_API std::string GetCpuId();
+
+using FileNamesStack = std::vector<std::filesystem::path>;
+
+} // namespace MR

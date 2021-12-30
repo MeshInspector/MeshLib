@@ -1,0 +1,126 @@
+#include "MRHistoryStore.h"
+#include "MRCombinedHistoryAction.h"
+#include <cassert>
+
+namespace MR
+{
+
+HistoryStore::~HistoryStore()
+{
+    clear();
+}
+
+void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
+{
+    if ( scoped_ )
+    {
+        scopedBlock_.push_back( action );
+        return;
+    }
+    stack_.resize( firstRedoIndex_ + 1 );
+    stack_[firstRedoIndex_] = action;
+    ++firstRedoIndex_;
+    changedSignal( *this, ChangeType::AppendAction );
+}
+
+void HistoryStore::startScope( bool on )
+{
+    if ( on == scoped_ )
+        return;
+    scoped_ = on;
+    if ( !on )
+        scopedBlock_.clear();
+}
+
+void HistoryStore::clear()
+{
+    if ( stack_.empty() )
+        return;
+    stack_.clear();
+    firstRedoIndex_ = 0;
+    changedSignal( *this, ChangeType::Clear );
+}
+
+void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deepFiltering /*= true*/ )
+{
+    const auto [needSignal, redoDecrease] = filterHistoryActionsVector( stack_, filteringCondition, firstRedoIndex_, deepFiltering );
+    firstRedoIndex_ -= redoDecrease;
+    if ( needSignal )
+        changedSignal( *this, ChangeType::Filter );
+}
+
+bool HistoryStore::undo()
+{
+    if ( firstRedoIndex_ == 0 )
+        return false;
+    assert( stack_.size() >= firstRedoIndex_ );
+    if ( stack_[firstRedoIndex_ - 1] )
+        stack_[firstRedoIndex_ - 1]->action( HistoryAction::Type::Undo );
+    --firstRedoIndex_;
+    changedSignal( *this, ChangeType::Undo );
+    return true;
+}
+
+bool HistoryStore::redo()
+{
+    if ( firstRedoIndex_ >= stack_.size() )
+        return false;
+    if ( stack_[firstRedoIndex_] )
+        stack_[firstRedoIndex_]->action( HistoryAction::Type::Redo );
+    ++firstRedoIndex_;
+    changedSignal( *this, ChangeType::Redo );
+    return true;
+}
+
+std::vector<std::string> HistoryStore::getNActions( unsigned n, HistoryAction::Type type ) const
+{
+    if ( type == HistoryAction::Type::Undo )
+        n = std::min( unsigned( firstRedoIndex_ ), n );
+    else if ( type == HistoryAction::Type::Redo )
+        n = std::min( unsigned( stack_.size() - firstRedoIndex_ ), n );
+    std::vector<std::string> res( n );
+    for ( unsigned i = 0; i < n; ++i )
+    {
+        std::shared_ptr<HistoryAction> action;
+        if ( type == HistoryAction::Type::Undo )
+            action = stack_[firstRedoIndex_ - 1 - i];
+        else if ( type == HistoryAction::Type::Redo )
+            action = stack_[firstRedoIndex_ + i];
+        if ( action )
+            res[i] = action->name();
+    }
+    return res;
+}
+
+std::pair<bool, int> filterHistoryActionsVector( HistoryActionsVector& historyVector,
+    HistoryStackFilter filteringCondition, size_t firstRedoIndex /*= 0*/, bool deepFiltering /*= true */ )
+{
+    bool needSignal = false;
+    int redoDecrease = 0;
+    for ( int i = ( int )historyVector.size() - 1; i >= 0; --i )
+    {
+        if ( filteringCondition( historyVector[i] ) )
+        {
+            if ( i < firstRedoIndex ) ++redoDecrease;
+            historyVector.erase( historyVector.begin() + i );
+            needSignal = true;
+        }
+        else if ( deepFiltering )
+        {
+            auto combinedAction = std::dynamic_pointer_cast< CombinedHistoryAction >( historyVector[i] );
+            if ( !combinedAction )
+                continue;
+
+            needSignal = combinedAction->filter( filteringCondition ) || needSignal;
+            if ( combinedAction->empty() )
+            {
+                if ( i < firstRedoIndex ) ++redoDecrease;
+                historyVector.erase( historyVector.begin() + i );
+                needSignal = true;
+            }
+        }
+    }
+    return { needSignal, redoDecrease };
+}
+
+}

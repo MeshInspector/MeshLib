@@ -1,0 +1,314 @@
+#include "MRPolylineTopology.h"
+#include "MRTimer.h"
+
+namespace MR
+{
+
+EdgeId PolylineTopology::makeEdge()
+{
+    assert( edges_.size() % 2 == 0 );
+    EdgeId he0( int( edges_.size() ) );
+    EdgeId he1( int( edges_.size() + 1 ) );
+
+    HalfEdgeRecord d0;
+    d0.next = he0;
+    edges_.push_back( d0 );
+
+    HalfEdgeRecord d1;
+    d1.next = he1;
+    edges_.push_back( d1 );
+
+    return he0;
+}
+
+EdgeId PolylineTopology::makeEdge( VertId a, VertId b )
+{
+    const auto ea = edgeWithOrg( a );
+    if ( ea && next( ea ) != ea )
+        return {};
+    const auto eb = edgeWithOrg( b );
+    if ( eb && next( eb ) != eb )
+        return {};
+
+    const auto newe = makeEdge();
+
+    if ( ea )
+        splice( ea, newe );
+    else
+        setOrg( newe, a );
+
+    if ( eb )
+        splice( eb, newe.sym() );
+    else
+        setOrg( newe.sym(), b );
+
+    return newe;
+}
+
+bool PolylineTopology::isLoneEdge( EdgeId a ) const
+{
+    assert( a.valid() );
+    auto & adata = edges_[a];
+    if ( adata.org.valid() || adata.next != a )
+        return false;
+
+    auto b = a.sym();
+    auto & bdata = edges_[b];
+    if ( bdata.org.valid() || bdata.next != b )
+        return false;
+
+    return true;
+}
+
+EdgeId PolylineTopology::lastNotLoneEdge() const
+{
+    assert( edges_.size() % 2 == 0 );
+    for ( EdgeId i{ (int)edges_.size() - 1 }; i.valid(); ----i ) // one decrement returns sym-edge
+    {
+        if ( !isLoneEdge( i ) )
+            return i;
+    }
+    return {};
+}
+
+void PolylineTopology::splice( EdgeId a, EdgeId b )
+{
+    assert( a.valid() && b.valid() );
+    if ( a == b )
+        return;
+
+    [[maybe_unused]] bool wasSameORing = next( a ) == b;
+    assert( wasSameORing == ( next( b ) == a ) );
+
+    auto & aData = edges_[a];
+    [[maybe_unused]] auto & aNextData = edges_[next( a )];
+    assert( aNextData.next == a );
+    auto & bData = edges_[b];
+    [[maybe_unused]] auto & bNextData = edges_[next( b )];
+    assert( bNextData.next == b );
+
+    bool wasSameOriginId = aData.org == bData.org;
+    assert( wasSameOriginId || !aData.org.valid() || !bData.org.valid() );
+
+    if ( !wasSameOriginId )
+    {
+        if ( aData.org.valid() )
+            setOrg_( b, aData.org );
+        else if ( bData.org.valid() )
+            setOrg_( a, bData.org );
+    }
+
+    std::swap( aData.next, bData.next );
+    assert( ( &aData == &aNextData ) == ( &bData == &bNextData ) );
+
+    if ( wasSameOriginId && bData.org.valid() )
+    {
+        setOrg_( b, VertId() );
+        if ( aData.org )
+            edgePerVertex_[aData.org] = a;
+    }
+
+    assert( ( wasSameORing && next( a ) != b && next( b ) != a ) || ( !wasSameORing && next( a ) == b && next( b ) == a ) );
+}
+
+void PolylineTopology::setOrg_( EdgeId a, VertId v )
+{
+    assert( a.valid() );
+    for ( EdgeId i = a; ; )
+    {
+        edges_[i].org = v;
+        i = edges_[i].next;
+        if ( i == a )
+            break;
+    }
+}
+
+void PolylineTopology::setOrg( EdgeId a, VertId v )
+{
+    auto oldV = org( a );
+    if ( v == oldV )
+        return;
+    setOrg_( a, v );
+    if ( oldV.valid() )
+    {
+        assert( edgePerVertex_[oldV].valid() );
+        edgePerVertex_[oldV] = EdgeId();
+        validVerts_.reset( oldV );
+        --numValidVerts_;
+    }
+    if ( v.valid() )
+    {
+        assert( !edgePerVertex_[v].valid() );
+        edgePerVertex_[v] = a;
+        validVerts_.set( v );
+        ++numValidVerts_;
+    }
+}
+
+EdgeId PolylineTopology::findEdge( VertId o, VertId d ) const
+{
+    assert( o.valid() && d.valid() );
+    EdgeId e0 = edgeWithOrg( o );
+    if ( !e0.valid() )
+        return {};
+
+    for ( EdgeId e = e0;; )
+    {
+        if ( dest( e ) == d )
+            return e;
+        e = next( e );
+        if ( e == e0 )
+            return {};
+    }
+}
+
+int PolylineTopology::getVertDegree( VertId a ) const
+{
+    const auto e = edgeWithOrg( a );
+    if ( !e )
+        return 0;
+    const auto e1 = next( e );
+    if ( e == e1 )
+        return 1;
+    assert( e == next( e1 ) );
+    return 2;
+}
+
+VertId PolylineTopology::lastValidVert() const
+{
+    if ( numValidVerts_ <= 0 )
+        return {};
+    for ( VertId i{ (int)validVerts_.size() - 1 }; i.valid(); --i )
+    {
+        if ( validVerts_.test( i ) )
+            return i;
+    }
+    assert( false );
+    return {};
+}
+
+VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const
+{
+    VertBitSet res;
+    for ( auto e : path )
+    {
+        res.autoResizeSet( org( e ) );
+        res.autoResizeSet( dest( e ) );
+    }
+    return res;
+}
+
+VertId PolylineTopology::splitEdge( EdgeId e )
+{
+    // disconnect edge e from its origin
+    EdgeId eNext = next( e );
+    if ( eNext != e )
+        splice( eNext, e );
+
+    // e now becomes the second part of split edge, add first part to it
+    EdgeId e0 = makeEdge();
+    splice( e, e0.sym() );
+    if ( eNext != e )
+        splice( eNext, e0 );
+
+    // allocate id from new vertex
+    VertId newv = addVertId();
+    setOrg( e, newv );
+    return newv;
+}
+
+EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
+{
+    if ( !vs || num < 2 )
+    {
+        assert( false );
+        return {};
+    }
+
+    VertId maxVertId;
+    for ( size_t i = 0; i < num; ++i )
+        maxVertId = std::max( maxVertId, vs[i] );
+    if ( maxVertId >= (int)vertSize() )
+        vertResize( maxVertId + 1 );
+
+    const auto e0 = makeEdge();
+    setOrg( e0, vs[0] );
+    auto e = e0;
+    for ( int j = 1; j + 1 < num; ++j )
+    {
+        const auto ej = makeEdge();
+        splice( ej, e.sym() );
+        setOrg( ej, vs[j] );
+        e = ej;
+    }
+    if ( vs[0] == vs[num-1] )
+    {
+        // close
+        splice( e0, e.sym() );
+    }
+    else
+    {
+        setOrg( e.sym(), vs[num-1] );
+    }
+    return e0;
+}
+
+bool PolylineTopology::isConsistentlyOriented() const
+{
+    MR_TIMER
+
+    for ( EdgeId e{0}; e < edges_.size(); ++e )
+    {
+        auto ne = next( e );
+        if ( e == ne || e.odd() == ne.sym().odd() ) 
+            continue;
+        return false;
+    }
+    return true;
+}
+
+#define CHECK(x) { assert(x); if (!(x)) return false; }
+
+bool PolylineTopology::checkValidity() const
+{
+    MR_TIMER
+
+    for ( EdgeId e{0}; e < edges_.size(); ++e )
+    {
+        CHECK( edges_[edges_[e].next].next == e );
+        if ( auto v = edges_[e].org )
+            CHECK( validVerts_.test( v ) );
+    }
+
+    const auto vSize = edgePerVertex_.size();
+    CHECK( vSize == validVerts_.size() )
+
+    int realValidVerts = 0;
+    for ( VertId v{0}; v < edgePerVertex_.size(); ++v )
+    {
+        if ( edgePerVertex_[v].valid() )
+        {
+            CHECK( validVerts_.test( v ) )
+            const auto e0 = edgePerVertex_[v]; 
+            CHECK( e0 < edges_.size() );
+            CHECK( edges_[e0].org == v );
+            ++realValidVerts;
+            for ( EdgeId e = e0;; )
+            {
+                CHECK( org(e) == v );
+                e = next( e );
+                if ( e == e0 )
+                    break;
+            }
+        }
+        else
+        {
+            CHECK( !validVerts_.test( v ) )
+        }
+    }
+    CHECK( numValidVerts_ == realValidVerts );
+
+    return true;
+}
+
+} //namespace MR

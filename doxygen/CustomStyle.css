@@ -1,0 +1,7 @@
+div#nav-tree-contents > ul > li > div.item {
+  display:none;
+}
+
+div#nav-tree-contents > div#nav-sync {
+  display:none;
+}

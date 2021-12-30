@@ -278,7 +278,7 @@ jobs:
         run: tar -xvf DebReleaseBin.tar
 
       - name: Create Deb
-        run: ./distribution.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: ./scripts/distribution.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
         env:
           MESHRUS_BUILD_RELEASE: ON
           MESHRUS_BUILD_DEBUG: OFF
@@ -311,7 +311,7 @@ jobs:
         run: tar -xvf RpmReleaseBin.tar
 
       - name: Create RPM
-        run: ./distribution_rpm.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: ./scripts/distribution_rpm.sh ${{needs.versioning-and-release-url.outputs.version_tag}}
         env:
           MESHRUS_BUILD_RELEASE: ON
           MESHRUS_BUILD_DEBUG: OFF

@@ -7,11 +7,6 @@
 # exit if any command failed
 set -eo pipefail
 
-# copy prebuilded libs if they exist
-if [ -d "/usr/local/lib/meshrus-thirdparty-lib/lib" ]; then
- cp -r /usr/local/lib/meshrus-thirdparty-lib/lib .
-fi
-
 if [ ! -f "./lib/libcpr.so" ]; then
  printf "Thirdparty build was not found. Building...\n"
  ./scripts/build_thirdparty.sh

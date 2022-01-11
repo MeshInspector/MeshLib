@@ -14,6 +14,7 @@
 #include "MRMesh/MRFillContour.h"
 #include "MRMesh/MRMeshDelete.h"
 #include "MRMesh/MRGTest.h"
+#include "MRMesh/MRMeshComponents.h"
 #include <spdlog/spdlog.h>
 #include <tbb/parallel_for.h>
 #include <parallel_hashmap/phmap.h>
@@ -1594,7 +1595,20 @@ void cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* ma
     CutMeshParameters params = {};
     params.new2OldMap = mapNew2Old;
     auto cutEdges = cutMesh( mesh, contours, params );
-    FaceBitSet removedFaces = mesh.topology.getValidFaces() - fillContourLeft( mesh.topology, cutEdges.resultCut );
+    
+    FaceBitSet goodFaces = fillContourLeft( mesh.topology, cutEdges.resultCut );
+    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex );
+    for ( const auto& comp : components )
+    {
+        if ( ( comp & goodFaces ).any() )
+            continue;
+        // separated component
+        auto point = mesh.orgPnt( mesh.topology.edgePerFace()[comp.find_first()] );
+        if ( plane.distance( point ) >= 0.0f )
+            goodFaces |= comp;
+    }
+    auto removedFaces = mesh.topology.getValidFaces() - goodFaces;
+
     deleteFaces( mesh.topology, removedFaces );
     if ( !mapNew2Old )
         return;

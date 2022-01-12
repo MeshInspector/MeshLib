@@ -126,6 +126,8 @@ public:
     bool removeChild( const std::shared_ptr<Object>& child ) { return removeChild( child.get() ); }
     MRMESH_API virtual bool removeChild( Object* child );
     MRMESH_API virtual void removeAllChildren();
+    /// sort children by name
+    MRMESH_API void sortChildren();
 
     // selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );

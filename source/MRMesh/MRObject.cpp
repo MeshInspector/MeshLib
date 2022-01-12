@@ -216,6 +216,14 @@ void Object::removeAllChildren()
     children_.clear();
 }
 
+void Object::sortChildren()
+{
+    std::sort( children_.begin(), children_.end(), [] ( const auto& a, const auto& b )
+    {
+        return a->name() < b->name();
+    } );
+}
+
 bool Object::select( bool on )
 {
     if ( selected_ == on )

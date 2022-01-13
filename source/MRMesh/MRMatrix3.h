@@ -60,6 +60,8 @@ struct Matrix3
     constexpr Matrix3<T> transposed() const noexcept;
     // returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
     constexpr Vector3<T> toEulerAngles() const noexcept;
+    // returns scaling factors by axes
+    constexpr Vector3<T> toScale() const noexcept;
 
     Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
     Matrix3 & operator -=( const Matrix3<T> & b ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
@@ -212,6 +214,15 @@ constexpr Vector3<T> Matrix3<T>::toEulerAngles() const noexcept
         std::atan2( -z.x, std::sqrt( z.y * z.y + z.z * z.z ) ),
         std::atan2(  y.x, x.x )
     };
+}
+
+template <typename T>
+constexpr Vector3<T> Matrix3<T>::toScale() const noexcept
+{
+    T scaleX = x.lengthSq();
+    T scaleY = y.lengthSq();
+    T scaleZ = z.lengthSq();
+    return { scaleX, scaleY, scaleZ };
 }
 
 } //namespace MR

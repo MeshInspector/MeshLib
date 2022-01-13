@@ -19,7 +19,7 @@ namespace MR
 
 template<typename T>
 std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPart, const Line3<T>& line,
-    T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
+    T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec, bool closestIntersect )
 {
     const auto& m = meshPart.mesh;
     constexpr int maxTreeDepth = 32;
@@ -40,7 +40,7 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
 
     FaceId faceId;
     TriPointf triP;
-    while( currentNode >= 0 )
+    while( currentNode >= 0 && ( closestIntersect || faceId ) )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {
@@ -125,31 +125,60 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
 }
 
 std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
-    float rayStart /*= 0.0f*/, float rayEnd /*= DBL_MAX */, const IntersectionPrecomputes<float>* prec /*= nullptr*/ )
+    float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec, bool closestIntersect )
 {
     if( prec )
     {
-        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, *prec );
+        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, *prec, closestIntersect );
     }
     else
     {
         const IntersectionPrecomputes<float> precNew( line.d );
-        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, precNew );
+        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, precNew, closestIntersect );
     }
 }
 
 std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
-    double rayStart /*= 0.0f*/, double rayEnd /*= DBL_MAX */, const IntersectionPrecomputes<double>* prec /*= nullptr*/ )
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec, bool closestIntersect )
 {
     if( prec )
     {
-        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, *prec );
+        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, *prec, closestIntersect );
     }
     else
     {
         const IntersectionPrecomputes<double> precNew( line.d );
-        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, precNew );
+        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, precNew, closestIntersect );
     }
+}
+
+template<typename T>
+std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect_( const std::vector<Line3Mesh<T>> & lineMeshes,
+    T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */ )
+{
+    std::optional<MultiMeshIntersectionResult> res;
+    for ( const auto & lm : lineMeshes )
+    {
+        assert( lm.mesh );
+        if ( auto r = meshRayIntersect_( { *lm.mesh, lm.region }, lm.line, rayStart, rayEnd, lm.prec, false ) )
+        {
+            res = MultiMeshIntersectionResult{ *r };
+            break;
+        }
+    }
+    return res;
+}
+
+std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3fMesh> & lineMeshes,
+    float rayStart, float rayEnd )
+{
+    return rayMultiMeshAnyIntersect_( lineMeshes, rayStart, rayEnd );
+}
+
+std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect( const std::vector<Line3dMesh> & lineMeshes,
+    double rayStart, double rayEnd )
+{
+    return rayMultiMeshAnyIntersect_( lineMeshes, rayStart, rayEnd );
 }
 
 template<typename T>

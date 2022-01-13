@@ -160,7 +160,14 @@ std::optional<MultiMeshIntersectionResult> rayMultiMeshAnyIntersect_( const std:
     for ( const auto & lm : lineMeshes )
     {
         assert( lm.mesh );
-        if ( auto r = meshRayIntersect_( { *lm.mesh, lm.region }, lm.line, rayStart, rayEnd, lm.prec, false ) )
+        auto prec = lm.prec;
+        IntersectionPrecomputes<T> myPrec;
+        if ( !prec )
+        {
+            myPrec = { lm.line.d };
+            prec = &myPrec;
+        }
+        if ( auto r = meshRayIntersect_( { *lm.mesh, lm.region }, lm.line, rayStart, rayEnd, *prec, false ) )
         {
             res = MultiMeshIntersectionResult{ *r };
             break;

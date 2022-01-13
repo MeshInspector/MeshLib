@@ -37,7 +37,7 @@ template<typename T>
 struct Line3Mesh
 {
     Line3<T> line; // in the reference frame of mesh
-    IntersectionPrecomputes<T> prec;
+    IntersectionPrecomputes<T> * prec = nullptr; // set it to a valid pointer for better performance
     const Mesh * mesh = nullptr; // must be set a valid pointer before use
     const AABBTree * tree = nullptr; // must be set a valid pointer before use
     const FaceBitSet * region = nullptr; // may remain nullptr, meaning all mesh

@@ -117,6 +117,7 @@ struct IntersectionPrecomputes
 
     // precomputed factors
     T Sx, Sy, Sz;
+    IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<T>& dir )
     {
         findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
@@ -152,6 +153,7 @@ struct IntersectionPrecomputes<float>
 
     // precomputed factors
     float Sx, Sy, Sz;
+    IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<float>& dir )
     {
         findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );

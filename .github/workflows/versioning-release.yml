@@ -1,6 +1,6 @@
 name: Versioning and relese URL
 on:
-  workflow_run:
+  workflow_call:
     secrets:
       BUILD_MACHINE_TOKEN:
         required: true
@@ -17,7 +17,6 @@ jobs:
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: [self-hosted]
-    needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
     outputs:
       version_tag: ${{ steps.version.outputs.version}}
       upload_url: ${{ steps.create_release.outputs.upload_url }}

@@ -187,6 +187,7 @@ jobs:
 
   # @todo change branch to master after testing
   versioning-and-release-url:
+    needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
     uses: MeshRUs/MeshLib/.github/workflows/versioning-release.yml@releases-table
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

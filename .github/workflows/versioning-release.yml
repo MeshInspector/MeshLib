@@ -1,6 +1,6 @@
 name: Versioning and relese URL
 on:
-  workflow_call:
+  workflow_run:
     secrets:
       BUILD_MACHINE_TOKEN:
         required: true

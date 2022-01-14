@@ -114,7 +114,7 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
 2. Copy **thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake** to **vcpkg/triplets** folder of vcpkg installation.
 3. Execute install.bat
     ```sh
-    cd vcpkg # or add vcpcg to PATH
+    cd vcpkg # or add vcpkg to PATH
     <path_to_MeshLib>/thirdparty/install.bat
     ```    
 ## Build with CMake on Linux

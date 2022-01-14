@@ -40,7 +40,7 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
 
     FaceId faceId;
     TriPointf triP;
-    while( currentNode >= 0 && ( closestIntersect || faceId ) )
+    while( currentNode >= 0 && ( closestIntersect || !faceId ) )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {

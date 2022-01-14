@@ -1,6 +1,9 @@
 name: Versioning and relese URL
 on:
   workflow_call:
+    secrets:
+      BUILD_MACHINE_TOKEN:
+        required: true
     outputs:
       version_tag:
         description: "Version tag"
@@ -11,7 +14,6 @@ on:
 
 jobs:
   versioning-and-release-url:
-    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: [self-hosted]
     outputs:

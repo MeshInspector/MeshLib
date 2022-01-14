@@ -1,9 +1,6 @@
 name: Versioning and relese URL
 on:
   workflow_call:
-    secrets:
-      BUILD_MACHINE_TOKEN:
-        required: true
     outputs:
       version_tag:
         description: "Version tag"

@@ -61,6 +61,7 @@
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
@@ -266,6 +267,7 @@
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />
+    <ClCompile Include="MRMeshLoadObj.cpp" />
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />

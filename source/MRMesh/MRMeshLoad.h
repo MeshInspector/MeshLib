@@ -24,13 +24,7 @@ MRMESH_API tl::expected<Mesh, std::string> fromOff( std::istream& in );
 
 // loads from .obj file
 MRMESH_API tl::expected<Mesh, std::string> fromObj( const std::filesystem::path& file, std::vector<Color>* colors = nullptr );
-// scene shift - num of previously loaded vertices to shift it from new faces indices
-MRMESH_API tl::expected<Mesh, std::string> fromObj( std::istream& in, VertId sceneShift = {} );
-// returns true if obj file contain scene, false otherwise
-MRMESH_API bool isSceneObjFile( const std::filesystem::path& file );
-// loads scene from obj file
-MRMESH_API tl::expected<std::vector<Mesh>, std::string> fromSceneObjFile( const std::filesystem::path& file,
-    std::vector<std::string>& names );
+MRMESH_API tl::expected<Mesh, std::string> fromObj( std::istream& in );
 // loads from any .stl
 MRMESH_API tl::expected<Mesh, std::string> fromAnyStl( const std::filesystem::path& file, std::vector<Color>* colors = nullptr );
 MRMESH_API tl::expected<Mesh, std::string> fromAnyStl( std::istream& in );

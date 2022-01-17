@@ -113,7 +113,7 @@ void ObjectMesh::deserializeFields_( const Json::Value& root )
     bordersColor_ = Color( resVec );
 
     deserializeFromJson( root["SelectionFaceBitSet"], selectedTriangles_ );
-    deserializeFromJson( root["SelectionEdgesBitSet"], selectedEdges_ );
+    deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
     deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
 }
 

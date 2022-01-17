@@ -672,6 +672,9 @@
     <ClInclude Include="MRChangeSceneObjectsOrder.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshLoadObj.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1129,6 +1132,9 @@
     </ClCompile>
     <ClCompile Include="MRCombinedHistoryAction.cpp">
       <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshLoadObj.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

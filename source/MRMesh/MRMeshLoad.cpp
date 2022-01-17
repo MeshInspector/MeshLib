@@ -6,8 +6,9 @@
 #include "miniply.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
-#include "OpenCTM/openctm.h"
+#include "MRMeshLoadObj.h"
 #include "MRColor.h"
+#include "OpenCTM/openctm.h"
 #include <tbb/parallel_for.h>
 #include <array>
 #include <future>
@@ -110,152 +111,17 @@ tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, std
     return fromObj( in );
 }
 
-tl::expected<Mesh, std::string> fromObj( std::istream & in, VertId sceneShift )
+tl::expected<Mesh, std::string> fromObj( std::istream & in )
 {
     MR_TIMER
 
-    std::vector<Vector3f> points;
-    std::vector<MeshBuilder::Triangle> tris;
+    auto objs = fromSceneObjFile( in, true );
+    if ( !objs.has_value() )
+        return tl::make_unexpected( objs.error() );
+    if ( objs->size() != 1 )
+        return tl::make_unexpected( "OBJ-file is empty" );
 
-    for ( ;; )
-    {
-        if ( !in )
-            return tl::make_unexpected( std::string( "OBJ-format read error" ) );
-        char ch = 0;
-        in >> ch;
-        if ( in.eof() )
-            break;
-        if ( ch == 'v' && in.peek() != 'n' )
-        {
-            float x, y, z;
-            in >> x >> y >> z;
-            points.emplace_back( x, y, z );
-        }
-        else if ( ch == 'f' )
-        {
-            auto readVert = [&]()
-            {
-                int v;
-                in >> v;
-                auto s = (char)in.peek();
-                if ( s == '/' )
-                {
-                    (void)in.get();
-                    auto s1 = (char)in.peek();
-                    if ( s1 == '/' )
-                    {
-                        (void)in.get();
-                        int x; //just skip for now
-                        in >> x;
-                    }
-                }
-                if ( sceneShift )
-                    v -= sceneShift.get();
-                return v;
-            };
-
-            int a = readVert();
-            int b = readVert();
-            int c = readVert();
-            tris.emplace_back( VertId( a-1 ), VertId( b-1 ), VertId( c-1 ), FaceId( tris.size() ) );
-        }
-        else if ( ch == 'o' )
-        {
-            // next object
-            in.unget();
-            break;
-        }
-        else
-        {
-            // skip unknown line
-            std::string str;
-            std::getline( in, str );
-        }
-    }
-
-    if ( tris.empty() )
-        return tl::make_unexpected( std::string( "No single triangle found in OBJ-file" ) );
-
-    Mesh res;
-    std::vector<MeshBuilder::VertDuplication> dups;
-    MeshBuilder::duplicateNonManifoldVertices( tris, &dups );
-    res.topology = fromTriangles( tris );
-    points.resize( res.topology.vertSize() );
-    for ( const auto & d : dups )
-        points[d.dupVert] = points[d.srcVert];
-
-    res.points.vec_ = std::move( points );
-
-    return std::move( res );
-}
-
-bool isSceneObjFile( const std::filesystem::path& file )
-{
-    auto ext = file.extension().u8string();
-    for ( auto& c : ext )
-        c = ( char )tolower( c );
-
-    if ( ext != u8".obj" )
-        return false;
-
-    std::ifstream in( file );
-    if ( !in )
-        return false;
-
-    for ( ;;)
-    {
-        char ch = 0;
-        in >> ch;
-        if ( in.eof() )
-            return false;
-        if ( ch == 'v' || ch == 'f' )
-            return false;
-        else if ( ch == 'o' )
-            return true;
-        else
-        {
-            // skip unknown line
-            std::string str;
-            std::getline( in, str );
-        }
-    }
-}
-
-tl::expected<std::vector<MR::Mesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, std::vector<std::string>& names )
-{
-    std::ifstream in( file );
-    if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-    std::vector<Mesh> resultMeshes;
-    std::vector<std::string> namesRes;
-    VertId sceneShift = 0_v;
-    for ( ;;)
-    {
-        char ch = 0;
-        in >> ch;
-        if ( in.eof() )
-            break;
-        if ( ch == 'v' || ch == 'f' )
-            return tl::make_unexpected( std::string( "Incorrect scene obj file: " ) + utf8string( file ) );
-        else if ( ch == 'o' )
-        {
-            namesRes.emplace_back();
-            in >> namesRes.back();
-            auto oneObjLoadRes = fromObj( in, sceneShift );
-            if ( !oneObjLoadRes.has_value() )
-                return tl::make_unexpected( oneObjLoadRes.error() );
-            resultMeshes.emplace_back( std::move( oneObjLoadRes.value() ) );
-            sceneShift += int( resultMeshes.back().points.size() );
-        }
-        else
-        {
-            // skip unknown line
-            std::string str;
-            std::getline( in, str );
-        }
-    }
-    names = std::move( namesRes );
-    return resultMeshes;
+    return std::move( (*objs)[0].mesh );
 }
 
 tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, std::vector<Color>* )

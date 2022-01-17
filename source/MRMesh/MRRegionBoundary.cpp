@@ -162,6 +162,21 @@ EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces
     return res;
 }
 
+UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    for ( auto v : verts )
+    {
+        for ( auto e : orgRing( topology, v ) )
+        {
+            if ( verts.test( topology.dest( e ) ) )
+                res.set( e.undirected() );
+        }
+    }
+    return res;
+}
+
 FaceBitSet getIncidentFaces_( const MeshTopology & topology, const VertBitSet & verts )
 {
     MR_TIMER

@@ -38,6 +38,8 @@ MRMESH_API FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBi
 MRMESH_API EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces );
 // composes the set of all vertices incident to given edges
 MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
+// composes the set of all edges with all their vertices in given set
+MRMESH_API UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts );
 // if edges-parameter is null pointer then simply returns the reference on all valid vertices;
 // otherwise performs store = getIncidentVerts( topology, *edges ) and returns reference on store
 MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store );

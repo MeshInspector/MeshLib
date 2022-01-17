@@ -86,6 +86,7 @@ struct [[nodiscard]] Mesh
     // given a point (p) in 3D and the closest point to in on mesh (proj), 
     // computes the signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh
     MRMESH_API float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
+    [[deprecated]] // this version has bad precision due to PointOnFace  -> MeshTriPoint conversion
     MRMESH_API float signedDistance( const Vector3f & pt, const PointOnFace & proj, const FaceBitSet * region = nullptr ) const;
     // this version finds projection by itself in order to return signed distance from given point
     MRMESH_API float signedDistance( const Vector3f & pt ) const;

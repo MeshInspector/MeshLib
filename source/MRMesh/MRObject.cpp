@@ -220,7 +220,16 @@ void Object::sortChildren()
 {
     std::sort( children_.begin(), children_.end(), [] ( const auto& a, const auto& b )
     {
-        return a->name() < b->name();
+        const auto& lhs = a->name();
+        const auto& rhs = b->name();
+        // used for case insensitive sorting
+        const auto result = std::mismatch( lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), 
+            [] ( const unsigned char lhsc, const unsigned char rhsc )
+        {
+            return std::tolower( lhsc ) == std::tolower( rhsc );
+        } );
+
+        return result.second != rhs.cend() && ( result.first == lhs.cend() || std::tolower( *result.first ) < std::tolower( *result.second ) );
     } );
 }
 

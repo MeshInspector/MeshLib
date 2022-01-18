@@ -13,7 +13,7 @@ public:
     // Constructed from original root
     SwapRootAction( const std::string& name ) :
         root_{ SceneRoot::getSharedPtr() },
-        scenePath_{ SceneRoot::getScenePathSharedPtr() },
+        scenePath_{ SceneRoot::getScenePath() },
         name_{ name }
     {
     }
@@ -25,15 +25,18 @@ public:
 
     virtual void action( HistoryAction::Type ) override
     {
-        if ( !root_ || !scenePath_ )
+        if ( !root_  )
             return;
         std::swap( root_, SceneRoot::getSharedPtr() );
-        std::swap( scenePath_, SceneRoot::getScenePathSharedPtr() );
+
+        auto scenePathClone = SceneRoot::getScenePath();
+        SceneRoot::setScenePath( scenePath_ );
+        scenePath_ = scenePathClone;
     }
 
 private:
     std::shared_ptr<Object> root_;
-    std::shared_ptr<std::filesystem::path> scenePath_;
+    std::filesystem::path scenePath_;
     std::string name_;
 };
 }

@@ -11,8 +11,9 @@ class SwapRootAction : public HistoryAction
 {
 public:
     // Constructed from original root
-    SwapRootAction( const std::string& name, const std::shared_ptr<Object>& root ) :
-        root_{ root },
+    SwapRootAction( const std::string& name ) :
+        root_{ SceneRoot::getSharedPtr() },
+        scenePath_{ SceneRoot::getScenePath() },
         name_{ name }
     {
     }
@@ -27,10 +28,15 @@ public:
         if ( !root_ )
             return;
         std::swap( root_, SceneRoot::getSharedPtr() );
+
+        auto scenePathClone = SceneRoot::getScenePath();
+        SceneRoot::setScenePath( scenePath_ );
+        scenePath_ = scenePathClone;
     }
 
 private:
     std::shared_ptr<Object> root_;
+    std::filesystem::path scenePath_;
     std::string name_;
 };
 }

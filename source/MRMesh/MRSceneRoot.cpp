@@ -26,4 +26,14 @@ SceneRoot::SceneRoot()
     root_->setAncillary( true );
 }
 
+void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
+{
+    instace_().scenePath_ = scenePath;
+}
+
+std::filesystem::path SceneRoot::getScenePath()
+{
+    return instace_().scenePath_;
+}
+
 }

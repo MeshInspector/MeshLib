@@ -25,7 +25,7 @@ public:
 
     virtual void action( HistoryAction::Type ) override
     {
-        if ( !root_  )
+        if ( !root_ )
             return;
         std::swap( root_, SceneRoot::getSharedPtr() );
 

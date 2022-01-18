@@ -33,6 +33,7 @@ struct Matrix3
     // creates matrix representing rotation that after application to (from) makes (to) vector
     static constexpr Matrix3 rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept;
     // creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)
+    // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
     static constexpr Matrix3 rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept;
     // constructs a matrix from its 3 rows
     static constexpr Matrix3 fromRows( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ); }

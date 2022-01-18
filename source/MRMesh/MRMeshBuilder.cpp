@@ -662,12 +662,16 @@ size_t getIntervalEndIndex( const std::vector<IncidentVert>& incidentItemsVector
 {
     size_t posEnd = posBegin + 1;
     auto prev = incidentItemsVector[posBegin];
-    auto curr = incidentItemsVector[posEnd];
-    while ( posEnd < incidentItemsVector.size() &&
-        faceToVertices[prev.f][prev.cIdx] == faceToVertices[curr.f][curr.cIdx] )
+    if ( posEnd < incidentItemsVector.size() )
     {
-        ++posEnd;
-        curr = incidentItemsVector[posEnd];
+        auto curr = incidentItemsVector[posEnd];
+        while ( posEnd < incidentItemsVector.size() &&
+            faceToVertices[prev.f][prev.cIdx] == faceToVertices[curr.f][curr.cIdx] )
+        {
+            ++posEnd;
+            if ( posEnd < incidentItemsVector.size() )
+                curr = incidentItemsVector[posEnd];
+        }
     }
     return posEnd;
 }

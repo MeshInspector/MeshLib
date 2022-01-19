@@ -15,6 +15,8 @@ target_include_directories(
 )
 
 find_package(GDCM CONFIG REQUIRED)
+find_package(turbojpeg REQUIRED)
+include_directories(${TURBOJPEG_INCLUDE_DIRS})
 find_package(Freetype REQUIRED)
 include_directories(${FREETYPE_INCLUDE_DIRS})
 find_package(Boost COMPONENTS REQUIRED )
@@ -47,6 +49,7 @@ IF(APPLE)
 		cpr
 		${PYTHON_LIB}
 		podofo
+		turbojpeg
 		png
 		fmt
 		tbb
@@ -74,6 +77,7 @@ ELSE()
 		cpr
 		${PYTHON_LIB}
 		podofo
+		turbojpeg
 		)
 ENDIF()
 

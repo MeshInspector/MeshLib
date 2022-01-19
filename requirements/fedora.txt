@@ -17,6 +17,7 @@ podofo-devel
 python3.8
 spdlog-devel
 suitesparse-devel
+libjpeg-turbo-devel
 tbb-devel
 time
 libzip-devel

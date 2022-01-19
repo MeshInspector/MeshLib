@@ -130,39 +130,41 @@ tl::expected<void, std::string> toPng( const Image& image, const std::filesystem
     return {};
 }
 
+struct JpegWriter
+{
+    JpegWriter()
+    {
+        tjInstance = tjInitCompress();
+    }
+    ~JpegWriter()
+    {
+        if ( tjInstance )
+            tjDestroy( tjInstance );
+        if ( jpegBuf )
+            tjFree( jpegBuf );
+    }
+    unsigned char* jpegBuf{ nullptr };
+    tjhandle tjInstance{ nullptr };
+};
+
 tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path )
 {
     unsigned long jpegSize = 0;
-    unsigned char* jpegBuf = nullptr;
-    tjhandle tjInstance = nullptr;
+    JpegWriter writer;
 
-    tjInstance = tjInitCompress();
-    if ( !tjInstance )
+    if ( !writer.tjInstance )
         return tl::make_unexpected( "Cannot initialize JPEG compressor." );
 
-    auto compressRes = tjCompress2( tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
+    auto compressRes = tjCompress2( writer.tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &writer.jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
     if ( compressRes != 0 )
-    {
-        tjDestroy( tjInstance ); 
-        tjFree( jpegBuf );
         return tl::make_unexpected( "Error occurred while compressing image data." );
-    }
+
     std::ofstream outFile( path, std::ios::binary );
     if ( !outFile )
-    {
-        tjDestroy( tjInstance );
-        tjFree( jpegBuf );
         return tl::make_unexpected( "Cannot write file " + path.string() );
-    }
-    if ( !outFile.write( ( char* )jpegBuf, jpegSize ) )
-    {
-        tjDestroy( tjInstance );
-        tjFree( jpegBuf );
-        return tl::make_unexpected( "Cannot write file " + path.string() );
-    }
 
-    tjDestroy( tjInstance );
-    tjFree( jpegBuf );
+    if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
+        return tl::make_unexpected( "Cannot write file " + path.string() );
 
     return {};
 }

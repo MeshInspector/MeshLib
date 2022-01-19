@@ -12,7 +12,7 @@ libblosc-dev
 libboost-all-dev
 libzstd-dev
 libsuitesparse-dev
-libjpeg-turbo8-dev
+libturbojpeg0-dev
 libzip-dev
 libspdlog-dev
 libfmt-dev

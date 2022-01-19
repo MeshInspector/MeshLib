@@ -20,6 +20,9 @@ MRMESH_API tl::expected<void, std::string> toBmp( const Image& image, const std:
 // saves in .png format
 MRMESH_API tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& path );
 
+// saves in .jpg format
+MRMESH_API tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path );
+
 // detects the format from file extension and save image to it  
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& path );
 

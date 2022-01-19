@@ -7,6 +7,7 @@
 #include <tl/expected.hpp>
 #include <string>
 #include <libpng16/png.h>
+#include <turbojpeg.h>
 
 namespace MR
 {
@@ -16,7 +17,8 @@ namespace ImageSave
 const IOFilters Filters =
 {
     {"Portable Network Graphics (.png)",  "*.png"},
-    {"BitMap Picture (.bmp)",  "*.bmp"}
+    {"BitMap Picture (.bmp)",  "*.bmp"},
+    {"JPEG (.jpg)",  "*.jpg"}
 };
 
 #pragma pack(push, 1)
@@ -128,6 +130,45 @@ tl::expected<void, std::string> toPng( const Image& image, const std::filesystem
     return {};
 }
 
+struct JpegWriter
+{
+    JpegWriter()
+    {
+        tjInstance = tjInitCompress();
+    }
+    ~JpegWriter()
+    {
+        if ( tjInstance )
+            tjDestroy( tjInstance );
+        if ( jpegBuf )
+            tjFree( jpegBuf );
+    }
+    unsigned char* jpegBuf{ nullptr };
+    tjhandle tjInstance{ nullptr };
+};
+
+tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path )
+{
+    unsigned long jpegSize = 0;
+    JpegWriter writer;
+
+    if ( !writer.tjInstance )
+        return tl::make_unexpected( "Cannot initialize JPEG compressor." );
+
+    auto compressRes = tjCompress2( writer.tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &writer.jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
+    if ( compressRes != 0 )
+        return tl::make_unexpected( "Error occurred while compressing image data." );
+
+    std::ofstream outFile( path, std::ios::binary );
+    if ( !outFile )
+        return tl::make_unexpected( "Cannot write file " + path.string() );
+
+    if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
+        return tl::make_unexpected( "Cannot write file " + path.string() );
+
+    return {};
+}
+
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = file.extension().u8string();
@@ -139,6 +180,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const 
         res = MR::ImageSave::toPng( image, file );
     else if ( ext == u8".bmp" )
         res = MR::ImageSave::toBmp( image, file );
+    else if ( ext == u8".jpg" )
+        res = MR::ImageSave::toJpeg( image, file );
     return res;
 }
 

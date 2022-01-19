@@ -47,6 +47,7 @@ IF(APPLE)
 		cpr
 		${PYTHON_LIB}
 		podofo
+		turbojpeg
 		png
 		fmt
 		tbb
@@ -74,6 +75,7 @@ ELSE()
 		cpr
 		${PYTHON_LIB}
 		podofo
+		turbojpeg
 		)
 ENDIF()
 

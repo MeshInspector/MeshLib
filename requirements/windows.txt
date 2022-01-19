@@ -5,6 +5,7 @@ boost-integer
 boost-move
 boost-range
 boost-signals2
+libjpeg-turbo
 cpr
 eigen3
 freetype

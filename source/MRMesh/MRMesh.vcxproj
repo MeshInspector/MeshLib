@@ -141,7 +141,6 @@
     <ClInclude Include="MRRegularMapMesher.h" />
     <ClInclude Include="MRRegularGridMesh.h" />
     <ClInclude Include="MRSceneRoot.h" />
-    <ClInclude Include="MRSwapRootAction.h" />
     <ClInclude Include="MRTupleBindings.h" />
     <ClInclude Include="MRUniformSampling.h" />
     <ClInclude Include="MRQuadraticForm.h" />

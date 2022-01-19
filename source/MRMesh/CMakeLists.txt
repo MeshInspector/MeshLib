@@ -15,14 +15,15 @@ target_include_directories(
 )
 
 find_package(GDCM CONFIG REQUIRED)
-find_package(turbojpeg REQUIRED)
-include_directories(${TURBOJPEG_INCLUDE_DIRS})
 find_package(Freetype REQUIRED)
 include_directories(${FREETYPE_INCLUDE_DIRS})
 find_package(Boost COMPONENTS REQUIRED )
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
+find_package(turbojpeg REQUIRED)
+pkg_search_module(TURBOJPEG REQUIRED libturbojpeg)
+include_directories(${TURBOJPEG_INCLUDE_DIRS})
 
 set(EIGEN_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/eigen)
 set(PHMAP_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/parallel-hashmap)

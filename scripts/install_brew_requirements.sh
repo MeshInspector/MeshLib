@@ -54,6 +54,7 @@ checkPackage llvm
 checkPackage libpng
 checkPackage pybind11
 checkPackage libsigc++
+checkPackage jpeg-turbo
 
 if $ALL_REQUIRED_PACKAGES_INSTALLED; then
  printf "\rAll required packages are already installed!                    \n"

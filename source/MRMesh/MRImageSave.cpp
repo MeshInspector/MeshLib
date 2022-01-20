@@ -69,13 +69,19 @@ tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem
     return {};
 }
 
+tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
+{
+    std::ofstream fp( file, std::ios::binary );
+    if ( !fp )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toPng( image, fp );
+}
+
 struct WritePng
 {
-    WritePng( const std::filesystem::path& file )
+    WritePng()
     {
-        fp = fopen( file, "wb" );
-        if ( !fp )
-            return;
         pngPtr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
         if ( !pngPtr )
             return;
@@ -83,30 +89,36 @@ struct WritePng
     }
     ~WritePng()
     {
-        if ( fp )
-            fclose( fp );
         if ( pngPtr )
             png_destroy_write_struct( &pngPtr, &infoPtr );
     }
 
     png_structp pngPtr{ nullptr };
     png_infop infoPtr{ nullptr };
-    FILE* fp{ nullptr };
 };
 
-tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
+static void write_to_png( png_structp png_ptr, png_bytep data, png_size_t length )
 {
-    WritePng png( file );
-    if ( !png.fp )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
+    stream->write( ( char* )data, length );
+}
 
+static void flush_png( png_structp png_ptr )
+{
+    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
+    stream->flush();
+}
+
+tl::expected<void, std::string> toPng( const Image& image, std::ostream& os )
+{
+    WritePng png;
     if ( !png.pngPtr )
-        return tl::make_unexpected( std::string( "Cannot create png " ) + utf8string( file ) );
+        return tl::make_unexpected( "Cannot create png" );
 
     if ( !png.infoPtr )
-        return tl::make_unexpected( std::string( "Cannot create png info" ) + utf8string( file ) );
-        
-    png_init_io( png.pngPtr, png.fp );
+        return tl::make_unexpected( "Cannot create png info" );
+
+    png_set_write_fn( png.pngPtr, &os, write_to_png, flush_png );
 
     // Output is 8bit depth, RGBA format.
     png_set_IHDR(
@@ -123,7 +135,7 @@ tl::expected<void, std::string> toPng( const Image& image, const std::filesystem
 
     std::vector<unsigned char*> ptrs( image.resolution.y );
     for ( int i = 0; i < image.resolution.y; ++i )
-        ptrs[image.resolution.y - i - 1] = (unsigned char*) ( image.pixels.data() + image.resolution.x * i );
+        ptrs[image.resolution.y - i - 1] = ( unsigned char* )( image.pixels.data() + image.resolution.x * i );
 
     png_write_image( png.pngPtr, ptrs.data() );
     png_write_end( png.pngPtr, NULL );

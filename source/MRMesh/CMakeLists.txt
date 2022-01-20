@@ -36,7 +36,7 @@ IF(APPLE)
 	target_include_directories(
 		${PROJECT_NAME} PUBLIC
 		${MESHLIB_THIRDPARTY_INCLUDE_DIR}/expected/include
-		/opt/homebrew/opt/jpeg-turbo/include)
+		${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		OpenVDB
@@ -53,7 +53,7 @@ IF(APPLE)
 		cpr
 		${PYTHON_LIB}
 		podofo
-		/opt/homebrew/opt/jpeg-turbo/lib/libturbojpeg.dylib
+		${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		png
 		fmt
 		tbb

@@ -220,6 +220,9 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
     needs: [windows-build-test, ubuntu-build-test, fedora-build-test]

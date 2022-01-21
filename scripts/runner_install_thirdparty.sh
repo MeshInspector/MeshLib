@@ -33,7 +33,7 @@ if [ ! -d "${PRECOMPILED_LIB_PATH}" ] || [ $DO_RECOMPILE == 1 ]; then
   rm -rf ${PRECOMPILED_LIB_PATH}
   mkdir -p ${PRECOMPILED_LIB_PATH}
   ./scripts/build_thirdparty.sh
-  cp -r "./lib" -T "${PRECOMPILED_LIB_PATH}"
+  cp -r "./lib" "${PRECOMPILED_LIB_PATH}"
 else
   ln -s ${PRECOMPILED_LIB_PATH} "./lib"
   echo "Link to ${PRECOMPILED_LIB_PATH} created."

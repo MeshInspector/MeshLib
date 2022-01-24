@@ -2,7 +2,7 @@ from helper import *
 
 torus = mrmesh.make_components_test_torus(2, 1, 10, 10, None)
 
-components = mrmesh.get_mesh_components(torus, None)
+components = mrmesh.get_mesh_components_verts(torus, None)
 
 assert(len(components) == 5)
 

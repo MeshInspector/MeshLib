@@ -79,6 +79,56 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) ) &MR::Mesh::transform );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::MeshPart>( m, "MeshPart" ).
+        def( pybind11::init<const Mesh&>() ).
+        def( pybind11::init<const Mesh&, const FaceBitSet*>() ).
+        def_readwrite( "region", &MR::MeshPart::region );
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
+{
+    pybind11::enum_<MR::MeshComponents::FaceIncidence>( m, "FaceIncidence" ).
+        value( "PerEdge", MR::MeshComponents::FaceIncidence::PerEdge ).
+        value( "PerVertex", MR::MeshComponents::FaceIncidence::PerVertex );
+
+    m.def( "get_mesh_components_verts", &MR::MeshComponents::getAllComponentsVerts,
+        pybind11::arg( "mesh" ),
+        pybind11::arg( "region" ) = nullptr,
+        "get all vertices componensts of the mesh" );
+
+    m.def( "get_mesh_components_face", &MR::MeshComponents::getAllComponents,
+        pybind11::arg( "meshPart" ),
+        pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
+        "get all faces componensts of the mesh" );
+
+    m.def( "get_faces_component", &MR::MeshComponents::getComponent,
+        pybind11::arg( "meshPart" ),
+        pybind11::arg( "faceId" ),
+        pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
+        "get component of given face id" );
+
+    m.def( "get_verts_component", &MR::MeshComponents::getComponentVerts,
+        pybind11::arg( "mesh" ),
+        pybind11::arg( "vertId" ),
+        pybind11::arg( "region" ) = nullptr,
+        "get component of given vert id" );
+
+    m.def( "get_largest_faces_component", &MR::MeshComponents::getLargestComponent,
+        pybind11::arg( "meshPart" ),
+        pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
+        "get largest faces component" );
+
+    m.def( "get_largest_verts_component", &MR::MeshComponents::getLargestComponentVerts,
+        pybind11::arg( "mesh" ),
+        pybind11::arg( "region" ) = nullptr,
+        "get largest vertices component" );
+} )
+
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, MR::Mesh )
 
 void pythonSetFillHolePlaneMetric( MR::FillHoleParams& params, const Mesh& mesh, EdgeId e )

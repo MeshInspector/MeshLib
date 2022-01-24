@@ -256,11 +256,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
 // TODO: introduce MeshPart
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, subdivide_mesh, &subdivideMesh, "split edges in mesh with settings" )
 
-// Select Component
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_mesh_components, &MR::MeshComponents::getAllComponentsVerts, "get all componensts of the mesh" )
-
 // Distance Map
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 {

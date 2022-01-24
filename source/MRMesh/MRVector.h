@@ -49,25 +49,24 @@ public:
         return vec_[i];
     }
 
+    // doubles reserved memory until resize(newSize) can be done without reallocation
+    void resizeWithReserve( size_t newSize )
+    {
+        auto reserved = vec_.capacity();
+        if ( reserved > 0 && newSize > reserved )
+        {
+            while ( newSize > reserved )
+                reserved <<= 1;
+            vec_.reserve( reserved );
+        }
+        vec_.resize( newSize );
+    }
+
     // this accessor automatically adjusts the size of the vector
     reference autoResizeAt( I i )
     {
-        auto sz = vec_.size();
-        if ( i == sz )
-        {
-            vec_.push_back({});
-            return vec_.back();
-        }
-        if ( i > sz )
-        {
-            if ( vec_.capacity() <= i && sz > 0 )
-            {
-                while ( i < sz )
-                    sz <<= 1;
-                vec_.reserve( sz );
-            }
-            vec_.resize( i + 1 );
-        }
+        if ( i + 1 > size() )
+            resizeWithReserve( i + 1 );
         return vec_[i];
     }
 

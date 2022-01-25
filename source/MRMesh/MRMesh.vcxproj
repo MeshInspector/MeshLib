@@ -108,7 +108,7 @@
     <ClInclude Include="MRIteratorRange.h" />
     <ClInclude Include="MRLaplacian.h" />
     <ClInclude Include="MRMeshCollide.h" />
-    <ClInclude Include="MRMeshColors.h" />
+    <ClInclude Include="MRSceneColors.h" />
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDiff.h" />
     <ClInclude Include="MRMeshDistance.h" />
@@ -291,7 +291,7 @@
     <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
-    <ClCompile Include="MRMeshColors.cpp" />
+    <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDistance.cpp" />
     <ClCompile Include="MRMeshEdgePoint.cpp" />

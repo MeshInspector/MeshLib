@@ -9,9 +9,10 @@
 #include "MRPointsSave.h"
 #include "MRPointsLoad.h"
 #include "MRTimer.h"
+#include "MRPch/MRJson.h"
+#include "MRSceneColors.h"
 #include <tbb/enumerable_thread_specific.h>
 #include <filesystem>
-#include "MRPch/MRJson.h"
 
 namespace MR
 {
@@ -31,6 +32,11 @@ ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/
     setFrontColor( objMesh.getFrontColor( false ), false );
     setBackColor( objMesh.getBackColor() );
     setColoringType( objMesh.getColoringType() );
+}
+
+ObjectPoints::ObjectPoints()
+{
+    setDefaultColors_();
 }
 
 void ObjectPoints::applyScale( float scaleFactor )
@@ -176,6 +182,12 @@ void ObjectPoints::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectPoints>( *this );
+}
+
+void ObjectPoints::setDefaultColors_()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
 }
 
 }

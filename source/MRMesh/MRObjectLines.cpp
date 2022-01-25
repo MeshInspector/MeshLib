@@ -4,9 +4,10 @@
 #include "MRSerializer.h"
 #include "MRTimer.h"
 #include "MRMeshTexture.h"
-#include <filesystem>
 #include "MRPch/MRJson.h"
+#include "MRSceneColors.h"
 #include <tbb/parallel_for.h>
+#include <filesystem>
 
 namespace MR
 {
@@ -127,6 +128,11 @@ const ViewportMask& ObjectLines::getVisualizePropertyMask( unsigned type ) const
     }
 }
 
+ObjectLines::ObjectLines()
+{
+    setDefaultColors_();
+}
+
 void ObjectLines::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_(root);
@@ -221,6 +227,12 @@ void ObjectLines::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<ObjectLines>( *this );
+}
+
+void ObjectLines::setDefaultColors_()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
 }
 
 }

@@ -1,7 +1,7 @@
 #include "MRVisualObject.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
-#include "MRMeshColors.h"
+#include "MRSceneColors.h"
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
 #include "MRObjectVoxels.h"
@@ -353,10 +353,10 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
 
 void VisualObject::setDefaultColors_()
 {
-    setFrontColor( MeshColors::get( MeshColors::SelectedMesh ) );
-    setFrontColor( MeshColors::get( MeshColors::UnselectedMesh ), false );
-    setBackColor( MeshColors::get( MeshColors::BackFaces ) );
-    setLabelsColor( MeshColors::get( MeshColors::Labels ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+    setBackColor( SceneColors::get( SceneColors::BackFaces ) );
+    setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 }
 
 } //namespace MR

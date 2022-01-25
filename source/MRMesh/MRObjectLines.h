@@ -20,7 +20,7 @@ struct LinesVisualizePropertyType : VisualizeMaskType
 class MRMESH_CLASS ObjectLines : public VisualObject
 {
 public:
-    ObjectLines() = default;
+    MRMESH_API ObjectLines();
     ObjectLines( ObjectLines&& ) = default;
     ObjectLines& operator=( ObjectLines&& ) = default;
 
@@ -78,6 +78,8 @@ protected:
     ViewportMask showPoints_;
     ViewportMask smoothConnections_;
 private:
+    // this is private function to set default colors of this type (ObjectLines) in constructor only
+    void setDefaultColors_();
     // width on lines on screen in pixels
     float lineWidth_{ 1.0f };
     float pointSize_{ 5.f };

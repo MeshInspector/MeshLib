@@ -9,9 +9,10 @@
 #include "MRSerializer.h"
 #include "MRMeshNormals.h"
 #include "MRTimer.h"
-#include <filesystem>
-#include <tbb/parallel_reduce.h>
 #include "MRPch/MRJson.h"
+#include "MRSceneColors.h"
+#include <tbb/parallel_reduce.h>
+#include <filesystem>
 
 namespace MR
 {
@@ -198,6 +199,12 @@ void ObjectVoxels::updateHistogram_( float min, float max )
     histogram_ = std::move( calc.hist );
 }
 
+void ObjectVoxels::setDefaultColors_()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
+}
+
 ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
     ObjectMesh( other )
 {
@@ -209,6 +216,11 @@ ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
 
     indexer_ = other.indexer_;
     reverseVoxelSize_ = other.reverseVoxelSize_;
+}
+
+ObjectVoxels::ObjectVoxels()
+{
+    setDefaultColors_();
 }
 
 void ObjectVoxels::applyScale( float scaleFactor )

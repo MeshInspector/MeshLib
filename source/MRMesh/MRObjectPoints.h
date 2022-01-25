@@ -9,7 +9,7 @@ struct RenderParams;
 class MRMESH_CLASS ObjectPoints : public VisualObject
 {
 public:
-    ObjectPoints() = default;
+    MRMESH_API ObjectPoints();
     MRMESH_API ObjectPoints( const ObjectMesh& objMesh, bool saveNormals = true );
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;
@@ -70,5 +70,8 @@ private:
 
     // size of point in pixels
     float pointSize_{ 5.0f };
+
+    // this is private function to set default colors of this type (ObjectPoints) in constructor only
+    void setDefaultColors_();
 };
 }

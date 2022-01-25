@@ -4,8 +4,9 @@
 #include "MRSerializer.h"
 #include "MRDistanceMapSave.h"
 #include "MRDistanceMapLoad.h"
-#include <tbb/parallel_for.h>
 #include "MRPch/MRJson.h"
+#include "MRSceneColors.h"
+#include <tbb/parallel_for.h>
 
 namespace MR
 {
@@ -106,7 +107,7 @@ void ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap
     dmap_ = dmap;
     toWorldParams_ = params;
 
-    construct();
+    construct_();
 }
 
 const std::shared_ptr<MR::DistanceMap>& ObjectDistanceMap::getDistanceMap() const
@@ -124,6 +125,11 @@ ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :
     dmap_( nullptr ),
     toWorldParams_( other.toWorldParams_ )
 {
+}
+
+ObjectDistanceMap::ObjectDistanceMap()
+{
+    setDefaultColors_();
 }
 
 void ObjectDistanceMap::serializeFields_( Json::Value& root ) const
@@ -147,7 +153,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["DepthVec"], toWorldParams_.direction );
     deserializeFromJson( root["OriginWorld"], toWorldParams_.orgPoint );
 
-    construct();
+    construct_();
 }
 
 tl::expected<void, std::string> ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path )
@@ -170,7 +176,13 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
         [this, filename = path.string() + ".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
 }
 
-void ObjectDistanceMap::construct()
+void ObjectDistanceMap::setDefaultColors_()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
+}
+
+void ObjectDistanceMap::construct_()
 {
     if ( !dmap_ )
         return;

@@ -8,6 +8,8 @@
 #include "MRGTest.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshLoad.h"
+#include "MRBitSetParallelFor.h"
+#include "MRMeshBuilder.h"
 
 namespace MR
 {
@@ -346,6 +348,45 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
     return res;
 }
 
+HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
+    const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion )
+{
+    MR_TIMER;
+    const auto distances = computeSurfaceDistances( mesh, ends, starts, FLT_MAX, vertRegion );
+
+    HashMap<VertId, VertId> res;
+    res.reserve( starts.count() );
+    // create all keys in res before parallel region
+    for ( auto v : starts )
+        res[v];
+
+    BitSetParallelFor( starts, [&]( VertId v )
+    {
+        SurfacePathBuilder b( mesh, distances );
+        auto last = b.findPrevPoint( v );
+        // if ( !last ) then v is not reachable from (ends) or it is contained in (ends)
+        int steps = 0;
+        while ( last )
+        {
+            if ( ++steps > mesh.topology.numValidFaces() )
+            {
+                // internal error
+                assert( false );
+                last.reset();
+                break;
+            }
+            if ( auto next = b.findPrevPoint( *last ) )
+                last = next;
+            else
+                break;
+        }
+        if ( last )
+            res[v] = last->getClosestVertex( mesh.topology );
+    } );
+
+    return res;
+}
+
 float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )
 {
     if ( surfacePath.empty() )
@@ -405,6 +446,34 @@ TEST(MRMesh, SurfacePath)
     EXPECT_FALSE( e.has_value() );
     e = computeExitPos ( Vector3f{ 1, 0.1f, 0 }, Vector3f{ 1, 0.9f, 0 }, -g );
     EXPECT_FALSE( e.has_value() );
+}
+
+TEST( MRMesh, SurfacePathTargets )
+{
+    std::vector<VertId> v{
+        0_v, 1_v, 2_v
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromVertexTriples( v );
+
+    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // 0_v
+    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // 1_v
+    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // 2_v
+
+    VertBitSet starts(3);
+    starts.set( 1_v );
+    starts.set( 2_v );
+
+    VertBitSet ends(3);
+    ends.set( 0_v );
+
+    const auto map = computeClosestSurfacePathTargets( mesh, starts, ends );
+    EXPECT_EQ( map.size(), starts.count() );
+    for ( const auto & [start, end] : map )
+    {
+        EXPECT_TRUE( starts.test( start ) );
+        EXPECT_TRUE( ends.test( end ) );
+    }
 }
 
 } //namespace MR

@@ -11,6 +11,11 @@ namespace MR
 MRMESH_API Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const VertBitSet& startVertices, float maxDist = FLT_MAX, 
                                                           const VertBitSet* region = nullptr );
 
+// computes path distances in mesh vertices from given start vertices, stopping when all targetVertices or maxDist is reached;
+// considered paths can go either along edges or straightly within triangles
+MRMESH_API Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const VertBitSet& startVertices, const VertBitSet& targetVertices,
+    float maxDist = FLT_MAX, const VertBitSet* region = nullptr );
+
 // computes path distances in mesh vertices from given start vertices with values in them, stopping when maxDist is reached;
 // considered paths can go either along edges or straightly within triangles
 MRMESH_API Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist = FLT_MAX, 

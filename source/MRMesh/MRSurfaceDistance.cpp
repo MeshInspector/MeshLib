@@ -20,6 +20,26 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSe
     return b.takeDistanceMap();
 }
 
+Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, const VertBitSet& targetVertices,
+    float maxDist, const VertBitSet* region )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.addStartRegion( startVertices, 0 );
+
+    auto toReachVerts = targetVertices - startVertices;
+    auto toReachCount = toReachVerts.count();
+
+    while ( toReachCount > 0 && b.doneDistance() < maxDist )
+    {
+        auto v = b.growOne();
+        if ( toReachVerts.test( v ) )
+            --toReachCount;
+    }
+    return b.takeDistanceMap();
+}
+
 Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist,
                                                const VertBitSet* region )
 {

@@ -16,6 +16,8 @@ struct MeshEdgePoint
 
     // returns valid vertex id if the point is in vertex, otherwise returns invalid id
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
+    // returns one of two edge vertices, closest to this point
+    [[nodiscard]] MRMESH_API VertId getClosestVertex( const MeshTopology & topology ) const;
     // just returns true of false
     [[nodiscard]] MRMESH_API bool inVertex() const;
 

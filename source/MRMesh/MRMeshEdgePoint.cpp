@@ -15,6 +15,14 @@ VertId MeshEdgePoint::inVertex( const MeshTopology & topology ) const
     return {};
 }
 
+VertId MeshEdgePoint::getClosestVertex( const MeshTopology & topology ) const
+{
+    if ( 2 * a <= 1 )
+        return topology.org( e );
+    else
+        return topology.dest( e );
+}
+
 bool MeshEdgePoint::inVertex() const
 {
     return a <= eps || a + eps >= 1;

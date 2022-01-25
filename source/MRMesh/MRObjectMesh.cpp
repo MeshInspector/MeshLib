@@ -5,7 +5,7 @@
 #include "MRSerializer.h"
 #include "MRMeshLoad.h"
 #include "MRMeshNormals.h"
-#include "MRMeshColors.h"
+#include "MRSceneColors.h"
 #include "MRMeshComponents.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
@@ -49,9 +49,11 @@ void ObjectMesh::setSelectedEdgesColor( const Color& color )
 
 void ObjectMesh::setDefaultColors_()
 {
-    setSelectedFacesColor( MeshColors::get( MeshColors::SelectedFaces ) );
-    setSelectedEdgesColor( MeshColors::get( MeshColors::SelectedEdges ) );
-    setEdgesColor( MeshColors::get( MeshColors::Edges ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+    setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
+    setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
+    setEdgesColor( SceneColors::get( SceneColors::Edges ) );
 }
 
 tl::expected<std::future<void>, std::string> ObjectMesh::serializeModel_( const std::filesystem::path& path ) const

@@ -13,7 +13,7 @@ namespace MR
 class MRMESH_CLASS ObjectVoxels : public ObjectMesh
 {
 public:
-    ObjectVoxels() = default;
+    MRMESH_API ObjectVoxels();
     ObjectVoxels& operator = ( ObjectVoxels&& ) noexcept = default;
     ObjectVoxels( ObjectVoxels&& ) noexcept = default;
     virtual ~ObjectVoxels() = default;
@@ -110,6 +110,11 @@ private:
     Vector3f reverseVoxelSize_;
 
     void updateHistogram_( float min, float max );
+
+
+    // this is private function to set default colors of this type (ObjectVoxels) in constructor only
+    void setDefaultColors_();
+
 protected:
     MRMESH_API ObjectVoxels( const ObjectVoxels& other );
 

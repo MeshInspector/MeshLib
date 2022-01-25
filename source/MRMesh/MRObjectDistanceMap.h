@@ -11,7 +11,7 @@ namespace MR
 class MRMESH_CLASS ObjectDistanceMap : public ObjectMesh
 {
 public:
-    ObjectDistanceMap() = default;
+    MRMESH_API ObjectDistanceMap();
     ObjectDistanceMap( ObjectDistanceMap&& ) noexcept = default;
     ObjectDistanceMap& operator = ( ObjectDistanceMap&& ) noexcept = default;
     virtual ~ObjectDistanceMap() = default;
@@ -57,7 +57,10 @@ private:
     DistanceMapToWorld toWorldParams_;
 
     //rebuild mesh according sets DistanceMap & DistanceMapToWorld
-    void construct();
+    void construct_();
+
+    // this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
+    void setDefaultColors_();
 };
 
 } // namespace MR

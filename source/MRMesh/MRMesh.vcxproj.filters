@@ -381,7 +381,7 @@
     <ClInclude Include="MRPlanarPath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshColors.h">
+    <ClInclude Include="MRSceneColors.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeIndexer.h">
@@ -896,7 +896,7 @@
     <ClCompile Include="MRPlanarPath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshColors.cpp">
+    <ClCompile Include="MRSceneColors.cpp">
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexer.cpp">

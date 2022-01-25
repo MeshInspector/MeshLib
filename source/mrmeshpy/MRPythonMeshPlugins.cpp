@@ -23,6 +23,7 @@
 #include "MRMesh/MRAlignTextToMesh.h"
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
+#include "MRMesh/MRMeshDelete.h"
 #include <tl/expected.hpp>
 
 using namespace MR;
@@ -255,6 +256,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
 
 // TODO: introduce MeshPart
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, subdivide_mesh, &subdivideMesh, "split edges in mesh with settings" )
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, delete_faces, &deleteFaces, "delete faces from topology" )
 
 // Distance Map
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )

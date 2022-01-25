@@ -303,8 +303,9 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp, 
-    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters, const VertBitSet* vertRegion )
+tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters,
+    const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
     std::vector<MeshEdgePoint> res;
@@ -325,7 +326,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
 
     // build distances from end to start, so to get correct path in reverse order
     bool connected = false;
-    const auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
+    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
     if ( !connected )
         return tl::make_unexpected( PathError::StartEndNotConnected );
 
@@ -345,14 +346,17 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
     assert( !res.empty() );
     reducePath( mp.mesh, start, res, end, numPostProcessIters );
 
+    if ( outSurfaceDistances )
+        *outSurfaceDistances = std::move( distances );
     return res;
 }
 
 HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
-    const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion )
+    const VertBitSet & starts, const VertBitSet & ends, 
+    const VertBitSet * vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
-    const auto distances = computeSurfaceDistances( mesh, ends, starts, FLT_MAX, vertRegion );
+    auto distances = computeSurfaceDistances( mesh, ends, starts, FLT_MAX, vertRegion );
 
     HashMap<VertId, VertId> res;
     res.reserve( starts.count() );
@@ -384,6 +388,8 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
             res[v] = last->getClosestVertex( mesh.topology );
     } );
 
+    if ( outSurfaceDistances )
+        *outSurfaceDistances = std::move( distances );
     return res;
 }
 

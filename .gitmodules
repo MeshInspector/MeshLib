@@ -16,3 +16,9 @@
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
+[submodule "thirdparty/wasmtbb"]
+	path = thirdparty/wasmtbb
+	url = https://github.com/hpcwasm/wasmtbb.git
+[submodule "thirdparty/googletest"]
+	path = thirdparty/googletest
+	url = https://github.com/joa/googletest.git

@@ -28,9 +28,15 @@ target_include_directories(
 	${PROJECT_NAME} PUBLIC ${EIGEN_DIR} ${PHMAP_DIR})
 
 IF(APPLE)
+	#jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
+	#because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.
+	#include_directories(/opt/homebrew/opt/jpeg-turbo/include)
+	#link_directories(/opt/homebrew/opt/jpeg-turbo/lib)
+
 	target_include_directories(
 		${PROJECT_NAME} PUBLIC
-		${MESHLIB_THIRDPARTY_INCLUDE_DIR}/expected/include)
+		${MESHLIB_THIRDPARTY_INCLUDE_DIR}/expected/include
+		${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		OpenVDB
@@ -47,7 +53,7 @@ IF(APPLE)
 		cpr
 		${PYTHON_LIB}
 		podofo
-		turbojpeg
+		${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		png
 		fmt
 		tbb

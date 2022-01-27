@@ -3,8 +3,11 @@ import sys
 import platform
 
 python_cmd = "py -3.10 "
-if (platform.system() == 'Linux' ):
+platformSystem = platform.system()
+if platformSystem == 'Linux':
 	python_cmd = "python3.8 "
+elif platformSystem == 'Darwin':
+	python_cmd = "python3 "
 
 directory = os.path.dirname(os.path.abspath(__file__))
 if len(sys.argv) == 1:

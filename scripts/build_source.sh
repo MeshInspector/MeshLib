@@ -69,7 +69,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
  #else
     emcmake cmake ../.. -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
  #fi
- emmake make -j 1 | tee ${logfile} #`nproc` | tee ${logfile}
+ emmake make -j `nproc` | tee ${logfile}
  cd ..
 fi
 
@@ -84,7 +84,7 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  #else
     emcmake cmake ../.. -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
  #fi
- emmake make -j 1 | tee ${logfile} #`nproc` | tee ${logfile}
+ emmake make -j `nproc` | tee ${logfile}
  cd ..
 fi
 

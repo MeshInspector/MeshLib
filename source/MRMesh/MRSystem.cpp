@@ -17,7 +17,7 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else
-#include <cpuid.h>
+//#include <cpuid.h>
 #endif
 #include <pthread.h>
 #include <libgen.h>
@@ -232,6 +232,7 @@ std::filesystem::path GetWindowsInstallDirectory()
 }
 #endif //_WIN32
 
+#ifndef __EMSCRIPTEN__
 std::string GetCpuId()
 {
     char CPUBrandString[0x40] = {};
@@ -269,6 +270,7 @@ std::string GetCpuId()
 #endif
     return CPUBrandString;
 }
+#endif
 
 bool LoadKey( const std::string& base, const std::string& key, bool defaultValue )
 {

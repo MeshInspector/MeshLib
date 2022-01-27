@@ -4,7 +4,6 @@
 #include "MRSceneColors.h"
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
-#include "MRObjectVoxels.h"
 #include "MRTimer.h"
 #include <filesystem>
 #include <tl/expected.hpp>

@@ -14,7 +14,7 @@ target_include_directories(
   ${PROJECT_NAME} PRIVATE /usr/include/suitesparse/
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1")
 #add_compile_options(-s USE_BOOST_HEADERS=1)
 
 #find_package(GDCM CONFIG REQUIRED)
@@ -25,7 +25,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 add_compile_definitions(__emscripten__)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
+include_directories(${THIRDPARTY_LIB_DIR}/libzip)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 

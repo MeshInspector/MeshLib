@@ -120,7 +120,7 @@ Polyline2ProjectionWithOffsetResult findProjectionOnPolyline2WithOffset(
         return res;
     }
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__EMSCRIPTEN__)
     float maxOffset = *std::max_element( offsetPerEdge.vec_.begin(), offsetPerEdge.vec_.end() );
 #else
     float maxOffset = *std::max_element( std::execution::par, offsetPerEdge.vec_.begin(), offsetPerEdge.vec_.end() );

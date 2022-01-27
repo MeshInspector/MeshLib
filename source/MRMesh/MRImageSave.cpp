@@ -6,8 +6,6 @@
 #include <filesystem>
 #include <tl/expected.hpp>
 #include <string>
-#include <libpng16/png.h>
-#include <turbojpeg.h>
 
 namespace MR
 {
@@ -16,9 +14,7 @@ namespace ImageSave
 
 const IOFilters Filters =
 {
-    {"Portable Network Graphics (.png)",  "*.png"},
-    {"BitMap Picture (.bmp)",  "*.bmp"},
-    {"JPEG (.jpg)",  "*.jpg"}
+    {"BitMap Picture (.bmp)",  "*.bmp"}
 };
 
 #pragma pack(push, 1)
@@ -69,118 +65,6 @@ tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem
     return {};
 }
 
-tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
-{
-    std::ofstream fp( file, std::ios::binary );
-    if ( !fp )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
-
-    return toPng( image, fp );
-}
-
-struct WritePng
-{
-    WritePng()
-    {
-        pngPtr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
-        if ( !pngPtr )
-            return;
-        infoPtr = png_create_info_struct( pngPtr );
-    }
-    ~WritePng()
-    {
-        if ( pngPtr )
-            png_destroy_write_struct( &pngPtr, &infoPtr );
-    }
-
-    png_structp pngPtr{ nullptr };
-    png_infop infoPtr{ nullptr };
-};
-
-static void write_to_png( png_structp png_ptr, png_bytep data, png_size_t length )
-{
-    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
-    stream->write( ( char* )data, length );
-}
-
-static void flush_png( png_structp png_ptr )
-{
-    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
-    stream->flush();
-}
-
-tl::expected<void, std::string> toPng( const Image& image, std::ostream& os )
-{
-    WritePng png;
-    if ( !png.pngPtr )
-        return tl::make_unexpected( "Cannot create png" );
-
-    if ( !png.infoPtr )
-        return tl::make_unexpected( "Cannot create png info" );
-
-    png_set_write_fn( png.pngPtr, &os, write_to_png, flush_png );
-
-    // Output is 8bit depth, RGBA format.
-    png_set_IHDR(
-      png.pngPtr,
-      png.infoPtr,
-      image.resolution.x, image.resolution.y,
-      8,
-      PNG_COLOR_TYPE_RGBA,
-      PNG_INTERLACE_NONE,
-      PNG_COMPRESSION_TYPE_DEFAULT,
-      PNG_FILTER_TYPE_DEFAULT
-    );
-    png_write_info( png.pngPtr, png.infoPtr );
-
-    std::vector<unsigned char*> ptrs( image.resolution.y );
-    for ( int i = 0; i < image.resolution.y; ++i )
-        ptrs[image.resolution.y - i - 1] = ( unsigned char* )( image.pixels.data() + image.resolution.x * i );
-
-    png_write_image( png.pngPtr, ptrs.data() );
-    png_write_end( png.pngPtr, NULL );
-    return {};
-}
-
-struct JpegWriter
-{
-    JpegWriter()
-    {
-        tjInstance = tjInitCompress();
-    }
-    ~JpegWriter()
-    {
-        if ( tjInstance )
-            tjDestroy( tjInstance );
-        if ( jpegBuf )
-            tjFree( jpegBuf );
-    }
-    unsigned char* jpegBuf{ nullptr };
-    tjhandle tjInstance{ nullptr };
-};
-
-tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path )
-{
-    unsigned long jpegSize = 0;
-    JpegWriter writer;
-
-    if ( !writer.tjInstance )
-        return tl::make_unexpected( "Cannot initialize JPEG compressor." );
-
-    auto compressRes = tjCompress2( writer.tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &writer.jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
-    if ( compressRes != 0 )
-        return tl::make_unexpected( "Error occurred while compressing image data." );
-
-    std::ofstream outFile( path, std::ios::binary );
-    if ( !outFile )
-        return tl::make_unexpected( "Cannot write file " + path.string() );
-
-    if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
-        return tl::make_unexpected( "Cannot write file " + path.string() );
-
-    return {};
-}
-
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = file.extension().u8string();
@@ -188,12 +72,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const 
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".png" )
-        res = MR::ImageSave::toPng( image, file );
-    else if ( ext == u8".bmp" )
+    if ( ext == u8".bmp" )
         res = MR::ImageSave::toBmp( image, file );
-    else if ( ext == u8".jpg" )
-        res = MR::ImageSave::toJpeg( image, file );
     return res;
 }
 

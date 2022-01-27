@@ -29,6 +29,8 @@ add_custom_target(
 
 add_subdirectory(./googletest/googletest ./googletest)
 
+add_subdirectory(./libzip ./libzip)
+
 #IF(APPLE)
  add_subdirectory(./expected ./expected)
 #ELSE()

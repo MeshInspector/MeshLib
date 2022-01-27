@@ -12,7 +12,7 @@
 #endif
 
 #include <spdlog/sinks/daily_file_sink.h>
-#include <fmt/chrono.h>
+#include <spdlog/fmt/chrono.h>
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop

@@ -3,7 +3,7 @@
 #include "MRMeshBuilder.h"
 #include "MRBitSet.h"
 #include "MRTimer.h"
-#include "MRGTest.h"
+//#include "MRGTest.h"
 
 namespace MR
 {
@@ -82,7 +82,7 @@ void meshToEigen( const Mesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi & F )
         V( i, 2 ) = p.z;
     }
 }
-
+/*
 TEST(MRMesh, Eigen) 
 {
     Eigen::MatrixXd V( 3, 3 );
@@ -101,6 +101,6 @@ TEST(MRMesh, Eigen)
 
     EXPECT_EQ( V, V1 );
     EXPECT_EQ( F, F1 );
-}
+}*/
 
 } //namespace MR

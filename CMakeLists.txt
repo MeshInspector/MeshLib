@@ -87,7 +87,7 @@ enable_testing()
 #  add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 # ENDIF()
 #ENDIF()
-add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
+#add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/MREAlgorithms ./MREAlgorithms)

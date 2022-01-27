@@ -7,6 +7,8 @@
 #include "MRGTest.h"
 #include <tbb/parallel_for.h>
 
+#include <Eigen/SparseCholesky>
+
 namespace MR
 {
 

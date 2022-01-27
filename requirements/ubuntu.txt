@@ -11,7 +11,6 @@ libilmbase-dev
 libblosc-dev
 libboost-all-dev
 libzstd-dev
-libsuitesparse-dev
 libturbojpeg0-dev
 libzip-dev
 libspdlog-dev

@@ -17,6 +17,5 @@ openvdb
 podofo
 python3
 spdlog
-suitesparse
 tiff
 tl-expected

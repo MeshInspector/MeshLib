@@ -25,8 +25,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1
 add_compile_definitions(__emscripten__)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
-include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
-include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
 include_directories(${THIRDPARTY_LIB_DIR}/libzip)
 pkg_check_modules(JSONCPP jsoncpp)
@@ -45,21 +43,21 @@ target_include_directories(
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		#OpenVDB
 		OpenCTM
-		spdlog
+		#spdlog
 		gtest gtest_main
 		zip
 		freetype
 		pthread
 		#gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		#Boost::boost
-		jsoncpp
+		#jsoncpp
 		#cholmod
 		#cpr
 		#${PYTHON_LIB}
 		#podofo
 		#turbojpeg
-		png
-		fmt
+		#png
+		#fmt
 		tbb
 		)
 #ELSE()

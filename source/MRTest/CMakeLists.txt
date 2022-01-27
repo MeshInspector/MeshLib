@@ -6,25 +6,25 @@ project (MRTest CXX)
 
 add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
-IF(NOT ${distro} STREQUAL "Fedora Linux")
+#IF(NOT ${distro} STREQUAL "Fedora Linux")
+# target_link_libraries(${PROJECT_NAME} PRIVATE
+#	 	 mrealgorithmspy
+#	 	 MREAlgorithms
+#         MRMesh
+#         spdlog
+#         mrmeshpy
+# )
+#ELSE()
  target_link_libraries(${PROJECT_NAME} PRIVATE
-	 	 mrealgorithmspy
-	 	 MREAlgorithms
+	 	 #mrealgorithmspy
+	 	 #MREAlgorithms
          MRMesh
-         spdlog
-         mrmeshpy
- )
-ELSE()
- target_link_libraries(${PROJECT_NAME} PRIVATE
-	 	 mrealgorithmspy
-	 	 MREAlgorithms
-         MRMesh
-         fmt
+         #fmt
          gtest
-         spdlog
-         mrmeshpy
+         #spdlog
+         #mrmeshpy
  )
-ENDIF()
+#ENDIF()
 
 add_test(NAME    ${PROJECT_NAME}
          COMMAND ${PROJECT_NAME})

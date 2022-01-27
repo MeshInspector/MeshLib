@@ -72,6 +72,8 @@ find_package(PkgConfig REQUIRED)
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
 
 enable_testing()
 
@@ -94,4 +96,4 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrealgorithmspy ./mrealgorithmspy)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)

@@ -220,9 +220,16 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
-# disabled due to platform differences (building for arm, testing on x86_64)
-#      - name: Unit Tests
-#        run: ./build/${{ matrix.config }}/bin/MRTest
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

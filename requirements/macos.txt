@@ -16,7 +16,6 @@ openvdb
 openssl@3
 podofo
 spdlog
-suite-sparse
 tbb
 libpng
 libsigc++

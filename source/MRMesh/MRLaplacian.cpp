@@ -7,12 +7,7 @@
 #include "MRGTest.h"
 #include <tbb/parallel_for.h>
 
-// unknown pragmas
-#pragma warning(disable:4068)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#include <Eigen/CholmodSupport>
-#pragma clang diagnostic pop
+#include <Eigen/SparseCholesky>
 
 namespace MR
 {
@@ -21,7 +16,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
 {
     MR_TIMER;
 
-    class CholmodeSolver final : public Solver
+    class SimplicialLDLTSolver final : public Solver
     {
     public:
         virtual void compute( const SparseMatrixColMajor& A ) final
@@ -34,10 +29,10 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
             return solver_.solve( rhs );
         }
     private:
-        Eigen::CholmodSimplicialLLT<SparseMatrixColMajor> solver_;
+        Eigen::SimplicialLDLT<SparseMatrixColMajor> solver_;
     };
 
-    solver_ = std::make_unique<CholmodeSolver>();
+    solver_ = std::make_unique<SimplicialLDLTSolver>();
 
     freeVerts_ = freeVerts;
     region_ = freeVerts;

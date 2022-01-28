@@ -28,3 +28,6 @@
 [submodule "thirdparty/libzip"]
 	path = thirdparty/libzip
 	url = https://github.com/nih-at/libzip.git
+[submodule "thirdparty/jsoncpp"]
+	path = thirdparty/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git

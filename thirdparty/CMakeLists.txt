@@ -15,18 +15,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pra
 	-Wno-int-in-bool-context -Wno-strict-aliasing")
 # -Werror")
 
-#add_compile_definitions(__emscripten__)
-get_filename_component(TBB_ROOT "./wasmtbb" ABSOLUTE)
-#include(${TBB_ROOT}/cmake/TBBBuild.cmake)
-#tbb_build(TBB_ROOT ${TBB_ROOT} CONFIG_DIR TBB_DIR)
-#find_package(TBB REQUIRED)
-#add_subdirectory(./wasmtbb ./wasmtbb)
-add_custom_target(
-   tbb
-   COMMAND make
-   WORKING_DIRECTORY ${TBB_ROOT}
-)
-
 add_subdirectory(./googletest/googletest ./googletest)
 
 add_subdirectory(./libzip ./libzip)
@@ -53,3 +41,6 @@ add_subdirectory(./libzip ./libzip)
 
 add_subdirectory(./OpenCTM ./OpenCTM)
 add_subdirectory(./parallel-hashmap ./parallel-hashmap)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
+add_subdirectory(./jsoncpp ./jsoncpp)

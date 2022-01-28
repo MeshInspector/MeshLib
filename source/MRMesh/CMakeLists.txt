@@ -22,13 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1
 #include_directories(${FREETYPE_INCLUDE_DIRS})
 #find_package(Boost COMPONENTS REQUIRED )
 #find_package( TBB REQUIRED )
-add_compile_definitions(__emscripten__)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
-include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
-include_directories(${THIRDPARTY_LIB_DIR}/libzip)
-pkg_check_modules(JSONCPP jsoncpp)
-include_directories(${JSONCPP_INCLUDE_DIRS})
 
 set(EIGEN_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/eigen)
 set(PHMAP_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/parallel-hashmap)
@@ -48,9 +42,9 @@ target_include_directories(
 		zip
 		freetype
 		pthread
+		jsoncpp
 		#gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		#Boost::boost
-		#jsoncpp
 		#cholmod
 		#cpr
 		#${PYTHON_LIB}

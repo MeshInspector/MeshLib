@@ -51,6 +51,8 @@ IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
 ENDIF()
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 link_directories(${THIRDPARTY_LIB_DIR})
+link_directories(${THIRDPARTY_LIB_DIR}/lib)
+link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
 
 find_package(PkgConfig REQUIRED)
 
@@ -70,10 +72,15 @@ find_package(PkgConfig REQUIRED)
 #ENDIF()
 #include_directories(${PYTHON_INCLUDE_PATH})
 
+add_compile_definitions(__emscripten__)
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
+include_directories(${THIRDPARTY_LIB_DIR}/libzip)
 
 enable_testing()
 
@@ -91,8 +98,10 @@ enable_testing()
 #ENDIF()
 #add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s TOTAL_MEMORY=2048MB")
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
-#add_subdirectory(${PROJECT_SOURCE_DIR}/MREAlgorithms ./MREAlgorithms)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MREAlgorithms ./MREAlgorithms)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/mrealgorithmspy ./mrealgorithmspy)

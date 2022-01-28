@@ -41,4 +41,8 @@ emcmake cmake ../${MR_THIRDPARTY_DIR}
 emmake make -j `nproc` #VERBOSE=1
 cd ..
 
+cd thirdparty/wasmtbb
+EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
+cd ../..
+
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

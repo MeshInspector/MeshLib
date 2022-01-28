@@ -1,7 +1,8 @@
-#include <MRMesh/MRMesh.h>
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
+#include "MREAlgorithms/MREMeshBoolean.h"
 
 namespace MR
 {
@@ -21,6 +22,7 @@ TEST(MeshRUs, QuadraticForm)
 int main(int argc, char **argv)
 {
     MR::loadMeshDll();
+    MRE::loadMREAlgorithmsDll();
     MR::setupLoggerByDefault();
 
     // print compiler info
@@ -33,7 +35,7 @@ int main(int argc, char **argv)
 #endif
 
     std::vector<std::string> xs{"text0", "text1"};
-    fmt::format( "Test {}", fmt::join( xs, "," ) );
+    spdlog::info(fmt::format( "Test {}", fmt::join( xs, "," ) ));
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

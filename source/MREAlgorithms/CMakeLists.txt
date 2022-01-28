@@ -12,6 +12,6 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	MRMesh
 	tbb
-	spdlog
-	fmt
+	#spdlog
+	#fmt
 )

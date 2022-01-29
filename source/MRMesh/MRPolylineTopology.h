@@ -35,10 +35,16 @@ struct PolylineTopology
     size_t edgeSize() const { return edges_.size(); }
     // returns the number of undirected edges (pairs of half-edges) including lone ones
     size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    // computes the number of not-lone (valid) undirected edges
+    MRMESH_API size_t computeNotLoneUndirectedEdges() const;
     // sets the capacity of half-edges vector
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     // returns true if given edge is within valid range and not-lone
     bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
+    // given edge becomes lone after the call, so it is un-spliced from connected edges, and if it was not connected at origin or destination, then that vertex is deleted as well
+    MRMESH_API void deleteEdge( UndirectedEdgeId ue );
+    // calls deleteEdge for every set bit
+    MRMESH_API void deleteEdges( const UndirectedEdgeBitSet & es );
 
     // given two half edges do either of two:
     // 1) if a and b were from distinct rings, puts them in one ring;

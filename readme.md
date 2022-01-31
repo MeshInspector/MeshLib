@@ -47,11 +47,11 @@ This list is not full and updating each day
       - Basic set of triangulation metrics,
       - Extended set of triangulation metrics,
       - Custom triangulation metrics.
- - Delone triangulation optimization, changing triangles without changing vertices, according to Delone criterion,
+ - Delaunay triangulation optimization, changing triangles without changing vertices, according to Delaunay criterion,
  - Tunnels fixing,
  - Multiple edges detection
  - Degenerate triangles fixing,
- - Undercats fixing, via voxels, 
+ - Undercuts fixing, via voxels, 
  - Surface self-intersections fixing
    - Guaranteed fix via voxels, 
    - Fix via Relax (mesh smoothing).
@@ -116,7 +116,7 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```sh
     cd vcpkg # or add vcpkg to PATH
     <path_to_MeshLib>/thirdparty/install.bat
-    ```    
+    ```
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
 

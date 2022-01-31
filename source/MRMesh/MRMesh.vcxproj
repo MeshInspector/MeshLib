@@ -70,6 +70,7 @@
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
+    <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
@@ -291,6 +292,7 @@
     <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
+    <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDistance.cpp" />

@@ -76,6 +76,11 @@ public:
         return dims_.x;
     }
 
+    const std::vector<T> & data() const
+    {
+        return data_;
+    }
+
 private:
     std::vector<T> data_;
 };

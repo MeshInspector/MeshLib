@@ -72,7 +72,7 @@ void SetCurrentThreadName( const char * name )
 #elif defined(__APPLE__) && defined(__MACH__)
     pthread_setname_np(name);
 #else
-    pthread_setname_np( pthread_self(), name);
+    //pthread_setname_np( pthread_self(), name);
 #endif
 }
 

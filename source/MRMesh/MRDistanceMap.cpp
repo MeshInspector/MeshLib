@@ -350,7 +350,8 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOffset* offsetParameters,
-    std::vector<UndirectedEdgeId>* outClosestEdges )
+    std::vector<UndirectedEdgeId>* outClosestEdges,
+    const PixelBitSet * region )
 {
     assert( polyline.topology.isConsistentlyOriented() );
 
@@ -378,6 +379,8 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
+            if ( region && !region->test( PixelId( int( i ) ) ) )
+                continue;
             size_t x = i % params.resolution.x;
             size_t y = i / params.resolution.x;
             Vector2f p;

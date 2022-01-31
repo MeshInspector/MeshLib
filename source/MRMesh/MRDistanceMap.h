@@ -153,7 +153,8 @@ struct ContoursDistanceMapOffset
 // !note that polyline topology should be consistently oriented
 MRMESH_API DistanceMap distanceMapFromContours( const Polyline2& contours, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOffset* offsetParameters = nullptr,
-    std::vector<UndirectedEdgeId>* outClosestEdges = nullptr );
+    std::vector<UndirectedEdgeId>* outClosestEdges = nullptr,
+    const PixelBitSet * region = nullptr ); //< if pointer is valid, then only these pixels will be filled
 
 // Makes distance map and filter out pixels with large (>threshold) distance between closest points on contour in neighbor pixels
 // Converts such points back in 3d space and return

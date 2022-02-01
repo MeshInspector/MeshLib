@@ -89,7 +89,7 @@ This list is not full and updating each day
 
 [Documentation](https://meshrus.github.io/)
 
-[Create issue without github account](https://meshrus.github.io/ReportIssue/)
+[Report an issue anonymously](https://meshrus.github.io/ReportIssue/)
 
 
 # Build

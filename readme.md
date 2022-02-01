@@ -89,6 +89,8 @@ This list is not full and updating each day
 
 [Documentation](https://meshrus.github.io/)
 
+[Create issue without github account](https://meshrus.github.io/ReportIssue/)
+
 
 # Build
 ## Build with VS2019 on Windows

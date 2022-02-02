@@ -7,6 +7,11 @@
 #include <tl/expected.hpp>
 #include <string>
 
+#ifndef __EMSCRIPTEN__
+#include <libpng16/png.h>
+#include <turbojpeg.h>
+#endif
+
 namespace MR
 {
 namespace ImageSave

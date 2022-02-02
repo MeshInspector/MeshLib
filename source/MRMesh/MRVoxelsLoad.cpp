@@ -217,8 +217,23 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     if ( data.voxelSize[0] == 0.0f )
     {
         const double* spacing = gimage.GetSpacing();
-        data.voxelSize.x = float( spacing[0] / 1000 );
-        data.voxelSize.y = float( spacing[1] / 1000 );
+        if ( spacing[0] == 1 && spacing[1] == 1 && spacing[2] == 1 )
+        {
+            // gdcm was unable to find the spacing, so find it by ourselves
+            if( ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
+            {
+                const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::PixelSpacing::GetTag() );
+                gdcm::Keywords::PixelSpacing desc;
+                desc.SetFromDataElement( de );
+                data.voxelSize.x = float( desc.GetValue(0) / 1000 );
+                data.voxelSize.y = float( desc.GetValue(1) / 1000 );
+            }
+        }
+        else 
+        {
+            data.voxelSize.x = float( spacing[0] / 1000 );
+            data.voxelSize.y = float( spacing[1] / 1000 );
+        }
         if ( data.voxelSize.z == 0.0f )
             data.voxelSize.z = data.voxelSize.x;
     }

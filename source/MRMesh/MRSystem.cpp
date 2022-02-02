@@ -16,7 +16,9 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else
-//#include <cpuid.h>
+#ifndef __EMSCRIPTEN__
+#include <cpuid.h>
+#endif
 #endif
 #include <pthread.h>
 #include <libgen.h>
@@ -71,7 +73,9 @@ void SetCurrentThreadName( const char * name )
 #elif defined(__APPLE__) && defined(__MACH__)
     pthread_setname_np(name);
 #else
-    //pthread_setname_np( pthread_self(), name);
+#ifndef __EMSCRIPTEN__
+    pthread_setname_np( pthread_self(), name);
+#endif
 #endif
 }
 

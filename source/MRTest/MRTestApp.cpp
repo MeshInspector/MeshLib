@@ -4,6 +4,12 @@
 #include "MRMesh/MRQuadraticForm.h"
 #include "MREAlgorithms/MREMeshBoolean.h"
 
+#ifndef __EMSCRIPTEN__
+#include "MRMesh/MRPython.h"
+#include "mrmeshpy/MRLoadModule.h"
+#include "mrealgorithmspy/MRLoadModule.h"
+#endif
+
 namespace MR
 {
 
@@ -23,6 +29,12 @@ int main(int argc, char **argv)
 {
     MR::loadMeshDll();
     MRE::loadMREAlgorithmsDll();
+
+#ifndef __EMSCRIPTEN__
+    MR::loadMRMeshPyModule();
+    MRE::loadMREAlgorithmsPyModule();
+#endif
+
     MR::setupLoggerByDefault();
 
     // print compiler info
@@ -32,6 +44,43 @@ int main(int argc, char **argv)
     spdlog::info( "GCC {}", __VERSION__ );
 #else
     spdlog::info( "MSVC {}", _MSC_FULL_VER );
+#endif
+
+#ifndef __EMSCRIPTEN__
+    //Test python mrmeshpy
+    {
+        MR::EmbeddedPython::init();
+        auto str = "import mrmeshpy\n"
+            "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
+            "funcs = dir( mrmeshpy )\n"
+            "for f in funcs :\n"
+            " if not f.startswith( '_' ) :\n"
+            "  print( \"mrmeshpy.\" + f )\n"
+            "print( \"\\n\" )";
+
+        if ( !MR::EmbeddedPython::runString( str ) )
+            return 1;
+    }
+    //Test python mrealgorithmspy
+    {
+        auto str = "import mrealgorithmspy\n"
+            "print( \"List of python module functions available in mrealgorithmspy:\\n\" )\n"
+            "funcs = dir( mrealgorithmspy )\n"
+            "for f in funcs :\n"
+            " if not f.startswith( '_' ) :\n"
+            "  print( \"mrealgorithmspy.\" + f )\n"
+            "print( \"\\n\" )";
+
+        if ( !MR::EmbeddedPython::runString( str ) )
+            return 1;
+    }
+
+    if ( StderrPyRedirector::getNumWritten() > 0 )
+    {
+        spdlog::error( "Some errors reported from python" );
+        return 1;
+    }
+
 #endif
 
     std::vector<std::string> xs{"text0", "text1"};

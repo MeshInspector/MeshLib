@@ -3,6 +3,10 @@
 #include "MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 
+#ifndef __EMSCRIPTEN__
+#include <fmt/chrono.h>
+#endif
+
 namespace
 {
 void tryClearDirectory( const std::filesystem::path& dir )

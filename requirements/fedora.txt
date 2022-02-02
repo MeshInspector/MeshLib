@@ -16,7 +16,6 @@ pkg-config
 podofo-devel
 python3.8
 spdlog-devel
-suitesparse-devel
 turbojpeg-devel
 tbb-devel
 time

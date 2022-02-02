@@ -1,5 +1,6 @@
 #include "MRPolylineTopology.h"
 #include "MRTimer.h"
+#include "MRGTest.h"
 
 namespace MR
 {
@@ -69,6 +70,41 @@ EdgeId PolylineTopology::lastNotLoneEdge() const
             return i;
     }
     return {};
+}
+
+size_t PolylineTopology::computeNotLoneUndirectedEdges() const
+{
+    MR_TIMER;
+    size_t res = 0;
+    for ( EdgeId i{ 0 }; i < (int)edges_.size(); ++++i ) // one increment returns sym-edge
+        if ( !isLoneEdge( i ) )
+            ++res;
+    return res;
+}
+
+void PolylineTopology::deleteEdge( UndirectedEdgeId ue )
+{
+    assert( ue.valid() );
+    const EdgeId e = ue;
+
+    if ( next( e ) != e )
+        splice( next( e ), e );
+    else
+        setOrg( e, {} );
+
+    if ( next( e.sym() ) != e.sym() )
+        splice( next( e.sym() ), e.sym() );
+    else
+        setOrg( e.sym(), {} );
+
+    assert( isLoneEdge( e ) );
+}
+
+void PolylineTopology::deleteEdges( const UndirectedEdgeBitSet & es )
+{
+    MR_TIMER
+    for ( auto ue : es )
+        deleteEdge( ue );
 }
 
 void PolylineTopology::splice( EdgeId a, EdgeId b )
@@ -309,6 +345,27 @@ bool PolylineTopology::checkValidity() const
     CHECK( numValidVerts_ == realValidVerts );
 
     return true;
+}
+
+TEST( MRMesh, PolylineTopology )
+{
+    PolylineTopology t;
+    VertId vs[4] = { 0_v, 1_v, 2_v, 0_v };
+    t.makePolyline( vs, 4 );
+    EXPECT_EQ( t.numValidVerts(), 3 );
+    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 3 );
+
+    t.deleteEdge( 0_ue );
+    EXPECT_EQ( t.numValidVerts(), 3 );
+    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 2 );
+
+    t.deleteEdge( 1_ue );
+    EXPECT_EQ( t.numValidVerts(), 2 );
+    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 1 );
+
+    t.deleteEdge( 2_ue );
+    EXPECT_EQ( t.numValidVerts(), 0 );
+    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 0 );
 }
 
 } //namespace MR

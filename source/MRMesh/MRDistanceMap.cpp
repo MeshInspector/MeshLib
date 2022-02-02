@@ -20,28 +20,33 @@ namespace MR
 
 static constexpr float NOT_VALID_VALUE = std::numeric_limits<float>::lowest();
 
-DistanceMap::DistanceMap( const MR::Matrix<float>& m ) : m_( m ) {}
+DistanceMap::DistanceMap( const MR::Matrix<float>& m ) 
+    : RectIndexer( m ) 
+    , data_( m.data() )
+{
+}
 
 DistanceMap::DistanceMap( size_t resX, size_t resY )
+    : RectIndexer( { (int)resX, (int)resY } )
+    , data_( size(), NOT_VALID_VALUE )
 {
-    m_ = Matrix<float>( resY, resX );
     invalidateAll();
 }
 
 bool DistanceMap::isValid( size_t x, size_t y ) const
 {
-    return m_( y, x ) != NOT_VALID_VALUE;
+    return data_[ toIndex( { int( x ), int( y ) } ) ] != NOT_VALID_VALUE;
 }
 
 bool DistanceMap::isValid( size_t i ) const
 {
-    return m_( i ) != NOT_VALID_VALUE;
+    return data_[i] != NOT_VALID_VALUE;
 }
 
 std::optional<float> DistanceMap::get( size_t x, size_t y ) const
 {
     if ( isValid( x, y ) )
-        return m_( y, x );
+        return data_[ toIndex( { int( x ), int( y ) } ) ];
     else
         return std::nullopt;
 }
@@ -49,33 +54,35 @@ std::optional<float> DistanceMap::get( size_t x, size_t y ) const
 std::optional<float> DistanceMap::get( size_t i ) const
 {
     if ( isValid( i ) )
-        return m_( i );
+        return data_[i];
     else
         return std::nullopt;
 }
 
 float& DistanceMap::getValue( size_t i )
 {
-    assert( m_( i ) != NOT_VALID_VALUE );
-    return m_( i );
+    assert( data_[i] != NOT_VALID_VALUE );
+    return data_[i];
 }
 
 const float& DistanceMap::getValue( size_t i ) const
 {
-    assert( m_( i ) != NOT_VALID_VALUE );
-    return m_( i );
+    assert( data_[i] != NOT_VALID_VALUE );
+    return data_[i];
 }
 
 float& DistanceMap::getValue( size_t x, size_t y )
 {
-    assert( m_( y, x ) != NOT_VALID_VALUE );
-    return m_( y, x );
+    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
+    assert( res != NOT_VALID_VALUE );
+    return res;
 }
 
 const float& DistanceMap::getValue( size_t x, size_t y ) const
 {
-    assert( m_( y, x ) != NOT_VALID_VALUE );
-    return m_( y, x );
+    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
+    assert( res != NOT_VALID_VALUE );
+    return res;
 }
 
 std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
@@ -150,27 +157,34 @@ std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
 
 void DistanceMap::set( size_t x, size_t y, float val )
 {
-    m_( y, x ) = val;
+    data_[ toIndex( { int( x ), int( y ) } ) ] = val;
 }
 
 void DistanceMap::set( size_t i, float val )
 {
-    m_( i ) = val;
+    data_[i] = val;
 }
 
 void DistanceMap::unset( size_t x, size_t y )
 {
-    m_( y, x ) = NOT_VALID_VALUE;
+    data_[ toIndex( { int( x ), int( y ) } ) ] = NOT_VALID_VALUE;
 }
 
 void DistanceMap::unset( size_t i )
 {
-    m_( i ) = NOT_VALID_VALUE;
+    data_[i] = NOT_VALID_VALUE;
 }
 
 void DistanceMap::invalidateAll()
 {
-    m_.fill( NOT_VALID_VALUE );
+    for( auto& elem : data_ )
+        elem = NOT_VALID_VALUE;
+}
+
+void DistanceMap::clear()
+{
+    RectIndexer::resize( {0, 0} );
+    data_.clear();
 }
 
 std::optional<Vector3f> DistanceMap::unproject( size_t x, size_t y, const DistanceMapToWorld& toWorldStruct ) const
@@ -350,7 +364,8 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOffset* offsetParameters,
-    std::vector<UndirectedEdgeId>* outClosestEdges )
+    std::vector<UndirectedEdgeId>* outClosestEdges,
+    const PixelBitSet * region )
 {
     assert( polyline.topology.isConsistentlyOriented() );
 
@@ -378,6 +393,8 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
+            if ( region && !region->test( PixelId( int( i ) ) ) )
+                continue;
             size_t x = i % params.resolution.x;
             size_t y = i / params.resolution.x;
             Vector2f p;
@@ -738,15 +755,9 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSiz
 
 void DistanceMap::negate()
 {
-    for( auto iX = 0; iX < resX(); iX++ )
-    {
-        for( auto iY = 0; iY < resY(); iY++ )
-        {
-            auto & v = m_( iY, iX );
-            if ( v != NOT_VALID_VALUE )
-                v = -v;
-        }
-    }
+    for( auto & v : data_ )
+        if ( v != NOT_VALID_VALUE )
+            v = -v;
 }
 
 // boolean operators
@@ -1045,15 +1056,15 @@ std::vector<std::pair<size_t, size_t>>  DistanceMap::getLocalMaximums() const
             {
                 continue;
             }
-            const auto& val = m_( i );
-            if ( ( m_( i - 1 - resX() ) < val ) &&
-                ( m_( i - 1 ) < val ) &&
-                ( m_( i - 1 + resX() ) < val ) &&
-                ( m_( i - resX() ) < val ) &&
-                ( m_( i + resX() ) < val ) &&
-                ( m_( i + 1 - resX() ) < val ) &&
-                ( m_( i + 1 ) < val ) &&
-                ( m_( i + 1 + resX() ) < val ) )
+            const auto& val = data_[i];
+            if ( ( data_[i - 1 - resX()] < val ) &&
+                 ( data_[i - 1] < val ) &&
+                 ( data_[i - 1 + resX()] < val ) &&
+                 ( data_[i - resX()] < val ) &&
+                 ( data_[i + resX()] < val ) &&
+                 ( data_[i + 1 - resX()] < val ) &&
+                 ( data_[i + 1] < val ) &&
+                 ( data_[i + 1 + resX()] < val ) )
             {
                 localAcc.push_back( { i % resX(), i / resX() } );
             }

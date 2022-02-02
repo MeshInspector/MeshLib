@@ -7,6 +7,10 @@ project (mrmeshnumpy CXX)
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
+if(APPLE)
+	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+endif(APPLE)
+
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")

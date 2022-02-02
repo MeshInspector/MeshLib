@@ -1,28 +1,28 @@
 #pragma once
+
+#include "MRRectIndexer.h"
 #include <vector>
 
 namespace MR
 {
 
-// simple 2d container with linear vector implementation
+// Row-major matrix with T values
 template <typename T>
-struct Matrix
+struct Matrix : RectIndexer
 {
 public:
     using ValueType = T;
     constexpr Matrix() noexcept = default;
 
-    Matrix( size_t numRows, size_t numCols )
+    Matrix( size_t numRows, size_t numCols ) : RectIndexer( { (int)numCols, (int)numRows } )
     {
-        data_.resize( size_t(numCols) * numRows );
-        rows_ = numRows;
-        cols_ = numCols;
+        data_.resize( size_ );
     }
 
     // main access method
-    constexpr T& operator ()( size_t row, size_t col ) noexcept { return data_[row * size_t(cols_) + col]; }
+    constexpr T& operator ()( size_t row, size_t col ) noexcept { return data_[toIndex( { (int)col, (int)row } )]; }
     constexpr T& operator ()( size_t i ) noexcept { return data_[i]; }
-    constexpr const T& operator ()( size_t row, size_t col ) const noexcept { return data_[row * size_t(cols_) + col]; }
+    constexpr const T& operator ()( size_t row, size_t col ) const noexcept { return data_[toIndex( { (int)col, (int)row } )]; }
     constexpr const T& operator ()( size_t i ) const noexcept { return data_[i]; }
 
     constexpr Matrix getSubMatrix( size_t startRow, size_t nRow, size_t startCol, size_t nCol )
@@ -32,19 +32,19 @@ public:
         {
             for( size_t c = 0; c < nCol; c++ )
             {
-                res(r, c) = data_[(startRow + r) * size_t(cols_) + startCol + c];
+                res(r, c) = data_[(startRow + r) * size_t(dims_.x) + startCol + c];
             }
         }
         return res;
     }
 
     // computes transposed matrix
-    constexpr Matrix transposed() const noexcept
+    constexpr Matrix transposed() const
     {
-        Matrix res( cols_, rows_ );
-        for( size_t r = 0; r < rows_; r++ )
+        Matrix res( dims_.x, dims_.y );
+        for( size_t r = 0; r < dims_.y; r++ )
         {
-            for( size_t c = 0; c < cols_; c++ )
+            for( size_t c = 0; c < dims_.x; c++ )
             {
                 res(c, r) = data_[r][c];
             }
@@ -62,27 +62,26 @@ public:
 
     void clear()
     {
+        RectIndexer::resize( {0, 0} );
         data_.clear();
-        rows_ = 0, cols_ = 0;
     }
 
     size_t getRowsNum() const
     {
-        return rows_;
+        return dims_.y;
     }
 
     size_t getColsNum() const
     {
-        return cols_;
+        return dims_.x;
     }
 
-    size_t size() const
+    const std::vector<T> & data() const
     {
-        return rows_ * cols_;
+        return data_;
     }
 
 private:
-    size_t rows_ = 0, cols_ = 0;
     std::vector<T> data_;
 };
 

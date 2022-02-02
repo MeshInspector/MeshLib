@@ -22,7 +22,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/lib/)
 # set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
 # set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
-# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -target arm64-apple-macos12 -std=c++20-stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
 #ELSE()
 # set(PYTHON_LIB python3.8)
 # # print compile time of each translation unit,

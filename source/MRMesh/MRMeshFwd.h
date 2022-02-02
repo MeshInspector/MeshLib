@@ -23,7 +23,7 @@ class EdgeTag;
 class UndirectedEdgeTag;
 class FaceTag;
 class VertTag;
-class GeomTag;
+class PixelTag;
 class VoxelTag;
 
 template <typename T> class Id;
@@ -32,7 +32,7 @@ using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
 using FaceId = Id<FaceTag>;
 using VertId = Id<VertTag>;
-using GeomId = Id<GeomTag>;
+using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 class ViewportId;
 class ViewportMask;
@@ -49,7 +49,7 @@ using FaceBitSet = TaggedBitSet<FaceTag>;
 using VertBitSet = TaggedBitSet<VertTag>;
 using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
-using GeomBitSet = TaggedBitSet<GeomTag>;
+using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
 
 template <typename T> class SetBitIteratorT;

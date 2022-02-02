@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMatrix.h"
+#include "MRRectIndexer.h"
 #include "MRBitSet.h"
 #include "MRAffineXf3.h"
 #include "MRDistanceMapParams.h"
@@ -14,7 +14,7 @@ namespace MR
 
 // this class allows to store distances from the plane in particular pixels
 // validVerts keeps only pixels with mesh-intersecting rays from them
-class DistanceMap
+class DistanceMap : public RectIndexer
 {
 public:
     DistanceMap() = default;
@@ -93,7 +93,7 @@ public:
     // invalidates all elements
     MRMESH_API void invalidateAll();
     // clears data, sets resolutions to zero
-    void clear() { m_.clear(); }
+    MRMESH_API void clear();
 
     // returns new derivatives map without directions
     MRMESH_API DistanceMap getDerivativeMap() const;
@@ -104,12 +104,12 @@ public:
     MRMESH_API std::vector< std::pair<size_t, size_t> > getLocalMaximums() const;
 
     //returns X resolution
-    size_t resX() const { return m_.getColsNum(); }
+    size_t resX() const { return dims_.x; }
     //returns Y resolution
-    size_t resY() const { return m_.getRowsNum(); }
+    size_t resY() const { return dims_.y; }
 
     //returns the number of pixels
-    size_t numPoints() const { return m_.getColsNum() * m_.getRowsNum(); }
+    size_t numPoints() const { return size(); }
 
     // finds minimum and maximum values
     // returns min_float and max_float if all values are invalid
@@ -122,7 +122,7 @@ public:
     MRMESH_API std::pair<size_t, size_t> getMaxIndex() const;
 
 private:
-    MR::Matrix<float> m_;
+    std::vector<float> data_;
 };
 
 // fill another distance map pair with gradients across X and Y axes of the argument map
@@ -153,7 +153,8 @@ struct ContoursDistanceMapOffset
 // !note that polyline topology should be consistently oriented
 MRMESH_API DistanceMap distanceMapFromContours( const Polyline2& contours, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOffset* offsetParameters = nullptr,
-    std::vector<UndirectedEdgeId>* outClosestEdges = nullptr );
+    std::vector<UndirectedEdgeId>* outClosestEdges = nullptr,
+    const PixelBitSet * region = nullptr ); //< if pointer is valid, then only these pixels will be filled
 
 // Makes distance map and filter out pixels with large (>threshold) distance between closest points on contour in neighbor pixels
 // Converts such points back in 3d space and return

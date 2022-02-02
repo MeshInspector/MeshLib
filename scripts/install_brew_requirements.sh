@@ -15,45 +15,13 @@ function checkPackage {
   MISSED_PACKAGES="${MISSED_PACKAGES} ${1}"
  fi
 }
-checkPackage automake
-checkPackage cmake
-checkPackage llvm@11
-checkPackage wget
-checkPackage zip
-checkPackage libzip
-checkPackage unzip
-checkPackage cpr
-checkPackage openvdb
-checkPackage openblas
-checkPackage tbb
-checkPackage ilmbase
-checkPackage openexr
-checkPackage boost
-checkPackage lz4
-checkPackage snappy
 
-checkPackage suite-sparse
-#https://stackoverflow.com/questions/60942254/i-cant-get-gtkmm-to-compile-on-mac-using-cmake
-checkPackage gtkmm3
-checkPackage gtk+3
-checkPackage openssl@3
-checkPackage libzip
-checkPackage zlib
-checkPackage spdlog
-checkPackage tinyxml
-checkPackage googletest
-checkPackage fmt
-checkPackage gdcm
-checkPackage eigen
-checkPackage tinyxml2
-checkPackage glfw
-checkPackage c-blosc
-checkPackage podofo
-checkPackage jsoncpp	
-checkPackage llvm
-checkPackage libpng
-checkPackage pybind11
-checkPackage libsigc++
+BASEDIR=$(dirname "$0")
+requirements_file="$BASEDIR"/../requirements/macos.txt
+for req in `cat $requirements_file`
+do
+  checkPackage "${req}"
+done
 
 if $ALL_REQUIRED_PACKAGES_INSTALLED; then
  printf "\rAll required packages are already installed!                    \n"
@@ -65,18 +33,11 @@ printf "${MISSED_PACKAGES}\n"
 
 brew install ${MISSED_PACKAGES}
 
-#export PATH=$(brew --prefix openssl)/bin:$PATH in ~/.bash_profile
-
-#check python3 pip
-PIP_OK=$(python3 -m pip --vesrion | grep "No module named pip")
-if [ "" != "$PIP_OK" ]; then
- printf "no pip for python3 found. installing...\n"
- wget https://bootstrap.pypa.io/get-pip.py
- python3 get-pip.py
- rm get-pip.py
-fi
+# check and upgrade python3 pip
+python3 -m ensurepip --upgrade
+python3 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3 -m pip install -r python_requirements.txt
+python3 -m pip install -r requirements/python.txt
 
 exit 0

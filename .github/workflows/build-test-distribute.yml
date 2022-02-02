@@ -185,6 +185,52 @@ jobs:
         run: |
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
+  macos-build-test:
+    timeout-minutes: 40
+    runs-on: [self-hosted, macOS, x64]
+    strategy:
+      matrix:
+        config: [Release]
+        compiler: [Сlang]
+        include:
+          - compiler: Сlang
+            cxx-compiler: /usr/bin/clang++
+            c-compiler: /usr/bin/clang
+
+    steps:
+      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ./scripts/runner_install_thirdparty.sh
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
     needs: [windows-build-test, ubuntu-build-test, fedora-build-test]

@@ -21,5 +21,4 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/SparseCore>
 #include <Eigen/Sparse>
-#include <Eigen/CholmodSupport>
 #pragma warning(pop)

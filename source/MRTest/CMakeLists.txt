@@ -6,9 +6,7 @@ project (MRTest CXX)
 
 set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
-file(GLOB SOURCES "*.cpp")
-
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
 #IF(NOT ${distro} STREQUAL "Fedora Linux")
 # target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -19,11 +17,11 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 #         mrmeshpy
 # )
 #ELSE()
- target_link_libraries(${PROJECT_NAME} PRIVATE
+ target_link_libraries(${PROJECT_NAME} PRIVATE -Wl,--whole-archive
  	 	 #mrealgorithmspy
          gtest
 	 MREAlgorithms
-         MRMesh
+         MRMesh -Wl,--no-whole-archive
          #fmt
          #spdlog
          #mrmeshpy

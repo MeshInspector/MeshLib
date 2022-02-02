@@ -9,7 +9,7 @@
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
 #include <spdlog/spdlog.h>
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
 

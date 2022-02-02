@@ -5,7 +5,7 @@
 #include "MRUVSphere.h"
 #include "MRBitSetParallelFor.h"
 #include "MRGTest.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

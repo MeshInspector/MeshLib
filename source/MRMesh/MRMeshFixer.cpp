@@ -4,8 +4,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
-#include <tbb/enumerable_thread_specific.h>
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

@@ -3,8 +3,7 @@
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRMesh/MRGTest.h"
-#include <tbb/parallel_reduce.h>
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

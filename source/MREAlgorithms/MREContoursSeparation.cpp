@@ -4,7 +4,7 @@
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRMeshComponents.h"
 #include "MRMesh/MRTimer.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 
 namespace MRE

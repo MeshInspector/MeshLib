@@ -1,7 +1,7 @@
 #include "MRFreeFormDeformer.h"
 #include "MRMesh.h"
 #include "MRBox.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 // unknown pragmas
 #pragma warning(disable:4068)

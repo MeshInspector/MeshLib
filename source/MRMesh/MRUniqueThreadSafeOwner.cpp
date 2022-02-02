@@ -2,7 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
-#include <tbb/task_arena.h>
+#include "MRPch/MRTBB.h"
 #include <cassert>
 
 namespace MR

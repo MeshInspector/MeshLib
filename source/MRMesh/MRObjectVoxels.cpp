@@ -12,7 +12,7 @@
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
-#include <tbb/parallel_reduce.h>
+#include "MRPch/MRTBB.h"
 #include <filesystem>
 
 namespace MR

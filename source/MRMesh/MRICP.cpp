@@ -6,7 +6,7 @@
 #include "MRBox.h"
 #include "MRQuaternion.h"
 #include "MRGTest.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 #include <numeric>
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;

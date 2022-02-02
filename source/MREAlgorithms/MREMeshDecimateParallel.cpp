@@ -5,7 +5,7 @@
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 namespace MRE
 {

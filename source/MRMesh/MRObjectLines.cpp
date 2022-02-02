@@ -6,7 +6,7 @@
 #include "MRMeshTexture.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 #include <filesystem>
 
 namespace MR

@@ -5,8 +5,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRPolyline2.h"
 #include "MRMesh/MRTimer.h"
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_reduce.h>
+#include "MRPch/MRTBB.h"
 #include <queue>
 
 namespace MRE

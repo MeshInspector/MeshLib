@@ -2,6 +2,12 @@
 
 // this is to include all important for us Intel Threading Building Blocks (TBB) parts in a precompiled header and suppress warnings there
 
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-volatile"
+#pragma clang diagnostic ignored "-W#warnings"
+#endif
+
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 #pragma warning(push)
 #pragma warning(disable: 4464) //relative include path contains '..'
@@ -15,3 +21,7 @@
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
 #pragma warning(pop)
+
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic pop
+#endif

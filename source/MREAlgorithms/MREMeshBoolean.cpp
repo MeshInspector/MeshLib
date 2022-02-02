@@ -9,7 +9,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRGTest.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 
 namespace MRE
 {

@@ -10,7 +10,7 @@
 #include "MRRegularGridMesh.h"
 #include "MRPolyline2Project.h"
 #include "MRBitSetParallelFor.h"
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <vector>
 

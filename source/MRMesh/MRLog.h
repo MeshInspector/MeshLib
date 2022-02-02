@@ -1,14 +1,8 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
-
-#pragma warning(push)
-#pragma warning(disable:4275)
-#pragma warning(disable:4251)
-#pragma warning(disable:4273)
-#include <spdlog/spdlog.h>
-#pragma warning(pop)
 
 namespace MR
 {

@@ -8,7 +8,7 @@
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>

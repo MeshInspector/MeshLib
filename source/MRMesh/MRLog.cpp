@@ -1,22 +1,7 @@
 #include "MRLog.h"
 #include "MRRestoringStreamsSink.h"
 #include "MRSystem.h"
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-
-#include <spdlog/sinks/basic_file_sink.h>
-
-#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-#include <spdlog/sinks/daily_file_sink.h>
-#include <spdlog/fmt/chrono.h>
-
-#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
-#pragma clang diagnostic pop
-#endif
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {

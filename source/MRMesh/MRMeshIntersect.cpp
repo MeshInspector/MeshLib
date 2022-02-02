@@ -9,7 +9,7 @@
 #include "MRLine3.h"
 #include "MRUVSphere.h"
 #include "MRGTest.h"
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRMeshLoad.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshSave.h"

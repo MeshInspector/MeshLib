@@ -1,15 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
-#pragma warning(push)
-#pragma warning(disable:4275)
-#pragma warning(disable:4251)
-#pragma warning(disable:4273)
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/base_sink.h>
-#pragma warning(pop)
-
+#include "MRPch/MRSpdlog.h"
 #include <mutex>
 #include <streambuf>
 #include <string>

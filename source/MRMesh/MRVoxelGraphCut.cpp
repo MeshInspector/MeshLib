@@ -5,7 +5,7 @@
 #include "MRSimpleVolume.h"
 #include "MRHeap.h"
 #include "MRVolumeIndexer.h"
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR

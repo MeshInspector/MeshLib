@@ -7,24 +7,37 @@ dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/build_source_${dt}.log"
 printf "Project build script started.\nYou could find output in ${logfile}\n"
 
-#if [[ $OSTYPE != 'darwin'* ]]; then
-#  source /etc/os-release
-#  if [ "${NAME}" == "Fedora Linux" ]; then
-#   if [ "${CMAKE_C_COMPILER}" = "" ]; then
-#    CMAKE_C_COMPILER=/usr/bin/gcc
-#   fi
-#   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-#    CMAKE_CXX_COMPILER=/usr/bin/g++
-#   fi
-#  else
-#   if [ "${CMAKE_C_COMPILER}" = "" ]; then
-#    CMAKE_C_COMPILER=/usr/bin/gcc-10
-#   fi
-#   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-#    CMAKE_CXX_COMPILER=/usr/bin/g++-10
-#   fi
-#  fi
-#fi
+if [[ $OSTYPE != 'darwin'* ]]; then
+  source /etc/os-release
+  if [ "${NAME}" == "Fedora Linux" ]; then
+   if [ "${CMAKE_C_COMPILER}" = "" ]; then
+    CMAKE_C_COMPILER=/usr/bin/gcc
+   fi
+   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+    CMAKE_CXX_COMPILER=/usr/bin/g++
+   fi
+  else
+   if [ "${CMAKE_C_COMPILER}" = "" ]; then
+    CMAKE_C_COMPILER=/usr/bin/gcc-10
+   fi
+   if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+    CMAKE_CXX_COMPILER=/usr/bin/g++-10
+   fi
+  fi
+fi
+
+if [ "${NAME}" == "Ubuntu" ]; then
+ if [ ! -n "$MR_EMSCRIPTEN" ]; then
+  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
+  echo;
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+   MR_EMSCRIPTEN="ON"
+  else
+   MR_EMSCRIPTEN="OFF"
+  fi
+  printf "Emscripten ${MR_EMSCRIPTEN}\n"
+ fi  
+fi
 
 if [ ! -n "$MESHRUS_BUILD_RELEASE" ]; then
  read -t 5 -p "Build MeshLib Release? Press (n) in 5 seconds to cancel (Y/n)" -rsn 1
@@ -64,12 +77,20 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
   mkdir -p Release
  fi
  cd Release
- #if [[ $OSTYPE == 'darwin'* ]]; then
- #   cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
- #else
-    emcmake cmake ../.. -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
- #fi
- emmake make -j `nproc` | tee ${logfile}
+ if [[ $OSTYPE == 'darwin'* ]]; then
+    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
+ else
+    if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+      cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    else
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
+    fi
+ fi 
+ if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+    cmake --build . -j `nproc` | tee ${logfile}
+ else
+    emmake make -j `nproc` | tee ${logfile}
+ fi
  cd ..
 fi
 
@@ -79,12 +100,20 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
   mkdir Debug
  fi
  cd Debug
- #if [[ $OSTYPE == 'darwin'* ]]; then
- #   cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
- #else
-    emcmake cmake ../.. -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
- #fi
- emmake make -j `nproc` | tee ${logfile}
+ if [[ $OSTYPE == 'darwin'* ]]; then
+    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
+ else
+    if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+      cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    else
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
+    fi
+ fi
+ if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+    cmake --build . -j `nproc` | tee ${logfile}
+ else
+    emmake make -j `nproc` | tee ${logfile}
+ fi
  cd ..
 fi
 

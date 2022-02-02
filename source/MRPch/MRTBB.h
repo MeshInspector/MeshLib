@@ -5,6 +5,7 @@
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-volatile"
+#pragma clang diagnostic ignored "-Wpedantic"
 #pragma clang diagnostic ignored "-W#warnings"
 #endif
 

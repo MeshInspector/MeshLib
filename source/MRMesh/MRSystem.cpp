@@ -12,7 +12,7 @@
 
 #else
 
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else

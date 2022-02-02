@@ -122,7 +122,11 @@ std::filesystem::path GetResourcesDirectory()
     // so all resources are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
+    #ifdef __APPLE__
+    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
+    #else
     return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
+    #endif
 #endif
 }
 
@@ -136,7 +140,11 @@ std::filesystem::path GetFontsDirectory()
     // so all fonts are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
+    #ifdef __APPLE__
+    return GetResourcesDirectory() / "fonts/";
+    #else
     return "/usr/local/share/fonts/";
+    #endif
 #endif
 }
 
@@ -150,7 +158,11 @@ std::filesystem::path GetLibsDirectory()
     // so all libs are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
+    #ifdef __APPLE__
+    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
+    #else
     return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+    #endif
 #endif
 }
 

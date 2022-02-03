@@ -344,7 +344,12 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
 
     sortByOrder( files, zOrder );
     if ( zOrder.size() > 1 )
+    {
         voxelSize.z = float( ( zOrder[1].imagePos - zOrder[0].imagePos ).length() / 1000.0 );
+        // if slices go in descending z-order then reverse them
+        if ( zOrder[1].imagePos.z < zOrder[0].imagePos.z )
+            std::reverse( files.begin(), files.end() );
+    }
 }
 
 std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,

@@ -23,6 +23,7 @@
     <ClInclude Include="MRBase64.h" />
     <ClInclude Include="MRBestFitQuadric.h" />
     <ClInclude Include="MRChangeMeshAction.h" />
+    <ClInclude Include="MRChangeNameAction.h" />
     <ClInclude Include="MRChangeSceneObjectsOrder.h" />
     <ClInclude Include="MRChangeSelectionAction.h" />
     <ClInclude Include="MRChangeObjectAction.h" />

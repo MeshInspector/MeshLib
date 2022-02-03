@@ -675,6 +675,9 @@
     <ClInclude Include="MRRectIndexer.h">
       <Filter>Source Files\DistanceMap</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeNameAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

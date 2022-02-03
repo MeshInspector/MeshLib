@@ -86,7 +86,7 @@ IF(MR_EMSCRIPTEN)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
   include_directories(${THIRDPARTY_LIB_DIR}/libzip)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s TOTAL_MEMORY=2048MB")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
 ENDIF() # MR_EMSCRIPTEN
 
 enable_testing()

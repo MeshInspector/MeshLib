@@ -8,22 +8,33 @@ add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
 IF(NOT ${distro} STREQUAL "Fedora Linux")
  target_link_libraries(${PROJECT_NAME} PRIVATE
-	 	 mrealgorithmspy
-	 	 MREAlgorithms
+         mrealgorithmspy
+         MREAlgorithms
          MRMesh
          spdlog
          mrmeshpy
  )
 ELSE()
- target_link_libraries(${PROJECT_NAME} PRIVATE
-	 	 mrealgorithmspy
-	 	 MREAlgorithms
-         MRMesh
-         fmt
-         gtest
-         spdlog
-         mrmeshpy
- )
+  IF (NOT MR_EMSCRIPTEN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        mrealgorithmspy
+        MREAlgorithms
+        MRMesh
+        fmt
+        gtest
+        spdlog
+        mrmeshpy
+    )
+  ELSE()
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        gtest
+        -Wl,--whole-archive
+        MREAlgorithms
+        MRMesh
+        -Wl,--no-whole-archive
+    )    
+  ENDIF()    
 ENDIF()
 
 add_test(NAME    ${PROJECT_NAME}

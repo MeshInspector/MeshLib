@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRFloatGrid.h"
 #include "MRVector3.h"
 #include "MRBitSet.h"
@@ -50,3 +51,4 @@ void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 }
 
 }
+#endif

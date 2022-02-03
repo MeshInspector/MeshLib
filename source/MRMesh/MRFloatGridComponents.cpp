@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRFloatGridComponents.h"
 #include "MRUnionFind.h"
 #include "MRFloatGrid.h"
@@ -72,3 +73,4 @@ std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue
 
 }
 }
+#endif

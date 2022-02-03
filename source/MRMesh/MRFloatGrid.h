@@ -1,5 +1,5 @@
 #pragma once
-
+#ifndef __EMSCRIPTEN__
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 
 #include "MRMeshFwd.h"
@@ -32,3 +32,4 @@ MRMESH_API FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelSca
 MRMESH_API void setValue( FloatGrid & grid, const VoxelBitSet& region, float value );
 
 }
+#endif

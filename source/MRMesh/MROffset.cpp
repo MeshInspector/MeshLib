@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MROffset.h"
 #include "MRMesh.h"
 #include "MRBox.h"
@@ -68,3 +69,4 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
 }
 
 }
+#endif

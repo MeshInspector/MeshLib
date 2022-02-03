@@ -7,6 +7,7 @@
     <ClInclude Include="MRJson.h" />
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MRTBB.h" />
+    <ClInclude Include="MRSpdlog.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

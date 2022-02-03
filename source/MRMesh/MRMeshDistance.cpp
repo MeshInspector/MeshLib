@@ -9,7 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRGTest.h"
-#include <tbb/enumerable_thread_specific.h>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

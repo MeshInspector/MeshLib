@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "exports.h"
 #include "MRMesh/MROffset.h"
 
@@ -10,3 +11,4 @@ using namespace MR;
 MREALGORITHMS_API Mesh partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 }
+#endif

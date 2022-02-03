@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"
@@ -63,3 +64,4 @@ MRMESH_API tl::expected<SimpleVolume, std::string> loadRaw( const std::filesyste
                                                       const ProgressCallback& cb = {} );
 }
 }
+#endif

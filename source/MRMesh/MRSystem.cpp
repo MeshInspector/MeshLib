@@ -12,11 +12,13 @@
 
 #else
 
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else
+#ifndef __EMSCRIPTEN__
 #include <cpuid.h>
+#endif
 #endif
 #include <pthread.h>
 #include <libgen.h>
@@ -71,7 +73,9 @@ void SetCurrentThreadName( const char * name )
 #elif defined(__APPLE__) && defined(__MACH__)
     pthread_setname_np(name);
 #else
+#ifndef __EMSCRIPTEN__
     pthread_setname_np( pthread_self(), name);
+#endif
 #endif
 }
 
@@ -243,6 +247,7 @@ std::filesystem::path GetWindowsInstallDirectory()
 }
 #endif //_WIN32
 
+#ifndef __EMSCRIPTEN__
 std::string GetCpuId()
 {
     char CPUBrandString[0x40] = {};
@@ -280,5 +285,6 @@ std::string GetCpuId()
 #endif
     return CPUBrandString;
 }
+#endif
 
 } //namespace MR

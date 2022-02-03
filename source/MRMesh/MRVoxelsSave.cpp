@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVoxelsSave.h"
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"
@@ -99,3 +100,4 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
 } // namespace VoxelsSave
 
 } // namespace MR
+#endif

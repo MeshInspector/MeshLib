@@ -1,5 +1,6 @@
+#ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 
 constexpr int MAX_RETRIES = 10;
@@ -50,3 +51,4 @@ TEST( CPRTest, Post )
         }
     }
 }
+#endif

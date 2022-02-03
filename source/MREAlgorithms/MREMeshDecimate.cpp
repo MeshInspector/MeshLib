@@ -8,7 +8,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRGTest.h"
-#include <tbb/parallel_reduce.h>
+#include "MRPch/MRTBB.h"
 #include <queue>
 
 namespace MRE

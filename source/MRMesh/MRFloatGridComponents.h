@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 
 namespace MR
@@ -13,3 +14,4 @@ MRMESH_API std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, flo
 }
 
 }
+#endif

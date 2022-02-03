@@ -39,8 +39,10 @@ MRMESH_API std::filesystem::path GetWindowsInstallDirectory();
 // returns version of MR
 MRMESH_API std::string GetMRVersionString();
 
+#ifndef __EMSCRIPTEN__
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();
+#endif
 
 using FileNamesStack = std::vector<std::filesystem::path>;
 

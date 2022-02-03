@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVoxelsVolume.h"
 #include "MRAffineXf3.h"
 #include "MRMesh.h"
@@ -60,3 +61,4 @@ float voxelizeAndComputeVolume( const std::vector<std::shared_ptr<Mesh>>& meshes
 }
 
 }
+#endif

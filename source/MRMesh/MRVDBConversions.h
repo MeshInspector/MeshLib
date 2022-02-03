@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
@@ -34,3 +35,4 @@ MRMESH_API Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
                             const ProgressCallback& cb = {} );
 
 }
+#endif

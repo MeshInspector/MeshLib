@@ -9,9 +9,16 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	MRMesh
-	tbb
-	spdlog
-	fmt
-)
+IF (NOT MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+  	  MRMesh
+  	  tbb
+  	  spdlog
+  	  fmt
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRMesh
+      tbb
+  )
+ENDIF()

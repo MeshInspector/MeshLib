@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRBoolean.h"
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
@@ -41,3 +42,4 @@ FloatGrid operator *= ( FloatGrid & a, const FloatGrid & b )
 }
 
 } //namespace MR
+#endif

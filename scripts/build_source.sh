@@ -26,6 +26,19 @@ if [[ $OSTYPE != 'darwin'* ]]; then
   fi
 fi
 
+if [ "${NAME}" == "Ubuntu" ]; then
+ if [ ! -n "$MR_EMSCRIPTEN" ]; then
+  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
+  echo;
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+   MR_EMSCRIPTEN="ON"
+  else
+   MR_EMSCRIPTEN="OFF"
+  fi
+  printf "Emscripten ${MR_EMSCRIPTEN}\n"
+ fi  
+fi
+
 if [ ! -n "$MESHRUS_BUILD_RELEASE" ]; then
  read -t 5 -p "Build MeshLib Release? Press (n) in 5 seconds to cancel (Y/n)" -rsn 1
  echo;
@@ -67,9 +80,17 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
  if [[ $OSTYPE == 'darwin'* ]]; then
     cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
  else
-    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+      cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    else
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
+    fi
+ fi 
+ if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+    cmake --build . -j `nproc` | tee ${logfile}
+ else
+    emmake make -j `nproc` | tee ${logfile}
  fi
- cmake --build . -j `nproc` | tee ${logfile}
  cd ..
 fi
 
@@ -82,9 +103,17 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  if [[ $OSTYPE == 'darwin'* ]]; then
     cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
  else
-    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+      cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
+    else
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
+    fi
  fi
- cmake --build . -j `nproc` | tee ${logfile}
+ if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
+    cmake --build . -j `nproc` | tee ${logfile}
+ else
+    emmake make -j `nproc` | tee ${logfile}
+ fi
  cd ..
 fi
 

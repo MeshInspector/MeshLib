@@ -15,8 +15,8 @@
 #include "MRMesh/MRMeshDelete.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRMeshComponents.h"
-#include <spdlog/spdlog.h>
-#include <tbb/parallel_for.h>
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
 

@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMesh/MRMeshFwd.h"
 #include <filesystem>
 
@@ -131,3 +132,4 @@ private:
 };
 
 }
+#endif

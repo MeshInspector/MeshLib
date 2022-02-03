@@ -1,7 +1,8 @@
+#ifndef __EMSCRIPTEN__
 #include "MRPython.h"
 #include "MRStringConvert.h"
 #include <pybind11/embed.h>
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include <vector>
 #include <fstream>
 #include <string>
@@ -185,4 +186,4 @@ EmbeddedPython& EmbeddedPython::instance_()
 }
 
 }
-
+#endif

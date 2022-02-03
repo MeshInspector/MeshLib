@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRObjectMesh.h"
 #include "MRProgressCallback.h"
@@ -129,3 +130,4 @@ protected:
 
 
 }
+#endif

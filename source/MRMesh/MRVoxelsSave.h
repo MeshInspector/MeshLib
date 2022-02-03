@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRIOFilters.h"
 #include <tl/expected.hpp>
@@ -17,3 +18,4 @@ MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path&
 }
 
 }
+#endif

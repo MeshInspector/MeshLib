@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRIOFilters.h"
 #include <tl/expected.hpp>
@@ -22,3 +23,4 @@ MRMESH_API tl::expected<Image, std::string> fromAnySupportedFormat( const std::f
 
 }
 }
+#endif

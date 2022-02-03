@@ -10,10 +10,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas \
-	-Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
+       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
 # -Werror")
 
-IF(APPLE)
+IF(APPLE OR MR_EMSCRIPTEN)
  add_subdirectory(./expected ./expected)
 ELSE()
  # set platform dependent flags
@@ -35,3 +35,10 @@ ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
 add_subdirectory(./parallel-hashmap ./parallel-hashmap)
+
+IF(MR_EMSCRIPTEN)
+  add_subdirectory(./googletest/googletest ./googletest)
+  add_subdirectory(./libzip ./libzip)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
+  add_subdirectory(./jsoncpp ./jsoncpp)
+ENDIF()

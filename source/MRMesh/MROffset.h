@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
@@ -25,3 +26,4 @@ struct OffsetParameters
 [[nodiscard]] MRMESH_API Mesh offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
 }
+#endif

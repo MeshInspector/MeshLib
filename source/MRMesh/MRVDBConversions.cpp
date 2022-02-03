@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVDBConversions.h"
 #include "MRFloatGrid.h"
 #include "MRMesh.h"
@@ -203,3 +204,4 @@ Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
 }
 
 } //namespace MR
+#endif

@@ -1,11 +1,14 @@
-#include <MRMesh/MRMesh.h>
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRLog.h"
-#include "MRMesh/MRPython.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MREAlgorithms/MREMeshBoolean.h"
+
+#ifndef __EMSCRIPTEN__
+#include "MRMesh/MRPython.h"
 #include "mrmeshpy/MRLoadModule.h"
 #include "mrealgorithmspy/MRLoadModule.h"
+#endif
 
 namespace MR
 {
@@ -26,8 +29,12 @@ int main(int argc, char **argv)
 {
     MR::loadMeshDll();
     MRE::loadMREAlgorithmsDll();
+
+#ifndef __EMSCRIPTEN__
     MR::loadMRMeshPyModule();
     MRE::loadMREAlgorithmsPyModule();
+#endif
+
     MR::setupLoggerByDefault();
 
     // print compiler info
@@ -39,6 +46,7 @@ int main(int argc, char **argv)
     spdlog::info( "MSVC {}", _MSC_FULL_VER );
 #endif
 
+#ifndef __EMSCRIPTEN__
     //Test python mrmeshpy
     {
         MR::EmbeddedPython::init();
@@ -73,8 +81,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
+#endif
+
     std::vector<std::string> xs{"text0", "text1"};
-    fmt::format( "Test {}", fmt::join( xs, "," ) );
+    spdlog::info(fmt::format( "Test {}", fmt::join( xs, "," ) ));
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

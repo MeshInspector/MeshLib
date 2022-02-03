@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRObjectVoxels.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
@@ -11,7 +12,7 @@
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
-#include <tbb/parallel_reduce.h>
+#include "MRPch/MRTBB.h"
 #include <filesystem>
 
 namespace MR
@@ -306,3 +307,4 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
 }
 
 }
+#endif

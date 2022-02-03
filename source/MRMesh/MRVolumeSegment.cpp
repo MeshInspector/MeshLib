@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVolumeSegment.h" 
 #include "MRVoxelPath.h"
 #include "MRObjectVoxels.h"
@@ -249,3 +250,4 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
 }
 
 }
+#endif

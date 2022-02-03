@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVoxelPath.h"
 #include "MRFloatGrid.h"
 #include "MRVector3.h"
@@ -320,3 +321,4 @@ std::vector<size_t> buildSmallestMetricPath( const ObjectVoxels & voxels,
 }
 
 }
+#endif

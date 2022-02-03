@@ -83,6 +83,8 @@ void meshToEigen( const Mesh & mesh, Eigen::MatrixXd & V, Eigen::MatrixXi & F )
     }
 }
 
+// TODO: this can probably be fixed later (now emcc cannot compile this test)
+#ifndef __EMSCRIPTEN__
 TEST(MRMesh, Eigen) 
 {
     Eigen::MatrixXd V( 3, 3 );
@@ -102,5 +104,6 @@ TEST(MRMesh, Eigen)
     EXPECT_EQ( V, V1 );
     EXPECT_EQ( F, F1 );
 }
+#endif
 
 } //namespace MR

@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include <tl/expected.hpp>
@@ -107,3 +108,4 @@ private:
 };
 
 }
+#endif

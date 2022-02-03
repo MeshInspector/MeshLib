@@ -4,7 +4,7 @@
 #include "MRTriangleIntersection.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
-#include <tbb/parallel_for.h>
+#include "MRPch/MRTBB.h"
 #include <atomic>
 
 namespace MR

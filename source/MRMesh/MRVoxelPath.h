@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include <functional>
 
@@ -47,3 +48,4 @@ struct VoxelMetricParameters
                                                                      size_t start, size_t finish );
 
 }
+#endif

@@ -16,3 +16,18 @@
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
+[submodule "thirdparty/wasmtbb"]
+	path = thirdparty/wasmtbb
+	url = https://github.com/hpcwasm/wasmtbb.git
+[submodule "thirdparty/googletest"]
+	path = thirdparty/googletest
+	url = https://github.com/joa/googletest.git
+[submodule "thirdparty/spdlog"]
+	path = thirdparty/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "thirdparty/libzip"]
+	path = thirdparty/libzip
+	url = https://github.com/nih-at/libzip.git
+[submodule "thirdparty/jsoncpp"]
+	path = thirdparty/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git

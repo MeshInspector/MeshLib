@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRPdf.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRImageSave.h"
@@ -5,7 +6,7 @@
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRGTest.h"
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include <fstream>
 
 #undef NOMINMAX
@@ -336,3 +337,4 @@ TEST( MRMesh, Pdf )
 }
 
 }
+#endif

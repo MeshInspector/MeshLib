@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef __EMSCRIPTEN__
 #include "MRVDBConversions.h"
 #include "MRAffineXf3.h"
 
@@ -38,3 +39,5 @@ MRMESH_API FloatGrid operator -= ( FloatGrid & a, const FloatGrid& b );
 MRMESH_API FloatGrid operator *= ( FloatGrid & a, const FloatGrid& b );
 
 } //namespace MR
+
+#endif

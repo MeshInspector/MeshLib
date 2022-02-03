@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRFixUndercuts.h"
 #include "MRMesh.h"
 #include "MRMatrix3.h"
@@ -16,8 +17,8 @@
 #include "MRFloatGrid.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
-#include <tbb/enumerable_thread_specific.h>
-#include <spdlog/spdlog.h>
+#include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
 
 namespace MR
@@ -340,3 +341,4 @@ Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectio
 
 } // namespace FixUndercuts
 } // namespace MR
+#endif

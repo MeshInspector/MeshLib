@@ -4,8 +4,7 @@
 #include "MRUVSphere.h"
 #include "MRMesh.h"
 #include "MRMeshToPointCloud.h"
-#include <tbb/parallel_for.h>
-#include <tbb/task_group.h>
+#include "MRPch/MRTBB.h"
 #include "MRGTest.h"
 #include <stack>
 #include <thread>

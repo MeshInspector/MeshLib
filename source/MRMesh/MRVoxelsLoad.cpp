@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
@@ -7,8 +8,8 @@
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#include <spdlog/spdlog.h>
-#include <tbb/parallel_for.h>
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
 
@@ -723,3 +724,4 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
 
 }
 }
+#endif

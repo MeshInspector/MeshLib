@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRImageLoad.h"
 #include "MRImage.h"
 #include "MRFile.h"
@@ -108,3 +109,4 @@ tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::
 }
 
 }
+#endif

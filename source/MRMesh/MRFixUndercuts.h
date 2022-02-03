@@ -1,4 +1,5 @@
 #pragma once
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRVector2.h"
@@ -81,3 +82,4 @@ MRMESH_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionPa
 MRMESH_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
 }
 }
+#endif

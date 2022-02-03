@@ -19,18 +19,18 @@
 #include "MRObjectMesh.h"
 #include "MRStringConvert.h"
 #include <filesystem>
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
 
-#if defined(__APPLE__) && defined(__clang__)
+#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-extension"
 #endif
 
 #include <zip.h>
 
-#if defined(__APPLE__) && defined(__clang__)
+#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic pop
 #endif
 

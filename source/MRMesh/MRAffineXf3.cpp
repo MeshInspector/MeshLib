@@ -1,9 +1,9 @@
 #include "MRAffineXf3.h"
-#include "MRQuaternion.h"
 #include "MRConstants.h"
+#include "MRGTest.h"
+#include "MRQuaternion.h"
 #include "MRPlane3.h"
 #include "MRLine3.h"
-#include "MRGTest.h"
 
 namespace MR
 {

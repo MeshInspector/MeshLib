@@ -11,7 +11,7 @@
 #include "MRPolyline2.h"
 #include "MRDistanceMap.h"
 #include "MRTimer.h"
-#include <spdlog/spdlog.h>
+#include "MRPch/MRSpdlog.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H

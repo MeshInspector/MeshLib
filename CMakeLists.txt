@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
+IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  message("building for Apple")
  set(PYTHON_LIB python3.9)
@@ -29,7 +29,8 @@ ELSE()
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\"")
  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\"")
-ENDIF()
+ENDIF() # APPLE
+ENDIF() # NOT MR_EMSCRIPTEN
 
 project (MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
@@ -54,6 +55,7 @@ link_directories(${THIRDPARTY_LIB_DIR})
 
 find_package(PkgConfig REQUIRED)
 
+IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
 
@@ -67,14 +69,29 @@ ELSE()
  set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
  include_directories(${PYBIND11_DIR})
  find_package(PythonLibs 3.8 EXACT REQUIRED)
-ENDIF()
+ENDIF() # APPLE
 include_directories(${PYTHON_INCLUDE_PATH})
+ENDIF() # NOT MR_EMSCRIPTEN
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
+IF(MR_EMSCRIPTEN)
+  add_compile_definitions(__emscripten__)
+  link_directories(${THIRDPARTY_LIB_DIR}/lib)
+  link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
+  include_directories(${THIRDPARTY_LIB_DIR}/libzip)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
+ENDIF() # MR_EMSCRIPTEN
+
 enable_testing()
 
+IF(NOT MR_EMSCRIPTEN)
 IF(NOT APPLE)
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")
@@ -88,10 +105,13 @@ IF(NOT APPLE)
  ENDIF()
 ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
+ENDIF() # NOT MR_EMSCRIPTEN
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MREAlgorithms ./MREAlgorithms)
-add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
-add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
-add_subdirectory(${PROJECT_SOURCE_DIR}/mrealgorithmspy ./mrealgorithmspy)
+IF(NOT MR_EMSCRIPTEN)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/mrealgorithmspy ./mrealgorithmspy)
+ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)

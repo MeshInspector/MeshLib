@@ -6,8 +6,11 @@
 #include <filesystem>
 #include <tl/expected.hpp>
 #include <string>
+
+#ifndef __EMSCRIPTEN__
 #include <libpng16/png.h>
 #include <turbojpeg.h>
+#endif
 
 namespace MR
 {
@@ -16,9 +19,11 @@ namespace ImageSave
 
 const IOFilters Filters =
 {
+#ifndef __EMSCRIPTEN__
     {"Portable Network Graphics (.png)",  "*.png"},
-    {"BitMap Picture (.bmp)",  "*.bmp"},
-    {"JPEG (.jpg)",  "*.jpg"}
+    {"JPEG (.jpg)",  "*.jpg"},
+#endif
+    {"BitMap Picture (.bmp)",  "*.bmp"}
 };
 
 #pragma pack(push, 1)
@@ -68,6 +73,8 @@ tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem
 
     return {};
 }
+
+#ifndef __EMSCRIPTEN__
 
 tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
 {
@@ -181,6 +188,8 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
     return {};
 }
 
+#endif
+
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = file.extension().u8string();
@@ -188,12 +197,14 @@ tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const 
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".png" )
-        res = MR::ImageSave::toPng( image, file );
-    else if ( ext == u8".bmp" )
+    if ( ext == u8".bmp" )
         res = MR::ImageSave::toBmp( image, file );
+#ifndef __EMSCRIPTEN__
+    else if ( ext == u8".png" )
+        res = MR::ImageSave::toPng( image, file );
     else if ( ext == u8".jpg" )
         res = MR::ImageSave::toJpeg( image, file );
+#endif
     return res;
 }
 

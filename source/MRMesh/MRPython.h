@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
@@ -140,3 +141,4 @@ private:
 };
 
 }
+#endif

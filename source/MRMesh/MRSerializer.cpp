@@ -62,7 +62,7 @@ UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDele
         if ( create_directories( folder, ec ) )
         {
             folder_ = std::move( folder );
-            spdlog::info( "Temporary folder created: {}", folder_.string() );
+            spdlog::info( "Temporary folder created: {}", utf8string( folder_ ) );
             break;
         }
     }
@@ -77,7 +77,7 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
     MR_TIMER;
     if ( onPreTempFolderDelete_ )
         onPreTempFolderDelete_( folder_ );
-    spdlog::info( "Deleting temporary folder: {}", folder_.string() );
+    spdlog::info( "Deleting temporary folder: {}", utf8string( folder_ ) );
     std::error_code ec;
     if ( !std::filesystem::remove_all( folder_, ec ) )
     {
@@ -98,13 +98,13 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
 
     std::ifstream ifs( path );
     if ( !ifs || ifs.bad() )
-        return tl::make_unexpected( "Cannot open json file " + path.string() );
+        return tl::make_unexpected( "Cannot open json file " + utf8string( path ) );
 
     std::string str( ( std::istreambuf_iterator<char>( ifs ) ),
                      std::istreambuf_iterator<char>() );
 
     if ( !ifs || ifs.bad() )
-        return tl::make_unexpected( "Cannot read json file " + path.string() );
+        return tl::make_unexpected( "Cannot read json file " + utf8string( path ) );
 
     ifs.close();
 
@@ -134,7 +134,7 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
             auto fileSource = zip_source_file( archive, utf8string( path ).c_str(), 0, 0 );
             if ( !fileSource )
                 return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " to archive" );
-            if ( zip_file_add( archive, std::filesystem::relative( path, base, ec ).string().c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_GUESS ) == -1 )
+            if ( zip_file_add( archive, utf8string( std::filesystem::relative( path, base, ec ) ).c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 ) == -1 )
                 return tl::make_unexpected( "Cannot add file " + utf8string( path ) + " to archive" );
         }
     }
@@ -143,7 +143,7 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
         if ( !std::filesystem::is_directory( path, ec ) )
             return tl::make_unexpected( utf8string( path ) + " - is not file or directory." );
         if ( path != base )
-            if ( zip_dir_add( archive, std::filesystem::relative( path, base, ec ).string().c_str(), ZIP_FL_ENC_GUESS ) == -1 )
+            if ( zip_dir_add( archive, utf8string( std::filesystem::relative( path, base, ec ) ).c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
                 return tl::make_unexpected( "Cannot add directory " + utf8string( path ) + " to archive" );
         for ( const auto& entry : std::filesystem::directory_iterator( path, ec ) )
         {
@@ -212,7 +212,7 @@ tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::file
     obj.setMesh( std::make_shared<Mesh>( mesh ) );
     if ( selection )
         obj.selectFaces( *selection );
-    obj.setName( path.stem().string() );
+    obj.setName( utf8string( path.stem() ) );
     return serializeObjectTree( obj, path );
 }
 

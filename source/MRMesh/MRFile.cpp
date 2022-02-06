@@ -16,4 +16,18 @@ FILE * fopen( const std::filesystem::path & filename, const char * mode )
 #endif
 }
 
+FILE * File::open( const std::filesystem::path & filename, const char * mode ) 
+{ 
+    close();
+    return handle_ = fopen( filename, mode ); 
+}
+
+void File::close()
+{
+    if ( !handle_ )
+        return;
+    std::fclose( handle_ );
+    handle_ = nullptr;
+}
+
 } //namespace MR

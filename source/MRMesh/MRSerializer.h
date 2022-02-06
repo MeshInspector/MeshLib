@@ -80,10 +80,12 @@ MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectT
 MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder );
 
 // decompresses given zip-file into given folder
-MRMESH_API tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder );
+MRMESH_API tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder,
+    const char * password = nullptr ); // if password is given then it will be used to decipher encrypted archive
 // compresses given folder in given zip-file
 MRMESH_API tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, 
-    const std::vector<std::filesystem::path>& excludeFiles = {} ); // files that should not be included to result zip 
+    const std::vector<std::filesystem::path>& excludeFiles = {}, // files that should not be included to result zip 
+    const char * password = nullptr );  // if password is given then the archive will be encrypted
 // saves mesh with optional selection to mru format
 MRMESH_API tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr );
 

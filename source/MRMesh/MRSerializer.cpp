@@ -1,4 +1,5 @@
 #include "MRSerializer.h"
+#include "MRFile.h"
 #include "MRObject.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
@@ -120,7 +121,7 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
 
 // path of item in filesystem, base - base path of scene root (%temp%/MeshRUsScene)
 tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
-    const std::vector<std::filesystem::path>& excludeFiles )
+    const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     std::error_code ec;
     if ( std::filesystem::is_regular_file( path, ec ) )
@@ -131,11 +132,24 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
         } );
         if ( excluded == excludeFiles.end() )
         {
-            auto fileSource = zip_source_file( archive, utf8string( path ).c_str(), 0, 0 );
+            File file( path, "rb" );
+            auto fileSource = zip_source_filep( archive, file, 0, 0 );
             if ( !fileSource )
                 return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " to archive" );
-            if ( zip_file_add( archive, utf8string( std::filesystem::relative( path, base, ec ) ).c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 ) == -1 )
-                return tl::make_unexpected( "Cannot add file " + utf8string( path ) + " to archive" );
+            file.detach(); //libzip has taken control over the handle
+
+            const auto archiveFilePath = utf8string( std::filesystem::relative( path, base, ec ) );
+            const auto index = zip_file_add( archive, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
+            zip_source_close( fileSource ); //otherwise it will be closed with the archive
+            fileSource = nullptr;
+            if ( index < 0 )
+                return tl::make_unexpected( "Cannot add file " + archiveFilePath + " to archive" );
+
+            if ( password )
+            {
+                if ( zip_file_set_encryption( archive, index, ZIP_EM_AES_256, password ) )
+                    return tl::make_unexpected( "Cannot encrypt file " + archiveFilePath + " in archive" );
+            }
         }
     }
     else
@@ -147,7 +161,7 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
                 return tl::make_unexpected( "Cannot add directory " + utf8string( path ) + " to archive" );
         for ( const auto& entry : std::filesystem::directory_iterator( path, ec ) )
         {
-            auto res = compressOneItem( archive, entry.path(), base, excludeFiles );
+            auto res = compressOneItem( archive, entry.path(), base, excludeFiles, password );
             if ( !res.has_value() )
                 return res;
         }
@@ -183,7 +197,7 @@ private:
 };
 
 tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
-    const std::vector<std::filesystem::path>& excludeFiles )
+    const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     MR_TIMER
 
@@ -196,12 +210,12 @@ tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFil
     if ( !zip )
         return tl::make_unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
-    auto res = compressOneItem( zip, sourceFolder, sourceFolder, excludeFiles );
+    auto res = compressOneItem( zip, sourceFolder, sourceFolder, excludeFiles, password );
     if ( !res.has_value() )
         return res;
 
     if ( zip.close() == -1 )
-        return tl::make_unexpected( "Cannot close zip." );
+        return tl::make_unexpected( "Cannot close zip" );
 
     return res;
 }
@@ -216,7 +230,7 @@ tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::file
     return serializeObjectTree( obj, path );
 }
 
-tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder )
+tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( targetFolder, ec ) )
@@ -226,6 +240,9 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
         return tl::make_unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
+
+    if ( password )
+        zip_set_default_password( zip, password );
 
     int nameLen{0};
     zip_stat_t stats;

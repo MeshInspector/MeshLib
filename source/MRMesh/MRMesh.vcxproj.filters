@@ -678,6 +678,9 @@
     <ClInclude Include="MRChangeNameAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MREmbeddedPython.h">
+      <Filter>Source Files\Python</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1141,6 +1144,9 @@
     </ClCompile>
     <ClCompile Include="MRRectIndexer.cpp">
       <Filter>Source Files\DistanceMap</Filter>
+    </ClCompile>
+    <ClCompile Include="MREmbeddedPython.cpp">
+      <Filter>Source Files\Python</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

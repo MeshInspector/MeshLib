@@ -2,7 +2,9 @@
 #include "MREmbeddedPython.h"
 #include "MRPython.h"
 #include "MRStringConvert.h"
+#include "MRPch/MRSpdlog.h"
 #include <pybind11/embed.h>
+#include <fstream>
 
 namespace MR
 {

@@ -1,8 +1,6 @@
 #ifndef __EMSCRIPTEN__
 #include "MRPython.h"
-#include "MRPch/MRSpdlog.h"
 #include <vector>
-#include <fstream>
 #include <string>
 #include <iostream>
 #include <sstream>

@@ -1,4 +1,4 @@
-#include "MRMesh/MREmbeddedPython.h"
+#include "MRMesh/MRPython.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMesh.h"
 #include "MREAlgorithms/MREContoursCut.h"

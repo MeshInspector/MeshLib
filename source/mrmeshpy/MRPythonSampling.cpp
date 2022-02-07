@@ -1,4 +1,4 @@
-#include "MRMesh/MREmbeddedPython.h"
+#include "MRMesh/MRPython.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRGridSampling.h"
 #include "MRMesh/MRUniformSampling.h"

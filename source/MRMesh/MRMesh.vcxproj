@@ -249,6 +249,7 @@
     <ClCompile Include="MRDistanceMapSave.cpp" />
     <ClCompile Include="MRDistanceMapTests.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
+    <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRExpandShrink.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />

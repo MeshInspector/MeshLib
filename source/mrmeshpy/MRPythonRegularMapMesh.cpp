@@ -1,4 +1,4 @@
-#include "MRMesh/MREmbeddedPython.h"
+#include "MRMesh/MRPython.h"
 #include "MRMesh/MRRegularMapMesher.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRSceneRoot.h"

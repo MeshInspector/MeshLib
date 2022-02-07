@@ -1145,6 +1145,9 @@
     <ClCompile Include="MRRectIndexer.cpp">
       <Filter>Source Files\DistanceMap</Filter>
     </ClCompile>
+    <ClCompile Include="MREmbeddedPython.cpp">
+      <Filter>Source Files\Python</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

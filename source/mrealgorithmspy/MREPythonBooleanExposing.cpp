@@ -1,4 +1,4 @@
-#include "MRMesh/MREmbeddedPython.h"
+#include "MRMesh/MRPython.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MREAlgorithms/MREMeshBoolean.h"
 

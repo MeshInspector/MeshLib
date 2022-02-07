@@ -5,6 +5,7 @@
 #include "MREAlgorithms/MREMeshBoolean.h"
 
 #ifndef __EMSCRIPTEN__
+#include "MRMesh/MRPython.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "mrmeshpy/MRLoadModule.h"
 #include "mrealgorithmspy/MRLoadModule.h"

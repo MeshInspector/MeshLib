@@ -108,7 +108,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_Library library;
     FT_Face face;
     FT_Init_FreeType( &library );
-    FT_New_Face( library, params.pathToFontFile.string().c_str(), 0, &face );
+    FT_New_Face( library, utf8string( params.pathToFontFile ).c_str(), 0, &face );
 
     FT_Set_Char_Size( face, 128 << 6, 128 << 6, 72, 72 );
     OutlineDecomposer decomposer( params.fontDetalization );

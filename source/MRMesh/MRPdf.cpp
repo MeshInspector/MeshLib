@@ -5,6 +5,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRGTest.h"
 #include "MRPch/MRSpdlog.h"
 #include <fstream>
@@ -52,7 +53,7 @@ params_( params )
 {
     if ( documentPath.empty() )
     {
-        spdlog::warn( "Wrong file path : \"{}\"", documentPath.string() );
+        spdlog::warn( "Wrong file path : \"{}\"", utf8string( documentPath ) );
         return;
     }
     cursorX_ = borderFieldLeft;
@@ -63,14 +64,14 @@ params_( params )
         checkFile.close();
     else
     {
-        spdlog::warn( "file on path \"{}\" is busy", documentPath.string() );
+        spdlog::warn( "file on path \"{}\" is busy", utf8string( documentPath ) );
         return;
     }
 
     document_ = std::make_unique<PoDoFo::PdfStreamedDocument>( documentPath.c_str() );
     if ( !document_ )
     {
-        spdlog::warn( "Can't create file : \"{}\"", documentPath.string() );
+        spdlog::warn( "Can't create file : \"{}\"", utf8string( documentPath ) );
         return;
     }
 
@@ -177,7 +178,7 @@ void Pdf::addTextManual( const std::string& text, const Box2d& box, HorAlignment
         alignment, verticalAlignment );
 }
 
-void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= std::string()*/,
+void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption /*= {}*/,
         const std::vector<std::pair<double, std::string>>& valuesMarks /*= {}*/ )
 {
     if ( !checkDocument() || !activeFont_ )

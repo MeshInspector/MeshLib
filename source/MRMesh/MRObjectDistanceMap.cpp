@@ -158,7 +158,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path )
 {
-    auto res = DistanceMapLoad::loadRaw( path.string() + ".raw" );
+    auto res = DistanceMapLoad::loadRaw( path.u8string() + u8".raw" );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     
@@ -173,7 +173,7 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
         return {};
 
     return std::async( std::launch::async,
-        [this, filename = path.string() + ".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
+        [this, filename = path.u8string() + u8".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
 }
 
 void ObjectDistanceMap::setDefaultColors_()

@@ -1,6 +1,7 @@
 #include "MRObject.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
+#include "MRStringConvert.h"
 #include "MRPch/MRJson.h"
 #include <filesystem>
 #include "MRGTest.h"
@@ -352,7 +353,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
         if ( !std::filesystem::create_directories( path, ec ) )
-            return tl::make_unexpected( "Cannot create directories " + path.string() );
+            return tl::make_unexpected( "Cannot create directories " + utf8string( path ) );
 
     std::vector<std::future<void>> res;
 

@@ -48,7 +48,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         if ( !std::filesystem::create_directories( parentPath, ec ) )
         {
             std::stringstream ss;
-            ss << "Cannot create directories: " << parentPath.string() << std::endl;
+            ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
             ss << "Error: " << ec.value() << " Message: " << ec.message() << std::endl;
             return tl::make_unexpected( ss.str() );
         }
@@ -66,7 +66,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     if ( !outFile )
     {
         std::stringstream ss;
-        ss << "Cannot write file: " << outPath.string() << std::endl;
+        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
         return tl::make_unexpected( ss.str() );
     }
 
@@ -91,7 +91,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     if ( !outFile.write( (const char*) buffer.data(), buffer.size() * sizeof( float ) ) )
     {
         std::stringstream ss;
-        ss << "Cannot write file: " << outPath.string() << std::endl;
+        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
         return tl::make_unexpected( ss.str() );
     }
     return {};

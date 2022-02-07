@@ -62,7 +62,7 @@ tl::expected<std::future<void>, std::string> ObjectMesh::serializeModel_( const 
         return {};
 
     return std::async( std::launch::async, 
-        [mesh = mesh_, filename = path.string() + ".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
+        [mesh = mesh_, filename = path.u8string() + u8".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
 }
 
 void ObjectMesh::serializeFields_( Json::Value& root ) const
@@ -121,7 +121,7 @@ void ObjectMesh::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectMesh::deserializeModel_( const std::filesystem::path& path )
 {
-    auto res = MeshLoad::fromCtm(path.string() + ".ctm");
+    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm" );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     

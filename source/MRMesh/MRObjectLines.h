@@ -84,5 +84,7 @@ private:
     float lineWidth_{ 1.0f };
     float pointSize_{ 5.f };
     std::shared_ptr<Polyline> polyline_;
+
+    mutable std::optional<float> totalLength_;
 };
 }

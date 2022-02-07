@@ -59,7 +59,10 @@ void ObjectLines::setDirtyFlags( uint32_t mask )
     VisualObject::setDirtyFlags( mask );
 
     if ( ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES ) && polyline_ )
+    {
         polyline_->invalidateCaches();
+        totalLength_.reset();
+    }
 }
 
 void ObjectLines::setLineWidth( float width )
@@ -96,6 +99,18 @@ std::vector<std::string> ObjectLines::getInfoLines() const
     {
         ss << "vertices : " << polyline_->topology.numValidVerts();
         res.push_back( ss.str() );
+
+        if ( !totalLength_ )
+        {
+            auto& polylineRef = *polyline_;
+            auto edgePerVertex = polylineRef.topology.edgePerVertex();
+            float sumLength = 0.f;
+            for ( auto edge : edgePerVertex )
+                sumLength += polylineRef.edgeLength( edge );
+            totalLength_ = sumLength / 2.f;
+        }
+        res.push_back( "total length : " + std::to_string( *totalLength_ ) );
+
         boundingBoxToInfoLines_( res );
     }
     else

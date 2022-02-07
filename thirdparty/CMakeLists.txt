@@ -38,6 +38,7 @@ add_subdirectory(./parallel-hashmap ./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
   add_subdirectory(./googletest/googletest ./googletest)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
   add_subdirectory(./libzip ./libzip)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   add_subdirectory(./jsoncpp ./jsoncpp)

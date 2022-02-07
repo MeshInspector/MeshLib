@@ -36,7 +36,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         return tl::make_unexpected( "ObjectDistanceMap is empty" );
 
     std::ofstream outFile( path, std::ios::binary );
-    const std::string writeError = "Cannot write file: " + path.string();
+    const std::string writeError = "Cannot write file: " + utf8string( path );
     if ( !outFile )
         return tl::make_unexpected( writeError );
 

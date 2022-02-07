@@ -1,6 +1,7 @@
 #include "MRLog.h"
 #include "MRRestoringStreamsSink.h"
 #include "MRSystem.h"
+#include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 
 #ifndef __EMSCRIPTEN__
@@ -106,7 +107,7 @@ void setupLoggerByDefault()
     fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", fmt::localtime( t ),
                 std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
 
-    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( fileName.string(), 1024 * 1024 * 5, 1, true );
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );
     file_sink->set_level( spdlog::level::trace );
     file_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( file_sink );

@@ -55,7 +55,7 @@ void putFileNameInZ( const std::vector<std::filesystem::path>& scans, std::vecto
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
-            std::string name = scans[i].stem().string();
+            std::string name = utf8string( scans[i].stem() );
             auto pos = name.find_first_of( "-0123456789" );
             double res = 0.0;
             if ( pos != std::string::npos )
@@ -503,7 +503,7 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
             cb( 0.5f + 0.5f * proc );
         return true;
     } );
-    voxels.setName( path.stem().string() );
+    voxels.setName( utf8string( path.stem() ) );
     return std::make_shared<ObjectVoxels>( std::move( voxels ) );
 }
 
@@ -531,7 +531,7 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
     auto parentPath = path.parent_path();
     std::error_code ec;
     if ( !std::filesystem::is_directory( parentPath, ec ) )
-        return tl::make_unexpected( parentPath.string() + " - is not directory" );
+        return tl::make_unexpected( utf8string( parentPath ) + " - is not directory" );
     std::vector<std::filesystem::path> candidatePaths;
     for ( auto entry : std::filesystem::directory_iterator( parentPath, ec ) )
     {
@@ -667,7 +667,7 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
     {
         int shift = xyDimsUnit * z;
         if ( !infile.read( outPointer + shift, xyDimsUnit ) )
-            return tl::make_unexpected( "Cannot read file: " + path.string() );
+            return tl::make_unexpected( "Cannot read file: " + utf8string( path ) );
         if ( cb )
             cb( ( z + 1.0f ) / float( params.dimensions.z ) );
     }

@@ -35,10 +35,10 @@ tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& pat
 
     std::error_code ec;
     if ( !std::filesystem::exists( path, ec ) )
-        return tl::make_unexpected( "File " + path.string() + " is not exist" );
+        return tl::make_unexpected( "File " + utf8string( path ) + " is not exist" );
     
     std::ifstream inFile( path, std::ios::binary );
-    const std::string readError = "Cannot read file: " + path.string();
+    const std::string readError = "Cannot read file: " + utf8string( path );
     if ( !inFile )
         return tl::make_unexpected( readError );
 

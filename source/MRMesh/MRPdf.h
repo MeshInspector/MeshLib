@@ -91,7 +91,7 @@ public:
      *     relative_position is in range [0., 1.], where 0. - left border of image, 1. - right border
      * @param caption if not empty - add caption under marks (if exist) or image.
      */
-    MRMESH_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = std::string(),
+    MRMESH_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
         const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
 
     /**

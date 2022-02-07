@@ -30,7 +30,7 @@ void Config::reset( const std::string& appName )
 void Config::writeToFile()
 {
     std::ofstream os( filePath_ );
-    spdlog::info( "Saving config file: " + filePath_.string() );
+    spdlog::info( "Saving config file: " + utf8string( filePath_ ) );
     if ( os.is_open() )
     {
         os << config_;
@@ -38,7 +38,7 @@ void Config::writeToFile()
     }
     else
     {
-        spdlog::warn( "Failed to save json config file " + filePath_.string() );
+        spdlog::warn( "Failed to save json config file " + utf8string( filePath_ ) );
     }
 }
 
@@ -59,7 +59,7 @@ void Config::reset( const std::filesystem::path& filePath )
     }
     else
     {
-        spdlog::warn( "Failed to open json config file " + Config::filePath_.string() );
+        spdlog::warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
         filePath_ = filePath;
     }
 }
@@ -139,7 +139,7 @@ void Config::setFileStack( const std::string& key, const FileNamesStack& keyValu
 {
     for ( auto i = 0; i < keyValue.size(); i++ )
     {
-        config_[key][i] = keyValue[i].string();
+        config_[key][i] = utf8string( keyValue[i] );
     }
 }
 
@@ -206,7 +206,7 @@ std::optional<std::vector<std::filesystem::path>> getPluginLibraryList()
         }
     }
     else
-        spdlog::warn( "Failed to open json config file " + pluginLibraryList.string() + " with " + ec.message() );
+        spdlog::warn( "Failed to open json config file " + utf8string( pluginLibraryList ) + " with " + ec.message() );
 
     if ( pluginLibraryListJson.isArray() )
     {

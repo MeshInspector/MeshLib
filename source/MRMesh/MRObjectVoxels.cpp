@@ -250,7 +250,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( std::launch::async,
-        [this, filename = path.string() + ".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
+        [this, filename = path.u8string() + u8".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -281,7 +281,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path )
 {
-    auto res = VoxelsLoad::loadRaw( path.string() + ".raw");
+    auto res = VoxelsLoad::loadRaw( path.u8string() + u8".raw");
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     

@@ -180,10 +180,10 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
 
     std::ofstream outFile( path, std::ios::binary );
     if ( !outFile )
-        return tl::make_unexpected( "Cannot write file " + path.string() );
+        return tl::make_unexpected( "Cannot write file " + utf8string( path ) );
 
     if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
-        return tl::make_unexpected( "Cannot write file " + path.string() );
+        return tl::make_unexpected( "Cannot write file " + utf8string( path ) );
 
     return {};
 }

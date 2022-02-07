@@ -678,6 +678,9 @@
     <ClInclude Include="MRChangeNameAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MREmbeddedPython.h">
+      <Filter>Source Files\Python</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

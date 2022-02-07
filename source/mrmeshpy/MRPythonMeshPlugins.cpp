@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBoolean.h"
 #include "MRMesh/MRVDBConversions.h"

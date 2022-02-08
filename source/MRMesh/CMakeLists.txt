@@ -50,7 +50,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		    Boost::boost
 		    jsoncpp
-		    cholmod
 		    cpr
 		    ${PYTHON_LIB}
 		    podofo
@@ -89,12 +88,9 @@ ELSE()
 		gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		Boost::boost
 		jsoncpp
-		cholmod
 		cpr
 		${PYTHON_LIB}
 		podofo
 		turbojpeg
 		)
 ENDIF()
-
-

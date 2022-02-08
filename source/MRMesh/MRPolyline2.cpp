@@ -1,5 +1,6 @@
 #include "MRPolyline2.h"
 #include "MRPolyline.h"
+#include "MRPolylineEdgeIterator.h"
 #include "MRAABBTreePolyline2.h"
 #include "MRAffineXf2.h"
 #include "MRVector2.h"
@@ -24,6 +25,16 @@ Polyline2::Polyline2( const Contours2f& contours )
             return points.backId();
         } 
     );
+}
+
+float Polyline2::totalLength() const
+{
+    MR_TIMER
+    double sum = 0;
+    for ( auto ue : undirectedEdges( topology ) )
+        sum += edgeLength( ue );
+
+    return (float)sum;
 }
 
 Box2f Polyline2::getBoundingBox() const

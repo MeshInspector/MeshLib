@@ -101,14 +101,7 @@ std::vector<std::string> ObjectLines::getInfoLines() const
         res.push_back( ss.str() );
 
         if ( !totalLength_ )
-        {
-            auto& polylineRef = *polyline_;
-            auto edgePerVertex = polylineRef.topology.edgePerVertex();
-            float sumLength = 0.f;
-            for ( auto edge : edgePerVertex )
-                sumLength += polylineRef.edgeLength( edge );
-            totalLength_ = sumLength / 2.f;
-        }
+            totalLength_ = polyline_->totalLength();
         res.push_back( "total length : " + std::to_string( *totalLength_ ) );
 
         boundingBoxToInfoLines_( res );

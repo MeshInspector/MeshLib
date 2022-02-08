@@ -1,5 +1,6 @@
 #include "MRPolyline.h"
 #include "MRPolyline2.h"
+#include "MRPolylineEdgeIterator.h"
 #include "MRAABBTreePolyline3.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
@@ -61,6 +62,16 @@ EdgeId Polyline::addFromPoints( const Vector3f * vs, size_t num )
     }
     const bool closed = vs[0] == vs[num-1];
     return addFromPoints( vs, num - ( closed ? 1 : 0 ), closed );
+}
+
+float Polyline::totalLength() const
+{
+    MR_TIMER
+    double sum = 0;
+    for ( auto ue : undirectedEdges( topology ) )
+        sum += edgeLength( ue );
+
+    return (float)sum;
 }
 
 Box3f Polyline::getBoundingBox() const

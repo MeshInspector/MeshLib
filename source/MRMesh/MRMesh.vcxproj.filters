@@ -681,6 +681,9 @@
     <ClInclude Include="MREmbeddedPython.h">
       <Filter>Source Files\Python</Filter>
     </ClInclude>
+    <ClInclude Include="MRPolylineEdgeIterator.h">
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

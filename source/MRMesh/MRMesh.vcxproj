@@ -69,6 +69,7 @@
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Project.h" />
+    <ClInclude Include="MRPolylineEdgeIterator.h" />
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />

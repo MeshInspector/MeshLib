@@ -44,9 +44,11 @@ public:
     float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
     // returns squared Euclidean length of the edge (faster to compute than length)
     float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
+    // returns total length of the polyline
+    MRMESH_API float totalLength() const;
 
     // returns cached aabb-tree for this polyline, creating it if it did not exist in a thread-safe manner
-    const AABBTreePolyline3& getAABBTree() const;
+    MRMESH_API const AABBTreePolyline3& getAABBTree() const;
     // returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box3f getBoundingBox() const;
 

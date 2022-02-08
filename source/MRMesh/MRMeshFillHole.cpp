@@ -252,6 +252,10 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
             cOp = mesh.topology.org( bEdgesMap[current.prevB % bEdgesMapSize] );
     }
 
+    // do not allow full ring from one loop
+    if ( ( nextA == aEdgesMapSize && nextB == 0 ) || ( nextB == bEdgesMapSize && nextA == 0 ) )
+        return false;
+
     // Metric is sum of length so we add new to previous one
     double sumMetric = current.weight + metric.getTriangleMetric( aVert, bVert, cVert, aOp, cOp );
     if ( sumMetric >= nextConn.weight )

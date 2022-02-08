@@ -87,7 +87,9 @@ This list is not full and updating each day
 
 [Our YouTube channel with updates](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-[Documentation](https://meshrus.github.io/)
+[Slides](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
+
+[Documentation](https://meshrus.github.io/MeshLib/html/index.html)
 
 [Report an issue anonymously](https://meshrus.github.io/ReportIssue/)
 

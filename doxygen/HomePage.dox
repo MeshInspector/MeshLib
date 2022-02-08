@@ -2,8 +2,8 @@ namespace MR {
 
 /** \mainpage Overview
 
-\section WhatAreMeshRUs MeshRUs
-MeshRUs is 3D geometry library that allows you to make your applications based on it or perform some 3D operations using it as application or library with c++ or python
+\section WhatAreMeshRUs MeshLib
+MeshLib is 3D geometry library that allows you to make your applications based on it or perform some 3D operations using it as application or library with c++ or python
 
 \section HomePageBuildWin Build with VS2019 on Windows
 

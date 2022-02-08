@@ -1,0 +1,84 @@
+namespace MR {
+
+/**
+
+\page HowToBasic Examples
+
+This page contains some examples of using MeshRUs
+
+\section CCodeExamples C++ Basic Examples
+
+Following code presents example of loading and saving mesh file
+
+\code
+std::filesystem::path inFilePath = "mesh.stl";
+tl::expected<MR::Mesh,std::string> loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
+if ( loadRes.has_value() )
+{
+	std::filesystem::path outFilePath = "mesh.ply";
+	tl::expected<void,std::string> saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
+	if ( !saveRes.has_value() )
+		std::cerr << saveRes.error() << "\n";
+}
+else
+	std::cerr << loadRes.error() << "\n";
+\endcode
+
+\sa \ref MR::MeshLoad
+\sa \ref MR::MeshSave
+
+Some examples of mesh modification are presented here
+
+\code
+// load mesh
+MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" ).value();
+
+// relax mesh (5 iterations)
+MR::relax( mesh, 5 );
+
+// subdivide mesh
+MR::SubdivideSettings props;
+props.maxDeviationAfterFlip = 0.5f;
+MR::subdivideMesh( mesh, props );
+
+// rotate mesh
+MR::AffindeXf3f rotationXf = MR::AffineXf3::linear( MR::Matrix3f::rotation( MR::Vector3f::plusZ(), MR::PI_F*0.5f ) );
+mesh.transform( rotationXf );
+\endcode
+
+\sa \ref MR::relax
+\sa \ref MR::subdivideMesh
+\sa \ref MR::Mesh
+
+\section PythonCodeExamples Python Basic Examples
+
+In this section we provide the same examples but with python code\n
+Load and save example:
+\code
+import mrmeshpy
+mesh = mrmeshpy.load_mesh("mesh.stl")
+mrmeshpy.save_mesh("mesh.ply")
+\endcode
+
+Mesh modification examples
+\code
+import mrmeshpy
+mesh = mrmeshpy.load_mesh("mesh.stl")
+
+mrmeshpy.relax(mesh,5,Null)
+
+props = mrmeshpy.SubdivideSettings()
+props.maxDeviationAfterFlip = 0.5
+mrmeshpy.subdivide_mesh(mesh,props)
+
+plusZ = mrmeshpy.Vector3()
+plusZ.z = 1.0
+rotationXf = mrmeshpy.AffineXf3.linear( mrmeshpy.Matrix3.rotation( plusZ, 3.1415*0.5 ) )
+mesh.transform(rotationXf)
+\endcode
+
+
+\sa \ref EmbendedPythonOverview
+*/
+
+}

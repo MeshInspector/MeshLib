@@ -220,14 +220,16 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream & in )
 
     for ( std::uint32_t i = 0;; )
     {
-        std::future<void> f;
+        tbb::task_group taskGroup;
+        bool hasTask = false;
         if ( i + buffer.size() < numTris )
         {
             const auto itemsInNextChuck = std::min( numTris - i - (std::uint32_t)buffer.size(), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
-            f = std::async( std::launch::async, [&in, &nextBuffer]()
+            hasTask = true;
+            taskGroup.run( [&in, &nextBuffer] ()
             {
-                in.read( (char*)nextBuffer.data(), sizeof(StlTriangle) * nextBuffer.size() );
+                in.read( ( char* )nextBuffer.data(), sizeof( StlTriangle ) * nextBuffer.size() );
             } );
         }
 
@@ -277,9 +279,9 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream & in )
             tris.emplace_back( *it[0], *it[1], *it[2], FaceId( int( i++ ) ) );
         }
 
-        if ( !f.valid() )
+        if ( !hasTask )
             break;
-        f.get();
+        taskGroup.wait();
         if ( !in  )
             return tl::make_unexpected( std::string( "Binary STL read error" ) );
         buffer.swap( nextBuffer );

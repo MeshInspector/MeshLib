@@ -13,6 +13,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pra
        -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
 # -Werror")
 
+IF(MR_EMSCRIPTEN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+ENDIF()
+
 IF(APPLE OR MR_EMSCRIPTEN)
  add_subdirectory(./expected ./expected)
 ELSE()

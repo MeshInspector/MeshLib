@@ -207,6 +207,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& m )
     using type = boost::dynamic_bitset<uint64_t>;
     pybind11::class_<type>( m, "BoostBitSet" ).
         def( "size", &type::size ).
+        def( "flip", ( type& ( type::* )( ) )& type::flip, pybind11::return_value_policy::reference ).
         def( "count", &type::count );
 } )
 
@@ -217,7 +218,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] (pybind11::module_& m)\
         def( pybind11::init<>() ).\
         def( "test", &type::test ).\
         def( "resize", &type::resize ).\
-        def( "set",( type& ( type::* )( type::IndexType, bool ) )& type::set, pybind11::return_value_policy::reference );\
+        def( "set",( type& ( type::* )( type::IndexType, bool ) )& type::set, pybind11::return_value_policy::reference ).\
+        def( pybind11::self & pybind11::self ).\
+        def( pybind11::self | pybind11::self ).\
+        def( pybind11::self ^ pybind11::self ).\
+        def( pybind11::self - pybind11::self ).\
+        def( pybind11::self &= pybind11::self ).\
+        def( pybind11::self |= pybind11::self ).\
+        def( pybind11::self ^= pybind11::self ).\
+        def( pybind11::self -= pybind11::self );\
 } )
 
 ADD_PYTHON_BITSET( VertBitSet, MR::VertBitSet )

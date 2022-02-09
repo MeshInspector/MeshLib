@@ -12,6 +12,7 @@
 #include "MRMesh/MRBoolean.h"
 #include "MRMesh/MRMeshMetrics.h"
 #include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRExpandShrink.h"
 
 
 using namespace MR;
@@ -40,6 +41,12 @@ void pythonSetMeshToSelected( Mesh mesh )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_selected_mesh, pythonGetSelectedMesh, "gets mesh from selected ObjectMesh" )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, set_mesh_to_selected, pythonSetMeshToSelected, "sets mesh to selected ObjectMesh" )
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, expand_verts, ( void( * )( const MeshTopology&, VertBitSet&, int ) )& expand, "expand vert bit set" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, shrink_verts, ( void( * )( const MeshTopology&, VertBitSet&, int ) )& shrink, "shrink vert bit set" )
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, expand_faces, ( void( * )( const MeshTopology&, FaceBitSet&, int ) )& expand, "expand face bit set" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, shrink_faces, ( void( * )( const MeshTopology&, FaceBitSet&, int ) )& shrink, "shrink face bit set" )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
 {

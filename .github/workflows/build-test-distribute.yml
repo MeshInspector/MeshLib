@@ -84,7 +84,10 @@ jobs:
       # https://github.com/actions/checkout/issues/354#issuecomment-759282642
       - name: Clear workspace
         run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+          ls -al
+          echo $HOME
+          pwd
+
 
       - name: Checkout
         uses: actions/checkout@v2

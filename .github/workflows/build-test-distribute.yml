@@ -126,7 +126,7 @@ jobs:
         run: |
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
-   fedora-build-test:
+  fedora-build-test:
     timeout-minutes: 60
     runs-on: [self-hosted, linux, x64, fedora35]
     strategy:

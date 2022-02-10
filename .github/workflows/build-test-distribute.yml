@@ -65,7 +65,9 @@ jobs:
 
   ubuntu-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux, x64, ubuntu-20-lts]
+    runs-on: ubuntu-20.04
+    container:
+      image: meshrus/ubuntu-build-server
     strategy:
       matrix:
         config: [Debug, Release]
@@ -124,7 +126,7 @@ jobs:
         run: |
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
-  fedora-build-test:
+   fedora-build-test:
     timeout-minutes: 60
     runs-on: [self-hosted, linux, x64, fedora35]
     strategy:

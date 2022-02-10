@@ -87,6 +87,9 @@ std::filesystem::path GetExeDirectory()
     wchar_t szPath[MAX_PATH];
     GetModuleFileNameW( hm, szPath, MAX_PATH );
 #else
+    #ifdef __EMSCRIPTEN__
+        return "/";
+    #endif
     char szPath[PATH_MAX];
     #ifdef __APPLE__
           uint32_t size = PATH_MAX + 1;
@@ -119,7 +122,7 @@ std::filesystem::path GetExeDirectory()
 std::filesystem::path GetResourcesDirectory()
 {
     auto exePath = GetExeDirectory();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
     // "build" in path means that MeshRUs is not installed to system
@@ -137,7 +140,7 @@ std::filesystem::path GetResourcesDirectory()
 std::filesystem::path GetFontsDirectory()
 {
     auto exePath = GetExeDirectory();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
     // "build" in path means that MeshRUs is not installed to system
@@ -155,7 +158,7 @@ std::filesystem::path GetFontsDirectory()
 std::filesystem::path GetLibsDirectory()
 {
     auto exePath = GetExeDirectory();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
     // "build" in path means that MeshRUs is not installed to system

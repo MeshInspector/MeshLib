@@ -28,6 +28,7 @@ struct Matrix3
     static constexpr Matrix3 scale( T s ) noexcept { return Matrix3( { s, T(0), T(0) }, { T(0), s, T(0) }, { T(0), T(0), s } ); }
     // returns a matrix that has its own scale along each axis
     static constexpr Matrix3 scale( T sx, T sy, T sz ) noexcept { return Matrix3( { sx, T(0), T(0) }, { T(0), sy, T(0) }, { T(0), T(0), sz } ); }
+    static constexpr Matrix3 scale( const Vector3<T> & s ) noexcept { return Matrix3( { s.x, T(0), T(0) }, { T(0), s.y, T(0) }, { T(0), T(0), s.z } ); }
     // creates matrix representing rotation around given axis on given angle
     static constexpr Matrix3 rotation( const Vector3<T> & axis, T angle ) noexcept;
     // creates matrix representing rotation that after application to (from) makes (to) vector

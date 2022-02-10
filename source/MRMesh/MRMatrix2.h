@@ -27,6 +27,7 @@ struct Matrix2
     static constexpr Matrix2 scale( T s ) noexcept { return Matrix2( { s, T(0) }, { T(0), s } ); }
     // returns a matrix that has its own scale along each axis
     static constexpr Matrix2 scale( T sx, T sy ) noexcept { return Matrix2( { sx, T(0) }, { T(0), sy } ); }
+    static constexpr Matrix2 scale( const Vector2<T> & s ) noexcept { return Matrix2( { s.x, T(0) }, { T(0), s.y } ); }
     // creates matrix representing rotation around origin on given angle
     static constexpr Matrix2 rotation( T angle ) noexcept;
     // creates matrix representing rotation that after application to (from) makes (to) vector

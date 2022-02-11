@@ -1,0 +1,28 @@
+FROM fedora:35
+
+RUN dnf -y update
+RUN dnf -y install git time python3-pip
+
+#copy files
+RUN mkdir /home/MeshRUs
+WORKDIR "/home/MeshRUs"
+
+#copy files
+COPY .git .git
+COPY thirdparty thirdparty
+COPY scripts scripts
+COPY source source
+COPY requirements requirements
+
+# build and install thirdparty
+RUN sudo ./scripts/build_thirdparty.sh
+RUN sudo ./scripts/install_thirdparty.sh
+
+# copy thirdparty libs
+RUN mkdir /usr/local/lib/meshrus-thirdparty-lib/
+RUN cp -r lib /usr/local/lib/meshrus-thirdparty-lib/
+RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf
+RUN sudo ldconfig
+
+WORKDIR "/home/"
+RUN rm -rf MeshRUs

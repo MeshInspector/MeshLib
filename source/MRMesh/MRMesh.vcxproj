@@ -266,6 +266,7 @@
     <ClCompile Include="MRIntersection.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
+    <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />

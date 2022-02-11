@@ -12,7 +12,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get -y update
-RUN apt-get -y install git sudo passwd cmake gcc clang pkg-config
+RUN apt-get -y install git sudo time python3-pip
 
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
@@ -24,9 +24,7 @@ COPY scripts scripts
 COPY source source
 COPY requirements requirements
 
-RUN apt-get -y install $(grep -vE "^\s*#" ./requirements/ubuntu.txt  | tr "\n" " ")
-
-RUN ls -al
+RUN sudo ./scripts/install_apt_requirements.sh
 
 # build and install thirdparty
 RUN sudo ./scripts/build_thirdparty.sh

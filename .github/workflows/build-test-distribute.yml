@@ -118,10 +118,6 @@ jobs:
           path: Deb${{matrix.config}}Bin.tar
           retention-days: 1
 
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
   fedora-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-20.04
@@ -176,10 +172,6 @@ jobs:
           name: Rpm${{matrix.config}}BinArchive
           path: Rpm${{matrix.config}}Bin.tar
           retention-days: 1
-
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   macos-build-test:
     if: ${{ false }}

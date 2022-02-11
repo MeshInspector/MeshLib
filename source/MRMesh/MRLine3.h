@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -17,7 +18,8 @@ struct Line3
     constexpr explicit Line3( const Line3<U> & l ) noexcept : p( l.p ), d( l.d ) { }
 
     // returns squared distance from given point to this line
-    [[nodiscard]] T distanceSq( const Vector3<T> & x ) const { return ( x - p ).lengthSq() - sqr( dot( d, x - p ) ) / d.lengthSq(); }
+    [[nodiscard]] T distanceSq( const Vector3<T> & x ) const 
+        { return std::max( T(0), ( x - p ).lengthSq() - sqr( dot( d, x - p ) ) / d.lengthSq() ); }
 
     // returns same line represented with flipped direction of d-vector
     [[nodiscard]] Line3 operator -() const { return Line3( p, -d ); }

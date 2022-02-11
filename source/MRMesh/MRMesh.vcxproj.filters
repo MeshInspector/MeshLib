@@ -1151,6 +1151,9 @@
     <ClCompile Include="MREmbeddedPython.cpp">
       <Filter>Source Files\Python</Filter>
     </ClCompile>
+    <ClCompile Include="MRLine3.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

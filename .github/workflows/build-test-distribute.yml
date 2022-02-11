@@ -186,6 +186,7 @@ jobs:
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   macos-build-test:
+    if: ${{ false }}
     timeout-minutes: 40
     runs-on: [self-hosted, macOS, x64, not-arm]
     strategy:

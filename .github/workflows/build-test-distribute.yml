@@ -141,18 +141,13 @@ jobs:
             c-compiler: /usr/bin/gcc
             
     steps:
-      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ./scripts/runner_install_thirdparty.sh
+        run: cp -r /usr/local/lib/meshlib-thirdparty-lib/lib .
 
       - name: Build
         run: ./scripts/build_source.sh

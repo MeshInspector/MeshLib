@@ -37,17 +37,12 @@ fi
 sudo -s printf "Root access acquired!\n" && \
 sudo apt update && sudo apt install ${MISSED_PACKAGES}
 
-#check python3.8 pip
-PIP_OK=$(python3.8 -m pip --vesrion | grep "No module named pip")
-if [ "" != "$PIP_OK" ]; then
- printf "no pip for python3.8 found. installing...\n"
- wget https://bootstrap.pypa.io/get-pip.py
- python3.8 get-pip.py
- rm get-pip.py
-fi
+# check and upgrade python3 pip
+python3 -m ensurepip --upgrade
+python3 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3.8 -m pip install -r requirements/python.txt
+python3 -m pip install -r requirements/python.txt
 
 # fix boost signal2 C++20 error in default version 1.71.0 from `apt`
 # NOTE: 1.75+ version already has this fix

@@ -65,7 +65,10 @@ jobs:
 
   ubuntu-build-test:
     timeout-minutes: 40
-    runs-on: [self-hosted, linux, x64, ubuntu-20-lts]
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/ubuntu-build-server
+      options: --user root
     strategy:
       matrix:
         config: [Debug, Release]
@@ -79,18 +82,13 @@ jobs:
             c-compiler: /usr/bin/gcc-10
 
     steps:
-      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ./scripts/runner_install_thirdparty.sh
+        run: cp -r /usr/local/lib/meshlib-thirdparty-lib/lib .
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -120,13 +118,12 @@ jobs:
           path: Deb${{matrix.config}}Bin.tar
           retention-days: 1
 
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
   fedora-build-test:
-    timeout-minutes: 60
-    runs-on: [self-hosted, linux, x64, fedora35]
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/fedora-build-server
+      options: --user root
     strategy:
       matrix:
         config: [Debug, Release]
@@ -140,18 +137,13 @@ jobs:
             c-compiler: /usr/bin/gcc
             
     steps:
-      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ./scripts/runner_install_thirdparty.sh
+        run: cp -r /usr/local/lib/meshlib-thirdparty-lib/lib .
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -180,10 +172,6 @@ jobs:
           name: Rpm${{matrix.config}}BinArchive
           path: Rpm${{matrix.config}}Bin.tar
           retention-days: 1
-
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   macos-build-test:
     if: ${{ false }}
@@ -360,7 +348,7 @@ jobs:
 
   delete-artifacts:
     timeout-minutes: 15
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     needs: [update-win-version-and-distribute, update-deb-version-and-distribute, update-rpm-version-and-distribute]
     if: always()
     steps:

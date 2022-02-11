@@ -38,8 +38,8 @@ if [ "${NAME}" == "Ubuntu" ]; then
  fi  
 fi
 
-#printf "Check requirements. Running ${FILE_NAME} ...\n"
-#./scripts/$FILE_NAME
+printf "Check requirements. Running ${FILE_NAME} ...\n"
+./scripts/$FILE_NAME
 MR_THIRDPARTY_DIR="thirdparty/"
 
 

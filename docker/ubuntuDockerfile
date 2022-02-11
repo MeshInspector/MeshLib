@@ -24,8 +24,6 @@ COPY scripts scripts
 COPY source source
 COPY requirements requirements
 
-RUN sudo ./scripts/install_apt_requirements.sh
-
 # build and install thirdparty
 RUN sudo ./scripts/build_thirdparty.sh
 RUN sudo ./scripts/install_thirdparty.sh
@@ -35,8 +33,5 @@ RUN cp -r lib /usr/local/lib/meshlib-thirdparty-lib/
 RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf
 RUN sudo ldconfig
 
-RUN rm -rf .git .git
-RUN rm -rf thirdparty
-RUN rm -rf scripts
-RUN rm -rf source
-RUN rm -rf requirements
+WORKDIR "/home/"
+RUN rm -rf MeshRUs

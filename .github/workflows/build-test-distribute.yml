@@ -65,7 +65,7 @@ jobs:
 
   ubuntu-build-test:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
       image: meshrus/ubuntu-build-server
       options: --user root
@@ -120,7 +120,7 @@ jobs:
 
   fedora-build-test:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
       image: meshrus/fedora-build-server
       options: --user root
@@ -348,7 +348,7 @@ jobs:
 
   delete-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [update-win-version-and-distribute, update-deb-version-and-distribute, update-rpm-version-and-distribute]
     if: always()
     steps:

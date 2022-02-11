@@ -123,8 +123,11 @@ jobs:
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   fedora-build-test:
-    timeout-minutes: 60
-    runs-on: [self-hosted, linux, x64, fedora35]
+    timeout-minutes: 40
+    runs-on: ubuntu-20.04
+    container:
+      image: meshrus/fedora-build-server
+      options: --user root
     strategy:
       matrix:
         config: [Debug, Release]
@@ -184,6 +187,7 @@ jobs:
           rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   macos-build-test:
+    if: ${{ false }}
     timeout-minutes: 40
     runs-on: [self-hosted, macOS, x64, not-arm]
     strategy:
@@ -357,7 +361,7 @@ jobs:
 
   delete-artifacts:
     timeout-minutes: 15
-    runs-on: [self-hosted]
+    runs-on: ubuntu-20.04
     needs: [update-win-version-and-distribute, update-deb-version-and-distribute, update-rpm-version-and-distribute]
     if: always()
     steps:

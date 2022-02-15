@@ -40,7 +40,10 @@ public:
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast<const std::shared_ptr<const Mesh>&>( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
+    // sets given mesh to this
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );
+    // sets given mesh to this, and returns back previous mesh of this
+    MRMESH_API virtual void swapMesh( std::shared_ptr< Mesh > & mesh );
     void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     const FaceBitSet& getSelectedFaces() const

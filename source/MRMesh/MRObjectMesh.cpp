@@ -270,6 +270,21 @@ bool ObjectMesh::isMeshClosed() const
     return *meshIsClosed_;
 }
 
+const Box3f ObjectMesh::getWorldBox() const
+{
+    if ( !worldBox_ )
+    {
+        if ( mesh_ )
+        {
+            const auto worldXf = this->worldXf();
+            worldBox_ = mesh_->computeBoundingBox( &worldXf );
+        }
+        else
+            worldBox_ = Box3f{};
+    }
+    return *worldBox_;
+}
+
 size_t ObjectMesh::numSelectedFaces() const
 {
     if ( !numSelectedFaces_ )
@@ -356,6 +371,14 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
         boundingBoxToInfoLines_( res );
+        getWorldBox();
+        if ( worldBox_ && worldBox_->valid() )
+        {
+            const auto bsize = worldBox_->size();
+            std::stringstream ss;
+            ss << "world bbox size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+            res.push_back( ss.str() );
+        }
     }
     else
         res.push_back( "no mesh" );
@@ -399,10 +422,14 @@ void ObjectMesh::setDirtyFlags( uint32_t mask )
         meshIsClosed_.reset();
     }
 
-    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
+    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
-        mesh_->invalidateCaches();
-        meshChangedSignal( mask );
+        worldBox_.reset();
+        if ( mesh_ )
+        {
+            mesh_->invalidateCaches();
+            meshChangedSignal( mask );
+        }
     }
 }
 

@@ -41,6 +41,7 @@ public:
     { return reinterpret_cast<const std::shared_ptr<const Mesh>&>( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );
+    void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     const FaceBitSet& getSelectedFaces() const
     {
@@ -123,6 +124,9 @@ public:
 
     // returns cached information whether the mesh is closed
     MRMESH_API bool isMeshClosed() const;
+    // returns cached bounding box of this mesh object in world coordinates;
+    // if you need bounding box in local coordinates please call getBoundingBox()
+    MRMESH_API const Box3f getWorldBox() const;
     // returns cached information about the number of selected faces in the mesh
     MRMESH_API size_t numSelectedFaces() const;
     // returns cached information about the number of selected undirected edges in the mesh
@@ -154,6 +158,7 @@ private:
     mutable std::optional<MeshStat> meshStat_;
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_;
+    mutable std::optional<Box3f> worldBox_;
 
 protected:
     MRMESH_API ObjectMesh( const ObjectMesh& other );

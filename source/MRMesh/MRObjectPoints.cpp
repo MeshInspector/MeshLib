@@ -57,6 +57,21 @@ void ObjectPoints::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
+const Box3f ObjectPoints::getWorldBox() const
+{
+    if ( !worldBox_ )
+    {
+        if ( points_ )
+        {
+            const auto worldXf = this->worldXf();
+            worldBox_ = points_->computeBoundingBox( &worldXf );
+        }
+        else
+            worldBox_ = Box3f{};
+    }
+    return *worldBox_;
+}
+
 std::vector<std::string> ObjectPoints::getInfoLines() const
 {
     std::vector<std::string> res;
@@ -69,6 +84,14 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
             << "\n Size : " << points_->points.size();
         res.push_back( ss.str() );
         boundingBoxToInfoLines_( res );
+        getWorldBox();
+        if ( worldBox_ && worldBox_->valid() )
+        {
+            const auto bsize = worldBox_->size();
+            ss = {};
+            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+            res.push_back( ss.str() );
+        }
     }
     else
         res.push_back( "no points" );
@@ -96,8 +119,12 @@ void ObjectPoints::setDirtyFlags( uint32_t mask )
 {
     VisualObject::setDirtyFlags( mask );
 
-    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && points_ )
-        points_->invalidateCaches();
+    if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
+    {
+        worldBox_.reset();
+        if ( points_ )
+            points_->invalidateCaches();
+    }
 }
 
 void ObjectPoints::setPointSize( float size )

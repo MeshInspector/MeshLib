@@ -334,20 +334,20 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
     if ( bbox.valid() )
     {
         std::stringstream ss;
-        ss << "bbox min: (" << bbox.min.x << ", " << bbox.min.y << ", " << bbox.min.z << ")";
+        ss << "box min: (" << bbox.min.x << ", " << bbox.min.y << ", " << bbox.min.z << ")";
         res.push_back( ss.str() );
 
         ss = {};
-        ss << "bbox max: (" << bbox.max.x << ", " << bbox.max.y << ", " << bbox.max.z << ")";
+        ss << "box max: (" << bbox.max.x << ", " << bbox.max.y << ", " << bbox.max.z << ")";
         res.push_back( ss.str() );
 
         ss = {};
         const auto bsize = bbox.size();
-        ss << "bbox size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+        ss << "box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
         res.push_back( ss.str() );
     }
     else
-        res.push_back( "empty bbox" );
+        res.push_back( "empty box" );
 }
 
 void VisualObject::setDefaultColors_()

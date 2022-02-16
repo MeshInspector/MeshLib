@@ -39,6 +39,9 @@ MRMESH_API std::filesystem::path GetWindowsInstallDirectory();
 // returns version of MR
 MRMESH_API std::string GetMRVersionString();
 
+// Opens given link in default browser
+MRMESH_API void OpenLink( const std::string& url );
+
 #ifndef __EMSCRIPTEN__
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();

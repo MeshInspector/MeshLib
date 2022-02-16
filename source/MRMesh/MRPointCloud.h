@@ -20,6 +20,9 @@ public:
     const AABBTreePoints& getAABBTree() const;
     // returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box3f getBoundingBox() const;
+    // passes through all valid points and finds the minimal bounding box containing all of them;
+    // if toWorld transformation is given then returns minimal bounding box in world space
+    MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     // Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }

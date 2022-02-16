@@ -30,6 +30,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     virtual void setPointCloud( const std::shared_ptr<PointCloud>& pointCloud ) { points_ = pointCloud; setDirtyFlags( DIRTY_ALL ); }
+    void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
@@ -45,6 +46,11 @@ public:
     ObjectPoints( ProtectedStruct, const ObjectPoints& obj ) : ObjectPoints( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
+
+    // returns cached bounding box of this point object in world coordinates;
+    // if you need bounding box in local coordinates please call getBoundingBox()
+    MRMESH_API const Box3f getWorldBox() const;
+
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;
 
@@ -65,8 +71,10 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
 private:
     std::shared_ptr<PointCloud> points_;
+    mutable std::optional<Box3f> worldBox_;
 
     // size of point in pixels
     float pointSize_{ 5.0f };

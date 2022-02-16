@@ -388,7 +388,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         {
             const auto bsize = worldBox_->size();
             std::stringstream ss;
-            ss << "world bbox size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
             res.push_back( ss.str() );
         }
     }

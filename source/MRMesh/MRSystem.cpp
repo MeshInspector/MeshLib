@@ -175,10 +175,10 @@ std::filesystem::path GetLibsDirectory()
 #endif
 }
 
-std::filesystem::path getUserConfigFilePath( const std::string& appName )
+std::filesystem::path getUserConfigDir( const std::string& appName )
 {
 #ifdef _WIN32
-    std::filesystem::path filepath( getenv( "APPDATA" ) );
+    std::filesystem::path filepath( _wgetenv( L"APPDATA" ) );
 #else
     struct passwd* pw = getpwuid( getuid() );
     if ( !pw )
@@ -199,6 +199,12 @@ std::filesystem::path getUserConfigFilePath( const std::string& appName )
     }
     if ( ec )
         spdlog::error( "{} {}", MR::asString( MR::systemToUtf8( ec.message().c_str() ) ), utf8string( filepath ) );
+    return filepath;
+}
+
+std::filesystem::path getUserConfigFilePath( const std::string& appName )
+{
+    std::filesystem::path filepath = getUserConfigDir( appName );
     filepath /= "config.json";
     return filepath;
 }

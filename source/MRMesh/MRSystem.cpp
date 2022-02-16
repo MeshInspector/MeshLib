@@ -22,7 +22,6 @@
 #include <cpuid.h>
 #endif
 #endif
-#endif
 #include <pthread.h>
 #include <libgen.h>
 #include <unistd.h>
@@ -258,7 +257,7 @@ void OpenLink( const std::string& url )
 #endif
     if ( openres == -1 )
     {
-        spdlog::warn( "Error opening new issue URL" );
+        spdlog::warn( "Error opening {}", url );
     }
 #endif
 #endif // _WIN32

@@ -16,8 +16,11 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#else
 #include <cpuid.h>
+#endif
 #endif
 #endif
 #include <pthread.h>
@@ -238,6 +241,27 @@ std::string GetMRVersionString()
     if ( !versFile )
         return configPrefix + "Version reading error";
     return configPrefix + version;
+}
+
+void OpenLink( const std::string& url )
+{
+#ifdef _WIN32
+    ShellExecuteA( NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL );
+#else
+#ifdef __EMSCRIPTEN__
+    EM_ASM( window.open( UTF8ToString( $0 ) ), url.c_str() );
+#else
+#ifdef __APPLE__
+    auto openres = system( ( "open " + url ).c_str() );
+#else
+    auto openres = system( ( "xdg-open " + url ).c_str() );
+#endif
+    if ( openres == -1 )
+    {
+        spdlog::warn( "Error opening new issue URL" );
+    }
+#endif
+#endif // _WIN32
 }
 
 #ifdef _WIN32

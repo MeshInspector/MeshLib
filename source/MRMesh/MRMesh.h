@@ -63,6 +63,9 @@ struct [[nodiscard]] Mesh
     MRMESH_API double area( const FaceBitSet & fs ) const;
     // this version returns the area of whole mesh if argument is nullptr
     double area( const FaceBitSet * fs = nullptr ) const { return area( topology.getFaceIds( fs ) ); }
+    // returns volume of closed mesh region, if region is not closed DBL_MAX is returned
+    // if region is nullptr - whole mesh is region
+    MRMESH_API double volume( const FaceBitSet* region = nullptr ) const;
     // computes triangular face normal from its vertices
     Vector3f leftNormal( EdgeId e ) const { return leftDirDblArea( e ).normalized(); }
     Vector3f normal( FaceId f ) const { return dirDblArea( f ).normalized(); }

@@ -163,6 +163,55 @@ double Mesh::area( const FaceBitSet & fs ) const
     return 0.5 * twiceRes;
 }
 
+class FaceVolumeCalc
+{
+public:
+    FaceVolumeCalc( const Mesh& mesh, const FaceBitSet& region) : mesh_( mesh ), region_( region )
+    {}
+    FaceVolumeCalc( FaceVolumeCalc& x, tbb::split ) : mesh_( x.mesh_ ), region_( x.region_ )
+    {}
+    void join( const FaceVolumeCalc& y )
+    {
+        volume_ += y.volume_;
+    }
+
+    double volume() const
+    {
+        return volume_;
+    }
+
+    void operator()( const tbb::blocked_range<FaceId>& r )
+    {
+        for ( FaceId f = r.begin(); f < r.end(); ++f )
+        {
+            if ( region_.test( f ) && mesh_.topology.hasFace( f ) )
+            {
+                Vector3f coords[3];
+                mesh_.getTriPoints( f, coords );
+                volume_ += mixed( coords[0], coords[1], coords[2] );
+            }
+        }
+    }
+
+private:
+    const Mesh& mesh_;
+    const FaceBitSet& region_;
+    double volume_{ 0.0 };
+};
+
+double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
+{
+    if ( !topology.isClosed( region ) )
+        return DBL_MAX;
+
+    MR_TIMER
+    const auto lastValidFace = topology.lastValidFace();
+    const auto& faces = topology.getFaceIds( region );
+    FaceVolumeCalc calc( *this, faces );
+    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    return calc.volume() / 6.0;
+}
+
 Vector3f Mesh::dirDblArea( VertId v ) const
 {
     Vector3f sum;

@@ -59,11 +59,23 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VertCoords, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::VertCoords>( m, "VertCoords" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::VertCoords::vec_ );
+
+    pybind11::class_<MR::FaceMap>( m, "FaceMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::FaceMap::vec_ );
+
+    pybind11::class_<MR::VertMap>( m, "VertMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::VertMap::vec_ );
+
+    pybind11::class_<MR::EdgeMap>( m, "EdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::EdgeMap::vec_ );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
@@ -80,6 +92,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
     pybind11::class_<MR::Mesh>( m, "Mesh" ).
         def( pybind11::init<>() ).
         def( "computeBoundingBox", ( Box3f( MR::Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& MR::Mesh::computeBoundingBox ).
+        def( "getBoundingBox", &MR::Mesh::getBoundingBox ).
+        def( "area", ( double( MR::Mesh::* )( const FaceBitSet* fs )const )& MR::Mesh::area, pybind11::arg( "fs" ) = nullptr ).
+        def( "volume", &MR::Mesh::volume, pybind11::arg( "region" ) = nullptr ).
+        def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false ).
         def_readwrite( "topology", &MR::Mesh::topology ).
         def_readwrite( "points", &MR::Mesh::points ).
         def( "invalidateCaches", &MR::Mesh::invalidateCaches ).

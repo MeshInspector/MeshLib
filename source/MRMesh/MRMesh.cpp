@@ -12,6 +12,7 @@
 #include "MRLine3.h"
 #include "MRLineSegm.h"
 #include "MRConstants.h"
+#include "MRComputeBoundingBox.h"
 #include "MRPch/MRTBB.h"
 
 namespace
@@ -428,38 +429,9 @@ float Mesh::leftCotan( EdgeId e ) const
     return nom / den;
 }
 
-class VertBoundingBoxCalc 
-{
-public:
-    VertBoundingBoxCalc( const Mesh & mesh, const AffineXf3f * toWorld ) : mesh_( mesh ), toWorld_( toWorld ) { }
-    VertBoundingBoxCalc( VertBoundingBoxCalc & x, tbb::split ) : mesh_( x.mesh_ ), toWorld_( x.toWorld_ ) { }
-    void join( const VertBoundingBoxCalc & y ) { box_.include( y.box_ ); }
-
-    const Box3f & box() const { return box_; }
-
-    void operator()( const tbb::blocked_range<VertId> & r ) 
-    {
-        for ( VertId v = r.begin(); v < r.end(); ++v ) 
-        {
-            if ( mesh_.topology.hasVert( v ) )
-                box_.include( toWorld_ ? (*toWorld_)( mesh_.points[v] ) : mesh_.points[v] );
-        }
-    }
-            
-private:
-    const Mesh & mesh_;
-    const AffineXf3f * toWorld_ = nullptr;
-    Box3f box_;
-};
-
 Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
-    MR_TIMER
-    const auto lastValidVert = topology.lastValidVert();
-
-    VertBoundingBoxCalc calc( *this, toWorld );
-    parallel_reduce( tbb::blocked_range<VertId>( 0_v, lastValidVert + 1 ), calc );
-    return calc.box();
+    return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
 Box3f Mesh::getBoundingBox() const 

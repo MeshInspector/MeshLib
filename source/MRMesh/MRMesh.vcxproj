@@ -22,6 +22,7 @@
     <ClInclude Include="MRAABBTreePolyline2.h" />
     <ClInclude Include="MRBase64.h" />
     <ClInclude Include="MRBestFitQuadric.h" />
+    <ClInclude Include="MRComputeBoundingBox.h" />
     <ClInclude Include="MRChangeMeshAction.h" />
     <ClInclude Include="MRChangeNameAction.h" />
     <ClInclude Include="MRChangeSceneObjectsOrder.h" />
@@ -231,6 +232,7 @@
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
+    <ClCompile Include="MRComputeBoundingBox.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />

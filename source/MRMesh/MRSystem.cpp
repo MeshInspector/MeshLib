@@ -254,7 +254,10 @@ void OpenLink( const std::string& url )
     ShellExecuteA( NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL );
 #else
 #ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( window.open( UTF8ToString( $0 ) ), url.c_str() );
+#pragma clang diagnostic pop
 #else
 #ifdef __APPLE__
     auto openres = system( ( "open " + url ).c_str() );

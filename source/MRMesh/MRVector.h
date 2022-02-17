@@ -83,6 +83,8 @@ public:
           reference  back()       { return vec_.back(); }
     // returns the identifier of the back() element
     I backId() const { assert( !vec_.empty() ); return I{ vec_.size() - 1 }; }
+    // returns backId() + 1
+    I endId() const { return I{ vec_.size() }; }
 
     auto data() { return vec_.data(); }
     auto data() const { return vec_.data(); }

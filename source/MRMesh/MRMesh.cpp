@@ -196,7 +196,7 @@ public:
 private:
     const Mesh& mesh_;
     const FaceBitSet& region_;
-    double volume_;
+    double volume_{ 0.0 };
 };
 
 double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const

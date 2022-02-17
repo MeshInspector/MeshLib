@@ -58,10 +58,12 @@ void ObjectLines::setDirtyFlags( uint32_t mask )
 {
     VisualObject::setDirtyFlags( mask );
 
-    if ( ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES ) && polyline_ )
+    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {
-        polyline_->invalidateCaches();
         totalLength_.reset();
+        worldBox_.reset();
+        if ( polyline_ )
+            polyline_->invalidateCaches();
     }
 }
 
@@ -89,6 +91,21 @@ void ObjectLines::swap( Object& other )
         assert( false );
 }
 
+const Box3f ObjectLines::getWorldBox() const
+{
+    if ( !worldBox_ )
+    {
+        if ( polyline_ )
+        {
+            const auto worldXf = this->worldXf();
+            worldBox_ = polyline_->computeBoundingBox( &worldXf );
+        }
+        else
+            worldBox_ = Box3f{};
+    }
+    return *worldBox_;
+}
+
 std::vector<std::string> ObjectLines::getInfoLines() const
 {
     std::vector<std::string> res;
@@ -105,6 +122,14 @@ std::vector<std::string> ObjectLines::getInfoLines() const
         res.push_back( "total length : " + std::to_string( *totalLength_ ) );
 
         boundingBoxToInfoLines_( res );
+        getWorldBox();
+        if ( worldBox_ && worldBox_->valid() )
+        {
+            const auto bsize = worldBox_->size();
+            ss = {};
+            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+            res.push_back( ss.str() );
+        }
     }
     else
     {

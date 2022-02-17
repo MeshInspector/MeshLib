@@ -33,6 +33,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual void setPolyline( const std::shared_ptr<Polyline>& polyline );
+    void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     virtual const std::shared_ptr<Polyline>& varPolyline() { return polyline_; }
     const std::shared_ptr<const Polyline>& polyline() const 
@@ -61,6 +62,10 @@ public:
     // returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 
+    // returns cached bounding box of this point object in world coordinates;
+    // if you need bounding box in local coordinates please call getBoundingBox()
+    MRMESH_API const Box3f getWorldBox() const;
+
 protected:
     ObjectLines( const ObjectLines& other ) = default;
 
@@ -86,5 +91,6 @@ private:
     std::shared_ptr<Polyline> polyline_;
 
     mutable std::optional<float> totalLength_;
+    mutable std::optional<Box3f> worldBox_;
 };
 }

@@ -352,7 +352,7 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
         res.push_back( ss.str() );
 
         const auto wbox = getWorldBox();
-        if ( wbox.valid() )
+        if ( wbox.valid() && wbox.size() != bbox.size() )
         {
             const auto wbsize = wbox.size();
             ss = {};

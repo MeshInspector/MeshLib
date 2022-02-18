@@ -328,6 +328,11 @@ void VisualObject::deserializeFields_( const Json::Value& root )
     dirty_ = DIRTY_ALL;
 }
 
+const Box3f VisualObject::getWorldBox() const
+{
+    return transformed( getBoundingBox(), worldXf() );
+}
+
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const
 {
     auto bbox = getBoundingBox();
@@ -345,6 +350,15 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
         const auto bsize = bbox.size();
         ss << "box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
         res.push_back( ss.str() );
+
+        const auto wbox = getWorldBox();
+        if ( wbox.valid() )
+        {
+            const auto wbsize = wbox.size();
+            ss = {};
+            ss << "world box size: (" << wbsize.x << ", " << wbsize.y << ", " << wbsize.z << ")";
+            res.push_back( ss.str() );
+        }
     }
     else
         res.push_back( "empty box" );

@@ -506,8 +506,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     {
         if ( x1 == resX || y1 == resY )
             return;
-        const auto v0 = *distMap.get( x0, y0 );
-        const auto v1 = *distMap.get( x1, y1 );
+        const auto v0opt = distMap.get( x0, y0 );
+        const auto v1opt = distMap.get( x1, y1 );
+        if ( !v0opt || !v1opt )
+            return;
+        const auto v0 = *v0opt;
+        const auto v1 = *v1opt;
         const bool low0 = v0 < isoValue;
         const bool low1 = v1 < isoValue;
         if ( low0 == low1 )

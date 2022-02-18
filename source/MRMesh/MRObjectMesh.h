@@ -129,7 +129,7 @@ public:
     MRMESH_API bool isMeshClosed() const;
     // returns cached bounding box of this mesh object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API const Box3f getWorldBox() const;
+    MRMESH_API virtual const Box3f getWorldBox() const override;
     // returns cached information about the number of selected faces in the mesh
     MRMESH_API size_t numSelectedFaces() const;
     // returns cached information about the number of selected undirected edges in the mesh

@@ -383,14 +383,6 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
         boundingBoxToInfoLines_( res );
-        getWorldBox();
-        if ( worldBox_ && worldBox_->valid() )
-        {
-            const auto bsize = worldBox_->size();
-            std::stringstream ss;
-            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-            res.push_back( ss.str() );
-        }
     }
     else
         res.push_back( "no mesh" );

@@ -122,14 +122,6 @@ std::vector<std::string> ObjectLines::getInfoLines() const
         res.push_back( "total length : " + std::to_string( *totalLength_ ) );
 
         boundingBoxToInfoLines_( res );
-        getWorldBox();
-        if ( worldBox_ && worldBox_->valid() )
-        {
-            const auto bsize = worldBox_->size();
-            ss = {};
-            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-            res.push_back( ss.str() );
-        }
     }
     else
     {

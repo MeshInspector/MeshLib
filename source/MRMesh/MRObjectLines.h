@@ -64,7 +64,7 @@ public:
 
     // returns cached bounding box of this point object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API const Box3f getWorldBox() const;
+    MRMESH_API virtual const Box3f getWorldBox() const override;
 
 protected:
     ObjectLines( const ObjectLines& other ) = default;

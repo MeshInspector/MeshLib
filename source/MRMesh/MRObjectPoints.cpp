@@ -84,14 +84,6 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
             << "\n Size : " << points_->points.size();
         res.push_back( ss.str() );
         boundingBoxToInfoLines_( res );
-        getWorldBox();
-        if ( worldBox_ && worldBox_->valid() )
-        {
-            const auto bsize = worldBox_->size();
-            ss = {};
-            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-            res.push_back( ss.str() );
-        }
     }
     else
         res.push_back( "no points" );

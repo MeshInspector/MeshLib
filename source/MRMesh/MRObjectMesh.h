@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVisualObject.h"
+#include "MRXfBasedCache.h"
 
 namespace MR
 {
@@ -44,7 +45,6 @@ public:
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );
     // sets given mesh to this, and returns back previous mesh of this
     MRMESH_API virtual void swapMesh( std::shared_ptr< Mesh > & mesh );
-    void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     const FaceBitSet& getSelectedFaces() const
     {
@@ -129,7 +129,7 @@ public:
     MRMESH_API bool isMeshClosed() const;
     // returns cached bounding box of this mesh object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual const Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox() const override;
     // returns cached information about the number of selected faces in the mesh
     MRMESH_API size_t numSelectedFaces() const;
     // returns cached information about the number of selected undirected edges in the mesh
@@ -161,7 +161,7 @@ private:
     mutable std::optional<MeshStat> meshStat_;
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_;
-    mutable std::optional<Box3f> worldBox_;
+    mutable XfBasedCache<Box3f> worldBox_;
 
 protected:
     MRMESH_API ObjectMesh( const ObjectMesh& other );

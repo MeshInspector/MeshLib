@@ -58,32 +58,6 @@ std::optional<float> DistanceMap::get( size_t i ) const
         return std::nullopt;
 }
 
-float& DistanceMap::getValue( size_t i )
-{
-    assert( data_[i] != NOT_VALID_VALUE );
-    return data_[i];
-}
-
-const float& DistanceMap::getValue( size_t i ) const
-{
-    assert( data_[i] != NOT_VALID_VALUE );
-    return data_[i];
-}
-
-float& DistanceMap::getValue( size_t x, size_t y )
-{
-    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
-    assert( res != NOT_VALID_VALUE );
-    return res;
-}
-
-const float& DistanceMap::getValue( size_t x, size_t y ) const
-{
-    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
-    assert( res != NOT_VALID_VALUE );
-    return res;
-}
-
 std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
 {
     if ( x < 0.f )

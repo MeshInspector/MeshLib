@@ -36,13 +36,11 @@ public:
     // returns value of index element, returns nullopt if not valid
     MRMESH_API std::optional<float> get( size_t i ) const;
     // returns value in (X,Y) element without check on valid
-    // use this only if you sure that distance map has no invalid values
-    MRMESH_API float& getValue( size_t x, size_t y );
-    MRMESH_API const float& getValue( size_t x, size_t y ) const;
-    // returns value of index element without check on valid
-    // use this only if you sure that distance map has no invalid values
-    MRMESH_API float& getValue( size_t i );
-    MRMESH_API const float& getValue( size_t i ) const;
+    // use this only if you sure that distance map has no invalid values or for serialization
+    float& getValue( size_t x, size_t y )       { return data_[ toIndex( { int( x ), int( y ) } ) ]; }
+    float  getValue( size_t x, size_t y ) const { return data_[ toIndex( { int( x ), int( y ) } ) ]; }
+    float& getValue( size_t i )       { return data_[i]; }
+    float  getValue( size_t i ) const { return data_[i]; }
 
 
     // finds interpolated value.

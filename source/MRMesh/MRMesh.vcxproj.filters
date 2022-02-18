@@ -687,6 +687,9 @@
     <ClInclude Include="MRComputeBoundingBox.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRXfBasedCache.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

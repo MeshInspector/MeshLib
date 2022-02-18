@@ -215,6 +215,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRXfBasedCache.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

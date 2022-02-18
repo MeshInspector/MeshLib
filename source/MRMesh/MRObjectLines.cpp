@@ -91,19 +91,16 @@ void ObjectLines::swap( Object& other )
         assert( false );
 }
 
-const Box3f ObjectLines::getWorldBox() const
+Box3f ObjectLines::getWorldBox() const
 {
-    if ( !worldBox_ )
-    {
-        if ( polyline_ )
-        {
-            const auto worldXf = this->worldXf();
-            worldBox_ = polyline_->computeBoundingBox( &worldXf );
-        }
-        else
-            worldBox_ = Box3f{};
-    }
-    return *worldBox_;
+    if ( !polyline_ )
+        return {};
+    const auto worldXf = this->worldXf();
+    if ( auto v = worldBox_.get( worldXf ) )
+        return *v;
+    const auto box = polyline_->computeBoundingBox( &worldXf );
+    worldBox_.set( worldXf, box );
+    return box;
 }
 
 std::vector<std::string> ObjectLines::getInfoLines() const

@@ -1,6 +1,8 @@
 #pragma once
+
 #include "MRVisualObject.h"
 #include "MRPointCloud.h"
+#include "MRXfBasedCache.h"
 
 namespace MR
 {
@@ -30,7 +32,6 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     virtual void setPointCloud( const std::shared_ptr<PointCloud>& pointCloud ) { points_ = pointCloud; setDirtyFlags( DIRTY_ALL ); }
-    void setXf( const AffineXf3f& xf ) override { VisualObject::setXf( xf ); worldBox_.reset(); }
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
@@ -49,7 +50,7 @@ public:
 
     // returns cached bounding box of this point object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual const Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox() const override;
 
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;
@@ -74,7 +75,7 @@ protected:
 
 private:
     std::shared_ptr<PointCloud> points_;
-    mutable std::optional<Box3f> worldBox_;
+    mutable XfBasedCache<Box3f> worldBox_;
 
     // size of point in pixels
     float pointSize_{ 5.0f };

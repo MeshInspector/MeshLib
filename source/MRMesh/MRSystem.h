@@ -45,10 +45,8 @@ MRMESH_API std::string GetMRVersionString();
 // Opens given link in default browser
 MRMESH_API void OpenLink( const std::string& url );
 
-#ifndef __EMSCRIPTEN__
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();
-#endif
 
 using FileNamesStack = std::vector<std::filesystem::path>;
 

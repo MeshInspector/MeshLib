@@ -282,9 +282,11 @@ std::filesystem::path GetWindowsInstallDirectory()
 }
 #endif //_WIN32
 
-#ifndef __EMSCRIPTEN__
 std::string GetCpuId()
 {
+#ifdef __EMSCRIPTEN__
+    return "Web Browser";
+#else
     char CPUBrandString[0x40] = {};
 #if defined(__APPLE__)
     size_t size = sizeof(CPUBrandString);
@@ -319,7 +321,7 @@ std::string GetCpuId()
     }
 #endif
     return CPUBrandString;
-}
 #endif
+}
 
 } //namespace MR

@@ -690,6 +690,9 @@
     <ClInclude Include="MRXfBasedCache.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRSceneSettings.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
     <ClInclude Include="MRFillContours2D.h" />
   </ItemGroup>
   <ItemGroup>
@@ -1163,6 +1166,9 @@
     </ClCompile>
     <ClCompile Include="MRComputeBoundingBox.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneSettings.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContours2D.cpp" />
   </ItemGroup>

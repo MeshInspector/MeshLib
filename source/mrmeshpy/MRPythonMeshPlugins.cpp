@@ -210,30 +210,6 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, remove_spikes, &removeSpikes, "removes spikes 
 // nothing to add or test
 
 // Geodesic Path
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, TriPoint, [] ( pybind11::module_& m )
-{
-    pybind11::class_<TriPointf>( m, "TriPoint" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "a", &TriPointf::a ).
-        def_readwrite( "b", &TriPointf::b );
-} )
-
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTriPoint, [] ( pybind11::module_& m )
-{
-    pybind11::class_<MeshTriPoint>( m, "MeshTriPoint" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "e", &MeshTriPoint::e ).
-        def_readwrite( "bary", &MeshTriPoint::bary );
-} )
-
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshEdgePoint, [] ( pybind11::module_& m )
-{
-    pybind11::class_<MR::MeshEdgePoint>( m, "MeshEdgePoint" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "e", &MR::MeshEdgePoint::e ).
-        def_readwrite( "a", &MR::MeshEdgePoint::a );
-} )
-
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMeshEdgePoint, MR::MeshEdgePoint )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, compute_surface_path, &computeSurfacePath, "finds closest surface path between points" )

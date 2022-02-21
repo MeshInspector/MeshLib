@@ -14,6 +14,7 @@
 #include "MRIRenderObject.h"
 #include "MRViewportId.h"
 #include "MRGTest.h"
+#include "MRSceneSettings.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include <filesystem>
@@ -195,6 +196,7 @@ void ObjectMesh::setupRenderObject_() const
 ObjectMesh::ObjectMesh()
 {
     setDefaultColors_();
+    setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
 }
 
 ObjectMesh::ObjectMesh( const ObjectMesh& other ) :

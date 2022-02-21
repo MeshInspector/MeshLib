@@ -9,6 +9,11 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRViewportId.h"
+#include "MRMesh/MRMeshEdgePoint.h"
+#include "MRMesh/MRTriPoint.h"
+#include "MRMesh/MRMeshTriPoint.h"
+#include "MRMesh/MREdgePaths.h"
+#include "MRMesh/MRFillContour.h"
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
@@ -183,6 +188,89 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& m )
         def_static( "any", &MR::ViewportMask::any );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::MeshEdgePoint>( m, "MeshEdgePoint" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<MR::EdgeId, float>() ).
+        def_readwrite( "e", &MR::MeshEdgePoint::e ).
+        def_readwrite( "a", &MR::MeshEdgePoint::a ).
+        def( "inVertex", ( MR::VertId( MR::MeshEdgePoint::* )( const MR::MeshTopology& )const )& MR::MeshEdgePoint::inVertex ).
+        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex ).
+        def( "getClosestVertex", &MR::MeshEdgePoint::getClosestVertex ).
+        def( "sym", &MR::MeshEdgePoint::sym ).
+        def( pybind11::self == pybind11::self );
+
+    pybind11::class_<MR::TriPointf>( m, "TriPoint" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<float, float>() ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
+        def_readwrite( "a", &MR::TriPointf::a ).
+        def_readwrite( "b", &MR::TriPointf::b );
+
+    pybind11::class_<MR::MeshTriPoint>( m, "MeshTriPoint" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<MR::EdgeId, MR::TriPointf>() ).
+        def( pybind11::init<const MR::MeshEdgePoint&>() ).
+        def( pybind11::init<MR::EdgeId, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
+        def_readwrite( "e", &MR::MeshTriPoint::e ).
+        def_readwrite( "bary", &MR::MeshTriPoint::bary ).
+        def( "onEdge", &MR::MeshTriPoint::onEdge ).
+        def( "inVertex", &MR::MeshTriPoint::inVertex ).
+        def( "isBd", &MR::MeshTriPoint::isBd );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::EdgeMetric>( m, "EdgeMetric" );
+
+    m.def( "identityMetric", &MR::identityMetric, "returns 1 for each edge" );
+    m.def( "edgeLengthMetric", &MR::edgeLengthMetric,"returns edge length" );
+    m.def( "edgeCurvMetric", &MR::edgeCurvMetric, "returns edge's metric that depends both on edge's length and on the angle between its left and right faces" );
+    m.def( "edgeTableMetric", &MR::edgeTableMetric, "pre-computes the metric for all mesh edges to quickly return it later for any edge" );
+    m.def( "buildShortestPath", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) )& MR::buildShortestPath,
+        pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
+        "builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned" );
+    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) )& MR::buildSmallestMetricPath,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
+        "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) )& MR::buildSmallestMetricPath,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
+        "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+
+    m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::dilateRegionByMetric,
+       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+       "expands the region (of faces or vertices) on given metric value" );
+    m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float ) )& MR::dilateRegionByMetric,
+       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+       "expands the region (of faces or vertices) on given metric value" );
+
+    m.def( "erodeRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::erodeRegionByMetric,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "shrinks the region (of faces or vertices) on given metric value" );
+    m.def( "erodeRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float ) )& MR::erodeRegionByMetric,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "shrinks the region (of faces or vertices) on given metric value" );
+
+    m.def( "dilateRegion", ( void( * )( const MR::Mesh&, MR::FaceBitSet&, float ) )& MR::dilateRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "expands the region (of faces or vertices) on given value (in meters)" );
+    m.def( "dilateRegion", ( void( * )( const MR::Mesh&, MR::VertBitSet&, float ) )& MR::dilateRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "expands the region (of faces or vertices) on given value (in meters)" );
+
+    m.def( "erodeRegion", ( void( * )( const MR::Mesh&, MR::FaceBitSet&, float ) )& MR::erodeRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "shrinks the region (of faces or vertices) on given value (in meters)" );
+    m.def( "erodeRegion", ( void( * )( const MR::Mesh&, MR::VertBitSet&, float ) )& MR::erodeRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+        "shrinks the region (of faces or vertices) on given value (in meters)" );
+
+    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath& ) )& MR::fillContourLeft, "fill region located to the left from given edges" );
+    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const std::vector<MR::EdgePath>& ) )& MR::fillContourLeft, "fill region located to the left from given edges" );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::EdgeId>( m, "EdgeId" ).
@@ -202,12 +290,13 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVec3, MR::Vector3f )
 
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& m )
 {
     using type = boost::dynamic_bitset<uint64_t>;
     pybind11::class_<type>( m, "BoostBitSet" ).
         def( "size", &type::size ).
-        def( "flip", ( type& ( type::* )( ) )& type::flip, pybind11::return_value_policy::reference ).
         def( "count", &type::count );
 } )
 
@@ -219,6 +308,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] (pybind11::module_& m)\
         def( "test", &type::test ).\
         def( "resize", &type::resize ).\
         def( "set",( type& ( type::* )( type::IndexType, bool ) )& type::set, pybind11::return_value_policy::reference ).\
+        def( "flip",( type& ( type::* )() )& type::flip, pybind11::return_value_policy::reference ).\
         def( pybind11::self & pybind11::self ).\
         def( pybind11::self | pybind11::self ).\
         def( pybind11::self ^ pybind11::self ).\

@@ -55,6 +55,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy ).
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy ).
         def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts ).
+        def( "org", &MR::MeshTopology::org ).
+        def( "dest", &MR::MeshTopology::dest ).
         def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges ).
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts );
 } )
@@ -76,6 +78,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::EdgeMap>( m, "EdgeMap" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::EdgeMap::vec_ );
+
+    pybind11::class_<MR::Vector<float, VertId>>( m, "VectorFloatByVert" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::Vector<float, VertId>::vec_ );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
@@ -98,6 +104,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false ).
         def_readwrite( "topology", &MR::Mesh::topology ).
         def_readwrite( "points", &MR::Mesh::points ).
+        def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint ).
+        def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint ).
         def( "invalidateCaches", &MR::Mesh::invalidateCaches ).
         def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) ) &MR::Mesh::transform );
 } )

@@ -8,7 +8,7 @@
 namespace MR
 {
 
-// This singleton struct contain default colors for scene objects
+// This singleton struct contains default colors for scene objects
 struct SceneColors
 {
     enum Type

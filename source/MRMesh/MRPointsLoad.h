@@ -32,9 +32,9 @@ MRMESH_API tl::expected<PointCloud, std::string> fromPts( std::istream& in );
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( const std::filesystem::path& file );
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( std::istream& in );
 
-// detects the format from file extension and loads mesh from it
+// detects the format from file extension and loads points from it
 MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, std::vector<Color>* colors = nullptr );
 
-} //namespace MeshLoad
+} //namespace PointsLoad
 
 } //namespace MR

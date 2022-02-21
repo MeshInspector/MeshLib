@@ -71,6 +71,8 @@
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Project.h" />
     <ClInclude Include="MRPolylineEdgeIterator.h" />
+    <ClInclude Include="MRLinesLoad.h" />
+    <ClInclude Include="MRLinesSave.h" />
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
@@ -290,7 +292,9 @@
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2.cpp" />
     <ClCompile Include="MRPolyline2Project.cpp" />
+    <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />
+    <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />

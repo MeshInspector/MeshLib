@@ -7,6 +7,7 @@
     <tab type="user" url="@ref EmbendedPythonOverview" title="Python overview" />
     <tab type="user" url="@ref DataModel" title="Data model overview" />
     <tab type="user" url="@ref CodingStyleHelp" title="Coding style" />
+    <tab type="user" url="@ref ThirdParty" title="Thirdparty list" />
     <tab type="modules" visible="yes" title="" intro=""/>
     <tab type="namespaces" visible="yes" title="">
       <tab type="namespacelist" visible="yes" title="" intro=""/>

@@ -1,0 +1,27 @@
+namespace MR {
+
+/** \page ThirdParty Thirdparty list
+
+\b Boost \b C++ \b Libraries - provides free peer-reviewed portable C++ source libraries. [Find more...](https://www.boost.org) \n
+\b Curl \b for \b People - a simple wrapper around libcurl. [Find more...](https://github.com/libcpr/cpr) \n
+\b Eigen - a C++ template library for linear algebra. [Find more...](https://eigen.tuxfamily.org) \n
+\b FreeType - a freely available software library to render fonts. [Find more...](https://freetype.org/) \n
+\b GDCM - C++ library dedicated to reading/parsing and writing DICOM medical files. [Find more...](http://gdcm.sourceforge.net/) \n
+\b Google Test - C++ testing and mocking framework. [Find more...](https://github.com/google/googletest) \n
+\b fmt - a library providing a fast and safe alternative to C stdio and C++ iostreams. [Find more...](https://github.com/fmtlib/fmt) \n
+\b JsonCpp - manipulating JSON values, including serialization and deserialization. [Find more...](https://github.com/open-source-parsers/jsoncpp) \n
+\b libzip - reading, creating, and modifying zip archives. [Find more...](https://libzip.org/) \n
+\b OpenCTM - the Open Compressed Triangle Mesh file format. [Find more...](http://openctm.sourceforge.net/) \n
+\b OpenVDB - efficient manipulation of sparse, time-varying, volumetric data discretized. [Find more...](https://www.openvdb.org/) \n
+\b parallel-hashmap - fast and memory-friendly hashmap and btree containers. [Find more...](https://github.com/greg7mdp/parallel-hashmap) \n
+\b PoDoFo - a library to work with the PDF file format. [Find more...](http://podofo.sourceforge.net/) \n
+\b pybind11 - a library that exposes C++ types in Python and vice versa. [Find more...](https://github.com/pybind/pybind11) \n
+\b spdlog - very fast, header-only/compiled, C++ logging library. [Find more...](https://github.com/gabime/spdlog) \n
+\b TBB - simplifies the work of adding parallelism to complex applications. [Find more...](https://github.com/oneapi-src/oneTBB) \n
+\b TartanLlama/expected - implementation of std::expected with functional-style extensions. [Find more...](https://github.com/TartanLlama/expected) \n
+\b miniply - a simple and fast parser for PLY files. [Find more...](https://github.com/vilya/miniply) \n
+
+
+*/
+
+}

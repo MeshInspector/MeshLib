@@ -26,11 +26,12 @@ class PlanarTriangulator
 public:
     // constructor makes initial mesh which simply contain input contours as edges
     // (same vertices are merged and multiple edges are deleted)
-    PlanarTriangulator( const Contours2d& contours );
+    PlanarTriangulator( const Contours2d& contours, bool abortWhenIntersect = false );
     // process line sweep queue and triangulate inside area of mesh (based on winding rule)
-    Mesh run();
+    std::optional<Mesh> run();
 private:
     Mesh mesh_;
+    bool abortWhenIntersect_ = false;
 
     struct EdgeWindingInfo
     {
@@ -71,8 +72,8 @@ private:
         float yPos{ FLT_MAX };
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
-    void processOneVert_( VertId v );
-    void resolveIntersectios_();
+    bool processOneVert_( VertId v );
+    bool resolveIntersectios_();
 };
 
 bool PlanarTriangulator::ComaparableVertId::operator<( const ComaparableVertId& other ) const
@@ -89,13 +90,14 @@ bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& 
     return l.x > r.x || ( l.x == r.x && l.y > r.y );
 }
 
-PlanarTriangulator::PlanarTriangulator( const Contours2d& contours )
+PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, bool abortWhenIntersect /*= false*/ )
 {
+    abortWhenIntersect_ = abortWhenIntersect;
     initMeshByContours_( contours );
     mergeSamePoints_();
 }
 
-Mesh PlanarTriangulator::run()
+std::optional<Mesh> PlanarTriangulator::run()
 {
     MR_TIMER;
     // process queue
@@ -104,7 +106,8 @@ Mesh PlanarTriangulator::run()
         auto active = queue_.top(); // cannot use std::move unfortunately since top() returns const reference
         queue_.pop();
 
-        processOneVert_( active.id );
+        if ( !processOneVert_( active.id ) )
+            return {};
     }
 
     // triangulate
@@ -271,7 +274,7 @@ void PlanarTriangulator::removeMultipleAfterMerge_()
     }
 }
 
-void PlanarTriangulator::processOneVert_( VertId v )
+bool PlanarTriangulator::processOneVert_( VertId v )
 {
     // remove left, find right
     bool hasLeft = false;
@@ -371,10 +374,10 @@ void PlanarTriangulator::processOneVert_( VertId v )
     }
 
     // resolve intersections
-    resolveIntersectios_();
+    return resolveIntersectios_();
 }
 
-void PlanarTriangulator::resolveIntersectios_()
+bool PlanarTriangulator::resolveIntersectios_()
 {
     for ( int i = 0; i + 1 < activeSweepEdges_.size(); ++i )
     {
@@ -400,6 +403,9 @@ void PlanarTriangulator::resolveIntersectios_()
         auto ratio2 = dot( p1 - p2, n1 ) / dot( d2, n1 );
         if ( ( ratio1 >= 1.0f || ratio1 <= 0.0f ) || ( ratio2 >= 1.0f || ratio2 <= 0.0f ) )
             continue; // no intersection
+
+        if ( abortWhenIntersect_ )
+            return false;
 
         auto intersection = p1 + ratio1 * d1;
         VertId vInter = mesh_.addPoint( intersection );
@@ -431,18 +437,19 @@ void PlanarTriangulator::resolveIntersectios_()
         // update queue
         queue_.push( ComaparableVertId{ &mesh_,vInter } );
     }
+    return true;
 }
 
-Mesh triangulateContours( const Contours2d& contours )
+std::optional<Mesh> triangulateContours( const Contours2d& contours, bool abortWhenIntersect /*= false*/ )
 {
-    PlanarTriangulator triangulator( contours );
+    PlanarTriangulator triangulator( contours, abortWhenIntersect );
     return triangulator.run();
 }
 
-Mesh triangulateContours( const Contours2f& contours )
+std::optional<Mesh> triangulateContours( const Contours2f& contours, bool abortWhenIntersect /*= false*/ )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd );
+    PlanarTriangulator triangulator( contsd, abortWhenIntersect );
     return triangulator.run();
 }
 

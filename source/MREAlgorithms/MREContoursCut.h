@@ -153,6 +153,6 @@ MREALGORITHMS_API CutMeshResult cutMesh( MR::Mesh& mesh, const OneMeshContours& 
   * \param mapNew2Old (this is optional output) map from newly generated faces to old faces (N-1)
   * \note This function changes input mesh
   */
-MREALGORITHMS_API void cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old = nullptr );
+MREALGORITHMS_API [[maybe_unused]] std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old = nullptr );
 
 }

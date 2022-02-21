@@ -684,6 +684,7 @@
     <ClInclude Include="MRPolylineEdgeIterator.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRFillContours2D.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1154,6 +1155,7 @@
     <ClCompile Include="MRLine3.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MRFillContours2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

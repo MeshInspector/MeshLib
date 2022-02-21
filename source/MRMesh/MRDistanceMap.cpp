@@ -58,32 +58,6 @@ std::optional<float> DistanceMap::get( size_t i ) const
         return std::nullopt;
 }
 
-float& DistanceMap::getValue( size_t i )
-{
-    assert( data_[i] != NOT_VALID_VALUE );
-    return data_[i];
-}
-
-const float& DistanceMap::getValue( size_t i ) const
-{
-    assert( data_[i] != NOT_VALID_VALUE );
-    return data_[i];
-}
-
-float& DistanceMap::getValue( size_t x, size_t y )
-{
-    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
-    assert( res != NOT_VALID_VALUE );
-    return res;
-}
-
-const float& DistanceMap::getValue( size_t x, size_t y ) const
-{
-    auto & res = data_[ toIndex( { int( x ), int( y ) } ) ];
-    assert( res != NOT_VALID_VALUE );
-    return res;
-}
-
 std::optional<float> DistanceMap::getInterpolated( float x, float y ) const
 {
     if ( x < 0.f )
@@ -532,8 +506,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     {
         if ( x1 == resX || y1 == resY )
             return;
-        const auto v0 = *distMap.get( x0, y0 );
-        const auto v1 = *distMap.get( x1, y1 );
+        const auto v0opt = distMap.get( x0, y0 );
+        const auto v1opt = distMap.get( x1, y1 );
+        if ( !v0opt || !v1opt )
+            return;
+        const auto v0 = *v0opt;
+        const auto v1 = *v1opt;
         const bool low0 = v0 < isoValue;
         const bool low1 = v1 < isoValue;
         if ( low0 == low1 )

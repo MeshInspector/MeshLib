@@ -50,12 +50,14 @@
 
 #include <gtest/gtest.h>
 
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:5204) //class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
 #pragma warning(disable:5220) //a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
 #include <ppltasks.h>
 #pragma warning(pop)
+#endif
 
 #pragma warning(push)
 #pragma warning(disable:4355) //'this': used in base member initializer list

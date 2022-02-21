@@ -57,19 +57,16 @@ void ObjectPoints::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-const Box3f ObjectPoints::getWorldBox() const
+Box3f ObjectPoints::getWorldBox() const
 {
-    if ( !worldBox_ )
-    {
-        if ( points_ )
-        {
-            const auto worldXf = this->worldXf();
-            worldBox_ = points_->computeBoundingBox( &worldXf );
-        }
-        else
-            worldBox_ = Box3f{};
-    }
-    return *worldBox_;
+    if ( !points_ )
+        return {};
+    const auto worldXf = this->worldXf();
+    if ( auto v = worldBox_.get( worldXf ) )
+        return *v;
+    const auto box = points_->computeBoundingBox( &worldXf );
+    worldBox_.set( worldXf, box );
+    return box;
 }
 
 std::vector<std::string> ObjectPoints::getInfoLines() const
@@ -84,14 +81,6 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
             << "\n Size : " << points_->points.size();
         res.push_back( ss.str() );
         boundingBoxToInfoLines_( res );
-        getWorldBox();
-        if ( worldBox_ && worldBox_->valid() )
-        {
-            const auto bsize = worldBox_->size();
-            ss = {};
-            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-            res.push_back( ss.str() );
-        }
     }
     else
         res.push_back( "no points" );

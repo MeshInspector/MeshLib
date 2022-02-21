@@ -172,6 +172,10 @@ public:
     // swaps this object with other
     MRMESH_API virtual void swap( Object& other ) override;
 
+    // returns cached bounding box of this object in world coordinates;
+    // if you need bounding box in local coordinates please call getBoundingBox()
+    MRMESH_API virtual Box3f getWorldBox() const;
+
     // this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}
 

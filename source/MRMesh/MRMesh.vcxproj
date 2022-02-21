@@ -22,6 +22,7 @@
     <ClInclude Include="MRAABBTreePolyline2.h" />
     <ClInclude Include="MRBase64.h" />
     <ClInclude Include="MRBestFitQuadric.h" />
+    <ClInclude Include="MRComputeBoundingBox.h" />
     <ClInclude Include="MRChangeMeshAction.h" />
     <ClInclude Include="MRChangeNameAction.h" />
     <ClInclude Include="MRChangeSceneObjectsOrder.h" />
@@ -215,6 +216,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRXfBasedCache.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -232,6 +234,7 @@
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCombinedHistoryAction.cpp" />
+    <ClCompile Include="MRComputeBoundingBox.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />

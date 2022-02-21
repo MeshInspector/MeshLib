@@ -684,6 +684,12 @@
     <ClInclude Include="MRPolylineEdgeIterator.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRComputeBoundingBox.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRXfBasedCache.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
     <ClInclude Include="MRFillContours2D.h" />
   </ItemGroup>
   <ItemGroup>
@@ -1153,6 +1159,9 @@
       <Filter>Source Files\Python</Filter>
     </ClCompile>
     <ClCompile Include="MRLine3.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRComputeBoundingBox.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContours2D.cpp" />

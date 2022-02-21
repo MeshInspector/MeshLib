@@ -51,6 +51,9 @@ public:
     MRMESH_API const AABBTreePolyline3& getAABBTree() const;
     // returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box3f getBoundingBox() const;
+    // passes through all valid points and finds the minimal bounding box containing all of them;
+    // if toWorld transformation is given then returns minimal bounding box in world space
+    MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     // applies given transformation to all valid polyline vertices
     MRMESH_API void transform( const AffineXf3f & xf );

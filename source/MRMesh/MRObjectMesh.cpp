@@ -270,19 +270,16 @@ bool ObjectMesh::isMeshClosed() const
     return *meshIsClosed_;
 }
 
-const Box3f ObjectMesh::getWorldBox() const
+Box3f ObjectMesh::getWorldBox() const
 {
-    if ( !worldBox_ )
-    {
-        if ( mesh_ )
-        {
-            const auto worldXf = this->worldXf();
-            worldBox_ = mesh_->computeBoundingBox( &worldXf );
-        }
-        else
-            worldBox_ = Box3f{};
-    }
-    return *worldBox_;
+    if ( !mesh_ )
+        return {};
+    const auto worldXf = this->worldXf();
+    if ( auto v = worldBox_.get( worldXf ) )
+        return *v;
+    const auto box = mesh_->computeBoundingBox( &worldXf );
+    worldBox_.set( worldXf, box );
+    return box;
 }
 
 size_t ObjectMesh::numSelectedFaces() const
@@ -383,14 +380,6 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
         boundingBoxToInfoLines_( res );
-        getWorldBox();
-        if ( worldBox_ && worldBox_->valid() )
-        {
-            const auto bsize = worldBox_->size();
-            std::stringstream ss;
-            ss << "world box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-            res.push_back( ss.str() );
-        }
     }
     else
         res.push_back( "no mesh" );

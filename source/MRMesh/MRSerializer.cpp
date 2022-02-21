@@ -244,7 +244,6 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
     if ( password )
         zip_set_default_password( zip, password );
 
-    int nameLen{0};
     zip_stat_t stats;
     zip_file_t* zfile;
     std::vector<char> fileBufer;
@@ -253,11 +252,12 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
         if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
             return tl::make_unexpected( "Cannot process zip content" );
 
-        nameLen = (int)strlen(stats.name);
-        std::filesystem::path relativeName = stats.name;
+        std::string nameFixed = stats.name;
+        std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
+        std::filesystem::path relativeName = nameFixed;
         relativeName.make_preferred();
         std::filesystem::path newItemPath = targetFolder / relativeName;
-        if (stats.name[nameLen-1] == '/')
+        if ( !nameFixed.empty() && nameFixed.back() == '/' )
         {
             if ( !std::filesystem::exists( newItemPath.parent_path(), ec ) )
                 if ( !std::filesystem::create_directories( newItemPath.parent_path(), ec ) )
@@ -267,7 +267,7 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
         {
             zfile = zip_fopen_index(zip,i,0);
             if ( !zfile )
-                return tl::make_unexpected( "Cannot open zip file " + std::string(stats.name) );
+                return tl::make_unexpected( "Cannot open zip file " + nameFixed );
 
             // in some manually created zip-files there is no folder entries for files in sub-folders;
             // so let us create directory each time before saving a file in it
@@ -282,7 +282,7 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
             fileBufer.resize(stats.size);
             auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
             if ( bitesRead != (zip_int64_t)stats.size )
-                return tl::make_unexpected( "Cannot read file from zip " + std::string( stats.name ) );
+                return tl::make_unexpected( "Cannot read file from zip " + nameFixed );
 
             zip_fclose(zfile);
             if ( !ofs.write( fileBufer.data(), fileBufer.size() ) )

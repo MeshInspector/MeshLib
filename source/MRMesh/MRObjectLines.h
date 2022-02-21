@@ -1,6 +1,8 @@
 #pragma once
+
 #include "MRVisualObject.h"
 #include "MRPolyline.h"
+#include "MRXfBasedCache.h"
 
 namespace MR
 {
@@ -61,6 +63,10 @@ public:
     // returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 
+    // returns cached bounding box of this point object in world coordinates;
+    // if you need bounding box in local coordinates please call getBoundingBox()
+    MRMESH_API virtual Box3f getWorldBox() const override;
+
 protected:
     ObjectLines( const ObjectLines& other ) = default;
 
@@ -86,5 +92,6 @@ private:
     std::shared_ptr<Polyline> polyline_;
 
     mutable std::optional<float> totalLength_;
+    mutable XfBasedCache<Box3f> worldBox_;
 };
 }

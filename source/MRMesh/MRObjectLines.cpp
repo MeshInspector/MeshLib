@@ -58,10 +58,12 @@ void ObjectLines::setDirtyFlags( uint32_t mask )
 {
     VisualObject::setDirtyFlags( mask );
 
-    if ( ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES ) && polyline_ )
+    if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {
-        polyline_->invalidateCaches();
         totalLength_.reset();
+        worldBox_.reset();
+        if ( polyline_ )
+            polyline_->invalidateCaches();
     }
 }
 
@@ -87,6 +89,18 @@ void ObjectLines::swap( Object& other )
         std::swap( *this, *otherLines );
     else
         assert( false );
+}
+
+Box3f ObjectLines::getWorldBox() const
+{
+    if ( !polyline_ )
+        return {};
+    const auto worldXf = this->worldXf();
+    if ( auto v = worldBox_.get( worldXf ) )
+        return *v;
+    const auto box = polyline_->computeBoundingBox( &worldXf );
+    worldBox_.set( worldXf, box );
+    return box;
 }
 
 std::vector<std::string> ObjectLines::getInfoLines() const

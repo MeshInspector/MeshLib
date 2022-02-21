@@ -7,6 +7,7 @@
 #include "MRGTest.h"
 #include "MRTimer.h"
 #include "MRMesh.h"
+#include "MRComputeBoundingBox.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -77,6 +78,11 @@ float Polyline::totalLength() const
 Box3f Polyline::getBoundingBox() const
 {
     return getAABBTree().getBoundingBox();
+}
+
+Box3f Polyline::computeBoundingBox( const AffineXf3f * toWorld ) const
+{
+    return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
 Contours2f Polyline::contours() const

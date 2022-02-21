@@ -39,7 +39,6 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
 {
     MR_TIMER;
 
-    std::vector<Color> colors;
     auto lines = LinesLoad::fromAnySupportedFormat( file );
     if ( !lines.has_value() )
     {
@@ -49,11 +48,6 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
     ObjectLines objectLines;
     objectLines.setName( utf8string( file.stem() ) );
     objectLines.setPolyline( std::make_shared<MR::Polyline>( std::move( lines.value() ) ) );
-    if ( !colors.empty() )
-    {
-        objectLines.setVertsColorMap( std::move( colors ) );
-        objectLines.setColoringType( ColoringType::VertsColorMap );
-    }
 
     return objectLines;
 }

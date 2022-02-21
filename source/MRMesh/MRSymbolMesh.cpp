@@ -214,7 +214,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
 Mesh triangulateSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
-    return *PlanarTriangulation::triangulateContours( createSymbolContours( params ) );
+    return PlanarTriangulation::triangulateContours( createSymbolContours( params ) );
 }
 
 void addBaseToPlanarMesh( Mesh & mesh )

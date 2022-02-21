@@ -26,11 +26,12 @@ class PlanarTriangulator
 public:
     // constructor makes initial mesh which simply contain input contours as edges
     // (same vertices are merged and multiple edges are deleted)
-    PlanarTriangulator( const Contours2d& contours, bool abortWhenIntersect = false );
+    PlanarTriangulator( const Contours2d& contours, bool mergeClosePoints = true, bool abortWhenIntersect = false );
     // process line sweep queue and triangulate inside area of mesh (based on winding rule)
     std::optional<Mesh> run();
 private:
     Mesh mesh_;
+    bool mergeClosePoints_ = true;
     bool abortWhenIntersect_ = false;
 
     struct EdgeWindingInfo
@@ -90,9 +91,10 @@ bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& 
     return l.x > r.x || ( l.x == r.x && l.y > r.y );
 }
 
-PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, bool abortWhenIntersect /*= false*/ )
+PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, bool mergeClosePoints /*= true*/, bool abortWhenIntersect /*= false*/ )
 {
     abortWhenIntersect_ = abortWhenIntersect;
+    mergeClosePoints_ = mergeClosePoints;
     initMeshByContours_( contours );
     mergeSamePoints_();
 }
@@ -188,9 +190,10 @@ void PlanarTriangulator::mergeSamePoints_()
             continue;
         }
         // if same coords
-        mergeSinglePare_( sortedPoints[prevUnique].id, sortedPoints[i].id );
+        if ( mergeClosePoints_ )
+            mergeSinglePare_( sortedPoints[prevUnique].id, sortedPoints[i].id );
     }
-    
+
     removeMultipleAfterMerge_();
 
     for ( const auto& p : sortedPoints )
@@ -440,16 +443,35 @@ bool PlanarTriangulator::resolveIntersectios_()
     return true;
 }
 
-std::optional<Mesh> triangulateContours( const Contours2d& contours, bool abortWhenIntersect /*= false*/ )
+Mesh triangulateContours( const Contours2d& contours, bool mergeClosePoints /*= true*/ )
 {
-    PlanarTriangulator triangulator( contours, abortWhenIntersect );
+    PlanarTriangulator triangulator( contours, mergeClosePoints, false );
+    if ( auto res = triangulator.run() )
+        return *res;
+    else
+        return Mesh();
+}
+
+Mesh triangulateContours( const Contours2f& contours, bool mergeClosePoints /*= true*/ )
+{
+    const auto contsd = copyContours<Contours2d>( contours );
+    PlanarTriangulator triangulator( contsd, mergeClosePoints, false );
+    if ( auto res = triangulator.run() )
+        return *res;
+    else
+        return Mesh();
+}
+
+std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, bool mergeClosePoints /*= true*/ )
+{
+    PlanarTriangulator triangulator( contours, mergeClosePoints, true );
     return triangulator.run();
 }
 
-std::optional<Mesh> triangulateContours( const Contours2f& contours, bool abortWhenIntersect /*= false*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, bool mergeClosePoints /*= true*/ )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, abortWhenIntersect );
+    PlanarTriangulator triangulator( contsd, mergeClosePoints, true );
     return triangulator.run();
 }
 

@@ -1,39 +1,57 @@
 #include "MRFillContours2D.h"
+#include <limits>
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MR2DContoursTriangulation.h"
+#include "MRRingIterator.h"
+#include "MREdgePaths.h"
+#include "MRAffineXf3.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRTimer.h"
 
-#include "MRMesh/MREdgeIterator.h"
-#include "MRMesh/MRIteratorRange.h"
-#include "MRMesh/MRRingIterator.h"
-#include "spdlog/spdlog.h"
-#include <iostream>
-#include "MRBestFit.h"
+namespace
+{
+const float maxError = std::numeric_limits<float>::epsilon() * 10.f;
+}
 
 namespace MR
 {
 
-bool MR::fillContours2D( Mesh& mesh, std::vector<EdgePath>& paths )
+bool fillContours2D( Mesh& mesh, const EdgePath& holesEdges )
 {
-    if ( paths.empty() )
+    MR_TIMER
+    // check input
+    assert( !holesEdges.empty() );
+    if ( holesEdges.empty() )
     {
-        spdlog::warn( "Paths size empty!" );
+        spdlog::warn( "Holes edges size empty!" );
         return false;
     }
 
     // reorder to make edges ring with hole on left side
+    bool badEdge = false;
+    auto& meshTopology = mesh.topology;
+    for ( const auto& edge : holesEdges )
+    {
+        if ( meshTopology.left( edge ) )
+        {
+            badEdge = true;
+            break;
+        }
+    }
+    assert( !badEdge );
+    if ( badEdge )
+    {
+        spdlog::warn( "Holes edges have edge with face on left side" );
+        return false;
+    }
+
+    std::vector<EdgePath> paths( holesEdges.size() );
     for ( int i = 0; i < paths.size(); ++i )
     {
         auto& path = paths[i];
-        if ( !mesh.topology.left( path[0] ) )
-            continue;
-
-        const auto size = path.size();
-        EdgePath reversPath( size );
-        reversPath[0] = path[0].sym();
-        for ( int j = 1; j < size; ++j )
-            reversPath[j] = path[size - j].sym();
-        path = std::move( reversPath );
+        for ( const auto& edge : leftRing( meshTopology, holesEdges[i] ) )
+            path.push_back( edge );
     }
 
     // make Contours from EdgePaths
@@ -50,37 +68,23 @@ bool MR::fillContours2D( Mesh& mesh, std::vector<EdgePath>& paths )
         contours3f.push_back( contour );
     }
 
-    // calculate center point
-    Vector3f centerPoint;
-    size_t pointsNumber = 0;
-    for ( const auto& contour : contours3f )
-    {
-        const auto max = contour.size() - 1;
-        pointsNumber += max;
-        for ( int i = 0; i < max; ++i )
-            centerPoint += contour[i];
-    }
-    centerPoint = centerPoint / float( pointsNumber );
-
     // calculate plane normal
     Vector3f planeNormal;
     for ( const auto& contour : contours3f )
     {
         const auto max = contour.size() - 1;
         for ( int i = 0; i < max; ++i )
-        {
-            planeNormal += cross( ( contour[i] - centerPoint ), ( contour[i + 1] - centerPoint ) );
-        }
+            planeNormal += cross( contour[i], contour[i + 1] );
     }
     planeNormal = planeNormal.normalized();
 
     // find transformation from world to plane space and back
-    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), centerPoint );
+    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), contours3f[0][0] );
     const auto planeXfInv = planeXf.inverse();
 
     // make contours2D (on plane) from contours3D (in world)
     Contours2f contours2f;
-    float maxZ = 0.f; // FOR DEBUG
+    float maxZ = 0.f;
     for ( const auto& contour3f : contours3f )
     {
         Contour2f contour;
@@ -88,79 +92,42 @@ bool MR::fillContours2D( Mesh& mesh, std::vector<EdgePath>& paths )
         {
             const auto localPoint = planeXfInv( point );
             contour.push_back( Vector2f( localPoint.x, localPoint.y ) );
-            if ( std::fabs( localPoint.z ) > maxZ ) maxZ = std::fabs( localPoint.z ); // DEBUG
+            if ( std::fabs( localPoint.z ) > maxZ ) maxZ = std::fabs( localPoint.z );
         }
         contours2f.push_back( contour );
     }
-    spdlog::info( "DEBUG maxZ = {}", maxZ ); // DEBUG
+    if ( maxZ > maxError )
+    {
+        spdlog::warn("Edges aren't in the same plane. Max Z = {}", maxZ );
+        return false;
+    }
 
     // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateContours( contours2f, true );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, false );
     if ( !fillResult )
     {
         spdlog::warn( "Cant triangulate contours" );
         return false;
     }
-    Mesh& additionalMesh = *fillResult;
-    auto holes = additionalMesh.topology.findHoleRepresentiveEdges();
-    auto holesForSearch = holes;
+    Mesh& patchMesh = *fillResult;
+    const auto holes = patchMesh.topology.findHoleRepresentiveEdges();
 
     // transform patch surface from plane to world space
-    auto& addMeshPoints = additionalMesh.points;
-    for ( auto& point : addMeshPoints )
+    auto& patchMeshPoints = patchMesh.points;
+    for ( auto& point : patchMeshPoints )
         point = planeXf( point );
-    
-    
-    // find 
-    std::vector<Vector2i> mapToSourceMesh( paths.size(), Vector2i( -1, -1 ) );
-    for ( int i = 0; i < paths.size(); ++i )
-    {
-        auto& path = paths[i];
-        for ( int j = 0; j < path.size(); ++j )
-        {
-            auto sourceOrg = mesh.orgPnt( path[j] );
-            auto sourceDest = mesh.destPnt( path[j] );
-            bool found = false;
-            for ( int k = int( holesForSearch.size() ) - 1; k >= 0; --k )
-            {
-                auto addOrg = additionalMesh.orgPnt( holesForSearch[k] );
-                auto addDest = additionalMesh.destPnt( holesForSearch[k] );
-                found = ( ( sourceOrg - addOrg ).lengthSq() < 1.e-6f && ( sourceDest - addDest ).lengthSq() < 1.e-6f ) ||
-                    ( ( sourceOrg - addDest ).lengthSq() < 1.e-6f && ( sourceDest - addOrg ).lengthSq() < 1.e-6f );
-//                 std::string text = fmt::format( "DEBUG i = {:2d} j = {:2d} k = {:2d} sOrg = ( {:4f} , {:4f} ) sDest = ( {:4f} , {:4f} ) aOrg = ( {:4f} , {:4f} ) aDest = ( {:4f} , {:4f} )",
-//                     i, j, k, sourceOrg.x, sourceOrg.y, sourceDest.x, sourceDest.y, addOrg.x, addOrg.y, addDest.x, addDest.y );
-//                 std::cout << text << std::endl;
-                if ( found )
-                {
-                    mapToSourceMesh[k] = Vector2i( i, j );
-                    break;
-                }
-            }
-            if ( found )
-                break;
-        }
-    }
 
-    // check that all holes edges founded
-    for ( const auto& item : mapToSourceMesh )
-    {
-        if ( item == Vector2i( -1, -1 ) )
-        {
-            spdlog::warn( "Some hole edge not found pair" );
-            return false;
-        }
-    }
-
+    // make 
     std::vector<EdgePath> newPaths( holes.size() );
     for ( int i = 0; i < newPaths.size(); ++i )
     {
         EdgePath newPath;
         EdgeId edge = holes[i];
-        if ( additionalMesh.topology.left( edge ) ) edge = edge.sym();
-        auto ring = leftRing( additionalMesh.topology, edge );
+        if ( patchMesh.topology.left( edge ) ) edge = edge.sym();
+        auto ring = leftRing( patchMesh.topology, edge );
         for ( const auto& e : ring )
             newPath.push_back( e );
-        newPaths[mapToSourceMesh[i].x] = newPath;
+        newPaths[i] = newPath;
     }
 
     // check that patch surface borders size equal original mesh borders size
@@ -178,37 +145,31 @@ bool MR::fillContours2D( Mesh& mesh, std::vector<EdgePath>& paths )
         }
     }
 
-    //make true ring direction
+    // reorder to make edges ring with hole on right side
     for ( int i = 0; i < newPaths.size(); ++i )
     {
         auto& newPath = newPaths[i];
-        if ( !additionalMesh.topology.right( newPath[0] ) )
+        if ( !patchMesh.topology.right( newPath[0] ) )
             continue;
-
-        const auto size = newPath.size();
-        EdgePath reversPath( size );
-        for ( int j = 1; j < size; ++j )
-            reversPath[size - j] = newPath[j].sym();
-        reversPath[0] = newPath[0].sym();
-        newPath = reversPath;
+        
+        newPath.push_back( newPath[0] );
+        reverse( newPath );
+        newPath.pop_back();
     }
 
     // move patch surface border points to original position (according original mesh)
-    auto& addMeshTopology = additionalMesh.topology;
+    auto& patchMeshTopology = patchMesh.topology;
     auto& meshPoints = mesh.points;
-    auto& meshTopology = mesh.topology;
     for ( int i = 0; i < paths.size(); ++i )
     {
         auto& path = paths[i];
         auto& newPath = newPaths[i];
         for ( int j = 0; j < path.size(); ++j )
-        {
-            addMeshPoints[addMeshTopology.org( newPath[j] )] = meshPoints[meshTopology.org( path[j] )];
-        }
+            patchMeshPoints[patchMeshTopology.org( newPath[j] )] = meshPoints[meshTopology.org( path[j] )];
     }
     
     // add patch surface to original mesh
-    mesh.addPartByMask( additionalMesh, additionalMesh.topology.getValidFaces(), false, paths, newPaths );
+    mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
     return true;
 }
 

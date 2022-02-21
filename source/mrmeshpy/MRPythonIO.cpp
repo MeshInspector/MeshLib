@@ -33,7 +33,7 @@ Mesh pythonLoadMeshFromAnyFormat( const std::string& path )
     return {};
 }
 
-bool pythonSaveLinesToAnyFormat( const Polyline& lines, const std::string& path )
+bool pythonSaveLinesToAnyFormat( const MR::Polyline& lines, const std::string& path )
 {
     auto res = MR::LinesSave::toAnySupportedFormat( lines, path );
     return res.has_value();

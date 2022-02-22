@@ -43,6 +43,7 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
@@ -262,6 +263,7 @@
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFile.cpp" />
     <ClCompile Include="MRFillContour.cpp" />
+    <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />

@@ -1585,7 +1585,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     return res;
 }
 
-void cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old /*= nullptr*/ )
+std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old /*= nullptr*/ )
 {
     MR_TIMER;
     MR_MESH_WRITER( mesh );
@@ -1610,11 +1610,13 @@ void cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* ma
     auto removedFaces = mesh.topology.getValidFaces() - goodFaces;
 
     deleteFaces( mesh.topology, removedFaces );
-    if ( !mapNew2Old )
-        return;
-    MR::FaceMap& map = *mapNew2Old;
-    for ( auto& faceId : removedFaces )
-        map[faceId] = FaceId();
+    if ( mapNew2Old )
+    {
+        MR::FaceMap& map = *mapNew2Old;
+        for ( auto& faceId : removedFaces )
+            map[faceId] = FaceId();
+    }
+    return cutEdges.resultCut;
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

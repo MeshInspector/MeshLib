@@ -102,6 +102,10 @@ struct PolylineTopology
     // return the edge from first to second vertex
     MRMESH_API EdgeId makePolyline( const VertId * vs, size_t num );
 
+    // saves and loads in binary stream
+    MRMESH_API void write( std::ostream & s ) const;
+    MRMESH_API bool read( std::istream & s );
+
     // comparison via edges (all other members are considered as not important caches)
     bool operator ==( const PolylineTopology & b ) const { return edges_ == b.edges_; }
     bool operator !=( const PolylineTopology & b ) const { return edges_ != b.edges_; }
@@ -110,6 +114,8 @@ struct PolylineTopology
     MRMESH_API bool isConsistentlyOriented() const;
     // verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
+    // computes numValidVerts_ and validVerts_ from edgePerVertex_
+    MRMESH_API void computeValidsFromEdges();
 
 private:
     // sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table

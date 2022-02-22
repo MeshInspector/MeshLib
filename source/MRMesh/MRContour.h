@@ -1,28 +1,50 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRVector3.h"
 
 namespace MR
 {
 
 // >0 for clockwise loop, < 0 for CCW loop
-template<typename T>
-T calcOrientedArea( const Contour2<T> & contour )
+template<typename T, typename R = T> //R is the type for the accumulation and for result
+R calcOrientedArea( const Contour2<T> & contour )
 {
     if ( contour.size() < 3 )
         return 0;
 
-    T area = 0;
-    auto p0 = contour[0];
+    R area = 0;
+    Vector2<R> p0{ contour[0] };
 
     for ( int i = 2; i < contour.size(); ++i )
     {
-        auto p1 = contour[i - 1];
-        auto p2 = contour[i];
+        Vector2<R> p1{ contour[i - 1] };
+        Vector2<R> p2{ contour[i] };
         area += cross( p2 - p0, p1 - p0 );
     }
 
-    return area / 2;
+    return R(0.5) * area;
+}
+
+// returns the vector with the magnitude equal to contour area, and directed to see the contour
+// in ccw order from the vector tip
+template<typename T, typename R = T> //R is the type for the accumulation and for result
+Vector3<R> calcOrientedArea( const Contour3<T> & contour )
+{
+    if ( contour.size() < 3 )
+        return {};
+
+    Vector3<R> area;
+    Vector3<R> p0{ contour[0] };
+
+    for ( int i = 2; i < contour.size(); ++i )
+    {
+        Vector3<R> p1{ contour[i - 1] };
+        Vector3<R> p2{ contour[i] };
+        area += cross( p1 - p0, p2 - p0 );
+    }
+
+    return R(0.5) * area;
 }
 
 // copy double-contour to float-contour, or vice versa

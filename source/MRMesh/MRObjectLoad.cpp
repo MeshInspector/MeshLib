@@ -1,9 +1,11 @@
 #include "MRObjectLoad.h"
 #include "MRObjectMesh.h"
 #include "MRMeshLoad.h"
+#include "MRLinesLoad.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRPointsLoad.h"
+#include "MRObjectLines.h"
 #include "MRObjectPoints.h"
 #include "MRStringConvert.h"
 
@@ -31,6 +33,23 @@ tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesys
     }
 
     return objectMesh;
+}
+
+tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file )
+{
+    MR_TIMER;
+
+    auto lines = LinesLoad::fromAnySupportedFormat( file );
+    if ( !lines.has_value() )
+    {
+        return tl::make_unexpected( lines.error() );
+    }
+
+    ObjectLines objectLines;
+    objectLines.setName( utf8string( file.stem() ) );
+    objectLines.setPolyline( std::make_shared<MR::Polyline>( std::move( lines.value() ) ) );
+
+    return objectLines;
 }
 
 tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file )

@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 #include "MRIntersectionPrecomputes.h"
 #include "MRTriPoint.h"
+#include <optional>
 
 namespace MR
 {

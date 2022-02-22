@@ -13,19 +13,18 @@ printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
 
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "MacOS"
-    FILE_NAME="install_brew_requirements.sh"
+  FILE_NAME="install_brew_requirements.sh"
 else
   source /etc/os-release
   echo $NAME
   FILE_NAME="install_apt_requirements.sh"
-  
 
   if [ "${NAME}" == "Fedora Linux" ]; then
    FILE_NAME="install_dnf_requirements.sh"
   fi
 fi
 
-if [ "${NAME}" == "Ubuntu" ]; then
+if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
  if [ ! -n "$MR_EMSCRIPTEN" ]; then
   read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
   echo;
@@ -41,7 +40,6 @@ fi
 printf "Check requirements. Running ${FILE_NAME} ...\n"
 ./scripts/$FILE_NAME
 MR_THIRDPARTY_DIR="thirdparty/"
-
 
 #build Third party
 if ! [ -d "./lib/" ]; then

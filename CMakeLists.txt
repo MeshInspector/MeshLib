@@ -59,7 +59,9 @@ IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
 
- find_package(pybind11  REQUIRED)
+ set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
+ include_directories(${PYBIND11_DIR})
+
  find_package(Python 3.9 EXACT REQUIRED)
  find_package(PythonInterp 3.9 EXACT REQUIRED)
  find_package(PythonLibs 3.9 EXACT REQUIRED)

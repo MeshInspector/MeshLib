@@ -28,7 +28,7 @@ tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path & file, 
     return fromMrmesh( in );
 }
 
-tl::expected<Mesh, std::string> fromMrmesh( std::istream & in )
+tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER
 
@@ -58,7 +58,7 @@ tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, std
     return fromOff( in );
 }
 
-tl::expected<Mesh, std::string> fromOff( std::istream & in )
+tl::expected<Mesh, std::string> fromOff( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER
     std::string header;
@@ -111,7 +111,7 @@ tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, std
     return fromObj( in );
 }
 
-tl::expected<Mesh, std::string> fromObj( std::istream & in )
+tl::expected<Mesh, std::string> fromObj( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER
 
@@ -133,7 +133,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& fil
     return fromAnyStl( in );
 }
 
-tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in )
+tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, std::vector<Color>* )
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in );
@@ -169,7 +169,7 @@ struct equalVector3f
     }
 };
 
-tl::expected<Mesh, std::string> fromBinaryStl( std::istream & in )
+tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER
 
@@ -311,7 +311,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file,
 
 }
 
-tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in )
+tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER;
 
@@ -558,6 +558,28 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::p
     if ( !loader )
         return res;
     return loader( file, colors );
+}
+
+tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, std::vector<Color>* colors )
+{
+    auto ext = extension;
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<MR::Mesh, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    auto filters = getFilters();
+    auto itF = std::find_if( filters.begin(), filters.end(), [ext] ( const IOFilter& filter )
+    {
+        return filter.extension == ext;
+    } );
+    if ( itF == filters.end() )
+        return res;
+
+    auto loader = getMeshStreamLoader( *itF );
+    if ( !loader )
+        return res;
+
+    return loader( in, colors );
 }
 
 /*

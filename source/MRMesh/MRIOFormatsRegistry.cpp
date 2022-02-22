@@ -32,6 +32,18 @@ public:
         return {};
     }
 
+    static MeshStreamLoader getStreamLoader( IOFilter filter )
+    {
+        const auto& loaders = get_().loaders_;
+        auto it = std::find_if( loaders.begin(), loaders.end(), [filter] ( const NamedMeshLoader& loader )
+        {
+            return loader.filter.name == filter.name;
+        } );
+        if ( it != loaders.end() )
+            return it->streamLoader;
+        return {};
+    }
+
     static void addLoader( const NamedMeshLoader& loader )
     {
         auto& loaders = get_().loaders_;
@@ -59,6 +71,11 @@ MeshLoaderAdder::MeshLoaderAdder( const NamedMeshLoader& loader )
 MeshLoader getMeshLoader( IOFilter filter )
 {
     return FormatsRegistry::getLoader( filter );
+}
+
+MeshStreamLoader getMeshStreamLoader( IOFilter filter )
+{
+    return FormatsRegistry::getStreamLoader( filter );
 }
 
 IOFilters getFilters()

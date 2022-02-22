@@ -10,15 +10,19 @@ namespace MR
 namespace MeshLoad
 {
 using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, std::vector<Color>* );
+using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, std::vector<Color>* );
 
 struct NamedMeshLoader
 {
     IOFilter filter;
-    MeshLoader loader{nullptr};
+    MeshLoader loader{ nullptr };
+    MeshStreamLoader streamLoader{ nullptr };
 };
 
 // Finds expected loader from registry
 MRMESH_API MeshLoader getMeshLoader( IOFilter filter );
+// Finds expected loader from registry
+MRMESH_API MeshStreamLoader getMeshStreamLoader( IOFilter filter );
 // Gets all registered filters
 MRMESH_API IOFilters getFilters();
 
@@ -27,7 +31,7 @@ MRMESH_API IOFilters getFilters();
 // example:
 // ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
 #define MR_ADD_MESH_LOADER( filter, loader ) \
-MR::MeshLoad::MeshLoaderAdder __meshLoaderAdder_##loader(MR::MeshLoad::NamedMeshLoader{filter,static_cast<MR::MeshLoad::MeshLoader>(loader)});\
+MR::MeshLoad::MeshLoaderAdder __meshLoaderAdder_##loader(MR::MeshLoad::NamedMeshLoader{filter,static_cast<MR::MeshLoad::MeshLoader>(loader),static_cast<MR::MeshLoad::MeshStreamLoader>(loader)});\
 
 class MeshLoaderAdder
 {

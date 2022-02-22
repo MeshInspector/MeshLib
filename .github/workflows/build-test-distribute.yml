@@ -174,8 +174,8 @@ jobs:
           retention-days: 1
 
   macos-build-test:
-    timeout-minutes: 40
-    runs-on: [self-hosted, macOS, x64, not-arm]
+    timeout-minutes: 60
+    runs-on: [macos-latest]
     strategy:
       matrix:
         config: [Release]
@@ -186,10 +186,6 @@ jobs:
             c-compiler: /usr/bin/clang
 
     steps:
-      # https://github.com/actions/checkout/issues/354#issuecomment-759282642
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -197,7 +193,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ./scripts/runner_install_thirdparty.sh
+        run: ./scripts/build_thirdparty.sh
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -214,10 +210,6 @@ jobs:
       - name: Python Tests
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py
-
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

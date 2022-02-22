@@ -289,6 +289,51 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
     return e0;
 }
 
+void PolylineTopology::write( std::ostream & s ) const
+{
+    // write edges
+    auto numEdges = (std::uint32_t)edges_.size();
+    s.write( (const char*)&numEdges, 4 );
+    s.write( (const char*)edges_.data(), edges_.size() * sizeof(HalfEdgeRecord) );
+
+    // write verts
+    auto numVerts = (std::uint32_t)edgePerVertex_.size();
+    s.write( (const char*)&numVerts, 4 );
+    s.write( (const char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof(EdgeId) );
+}
+
+bool PolylineTopology::read( std::istream & s )
+{
+    // read edges
+    std::uint32_t numEdges;
+    s.read( (char*)&numEdges, 4 );
+    if ( !s )
+        return false;
+
+    auto posCur = s.tellg();
+    s.seekg( 0, std::ios_base::end );
+    const auto posEnd = s.tellg();
+    s.seekg( posCur );
+    if ( size_t( posEnd - posCur ) < numEdges * sizeof(HalfEdgeRecord) )
+        return false; // stream is too short
+
+    edges_.resize( numEdges );
+    s.read( (char*)edges_.data(), edges_.size() * sizeof(HalfEdgeRecord) );
+
+    // read verts
+    std::uint32_t numVerts;
+    s.read( (char*)&numVerts, 4 );
+    if ( !s )
+        return false;
+    edgePerVertex_.resize( numVerts );
+    validVerts_.resize( numVerts );
+    s.read( (char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof(EdgeId) );
+
+    computeValidsFromEdges();
+
+    return s.good() && checkValidity();
+}
+
 bool PolylineTopology::isConsistentlyOriented() const
 {
     MR_TIMER
@@ -345,6 +390,19 @@ bool PolylineTopology::checkValidity() const
     CHECK( numValidVerts_ == realValidVerts );
 
     return true;
+}
+
+void PolylineTopology::computeValidsFromEdges()
+{
+    MR_TIMER
+
+    numValidVerts_ = 0;
+    for ( VertId v{0}; v < edgePerVertex_.size(); ++v )
+        if ( edgePerVertex_[v].valid() )
+        {
+            validVerts_.set( v );
+            ++numValidVerts_;
+        }
 }
 
 TEST( MRMesh, PolylineTopology )

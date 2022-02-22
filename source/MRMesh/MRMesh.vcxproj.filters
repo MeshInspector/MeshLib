@@ -693,6 +693,12 @@
     <ClInclude Include="MRSceneSettings.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRLinesSave.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLinesLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1168,6 +1174,12 @@
     </ClCompile>
     <ClCompile Include="MRSceneSettings.cpp">
       <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLinesSave.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLinesLoad.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

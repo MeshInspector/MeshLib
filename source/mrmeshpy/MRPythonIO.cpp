@@ -61,9 +61,9 @@ PointCloud pythonLoadPointCloudFromAnyFormat( const std::string& path )
     return {};
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_mesh, pythonSaveMeshToAnyFormat, "saves mesh in file of known format/extention" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_mesh, pythonSaveMeshToAnyFormat, "saves mesh in file of known format/extension" )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, load_mesh, pythonLoadMeshFromAnyFormat, "load mesh of known format" )
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_lines, pythonSaveLinesToAnyFormat, "saves lines in file of known format/extention" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_lines, pythonSaveLinesToAnyFormat, "saves lines in file of known format/extension" )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, load_lines, pythonLoadLinesFromAnyFormat, "load lines of known format" )
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_points, pythonSavePointCloudToAnyFormat, "saves point cloud in file of known format/extention" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, save_points, pythonSavePointCloudToAnyFormat, "saves point cloud in file of known format/extension" )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, load_points, pythonLoadPointCloudFromAnyFormat, "load point cloud of known format" )

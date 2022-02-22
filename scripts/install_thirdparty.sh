@@ -6,10 +6,12 @@
 # exit if any command failed
 set -eo pipefail
 
-read -t 5 -p "It is strongly recomended to use 'apt install ./distr/meshrus*.deb' instead! Press (y) in 10 seconds to continue (y/N)" -rsn 1
-echo;
-if ! [[ $REPLY =~ ^[Yy]$ ]]; then
- exit 0
+if [ $MR_STATE != "DOCKER_BUILD" ]; then
+ read -t 5 -p "It is strongly recomended to use 'apt install ./distr/meshrus*.deb' instead! Press (y) in 10 seconds to continue (y/N)" -rsn 1
+ echo;
+ if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+  exit 0
+ fi
 fi
 
 #install MR requirements

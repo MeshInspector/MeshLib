@@ -24,7 +24,6 @@ on:
 
 jobs:
   image-build-test-upload:
-    needs: [ windows-build-test, ubuntu-build-test, fedora-build-test ]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     strategy:
@@ -52,5 +51,3 @@ jobs:
           file: docker/${{matrix.distribution}}Dockerfile
           load: true
           tags: meshrus/meshlib-${{matrix.distribution}}:latest
-        env:
-          MR_STATE: DOCKER_BUILD

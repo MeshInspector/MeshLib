@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  image-build-test-upload:
+  image-build-upload:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     strategy:
@@ -51,5 +51,3 @@ jobs:
           file: docker/${{matrix.distribution}}Dockerfile
           load: true
           tags: meshrus/meshlib-${{matrix.distribution}}:latest
-        env:
-          MR_STATE: DOCKER_BUILD

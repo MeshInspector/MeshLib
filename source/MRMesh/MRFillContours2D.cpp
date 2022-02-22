@@ -17,21 +17,21 @@ const float maxError = std::numeric_limits<float>::epsilon() * 10.f;
 namespace MR
 {
 
-bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
+bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
     // check input
-    assert( !holesEdges.empty() );
-    if ( holesEdges.empty() )
+    assert( !holeRepresentativeEdges.empty() );
+    if ( holeRepresentativeEdges.empty() )
     {
-        spdlog::warn( "Holes edges size empty!" );
+        spdlog::warn( "fillContours2D: No hole edges are given" );
         return false;
     }
 
     // reorder to make edges ring with hole on left side
     bool badEdge = false;
     auto& meshTopology = mesh.topology;
-    for ( const auto& edge : holesEdges )
+    for ( const auto& edge : holeRepresentativeEdges )
     {
         if ( meshTopology.left( edge ) )
         {
@@ -42,16 +42,16 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
     assert( !badEdge );
     if ( badEdge )
     {
-        spdlog::warn( "Holes edges have edge with face on left side" );
+        spdlog::warn( "fillContours2D: Some hole edges have left face" );
         return false;
     }
 
     // make border rings
-    std::vector<EdgePath> paths( holesEdges.size() );
+    std::vector<EdgePath> paths( holeRepresentativeEdges.size() );
     for ( int i = 0; i < paths.size(); ++i )
     {
         auto& path = paths[i];
-        for ( const auto& edge : leftRing( meshTopology, holesEdges[i] ) )
+        for ( const auto& edge : leftRing( meshTopology, holeRepresentativeEdges[i] ) )
             path.push_back( edge );
     }
 
@@ -85,7 +85,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
     }
     if ( maxZ > maxError )
     {
-        spdlog::warn("Edges aren't in the same plane. Max Z = {}", maxZ );
+        spdlog::warn("fillContours2D: Edges aren't in the same plane. Max Z = {}", maxZ );
         return false;
     }
 
@@ -93,7 +93,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
     auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, false );
     if ( !fillResult )
     {
-        spdlog::warn( "Cant triangulate contours" );
+        spdlog::warn( "fillContours2D: Cant triangulate contours" );
         return false;
     }
     Mesh& patchMesh = *fillResult;
@@ -120,14 +120,14 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
     {
-        spdlog::warn( "Patch surface borders size different from original mesh borders size" );
+        spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
         return false;
     }
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
         {
-            spdlog::warn( "Patch surface borders size different from original mesh borders size" );
+            spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
             return false;
         }
     }

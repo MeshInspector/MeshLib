@@ -34,7 +34,7 @@ if [ "$EUID" -ne 0 ]; then
  RUN_AS_ROOT="NO"
 fi
 
-if [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
+if [ $MR_STATE != "DOCKER_BUILD" ]; then
  sudo -s printf "Root access acquired!\n" && \
  sudo apt update && sudo apt install ${MISSED_PACKAGES}
 else

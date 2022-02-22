@@ -24,7 +24,7 @@ else
   fi
 fi
 
-if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
+if [ "${NAME}" == "Ubuntu" ] && [ $MR_STATE != "DOCKER_BUILD" ]; then
  if [ ! -n "$MR_EMSCRIPTEN" ]; then
   read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
   echo;

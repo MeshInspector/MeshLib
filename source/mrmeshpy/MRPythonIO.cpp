@@ -30,7 +30,7 @@ Mesh pythonLoadMeshFromAnyFormat( const std::string& path )
 {
     auto res = MR::MeshLoad::fromAnySupportedFormat( path );
     if ( res.has_value() )
-        return *res;
+        return std::move( *res );
     return {};
 }
 
@@ -131,7 +131,7 @@ Mesh pythonLoadMeshFromAnyFormat( pybind11::object fileHandle, const std::string
     std::istream ifs( &streambuf );
     auto res = MR::MeshLoad::fromAnySupportedFormat( ifs, extension );
     if ( res.has_value() )
-        return *res;
+        return std::move( *res );
     std::cout << res.error() << '\n';
     return {};
 }
@@ -146,7 +146,7 @@ MR::Polyline pythonLoadLinesFromAnyFormat( const std::string& path )
 {
     auto res = MR::LinesLoad::fromAnySupportedFormat( path );
     if ( res.has_value() )
-        return *res;
+        return std::move( *res );
     return {};
 }
 
@@ -160,7 +160,7 @@ PointCloud pythonLoadPointCloudFromAnyFormat( const std::string& path )
 {
     auto res = MR::PointsLoad::fromAnySupportedFormat( path );
     if ( res.has_value() )
-        return *res;
+        return std::move( *res );
     return {};
 }
 

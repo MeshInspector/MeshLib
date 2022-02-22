@@ -49,5 +49,5 @@ jobs:
         with:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
-          load: true
+          push: true
           tags: meshrus/meshlib-${{matrix.distribution}}:latest

@@ -11,7 +11,7 @@
 
 namespace
 {
-const float maxError = std::numeric_limits<float>::epsilon() * 10.f;
+const float maxError = std::numeric_limits<float>::epsilon() * 20.f;
 }
 
 namespace MR
@@ -110,7 +110,6 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     {
         EdgePath newPath;
         EdgeId edge = holes[i];
-        if ( patchMesh.topology.left( edge ) ) edge = edge.sym();
         auto ring = leftRing( patchMesh.topology, edge );
         for ( const auto& e : ring )
             newPath.push_back( e );

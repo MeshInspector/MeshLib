@@ -174,7 +174,6 @@ jobs:
           retention-days: 1
 
   macos-build-test:
-    if: ${{ false }}
     timeout-minutes: 40
     runs-on: [self-hosted, macOS, x64, not-arm]
     strategy:

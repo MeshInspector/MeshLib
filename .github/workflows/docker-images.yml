@@ -51,3 +51,5 @@ jobs:
           file: docker/${{matrix.distribution}}Dockerfile
           load: true
           tags: meshrus/meshlib-${{matrix.distribution}}:latest
+        env:
+          MR_STATE: DOCKER_BUILD

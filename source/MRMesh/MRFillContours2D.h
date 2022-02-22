@@ -12,6 +12,6 @@ namespace MR
  * edges should have invalid left face (FaceId == -1)
  * @return true if holes filled, otherwise - false
  */
-MRMESH_API bool fillContours2D( Mesh& mesh, const EdgePath& holesEdges );
+MRMESH_API bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges );
 
 }

@@ -447,7 +447,7 @@ Mesh triangulateContours( const Contours2d& contours, bool mergeClosePoints /*= 
 {
     PlanarTriangulator triangulator( contours, mergeClosePoints, false );
     if ( auto res = triangulator.run() )
-        return *res;
+        return std::move( *res );
     else
         return Mesh();
 }
@@ -457,7 +457,7 @@ Mesh triangulateContours( const Contours2f& contours, bool mergeClosePoints /*= 
     const auto contsd = copyContours<Contours2d>( contours );
     PlanarTriangulator triangulator( contsd, mergeClosePoints, false );
     if ( auto res = triangulator.run() )
-        return *res;
+        return std::move( *res );
     else
         return Mesh();
 }

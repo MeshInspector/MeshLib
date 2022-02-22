@@ -17,7 +17,7 @@ const float maxError = std::numeric_limits<float>::epsilon() * 10.f;
 namespace MR
 {
 
-bool fillContours2D( Mesh& mesh, const EdgePath& holesEdges )
+bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holesEdges )
 {
     MR_TIMER
     // check input
@@ -46,6 +46,7 @@ bool fillContours2D( Mesh& mesh, const EdgePath& holesEdges )
         return false;
     }
 
+    // make border rings
     std::vector<EdgePath> paths( holesEdges.size() );
     for ( int i = 0; i < paths.size(); ++i )
     {
@@ -54,46 +55,32 @@ bool fillContours2D( Mesh& mesh, const EdgePath& holesEdges )
             path.push_back( edge );
     }
 
-    // make Contours from EdgePaths
-    Contours3f contours3f;
-    for ( const auto& path : paths )
-    {
-        Contour3f contour;
-        for ( const auto& edge : path )
-        {
-            const Vector3f point = mesh.orgPnt( edge );
-            contour.push_back( point );
-        }
-        contour.push_back( contour[0] );
-        contours3f.push_back( contour );
-    }
-
     // calculate plane normal
     Vector3f planeNormal;
-    for ( const auto& contour : contours3f )
+    for ( const auto& path : paths )
     {
-        const auto max = contour.size() - 1;
-        for ( int i = 0; i < max; ++i )
-            planeNormal += cross( contour[i], contour[i + 1] );
+        for ( const auto& edge : path )
+            planeNormal += cross( mesh.orgPnt( edge ), mesh.destPnt( edge ) );
     }
     planeNormal = planeNormal.normalized();
 
     // find transformation from world to plane space and back
-    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), contours3f[0][0] );
+    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), mesh.orgPnt( paths[0][0] ) );
     const auto planeXfInv = planeXf.inverse();
 
-    // make contours2D (on plane) from contours3D (in world)
+    // make contours2D (on plane) from border rings (in world)
     Contours2f contours2f;
     float maxZ = 0.f;
-    for ( const auto& contour3f : contours3f )
+    for ( const auto& path : paths )
     {
         Contour2f contour;
-        for ( const auto& point : contour3f )
+        for ( const auto& edge : path )
         {
-            const auto localPoint = planeXfInv( point );
+            const auto localPoint = planeXfInv( mesh.orgPnt( edge ) );
             contour.push_back( Vector2f( localPoint.x, localPoint.y ) );
             if ( std::fabs( localPoint.z ) > maxZ ) maxZ = std::fabs( localPoint.z );
         }
+        contour.push_back( contour[0] );
         contours2f.push_back( contour );
     }
     if ( maxZ > maxError )

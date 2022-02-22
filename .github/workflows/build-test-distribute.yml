@@ -67,7 +67,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/ubuntu-build-server
+      image: meshrus/meshlib-ubuntu
       options: --user root
     strategy:
       matrix:
@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/fedora-build-server
+      image: meshrus/meshlib-fedora
       options: --user root
     strategy:
       matrix:

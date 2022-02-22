@@ -5,33 +5,13 @@
 # This script installs requirements by `dnf` if not already installed
 # `distribution.sh` uses this script as preinstall
 
-ALL_REQUIRED_PACKAGES_INSTALLED=true
-MISSED_PACKAGES=""
-
-function checkPackage {
- PKG_OK=$( brew list ${1})
- if [ "${?}" != 0 ]; then
-  ALL_REQUIRED_PACKAGES_INSTALLED=false
-  MISSED_PACKAGES="${MISSED_PACKAGES} ${1}"
- fi
-}
-
-BASEDIR=$(dirname "$0")
-requirements_file="$BASEDIR"/../requirements/macos.txt
+requirements_file=requirements/macos.txt
 for req in `cat $requirements_file`
 do
-  checkPackage "${req}"
+  echo "brew \"${req}\"" >> requirements/Brewfile
 done
 
-if $ALL_REQUIRED_PACKAGES_INSTALLED; then
- printf "\rAll required packages are already installed!                    \n"
- exit 0
-fi
-
-printf "\rSome required package(s) are not installed!                     \n"
-printf "${MISSED_PACKAGES}\n"
-
-brew install ${MISSED_PACKAGES}
+brew bundle install --file=requirements/Brewfile
 
 # check and upgrade python3 pip
 python3 -m ensurepip --upgrade

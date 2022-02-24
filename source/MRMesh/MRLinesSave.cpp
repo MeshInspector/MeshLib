@@ -55,6 +55,18 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, 
     return res;
 }
 
+tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, std::ostream& out, const std::string& extension )
+{
+    auto ext = extension.substr( 1 );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".mrlines" )
+        res = toMrLines( polyline, out );
+    return res;
+}
+
 } //namespace LinesSave
 
 } //namespace MR

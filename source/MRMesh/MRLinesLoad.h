@@ -21,6 +21,8 @@ MRMESH_API tl::expected<Polyline, std::string> fromMrLines( std::istream& in );
 
 // detects the format from file extension and loads polyline from it
 MRMESH_API tl::expected<Polyline, std::string> fromAnySupportedFormat( const std::filesystem::path& file );
+// extension in `*.ext` format
+MRMESH_API tl::expected<Polyline, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension );
 
 } //namespace LinesLoad
 

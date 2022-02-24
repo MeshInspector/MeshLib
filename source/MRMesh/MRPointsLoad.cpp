@@ -251,7 +251,24 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
     else if ( ext == u8".obj" )
         res = MR::PointsLoad::fromObj( file );
     return res;
+}
 
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, std::vector<Color>* colors /*= nullptr */ )
+{
+    auto ext = extension.substr( 1 );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".ply" )
+        res = MR::PointsLoad::fromPly( in, colors );
+    else if ( ext == ".ctm" )
+        res = MR::PointsLoad::fromCtm( in, colors );
+    else if ( ext == ".pts" )
+        res = MR::PointsLoad::fromPts( in );
+    else if ( ext == ".obj" )
+        res = MR::PointsLoad::fromObj( in );
+    return res;
 }
 
 }

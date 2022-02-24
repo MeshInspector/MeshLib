@@ -179,5 +179,21 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
         res = MR::PointsSave::toPts( points, file );
     return res;
 }
+tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const std::vector<Color>* colors /*= nullptr */ )
+{
+    auto ext = extension.substr( 1 );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".ply" )
+        res = MR::PointsSave::toPly( points, out, colors );
+    else if ( ext == ".ctm" )
+        res = MR::PointsSave::toCtm( points, out, colors );
+    else if ( ext == ".pts" )
+        res = MR::PointsSave::toPts( points, out );
+    return res;
+}
+
 }
 }

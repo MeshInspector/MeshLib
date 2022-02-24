@@ -21,6 +21,8 @@ MRMESH_API tl::expected<void, std::string> toMrLines( const Polyline& polyline, 
 
 // detects the format from file extension and saves polyline in it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, const std::filesystem::path& file );
+// extension in `*.ext` format
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, std::ostream& out, const std::string& extension );
 
 } //namespace LinesSave
 

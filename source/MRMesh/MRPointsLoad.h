@@ -34,6 +34,8 @@ MRMESH_API tl::expected<PointCloud, std::string> fromObj( std::istream& in );
 
 // detects the format from file extension and loads points from it
 MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, std::vector<Color>* colors = nullptr );
+// extension in `*.ext` format
+MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, std::vector<Color>* colors = nullptr );
 
 } //namespace PointsLoad
 

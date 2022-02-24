@@ -345,6 +345,28 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
     return res;
 }
 
+tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const std::vector<Color>* perVertColors /*= nullptr */ )
+{
+    auto ext = extension.substr( 1 );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".off" )
+        res = MR::MeshSave::toOff( mesh, out );
+    else if ( ext == ".obj" )
+        res = MR::MeshSave::toObj( mesh, out );
+    else if ( ext == ".stl" )
+        res = MR::MeshSave::toBinaryStl( mesh, out );
+    else if ( ext == ".ply" )
+        res = MR::MeshSave::toPly( mesh, out, perVertColors );
+    else if ( ext == ".ctm" )
+        res = MR::MeshSave::toCtm( mesh, out );
+    else if ( ext == ".mrmesh" )
+        res = MR::MeshSave::toMrmesh( mesh, out );
+    return res;
+}
+
 } //namespace MeshSave
 
 } //namespace MR

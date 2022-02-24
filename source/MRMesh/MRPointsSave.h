@@ -39,5 +39,7 @@ MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, std:
 
 // detects the format from file extension and save points to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors = nullptr );
+// extension in `*.ext` format
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const std::vector<Color>* colors = nullptr );
 }
 }

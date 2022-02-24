@@ -61,6 +61,8 @@ MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostrea
 
 // detects the format from file extension and save mesh to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const std::vector<Color>* perVertColors = nullptr );
+// extension in `*.ext` format
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const std::vector<Color>* perVertColors = nullptr );
 
 } //namespace MeshSave
 

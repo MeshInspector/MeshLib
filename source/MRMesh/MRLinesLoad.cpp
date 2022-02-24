@@ -63,6 +63,18 @@ tl::expected<Polyline, std::string> fromAnySupportedFormat( const std::filesyste
     return res;
 }
 
+tl::expected<MR::Polyline, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension )
+{
+    auto ext = extension.substr( 1 );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    tl::expected<Polyline, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    if ( ext == ".mrlines" )
+        res = fromMrLines( in );
+    return res;
+}
+
 } //namespace LinesLoad
 
 } // namespace MR

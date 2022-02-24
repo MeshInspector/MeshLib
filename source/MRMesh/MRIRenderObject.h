@@ -24,7 +24,6 @@ struct RenderParams : BaseRenderParams
     const Vector3f& lightPos; // position of light source
     bool forceZBuffer{ false }; // if this flag is set, rewrite Z buffer anyway
     bool alphaSort{ false };    // if this flag is true shader for alpha sorting is used
-    int maxNodesPerPixel{ 20 }; // alpha sorting shader maximum per pixel array size
 };
 
 class IRenderObject

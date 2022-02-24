@@ -378,9 +378,9 @@ float MeshICP::getMeanSqDistToPlane() const
     for (const auto& vp : vertPairs_)
     {
         auto v = dot( vp.normRef, vp.refPoint - xf_(points[vp.vertId]) );
-        sum += std::abs( v );
+        sum += sqr( v );
     }
-    return float( sum / vertPairs_.size() );
+    return (float)std::sqrt( sum / vertPairs_.size() );
 }
 
 Vector3f MeshICP::getShiftVector() const

@@ -48,14 +48,14 @@ struct ICPProperties
     ICPMethod method = ICPMethod::PointToPlane;
     // rotation part will be limited by this value. If the whole rotation exceed this value, it will be normalized to that.
     // Note: PointToPlane only!
-    float p2plAngleLimit = PI_F / 6.0f;
+    float p2plAngleLimit = PI_F / 6.0f; // [radians]
     // Points pair will be counted only if cosine between surface normals in points is higher
-    float cosTreshold = 0.7f;
-    // Points pair will be counted only if squared distance between points is lower
-    float distTresholdSq = 1.f;
+    float cosTreshold = 0.7f; // in [-1,1]
+    // Points pair will be counted only if squared distance between points is lower than
+    float distTresholdSq = 1.f; // [distance^2]
     // Sigma multiplier for statistic throw of paints pair based on the distance
     // Default: all pairs in the interval the (distance = mean +- 3*sigma) are passed
-    float distStatisticSigmaFactor = 3.f;
+    float distStatisticSigmaFactor = 3.f; // dimensionless
     // Finds only translation. Rotation part is identity matrix
     ICPMode icpMode = ICPMode::AnyRigidXf;
     // If this vector is not zero then rotation is allowed relative to this axis only
@@ -67,9 +67,8 @@ struct ICPProperties
     int iterLimit = 10; // maximum iterations
     int badIterStopCount = 3; // maximum iterations without improvements
 
-    // Algorithm target minimization criteria
-    // Mean distance between points for p2pt, mean distance to planes for p2pl
-    float exitVal = 0.;
+    // Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
+    float exitVal = 0; // [distance]
 };
 
 // This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms
@@ -99,8 +98,8 @@ public:
     const ICPProperties& getParams() const { return prop_; }
     MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
     MRMESH_API std::string getLastICPInfo() const; // returns status info string
-    MRMESH_API float getMeanSqDistToPoint() const; // shows current mean square deviation
-    MRMESH_API float getMeanSqDistToPlane() const; //shows current P2Pl metrics
+    MRMESH_API float getMeanSqDistToPoint() const; // computes root-mean-square deviation between points
+    MRMESH_API float getMeanSqDistToPlane() const; // computes root-mean-square deviation from points to target planes
     const std::vector<VertPair>& getVertPairs() const { return vertPairs_; } // used to visualize generated points pairs
     MRMESH_API std::pair<float, float> getDistLimitsSq() const; // finds squared minimum and maximum pairs distances
 

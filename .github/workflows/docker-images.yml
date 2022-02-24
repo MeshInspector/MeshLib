@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        distribution: [ ubuntu, fedora]
+        distribution: [ubuntu, fedora]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -44,10 +44,45 @@ jobs:
           username: meshrus
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build
         uses: docker/build-push-action@v2
         with:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
-          push: true
+          push: false
           tags: meshrus/meshlib-${{matrix.distribution}}:latest
+      
+      - name: Testing image - prepare
+        run:  id=$(docker create meshrus/meshlib-${{matrix.distribution}})
+
+      - name: Testing image - copy repo
+        run: docker cp . $id:/home/MeshLib/
+        
+      - name: Testing image - commit container
+        run: docker commit $id debug/${{matrix.distribution}}
+        
+      - name: Testing image - run container
+        run: docker run -it --rm --entrypoint sh debug/${{matrix.distribution}}
+   
+      - name: Testing image - prepare for build
+        run: cd /home/MeshLib && cp -r /usr/local/lib/meshlib-thirdparty-lib/lib .
+        
+      - name: Testing image - build
+        run: ./scripts/build_source.sh
+        
+      - name: Testing image - unit tests
+        run: ./build/Release/bin/MRTest
+
+      - name: Testing image - python tests
+        run: |
+          cd ./build/${{ matrix.config }}/bin
+          python3 ./../../../scripts/run_python_test_script.py
+          
+      - name: Testing image - exit container
+        run: exit
+
+      - name: Remove debug image
+        run: docker image rm debug/${{matrix.distribution}}
+        
+      - name: Push image
+        run: docker push meshrus/meshlib-${{matrix.distribution}})

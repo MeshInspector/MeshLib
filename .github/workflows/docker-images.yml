@@ -48,14 +48,13 @@ jobs:
         run:  docker build -f docker/${{matrix.distribution}}Dockerfile -t meshrus/meshlib-${{matrix.distribution}} . --progress=plain --no-cache
       
       - name: Testing image - prepare
-        id: image
-        run: echo '::set-output id=$(docker create meshrus/meshlib-${{matrix.distribution}})'
+        run: echo "id=$(docker create meshrus/meshlib-${{matrix.distribution}})" >> $GITHUB_ENV
 
       - name: Testing image - copy repo
-        run: docker cp . ${{steps.image.outputs.id}}:/home/MeshLib/
+        run: docker cp . $id:/home/MeshLib/
         
       - name: Testing image - commit container
-        run: docker commit ${{steps.image.outputs.id}} debug/${{matrix.distribution}}
+        run: docker commit $id debug/${{matrix.distribution}}
         
       - name: Testing image - run container
         run: docker run -it --rm --entrypoint sh debug/${{matrix.distribution}}

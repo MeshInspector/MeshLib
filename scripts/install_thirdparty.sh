@@ -6,7 +6,7 @@
 # exit if any command failed
 set -eo pipefail
 
-if [ $MR_STATE -ne "DOCKER_BUILD" ]; then
+if [ "$MR_STATE" -ne "DOCKER_BUILD" ]; then
  read -t 5 -p "It is strongly recomended to use 'apt install ./distr/meshrus*.deb' instead! Press (y) in 10 seconds to continue (y/N)" -rsn 1
  echo;
  if ! [[ $REPLY =~ ^[Yy]$ ]]; then

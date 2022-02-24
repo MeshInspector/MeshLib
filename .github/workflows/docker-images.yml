@@ -48,13 +48,14 @@ jobs:
         run:  docker build -f docker/${{matrix.distribution}}Dockerfile -t meshrus/meshlib-${{matrix.distribution}} . --progress=plain --no-cache
       
       - name: Testing image - prepare
-        run:  id=$(docker create meshrus/meshlib-${{matrix.distribution}})
+        run: echo '::set-output id=$(docker create meshrus/meshlib-${{matrix.distribution}})'
+        id: image
 
       - name: Testing image - copy repo
-        run: docker cp . $id:/home/MeshLib/
+        run: docker cp . ${{steps.image.id}}:/home/MeshLib/
         
       - name: Testing image - commit container
-        run: docker commit $id debug/${{matrix.distribution}}
+        run: docker commit ${{steps.image.id}} debug/${{matrix.distribution}}
         
       - name: Testing image - run container
         run: docker run -it --rm --entrypoint sh debug/${{matrix.distribution}}
@@ -70,7 +71,7 @@ jobs:
 
       - name: Testing image - python tests
         run: |
-          cd ./build/${{ matrix.config }}/bin
+          cd ./build/Release/bin
           python3 ./../../../scripts/run_python_test_script.py
           
       - name: Testing image - exit container

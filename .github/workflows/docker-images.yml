@@ -69,4 +69,4 @@ jobs:
         run: docker image rm debug/${{matrix.distribution}}
         
       - name: Push image
-        run: docker push meshrus/meshlib-${{matrix.distribution}})
+        run: docker push meshrus/meshlib-${{matrix.distribution}}

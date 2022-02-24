@@ -56,25 +56,14 @@ jobs:
       - name: Testing image - commit container
         run: docker commit $id debug/${{matrix.distribution}}
         
-      - name: Testing image - run container
-        run: docker run -it --rm --entrypoint sh debug/${{matrix.distribution}}
-   
-      - name: Testing image - prepare for build
-        run: cd /home/MeshLib && cp -r /usr/local/lib/meshlib-thirdparty-lib/lib .
-        
-      - name: Testing image - build
-        run: ./scripts/build_source.sh
-        
-      - name: Testing image - unit tests
-        run: ./build/Release/bin/MRTest
-
-      - name: Testing image - python tests
+      - name: Testing image - build and test
         run: |
-          cd ./build/Release/bin
-          python3 ./../../../scripts/run_python_test_script.py
-          
-      - name: Testing image - exit container
-        run: exit
+          docker run --rm debug/${{matrix.distribution}} /bin/bash -c " \
+          cd /home/MeshLib && cp -r /usr/local/lib/meshlib-thirdparty-lib/lib . && \
+          ./scripts/build_source.sh && \
+          ./build/Release/bin/MRTest && \
+          cd ./build/Release/bin && \
+          python3 ./../../../scripts/run_python_test_script.py"
 
       - name: Remove debug image
         run: docker image rm debug/${{matrix.distribution}}

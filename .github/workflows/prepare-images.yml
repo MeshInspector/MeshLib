@@ -47,7 +47,7 @@ jobs:
 
   image-build-upload:
     needs: [image-select]
-    if: ${{ jobs.image-select.outputs.need_rebuild == 'true' }}
+    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     strategy:
@@ -74,4 +74,4 @@ jobs:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
-          tags: meshrus/meshlib-${{matrix.distribution}}:${{jobs.image-select.outputs.image_tag}}
+          tags: meshrus/meshlib-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}

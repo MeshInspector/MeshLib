@@ -194,7 +194,7 @@ protected:
     // user should not be able to call copy implicitly, use clone() function instead
     MRMESH_API Object( const Object& obj );
 
-    // swaps thole object (signals too)
+    // swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );
     // swaps signals, used in `swap` function to return back signals after `swapBase_`
     // pls call Parent::swapSignals_ first when overriding this function

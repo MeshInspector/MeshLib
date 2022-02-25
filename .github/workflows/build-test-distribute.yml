@@ -69,7 +69,6 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-
   ubuntu-build-test:
     timeout-minutes: 40
     needs: [select-image-tag]

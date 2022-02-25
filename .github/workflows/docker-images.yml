@@ -40,8 +40,7 @@ jobs:
 
       - name: Select image tag
         id: select-tag
-        run: |
-          echo "::set-output image_tag=$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${GITHUB_REF##*/}" || echo "latest")"
+        run: echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${GITHUB_REF##*/}" || echo "latest")"
 
       - name: Checkout
         if: steps.changes.outputs.src == 'true'

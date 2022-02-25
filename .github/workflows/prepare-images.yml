@@ -51,7 +51,6 @@ jobs:
         id: need_rebuild
         run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
 
-
   image-build-upload:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}

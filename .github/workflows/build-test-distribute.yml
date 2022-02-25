@@ -14,55 +14,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  windows-build-test:
-    timeout-minutes: 40
-    # The type of runner that the job will run on
-    runs-on: [self-hosted, windows, x64]
-    strategy:
-      matrix:
-        config: [Debug, Release]
-    steps:
-      - name: Clear workspace
-        run: |
-          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
-
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive          
-        
-      - name: Update thirdparty
-        run: thirdparty\install.bat
-
-      - name: Integrate vcpkg
-        run: vcpkg integrate install
-        
-      - name: Build
-        run: py -3 scripts\build_script.py ${{ matrix.config }}
-        
-      - name: Unit Tests
-        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
-
-      - name: Python Tests
-        working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py
-
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' }}
-        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
-        
-      - name: Upload Windows Binaries Archive
-        if: ${{ github.event_name == 'push' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: WindowsArchive${{ matrix.config }}
-          path: MREDist_${{ matrix.config }}.zip
-          retention-days: 1
-
-      - name: Clear workspace
-        run: |
-          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
-
   select-image-tag:
     uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker-images
     secrets:
@@ -180,6 +131,55 @@ jobs:
           name: Rpm${{matrix.config}}BinArchive
           path: Rpm${{matrix.config}}Bin.tar
           retention-days: 1
+
+  windows-build-test:
+    timeout-minutes: 40
+    # The type of runner that the job will run on
+    runs-on: [self-hosted, windows, x64]
+    strategy:
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - name: Clear workspace
+        run: |
+          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Update thirdparty
+        run: thirdparty\install.bat
+
+      - name: Integrate vcpkg
+        run: vcpkg integrate install
+
+      - name: Build
+        run: py -3 scripts\build_script.py ${{ matrix.config }}
+
+      - name: Unit Tests
+        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+
+      - name: Python Tests
+        working-directory: source\x64\${{ matrix.config }}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' }}
+        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
+
+      - name: Upload Windows Binaries Archive
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: WindowsArchive${{ matrix.config }}
+          path: MREDist_${{ matrix.config }}.zip
+          retention-days: 1
+
+      - name: Clear workspace
+        run: |
+          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
 
   macos-build-test:
     timeout-minutes: 60

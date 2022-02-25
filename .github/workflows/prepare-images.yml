@@ -76,7 +76,7 @@ jobs:
 
       - name: Set image tag base path
         run: |
-          repo_path=${{env.GITHUB_REPOSITORY}}
+          repo_path=${{github.repository}}
           echo "base_path=${repo_path,,}" >> $GITHUB_ENV
 
       - name: Build and push

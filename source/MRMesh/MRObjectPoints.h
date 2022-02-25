@@ -40,9 +40,6 @@ public:
     // returns size of points on screen in pixels
     float getPointSize() const { return pointSize_; }
 
-    // swaps this object with other
-    MRMESH_API virtual void swap( Object& other ) override;
-
     // this ctor is public only for std::make_shared used inside clone()
     ObjectPoints( ProtectedStruct, const ObjectPoints& obj ) : ObjectPoints( obj ) {}
 
@@ -54,6 +51,9 @@ public:
 
 protected:
     ObjectPoints( const ObjectPoints& other ) = default;
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
 
     virtual Vector<Vector3f, VertId> computeVertsNormals_() const override
     {

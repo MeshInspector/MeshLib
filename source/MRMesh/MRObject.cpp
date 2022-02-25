@@ -276,6 +276,16 @@ Object::Object( const Object& other )
     ancillary_ = other.ancillary_;
 }
 
+void Object::swapBase_( Object& other )
+{
+    std::swap( *this, other );
+}
+
+void Object::swapSignals_( Object& other )
+{
+    std::swap( xfChangedSignal, other.xfChangedSignal );
+}
+
 tl::expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const
 {
     return {};
@@ -470,9 +480,9 @@ tl::expected<void, std::string> Object::deserializeRecursive( const std::filesys
 
 void Object::swap( Object& other )
 {
-    std::swap( *this, other );
+    swapBase_( other );
     // swap signals second time to return in place
-    std::swap( xfChangedSignal, other.xfChangedSignal );
+    swapSignals_( other );
 }
 
 TEST( MRMesh, DataModelRemoveChild )

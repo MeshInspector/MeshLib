@@ -83,7 +83,7 @@ void ObjectLines::setPointSize( float size )
     needRedraw_ = true;
 }
 
-void ObjectLines::swap( Object& other )
+void ObjectLines::swapBase_( Object& other )
 {
     if ( auto otherLines = other.asType<ObjectLines>() )
         std::swap( *this, *otherLines );

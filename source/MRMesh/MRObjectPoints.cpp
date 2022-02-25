@@ -125,7 +125,7 @@ void ObjectPoints::setPointSize( float size )
     needRedraw_ = true;
 }
 
-void ObjectPoints::swap( Object& other )
+void ObjectPoints::swapBase_( Object& other )
 {
     if ( auto otherPoints = other.asType<ObjectPoints>() )
         std::swap( *this, *otherPoints );

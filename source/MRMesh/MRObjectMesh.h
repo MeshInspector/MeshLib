@@ -105,10 +105,6 @@ public:
     const Color& getBordersColor() const { return bordersColor_; }
     virtual void setBordersColor( const Color& color ) { bordersColor_ = color; needRedraw_ = true; }
 
-    // swaps this object with other
-    // note: do not swap object signals, so listeners will get notifications from swapped object
-    MRMESH_API virtual void swap( Object& other ) override;
-
     // this ctor is public only for std::make_shared used inside clone()
     ObjectMesh( ProtectedStruct, const ObjectMesh& obj ) : ObjectMesh( obj ) {}
 
@@ -165,6 +161,12 @@ private:
 
 protected:
     MRMESH_API ObjectMesh( const ObjectMesh& other );
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
+    // swaps signals, used in `swap` function to return back signals after `swapBase_`
+    // pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 

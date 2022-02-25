@@ -27,9 +27,6 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    // swaps this object with other
-    MRMESH_API virtual void swap( Object& other ) override;
-
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
     //setters
@@ -43,6 +40,9 @@ public:
 protected:
 
     MRMESH_API ObjectDistanceMap( const ObjectDistanceMap& other );
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

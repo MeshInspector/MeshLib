@@ -92,9 +92,6 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
-    // swaps this object with other
-    MRMESH_API virtual void swap( Object& other ) override;
-
     // this ctor is public only for std::make_shared used inside clone()
     ObjectVoxels( ProtectedStruct, const ObjectVoxels& obj ) : ObjectVoxels( obj ) {}
 
@@ -118,6 +115,9 @@ private:
 
 protected:
     MRMESH_API ObjectVoxels( const ObjectVoxels& other );
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

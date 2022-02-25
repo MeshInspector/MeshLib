@@ -444,14 +444,19 @@ void ObjectMesh::setCreases( UndirectedEdgeBitSet creases )
     dirty_ |= ( DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL );
 }
 
-void ObjectMesh::swap( Object& other )
+void ObjectMesh::swapBase_( Object& other )
 {
     if ( auto otherMesh = other.asType<ObjectMesh>() )
-    {
         std::swap( *this, *otherMesh );
-        // swap signals second time to return in place
+    else
+        assert( false );
+}
+
+void ObjectMesh::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherMesh = other.asType<ObjectMesh>() )
         std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
-    }
     else
         assert( false );
 }

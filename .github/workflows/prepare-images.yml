@@ -10,7 +10,7 @@ on:
     outputs:
       image_tag:
         description: "image for testing"
-        value: ${{ jobs.select-image-tag.outputs.image_tag }}
+        value: ${{ jobs.image-select.outputs.image_tag }}
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -36,9 +36,16 @@ jobs:
               - 'scripts/**'
               - 'thirdparty/**'
 
+      - name: Get branch names
+        if: ${{steps.changes.outputs.src == 'true'}}
+        id: branch-name
+        uses: tj-actions/branch-names@v4.9
+
       - name: Select image tag
         id: select-tag
-        run: echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${GITHUB_REF_NAME##*/}" || echo "latest")"
+        run: |
+          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && \
+          echo "${{steps.branch-name.outputs.current_branch}}" || echo "latest")"
 
       - name: Checking whether to start image rebuild
         id: need_rebuild

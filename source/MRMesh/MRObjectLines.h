@@ -47,9 +47,6 @@ public:
     MRMESH_API virtual void setPointSize( float size );
     float getPointSize() const { return pointSize_; }
 
-    // swaps this object with other
-    MRMESH_API virtual void swap( Object& other ) override;
-
     // this ctor is public only for std::make_shared used inside clone()
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
@@ -69,6 +66,9 @@ public:
 
 protected:
     ObjectLines( const ObjectLines& other ) = default;
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
 

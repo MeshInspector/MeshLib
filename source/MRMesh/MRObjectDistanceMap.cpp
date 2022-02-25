@@ -55,7 +55,7 @@ std::shared_ptr<MR::Object> ObjectDistanceMap::shallowClone() const
     return res;
 }
 
-void ObjectDistanceMap::swap( Object& other )
+void ObjectDistanceMap::swapBase_( Object& other )
 {
     if ( auto otherObject = other.asType<ObjectDistanceMap>() )
         std::swap( *this, *otherObject );

@@ -150,7 +150,7 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask )
         mesh_->invalidateCaches();
 }
 
-void ObjectVoxels::swap( Object& other )
+void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
         std::swap( *this, *otherVoxels );

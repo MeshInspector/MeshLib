@@ -237,7 +237,7 @@ void VisualObject::renderForPicker( const BaseRenderParams& params, unsigned id)
     renderObj_->renderPicker( params, id );
 }
 
-void VisualObject::swap( Object& other )
+void VisualObject::swapBase_( Object& other )
 {    
     if ( auto otherVis = other.asType<VisualObject>() )
         std::swap( *this, *otherVis );

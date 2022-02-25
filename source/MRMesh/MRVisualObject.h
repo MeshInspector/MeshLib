@@ -169,8 +169,6 @@ public:
     MRMESH_API virtual void render( const RenderParams& ) const;
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
 
-    // swaps this object with other
-    MRMESH_API virtual void swap( Object& other ) override;
 
     // returns cached bounding box of this object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
@@ -182,6 +180,9 @@ public:
 protected:
 
     MRMESH_API VisualObject( const VisualObject& obj );
+
+    // swaps this object with other
+    MRMESH_API virtual void swapBase_( Object& other ) override;
 
     // each renderable child of VisualObject should imlpement this method
     // and assign renderObj_ inside

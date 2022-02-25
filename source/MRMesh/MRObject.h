@@ -178,7 +178,8 @@ public:
 
     // swaps this object with other
     // note: do not swap object signals, so listeners will get notifications from swapped object
-    MRMESH_API virtual void swap( Object& other );
+    // requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
+    MRMESH_API void swap( Object& other );
 
     // signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;
@@ -192,6 +193,12 @@ public:
 protected:
     // user should not be able to call copy implicitly, use clone() function instead
     MRMESH_API Object( const Object& obj );
+
+    // swaps thole object (signals too)
+    MRMESH_API virtual void swapBase_( Object& other );
+    // swaps signals, used in `swap` function to return back signals after `swapBase_`
+    // pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other );
 
     // Creates future to save object model (e.g. mesh) in given file
     // path is full filename without extension

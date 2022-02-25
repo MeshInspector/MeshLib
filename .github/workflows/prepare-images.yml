@@ -80,4 +80,4 @@ jobs:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
-          tags: meshrus/meshlib-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+          tags: ${{GITHUB_REPOSITORY,,}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}

@@ -77,7 +77,7 @@ jobs:
       - name: Set image tag base path
         run: |
           repo_path=${{github.repository}}
-          echo "base_path=${repo_path,,}" >> $GITHUB_ENV
+          echo "DOCKERHUB_BASE_PATH=${repo_path,,}" >> $GITHUB_ENV
 
       - name: Build and push
         uses: docker/build-push-action@v2
@@ -85,4 +85,4 @@ jobs:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
-          tags: $base_path-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+          tags: ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}

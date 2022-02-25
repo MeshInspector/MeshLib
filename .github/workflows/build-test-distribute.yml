@@ -63,11 +63,19 @@ jobs:
         run: |
           Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
 
+  select-image-tag:
+    uses: MeshRUs/MeshLib/.github/workflows/docker-images.yml@docker-images
+    secrets:
+      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+
   ubuntu-build-test:
     timeout-minutes: 40
+    needs: [select-image-tag]
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-ubuntu
+      image: meshrus/meshlib-ubuntu:${{needs.select-image-tag.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:
@@ -120,9 +128,10 @@ jobs:
 
   fedora-build-test:
     timeout-minutes: 40
+    needs: [select-image-tag]
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-fedora
+      image: meshrus/meshlib-fedora:${{needs.select-image-tag.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:

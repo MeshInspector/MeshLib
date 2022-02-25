@@ -74,10 +74,15 @@ jobs:
           username: meshrus
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set image tag base path
+        run: |
+          repo_path=${{env.GITHUB_REPOSITORY}}
+          echo "base_path=${repo_path,,}" >> $GITHUB_ENV
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
-          tags: ${${{env.GITHUB_REPOSITORY}},,}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+          tags: $base_path-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}

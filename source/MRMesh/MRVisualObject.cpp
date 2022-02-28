@@ -348,16 +348,19 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
 
         ss = {};
         const auto bsize = bbox.size();
-        ss << "box size: (" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
-        res.push_back( ss.str() );
+        ss << "(" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
+        const auto boxStr = ss.str();
+        res.push_back( "box size: " + boxStr );
 
         const auto wbox = getWorldBox();
-        if ( wbox.valid() && wbox.size() != bbox.size() )
+        if ( wbox.valid() )
         {
             const auto wbsize = wbox.size();
             ss = {};
-            ss << "world box size: (" << wbsize.x << ", " << wbsize.y << ", " << wbsize.z << ")";
-            res.push_back( ss.str() );
+            ss << "(" << wbsize.x << ", " << wbsize.y << ", " << wbsize.z << ")";
+            const auto wboxStr = ss.str();
+            if ( boxStr != wboxStr )
+                res.push_back( "world box size: " + wboxStr );
         }
     }
     else

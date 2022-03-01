@@ -60,10 +60,6 @@ jobs:
       matrix:
         distribution: [ubuntu, fedora]
     steps:
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:

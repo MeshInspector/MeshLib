@@ -348,6 +348,26 @@ bool PolylineTopology::isConsistentlyOriented() const
     return true;
 }
 
+void PolylineTopology::flip()
+{
+    MR_TIMER
+
+    for ( auto & e : edgePerVertex_ )
+    {
+        if ( e.valid() )
+            e = e.sym();
+    }
+
+    for ( EdgeId i{0}; i + 1 < edges_.size(); ++++i )
+    {
+        auto & r0 = edges_[i];
+        auto & r1 = edges_[i + 1];
+        std::swap( r0, r1 );
+        r0.next = r0.next.sym();
+        r1.next = r1.next.sym();
+    }
+}
+
 #define CHECK(x) { assert(x); if (!(x)) return false; }
 
 bool PolylineTopology::checkValidity() const
@@ -410,6 +430,17 @@ TEST( MRMesh, PolylineTopology )
     PolylineTopology t;
     VertId vs[4] = { 0_v, 1_v, 2_v, 0_v };
     t.makePolyline( vs, 4 );
+    EXPECT_TRUE( t.checkValidity() );
+    EXPECT_TRUE( t.isConsistentlyOriented() );
+    EXPECT_EQ( t.org( 0_e ), 0_v );
+    EXPECT_EQ( t.dest( 0_e ), 1_v );
+
+    t.flip();
+    EXPECT_TRUE( t.checkValidity() );
+    EXPECT_TRUE( t.isConsistentlyOriented() );
+    EXPECT_EQ( t.org( 0_e ), 1_v );
+    EXPECT_EQ( t.dest( 0_e ), 0_v );
+
     EXPECT_EQ( t.numValidVerts(), 3 );
     EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 3 );
 

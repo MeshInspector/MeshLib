@@ -112,6 +112,8 @@ struct PolylineTopology
 
     // returns true if for each edge e: e == e.next() || e.odd() == next( e ).sym().odd()
     MRMESH_API bool isConsistentlyOriented() const;
+    // changes the orientation of all edges: every edge e is replaced with e.sym()
+    MRMESH_API void flip();
     // verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
     // computes numValidVerts_ and validVerts_ from edgePerVertex_

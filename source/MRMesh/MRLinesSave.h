@@ -15,7 +15,7 @@ namespace LinesSave
 
 MRMESH_API extern const IOFilters Filters;
 
-// saves in .mrpolyline file
+// saves in .mrlines file
 MRMESH_API tl::expected<void, std::string> toMrLines( const Polyline& polyline, const std::filesystem::path& file );
 MRMESH_API tl::expected<void, std::string> toMrLines( const Polyline& polyline, std::ostream& out );
 

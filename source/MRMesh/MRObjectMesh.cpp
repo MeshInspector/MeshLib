@@ -17,6 +17,7 @@
 #include "MRSceneSettings.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
 
 namespace MR
@@ -62,7 +63,7 @@ tl::expected<std::future<void>, std::string> ObjectMesh::serializeModel_( const 
     if ( ancillary_ || !mesh_ )
         return {};
 
-    return std::async( std::launch::async, 
+    return std::async( getAsyncLaunchType(),
         [mesh = mesh_, filename = path.u8string() + u8".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
 }
 

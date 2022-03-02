@@ -12,6 +12,7 @@
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
 
 namespace MR
@@ -170,7 +171,7 @@ tl::expected<std::future<void>, std::string> ObjectPoints::serializeModel_( cons
         return {};
 
     const std::vector<Color>* colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_.vec_;
-    return std::async( std::launch::async,
+    return std::async( getAsyncLaunchType(),
         [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
 }
 

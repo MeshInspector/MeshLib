@@ -8,6 +8,7 @@
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MRTBB.h" />
     <ClInclude Include="MRSpdlog.h" />
+    <ClInclude Include="MRAsyncLaunchType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

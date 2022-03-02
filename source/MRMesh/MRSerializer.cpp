@@ -322,6 +322,10 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
 
     ofs.close();
 
+#ifdef __EMSCRIPTEN__
+    for ( auto & f : saveModelFutures.value() )
+        f.get();
+#else
     if ( progress )
         progress( 0.1f );
 
@@ -354,6 +358,7 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
     {
         return tl::make_unexpected( "Canceled" );
     }
+#endif
     if ( preCompress )
         preCompress( scenePath );
 

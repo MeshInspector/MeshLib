@@ -42,7 +42,7 @@ tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& pat
     if ( !inFile )
         return tl::make_unexpected( readError );
 
-    size_t resolution[2] = {};
+    uint64_t resolution[2] = {};
     if ( !inFile.read( ( char* )resolution, sizeof( resolution ) ) )
         return tl::make_unexpected( readError );
 

@@ -17,6 +17,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAsyncLaunchType.h" />
     <ClInclude Include="MREigen.h" />
     <ClInclude Include="MROpenvdb.h" />
     <ClInclude Include="MRJson.h" />

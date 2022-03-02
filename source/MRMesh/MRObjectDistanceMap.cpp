@@ -7,6 +7,7 @@
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRAsyncLaunchType.h"
 
 namespace MR
 {
@@ -172,7 +173,7 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
     if ( !dmap_ )
         return {};
 
-    return std::async( std::launch::async,
+    return std::async( getAsyncLaunchType(),
         [this, filename = path.u8string() + u8".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
 }
 

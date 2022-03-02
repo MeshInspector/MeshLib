@@ -90,3 +90,7 @@ jobs:
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
           tags: ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}

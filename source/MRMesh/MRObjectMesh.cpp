@@ -62,7 +62,12 @@ tl::expected<std::future<void>, std::string> ObjectMesh::serializeModel_( const 
     if ( ancillary_ || !mesh_ )
         return {};
 
-    return std::async( std::launch::async, 
+#ifdef __EMSCRIPTEN__
+    std::launch lType = std::launch::deferred;
+#else
+    std::launch lType = std::launch::async;
+#endif
+    return std::async( lType,
         [mesh = mesh_, filename = path.u8string() + u8".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
 }
 

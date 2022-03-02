@@ -249,7 +249,12 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
     if ( ancillary_ || !grid_ )
         return {};
 
-    return std::async( std::launch::async,
+#ifdef __EMSCRIPTEN__
+    std::launch lType = std::launch::deferred;
+#else
+    std::launch lType = std::launch::async;
+#endif
+    return std::async( lType,
         [this, filename = path.u8string() + u8".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 

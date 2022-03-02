@@ -170,7 +170,12 @@ tl::expected<std::future<void>, std::string> ObjectPoints::serializeModel_( cons
         return {};
 
     const std::vector<Color>* colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_.vec_;
-    return std::async( std::launch::async,
+#ifdef __EMSCRIPTEN__
+    std::launch lType = std::launch::deferred;
+#else
+    std::launch lType = std::launch::async;
+#endif
+    return std::async( lType,
         [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
 }
 

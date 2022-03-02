@@ -89,6 +89,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         auto newVertId = mesh.splitEdge( el.edge, settings.region );
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
+        if ( settings.onVertCreated )
+            settings.onVertCreated( newVertId );
         ++splitsDone;
         makeDeloneOriginRing( mesh, el.edge, settings.maxDeviationAfterFlip, settings.region );
         for ( auto e : orgRing( mesh.topology, EdgeId{ el.edge } ) )

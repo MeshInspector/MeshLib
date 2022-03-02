@@ -13,6 +13,7 @@
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
 
 namespace MR
@@ -249,12 +250,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
     if ( ancillary_ || !grid_ )
         return {};
 
-#ifdef __EMSCRIPTEN__
-    std::launch lType = std::launch::deferred;
-#else
-    std::launch lType = std::launch::async;
-#endif
-    return std::async( lType,
+    return std::async( getAsyncLaunchType(),
         [this, filename = path.u8string() + u8".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 

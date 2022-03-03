@@ -44,8 +44,11 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         const auto & aNode = aTree[s.aNode];
         const auto & bNode = bTree[s.bNode];
 
-        const auto overlap = aNode.box.intersection( transformed( bNode.box, rigidB2A ) );
-        if ( !overlap.valid() )
+        // check intersection in int boxes for consistency with precise intersections
+        auto transformedBoxb = transformed( bNode.box, rigidB2A );
+        Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
+        Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
+        if ( !aBox.intersects( bBox ) )
             continue;
 
         if ( aNode.leaf() && bNode.leaf() )

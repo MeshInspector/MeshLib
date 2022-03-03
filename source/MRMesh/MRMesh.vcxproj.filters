@@ -699,7 +699,9 @@
     <ClInclude Include="MRLinesLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRFillContours2D.h" />
+    <ClInclude Include="MRFillContours2D.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1182,7 +1184,9 @@
     <ClCompile Include="MRLinesLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRFillContours2D.cpp" />
+    <ClCompile Include="MRFillContours2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

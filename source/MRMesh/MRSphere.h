@@ -8,7 +8,7 @@ namespace MR
 struct SphereParams
 {
     float radius = 1;
-    float maxEdgeLen = 0.2f;
+    int numMeshVertices = 100;
 };
 
 // creates a mesh of sphere with irregular triangulation

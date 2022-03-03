@@ -13,27 +13,19 @@ Mesh makeSphere( const SphereParams & params )
     MR_TIMER
     auto mesh = makeCube();
 
-    auto projectOnSphere = [radius = params.radius]( const Vector3f & v )
+    auto projectOnSphere = [&]( VertId vid )
     { 
-        return radius * v.normalized();
+        mesh.points[vid] = params.radius * mesh.points[vid].normalized();
     };
-    for ( auto & p : mesh.points )
-        p = projectOnSphere( p );
+    for ( auto vid : mesh.topology.getValidVerts() )
+        projectOnSphere( vid );
 
     SubdivideSettings ss;
-    ss.maxEdgeLen = params.maxEdgeLen;
-
-    // sphere area is 4*pi*radius^2
-    // min triangle area 1/2*(1/4*maxEdgeLen^2)
-    // every split create 2 triangles
-    // maxSplits = 4*pi*radius^2 / (1/4*maxEdgeLen^2), but we put a larger limit
-    ss.maxEdgeSplits = (int)std::lround( sqr( 15 * params.radius / params.maxEdgeLen ) );
-
+    ss.maxEdgeSplits = params.numMeshVertices - mesh.topology.numValidVerts();
+    if ( ss.maxEdgeSplits <= 0 )
+        return mesh;
     ss.maxDeviationAfterFlip = params.radius;
-    ss.onVertCreated = [&]( VertId vid )
-    { 
-        mesh.points[vid] = projectOnSphere( mesh.points[vid] );
-    };
+    ss.onVertCreated = projectOnSphere;
 
     subdivideMesh( mesh, ss );
 

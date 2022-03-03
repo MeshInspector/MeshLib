@@ -18,7 +18,7 @@ on:
 jobs:
   image-select:
     timeout-minutes: 5
-    runs-on: [self-hosted, x64, docker-ready]
+    runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.select-tag.outputs.image_tag}}
       need_rebuild: ${{ steps.need_rebuild.outputs.need_rebuild}}
@@ -55,7 +55,7 @@ jobs:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
     timeout-minutes: 30
-    runs-on: [self-hosted, x64, docker-ready]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         distribution: [ubuntu, fedora]

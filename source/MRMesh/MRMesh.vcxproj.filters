@@ -702,6 +702,9 @@
     <ClInclude Include="MRFillContours2D.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRSphere.h">
+      <Filter>Source Files\Primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1186,6 +1189,9 @@
     </ClCompile>
     <ClCompile Include="MRFillContours2D.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSphere.cpp">
+      <Filter>Source Files\Primitives</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

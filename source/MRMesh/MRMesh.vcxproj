@@ -80,6 +80,7 @@
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
+    <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSymMatrix2.h" />
@@ -325,6 +326,7 @@
     <ClCompile Include="MRRestoringStreamsSink.cpp" />
     <ClCompile Include="MRSceneRoot.cpp" />
     <ClCompile Include="MRSceneSettings.cpp" />
+    <ClCompile Include="MRSphere.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />

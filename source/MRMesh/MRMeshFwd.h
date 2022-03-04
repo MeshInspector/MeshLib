@@ -258,6 +258,8 @@ class MRMESH_CLASS HistoryStore;
 class ChangeObjectAction;
 class MRMESH_CLASS ChangeSceneAction;
 class ChangeSelectionAction;
+class ChangeEdgeSelectionAction;
+class ChangeCreasesAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;

@@ -132,18 +132,17 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
         } );
         if ( excluded == excludeFiles.end() )
         {
-            File file( path, "rb" );
-            auto fileSource = zip_source_filep( archive, file, 0, 0 );
+            auto fileSource = zip_source_file( archive, utf8string( path ).c_str(), 0, 0 );
             if ( !fileSource )
-                return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " to archive" );
-            file.detach(); //libzip has taken control over the handle
+                return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
 
             const auto archiveFilePath = utf8string( std::filesystem::relative( path, base, ec ) );
             const auto index = zip_file_add( archive, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
-            zip_source_close( fileSource ); //otherwise it will be closed with the archive
-            fileSource = nullptr;
             if ( index < 0 )
+            {
+                zip_source_free( fileSource );
                 return tl::make_unexpected( "Cannot add file " + archiveFilePath + " to archive" );
+            }
 
             if ( password )
             {

@@ -453,7 +453,15 @@ void ObjectMesh::setCreases( UndirectedEdgeBitSet creases )
         return;
     creases_ = std::move( creases );
     numCreaseEdges_.reset();
-    dirty_ |= ( DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL );
+
+    if ( creases_.any() )
+    {
+        dirty_ |= DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL;
+    }
+    else
+    {
+        dirty_ |= DIRTY_VERTS_NORMAL | DIRTY_VERTS_RENDER_NORMAL;
+    }
 }
 
 void ObjectMesh::swapBase_( Object& other )

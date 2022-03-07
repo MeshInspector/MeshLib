@@ -116,6 +116,28 @@ std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
     return res;
 }
 
+void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges )
+{
+    if ( multipleEdges.empty() )
+        return;
+    MR_TIMER
+    MR_MESH_WRITER( mesh )
+
+    for ( const auto & mE : multipleEdges )
+    {
+        int num = 0;
+        for ( auto e : orgRing( mesh.topology, mE.first ) )
+        {
+            if ( mesh.topology.dest( e ) != mE.second )
+                continue;
+            if ( num++ == 0 )
+                continue; // skip the first edge in the group
+            mesh.splitEdge( e.sym() );
+        }
+        assert( num > 1 ); //it was really multiply connected pair of vertices
+    }
+}
+
 FaceBitSet findDegenerateFaces( const Mesh& mesh, float criticalAspectRatio /*= FLT_MAX */ )
 {
     FaceBitSet selection( mesh.topology.getValidFaces().size() );

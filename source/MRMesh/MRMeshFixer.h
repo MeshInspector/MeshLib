@@ -13,8 +13,10 @@ MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
 using MultipleEdge = std::pair<VertId, VertId>;
 MRMESH_API std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology );
 
-// resolves multiple edges, but splitting all but one edge in each group
+// resolves given multiple edges, but splitting all but one edge in each group
 MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges );
+// finds and resolves multiple edges
+MRMESH_API void fixMultipleEdges( Mesh & mesh );
 
 // finds faces which aspect ratio >= criticalAspectRatio
 MRMESH_API FaceBitSet findDegenerateFaces( const Mesh& mesh, float criticalAspectRatio = FLT_MAX );

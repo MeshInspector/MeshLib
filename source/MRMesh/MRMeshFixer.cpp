@@ -138,6 +138,11 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
     }
 }
 
+void fixMultipleEdges( Mesh & mesh )
+{
+    fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ) );
+}
+
 FaceBitSet findDegenerateFaces( const Mesh& mesh, float criticalAspectRatio /*= FLT_MAX */ )
 {
     FaceBitSet selection( mesh.topology.getValidFaces().size() );

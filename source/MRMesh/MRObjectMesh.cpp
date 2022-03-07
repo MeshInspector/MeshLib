@@ -301,6 +301,14 @@ size_t ObjectMesh::numSelectedEdges() const
     return *numSelectedEdges_;
 }
 
+size_t ObjectMesh::numCreaseEdges() const
+{
+    if ( !numCreaseEdges_ )
+        numCreaseEdges_ = creases_.count();
+
+    return *numCreaseEdges_;
+}
+
 void ObjectMesh::applyScale( float scaleFactor )
 {
     if ( !mesh_ )
@@ -379,6 +387,8 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( "edges: " + std::to_string( meshStat_->numUndirectedEdges ) );
         if( auto nEdgesSelected = numSelectedEdges() )
             res.back() += " / " + std::to_string( nEdgesSelected ) + " selected";
+        if( auto nCreaseEdges = numCreaseEdges() )
+            res.back() += " / " + std::to_string( nCreaseEdges ) + " creases";
 
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
@@ -442,6 +452,7 @@ void ObjectMesh::setCreases( UndirectedEdgeBitSet creases )
     if ( creases == creases_ )
         return;
     creases_ = std::move( creases );
+    numCreaseEdges_.reset();
     dirty_ |= ( DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL );
 }
 

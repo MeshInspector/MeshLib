@@ -130,6 +130,8 @@ public:
     MRMESH_API size_t numSelectedFaces() const;
     // returns cached information about the number of selected undirected edges in the mesh
     MRMESH_API size_t numSelectedEdges() const;
+    // returns cached information about the number of crease undirected edges in the mesh
+    MRMESH_API size_t numCreaseEdges() const;
 
     // signal about mesh changing, triggered in setDirtyFlag
     using MeshChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
@@ -156,7 +158,7 @@ private:
     };
     mutable std::optional<MeshStat> meshStat_;
     mutable std::optional<bool> meshIsClosed_;
-    mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_;
+    mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_, numCreaseEdges_;
     mutable XfBasedCache<Box3f> worldBox_;
 
 protected:

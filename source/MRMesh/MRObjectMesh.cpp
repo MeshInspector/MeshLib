@@ -309,6 +309,14 @@ size_t ObjectMesh::numCreaseEdges() const
     return *numCreaseEdges_;
 }
 
+double ObjectMesh::totalArea() const
+{
+    if ( !totalArea_ )
+        totalArea_ = mesh_ ? mesh_->area() : 0.0;
+
+    return *totalArea_;
+}
+
 void ObjectMesh::applyScale( float scaleFactor )
 {
     if ( !mesh_ )
@@ -392,6 +400,8 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 
+        res.push_back( "area: " + std::to_string( totalArea() ) );
+
         boundingBoxToInfoLines_( res );
     }
     else
@@ -439,6 +449,7 @@ void ObjectMesh::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
         worldBox_.reset();
+        totalArea_.reset();
         if ( mesh_ )
         {
             mesh_->invalidateCaches();

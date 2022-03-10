@@ -157,6 +157,10 @@ struct [[nodiscard]] Mesh
     // if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
     MRMESH_API VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
 
+    // split given triangle on three triangles, introducing new vertex (which is returned) in the centroid of original triangle and connecting it to its vertices;
+    // if region is given, then it must include (f) and new faces will be added there as well
+    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr );
+
     // appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
     MRMESH_API void addPart( const Mesh & from,
         // optionally returns mappings: from.id -> this.id

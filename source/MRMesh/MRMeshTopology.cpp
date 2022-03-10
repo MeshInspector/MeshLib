@@ -656,6 +656,52 @@ VertId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
     return newv;
 }
 
+VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region )
+{
+    EdgeId e[3];
+    e[0] = edgeWithLeft( f );
+    assert( isLeftTri( e[0] ) );
+    e[1] = prev( e[0].sym() );
+    e[2] = prev( e[1].sym() );
+
+    if ( region )
+        region->test( f );
+
+    setLeft_( e[0], FaceId{} );
+
+    EdgeId n[3];
+    for ( int i = 0; i < 3; ++i )
+    {
+        n[i] = makeEdge();
+        splice( e[i], n[i] );
+    }
+
+    // connect new edges in new vertex
+    splice( n[0].sym(), n[1].sym() );
+    splice( n[1].sym(), n[2].sym() );
+    VertId newv = addVertId();
+    setOrg( n[0].sym(), newv );
+
+    for ( int i = 0; i < 3; ++i )
+    {
+        assert( isLeftTri( e[i] ) );
+    }
+
+    setLeft_( e[0], f );
+    const auto f1 = addFaceId();
+    setLeft( e[1], f1 );
+    const auto f2 = addFaceId();
+    setLeft( e[2], f2 );
+
+    if ( region )
+    {
+        region->autoResizeSet( f1 );
+        region->autoResizeSet( f2 );
+    }
+
+    return newv;
+}
+
 void MeshTopology::flipOrientation()
 {
     MR_TIMER

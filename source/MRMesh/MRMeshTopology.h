@@ -184,7 +184,11 @@ public:
     // split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned);
     // left and right faces if valid are also subdivide by new edge each;
     // if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
-    VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    MRMESH_API VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+
+    // split given triangle on three triangles, introducing new vertex (which is returned) inside original triangle and connecting it to its vertices;
+    // if region is given, then it must include (f) and new faces will be added there as well
+    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr );
 
     // flip orientation (normals) of all faces
     MRMESH_API void flipOrientation();

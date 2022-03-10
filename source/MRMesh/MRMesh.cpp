@@ -545,6 +545,14 @@ VertId Mesh::splitEdge( EdgeId e, FaceBitSet * region )
     return newv;
 }
 
+VertId Mesh::splitFace( FaceId f, FaceBitSet * region )
+{
+    auto newPos = triCenter( f );
+    VertId newv = topology.splitFace( f, region );
+    points.autoResizeAt( newv ) = newPos;
+    return newv;
+}
+
 void Mesh::addPart( const Mesh & from,
     FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap, bool rearrangeTriangles )
 {

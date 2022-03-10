@@ -142,6 +142,29 @@ TEST(MRMesh, SplitEdge)
     EXPECT_EQ( region.count(), 3 );
 }
 
+TEST(MRMesh, SplitFace) 
+{
+    std::vector<VertId> v{ 
+        VertId{0}, VertId{1}, VertId{2}
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f );
+    mesh.points.emplace_back( 0.f, 0.f, 1.f );
+    mesh.points.emplace_back( 0.f, 1.f, 0.f );
+
+    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
+    EXPECT_EQ( mesh.points.size(), 3 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(5) ); // 3*2 = 6 half-edges in total
+
+    mesh.splitFace( 0_f );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
+    EXPECT_EQ( mesh.points.size(), 4 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
+}
+
 TEST(MRMesh, SubdivideMesh) 
 {
     std::vector<VertId> v{ 

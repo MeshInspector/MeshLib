@@ -260,7 +260,7 @@ MR::FaceBitSet getFacesByMinEdgeLength( const MR::Mesh& mesh, float minLength )
     return resultFaces;
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, getFacesByMinEdgeLength, getFacesByMinEdgeLength, "return faces with at least one edge longer then min edge length" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, getFacesByMinEdgeLength, getFacesByMinEdgeLength, "return faces with at least one edge longer than min edge length" )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, self_intersections_heal, pythonHealSelfIntersections, "heals self intersections by converting mesh to voxels and back" )
 

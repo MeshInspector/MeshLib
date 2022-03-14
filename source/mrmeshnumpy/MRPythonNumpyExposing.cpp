@@ -130,15 +130,16 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
     return res;
 }
 
+// returns numpy array shapes [num faces,3] which represents indices of mesh valid faces
 pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 {
     using namespace MR;
     const auto& validFaces = topology.getValidFaces();
-    int numValidFaces = topology.lastValidFace() + 1;
+    int numFaces = topology.lastValidFace() + 1;
     // Allocate and initialize some data;
-    const int size = numValidFaces * 3;
+    const int size = numFaces * 3;
     int* data = new int[size];
-    for ( int i = 0; i < numValidFaces; i++ )
+    for ( int i = 0; i < numFaces; i++ )
     {
         auto ind = i * 3;
         if ( validFaces.test( FaceId( i ) ) )
@@ -164,20 +165,21 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     } );
 
     return pybind11::array_t<int>(
-        { numValidFaces, 3}, // shape
+        { numFaces, 3}, // shape
         { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
 
+// returns numpy array shapes [num verts,3] which represents coordinates of mesh valid points
 pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
 {
     using namespace MR;
-    int numValidVerts = mesh.topology.lastValidVert() + 1;
+    int numVerts = mesh.topology.lastValidVert() + 1;
     // Allocate and initialize some data;
-    const int size = numValidVerts * 3;
+    const int size = numVerts * 3;
     double* data = new double[size];
-    for ( int i = 0; i < numValidVerts; i++ )
+    for ( int i = 0; i < numVerts; i++ )
     {
         int ind = 3 * i;
         for ( int vi = 0; vi < 3; ++vi )
@@ -193,7 +195,7 @@ pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
     } );
 
     return pybind11::array_t<double>(
-        { numValidVerts, 3 }, // shape
+        { numVerts, 3 }, // shape
         { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent

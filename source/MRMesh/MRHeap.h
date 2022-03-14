@@ -25,6 +25,8 @@ public:
     Heap( int size, T def = {}, P pred = {} );
     // returns the size of the heap
     int size() const { return (int)heap_.size(); }
+    // increases the size of the heap by adding elements at the end
+    void resize( int size, T def = {} );
     // returns the value associated with given element
     const T & value( I elemId ) const { return heap_[ id2PosInHeap_[ elemId ] ].val; }
     // returns the element with the largest value
@@ -42,6 +44,8 @@ public:
 private:
     // tests whether heap element at posA is less than posB
     bool less_( int posA, int posB ) const;
+    // lifts the element in the queue according to its value
+    void lift_( int pos, I elemId );
 
 private:
     std::vector<Element> heap_;
@@ -63,6 +67,20 @@ Heap<T, I, P>::Heap( int size, T def, P pred )
 }
 
 template <typename T, typename I, typename P>
+void Heap<T, I, P>::resize( int size, T def )
+{
+    assert ( heap_.size() == id2PosInHeap_.size() );
+    while ( heap_.size() < size )
+    {
+        I i( heap_.size() );
+        heap_.emplace_back( i, def );
+        id2PosInHeap_.push_back( i );
+        lift_( i, i );
+    }
+    assert ( heap_.size() == id2PosInHeap_.size() );
+}
+
+template <typename T, typename I, typename P>
 void Heap<T, I, P>::setValue( I elemId, const T & newVal )
 {
     int pos = id2PosInHeap_[ elemId ];
@@ -80,6 +98,12 @@ void Heap<T, I, P>::setLargerValue( I elemId, const T & newVal )
     assert( heap_[pos].id == elemId );
     assert( !( pred_( newVal, heap_[pos].val ) ) );
     heap_[pos].val = newVal;
+    lift_( pos, elemId );
+}
+
+template <typename T, typename I, typename P>
+void Heap<T, I, P>::lift_( int pos, I elemId )
+{
     while ( pos > 0 )
     {
         int parentPos = ( pos - 1 ) / 2;

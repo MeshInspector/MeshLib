@@ -130,7 +130,7 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
     return res;
 }
 
-// returns numpy array shapes [num faces,3] which represents indices of mesh valid faces
+// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces 
 pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 {
     using namespace MR;
@@ -166,7 +166,7 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 
     return pybind11::array_t<int>(
         { numFaces, 3}, // shape
-        { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for double
+        { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for int
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
@@ -222,7 +222,7 @@ pybind11::array_t<bool> getNumpyBitSet( const boost::dynamic_bitset<std::uint64_
 
     return pybind11::array_t<bool>(
         { size }, // shape
-        { sizeof( bool ) }, // C-style contiguous strides for double
+        { sizeof( bool ) }, // C-style contiguous strides for bool
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }

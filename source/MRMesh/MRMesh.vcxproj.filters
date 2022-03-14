@@ -705,6 +705,9 @@
     <ClInclude Include="MRSphere.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRConvexHull.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1192,6 +1195,9 @@
     </ClCompile>
     <ClCompile Include="MRSphere.cpp">
       <Filter>Source Files\Primitives</Filter>
+    </ClCompile>
+    <ClCompile Include="MRConvexHull.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

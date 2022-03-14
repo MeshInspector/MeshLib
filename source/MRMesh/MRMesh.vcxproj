@@ -34,6 +34,7 @@
     <ClInclude Include="MRConfig.h" />
     <ClInclude Include="MRContour.h" />
     <ClInclude Include="MRContoursStitch.h" />
+    <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRDenseBox.h" />
     <ClInclude Include="MRDistanceMap.h" />
     <ClInclude Include="MRDistanceMapLoad.h" />
@@ -242,6 +243,7 @@
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
+    <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />

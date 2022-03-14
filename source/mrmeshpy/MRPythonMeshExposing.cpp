@@ -13,7 +13,8 @@
 #include "MRMesh/MRMeshMetrics.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRExpandShrink.h"
-
+#include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MREdgeIterator.h"
 
 using namespace MR;
 
@@ -124,6 +125,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
+{
+    m.def( "getIncidentVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getIncidentVerts );
+    m.def( "getInnerVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getInnerVerts );
+
+    m.def( "getIncidentFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getIncidentFaces );
+    m.def( "getInnerFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getInnerFaces );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::MeshComponents::FaceIncidence>( m, "FaceIncidence" ).
@@ -229,6 +239,28 @@ void pythonHealSelfIntersections( Mesh& mesh, float voxelSize )
     convert.voxelSize = voxelSize;
     mesh = convert( convert( mesh ) );
 }
+
+MR::FaceBitSet getFacesByMinEdgeLength( const MR::Mesh& mesh, float minLength )
+{
+    using namespace MR;
+    FaceBitSet resultFaces( mesh.topology.getValidFaces().size() );
+    float minLengthSq = minLength * minLength;
+    for ( auto ue : MR::undirectedEdges( mesh.topology ) )
+    {
+        if ( mesh.edgeLengthSq( ue ) > minLengthSq )
+        {
+            auto l = mesh.topology.left( ue );
+            auto r = mesh.topology.right( ue );
+            if ( l )
+                resultFaces.set( l );
+            if ( r )
+                resultFaces.set( r );
+        }
+    }
+    return resultFaces;
+}
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, getFacesByMinEdgeLength, getFacesByMinEdgeLength, "return faces with at least one edge longer than min edge length" )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, self_intersections_heal, pythonHealSelfIntersections, "heals self intersections by converting mesh to voxels and back" )
 

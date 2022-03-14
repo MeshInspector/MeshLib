@@ -130,6 +130,110 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
     return res;
 }
 
+// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces 
+pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
+{
+    using namespace MR;
+    const auto& validFaces = topology.getValidFaces();
+    int numFaces = topology.lastValidFace() + 1;
+    // Allocate and initialize some data;
+    const int size = numFaces * 3;
+    int* data = new int[size];
+    for ( int i = 0; i < numFaces; i++ )
+    {
+        auto ind = i * 3;
+        if ( validFaces.test( FaceId( i ) ) )
+        {
+            VertId v[3];
+            topology.getTriVerts( FaceId( i ), v );
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = v[vi];
+        }
+        else
+        {
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = 0;
+        }
+    }
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    pybind11::capsule freeWhenDone( data, [] ( void* f )
+    {
+        int* data = reinterpret_cast< int* >( f );
+        delete[] data;
+    } );
+
+    return pybind11::array_t<int>(
+        { numFaces, 3}, // shape
+        { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for int
+        data, // the data pointer
+        freeWhenDone ); // numpy array references this parent
+}
+
+// returns numpy array shapes [num verts,3] which represents coordinates of mesh valid points
+pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
+{
+    using namespace MR;
+    int numVerts = mesh.topology.lastValidVert() + 1;
+    // Allocate and initialize some data;
+    const int size = numVerts * 3;
+    double* data = new double[size];
+    for ( int i = 0; i < numVerts; i++ )
+    {
+        int ind = 3 * i;
+        for ( int vi = 0; vi < 3; ++vi )
+            data[ind + vi] = mesh.points.vec_[i][vi];
+    }
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    pybind11::capsule freeWhenDone( data, [] ( void* f )
+    {
+        double* data = reinterpret_cast< double* >( f );
+        delete[] data;
+    } );
+
+    return pybind11::array_t<double>(
+        { numVerts, 3 }, // shape
+        { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
+        data, // the data pointer
+        freeWhenDone ); // numpy array references this parent
+}
+
+pybind11::array_t<bool> getNumpyBitSet( const boost::dynamic_bitset<std::uint64_t>& bitSet )
+{
+    using namespace MR;
+    // Allocate and initialize some data;
+    const size_t size = bitSet.size();
+    bool* data = new bool[size];
+    for ( int i = 0; i < size; i++ )
+    {
+        data[i] = bitSet.test( i );
+    }
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    pybind11::capsule freeWhenDone( data, [] ( void* f )
+    {
+        bool* data = reinterpret_cast< bool* >( f );
+        delete[] data;
+    } );
+
+    return pybind11::array_t<bool>(
+        { size }, // shape
+        { sizeof( bool ) }, // C-style contiguous strides for bool
+        data, // the data pointer
+        freeWhenDone ); // numpy array references this parent
+}
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
+{
+    m.def( "getNumpyFaces", &getNumpyFaces );
+    m.def( "getNumpyVerts", &getNumpyVerts );
+    m.def( "getNumpyBitSet", &getNumpyBitSet );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )
 {
     m.def( "pointCloudFromPoints", &pointCloudFromNP, pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );

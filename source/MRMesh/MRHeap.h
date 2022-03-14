@@ -73,7 +73,7 @@ void Heap<T, I, P>::resize( int size, T def )
     while ( heap_.size() < size )
     {
         I i( heap_.size() );
-        heap_.emplace_back( i, def );
+        heap_.push_back( { i, def } );
         id2PosInHeap_.push_back( i );
         lift_( i, i );
     }

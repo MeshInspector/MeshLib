@@ -14,8 +14,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  prepare-image:
+    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker-images
+    secrets:
+      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
   windows-build-test:
     timeout-minutes: 40
+    # to show the graph correctly
+    needs: [prepare-image]
     # The type of runner that the job will run on
     runs-on: [self-hosted, windows, x64]
     strategy:
@@ -62,12 +70,6 @@ jobs:
       - name: Clear workspace
         run: |
           Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
-
-  prepare-image:
-    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker-images
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   ubuntu-build-test:
     timeout-minutes: 40
@@ -183,6 +185,8 @@ jobs:
 
   macos-build-test:
     timeout-minutes: 60
+    # to show the graph correctly
+    needs: [prepare-image]
     runs-on: [macos-latest]
     strategy:
       matrix:

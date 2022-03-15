@@ -21,7 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.select-tag.outputs.image_tag}}
-      need_rebuild: ${{ steps.need_rebuild.outputs.need_rebuild}}
+      need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
+      matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
       - name: Filter paths
         uses: dorny/paths-filter@v2
@@ -48,8 +49,18 @@ jobs:
           echo "${{steps.branch-name.outputs.current_branch}}" || echo "latest")"
 
       - name: Checking whether to start image rebuild
-        id: need_rebuild
+        id: need-rebuild
         run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
+        
+      - name: Select matrix
+        id: matrix-set
+        run: |
+          echo ${{github.repository}}
+          if [ "${{github.repository}}" == "MeshInspector" ]; then
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
+          else
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"}]}"
+          fi
 
   image-build-upload:
     needs: [image-select]
@@ -57,8 +68,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        distribution: [ubuntu, fedora]
+      matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
     steps:
       - name: Clear workspace
         run: |

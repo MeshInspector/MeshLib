@@ -1,0 +1,29 @@
+name: Delete debug images
+
+# only trigger on pull request closed events
+on:
+  pull_request:
+    types: [ closed ]
+
+jobs:
+  image-check-delete:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: meshrus
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get branch names
+        id: branch-name
+        uses: tj-actions/branch-names@v4.9
+
+      - name: Delete ubuntu debug image
+        if: ${{steps.branch-name.outputs.current_branch}} != master
+        run: curl -X DELETE -u "https://hub.docker.com/v2/repositories/meshrus/meshlib-ubuntu/tags/${{steps.branch-name.outputs.current_branch}}"
+
+      - name: Delete fedora debug image
+        if: ${{steps.branch-name.outputs.current_branch}} != master
+        run: curl -X DELETE -u "https://hub.docker.com/v2/repositories/meshrus/meshlib-fedora/tags/${{steps.branch-name.outputs.current_branch}}"

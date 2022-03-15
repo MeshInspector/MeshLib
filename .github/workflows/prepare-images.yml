@@ -1,0 +1,106 @@
+name: Prepare images
+
+on:
+  workflow_call:
+    secrets:
+      BUILD_MACHINE_TOKEN:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+    outputs:
+      image_tag:
+        description: "image for testing"
+        value: ${{ jobs.image-select.outputs.image_tag }}
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  image-select:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.select-tag.outputs.image_tag}}
+      need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
+      matrix: ${{ steps.matrix-set.outputs.matrix}}
+    steps:
+      - name: Filter paths
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          filters: |
+            src:
+              - '.github/workflows/docker-images.yml'
+              - 'docker/**'
+              - 'requirements/**'
+              - 'scripts/**'
+              - 'thirdparty/**'
+
+      - name: Get branch names
+        if: ${{steps.changes.outputs.src == 'true'}}
+        id: branch-name
+        uses: tj-actions/branch-names@v4.9
+
+      - name: Select image tag
+        id: select-tag
+        run: |
+          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" || \
+          echo "latest")"
+
+      - name: Checking whether to start image rebuild
+        id: need-rebuild
+        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
+        
+      - name: Select matrix
+        id: matrix-set
+        run: |
+          echo ${{github.repository}}
+          if [ "${{github.repository}}" == "MeshRUs/MeshInspector" ]; then
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
+          else
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"}]}"
+          fi
+
+  image-build-upload:
+    needs: [image-select]
+    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
+    steps:
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: meshrus
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set image tag base path
+        run: |
+          repo_path=${{github.repository}}
+          echo "DOCKERHUB_BASE_PATH=${repo_path,,}" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: docker/${{matrix.distribution}}Dockerfile
+          push: true
+          tags: ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+
+      - name: Clear workspace
+        run: |
+          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}

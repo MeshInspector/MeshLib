@@ -1,7 +1,6 @@
 FROM fedora:35
 
-RUN dnf -y update
-RUN dnf -y install git time python3-pip
+RUN dnf -y update && dnf -y install git time python3-pip
 
 #copy files
 RUN mkdir /home/MeshRUs
@@ -11,12 +10,13 @@ WORKDIR "/home/MeshRUs"
 COPY .git .git
 COPY thirdparty thirdparty
 COPY scripts scripts
-COPY source source
 COPY requirements requirements
 
 # build and install thirdparty
 RUN sudo ./scripts/build_thirdparty.sh
 RUN sudo ./scripts/install_thirdparty.sh
+
+ENV MR_STATE=DOCKER_BUILD
 
 # copy thirdparty libs
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/

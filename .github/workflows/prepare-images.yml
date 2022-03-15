@@ -56,7 +56,7 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
-          if [ "${{github.repository}}" == "MeshInspector" ]; then
+          if [ "${{github.repository}}" == "MeshRUs/MeshInspector" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
           else
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"}]}"

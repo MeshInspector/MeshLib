@@ -66,6 +66,7 @@
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
@@ -82,6 +83,7 @@
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
     <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSymMatrix2.h" />
@@ -282,6 +284,7 @@
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
+    <ClCompile Include="MRObjectMeshHolder.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />
     <ClCompile Include="MRMeshLoadObj.cpp" />
     <ClCompile Include="MRMeshToPointCloud.cpp" />
@@ -329,6 +332,7 @@
     <ClCompile Include="MRSceneRoot.cpp" />
     <ClCompile Include="MRSceneSettings.cpp" />
     <ClCompile Include="MRSphere.cpp" />
+    <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />

@@ -27,7 +27,7 @@ MR_ADD_CLASS_FACTORY( ObjectMesh )
 
 
 ObjectMesh::ObjectMesh( const ObjectMesh& other ) :
-    MeshHolder( other )
+    ObjectMeshHolder( other )
 {
 }
 
@@ -137,7 +137,7 @@ std::shared_ptr<Object> ObjectMesh::shallowClone() const
 
 void ObjectMesh::setDirtyFlags( uint32_t mask )
 {
-    MeshHolder::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask );
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE)
     {
         if ( mesh_ )

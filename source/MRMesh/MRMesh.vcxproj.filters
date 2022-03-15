@@ -717,7 +717,7 @@
     <ClInclude Include="MRSphereObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshHolder.h">
+    <ClInclude Include="MRObjectMeshHolder.h">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1214,7 +1214,7 @@
     <ClCompile Include="MRSphereObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshHolder.cpp">
+    <ClCompile Include="MRObjectMeshHolder.cpp">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
   </ItemGroup>

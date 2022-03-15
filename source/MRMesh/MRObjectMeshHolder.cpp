@@ -1,4 +1,4 @@
-#include "MRMeshHolder.h"
+#include "MRObjectMeshHolder.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRMeshSave.h"
@@ -23,33 +23,33 @@
 namespace MR
 {
 
-MR_ADD_CLASS_FACTORY( MeshHolder )
+MR_ADD_CLASS_FACTORY( ObjectMeshHolder )
 
-const Color& MeshHolder::getSelectedFacesColor() const
+const Color& ObjectMeshHolder::getSelectedFacesColor() const
 {
     return faceSelectionColor_;
 }
 
-const Color& MeshHolder::getSelectedEdgesColor() const
+const Color& ObjectMeshHolder::getSelectedEdgesColor() const
 {
     return edgeSelectionColor_;
 }
 
-void MeshHolder::setSelectedFacesColor( const Color& color )
+void ObjectMeshHolder::setSelectedFacesColor( const Color& color )
 {
     if ( color == faceSelectionColor_ )
         return;
     faceSelectionColor_ = color;
 }
 
-void MeshHolder::setSelectedEdgesColor( const Color& color )
+void ObjectMeshHolder::setSelectedEdgesColor( const Color& color )
 {
     if ( color == edgeSelectionColor_ )
         return;
     edgeSelectionColor_ = color;
 }
 
-tl::expected<std::future<void>, std::string> MeshHolder::serializeModel_( const std::filesystem::path& path ) const
+tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
         return {};
@@ -58,7 +58,7 @@ tl::expected<std::future<void>, std::string> MeshHolder::serializeModel_( const 
         [mesh = mesh_, filename = path.u8string() + u8".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
 }
 
-void MeshHolder::serializeFields_( Json::Value& root ) const
+void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
@@ -78,10 +78,10 @@ void MeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
     serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
 
-    root["Type"].append( MeshHolder::TypeName() );
+    root["Type"].append( ObjectMeshHolder::TypeName() );
 }
 
-void MeshHolder::deserializeFields_( const Json::Value& root )
+void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
     const auto& selectionColor = root["Colors"]["Selection"];
@@ -112,7 +112,7 @@ void MeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
 }
 
-tl::expected<void, std::string> MeshHolder::deserializeModel_( const std::filesystem::path& path )
+tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path )
 {
     auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm" );
     if ( !res.has_value() )
@@ -122,14 +122,14 @@ tl::expected<void, std::string> MeshHolder::deserializeModel_( const std::filesy
     return {};
 }
 
-Box3f MeshHolder::computeBoundingBox_() const
+Box3f ObjectMeshHolder::computeBoundingBox_() const
 {
     if ( !mesh_ )
         return Box3f();
     return mesh_->computeBoundingBox();
 }
 
-Box3f MeshHolder::computeBoundingBoxXf_() const
+Box3f ObjectMeshHolder::computeBoundingBoxXf_() const
 {
     if ( !mesh_ )
         return Box3f();
@@ -137,28 +137,28 @@ Box3f MeshHolder::computeBoundingBoxXf_() const
     return mesh_->computeBoundingBox( &tempXf );
 }
 
-Vector<MR::Vector3f, MR::VertId> MeshHolder::computeVertsNormals_() const
+Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
 {
     if ( !mesh_ )
         return {};
     return computePerVertNormals( *mesh_ );
 }
 
-Vector<MR::Vector3f, MR::FaceId> MeshHolder::computeFacesNormals_() const
+Vector<MR::Vector3f, MR::FaceId> ObjectMeshHolder::computeFacesNormals_() const
 {
     if ( !mesh_ )
         return {};
     return computePerFaceNormals( *mesh_ );
 }
 
-Vector<MR::TriangleCornerNormals, MR::FaceId> MeshHolder::computeCornerNormals_() const
+Vector<MR::TriangleCornerNormals, MR::FaceId> ObjectMeshHolder::computeCornerNormals_() const
 {
     if ( !mesh_ )
         return {};
     return computePerCornerNormals( *mesh_, creases_.any() ? &creases_ : nullptr );
 }
 
-const ViewportMask& MeshHolder::getVisualizePropertyMask( unsigned type ) const
+const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )
     {
@@ -181,13 +181,13 @@ const ViewportMask& MeshHolder::getVisualizePropertyMask( unsigned type ) const
     }
 }
 
-void MeshHolder::setupRenderObject_() const
+void ObjectMeshHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )
-        renderObj_ = createRenderObject<MeshHolder>( *this );
+        renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
 }
 
-void MeshHolder::setDefaultColors_()
+void ObjectMeshHolder::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
@@ -196,7 +196,7 @@ void MeshHolder::setDefaultColors_()
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
 }
 
-MeshHolder::MeshHolder( const MeshHolder& other ) :
+ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     VisualObject( other )
 {
     edgesColor_ = other.edgesColor_;
@@ -216,13 +216,13 @@ MeshHolder::MeshHolder( const MeshHolder& other ) :
     showSelectedFaces_ = other.showSelectedFaces_;
 }
 
-MeshHolder::MeshHolder()
+ObjectMeshHolder::ObjectMeshHolder()
 {
     setDefaultColors_();
     setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
 }
 
-uint32_t MeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
+uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
 {
     auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
     uint32_t res = 0;
@@ -244,20 +244,20 @@ uint32_t MeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask
     return res;
 }
 
-bool MeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
+bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
         ( isVisible( viewportMask ) &&
           ( dirty_ & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
 }
 
-void MeshHolder::resetDirtyExeptMask( uint32_t mask ) const
+void ObjectMeshHolder::resetDirtyExeptMask( uint32_t mask ) const
 {
     // Bounding box and normals (all caches) is cleared only if it was recounted
     dirty_ &= ( DIRTY_CACHES | mask );
 }
 
-std::vector<std::string> MeshHolder::getInfoLines() const
+std::vector<std::string> ObjectMeshHolder::getInfoLines() const
 {
     std::vector<std::string> res;
 
@@ -265,30 +265,30 @@ std::vector<std::string> MeshHolder::getInfoLines() const
     return res;
 }
 
-std::shared_ptr<Object> MeshHolder::clone() const
+std::shared_ptr<Object> ObjectMeshHolder::clone() const
 {
-    auto res = std::make_shared<MeshHolder>( ProtectedStruct{}, *this );
+    auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );
     if ( mesh_ )
         res->mesh_ = std::make_shared<Mesh>( *mesh_ );
     return res;
 }
 
-std::shared_ptr<Object> MeshHolder::shallowClone() const
+std::shared_ptr<Object> ObjectMeshHolder::shallowClone() const
 {
-    auto res = std::make_shared<MeshHolder>( ProtectedStruct{}, *this );
+    auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );
     if ( mesh_ )
         res->mesh_ = mesh_;
     return res;
 }
 
-void MeshHolder::selectFaces( FaceBitSet newSelection )
+void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
     selectedTriangles_ = std::move( newSelection );
     numSelectedFaces_.reset();
     dirty_ |= DIRTY_SELECTION;
 }
 
-void MeshHolder::selectEdges( const UndirectedEdgeBitSet& newSelection )
+void ObjectMeshHolder::selectEdges( const UndirectedEdgeBitSet& newSelection )
 {
     selectedEdges_ = newSelection;
     numSelectedEdges_.reset();
@@ -296,7 +296,7 @@ void MeshHolder::selectEdges( const UndirectedEdgeBitSet& newSelection )
 }
 
 
-bool MeshHolder::isMeshClosed() const
+bool ObjectMeshHolder::isMeshClosed() const
 {
     if ( !meshIsClosed_ )
         meshIsClosed_ = mesh_ && mesh_->topology.isClosed();
@@ -304,7 +304,7 @@ bool MeshHolder::isMeshClosed() const
     return *meshIsClosed_;
 }
 
-Box3f MeshHolder::getWorldBox() const
+Box3f ObjectMeshHolder::getWorldBox() const
 {
     if ( !mesh_ )
         return {};
@@ -316,7 +316,7 @@ Box3f MeshHolder::getWorldBox() const
     return box;
 }
 
-size_t MeshHolder::numSelectedFaces() const
+size_t ObjectMeshHolder::numSelectedFaces() const
 {
     if ( !numSelectedFaces_ )
         numSelectedFaces_ = selectedTriangles_.count();
@@ -324,7 +324,7 @@ size_t MeshHolder::numSelectedFaces() const
     return *numSelectedFaces_;
 }
 
-size_t MeshHolder::numSelectedEdges() const
+size_t ObjectMeshHolder::numSelectedEdges() const
 {
     if ( !numSelectedEdges_ )
         numSelectedEdges_ = selectedEdges_.count();
@@ -332,7 +332,7 @@ size_t MeshHolder::numSelectedEdges() const
     return *numSelectedEdges_;
 }
 
-size_t MeshHolder::numCreaseEdges() const
+size_t ObjectMeshHolder::numCreaseEdges() const
 {
     if ( !numCreaseEdges_ )
         numCreaseEdges_ = creases_.count();
@@ -340,7 +340,7 @@ size_t MeshHolder::numCreaseEdges() const
     return *numCreaseEdges_;
 }
 
-double MeshHolder::totalArea() const
+double ObjectMeshHolder::totalArea() const
 {
     if ( !totalArea_ )
         totalArea_ = mesh_ ? mesh_->area() : 0.0;
@@ -348,7 +348,7 @@ double MeshHolder::totalArea() const
     return *totalArea_;
 }
 
-void MeshHolder::setDirtyFlags( uint32_t mask )
+void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 {
     // selected faces and edges can be changed only by the methods of this class, 
     // which set dirty flags appropriately
@@ -371,7 +371,7 @@ void MeshHolder::setDirtyFlags( uint32_t mask )
     }
 }
 
-void MeshHolder::setCreases( UndirectedEdgeBitSet creases )
+void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
 {
     if ( creases == creases_ )
         return;
@@ -388,15 +388,15 @@ void MeshHolder::setCreases( UndirectedEdgeBitSet creases )
     }
 }
 
-void MeshHolder::swapBase_( Object& other )
+void ObjectMeshHolder::swapBase_( Object& other )
 {
-    if ( auto otherMesh = other.asType<MeshHolder>() )
+    if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
         std::swap( *this, *otherMesh );
     else
         assert( false );
 }
 
-AllVisualizeProperties MeshHolder::getAllVisualizeProperties() const
+AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;
     res.resize( MeshVisualizePropertyType::MeshVisualizePropsCount );
@@ -405,7 +405,7 @@ AllVisualizeProperties MeshHolder::getAllVisualizeProperties() const
     return res;
 }
 
-const Vector<MR::Vector3f, MR::FaceId>& MeshHolder::getFacesNormals() const
+const Vector<MR::Vector3f, MR::FaceId>& ObjectMeshHolder::getFacesNormals() const
 {
     std::unique_lock lock( readCacheMutex_.getMutex() );
     if ( dirty_ & DIRTY_FACES_NORMAL )
@@ -416,7 +416,7 @@ const Vector<MR::Vector3f, MR::FaceId>& MeshHolder::getFacesNormals() const
     return facesNormalsCache_;
 }
 
-const Vector<MR::TriangleCornerNormals, MR::FaceId>& MeshHolder::getCornerNormals() const
+const Vector<MR::TriangleCornerNormals, MR::FaceId>& ObjectMeshHolder::getCornerNormals() const
 {
     std::unique_lock lock( readCacheMutex_.getMutex() );
     if ( dirty_ & DIRTY_CORNERS_NORMAL )

@@ -22,14 +22,14 @@ struct MeshVisualizePropertyType : VisualizeMaskType
 };
 
 // an object that stores a mesh
-class MRMESH_CLASS MeshHolder : public VisualObject
+class MRMESH_CLASS ObjectMeshHolder : public VisualObject
 {
 public:
-    MRMESH_API MeshHolder();
+    MRMESH_API ObjectMeshHolder();
 
-    MeshHolder( MeshHolder&& ) noexcept = default;
-    MeshHolder& operator = ( MeshHolder&& ) noexcept = default;
-    virtual ~MeshHolder() = default;
+    ObjectMeshHolder( ObjectMeshHolder&& ) noexcept = default;
+    ObjectMeshHolder& operator = ( ObjectMeshHolder&& ) noexcept = default;
+    virtual ~ObjectMeshHolder() = default;
 
     constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
     virtual const char* typeName() const override { return TypeName(); }
@@ -117,7 +117,7 @@ public:
     }
 
     // this ctor is public only for std::make_shared used inside clone()
-    MeshHolder( ProtectedStruct, const MeshHolder& obj ) : MeshHolder( obj )
+    ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
     // returns dirty flag of currently using normal type if they are dirty in render representation
@@ -161,7 +161,7 @@ protected:
     mutable std::optional<double> totalArea_;
     mutable XfBasedCache<Box3f> worldBox_;
 
-    MRMESH_API MeshHolder( const MeshHolder& other );
+    MRMESH_API ObjectMeshHolder( const ObjectMeshHolder& other );
 
     // swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

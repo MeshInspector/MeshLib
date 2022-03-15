@@ -8,7 +8,7 @@
 
 namespace
 {
-constexpr int cDeteilsLevel = 2048;
+constexpr int cDetailLevel = 2048;
 constexpr float cBaseRadius = 1.0f;
 }
 
@@ -106,13 +106,13 @@ void SphereObject::swapBase_( Object& other )
 
 void SphereObject::serializeFields_( Json::Value& root ) const
 {
-    MeshHolder::serializeFields_( root );
+    ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
 }
 
 void SphereObject::constructMesh_()
 {
-    mesh_ = std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDeteilsLevel } ) );
+    mesh_ = std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDetailLevel } ) );
     setFlatShading( false );
     selectFaces( {} );
     selectEdges( {} );

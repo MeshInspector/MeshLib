@@ -243,7 +243,7 @@ class DistanceMap;
 
 class Object;
 class VisualObject;
-class MeshHolder;
+class ObjectMeshHolder;
 class ObjectMesh;
 class ObjectPoints;
 class ObjectVoxels;

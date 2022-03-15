@@ -1,12 +1,12 @@
 #pragma once
 
-#include "MRMeshHolder.h"
+#include "MRObjectMeshHolder.h"
 #include "MRXfBasedCache.h"
 
 namespace MR
 {
 // an object that stores a mesh
-class MRMESH_CLASS ObjectMesh : public MeshHolder
+class MRMESH_CLASS ObjectMesh : public ObjectMeshHolder
 {
 public:
     ObjectMesh() = default;

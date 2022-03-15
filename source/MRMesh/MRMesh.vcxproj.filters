@@ -73,6 +73,9 @@
     <Filter Include="Source Files\DataModel\Features">
       <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\DataModel\ModelHolder">
+      <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -714,6 +717,9 @@
     <ClInclude Include="MRSphereObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshHolder.h">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1207,6 +1213,9 @@
     </ClCompile>
     <ClCompile Include="MRSphereObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshHolder.cpp">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

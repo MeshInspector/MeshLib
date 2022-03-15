@@ -1,12 +1,12 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRObjectMesh.h"
+#include "MRMeshHolder.h"
 
 namespace MR
 {
 
 // Object to show sphere feature, position and radius are controlled by xf
-class MRMESH_CLASS SphereObject : public ObjectMesh
+class MRMESH_CLASS SphereObject : public MeshHolder
 {
 public:
     // Creates simple sphere object with center in zero and radius - 1

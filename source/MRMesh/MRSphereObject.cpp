@@ -106,13 +106,17 @@ void SphereObject::swapBase_( Object& other )
 
 void SphereObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMesh::serializeFields_( root );
+    MeshHolder::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
 }
 
 void SphereObject::constructMesh_()
 {
-    setMesh( std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDeteilsLevel } ) ) );
+    mesh_ = std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDeteilsLevel } ) );
+    setFlatShading( false );
+    selectFaces( {} );
+    selectEdges( {} );
+    setDirtyFlags( DIRTY_ALL );
 }
 
 }

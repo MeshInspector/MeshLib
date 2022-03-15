@@ -45,8 +45,8 @@ jobs:
       - name: Select image tag
         id: select-tag
         run: |
-          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && \
-          echo "${{steps.branch-name.outputs.current_branch}}" || echo "latest")"
+          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" || \
+          echo "latest")"
 
       - name: Checking whether to start image rebuild
         id: need-rebuild

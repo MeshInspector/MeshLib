@@ -10,7 +10,7 @@ namespace MR
 class ChangeMeshAction : public HistoryAction
 {
 public:
-    // Constructed from original ObjectMesh
+    // use this constructor to remember object's mesh before making any changes in it
     ChangeMeshAction( const std::string& name, const std::shared_ptr<ObjectMesh>& obj ) :
         objMesh_{ obj },
         name_{ name }
@@ -20,6 +20,16 @@ public:
             if ( auto m = obj->mesh() )
                 cloneMesh_ = std::make_shared<Mesh>( *m );
         }
+    }
+
+    // use this constructor to remember current object's mesh and immediately set new mesh to the object
+    ChangeMeshAction( const std::string& name, const std::shared_ptr<ObjectMesh>& obj, std::shared_ptr<Mesh> newMesh ) :
+        objMesh_{ obj },
+        cloneMesh_{ std::move( newMesh ) },
+        name_{ name }
+    {
+        if ( objMesh_ )
+            objMesh_->swapMesh( cloneMesh_);
     }
 
     virtual std::string name() const override

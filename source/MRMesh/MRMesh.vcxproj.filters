@@ -70,6 +70,9 @@
     <Filter Include="Source Files\PDF">
       <UniqueIdentifier>{6e164873-f97c-4112-be31-701b3284f4c6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\DataModel\Features">
+      <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -708,6 +711,9 @@
     <ClInclude Include="MRConvexHull.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRSphereObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1198,6 +1204,9 @@
     </ClCompile>
     <ClCompile Include="MRConvexHull.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSphereObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

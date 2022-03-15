@@ -24,6 +24,12 @@ jobs:
       need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          submodules: recursive
+
       - name: Filter paths
         uses: dorny/paths-filter@v2
         id: changes

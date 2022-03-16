@@ -18,8 +18,6 @@ public:
     constexpr static const char* TypeName() noexcept { return "ObjectMesh"; }
     virtual const char* typeName() const override { return TypeName(); }
 
-    MRMESH_API virtual void applyScale( float scaleFactor ) override;
-
     // returns variable mesh, if const mesh is needed use `mesh()` instead
     virtual const std::shared_ptr< Mesh > & varMesh() { return mesh_; }
 

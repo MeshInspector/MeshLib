@@ -257,6 +257,25 @@ void ObjectMeshHolder::resetDirtyExeptMask( uint32_t mask ) const
     dirty_ &= ( DIRTY_CACHES | mask );
 }
 
+
+void ObjectMeshHolder::applyScale( float scaleFactor )
+{
+    if ( !mesh_ )
+        return;
+
+    auto& points = mesh_->points;
+
+    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
+        [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            points[VertId( i )] *= scaleFactor;
+        }
+    } );
+    setDirtyFlags( DIRTY_POSITION );
+}
+
 std::vector<std::string> ObjectMeshHolder::getInfoLines() const
 {
     std::vector<std::string> res;

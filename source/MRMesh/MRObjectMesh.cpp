@@ -41,24 +41,6 @@ std::optional<MeshIntersectionResult> ObjectMesh::worldRayIntersection( const Li
     return res;
 }
 
-void ObjectMesh::applyScale( float scaleFactor )
-{
-    if ( !mesh_ )
-        return;
-
-    auto& points = mesh_->points;
-
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
-    {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            points[VertId( i )] *= scaleFactor;
-        }
-    } );
-    setDirtyFlags( DIRTY_POSITION );
-}
-
 void ObjectMesh::setMesh( std::shared_ptr< Mesh > mesh )
 {
     if ( mesh == mesh_ )

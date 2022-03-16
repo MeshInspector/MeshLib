@@ -34,6 +34,8 @@ public:
     constexpr static const char* TypeName() noexcept { return "MeshHolder"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    MRMESH_API virtual void applyScale( float scaleFactor ) override;
+
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 

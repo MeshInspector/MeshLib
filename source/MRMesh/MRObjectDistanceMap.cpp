@@ -33,7 +33,7 @@ void ObjectDistanceMap::applyScale( float scaleFactor )
         } );
     }
 
-    ObjectMesh::applyScale( scaleFactor );
+    ObjectMeshHolder::applyScale( scaleFactor );
 }
 
 std::shared_ptr<MR::Object> ObjectDistanceMap::clone() const
@@ -122,7 +122,7 @@ const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
 }
 
 ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :
-    ObjectMesh( other ),
+    ObjectMeshHolder( other ),
     dmap_( nullptr ),
     toWorldParams_( other.toWorldParams_ )
 {

@@ -1,6 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRObjectMesh.h"
+#include "MRObjectMeshHolder.h"
 #include "MRDistanceMapParams.h"
 
 
@@ -8,7 +8,7 @@ namespace MR
 {
 
 // This class stores information about distance map object
-class MRMESH_CLASS ObjectDistanceMap : public ObjectMesh
+class MRMESH_CLASS ObjectDistanceMap : public ObjectMeshHolder
 {
 public:
     MRMESH_API ObjectDistanceMap();

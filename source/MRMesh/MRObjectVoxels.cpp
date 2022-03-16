@@ -208,7 +208,7 @@ void ObjectVoxels::setDefaultColors_()
 }
 
 ObjectVoxels::ObjectVoxels( const ObjectVoxels& other ) :
-    ObjectMesh( other )
+    ObjectMeshHolder( other )
 {
     dimensions_ = other.dimensions_;
     isoValue_ = other.isoValue_;
@@ -229,7 +229,7 @@ void ObjectVoxels::applyScale( float scaleFactor )
 {
     voxelSize_ *= scaleFactor;
 
-    ObjectMesh::applyScale( scaleFactor );
+    ObjectMeshHolder::applyScale( scaleFactor );
 }
 
 void ObjectVoxels::serializeFields_( Json::Value& root ) const
@@ -295,7 +295,7 @@ tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::file
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
-    std::vector<std::string> res = ObjectMesh::getInfoLines();
+    std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
     for ( auto & s : res )
         s = "mesh " + s;
     if ( res.empty() )

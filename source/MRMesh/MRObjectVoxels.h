@@ -1,7 +1,7 @@
 #pragma once
 #ifndef __EMSCRIPTEN__
 #include "MRMeshFwd.h"
-#include "MRObjectMesh.h"
+#include "MRObjectMeshHolder.h"
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
 #include "MRVolumeIndexer.h"
@@ -11,7 +11,7 @@ namespace MR
 
 
 // This class stores information about voxels object
-class MRMESH_CLASS ObjectVoxels : public ObjectMesh
+class MRMESH_CLASS ObjectVoxels : public ObjectMeshHolder
 {
 public:
     MRMESH_API ObjectVoxels();

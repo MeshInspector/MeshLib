@@ -361,6 +361,8 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
         outClosestEdges->resize( size );
 
     DistanceMap distMap( params.resolution.x, params.resolution.y );
+    if ( !polyline.topology.lastNotLoneEdge().valid())
+        return distMap;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {

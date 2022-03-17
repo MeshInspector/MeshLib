@@ -723,6 +723,9 @@
     <ClInclude Include="MR2to3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPlaneObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1219,6 +1222,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectMeshHolder.cpp">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPlaneObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

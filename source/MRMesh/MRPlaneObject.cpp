@@ -112,7 +112,7 @@ void PlaneObject::constructMesh_()
 
     std::vector<VertId> v{
         VertId{0}, VertId{1}, VertId{2},
-        VertId{1}, VertId{2}, VertId{3}
+        VertId{2}, VertId{1}, VertId{3}
     };
 
     // create object Mesh cube
@@ -130,7 +130,8 @@ void PlaneObject::constructMesh_()
     selectEdges( {} );
 
     setColoringType( ColoringType::SolidColor );
-    setFrontColor( Color::gray(), false );
+    setFrontColor( Color( 88, 88, 88, 128 ), false );
+    setBackColor( Color( 168, 168, 168, 128 ) );
 
     setDirtyFlags( DIRTY_ALL );
 }

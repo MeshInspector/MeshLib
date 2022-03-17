@@ -27,6 +27,44 @@ Polyline2::Polyline2( const Contours2f& contours )
     );
 }
 
+// !note: this probably should be some template function for Polyline and Polyline2
+EdgeId Polyline2::addFromPoints( const Vector2f* vs, size_t num, bool closed )
+{
+    if ( !vs || num < 2 )
+    {
+        assert( false );
+        return {};
+    }
+    const VertId firstVertId( ( int )topology.vertSize() );
+    if ( ( int )firstVertId + num > points.size() )
+        points.resize( ( int )firstVertId + num );
+
+    const size_t numSegmEnds = num + ( closed ? 1 : 0 );
+    std::vector<VertId> newVerts( numSegmEnds );
+    for ( int i = 0; i < num; ++i )
+    {
+        VertId v( firstVertId + i );
+        newVerts[i] = v;
+        points[v] = vs[i];
+    }
+    if ( closed )
+        newVerts.back() = newVerts.front();
+
+    return topology.makePolyline( newVerts.data(), numSegmEnds );
+}
+
+// !note: this probably should be some template function for Polyline and Polyline2
+EdgeId Polyline2::addFromPoints( const Vector2f* vs, size_t num )
+{
+    if ( !vs || num < 2 )
+    {
+        assert( false );
+        return {};
+    }
+    const bool closed = vs[0] == vs[num - 1];
+    return addFromPoints( vs, num - ( closed ? 1 : 0 ), closed );
+}
+
 float Polyline2::totalLength() const
 {
     MR_TIMER

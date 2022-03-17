@@ -720,6 +720,9 @@
     <ClInclude Include="MRObjectMeshHolder.h">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
+    <ClInclude Include="MR2to3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

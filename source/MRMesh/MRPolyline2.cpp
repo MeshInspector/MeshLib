@@ -6,6 +6,7 @@
 #include "MRVector2.h"
 #include "MRGTest.h"
 #include "MRTimer.h"
+#include "MR2to3.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -60,7 +61,7 @@ Polyline Polyline2::toPolyline3() const
     res.points.reserve( points.size() );
     for ( size_t i = 0; i < points.size(); i++ )
     {
-        res.points.push_back( { points[VertId( i )].x, points[VertId( i )].y, 0.f } );
+        res.points.push_back( to3dim( points[VertId( i )] ) );
     }
     return res;
 }

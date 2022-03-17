@@ -20,8 +20,7 @@ public:
 
     // adds connected line in this, passing progressively via points *[vs, vs+num);
     // if closed argument is true then the last and the first points will be additionally connected;
-    // return the edge from first new to second new vertex
-    
+    // return the edge from first new to second new vertex    
     MRMESH_API EdgeId addFromPoints( const Vector3f * vs, size_t num, bool closed );
     [[deprecated]] EdgeId makePolyline( const Vector3f * vs, size_t num, bool closed ) { return addFromPoints( vs, num, closed ); }
 

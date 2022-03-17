@@ -203,7 +203,7 @@ protected:
 
     std::shared_ptr<Mesh> mesh_;
 private:
-    // this is private function to set default colors of this type (ObjectMesh) in constructor only
+    // this is private function to set default colors of this type (ObjectMeshHolder) in constructor only
     void setDefaultColors_();
 };
 

@@ -5,6 +5,7 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
+#include "MRVector3.h"
 
 namespace MR
 {
@@ -59,6 +60,7 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
         box.include( p );
     }
 
+    // make a normal vector from center directed against a point (0, 0, 0)
     Plane3f plane = pa.getBestPlanef();
     Vector3f normal = plane.n.normalized();
     if ( plane.d < 0 )

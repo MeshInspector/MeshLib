@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRVector3.h"
 #include "MRObjectMeshHolder.h"
 
 namespace MR
@@ -61,8 +60,6 @@ protected:
 
 private:
     void constructMesh_();
-
-    Vector3f normal_;
 };
 
 }

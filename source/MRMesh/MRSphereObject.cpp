@@ -49,7 +49,7 @@ SphereObject::SphereObject()
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
 {
     constructMesh_();
-    // find best raduis and center
+    // find best radius and center
     Eigen::Matrix<double, 4, 4> accumA_;
     Eigen::Matrix<double, 4, 1> accumB_;
     accumA_.setZero();
@@ -69,7 +69,7 @@ SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     setCenter( { float( res[0] ),float( res[1] ),float( res[2] ) } );
     double rSq = res[0] * res[0] + res[1] * res[1] + res[2] * res[2] - res[3];
     assert( rSq >= 0.0 );
-    setRadius( float( sqrt( rSq ) ) );
+    setRadius( float( sqrt( std::max( rSq, 0.0 ) ) ) );
 }
 
 std::vector<std::string> SphereObject::getInfoLines() const

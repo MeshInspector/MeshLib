@@ -430,8 +430,9 @@ bool PolylineTopology::isClosed() const
     MR_TIMER;
     for ( EdgeId e( 0 ); e < edges_.size(); ++e )
     {
-        auto nextE = next( e );
-        if ( nextE == e || !nextE.valid() )
+        if ( !edges_[e].org.valid() )
+            continue; // skip edges without valid vertices
+        if ( edges_[e].next == e )
             return false;
     }
     return true;

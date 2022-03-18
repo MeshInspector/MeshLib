@@ -9,7 +9,7 @@ namespace MR
 MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a, const Polyline2& b,
     const AffineXf2f* rigidB2A = nullptr, // rigid transformation from B-polyline space to A polyline space, nullptr considered as identity transformation
     bool firstIntersectionOnly = false );  // if true then the function returns at most one pair of intersecting edges and returns faster
-// the same, but returns one bite set per polyline with colliding edges
+// the same, but returns one bitset per polyline with colliding edges
 MRMESH_API std::pair<UndirectedEdgeBitSet, UndirectedEdgeBitSet> findCollidingEdgesBitsets( const Polyline2& a, const Polyline2& b,
     const AffineXf2f* rigidB2A = nullptr );
 

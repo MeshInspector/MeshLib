@@ -271,11 +271,11 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
 
     auto aEdge = a.topology.lastNotLoneEdge();
     if ( !aEdge )
-        return true; //consider empty mesh always inside
+        return true; //consider empty polyline always inside
 
     auto cols = findCollidingEdges( a, b, rigidB2A );
     if ( !cols.empty() )
-        return false; // meshes intersect
+        return false; // polyline intersect
 
     Vector2f aPoint = a.orgPnt( aEdge );
     if ( rigidB2A )

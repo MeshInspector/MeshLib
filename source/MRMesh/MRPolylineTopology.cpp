@@ -425,6 +425,18 @@ void PolylineTopology::computeValidsFromEdges()
         }
 }
 
+bool PolylineTopology::isClosed() const
+{
+    MR_TIMER;
+    for ( EdgeId e( 0 ); e < edges_.size(); ++e )
+    {
+        auto nextE = next( e );
+        if ( nextE == e || !nextE.valid() )
+            return false;
+    }
+    return true;
+}
+
 TEST( MRMesh, PolylineTopology )
 {
     PolylineTopology t;

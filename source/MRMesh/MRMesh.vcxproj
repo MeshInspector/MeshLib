@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -73,6 +73,7 @@
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPolyline2.h" />
+    <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Project.h" />
     <ClInclude Include="MRPolylineEdgeIterator.h" />
     <ClInclude Include="MRLinesLoad.h" />
@@ -301,6 +302,7 @@
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2.cpp" />
+    <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Project.cpp" />
     <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />

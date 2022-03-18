@@ -118,7 +118,8 @@ struct PolylineTopology
     MRMESH_API bool checkValidity() const;
     // computes numValidVerts_ and validVerts_ from edgePerVertex_
     MRMESH_API void computeValidsFromEdges();
-
+    // returns true if the polyline does not have any holes
+    MRMESH_API bool isClosed() const;
 private:
     // sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );

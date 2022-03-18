@@ -131,10 +131,6 @@ void PlaneObject::constructMesh_()
     selectFaces( {} );
     selectEdges( {} );
 
-    setColoringType( ColoringType::SolidColor );
-    setFrontColor( Color( 88, 88, 88, 128 ), false );
-    setBackColor( Color( 168, 168, 168, 128 ) );
-
     setDirtyFlags( DIRTY_ALL );
 }
 

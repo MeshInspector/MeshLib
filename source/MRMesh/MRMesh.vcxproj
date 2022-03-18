@@ -71,6 +71,7 @@
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
+    <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Project.h" />
@@ -292,6 +293,7 @@
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
+    <ClCompile Include="MRPlaneObject.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />
     <ClCompile Include="MRPointCloudMakeNormals.cpp" />
     <ClCompile Include="MRPointCloudRadius.cpp" />

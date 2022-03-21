@@ -20,6 +20,7 @@ struct Vector3
 
     constexpr Vector3() noexcept = default;
     constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
+    explicit constexpr Vector3( const Vector2<T> & v ) noexcept : x( v.x ), y( v.y ) { }
 
     static constexpr Vector3 diagonal( T a ) noexcept { return Vector3( a, a, a ); }
     static constexpr Vector3 plusX() noexcept { return Vector3( 1, 0, 0 ); }

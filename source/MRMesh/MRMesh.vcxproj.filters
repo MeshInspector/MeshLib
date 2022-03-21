@@ -498,9 +498,6 @@
     <ClInclude Include="MRLineSegm3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRPolyline3.h">
-      <Filter>Source Files\Polyline3</Filter>
-    </ClInclude>
     <ClInclude Include="MRAABBTreePolyline3.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -727,6 +724,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Collide.h" />
+    <ClInclude Include="MRPolyline.h">
+      <Filter>Source Files\Polyline3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1035,9 +1035,6 @@
     <ClCompile Include="MRAABBTreePolyline3.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRPolyline3.cpp">
-      <Filter>Source Files\Polyline3</Filter>
-    </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1121,9 +1118,6 @@
     </ClCompile>
     <ClCompile Include="MRImageLoad.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRPolyline2.cpp">
-      <Filter>Source Files\Polyline3</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline2.cpp">
       <Filter>Source Files\AABBTree</Filter>
@@ -1228,6 +1222,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp" />
+    <ClCompile Include="MRPolyline.cpp">
+      <Filter>Source Files\Polyline3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

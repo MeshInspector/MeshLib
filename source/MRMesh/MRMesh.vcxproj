@@ -67,6 +67,7 @@
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRPartMapping.h" />
@@ -287,6 +288,7 @@
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
+    <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />
     <ClCompile Include="MRMeshLoadObj.cpp" />

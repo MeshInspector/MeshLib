@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRObjectMeshHolder.h"
-#include "MRXfBasedCache.h"
 
 namespace MR
 {

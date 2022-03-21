@@ -82,41 +82,21 @@ public:
     MRMESH_API const Vector<Vector3f, FaceId>& getFacesNormals() const;
     MRMESH_API const Vector<TriangleCornerNormals, FaceId>& getCornerNormals() const;
 
-    const Vector<Color, FaceId>& getFacesColorMap() const
-    {
-        return facesColorMap_;
-    }
+    const Vector<Color, FaceId>& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( Vector<Color, FaceId> facesColorMap )
-    {
-        facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP;
-    }
+    { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
-    float getEdgeWidth() const
-    {
-        return edgeWidth_;
-    }
+    float getEdgeWidth() const { return edgeWidth_; }
     virtual void setEdgeWidth( float edgeWidth )
-    {
-        edgeWidth_ = edgeWidth; needRedraw_ = true;
-    }
+    { edgeWidth_ = edgeWidth; needRedraw_ = true; }
 
-    const Color& getEdgesColor() const
-    {
-        return edgesColor_;
-    }
+    const Color& getEdgesColor() const { return edgesColor_; }
     virtual void setEdgesColor( const Color& color )
-    {
-        edgesColor_ = color; needRedraw_ = true;
-    }
+    { edgesColor_ = color; needRedraw_ = true; }
 
-    const Color& getBordersColor() const
-    {
-        return bordersColor_;
-    }
+    const Color& getBordersColor() const { return bordersColor_; }
     virtual void setBordersColor( const Color& color )
-    {
-        bordersColor_ = color; needRedraw_ = true;
-    }
+    { bordersColor_ = color; needRedraw_ = true; }
 
     // this ctor is public only for std::make_shared used inside clone()
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )

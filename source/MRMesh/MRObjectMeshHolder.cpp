@@ -199,21 +199,25 @@ void ObjectMeshHolder::setDefaultColors_()
 ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     VisualObject( other )
 {
-    edgesColor_ = other.edgesColor_;
-    bordersColor_ = other.bordersColor_;
-    flatShading_ = other.flatShading_;
+    selectedTriangles_ = other.selectedTriangles_;
+    selectedEdges_ = other.selectedEdges_;
+    creases_ = other.creases_;
+
     showFaces_ = other.showFaces_;
     showEdges_ = other.showEdges_;
     showSelectedEdges_ = other.showSelectedEdges_;
+    showSelectedFaces_ = other.showSelectedFaces_;
     showBordersHighlight_ = other.showBordersHighlight_;
-    facesColorMap_ = other.facesColorMap_;
-    edgeWidth_ = other.edgeWidth_;
-
-    selectedTriangles_ = other.selectedTriangles_;
-    selectedEdges_ = other.selectedEdges_;
+    flatShading_ = other.flatShading_;
+    onlyOddFragments_ = other.onlyOddFragments_;
+    
+    edgesColor_ = other.edgesColor_;
+    bordersColor_ = other.bordersColor_;
+    edgeSelectionColor_ = other.edgeSelectionColor_;
     faceSelectionColor_ = other.faceSelectionColor_;
 
-    showSelectedFaces_ = other.showSelectedFaces_;
+    facesColorMap_ = other.facesColorMap_;
+    edgeWidth_ = other.edgeWidth_;
 }
 
 ObjectMeshHolder::ObjectMeshHolder()

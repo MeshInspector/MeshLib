@@ -727,6 +727,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Collide.h" />
+    <ClInclude Include="MRObjectLinesHolder.h">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1228,6 +1231,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp" />
+    <ClCompile Include="MRObjectLinesHolder.cpp">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

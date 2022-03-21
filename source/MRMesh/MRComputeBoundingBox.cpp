@@ -1,6 +1,7 @@
 #include "MRComputeBoundingBox.h"
 #include "MRBox.h"
 #include "MRAffineXf.h"
+#include "MRAffineXf2.h"
 #include "MRBitSet.h"
 #include "MRId.h"
 #include "MRTimer.h"
@@ -10,15 +11,16 @@
 namespace MR
 {
 
+template<typename V>
 class VertBoundingBoxCalc 
 {
 public:
-    VertBoundingBoxCalc( const VertCoords & points, const VertBitSet & region, const AffineXf3f * toWorld ) 
+    VertBoundingBoxCalc( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld ) 
         : points_( points ), region_( region ), toWorld_( toWorld ) { }
     VertBoundingBoxCalc( VertBoundingBoxCalc & x, tbb::split ) : points_( x.points_ ), region_( x.region_ ), toWorld_( x.toWorld_ ) { }
     void join( const VertBoundingBoxCalc & y ) { box_.include( y.box_ ); }
 
-    const Box3f & box() const { return box_; }
+    const Box<V> & box() const { return box_; }
 
     void operator()( const tbb::blocked_range<VertId> & r ) 
     {
@@ -30,13 +32,14 @@ public:
     }
             
 private:
-    const VertCoords & points_;
+    const Vector<V, VertId> & points_;
     const VertBitSet & region_;
-    const AffineXf3f * toWorld_ = nullptr;
-    Box3f box_;
+    const AffineXf<V> * toWorld_ = nullptr;
+    Box<V> box_;
 };
 
-Box3f computeBoundingBox( const VertCoords & points, const VertBitSet & region, const AffineXf3f * toWorld )
+template<typename V>
+Box<V> computeBoundingBox( const Vector<V, VertId> & points, const VertBitSet & region, const AffineXf<V> * toWorld )
 {
     MR_TIMER
 
@@ -44,5 +47,8 @@ Box3f computeBoundingBox( const VertCoords & points, const VertBitSet & region, 
     parallel_reduce( tbb::blocked_range<VertId>( 0_v, points.endId() ), calc );
     return calc.box();
 }
+
+template Box2f computeBoundingBox( const Vector<Vector2f, VertId> & points, const VertBitSet & region, const AffineXf2f * toWorld );
+template Box3f computeBoundingBox( const Vector<Vector3f, VertId> & points, const VertBitSet & region, const AffineXf3f * toWorld );
 
 } //namespace MR

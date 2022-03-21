@@ -1,6 +1,6 @@
 #include "MRObjectLines.h"
 #include "MRObjectFactory.h"
-#include "MRPolyline3.h"
+#include "MRPolyline.h"
 #include "MRSerializer.h"
 #include "MRTimer.h"
 #include "MRMeshTexture.h"

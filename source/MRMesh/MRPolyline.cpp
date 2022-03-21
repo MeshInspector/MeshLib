@@ -1,7 +1,7 @@
-#include "MRPolyline3.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRAABBTreePolyline3.h"
+#include "MRAffineXf2.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
 #include "MRGTest.h"
@@ -13,7 +13,8 @@
 namespace MR
 {
 
-Polyline3::Polyline3( const Contours2f& contours )
+template<typename V>
+Polyline<V>::Polyline( const Contours2f& contours )
 {
     MR_TIMER
     topology.buildFromContours( contours, 
@@ -23,13 +24,17 @@ Polyline3::Polyline3( const Contours2f& contours )
         },
         [&points = this->points]( const Vector2f & p )
         {
+            if constexpr ( V::elements == 2 )
+                points.emplace_back( p.x, p.y );
+            else
             points.emplace_back( p.x, p.y, 0.0f );
             return points.backId();
         } 
     );
 }
 
-EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num, bool closed )
+template<typename V>
+EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num, bool closed )
 {
     if ( !vs || num < 2 )
     {
@@ -54,7 +59,8 @@ EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num, bool closed )
     return topology.makePolyline( newVerts.data(), numSegmEnds );
 }
 
-EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num )
+template<typename V>
+EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num )
 {
     if ( !vs || num < 2 )
     {
@@ -65,7 +71,8 @@ EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num )
     return addFromPoints( vs, num - ( closed ? 1 : 0 ), closed );
 }
 
-float Polyline3::totalLength() const
+template<typename V>
+float Polyline<V>::totalLength() const
 {
     MR_TIMER
     double sum = 0;
@@ -75,40 +82,32 @@ float Polyline3::totalLength() const
     return (float)sum;
 }
 
-Box3f Polyline3::getBoundingBox() const
+template<typename V>
+Box<V> Polyline<V>::getBoundingBox() const
 {
     return getAABBTree().getBoundingBox();
 }
 
-Box3f Polyline3::computeBoundingBox( const AffineXf3f * toWorld ) const
+template<typename V>
+Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 {
     return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
-Contours2f Polyline3::contours() const
+template<typename V>
+Contours2f Polyline<V>::contours() const
 {
     MR_TIMER
     return topology.convertToContours<Vector2f>( 
         [&points = this->points]( VertId v )
         {
-            return Vector2f{ points[v].x, points[v].y };
+            return Vector2f{ points[v] };
         } 
     );
 }
 
-Polyline2 Polyline3::toPolyline2() const
-{
-    Polyline2 res;
-    res.topology = topology;
-    res.points.reserve( points.size() );
-    for ( size_t i = 0; i < points.size(); i++ )
-    {
-        res.points.push_back( { points[VertId( i )].x, points[VertId( i )].y } );
-    }
-    return res;
-}
-
-EdgeId Polyline3::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
+template<typename V>
+EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
     if ( path.empty() )
         return {};
@@ -120,12 +119,12 @@ EdgeId Polyline3::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
     {
         VertId newV = VertId( shift + i );
         newVerts[i] = newV;
-        points[newV] = mesh.orgPnt( path[i] );
+        points[newV] = V{ mesh.orgPnt( path[i] ) };
     }
     if ( !closed )
     {
         newVerts.back() = VertId( shift + path.size() );
-        points.back() = mesh.destPnt( path.back() );
+        points.back() = V{ mesh.destPnt( path.back() ) };
     }
     else
     {
@@ -134,7 +133,8 @@ EdgeId Polyline3::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
     return topology.makePolyline( newVerts.data(), newVerts.size() );
 }
 
-EdgeId Polyline3::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
+template<typename V>
+EdgeId Polyline<V>::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
 {
     if ( path.empty() )
         return {};
@@ -146,12 +146,12 @@ EdgeId Polyline3::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path 
     {
         VertId newV = VertId( shift + i );
         newVerts[i] = newV;
-        points[newV] = mesh.edgePoint( path[i] );
+        points[newV] = V{ mesh.edgePoint( path[i] ) };
     }
     if ( !closed )
     {
         newVerts.back() = VertId( shift + path.size() - 1 );
-        points.back() = mesh.edgePoint( path.back() );
+        points.back() = V{ mesh.edgePoint( path.back() ) };
     }
     else
     {
@@ -160,7 +160,8 @@ EdgeId Polyline3::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path 
     return topology.makePolyline( newVerts.data(), newVerts.size() );
 }
 
-void Polyline3::transform( const AffineXf3f & xf )
+template<typename V>
+void Polyline<V>::transform( const AffineXf<V> & xf )
 {
     MR_TIMER
     VertId lastValidVert = topology.lastValidVert();
@@ -176,9 +177,43 @@ void Polyline3::transform( const AffineXf3f & xf )
     invalidateCaches();
 }
 
-const AABBTreePolyline3& Polyline3::getAABBTree() const
+template<typename V>
+const AABBTreePolyline<V>& Polyline<V>::getAABBTree() const
 {
-    return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline3( *this ); } );
+    return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline<V>( *this ); } );
+}
+
+TEST( Polyline2, Contour )
+{
+    Contour2f cont;
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+    cont.push_back( Vector2f( 0.f, 1.f ) );
+    cont.push_back( Vector2f( 1.f, 1.f ) );
+
+    Contour2f cont2;
+    cont2.push_back( Vector2f( 2.f, 0.f ) );
+    cont2.push_back( Vector2f( 3.f, 0.f ) );
+    cont2.push_back( Vector2f( 2.f, 1.f ) );
+    cont2.push_back( Vector2f( 3.f, 1.f ) );
+
+    Contours2f conts{ cont,cont2 };
+
+    Polyline2 pl( conts );
+    auto conts2 = pl.contours();
+
+    for ( auto i = 0; i < conts.size(); i++ )
+{
+        auto& c1 = conts[i];
+        auto& c2 = conts2[i];
+        for ( auto j = 0; j < c1.size(); j++ )
+{
+            auto v1 = c1[j];
+            auto v2 = c2[j];
+            EXPECT_NEAR( v1[0], v2[0], 1e-8 );
+            EXPECT_NEAR( v1[1], v2[1], 1e-8 );
+        }
+    }
 }
 
 TEST( Polyline3, Contour )
@@ -213,5 +248,8 @@ TEST( Polyline3, Contour )
         }
     }
 }
+
+template struct Polyline<Vector2f>;
+template struct Polyline<Vector3f>;
 
 } //namespace MR

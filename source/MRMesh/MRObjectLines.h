@@ -1,5 +1,12 @@
 #pragma once
+<<<<<<< HEAD
 #include "MRObjectLinesHolder.h"
+=======
+
+#include "MRVisualObject.h"
+#include "MRPolyline.h"
+#include "MRXfBasedCache.h"
+>>>>>>> d63923ea087a5a4c7a0d2224e96c9cab6aceb1db
 
 namespace MR
 {

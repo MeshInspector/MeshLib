@@ -1,6 +1,7 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRPolyline3.h"
+#include "MRMeshFwd.h"
+#include "MRPolyline.h"
 #include "MRXfBasedCache.h"
 
 namespace MR

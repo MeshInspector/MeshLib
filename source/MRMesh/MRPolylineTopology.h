@@ -10,8 +10,9 @@ namespace MR
 {
 
 // topology of one or several polylines (how line segments are connected in lines) common for 2D and 3D polylines
-struct PolylineTopology
+class PolylineTopology
 {
+public:
     // builds this topology from given contours,
     // also builds the vector of referenced points using two functors: reserve and add
     // if all even edges are consistently oriented, then the output contours will be oriented the same

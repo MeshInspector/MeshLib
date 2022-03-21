@@ -229,15 +229,19 @@ class MeshTopology;
 struct Mesh;
 struct MeshPart;
 struct PointCloud;
-struct Polyline2;
-struct Polyline3;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+template<typename T> class UniqueThreadSafeOwner;
+
+class PolylineTopology;
+template<typename V>
+struct Polyline;
+using Polyline2 = Polyline<Vector2f>;
+using Polyline3 = Polyline<Vector3f>;
 template<typename V>
 class MRMESH_CLASS AABBTreePolyline;
 using AABBTreePolyline2 = AABBTreePolyline<Vector2f>;
 using AABBTreePolyline3 = AABBTreePolyline<Vector3f>;
-template<typename T> class UniqueThreadSafeOwner;
 
 class DistanceMap;
 

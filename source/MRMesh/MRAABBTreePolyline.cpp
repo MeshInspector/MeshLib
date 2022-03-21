@@ -1,7 +1,7 @@
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreeMaker.h"
 #include "MRPolyline2.h"
-#include "MRPolyline3.h"
+#include "MRPolyline.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"

@@ -4,7 +4,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRPolyline3.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"

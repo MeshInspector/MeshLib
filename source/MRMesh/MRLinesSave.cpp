@@ -1,5 +1,5 @@
 #include "MRLinesSave.h"
-#include "MRPolyline3.h"
+#include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"

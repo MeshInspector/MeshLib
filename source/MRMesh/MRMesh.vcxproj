@@ -73,6 +73,7 @@
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
+    <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Project.h" />
@@ -150,7 +151,6 @@
     <ClInclude Include="MRPointsInBall.h" />
     <ClInclude Include="MRPointsLoad.h" />
     <ClInclude Include="MRPointsSave.h" />
-    <ClInclude Include="MRPolyline3.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
     <ClInclude Include="MRPython.h" />
@@ -302,8 +302,7 @@
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
-    <ClCompile Include="MRPolyline3.cpp" />
-    <ClCompile Include="MRPolyline2.cpp" />
+    <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Project.cpp" />
     <ClCompile Include="MRLinesLoad.cpp" />

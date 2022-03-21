@@ -20,7 +20,7 @@ struct PolylineProjectionResult
 };
 
 // computes the closest point on polyline to given point
-MRMESH_API PolylineProjectionResult findProjectionOnPolyline( const Vector3f& pt, const Polyline& polyline,
+MRMESH_API PolylineProjectionResult findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline,
     float upDistLimitSq = FLT_MAX,  //< upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid point
     AffineXf3f* xf = nullptr );   //< polyline-to-point transformation, if not specified then identity transformation is assumed
 
@@ -35,7 +35,7 @@ struct PolylineProjectionWithOffsetResult
 };
 
 // computes the closest point on polyline to given point, respecting each edge offset
-MRMESH_API PolylineProjectionWithOffsetResult findProjectionOnPolylineWithOffset( const Vector3f& pt, const Polyline& polyline,
+MRMESH_API PolylineProjectionWithOffsetResult findProjectionOnPolylineWithOffset( const Vector3f& pt, const Polyline3& polyline,
     const Vector<float, UndirectedEdgeId>& offsetPerEdge, //< offset for each edge of polyline
     float upDistLimit = FLT_MAX,  //< upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point
     AffineXf3f* xf = nullptr );   //< polyline-to-point transformation, if not specified then identity transformation is assumed

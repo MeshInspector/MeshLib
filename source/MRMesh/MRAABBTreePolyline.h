@@ -18,7 +18,7 @@ struct PolylineTraits<Vector2f>
 template<>
 struct PolylineTraits<Vector3f>
 {
-    using Polyline = MR::Polyline;
+    using Polyline = MR::Polyline3;
 };
 
 // bounding volume hierarchy for line segments

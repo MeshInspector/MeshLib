@@ -52,7 +52,7 @@
     <Filter Include="Source Files\PointCloud">
       <UniqueIdentifier>{c300f0c9-5a9b-44ee-98c2-1ac7dad01b16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Polyline">
+    <Filter Include="Source Files\Polyline3">
       <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\History">
@@ -498,8 +498,8 @@
     <ClInclude Include="MRLineSegm3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRPolyline.h">
-      <Filter>Source Files\Polyline</Filter>
+    <ClInclude Include="MRPolyline3.h">
+      <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreePolyline3.h">
       <Filter>Source Files\AABBTree</Filter>
@@ -604,10 +604,10 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2.h">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreePolyline2.h">
       <Filter>Source Files\AABBTree</Filter>
@@ -688,7 +688,7 @@
       <Filter>Source Files\Python</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineEdgeIterator.h">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
     <ClInclude Include="MRComputeBoundingBox.h">
       <Filter>Source Files\Math</Filter>
@@ -726,6 +726,7 @@
     <ClInclude Include="MRPlaneObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRPolyline2Collide.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1034,8 +1035,8 @@
     <ClCompile Include="MRAABBTreePolyline3.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRPolyline.cpp">
-      <Filter>Source Files\Polyline</Filter>
+    <ClCompile Include="MRPolyline3.cpp">
+      <Filter>Source Files\Polyline3</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
       <Filter>Source Files\AABBTree</Filter>
@@ -1122,7 +1123,7 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2.cpp">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Polyline3</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline2.cpp">
       <Filter>Source Files\AABBTree</Filter>
@@ -1143,7 +1144,7 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTopology.cpp">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Polyline3</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecisePredicates2.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1226,6 +1227,7 @@
     <ClCompile Include="MRPlaneObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
+    <ClCompile Include="MRPolyline2Collide.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

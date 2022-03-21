@@ -1,4 +1,4 @@
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRPolyline2.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRAABBTreePolyline3.h"
@@ -13,7 +13,7 @@
 namespace MR
 {
 
-Polyline::Polyline( const Contours2f& contours )
+Polyline3::Polyline3( const Contours2f& contours )
 {
     MR_TIMER
     topology.buildFromContours( contours, 
@@ -29,7 +29,7 @@ Polyline::Polyline( const Contours2f& contours )
     );
 }
 
-EdgeId Polyline::addFromPoints( const Vector3f * vs, size_t num, bool closed )
+EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num, bool closed )
 {
     if ( !vs || num < 2 )
     {
@@ -54,7 +54,7 @@ EdgeId Polyline::addFromPoints( const Vector3f * vs, size_t num, bool closed )
     return topology.makePolyline( newVerts.data(), numSegmEnds );
 }
 
-EdgeId Polyline::addFromPoints( const Vector3f * vs, size_t num )
+EdgeId Polyline3::addFromPoints( const Vector3f * vs, size_t num )
 {
     if ( !vs || num < 2 )
     {
@@ -65,7 +65,7 @@ EdgeId Polyline::addFromPoints( const Vector3f * vs, size_t num )
     return addFromPoints( vs, num - ( closed ? 1 : 0 ), closed );
 }
 
-float Polyline::totalLength() const
+float Polyline3::totalLength() const
 {
     MR_TIMER
     double sum = 0;
@@ -75,17 +75,17 @@ float Polyline::totalLength() const
     return (float)sum;
 }
 
-Box3f Polyline::getBoundingBox() const
+Box3f Polyline3::getBoundingBox() const
 {
     return getAABBTree().getBoundingBox();
 }
 
-Box3f Polyline::computeBoundingBox( const AffineXf3f * toWorld ) const
+Box3f Polyline3::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );
 }
 
-Contours2f Polyline::contours() const
+Contours2f Polyline3::contours() const
 {
     MR_TIMER
     return topology.convertToContours<Vector2f>( 
@@ -96,7 +96,7 @@ Contours2f Polyline::contours() const
     );
 }
 
-Polyline2 Polyline::toPolyline2() const
+Polyline2 Polyline3::toPolyline2() const
 {
     Polyline2 res;
     res.topology = topology;
@@ -108,7 +108,7 @@ Polyline2 Polyline::toPolyline2() const
     return res;
 }
 
-EdgeId Polyline::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
+EdgeId Polyline3::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
 {
     if ( path.empty() )
         return {};
@@ -134,7 +134,7 @@ EdgeId Polyline::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
     return topology.makePolyline( newVerts.data(), newVerts.size() );
 }
 
-EdgeId Polyline::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
+EdgeId Polyline3::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
 {
     if ( path.empty() )
         return {};
@@ -160,7 +160,7 @@ EdgeId Polyline::addFromSurfacePath( const Mesh& mesh, const SurfacePath& path )
     return topology.makePolyline( newVerts.data(), newVerts.size() );
 }
 
-void Polyline::transform( const AffineXf3f & xf )
+void Polyline3::transform( const AffineXf3f & xf )
 {
     MR_TIMER
     VertId lastValidVert = topology.lastValidVert();
@@ -176,12 +176,12 @@ void Polyline::transform( const AffineXf3f & xf )
     invalidateCaches();
 }
 
-const AABBTreePolyline3& Polyline::getAABBTree() const
+const AABBTreePolyline3& Polyline3::getAABBTree() const
 {
     return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline3( *this ); } );
 }
 
-TEST( Polyline, Contour )
+TEST( Polyline3, Contour )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -197,7 +197,7 @@ TEST( Polyline, Contour )
 
     Contours2f conts{ cont,cont2 };
 
-    Polyline pl( conts );
+    Polyline3 pl( conts );
     auto conts2 = pl.contours();
 
     for ( auto i = 0; i < conts.size(); i++ )

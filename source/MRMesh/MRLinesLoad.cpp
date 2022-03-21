@@ -1,5 +1,5 @@
 #include "MRLinesLoad.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRTimer.h"
 #include "MRStringConvert.h"
 #include <fstream>
@@ -15,7 +15,7 @@ const IOFilters Filters =
     {"MrLines (.mrlines)", "*.mrlines"}
 };
 
-tl::expected<Polyline, std::string> fromMrLines( const std::filesystem::path & file )
+tl::expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & file )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -24,11 +24,11 @@ tl::expected<Polyline, std::string> fromMrLines( const std::filesystem::path & f
     return fromMrLines( in );
 }
 
-tl::expected<Polyline, std::string> fromMrLines( std::istream & in )
+tl::expected<Polyline3, std::string> fromMrLines( std::istream & in )
 {
     MR_TIMER
 
-    Polyline polyline;
+    Polyline3 polyline;
     if ( !polyline.topology.read( in ) )
         return tl::make_unexpected( std::string( "Error reading topology from lines-file" ) );
 
@@ -51,25 +51,25 @@ tl::expected<Polyline, std::string> fromMrLines( std::istream & in )
     return std::move( polyline );
 }
 
-tl::expected<Polyline, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
+tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    tl::expected<Polyline, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == u8".mrlines" )
         res = fromMrLines( file );
     return res;
 }
 
-tl::expected<MR::Polyline, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension )
+tl::expected<MR::Polyline3, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    tl::expected<Polyline, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+    tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = fromMrLines( in );
     return res;

@@ -4,7 +4,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRPolyline3.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
@@ -149,13 +149,13 @@ bool pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& extension, 
     return res.has_value();
 }
 
-bool pythonSaveLinesToAnyFormat( const MR::Polyline& lines, const std::string& path )
+bool pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& path )
 {
     auto res = MR::LinesSave::toAnySupportedFormat( lines, path );
     return res.has_value();
 }
 
-bool pythonSaveLinesToAnyFormat( const MR::Polyline& lines, const std::string& extension, pybind11::object fileHandle )
+bool pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
     {
@@ -168,7 +168,7 @@ bool pythonSaveLinesToAnyFormat( const MR::Polyline& lines, const std::string& e
     return res.has_value();
 }
 
-MR::Polyline pythonLoadLinesFromAnyFormat( const std::string& path )
+MR::Polyline3 pythonLoadLinesFromAnyFormat( const std::string& path )
 {
     auto res = MR::LinesLoad::fromAnySupportedFormat( path );
     if ( res.has_value() )
@@ -176,7 +176,7 @@ MR::Polyline pythonLoadLinesFromAnyFormat( const std::string& path )
     return {};
 }
 
-MR::Polyline pythonLoadLinesFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
+MR::Polyline3 pythonLoadLinesFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
 {
     if ( !( pybind11::hasattr( fileHandle, "read" ) && pybind11::hasattr( fileHandle, "seek" ) && pybind11::hasattr( fileHandle, "tell" ) ) )
     {
@@ -247,13 +247,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
 {
-    m.def( "save_lines", ( bool( * )( const MR::Polyline&, const std::string& ) ) & pythonSaveLinesToAnyFormat, "saves lines in file of known format/extension" );
-    m.def( "save_lines", ( bool( * )( const MR::Polyline&, const std::string&, pybind11::object ) ) & pythonSaveLinesToAnyFormat, "saves lines in python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "save_lines", ( bool( * )( const MR::Polyline3&, const std::string& ) ) & pythonSaveLinesToAnyFormat, "saves lines in file of known format/extension" );
+    m.def( "save_lines", ( bool( * )( const MR::Polyline3&, const std::string&, pybind11::object ) ) & pythonSaveLinesToAnyFormat, "saves lines in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 {
-    m.def( "load_lines", ( MR::Polyline( * )( const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines of known format" );
-    m.def( "load_lines", ( MR::Polyline( * )( pybind11::object, const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines from python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "load_lines", ( MR::Polyline3( * )( const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines of known format" );
+    m.def( "load_lines", ( MR::Polyline3( * )( pybind11::object, const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines from python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {

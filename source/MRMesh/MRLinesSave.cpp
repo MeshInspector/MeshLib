@@ -1,5 +1,5 @@
 #include "MRLinesSave.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
@@ -16,7 +16,7 @@ const IOFilters Filters =
     {"MrLines (.mrlines)", "*.mrlines"}
 };
 
-tl::expected<void, std::string> toMrLines( const Polyline& polyline, const std::filesystem::path& file )
+tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std::filesystem::path& file )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -25,7 +25,7 @@ tl::expected<void, std::string> toMrLines( const Polyline& polyline, const std::
     return toMrLines( polyline, out );
 }
 
-tl::expected<void, std::string> toMrLines( const Polyline& polyline, std::ostream& out )
+tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostream& out )
 {
     MR_TIMER;
     polyline.topology.write( out );
@@ -43,7 +43,7 @@ tl::expected<void, std::string> toMrLines( const Polyline& polyline, std::ostrea
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, const std::filesystem::path& file )
+tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -55,7 +55,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, 
     return res;
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Polyline& polyline, std::ostream& out, const std::string& extension )
+tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

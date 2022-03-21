@@ -62,8 +62,8 @@ public:
     // if all even edges are consistently oriented, then the output contours will be oriented the same
     MRMESH_API Contours2f contours() const;
 
-    //convert Polyline2 to 3D Polyline by adding zeros for a Z components
-    MRMESH_API Polyline toPolyline3() const;
+    //convert Polyline2 to 3D Polyline3 by adding zeros for a Z components
+    MRMESH_API Polyline3 toPolyline3() const;
 
 private:
     mutable UniqueThreadSafeOwner<AABBTreePolyline2> AABBTreeOwner_;

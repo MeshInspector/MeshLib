@@ -1,6 +1,6 @@
 #include "MRObjectLines.h"
 #include "MRObjectFactory.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRSerializer.h"
 #include "MRTimer.h"
 #include "MRMeshTexture.h"
@@ -36,7 +36,7 @@ std::shared_ptr<Object> ObjectLines::clone() const
 {
     auto res = std::make_shared<ObjectLines>( ProtectedStruct{}, *this );
     if ( polyline_ )
-        res->polyline_ = std::make_shared<Polyline>( *polyline_ );
+        res->polyline_ = std::make_shared<Polyline3>( *polyline_ );
     return res;
 }
 
@@ -48,7 +48,7 @@ std::shared_ptr<Object> ObjectLines::shallowClone() const
     return res;
 }
 
-void ObjectLines::setPolyline( const std::shared_ptr<Polyline>& polyline )
+void ObjectLines::setPolyline( const std::shared_ptr<Polyline3>& polyline )
 {
     polyline_ = polyline;
     setDirtyFlags( DIRTY_ALL );
@@ -207,7 +207,7 @@ void ObjectLines::deserializeFields_( const Json::Value& root )
     if ( !pointsRoot.isArray() || !linesRoot.isArray() )
         return;
 
-    Polyline polyline;
+    Polyline3 polyline;
     polyline.points.resize( pointsRoot.size() );
     for ( int i = 0; i < polyline.points.size(); ++i )
         deserializeFromJson( pointsRoot[i], polyline.points.vec_[i] );
@@ -220,7 +220,7 @@ void ObjectLines::deserializeFields_( const Json::Value& root )
     for ( int i = 0; i < (int)linesRoot.size(); i += 2 )
         polyline.topology.makeEdge( VertId( linesRoot[i].asInt() ), VertId( linesRoot[i + 1].asInt() ) );
 
-    polyline_ = std::make_shared<Polyline>( std::move( polyline ) );
+    polyline_ = std::make_shared<Polyline3>( std::move( polyline ) );
     setDirtyFlags( DIRTY_ALL );
 }
 

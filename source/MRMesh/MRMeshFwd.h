@@ -229,8 +229,8 @@ class MeshTopology;
 struct Mesh;
 struct MeshPart;
 struct PointCloud;
-struct Polyline;
 struct Polyline2;
+struct Polyline3;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 template<typename V>

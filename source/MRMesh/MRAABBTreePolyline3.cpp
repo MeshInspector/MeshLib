@@ -1,5 +1,5 @@
 #include "MRAABBTreePolyline.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRAABBTreeMaker.h"
 #include "MRGTest.h"
 
@@ -8,7 +8,7 @@ namespace MR
 
 TEST( MRMesh, AABBTreePolyline3 )
 {
-    Polyline polyline;
+    Polyline3 polyline;
     polyline.points.vec_ = {
         {0.0f,0.1f,0.0f},
         {0.0f,0.1f,1.0f},

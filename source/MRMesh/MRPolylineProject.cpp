@@ -1,6 +1,6 @@
 #include "MRPolylineProject.h"
 #include "MRMesh.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRAABBTreePolyline3.h"
 #include "MRLineSegm.h"
 #include <algorithm>
@@ -97,7 +97,7 @@ PolylineProjectionResult findProjectionCore( const Vector3f& pt, const AABBTreeP
     return res;
 }
 
-PolylineProjectionResult findProjectionOnPolyline( const Vector3f& pt, const Polyline& polyline, float upDistLimitSq, AffineXf3f* xf )
+PolylineProjectionResult findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline, float upDistLimitSq, AffineXf3f* xf )
 {
     return findProjectionCore( pt, polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
     {
@@ -107,7 +107,7 @@ PolylineProjectionResult findProjectionOnPolyline( const Vector3f& pt, const Pol
 }
 
 PolylineProjectionWithOffsetResult findProjectionOnPolylineWithOffset(
-    const Vector3f& pt, const Polyline& polyline, 
+    const Vector3f& pt, const Polyline3& polyline, 
     const Vector<float, UndirectedEdgeId>& offsetPerEdge, /*< offset for each edge of polyline */ 
     float upDistLimit /*= FLT_MAX*/, /*< upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point */ 
     AffineXf3f* xf /*= nullptr */ )

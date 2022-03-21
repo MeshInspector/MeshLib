@@ -1,7 +1,7 @@
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreeMaker.h"
 #include "MRPolyline2.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
@@ -76,7 +76,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
 }
 
 template AABBTreePolyline<Vector2f>::AABBTreePolyline( const Polyline2 & );
-template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Polyline & );
+template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Polyline3 & );
 template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Mesh &, const UndirectedEdgeBitSet & );
 
 } //namespace MR

@@ -7,16 +7,16 @@ namespace MR
 {
 
 // 3 dimensional polyline
-struct Polyline
+struct Polyline3
 {
 public:
     PolylineTopology topology;
     VertCoords points;
 
-    Polyline() = default;
+    Polyline3() = default;
 
     // creates polyline from 2d contours (each point Z coord = 0)
-    MRMESH_API Polyline( const Contours2f& contours );
+    MRMESH_API Polyline3( const Contours2f& contours );
 
     // adds connected line in this, passing progressively via points *[vs, vs+num);
     // if closed argument is true then the last and the first points will be additionally connected;
@@ -60,11 +60,11 @@ public:
     // Invalidates caches (e.g. aabb-tree) after a change in polyline
     void invalidateCaches() { AABBTreeOwner_.reset(); };
 
-    // convert Polyline to simple contour structures with vector of points inside
+    // convert Polyline3 to simple contour structures with vector of points inside
     // if all even edges are consistently oriented, then the output contours will be oriented the same
     MRMESH_API Contours2f contours() const;
 
-    // convert Polyline to Polyline2 with removed Z component
+    // convert Polyline3 to Polyline2 with removed Z component
     MRMESH_API Polyline2 toPolyline2() const;
 
     // adds path to this polyline

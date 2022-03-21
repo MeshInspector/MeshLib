@@ -47,7 +47,7 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
 
     ObjectLines objectLines;
     objectLines.setName( utf8string( file.stem() ) );
-    objectLines.setPolyline( std::make_shared<MR::Polyline>( std::move( lines.value() ) ) );
+    objectLines.setPolyline( std::make_shared<MR::Polyline3>( std::move( lines.value() ) ) );
 
     return objectLines;
 }

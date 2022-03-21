@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRVisualObject.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRXfBasedCache.h"
 
 namespace MR
@@ -34,11 +34,11 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    MRMESH_API virtual void setPolyline( const std::shared_ptr<Polyline>& polyline );
+    MRMESH_API virtual void setPolyline( const std::shared_ptr<Polyline3>& polyline );
 
-    virtual const std::shared_ptr<Polyline>& varPolyline() { return polyline_; }
-    const std::shared_ptr<const Polyline>& polyline() const 
-    { return reinterpret_cast< const std::shared_ptr<const Polyline>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
+    virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
+    const std::shared_ptr<const Polyline3>& polyline() const 
+    { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
     
@@ -89,7 +89,7 @@ private:
     // width on lines on screen in pixels
     float lineWidth_{ 1.0f };
     float pointSize_{ 5.f };
-    std::shared_ptr<Polyline> polyline_;
+    std::shared_ptr<Polyline3> polyline_;
 
     mutable std::optional<float> totalLength_;
     mutable XfBasedCache<Box3f> worldBox_;

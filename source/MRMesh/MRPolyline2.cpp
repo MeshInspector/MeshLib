@@ -1,5 +1,5 @@
 #include "MRPolyline2.h"
-#include "MRPolyline.h"
+#include "MRPolyline3.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRAABBTreePolyline2.h"
 #include "MRAffineXf2.h"
@@ -28,7 +28,7 @@ Polyline2::Polyline2( const Contours2f& contours )
     );
 }
 
-// !note: this probably should be some template function for Polyline and Polyline2
+// !note: this probably should be some template function for Polyline3 and Polyline2
 EdgeId Polyline2::addFromPoints( const Vector2f* vs, size_t num, bool closed )
 {
     if ( !vs || num < 2 )
@@ -54,7 +54,7 @@ EdgeId Polyline2::addFromPoints( const Vector2f* vs, size_t num, bool closed )
     return topology.makePolyline( newVerts.data(), numSegmEnds );
 }
 
-// !note: this probably should be some template function for Polyline and Polyline2
+// !note: this probably should be some template function for Polyline3 and Polyline2
 EdgeId Polyline2::addFromPoints( const Vector2f* vs, size_t num )
 {
     if ( !vs || num < 2 )
@@ -92,9 +92,9 @@ Contours2f Polyline2::contours() const
     );
 }
 
-Polyline Polyline2::toPolyline3() const
+Polyline3 Polyline2::toPolyline3() const
 {
-    Polyline res;
+    Polyline3 res;
     res.topology = topology;
     res.points.reserve( points.size() );
     for ( size_t i = 0; i < points.size(); i++ )

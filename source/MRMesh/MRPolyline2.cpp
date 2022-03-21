@@ -99,7 +99,7 @@ Polyline3 Polyline2::toPolyline3() const
     res.points.reserve( points.size() );
     for ( size_t i = 0; i < points.size(); i++ )
     {
-        res.points.push_back( to3dim( points[VertId( i )] ) );
+        res.points.push_back( Vector3f( points[VertId( i )] ) );
     }
     return res;
 }

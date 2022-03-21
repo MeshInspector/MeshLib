@@ -91,7 +91,7 @@ Contours2f Polyline3::contours() const
     return topology.convertToContours<Vector2f>( 
         [&points = this->points]( VertId v )
         {
-            return Vector2f{ points[v].x, points[v].y };
+            return Vector2f{ points[v] };
         } 
     );
 }
@@ -103,7 +103,7 @@ Polyline2 Polyline3::toPolyline2() const
     res.points.reserve( points.size() );
     for ( size_t i = 0; i < points.size(); i++ )
     {
-        res.points.push_back( { points[VertId( i )].x, points[VertId( i )].y } );
+        res.points.push_back( Vector2f{ points[VertId( i )] } );
     }
     return res;
 }

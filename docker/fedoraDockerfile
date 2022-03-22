@@ -1,6 +1,6 @@
 FROM fedora:35
 
-RUN dnf -y update && dnf -y install git time python3-pip
+RUN dnf -y update && dnf -y install git time python3-pip rpm-build
 
 #copy files
 RUN mkdir /home/MeshRUs

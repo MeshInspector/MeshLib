@@ -727,6 +727,9 @@
     <ClInclude Include="MRPolyline.h">
       <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectLinesHolder.h">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1224,6 +1227,9 @@
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline.cpp">
       <Filter>Source Files\Polyline3</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectLinesHolder.cpp">
+      <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

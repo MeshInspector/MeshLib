@@ -97,7 +97,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib .
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -153,7 +153,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib .
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -288,7 +288,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib .
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
 
       - name: Download Ubuntu Binaries Archive
         uses: actions/download-artifact@v2
@@ -329,7 +329,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib .
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
 
       - name: Download Fedora Binaries Archive
         uses: actions/download-artifact@v2

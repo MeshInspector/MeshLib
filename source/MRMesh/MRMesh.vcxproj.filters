@@ -730,6 +730,9 @@
     <ClInclude Include="MRObjectLinesHolder.h">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
+    <ClInclude Include="MRLineObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1230,6 +1233,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectLinesHolder.cpp">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLineObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

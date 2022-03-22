@@ -59,6 +59,7 @@
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
     <ClInclude Include="MRLine3.h" />
+    <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />
     <ClInclude Include="MRLineSegm3.h" />
     <ClInclude Include="MRLog.h" />
@@ -284,6 +285,7 @@
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
+    <ClCompile Include="MRLineObject.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />

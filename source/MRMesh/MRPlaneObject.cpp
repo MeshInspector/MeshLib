@@ -67,7 +67,7 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
         normal *= -1.f;
 
     setNormal( normal );
-    setCenter( box.center() );
+    setCenter( plane.project( box.center() ) );
     setSize( box.diagonal() * 2.f );
 }
 

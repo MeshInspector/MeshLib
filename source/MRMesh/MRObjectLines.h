@@ -23,8 +23,6 @@ public:
     MRMESH_API virtual void setPolyline( const std::shared_ptr<Polyline3>& polyline );
 
     virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
-    const std::shared_ptr<const Polyline3>& polyline() const 
-    { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
@@ -38,6 +36,8 @@ protected:
 
     // swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+
+    MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
 
 }

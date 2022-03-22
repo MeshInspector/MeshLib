@@ -52,6 +52,8 @@ protected:
     // swaps signals, used in `swap` function to return back signals after `swapBase_`
     // pls call Parent::swapSignals_ first when overriding this function
     MRMESH_API virtual void swapSignals_( Object& other ) override;
+
+    MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
 
 } //namespace MR

@@ -146,6 +146,12 @@ void ObjectMesh::swapSignals_( Object& other )
         assert( false );
 }
 
+void ObjectMesh::serializeFields_( Json::Value& root ) const
+{
+    ObjectMeshHolder::serializeFields_( root );
+    root["Type"].append( ObjectMesh::TypeName() );
+}
+
 TEST(MRMesh, DataModel)
 {
     Object root;

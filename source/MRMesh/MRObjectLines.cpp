@@ -57,6 +57,12 @@ void ObjectLines::swapBase_( Object& other )
         assert( false );
 }
 
+void ObjectLines::serializeFields_( Json::Value& root ) const
+{
+    ObjectLinesHolder::serializeFields_( root );
+    root["Type"].append( ObjectLines::TypeName() );
+}
+
 std::vector<std::string> ObjectLines::getInfoLines() const
 {
     std::vector<std::string> res;

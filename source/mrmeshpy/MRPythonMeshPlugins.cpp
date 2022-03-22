@@ -238,6 +238,8 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, delete_faces, &deleteFaces, "delete faces from
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, fix_multiple_edges, (void(*)(Mesh&))&fixMultipleEdges, "resolves multiple edges in the mesh" )
 
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, has_multiple_edges, hasMultipleEdges, "checks whether mesh topology has multiple edges" )
+
 // Distance Map
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 {

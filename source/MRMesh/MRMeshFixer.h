@@ -12,6 +12,7 @@ MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
 // finds multiple edges in the mesh
 using MultipleEdge = std::pair<VertId, VertId>;
 MRMESH_API std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology );
+inline bool hasMultipleEdges( const MeshTopology & topology ) { return !findMultipleEdges( topology ).empty(); }
 
 // resolves given multiple edges, but splitting all but one edge in each group
 MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges );

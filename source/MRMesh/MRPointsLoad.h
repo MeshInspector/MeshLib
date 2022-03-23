@@ -32,6 +32,10 @@ MRMESH_API tl::expected<PointCloud, std::string> fromPts( std::istream& in );
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( const std::filesystem::path& file );
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( std::istream& in );
 
+// loads from .asc file
+MRMESH_API tl::expected<PointCloud, std::string> fromAsc( const std::filesystem::path& file );
+MRMESH_API tl::expected<PointCloud, std::string> fromAsc( std::istream& in );
+
 // detects the format from file extension and loads points from it
 MRMESH_API tl::expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, std::vector<Color>* colors = nullptr );
 // extension in `*.ext` format

@@ -16,6 +16,7 @@ namespace PointsLoad
 const IOFilters Filters =
 {
     {"All (*.*)",         "*.*"},
+    {"ASC (.asc)",        "*.asc"},
     {"CTM (.ctm)",        "*.ctm"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
@@ -235,6 +236,57 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in )
     return std::move( cloud );
 }
 
+tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return fromAsc( in );
+}
+
+tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in )
+{
+    PointCloud cloud;
+    bool allNormalsValid = true;
+
+    while ( in )
+    {
+        std::string str;
+        std::getline( in, str );
+        if ( str.empty() && in.eof() )
+            break;
+        if ( !in )
+            return tl::make_unexpected( std::string( "ASC-stream read error" ) );
+        if ( str.empty() )
+            continue;
+        if ( str[0] == '#' )
+            continue; //comment line
+
+        std::istringstream is( str );
+        float x, y, z;
+        is >> x >> y >> z;
+        if ( !is )
+            return tl::make_unexpected( std::string( "ASC-format parse error" ) );
+        cloud.points.emplace_back( x, y, z );
+
+        if ( allNormalsValid )
+        {
+            is >> x >> y >> z;
+            if ( is )
+                cloud.normals.emplace_back( x, y, z );
+            else
+            {
+                cloud.normals = {};
+                allNormalsValid = false;
+            }
+        }
+    }
+
+    cloud.validPoints.resize( cloud.points.size(), true );
+    return std::move( cloud );
+}
+
 tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, std::vector<Color>* colors /*= nullptr */ )
 {
     auto ext = file.extension().u8string();
@@ -250,6 +302,8 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
         res = MR::PointsLoad::fromPts( file );
     else if ( ext == u8".obj" )
         res = MR::PointsLoad::fromObj( file );
+    else if ( ext == u8".asc" )
+        res = MR::PointsLoad::fromAsc( file );
     return res;
 }
 
@@ -268,6 +322,8 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& 
         res = MR::PointsLoad::fromPts( in );
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( in );
+    else if ( ext == ".asc" )
+        res = MR::PointsLoad::fromAsc( in );
     return res;
 }
 

@@ -78,9 +78,15 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     if ( points_ )
     {
         std::stringstream ss;
-        ss << "PointCloud :"
-            << "\n Size : " << points_->points.size();
-        res.push_back( ss.str() );
+        if ( points_->normals.empty() )
+            res.push_back( "points: " + std::to_string( points_->points.size() ) );
+        else if ( points_->points.size() == points_->normals.size() )
+            res.push_back( "points with normals: " + std::to_string( points_->points.size() ) );
+        else
+        {
+            res.push_back( "points: " + std::to_string( points_->points.size() ) );
+            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+        }
         boundingBoxToInfoLines_( res );
     }
     else

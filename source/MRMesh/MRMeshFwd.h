@@ -251,6 +251,7 @@ class ObjectMeshHolder;
 class ObjectMesh;
 class ObjectPoints;
 class ObjectVoxels;
+class ObjectLinesHolder;
 class ObjectLines;
 class ObjectDistanceMap;
 struct SimpleVolume;

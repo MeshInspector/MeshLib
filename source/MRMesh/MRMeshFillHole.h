@@ -29,11 +29,20 @@ struct FillHoleParams
     std::unique_ptr<FillHoleMetric> metric{};
     /// If not nullptr accumulate new faces
     FaceBitSet* outNewFaces{ nullptr };
-    /** If true makes additional efforts to avoid creating multiple edges, 
+    /** If Strong makes additional efforts to avoid creating multiple edges, 
       * in some rare cases it is not possible (cases with extremely bad topology), 
       * if you faced one try to use \ref MR::duplicateMultiHoleVertices before \ref MR::fillHole
+      * 
+      * If Simple avoid creating edges that already exist in topology (default)
+      * 
+      * If None do not avoid multiple edges
       */
-    bool avoidMultipleEdges{ false };
+    enum class MultipleEdgesResolveMode
+    {
+        None,
+        Simple,
+        Strong
+    } multipleEdgesResolveMode{ MultipleEdgesResolveMode::Simple };
     /** If true creates degenerate faces band around hole to have sharp angle visualization
       * \warning This flag bad for result topology, most likely you do not need it
       */

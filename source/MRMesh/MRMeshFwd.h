@@ -267,6 +267,8 @@ class ChangeSelectionAction;
 class ChangeEdgeSelectionAction;
 class ChangeCreasesAction;
 class ChangeMeshAction;
+class ChangeMeshPointsAction;
+class ChangeMeshTopologyAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;

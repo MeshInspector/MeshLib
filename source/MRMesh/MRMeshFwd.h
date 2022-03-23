@@ -266,6 +266,7 @@ class MRMESH_CLASS ChangeSceneAction;
 class ChangeSelectionAction;
 class ChangeEdgeSelectionAction;
 class ChangeCreasesAction;
+class ChangeMeshAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;

@@ -484,7 +484,8 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
                 EdgeId cCur = edgeMap[cIndex];
                 WeightedConn& current = newEdgesMap[i][cIndex];
                 current = {int( i ),int( cIndex ), DBL_MAX};
-                if ( params.avoidMultipleEdges && sameEdgeExists( mesh.topology, aCur, cCur ) )
+                if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
+                    sameEdgeExists( mesh.topology, aCur, cCur ) )
                     continue;
                 getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter );
                 getTriangulationWeights( mesh.topology, newEdgesMap, edgeMap, metricRef, optimalStepsCache, current ); // find better among steps
@@ -504,7 +505,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
             );
 
         if ( weight < finConn.weight &&
-            ( !params.avoidMultipleEdges || // try to fix multiple if needed
+            ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
                 removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metricRef, newEdgesMap[cIndex][i] ) ) )
         {
             finConn = newEdgesMap[cIndex][i];

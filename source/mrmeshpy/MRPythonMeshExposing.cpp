@@ -192,9 +192,14 @@ void pythonSetFillHoleCircumscribedMetric( MR::FillHoleParams& params, const Mes
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
 {
+    pybind11::enum_<MR::FillHoleParams::MultipleEdgesResolveMode>( m, "FillHoleParamsMultipleEdgesResolveMode" ).
+        value( "None", MR::FillHoleParams::MultipleEdgesResolveMode::None ).
+        value( "Simple", MR::FillHoleParams::MultipleEdgesResolveMode::Simple ).
+        value( "Strong", MR::FillHoleParams::MultipleEdgesResolveMode::Strong );
+
     pybind11::class_<MR::FillHoleParams>( m, "FillHoleParams" ).
         def( pybind11::init<>() ).
-        def_readwrite( "avoidMultipleEdges", &MR::FillHoleParams::avoidMultipleEdges ).
+        def_readwrite( "multipleEdgesResolveMode", &MR::FillHoleParams::multipleEdgesResolveMode ).
         def_readwrite( "makeDegenerateBand", &MR::FillHoleParams::makeDegenerateBand ).
         def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces );
 

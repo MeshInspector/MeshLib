@@ -48,6 +48,7 @@ void ObjectMesh::setMesh( std::shared_ptr< Mesh > mesh )
     mesh_ = std::move(mesh);
     selectFaces({});
     selectEdges({});
+    setCreases({});
     setDirtyFlags( DIRTY_ALL );
 }
 
@@ -56,8 +57,6 @@ void ObjectMesh::swapMesh( std::shared_ptr< Mesh > & mesh )
     if ( mesh == mesh_ )
         return;
     mesh_.swap( mesh );
-    selectFaces({});
-    selectEdges({});
     setDirtyFlags( DIRTY_ALL );
 }
 

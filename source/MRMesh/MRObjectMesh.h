@@ -20,9 +20,10 @@ public:
     // returns variable mesh, if const mesh is needed use `mesh()` instead
     virtual const std::shared_ptr< Mesh > & varMesh() { return mesh_; }
 
-    // sets given mesh to this
+    // sets given mesh to this, resets selection and creases
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );
-    // sets given mesh to this, and returns back previous mesh of this
+    // sets given mesh to this, and returns back previous mesh of this;
+    // does not touch selection or creases
     MRMESH_API virtual void swapMesh( std::shared_ptr< Mesh > & mesh );
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;

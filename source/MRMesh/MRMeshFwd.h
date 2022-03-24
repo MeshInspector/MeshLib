@@ -254,6 +254,10 @@ class ObjectVoxels;
 class ObjectLinesHolder;
 class ObjectLines;
 class ObjectDistanceMap;
+class LineObject;
+class CircleObject;
+class PlaneObject;
+class SphereObject;
 struct SimpleVolume;
 
 struct OpenVdbFloatGrid;

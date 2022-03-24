@@ -9,8 +9,7 @@
 
 namespace
 {
-constexpr int cDetailLevel = 2048;
-constexpr float cBaseRadius = 1.0f;
+constexpr int cDetailLevel = 128;
 }
 
 namespace MR
@@ -148,13 +147,13 @@ void CircleObject::constructPolyline_()
 {
     polyline_ = std::make_shared<Polyline3>();
 
-    std::vector<Vector3f> points( 64 );
-    for ( int i = 0; i < 64; ++i )
+    std::vector<Vector3f> points( cDetailLevel );
+    for ( int i = 0; i < cDetailLevel; ++i )
     {
         points[i].x = cosf( i / 32.f * PI_F );
         points[i].y = sinf( i / 32.f * PI_F );
     }
-    polyline_->addFromPoints( points.data(), 64, true );
+    polyline_->addFromPoints( points.data(), cDetailLevel, true );
 
     setDirtyFlags( DIRTY_ALL );
 }

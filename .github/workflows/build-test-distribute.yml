@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@master
+    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker/windows
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -25,7 +25,9 @@ jobs:
     # to show the graph correctly
     needs: [prepare-image]
     # The type of runner that the job will run on
-    runs-on: [self-hosted, windows, x64]
+    runs-on: windows-2019
+    container:
+      image: meshrus/meshlib-windows:${{needs.prepare-image.outputs.image_tag}}
     strategy:
       matrix:
         config: [Debug, Release]
@@ -72,6 +74,7 @@ jobs:
           Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
 
   ubuntu-build-test:
+    if: ${{ false }}
     timeout-minutes: 40
     needs: [prepare-image]
     runs-on: ubuntu-latest
@@ -128,6 +131,7 @@ jobs:
           retention-days: 1
 
   fedora-build-test:
+    if: ${{ false }}
     timeout-minutes: 40
     needs: [prepare-image]
     runs-on: ubuntu-latest
@@ -184,6 +188,7 @@ jobs:
           retention-days: 1
 
   macos-build-test:
+    if: ${{ false }}
     timeout-minutes: 60
     # to show the graph correctly
     needs: [prepare-image]

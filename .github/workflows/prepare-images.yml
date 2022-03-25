@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.select-tag.outputs.image_tag}}
+      image_path: ${{ steps.set-path.outputs.image_path}}
       need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
@@ -42,6 +43,8 @@ jobs:
               - 'requirements/**'
               - 'scripts/**'
               - 'thirdparty/**'
+              - 'MeshLib/requirements/**'
+              - 'MeshLib/thirdparty/**'
 
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true'}}
@@ -54,6 +57,12 @@ jobs:
           echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" || \
           echo "latest")"
 
+      - name: Set image tag base path
+        id: set-path
+        run: |
+          repo_path=${{github.repository}}
+          echo '::set-output name=image_path::${repo_path,,}'
+
       - name: Checking whether to start image rebuild
         id: need-rebuild
         run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
@@ -63,23 +72,21 @@ jobs:
         run: |
           echo ${{github.repository}}
           if [ "${{github.repository}}" == "MeshRUs/MeshInspector" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           else
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           fi
 
   image-build-upload:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
+    env:
+      DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}
     steps:
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -94,11 +101,6 @@ jobs:
           username: meshrus
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set image tag base path
-        run: |
-          repo_path=${{github.repository}}
-          echo "DOCKERHUB_BASE_PATH=${repo_path,,}" >> $GITHUB_ENV
-
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -106,7 +108,3 @@ jobs:
           file: docker/${{matrix.distribution}}Dockerfile
           push: true
           tags: ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
-
-      - name: Clear workspace
-        run: |
-          rm -rf ${{ github.workspace }} && mkdir ${{ github.workspace }}

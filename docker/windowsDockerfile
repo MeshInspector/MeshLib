@@ -1,20 +1,33 @@
-# Use the latest Windows Server Core image
-FROM mcr.microsoft.com/windows/servercore:ltsc2019
+FROM mcr.microsoft.com/dotnet/framework/runtime:3.5-windowsservercore-ltsc2019
+
+# Reset the shell.
+SHELL ["cmd", "/S", "/C"]
 
 WORKDIR "C:\\workspace"
 
-# Restore the default Windows shell for correct batch processing.
-SHELL ["cmd", "/S", "/C"]
+# Install Node.js LTS
+ADD https://nodejs.org/dist/v8.11.3/node-v8.11.3-x64.msi C:\Temp\node-install.msi
+RUN start /wait msiexec.exe /i C:\Temp\node-install.msi /l*vx "%TEMP%\MSI-node-install.log" /qn ADDLOCAL=ALL
 
-# Install VS2019 Build Tools with the Microsoft.VisualStudio.Workload.VCTools workload with clang components.
-RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtools.exe
-RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
+# Download channel for fixed install.
+ARG CHANNEL_URL=https://aka.ms/vs/16/release/channel
+ADD ${CHANNEL_URL} C:\Temp\VisualStudio.chman
 
-# All required external packages for compilation
-# COPY vcpkg C:\src\vcpkg
+# Download and install Build Tools for Visual Studio 2019 for native desktop workload.
+ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:\Temp\vs_buildtools.exe
+RUN C:\Temp\vs_buildtools.exe --quiet --wait --norestart --nocache \
+    --channelUri C:\TEMP\VisualStudio.chman \
+    --installChannelUri C:\Temp\VisualStudio.chman \
+    --add Microsoft.VisualStudio.Workload.MSBuildTools \
+    --add Microsoft.VisualStudio.Workload.VCTools \
+    --add Microsoft.VisualStudio.Component.TestTools.BuildTools \
+    --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+    --add Microsoft.VisualStudio.Component.Windows10SDK.18362 \
+    --installPath C:\vcbuildtools
 
 # Install choco
-RUN powershell -ExecutionPolicy unrestricted -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+RUN powershell -ExecutionPolicy unrestricted -Command \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
 # Needed for bootstrapper
 RUN powershell -ExecutionPolicy unrestricted -Command Install-WindowsFeature Net-Framework-Core
@@ -26,14 +39,18 @@ RUN choco install git.install --confirm
 # Install PowerShell Core
 RUN choco install pwsh --confirm
 
-# One drive connection
-# COPY rclone1551 C:\src\rclone1551
+RUN git clone https://github.com/Microsoft/vcpkg.git && \
+    cd vcpkg && \
+    git checkout 5c54cc06554e450829d72013c4b9e4baae41529a && \
+    .\bootstrap-vcpkg.bat && \
+    .\vcpkg integrate install && \
+    cd ..
 
-# ntldd recursively finds
-# COPY ntldd C:\src\ntldd
+COPY . ./MeshLib
+COPY ./thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake ./vcpkg/triplets
 
-# These two fonts are needed for unit tests in the Docker image
-# COPY fonts\*.ttf C:\Windows\Fonts\
+RUN cd vcpkg && \
+    ../MeshLib//thirdparty/install.bat
 
 # There is powershell on the server side.
 ENTRYPOINT ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]

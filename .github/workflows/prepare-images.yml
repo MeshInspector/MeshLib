@@ -59,7 +59,9 @@ jobs:
 
       - name: Set image tag base path
         id: set-path
-        run: echo '::set-output name=image_path::${{github.repository}}'
+        run: |
+          repo_path=${{github.repository}}
+          echo "::set-output name=image_path::${repo_path,,}"
 
       - name: Checking whether to start image rebuild
         id: need-rebuild

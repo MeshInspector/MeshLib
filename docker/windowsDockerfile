@@ -18,8 +18,6 @@ ADD ${CHANNEL_URL} C:\Temp\VisualStudio.chman
 # Install VS2019 Build Tools with the Microsoft.VisualStudio.Workload.VCTools workload with clang components.
 RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtools.exe
 RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
-    --channelURI C:\TEMP\VisualStudio.chman `
-    --installChannelUri C:\Temp\VisualStudio.chman `
     --add Microsoft.VisualStudio.Workload.MSBuildTools `
     --installPath C:\vcbuildtools
 

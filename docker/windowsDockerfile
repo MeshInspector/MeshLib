@@ -8,12 +8,7 @@ SHELL ["cmd", "/S", "/C"]
 
 # Install VS2019 Build Tools with the Microsoft.VisualStudio.Workload.VCTools workload with clang components.
 RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtools.exe
-RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
-  --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended `
-  --add Microsoft.VisualStudio.Component.VC.Llvm.Clang `
-  --add Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset `
-  --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Llvm.Clang `
-  || IF "%ERRORLEVEL%"=="3010" EXIT 0
+RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended
 
 # All required external packages for compilation
 # COPY vcpkg C:\src\vcpkg

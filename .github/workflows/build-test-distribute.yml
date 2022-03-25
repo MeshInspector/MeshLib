@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker/windows
+    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@docker-windows
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

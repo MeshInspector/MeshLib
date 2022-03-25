@@ -14,8 +14,7 @@ RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache --add Micros
 # COPY vcpkg C:\src\vcpkg
 
 # Install choco
-RUN powershell -ExecutionPolicy unrestricted -Command `
-    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+RUN powershell -ExecutionPolicy unrestricted -Command iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
 # Needed for bootstrapper
 RUN powershell -ExecutionPolicy unrestricted -Command Install-WindowsFeature Net-Framework-Core

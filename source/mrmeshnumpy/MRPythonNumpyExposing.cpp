@@ -238,3 +238,41 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::modu
 {
     m.def( "pointCloudFromPoints", &pointCloudFromNP, pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
 } )
+
+template<typename T>
+MR::TaggedBitSet<T> pointCloudFromNP( const pybind11::buffer& bools )
+{
+    pybind11::buffer_info boolsInfo = bools.request();
+    if ( boolsInfo.ndim != 1 )
+    {
+        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'bools' should be (n)" );
+        assert( false );
+        return {};
+    }
+
+    if ( boolsInfo.shape[0] == 0 )
+        return {};
+
+    if ( boolsInfo.format != pybind11::format_descriptor<bool>::format() )
+    {
+        PyErr_SetString( PyExc_RuntimeError, "format of python vector 'bools' should be bool" );
+        assert( false );
+        return {};
+    }
+
+    MR::TaggedBitSet<T> resultBitSet( boolsInfo.shape[0] );
+
+    bool* data = reinterpret_cast< bool* >( boolsInfo.ptr );
+    for ( int i = 0; i < boolsInfo.shape[0]; ++i )
+        resultBitSet.set( MR::Id<T>( i ), data[i] );
+
+    return resultBitSet;
+}
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
+{
+    m.def( "makeFaceBitSetFromNumpy", &pointCloudFromNP<MR::FaceTag> );
+    m.def( "makeVertBitSetFromNumpy", &pointCloudFromNP<MR::VertTag> );
+    m.def( "makeEdgeBitSetFromNumpy", &pointCloudFromNP<MR::EdgeTag> );
+    m.def( "makeUndirectedEdgeBitSetFromNumpy", &pointCloudFromNP<MR::UndirectedEdgeTag> );
+} )

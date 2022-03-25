@@ -97,6 +97,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vecMeshBuilderTri, MR::MeshBuilder::Triangle )
 
+MR::Mesh pythonCopyMeshFunction( const MR::Mesh& mesh )
+{
+    return mesh;
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::Mesh>( m, "Mesh" ).
@@ -112,6 +117,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint ).
         def( "invalidateCaches", &MR::Mesh::invalidateCaches ).
         def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) ) &MR::Mesh::transform );
+
+    m.def( "copyMesh", &pythonCopyMeshFunction );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )

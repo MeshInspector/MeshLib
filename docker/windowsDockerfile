@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/framework/runtime:3.5-windowsservercore-ltsc2019
 # Reset the shell.
 SHELL ["cmd", "/S", "/C"]
 
-WORKDIR "C:"
+WORKDIR "C:\"
 
 # Install Node.js LTS
 ADD https://nodejs.org/dist/v8.11.3/node-v8.11.3-x64.msi .\Temp\node-install.msi
@@ -39,7 +39,7 @@ RUN choco install git.install --confirm
 # Install PowerShell Core
 RUN choco install pwsh --confirm
 
-WORKDIR ".\workspace"
+WORKDIR "C:\\workspace"
 
 RUN git clone https://github.com/Microsoft/vcpkg.git && \
     cd vcpkg && \

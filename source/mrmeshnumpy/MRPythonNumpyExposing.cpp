@@ -240,7 +240,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::modu
 } )
 
 template<typename T>
-MR::TaggedBitSet<T> pointCloudFromNP( const pybind11::buffer& bools )
+MR::TaggedBitSet<T> bitSetFromNP( const pybind11::buffer& bools )
 {
     pybind11::buffer_info boolsInfo = bools.request();
     if ( boolsInfo.ndim != 1 )
@@ -271,8 +271,8 @@ MR::TaggedBitSet<T> pointCloudFromNP( const pybind11::buffer& bools )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
 {
-    m.def( "makeFaceBitSetFromNumpy", &pointCloudFromNP<MR::FaceTag> );
-    m.def( "makeVertBitSetFromNumpy", &pointCloudFromNP<MR::VertTag> );
-    m.def( "makeEdgeBitSetFromNumpy", &pointCloudFromNP<MR::EdgeTag> );
-    m.def( "makeUndirectedEdgeBitSetFromNumpy", &pointCloudFromNP<MR::UndirectedEdgeTag> );
+    m.def( "faceBitSetFromBools", &bitSetFromNP<MR::FaceTag> );
+    m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag> );
+    m.def( "edgeBitSetFromBools", &bitSetFromNP<MR::EdgeTag> );
+    m.def( "undirectedEdgeBitSetFromBools", &bitSetFromNP<MR::UndirectedEdgeTag> );
 } )

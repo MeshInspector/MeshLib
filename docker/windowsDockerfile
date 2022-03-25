@@ -15,10 +15,10 @@ RUN start /wait msiexec.exe /i C:\Temp\node-install.msi /l*vx "%TEMP%\MSI-node-i
 ARG CHANNEL_URL=https://aka.ms/vs/16/release/channel
 ADD ${CHANNEL_URL} C:\Temp\VisualStudio.chman
 
-# Download and install Build Tools for Visual Studio 2019 for native desktop workload.
-ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:\Temp\vs_buildtools.exe
-RUN C:\Temp\vs_buildtools.exe --quiet --wait --norestart --nocache `
-    --channelUri C:\TEMP\VisualStudio.chman `
+# Install VS2019 Build Tools with the Microsoft.VisualStudio.Workload.VCTools workload with clang components.
+RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtools.exe
+RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
+    --channelURI C:\TEMP\VisualStudio.chman `
     --installChannelUri C:\Temp\VisualStudio.chman `
     --add Microsoft.VisualStudio.Workload.MSBuildTools `
     --installPath C:\vcbuildtools

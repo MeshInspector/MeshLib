@@ -72,10 +72,10 @@ IF(APPLE OR MR_EMSCRIPTEN)
 ELSE()
 	find_package(tl-expected REQUIRED)
 	set(CPR_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/cpr)
-	include_directories( ${CPR_DIR}/include)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${CPR_DIR}/include)
 
 	set(CURL_INCLUDES ${THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)
-	include_directories(${CURL_INCLUDES})
+	target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDES})
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		openvdb

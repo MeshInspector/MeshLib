@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRPlane3.h"
 #include "MRLine3.h"
 #include "MRLineSegm.h"

@@ -98,7 +98,7 @@ std::optional<LineSegm3<T>> closestPoints( const Plane3<T>& plane1, const Plane3
 
     const auto planeNpoint = plane1N.n * plane1N.d;
     const auto plane2Npoint = plane2N.n * plane2N.d;
-    return LineSegm3( planeNpoint, plane2Npoint );
+    return LineSegm3<T>( planeNpoint, plane2Npoint );
 }
 
 // finds closest point on a plane and a line;
@@ -113,7 +113,7 @@ std::optional<LineSegm3<T>> closestPoints( const Plane3<T>& plane, const Line3<T
     if ( std::abs(den) >= errorLimit<T> )
         return {};
 
-    return LineSegm3( planeN.project( lineN.p ), lineN.p );
+    return LineSegm3<T>( planeN.project( lineN.p ), lineN.p );
 }
 
 // finds closest point on a line1 and a line2;
@@ -125,7 +125,7 @@ std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>
     const auto line2N = line2.normalized();
     const auto crossDir = cross( line1N.d, line2N.d );
     if ( crossDir.length() < errorLimit<T> )
-        return LineSegm3( line1N.p, line2N.project( line1N.p ) );
+        return LineSegm3<T>( line1N.p, line2N.project( line1N.p ) );
 
     const auto p1 = dot( crossDir, line1N.p );
     const auto p2 = dot( crossDir, line2N.p );
@@ -135,7 +135,7 @@ std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>
     const auto n2 = cross( line2N.d, crossDir );
     const auto closest1 = line1N.p + dot( ( line2N.p - line1N.p ), n2 ) / dot( line1N.d, n2 ) * line1N.d;
     const auto closest2 = closest1 + ( p2 - p1 ) * crossDir;
-    return LineSegm3( closest1, closest2 );
+    return LineSegm3<T>( closest1, closest2 );
 }
 
 } //namespace MR

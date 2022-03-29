@@ -59,7 +59,7 @@ std::optional<Vector3<T>> intersection( const Line3<T>& line1, const Line3<T>& l
         return {};
 
     const auto n2 = cross( line2.d, crossDir );
-    const float den = dot( line1.d, n2 );
+    const T den = dot( line1.d, n2 );
     if ( den == 0 ) // check for calculation
         return {};
     return line1.p + dot( ( line2.p - line1.p ), n2 ) / den * line1.d;
@@ -129,7 +129,7 @@ std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>
         return {};
 
     const auto n2 = cross( line2.d, crossDir );
-    const float den = dot( line1.d, n2 );
+    const T den = dot( line1.d, n2 );
     if ( den == 0 ) // check for calculation
         return {};
     const auto closest1 = line1.p + dot( ( line2.p - line1.p ), n2 ) / den * line1.d;

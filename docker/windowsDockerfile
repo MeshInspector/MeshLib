@@ -41,21 +41,29 @@ RUN choco install git.install --confirm
 # Install PowerShell Core
 RUN choco install pwsh --confirm
 
+# Install sudo cmd
+RUN choco install sudo --confirm
+
 WORKDIR "C:\\workspace"
 
 RUN git clone https://github.com/Microsoft/vcpkg.git && \
     cd vcpkg && \
-    git checkout 5c54cc06554e450829d72013c4b9e4baae41529a && \
-    .\bootstrap-vcpkg.bat && \
-    .\vcpkg integrate install && \
-    cd ..
+    git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
+
+WORKDIR "C:\\workspace\\vcpkg"
+RUN bootstrap-vcpkg.bat
+RUN sudo .\vcpkg integrate install
+
+WORKDIR "C:\\workspace"
 
 COPY . ./MeshLib
 COPY ./thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake ./vcpkg/triplets
 
 RUN dir
 
-RUN cd vcpkg && \
+WORKDIR "C:\\workspace\\vcpkg"
+
+RUN dir && \
     C:\\workspace\\MeshLib\\thirdparty\\install.bat
 
 # There is powershell on the server side.

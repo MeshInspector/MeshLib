@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@${{ github.sha }}
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

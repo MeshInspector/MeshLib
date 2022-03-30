@@ -1,4 +1,4 @@
-[![build-test-distribute](https://github.com/MeshRUs/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshRUs/MeshLib/actions/workflows/build-test-distribute.yml?branch=master)
+[![build-test-distribute](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml?branch=master)
 
 # Welcome to the MeshLib!
 3D scanning is becoming more and more ubiquitous. Robotic automation, self-driving cars and multitude of other industrial, medical and scientific applications require advanced computer vision to deliver the levels of automation customers expect these days. The great rise of AI gave another boost to computer vision and the need to utilize 3D data to make machines smarter. Not only are tasks at hand becoming more complex, but the size of data grows exponentially. 
@@ -83,7 +83,7 @@ This list is not full and updating each day
    - Point to plane.
 
 ## Some useful links
-[MeshInspector releases page](https://github.com/MeshRUs/MeshInspectorReleases/releases)
+[MeshInspector releases page](https://github.com/MeshInspector/MeshInspectorReleases/releases)
 
 [Our YouTube channel with updates](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
@@ -97,7 +97,7 @@ This list is not full and updating each day
 # Build
 ## Build with VS2019 on Windows
 ```sh
-git clone https://github.com/MeshRUs/MeshLib.git
+git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 git submodule update --init --recursive
 ```
@@ -129,7 +129,7 @@ This approach is useful for new MR developers
 **Install/Build dependencies. Build project. Run Test Application** Run the following in terminal:
 
 ```sh
-git clone https://github.com/MeshRUs/MeshLib.git
+git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 ./scripts/install_thirdparty.sh

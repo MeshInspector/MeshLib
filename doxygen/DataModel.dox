@@ -2,7 +2,7 @@ namespace MR {
 
 /** \page DataModel Data model class hierarchy
 
-All data in MeshRUs are stored in objects. Each object can have it own type derived from Object:
+All data in MeshLib are stored in objects. Each object can have it own type derived from Object:
 
                Object (Simple object can be selected or hidden)
                  |
@@ -13,7 +13,7 @@ All data in MeshRUs are stored in objects. Each object can have it own type deri
     JawScan, Tooth, ...
 
 \section DataModelScene Scene
-Scene in MeshRUs consists of a tree of object with one root, and all others objects are children or some grandchildren of scene root. Each object has its own name (e.g. Upper Jaw), transform, visibility, selected and ancillary flags. Ancillary objects are not shown in UI list but rendered in 3D and cannot be selected. For example, a scene can look like:
+Scene in MeshLib consists of a tree of object with one root, and all others objects are children or some grandchildren of scene root. Each object has its own name (e.g. Upper Jaw), transform, visibility, selected and ancillary flags. Ancillary objects are not shown in UI list but rendered in 3D and cannot be selected. For example, a scene can look like:
 
                     Root
                      |

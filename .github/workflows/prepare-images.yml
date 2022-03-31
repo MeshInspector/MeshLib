@@ -38,6 +38,7 @@ jobs:
           filters: |
             src:
               - '.github/workflows/docker-images.yml'
+              - '.github/workflows/prepare-images.yml'
               - 'docker/**'
               - 'requirements/**'
               - 'scripts/**'
@@ -62,7 +63,7 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
-          if [ "${{github.repository}}" == "MeshRUs/MeshInspector" ]; then
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
           else
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"}]}"
@@ -97,6 +98,11 @@ jobs:
       - name: Set image tag base path
         run: |
           repo_path=${{github.repository}}
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
+            repo_path="MeshRUs/MeshInspector"
+          else
+            repo_path="MeshRUs/MeshLib"
+          fi
           echo "DOCKERHUB_BASE_PATH=${repo_path,,}" >> $GITHUB_ENV
 
       - name: Build and push

@@ -18,11 +18,8 @@ MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, co
     : meshPart_( floatingMesh )
     , refPart_( referenceMesh )
 {
-    refXf_ = refMeshXf;
-    refXfInv_ = refMeshXf.inverse();
-    xf_ = fltMeshXf;
+    setXfs( fltMeshXf, refMeshXf );
     bitSet_ = floatingMeshBitSet;
-
     updateVertPairs();
 }
 
@@ -31,11 +28,15 @@ MeshICP::MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, co
     : meshPart_( floatingMesh )
     , refPart_( referenceMesh )
 {
+    setXfs( fltMeshXf, refMeshXf );
+    recomputeBitSet(floatSamplingVoxelSize);
+}
+
+void MeshICP::setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf )
+{
     refXf_ = refMeshXf;
     refXfInv_ = refMeshXf.inverse();
     xf_ = fltMeshXf;
-
-    recomputeBitSet(floatSamplingVoxelSize);
 }
 
 void MeshICP::recomputeBitSet(const float floatSamplingVoxelSize)

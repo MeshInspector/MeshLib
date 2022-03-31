@@ -89,9 +89,10 @@ MREALGORITHMS_API MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & 
  * \brief Resolves degenerate triangles in given mesh
  * \details This function performs decimation, so it can affect topology
  * \ingroup DecimateGroup
+ * \return true if the mesh has been changed
  * 
  * \sa \ref decimateMesh
  */
-MREALGORITHMS_API DecimateResult resolveMeshDegenerations( MR::Mesh& mesh );
+MREALGORITHMS_API bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
 
 } //namespace MR

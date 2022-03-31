@@ -47,8 +47,8 @@ MR_ADD_PYTHON_FUNCTION( moduleName, examplePythonFunc, pythonExample);
 \endcode
 
 \b Functions
-\c MeshRUs/pythonScripts folder contain scripts which could be used as examples for developers or testers. \b Python \b library allows to list all `mrmeshpy.*` functions with standart `print(dir(mrmeshpy))` call.
-You can list all available python functuins by running `python MeshRUs/python_scripts/functions_list.py`
+\c MeshLib/python_scripts folder contain scripts which could be used as examples for developers or testers. \b Python \b library allows to list all `mrmeshpy.*` functions with standart `print(dir(mrmeshpy))` call.
+You can list all available python functuins by running `python MeshLib/python_scripts/functions_list.py`
 
 \note Not all functions are available anytime, for example functions that triggers rendering are not available in direct python call, but available with executable run
 

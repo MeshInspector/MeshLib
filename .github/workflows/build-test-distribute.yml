@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshRUs/MeshLib/.github/workflows/prepare-images.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -226,7 +226,7 @@ jobs:
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
     needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
-    uses: MeshRUs/MeshLib/.github/workflows/versioning-release.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 

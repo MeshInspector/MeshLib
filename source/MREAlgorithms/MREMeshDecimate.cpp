@@ -8,6 +8,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRGTest.h"
+#include "MRMesh/MRMeshDelone.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
@@ -180,11 +181,22 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
     return qf;
 }
 
-DecimateResult resolveMeshDegenerations( MR::Mesh& mesh )
+bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation )
 {
-    DecimateSettings settings;
-    settings.maxError = 0.0f;
-    return decimateMesh( mesh, settings );
+    MR_TIMER;
+    bool meshChanged = false;
+    for( int i = 0; i < maxIters; ++i )
+    {
+        bool changedThisIter = makeDeloneEdgeFlips( mesh, 5, maxDeviation ) > 0;
+
+        DecimateSettings settings;
+        settings.maxError = maxDeviation;
+        changedThisIter = decimateMesh( mesh, settings ).vertsDeleted > 0 || changedThisIter;
+        meshChanged = meshChanged || changedThisIter;
+        if ( !changedThisIter )
+            break;
+    }
+    return meshChanged;
 }
 
 void MeshDecimator::initializeQueue_()

@@ -43,8 +43,6 @@ jobs:
               - 'requirements/**'
               - 'scripts/**'
               - 'thirdparty/**'
-              - 'MeshLib/requirements/**'
-              - 'MeshLib/thirdparty/**'
 
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true'}}
@@ -61,6 +59,11 @@ jobs:
         id: set-path
         run: |
           repo_path=${{github.repository}}
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
+            repo_path="MeshRUs/MeshInspector"
+          else
+            repo_path="MeshRUs/MeshLib"
+          fi
           echo "::set-output name=image_path::${repo_path,,}"
 
       - name: Checking whether to start image rebuild
@@ -71,6 +74,8 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\"},{\"distribution\":\"fedora\"},{\"distribution\":\"emscripten\"}]}"
           if [ "${{github.repository}}" == "MeshRUs/MeshInspector" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           else

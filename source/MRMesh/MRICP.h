@@ -94,6 +94,9 @@ public:
     MRMESH_API void setPairsWeight(const std::vector<float> w);
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
+    MRMESH_API void setXfs( const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf );
+    // recompute point pairs after manual change of transformations or parameters
+    MRMESH_API void updateVertPairs();
 
     const ICPProperties& getParams() const { return prop_; }
     MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
@@ -105,7 +108,6 @@ public:
 
     //returns new xf transformation for the floating mesh, which allows to match reference mesh
     MRMESH_API AffineXf3f calculateTransformation();
-    MRMESH_API void updateVertPairs();
 
 private:
     // input meshes variables

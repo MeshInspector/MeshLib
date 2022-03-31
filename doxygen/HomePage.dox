@@ -8,7 +8,7 @@ MeshLib is 3D geometry library that allows you to make your applications based o
 \section HomePageBuildWin Build with VS2019 on Windows
 
 \code
-$ git clone https://github.com/MeshRUs/MeshLib.git
+$ git clone https://github.com/MeshInspector/MeshLib.git
 $ cd MeshLib
 $ git submodule update --init --recursive
 \endcode
@@ -38,7 +38,7 @@ This installation was checked on Ubuntu 20.04.4 with cmake 3.19.3 and gcc 9.3.0.
 Installation process is automated, but takes ~40 minutes if no required packages are already installed.. \n
 \b Install/Build \b dependencies. \b Build \b project. \b Run \b Test \b Application Run the following in terminal:
 \code
-$ git clone https://github.com/MeshRUs/MeshLib.git
+$ git clone https://github.com/MeshInspector/MeshLib.git
 $ cd MeshLib
 $ ./scripts/install_requirements.sh
 $ ./scripts/build.sh

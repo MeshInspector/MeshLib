@@ -11,10 +11,15 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( Object )
 
-ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept : children_( std::move( b.children_ ) )
+ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept 
+    : children_( std::move( b.children_ ) )
+    , bastards_( std::move( b.bastards_ ) )
 {
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
+        if ( child )
+            child->parent_ = thisObject;
+    for ( const auto & child : bastards_ )
         if ( child )
             child->parent_ = thisObject;
 }
@@ -24,10 +29,17 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
+    for ( const auto & child : bastards_ )
+        if ( child )
+            child->parent_ = nullptr;
 
     children_ = std::move( b.children_ );
+    bastards_ = std::move( b.bastards_ );
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
+        if ( child )
+            child->parent_ = thisObject;
+    for ( const auto & child : bastards_ )
         if ( child )
             child->parent_ = thisObject;
     return * this;
@@ -38,6 +50,9 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
+    for ( const auto & child : bastards_ )
+        if ( child )
+            child->parent_ = nullptr;
 }
 
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
@@ -45,7 +60,7 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
     for ( const auto & child : children_ )
         if ( child->name() == name )
             return child;
-    return {}; // not found
+    return {}; // not found among recognized children
 }
 
 void Object::setXf( const AffineXf3f& xf )
@@ -125,7 +140,7 @@ bool Object::detachFromParent()
     return parent_->removeChild( this );
 }
 
-bool Object::addChild( std::shared_ptr<Object> child )
+bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
 {
     if( !child )
         return false;
@@ -144,21 +159,18 @@ bool Object::addChild( std::shared_ptr<Object> child )
         oldParent->removeChild( child );
 
     child->parent_ = this;
-    children_.push_back( std::move( child ) );
+    if ( recognizedChild )
+        children_.push_back( std::move( child ) );
+    else
+        bastards_.push_back( std::move( child ) );
 
     return true;
 }
 
-bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
+bool Object::addChildBefore_( std::vector< std::shared_ptr< Object > > & children, std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
 {
-    if( !newChild || newChild == existingChild )
-        return false;
-
-    if ( newChild.get() == this )
-        return false;
-
-    auto it1 = std::find( begin( children_ ), end( children_ ), existingChild );
-    if ( it1 == end( children_ ) )
+    auto it1 = std::find( begin( children ), end( children ), existingChild );
+    if ( it1 == end( children ) )
         return false;
 
     if ( isAncestor( newChild.get() ) )
@@ -167,8 +179,8 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
     auto oldParent = newChild->parent();
     if ( oldParent == this )
     {
-        auto it0 = std::find( begin( children_ ), end( children_ ), newChild );
-        if ( it0 == end( children_ ) )
+        auto it0 = std::find( begin( children ), end( children ), newChild );
+        if ( it0 == end( children ) )
         {
             assert( false );
             return false;
@@ -184,8 +196,21 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
         oldParent->removeChild( newChild );
 
     newChild->parent_ = this;
-    children_.insert( it1, std::move( newChild ) );
+    children.insert( it1, std::move( newChild ) );
     return true;
+}
+
+bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
+{
+    if( !newChild || newChild == existingChild )
+        return false;
+
+    if ( newChild.get() == this )
+        return false;
+
+    return 
+        addChildBefore_( children_, std::move( newChild ), existingChild ) ||
+        addChildBefore_( bastards_, std::move( newChild ), existingChild );
 }
 
 bool Object::removeChild( Object* child )
@@ -200,12 +225,21 @@ bool Object::removeChild( Object* child )
 
     child->parent_ = nullptr;
 
-    auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
+    const auto pred = [child]( const std::shared_ptr<Object>& obj )
     {
         return obj.get() == child;
-    } );
-    assert( it != children_.end() );
-    children_.erase( it, children_.end() );
+    };
+
+    auto it = std::remove_if( children_.begin(), children_.end(), pred );
+    if ( it != children_.end() )
+    {
+        children_.erase( it, children_.end() );
+        return true;
+    }
+
+    it = std::remove_if( bastards_.begin(), bastards_.end(), pred );
+    assert( it != bastards_.end() );
+    bastards_.erase( it, bastards_.end() );
 
     return true;
 }

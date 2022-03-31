@@ -8,9 +8,6 @@
 namespace MR
 {
 
-template<typename T>
-const T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 );
-
 // finds an intersection between a plane1 and a plane2
 // plane1 and plane2 should be normalized for check parallelism
 // returns nullopt if they are parallel (even if they match)

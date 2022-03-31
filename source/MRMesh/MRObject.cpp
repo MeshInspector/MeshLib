@@ -104,6 +104,13 @@ void Object::setGlobalVisibilty( bool on, ViewportMask viewportMask /*= Viewport
     }
 }
 
+void Object::setLogicalParent( Object * newParent )
+{
+    if ( parent_ )
+        parent_->removeChild( this );
+    parent_ = newParent;
+}
+
 bool Object::isAncestor( const Object* ancestor ) const
 {
     if ( !ancestor )
@@ -198,15 +205,15 @@ bool Object::removeChild( Object* child )
     if ( oldParent != this )
         return false;
 
-    child->parent_ = nullptr;
-
     auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
     {
         return obj.get() == child;
     } );
-    assert( it != children_.end() );
-    children_.erase( it, children_.end() );
+    if ( it == children_.end() )
+        return false;
 
+    children_.erase( it, children_.end() );
+    child->parent_ = nullptr;
     return true;
 }
 

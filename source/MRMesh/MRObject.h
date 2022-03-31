@@ -105,6 +105,10 @@ public:
     // returns parent object in the tree
     const Object * parent() const { return parent_; }
     Object * parent() { return parent_; }
+    // sets new parent for this object, but does not adds this in the children of it,
+    // and removes this from the children of the current parent;
+    // so new parent will not recognize this as its child
+    MRMESH_API virtual void setLogicalParent( Object * newParent );
 
     // return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;
@@ -124,6 +128,7 @@ public:
     MRMESH_API virtual bool addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
     // returns false if it was not child of this
     bool removeChild( const std::shared_ptr<Object>& child ) { return removeChild( child.get() ); }
+    // removes given object from the children; return false if it was not a child
     MRMESH_API virtual bool removeChild( Object* child );
     MRMESH_API virtual void removeAllChildren();
     /// sort children by name

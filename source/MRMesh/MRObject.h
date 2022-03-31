@@ -49,7 +49,8 @@ struct ObjectChildrenHolder
     MRMESH_API ~ObjectChildrenHolder();
 protected:
     Object * parent_ = nullptr;
-    std::vector< std::shared_ptr< Object > > children_;
+    std::vector< std::shared_ptr< Object > > children_; // recognized ones
+    std::vector< std::weak_ptr< Object > > bastards_; // unrecognized children to hide from the pubic
 };
 
 // named object in the data model
@@ -115,18 +116,19 @@ public:
     // an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
-    // adds given object at the end of this children;
+    // adds given object at the end of children (recognized or not);
     // returns false if it was already child of this, of if given pointer is empty
-    MRMESH_API virtual bool addChild( std::shared_ptr<Object> child );
-    // adds given object in this children before existingChild;
+    MRMESH_API virtual bool addChild( std::shared_ptr<Object> child, bool recognizedChild = true );
+    // adds given object in the recognized children before existingChild;
     // if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
     // returns false if newChild is nullptr, or existingChild is not a child of this
     MRMESH_API virtual bool addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
     // returns false if it was not child of this
     bool removeChild( const std::shared_ptr<Object>& child ) { return removeChild( child.get() ); }
     MRMESH_API virtual bool removeChild( Object* child );
+    // detaches all recognized children from this, keeping all unrecognized ones
     MRMESH_API virtual void removeAllChildren();
-    /// sort children by name
+    /// sort recognized children by name
     MRMESH_API void sortChildren();
 
     // selects the object, returns true if value changed, otherwise returns false
@@ -151,11 +153,11 @@ public:
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
 
-    // clones all tree of this object (except ancillary children)
+    // clones all tree of this object (except ancillary and unrecognized children)
     MRMESH_API std::shared_ptr<Object> cloneTree() const;
     // clones current object only, without parent and/or children
     MRMESH_API virtual std::shared_ptr<Object> clone() const;
-    // clones all tree of this object (except ancillary children)
+    // clones all tree of this object (except ancillary and unrecognied children)
     // clones only pointers to mesh, points or voxels
     MRMESH_API std::shared_ptr<Object> shallowCloneTree() const;
     // clones current object only, without parent and/or children

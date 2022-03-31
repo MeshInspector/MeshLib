@@ -11,11 +11,16 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( Object )
 
-ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept : children_( std::move( b.children_ ) )
+ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept 
+    : children_( std::move( b.children_ ) )
+    , bastards_( std::move( b.bastards_ ) )
 {
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
         if ( child )
+            child->parent_ = thisObject;
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = thisObject;
 }
 
@@ -24,11 +29,18 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
+            child->parent_ = nullptr;
 
     children_ = std::move( b.children_ );
+    bastards_ = std::move( b.bastards_ );
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
         if ( child )
+            child->parent_ = thisObject;
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = thisObject;
     return * this;
 }
@@ -38,6 +50,9 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
+            child->parent_ = nullptr;
 }
 
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
@@ -45,7 +60,7 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
     for ( const auto & child : children_ )
         if ( child->name() == name )
             return child;
-    return {}; // not found
+    return {}; // not found among recognized children
 }
 
 void Object::setXf( const AffineXf3f& xf )
@@ -125,7 +140,7 @@ bool Object::detachFromParent()
     return parent_->removeChild( this );
 }
 
-bool Object::addChild( std::shared_ptr<Object> child )
+bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
 {
     if( !child )
         return false;
@@ -144,7 +159,16 @@ bool Object::addChild( std::shared_ptr<Object> child )
         oldParent->removeChild( child );
 
     child->parent_ = this;
-    children_.push_back( std::move( child ) );
+    if ( recognizedChild )
+    {
+        children_.push_back( std::move( child ) );
+    }
+    else
+    {
+        // remove invalid children before adding new one
+        std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
+        bastards_.push_back( std::move( child ) );
+    }
 
     return true;
 }
@@ -202,10 +226,21 @@ bool Object::removeChild( Object* child )
 
     auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
     {
-        return obj.get() == child;
+        return !obj || obj.get() == child;
     } );
-    assert( it != children_.end() );
-    children_.erase( it, children_.end() );
+    if ( it != children_.end() )
+    {
+        children_.erase( it, children_.end() );
+        return true;
+    }
+
+    auto bit = std::remove_if( bastards_.begin(), bastards_.end(), [child]( const std::weak_ptr<Object>& wobj )
+    {
+        auto obj = wobj.lock();
+        return !obj || obj.get() == child;
+    } );
+    assert( bit != bastards_.end() );
+    bastards_.erase( bit, bastards_.end() );
 
     return true;
 }

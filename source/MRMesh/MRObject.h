@@ -50,7 +50,7 @@ struct ObjectChildrenHolder
 protected:
     Object * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; // recognized ones
-    std::vector< std::shared_ptr< Object > > bastards_; // unrecognized children to hide from the pubic
+    std::vector< std::weak_ptr< Object > > bastards_; // unrecognized children to hide from the pubic
 };
 
 // named object in the data model
@@ -119,8 +119,7 @@ public:
     // adds given object at the end of children (recognized or not);
     // returns false if it was already child of this, of if given pointer is empty
     MRMESH_API virtual bool addChild( std::shared_ptr<Object> child, bool recognizedChild = true );
-    // adds given object in the children before existingChild (if existingChild is a recognized child,
-    // or in unrecorgnied children if existingChild is one of them);
+    // adds given object in the recognized children before existingChild;
     // if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
     // returns false if newChild is nullptr, or existingChild is not a child of this
     MRMESH_API virtual bool addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
@@ -217,11 +216,6 @@ protected:
     // Reads parameters from json value
     // if you override this method, please call Base::deserializeFields_(root) in the beginning
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
-
-    // adds given object in children before existingChild;
-    // if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
-    // returns false if newChild is nullptr, or existingChild is not a child of this
-    MRMESH_API bool addChildBefore_( std::vector< std::shared_ptr< Object > > & children, std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
 
     std::string name_;
     AffineXf3f xf_;

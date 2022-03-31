@@ -19,8 +19,8 @@ ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = thisObject;
-    for ( const auto & child : bastards_ )
-        if ( child )
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = thisObject;
 }
 
@@ -29,8 +29,8 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
-    for ( const auto & child : bastards_ )
-        if ( child )
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = nullptr;
 
     children_ = std::move( b.children_ );
@@ -39,8 +39,8 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = thisObject;
-    for ( const auto & child : bastards_ )
-        if ( child )
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = thisObject;
     return * this;
 }
@@ -50,8 +50,8 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
-    for ( const auto & child : bastards_ )
-        if ( child )
+    for ( const auto & wchild : bastards_ )
+        if ( auto child = wchild.lock() )
             child->parent_ = nullptr;
 }
 
@@ -160,17 +160,29 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
 
     child->parent_ = this;
     if ( recognizedChild )
+    {
         children_.push_back( std::move( child ) );
+    }
     else
+    {
+        // remove invalid children before adding new one
+        std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
         bastards_.push_back( std::move( child ) );
+    }
 
     return true;
 }
 
-bool Object::addChildBefore_( std::vector< std::shared_ptr< Object > > & children, std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
+bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
 {
-    auto it1 = std::find( begin( children ), end( children ), existingChild );
-    if ( it1 == end( children ) )
+    if( !newChild || newChild == existingChild )
+        return false;
+
+    if ( newChild.get() == this )
+        return false;
+
+    auto it1 = std::find( begin( children_ ), end( children_ ), existingChild );
+    if ( it1 == end( children_ ) )
         return false;
 
     if ( isAncestor( newChild.get() ) )
@@ -179,8 +191,8 @@ bool Object::addChildBefore_( std::vector< std::shared_ptr< Object > > & childre
     auto oldParent = newChild->parent();
     if ( oldParent == this )
     {
-        auto it0 = std::find( begin( children ), end( children ), newChild );
-        if ( it0 == end( children ) )
+        auto it0 = std::find( begin( children_ ), end( children_ ), newChild );
+        if ( it0 == end( children_ ) )
         {
             assert( false );
             return false;
@@ -196,21 +208,8 @@ bool Object::addChildBefore_( std::vector< std::shared_ptr< Object > > & childre
         oldParent->removeChild( newChild );
 
     newChild->parent_ = this;
-    children.insert( it1, std::move( newChild ) );
+    children_.insert( it1, std::move( newChild ) );
     return true;
-}
-
-bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
-{
-    if( !newChild || newChild == existingChild )
-        return false;
-
-    if ( newChild.get() == this )
-        return false;
-
-    return 
-        addChildBefore_( children_, std::move( newChild ), existingChild ) ||
-        addChildBefore_( bastards_, std::move( newChild ), existingChild );
 }
 
 bool Object::removeChild( Object* child )
@@ -225,21 +224,23 @@ bool Object::removeChild( Object* child )
 
     child->parent_ = nullptr;
 
-    const auto pred = [child]( const std::shared_ptr<Object>& obj )
+    auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
     {
-        return obj.get() == child;
-    };
-
-    auto it = std::remove_if( children_.begin(), children_.end(), pred );
+        return !obj || obj.get() == child;
+    } );
     if ( it != children_.end() )
     {
         children_.erase( it, children_.end() );
         return true;
     }
 
-    it = std::remove_if( bastards_.begin(), bastards_.end(), pred );
-    assert( it != bastards_.end() );
-    bastards_.erase( it, bastards_.end() );
+    auto bit = std::remove_if( bastards_.begin(), bastards_.end(), [child]( const std::weak_ptr<Object>& wobj )
+    {
+        auto obj = wobj.lock();
+        return !obj || obj.get() == child;
+    } );
+    assert( bit != bastards_.end() );
+    bastards_.erase( bit, bastards_.end() );
 
     return true;
 }

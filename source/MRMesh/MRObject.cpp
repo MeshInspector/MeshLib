@@ -11,38 +11,9 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( Object )
 
-ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept : children_( std::move( b.children_ ) )
-{
-    auto * thisObject = static_cast<Object*>( this );
-    for ( const auto & child : children_ )
-        if ( child )
-            child->parent_ = thisObject;
-}
-
-ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder && b ) noexcept
-{
-    for ( const auto & child : children_ )
-        if ( child )
-            child->parent_ = nullptr;
-
-    children_ = std::move( b.children_ );
-    auto * thisObject = static_cast<Object*>( this );
-    for ( const auto & child : children_ )
-        if ( child )
-            child->parent_ = thisObject;
-    return * this;
-}
-
-ObjectChildrenHolder::~ObjectChildrenHolder()
-{
-    for ( const auto & child : children_ )
-        if ( child )
-            child->parent_ = nullptr;
-}
-
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {
-    for ( const auto & child : children_ )
+    for ( const auto & child : children() )
         if ( child->name() == name )
             return child;
     return {}; // not found
@@ -52,7 +23,7 @@ void Object::setXf( const AffineXf3f& xf )
 {
     if ( xf_ == xf )
         return;
-    xf_ = xf; 
+    xf_ = xf;
     xfChangedSignal();
     needRedraw_ = true;
 }
@@ -60,11 +31,11 @@ void Object::setXf( const AffineXf3f& xf )
 AffineXf3f Object::worldXf() const
 {
     auto xf = xf_;
-    auto parent = parent_;
-    while ( parent )
+    auto obj = parent();
+    while ( obj )
     {
-        xf = parent->xf() * xf;
-        parent = parent->parent();
+        xf = obj->xf() * xf;
+        obj = obj->parent();
     }
     return xf;
 }
@@ -81,11 +52,11 @@ void Object::applyScale( float )
 bool Object::globalVisibilty( ViewportMask viewportMask /*= ViewportMask::any() */ ) const
 {
     bool visible = isVisible( viewportMask );
-    auto parent = parent_;
-    while ( visible && parent )
+    auto obj = parent();
+    while ( visible && obj )
     {
-        visible = parent->isVisible( viewportMask );
-        parent = parent->parent();
+        visible = obj->isVisible( viewportMask );
+        obj = obj->parent();
     }
     return visible;
 }
@@ -96,142 +67,12 @@ void Object::setGlobalVisibilty( bool on, ViewportMask viewportMask /*= Viewport
     if ( !on )
         return;
 
-    auto parent = parent_;
-    while ( parent )
+    auto obj = parent();
+    while ( obj )
     {
-        parent->setVisible( true, viewportMask );
-        parent = parent->parent();
+        obj->setVisible( true, viewportMask );
+        obj = obj->parent();
     }
-}
-
-bool Object::isAncestor( const Object* ancestor ) const
-{
-    if ( !ancestor )
-        return false;
-    auto preParent = parent_;
-    while ( preParent )
-    {
-        if ( preParent == ancestor )
-            return true;
-        preParent = preParent->parent();
-    }
-    return false;
-}
-
-bool Object::detachFromParent()
-{
-    if ( !parent_ )
-        return false;
-    return parent_->removeChild( this );
-}
-
-bool Object::addChild( std::shared_ptr<Object> child )
-{
-    if( !child )
-        return false;
-
-    if ( child.get() == this )
-        return false;
-
-    auto oldParent = child->parent();
-    if ( oldParent == this )
-        return false;
-
-    if ( isAncestor( child.get() ) )
-        return false;
-
-    if ( oldParent )
-        oldParent->removeChild( child );
-
-    child->parent_ = this;
-    children_.push_back( std::move( child ) );
-
-    return true;
-}
-
-bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild )
-{
-    if( !newChild || newChild == existingChild )
-        return false;
-
-    if ( newChild.get() == this )
-        return false;
-
-    auto it1 = std::find( begin( children_ ), end( children_ ), existingChild );
-    if ( it1 == end( children_ ) )
-        return false;
-
-    if ( isAncestor( newChild.get() ) )
-        return false;
-
-    auto oldParent = newChild->parent();
-    if ( oldParent == this )
-    {
-        auto it0 = std::find( begin( children_ ), end( children_ ), newChild );
-        if ( it0 == end( children_ ) )
-        {
-            assert( false );
-            return false;
-        }
-        if ( it0 + 1 < it1 )
-            std::rotate( it0, it0 + 1, it1 );
-        else if ( it1 < it0 )
-            std::rotate( it1, it0, it0 + 1 );
-        return true;
-    }
-
-    if ( oldParent )
-        oldParent->removeChild( newChild );
-
-    newChild->parent_ = this;
-    children_.insert( it1, std::move( newChild ) );
-    return true;
-}
-
-bool Object::removeChild( Object* child )
-{
-    assert( child );
-    if ( !child )
-        return false;
-
-    auto oldParent = child->parent();
-    if ( oldParent != this )
-        return false;
-
-    child->parent_ = nullptr;
-
-    auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
-    {
-        return obj.get() == child;
-    } );
-    assert( it != children_.end() );
-    children_.erase( it, children_.end() );
-
-    return true;
-}
-
-void Object::removeAllChildren()
-{
-    for ( const auto & ch : children_ )
-        ch->parent_ = nullptr;
-    children_.clear();
-}
-
-void Object::sortChildren()
-{
-    std::sort( children_.begin(), children_.end(), [] ( const auto& a, const auto& b )
-    {
-        const auto& lhs = a->name();
-        const auto& rhs = b->name();
-        // used for case insensitive sorting
-        const auto result = std::mismatch( lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), 
-            [] ( const unsigned char lhsc, const unsigned char rhsc )
-        {
-            return std::tolower( lhsc ) == std::tolower( rhsc );
-        } );
-
-        return result.second != rhs.cend() && ( result.first == lhs.cend() || std::tolower( *result.first ) < std::tolower( *result.second ) );
-    } );
 }
 
 bool Object::select( bool on )
@@ -260,9 +101,9 @@ void Object::setVisible( bool on, ViewportMask viewportMask /*= ViewportMask::al
 
     needRedraw_ = true;
 
-    if ( on ) 
-        setVisibilityMask( visibilityMask_ | viewportMask ); 
-    else 
+    if ( on )
+        setVisibilityMask( visibilityMask_ | viewportMask );
+    else
         setVisibilityMask( visibilityMask_ & ~viewportMask );
 }
 
@@ -332,7 +173,7 @@ void Object::deserializeFields_( const Json::Value& root )
 std::shared_ptr<Object> Object::cloneTree() const
 {
     std::shared_ptr<Object> res = clone();
-    for ( const auto& child : children_ )
+    for ( const auto& child : children() )
         if ( !child->isAncillary() )
             res->addChild( child->cloneTree() );
     return res;
@@ -346,7 +187,7 @@ std::shared_ptr<Object> Object::clone() const
 std::shared_ptr<Object> Object::shallowCloneTree() const
 {
     std::shared_ptr<Object> res = shallowClone();
-    for ( const auto& child : children_ )
+    for ( const auto& child : children() )
         if ( !child->isAncillary() )
             res->addChild( child->shallowCloneTree() );
     return res;
@@ -385,16 +226,16 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
     if ( model.value().valid() )
         res.push_back( std::move( model.value() ) );
     serializeFields_( root );
-    
+
     root["Key"] = key;
 
-    if ( !children_.empty() )
+    if ( !children().empty() )
     {
         auto childrenPath = path / key;
         auto& childrenRoot = root["Children"];
-        for ( int i = 0; i < children_.size(); ++i )
+        for ( int i = 0; i < children().size(); ++i )
         {
-            const auto& child = children_[i];
+            const auto& child = children()[i];
             if ( child->isAncillary() )
                 continue; // consider ancillary_ objects as temporary, not requiring saving
             auto sub = child->serializeRecursive( childrenPath, childrenRoot[std::to_string( i )], i );

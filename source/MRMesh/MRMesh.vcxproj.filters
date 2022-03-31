@@ -733,6 +733,9 @@
     <ClInclude Include="MRLineObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectChildrenHolder.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

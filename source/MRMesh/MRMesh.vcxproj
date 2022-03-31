@@ -68,6 +68,7 @@
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRObjectChildrenHolder.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />

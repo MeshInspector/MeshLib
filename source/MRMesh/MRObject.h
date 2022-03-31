@@ -4,6 +4,7 @@
 #include "MRVector4.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
+#include "MRObjectChildrenHolder.h"
 #include "MRViewportId.h"
 #include <boost/signals2/signal.hpp>
 #include <tl/expected.hpp>
@@ -36,24 +37,8 @@ private:
     std::mutex mutex_;
 };
 
-
-// since every object stores a pointer on its parent,
-// copying of this object is prohibited and moving is taken with care
-struct ObjectChildrenHolder
-{
-    ObjectChildrenHolder() = default;
-    ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
-    ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;
-    MRMESH_API ObjectChildrenHolder( ObjectChildrenHolder && ) noexcept;
-    MRMESH_API ObjectChildrenHolder & operator = ( ObjectChildrenHolder && ) noexcept;
-    MRMESH_API ~ObjectChildrenHolder();
-protected:
-    Object * parent_ = nullptr;
-    std::vector< std::shared_ptr< Object > > children_;
-};
-
 // named object in the data model
-class MRMESH_CLASS Object : public ObjectChildrenHolder
+class MRMESH_CLASS Object : public ObjectChildrenHolder<Object>
 {
 public:
     Object() = default;
@@ -102,33 +87,6 @@ public:
     const bool isLocked() const { return locked_; }
     virtual void setLocked( bool on ) { locked_ = on; }
 
-    // returns parent object in the tree
-    const Object * parent() const { return parent_; }
-    Object * parent() { return parent_; }
-
-    // return true if given object is ancestor of this one, false otherwise
-    MRMESH_API bool isAncestor( const Object* ancestor ) const;
-
-    // removes this from its parent children list
-    // returns false if it was already orphan
-    MRMESH_API virtual bool detachFromParent();
-    // an object can hold other sub-objects
-    const std::vector<std::shared_ptr<Object>>& children() { return children_; }
-    const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
-    // adds given object at the end of this children;
-    // returns false if it was already child of this, of if given pointer is empty
-    MRMESH_API virtual bool addChild( std::shared_ptr<Object> child );
-    // adds given object in this children before existingChild;
-    // if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
-    // returns false if newChild is nullptr, or existingChild is not a child of this
-    MRMESH_API virtual bool addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
-    // returns false if it was not child of this
-    bool removeChild( const std::shared_ptr<Object>& child ) { return removeChild( child.get() ); }
-    MRMESH_API virtual bool removeChild( Object* child );
-    MRMESH_API virtual void removeAllChildren();
-    /// sort children by name
-    MRMESH_API void sortChildren();
-
     // selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
     bool isSelected() const { return selected_; }
@@ -147,7 +105,7 @@ public:
     // gets object visibility as bitmask of viewports
     ViewportMask visibilityMask() const { return visibilityMask_; }
 
-    // this method virtual because others data model types could have dirty flags or something 
+    // this method virtual because others data model types could have dirty flags or something
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
 
@@ -228,9 +186,9 @@ protected:
 template <typename T>
 std::shared_ptr<const T> Object::find( const std::string_view & name ) const
 {
-    for ( const auto & child : children_ )
+    for ( const auto& child : children() )
         if ( child->name() == name )
-            if ( auto res = std::dynamic_pointer_cast<T>( child ) )
+            if ( auto res = std::dynamic_pointer_cast<const T>( child ) )
                 return res;
     return {}; // not found
 }

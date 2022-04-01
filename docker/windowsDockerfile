@@ -1,5 +1,4 @@
-FROM meshrus/meshlib-windows:base
-
+FROM meshrus/meshlib-windows:default
 # Reset the shell.
 SHELL ["cmd", "/S", "/C"]
 

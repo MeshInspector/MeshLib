@@ -97,6 +97,18 @@ public:
     TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const;
 };
 
+template <typename T>
+inline bool contains( const TaggedBitSet<T> * bitset, Id<T> id )
+{
+    return id.valid() && ( !bitset || bitset->test( id ) );
+}
+
+template <typename T>
+inline bool contains( const TaggedBitSet<T> & bitset, Id<T> id )
+{
+    return id.valid() && bitset.test( id );
+}
+
 // iterator to enumerate all indices with set bits in BitSet class or its derivatives
 template <typename T>
 class SetBitIteratorT

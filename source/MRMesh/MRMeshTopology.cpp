@@ -201,14 +201,6 @@ bool MeshTopology::isLeftQuad( EdgeId a ) const
     return a == e;
 }
 
-bool MeshTopology::isLeftInRegion( EdgeId e, const FaceBitSet * region ) const
-{
-    auto l = left( e );
-    if ( !l.valid() )
-        return false;
-    return !region || region->test( l );
-}
-
 EdgeId MeshTopology::bdEdgeSameOrigin( EdgeId e, const FaceBitSet * region ) const
 {
     for ( auto ei : orgRing( *this, e ) )

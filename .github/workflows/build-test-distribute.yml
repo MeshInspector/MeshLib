@@ -40,7 +40,7 @@ jobs:
       - name: Prepare image - pull and create container
         run: |
           docker pull meshrus/meshlib-windows:latest
-          $id=docker create --workdir C:\workspace\MeshInspector\MeshLib -v "${{ github.workspace }}\..\..":C:\workspace --entrypoint "tail" meshrus/meshlib-windows:latest} "-f" "/dev/null"
+          $id=docker create --workdir C:\workspace\MeshInspector\MeshLib -v "${{ github.workspace }}\..\..":C:\workspace --entrypoint "tail" meshrus/meshlib-windows:latest "-f" "/dev/null"
           echo "id=$id" >> $env:GITHUB_ENV
 
       - name: Start container

@@ -72,7 +72,7 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
     if ( plane.d < 0 )
         normal *= -1.f;
 
-    AffineXf3f toPlaneXf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), normal ) ).inverse();
+    AffineXf3f toPlaneXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), normal ), plane.n * plane.d ).inverse();
 
     std::vector<Vector3f> pointsProj( pointsToApprox.size() );
     for ( int i = 0; i < pointsProj.size(); ++i )

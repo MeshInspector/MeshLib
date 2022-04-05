@@ -520,11 +520,11 @@ void Object::swap( Object& other )
     swapSignals_( other );
 }
 
-Box3f Object::getWorldTreeBox() const
+Box3f Object::getWorldTreeBox( ViewportMask viewportMask ) const
 {
     Box3f res = getWorldBox();
     for ( const auto & c : children_ )
-        if ( c && !c->isAncillary() )
+        if ( c && !c->isAncillary() && c->isVisible( viewportMask ) )
             res.include( c->getWorldTreeBox() );
     return res;
 }

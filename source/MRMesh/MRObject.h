@@ -186,8 +186,8 @@ public:
 
     // returns bounding box of this object in world coordinates
     virtual Box3f getWorldBox() const { return {}; } //empty box
-    // returns bounding box of this object and all children in world coordinates
-    MRMESH_API Box3f getWorldTreeBox() const;
+    // returns bounding box of this object and all children visible in given viewports in world coordinates
+    MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
 
     // signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;

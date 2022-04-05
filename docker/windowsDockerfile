@@ -32,23 +32,19 @@ RUN python -m ensurepip --upgrade
 RUN python -m pip install --upgrade pip
 
 WORKDIR "C:\\workspace"
+# Install python requirements
+RUN python -m pip install -r MeshLib\requirements\python.txt
 
+WORKDIR "C:\\workspace\\MeshLib"
+COPY ./MeshLib .
+
+WORKDIR "C:\\workspace"
 RUN git clone https://github.com/Microsoft/vcpkg.git
 
 WORKDIR "C:\\workspace\\vcpkg"
 RUN git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
 RUN bootstrap-vcpkg.bat
 RUN sudo vcpkg integrate install
-
-WORKDIR "C:\\workspace\\MeshLib\\thirdparty\\"
-COPY ./thirdparty/install.bat .
-
-WORKDIR "C:\\workspace\\MeshLib\\requirements\\"
-COPY ./requirements/ .
-
-WORKDIR "C:\\workspace"
-# Install python requirements
-RUN python -m pip install -r MeshLib\requirements\python.txt
 
 # Install vcpkg requirements
 WORKDIR "C:\\workspace\\vcpkg"

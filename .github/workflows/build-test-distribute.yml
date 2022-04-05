@@ -26,8 +26,6 @@ jobs:
     needs: [prepare-image]
     # The type of runner that the job will run on
     runs-on: windows-2019
-    #container:
-      #image: meshrus/meshlib-windows:${{needs.prepare-image.outputs.image_tag}}
     strategy:
       matrix:
         config: [Debug, Release]
@@ -39,10 +37,12 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name meshlib-win --workdir C:\workspace\MeshInspector\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
+          docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
 
       - name: Build
-        run: docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+        run: |
+          docker exec meshlib-win powershell -command Get-Location
+          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Unit Tests
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
@@ -65,8 +65,8 @@ jobs:
           retention-days: 1
 
       - name: Clear workspace
-        run: |
-          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+        if: always()
+        run: docker rm --force meshlib-win
 
   ubuntu-build-test:
     timeout-minutes: 40

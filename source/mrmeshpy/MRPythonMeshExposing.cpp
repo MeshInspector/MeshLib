@@ -55,12 +55,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy ).
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy ).
-        def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts ).
         def( "org", &MR::MeshTopology::org ).
         def( "dest", &MR::MeshTopology::dest ).
         def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces ).
         def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges ).
         def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts ).
+        def( "findBoundary", &MR::MeshTopology::findBoundary ).
         def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges ).
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts );
 } )

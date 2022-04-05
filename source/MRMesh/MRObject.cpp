@@ -525,7 +525,7 @@ Box3f Object::getWorldTreeBox() const
     Box3f res = getWorldBox();
     for ( const auto & c : children_ )
         if ( c && !c->isAncillary() )
-            res.include( c->getWorldBox() );
+            res.include( c->getWorldTreeBox() );
     return res;
 }
 

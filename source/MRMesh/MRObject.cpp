@@ -520,6 +520,15 @@ void Object::swap( Object& other )
     swapSignals_( other );
 }
 
+Box3f Object::getWorldTreeBox() const
+{
+    Box3f res = getWorldBox();
+    for ( const auto & c : children_ )
+        if ( c && !c->isAncillary() )
+            res.include( c->getWorldBox() );
+    return res;
+}
+
 TEST( MRMesh, DataModelRemoveChild )
 {
     auto child2 = std::make_shared<Object>();

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRObject.h"
-#include "MRBox.h"
 #include "MRMeshTexture.h"
 #include "MRVector.h"
 #include "MRColor.h"
@@ -170,9 +169,9 @@ public:
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
 
 
-    // returns cached bounding box of this object in world coordinates;
+    // returns bounding box of this object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const;
+    MRMESH_API virtual Box3f getWorldBox() const override;
 
     // this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}

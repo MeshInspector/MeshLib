@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector4.h"
 #include "MRAffineXf3.h"
+#include "MRBox.h"
 #include "MRBitSet.h"
 #include "MRViewportId.h"
 #include <boost/signals2/signal.hpp>
@@ -182,6 +183,11 @@ public:
     // note: do not swap object signals, so listeners will get notifications from swapped object
     // requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
     MRMESH_API void swap( Object& other );
+
+    // returns bounding box of this object in world coordinates
+    virtual Box3f getWorldBox() const { return {}; } //empty box
+    // returns bounding box of this object and all children visible in given viewports in world coordinates
+    MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
 
     // signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;

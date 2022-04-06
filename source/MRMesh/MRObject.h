@@ -95,8 +95,10 @@ public:
     // scale object size (all point positions)
     MRMESH_API virtual void applyScale( float scaleFactor );
 
-    // returns true if all predecessors are visible, false otherwise
-    MRMESH_API bool globalVisibilty( ViewportMask viewportMask = ViewportMask::any() ) const;
+    // returns all viewports where this object is visible together with all its parents
+    MRMESH_API ViewportMask globalVisibilityMask() const;
+    // returns true if this object is visible together with all its parents in any of given viewports
+    bool globalVisibilty( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalVisibilityMask() & viewportMask ).empty(); }
     // if true sets all predecessors visible, otherwise sets this object invisible
     MRMESH_API void setGlobalVisibilty( bool on, ViewportMask viewportMask = ViewportMask::any() );
 

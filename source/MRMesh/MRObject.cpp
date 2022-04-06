@@ -93,16 +93,16 @@ void Object::applyScale( float )
 {
 }
 
-bool Object::globalVisibilty( ViewportMask viewportMask /*= ViewportMask::any() */ ) const
+ViewportMask Object::globalVisibilityMask() const
 {
-    bool visible = isVisible( viewportMask );
+    auto res = visibilityMask_;
     auto parent = parent_;
-    while ( visible && parent )
+    while ( !res.empty() && parent )
     {
-        visible = parent->isVisible( viewportMask );
+        res &= parent->visibilityMask_;
         parent = parent->parent();
     }
-    return visible;
+    return res;
 }
 
 void Object::setGlobalVisibilty( bool on, ViewportMask viewportMask /*= ViewportMask::any() */ )

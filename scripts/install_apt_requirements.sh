@@ -42,11 +42,11 @@ else
 fi
 
 # check and upgrade python3 pip
-python3 -m ensurepip --upgrade
-python3 -m pip install --upgrade pip
+python3.9 -m ensurepip --upgrade
+python3.9 -m pip install --upgrade pip
 
 # install requirements for python libs
-python3 -m pip install -r requirements/python.txt
+python3.9 -m pip install -r requirements/python.txt
 
 # fix boost signal2 C++20 error in default version 1.71.0 from `apt`
 # NOTE: 1.75+ version already has this fix

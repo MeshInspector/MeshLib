@@ -63,9 +63,9 @@ jobs:
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
 
-      - name: Clear workspace
-        if: always()
-        run: docker rm --force meshlib-win
+      #- name: Clear workspace
+      #  if: always()
+      #  run: docker rm --force meshlib-win
 
   ubuntu-build-test:
     timeout-minutes: 40

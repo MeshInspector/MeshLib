@@ -53,14 +53,14 @@ private:
     void updateAggregated();
 };
 
-template<typename TypeId>
-void ColorMapAggregator<TypeId>::setDefaultColor( const Color& color )
+template<typename Tag>
+void ColorMapAggregator<Tag>::setDefaultColor( const Color& color )
 {
     defaultColor_ = color;
 }
 
-template<typename TypeId>
-void ColorMapAggregator<TypeId>::setColorMap( int i, const ColorMap& colorMap, const ElementsBitSet& elementsBitSet )
+template<typename Tag>
+void ColorMapAggregator<Tag>::setColorMap( int i, const ColorMap& colorMap, const ElementsBitSet& elementsBitSet )
 {
     assert( i >= 0 && i < MaxColorMap );
     assert( !colorMap.empty() );
@@ -73,8 +73,8 @@ void ColorMapAggregator<TypeId>::setColorMap( int i, const ColorMap& colorMap, c
     dataSet_[i] = {true, colorMap, elementsBitSet};
 }
 
-template<typename TypeId>
-void ColorMapAggregator<TypeId>::resetColorMap( int i )
+template<typename Tag>
+void ColorMapAggregator<Tag>::resetColorMap( int i )
 {
     assert( i >= 0 && i < MaxColorMap );
     dataSet_[i].active = false;
@@ -87,8 +87,8 @@ void ColorMapAggregator<TypeId>::resetColorMap( int i )
         colorMapSize_ = 0;
 }
 
-template<typename TypeId>
-void ColorMapAggregator<TypeId>::setMode( AggregateMode mode )
+template<typename Tag>
+void ColorMapAggregator<Tag>::setMode( AggregateMode mode )
 {
     if ( mode == mode_ )
         return;
@@ -96,16 +96,16 @@ void ColorMapAggregator<TypeId>::setMode( AggregateMode mode )
     needUpdate_ = true;
 }
 
-template<typename TypeId>
-ColorMapAggregator<TypeId>::ColorMap ColorMapAggregator<TypeId>::aggregate()
+template<typename Tag>
+typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate()
 {
     if ( needUpdate_ )
         updateAggregated();
     return aggregatedColorMap_;
 }
 
-template<typename TypeId>
-void ColorMapAggregator<TypeId>::updateAggregated()
+template<typename Tag>
+void ColorMapAggregator<Tag>::updateAggregated()
 {
     aggregatedColorMap_.clear();
     aggregatedColorMap_.resize( colorMapSize_, defaultColor_ );

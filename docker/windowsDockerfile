@@ -31,14 +31,14 @@ RUN choco install git.install python3 sudo --confirm
 RUN python -m ensurepip --upgrade
 RUN python -m pip install --upgrade pip
 
+# Copy src
 WORKDIR "C:\\workspace"
+COPY . ./MeshLib
+
 # Install python requirements
 RUN python -m pip install -r MeshLib\requirements\python.txt
 
-WORKDIR "C:\\workspace\\MeshLib"
-COPY ./MeshLib .
-
-WORKDIR "C:\\workspace"
+# Install vcpkg
 RUN git clone https://github.com/Microsoft/vcpkg.git
 
 WORKDIR "C:\\workspace\\vcpkg"

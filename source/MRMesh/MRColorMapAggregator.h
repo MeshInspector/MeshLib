@@ -27,7 +27,7 @@ public:
     enum class AggregateMode
     {
         Overlay,
-        Mixing
+        Blending
     };
 
     void setMode( AggregateMode mode );
@@ -47,7 +47,7 @@ private:
 
     ColorMap aggregatedColorMap_;
     int colorMapSize_{ 0 };
-    bool needUpdate_{ false };
+    bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
     void updateAggregated();
@@ -107,6 +107,7 @@ ColorMapAggregator<TypeId>::ColorMap ColorMapAggregator<TypeId>::aggregate()
 template<typename TypeId>
 void ColorMapAggregator<TypeId>::updateAggregated()
 {
+    aggregatedColorMap_.clear();
     aggregatedColorMap_.resize( colorMapSize_, defaultColor_ );
 
     ElementsBitSet remaining;
@@ -114,7 +115,7 @@ void ColorMapAggregator<TypeId>::updateAggregated()
 
     if ( mode_ == AggregateMode::Overlay )
     {
-        for ( int i = 0; i < MaxColorMap; ++i )
+        for ( int i = MaxColorMap - 1; i >= 0; --i )
         {
             if ( !dataSet_[i].active )
                 continue;
@@ -125,25 +126,29 @@ void ColorMapAggregator<TypeId>::updateAggregated()
             {
                 aggregatedColorMap_[e] = colors[e];
             }
-            availableElements -= dataSet_[i].elements;
+            remaining -= dataSet_[i].elements;
         }
     }
     else
     {
-        for ( const auto& e : remaining )
+        for ( int i = 0; i < MaxColorMap; ++i )
         {
-            Vector4f res;
-            float count = 0;
-            for ( int i = 0; i < MaxColorMap; ++i )
+            if ( !dataSet_[i].active )
+                continue;
+            const auto& colorMap = dataSet_[i].colorMap;
+            for ( const auto& e : dataSet_[i].elements )
             {
-                if ( !dataSet_[i].active || !dataSet_[i].elements[e] )
-                    continue;
-                res += Vector4f( dataSet_[i].colorMap[e] );
-                count += 1.f;
+                const Vector4f frontColor4 = Vector4f( colorMap[e] );
+                const Vector3f a = Vector3f( frontColor4.x, frontColor4.y, frontColor4.z ) * frontColor4.w;
+                const Vector4f backColor4 = Vector4f( aggregatedColorMap_[e] );
+                const Vector3f b = Vector3f( backColor4.x, backColor4.y, backColor4.z ) * backColor4.w * ( 1 - frontColor4.w );
+                const float alphaRes = frontColor4.w + backColor4.w * ( 1 - frontColor4.w );
+                const Vector3f newColor = ( a + b ) / alphaRes;
+                aggregatedColorMap_[e] = Color( newColor.x, newColor.y, newColor.z, alphaRes );
             }
-            aggregatedColorMap_[e] = Color( res / count );
         }
     }
+    
 
     needUpdate_ = false;
 }

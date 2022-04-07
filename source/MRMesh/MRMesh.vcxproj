@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />
     <ClInclude Include="MRAABBTreePolyline.h" />
     <ClInclude Include="MRAffineXf.h" />

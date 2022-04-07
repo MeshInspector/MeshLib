@@ -736,6 +736,9 @@
     <ClInclude Include="MRCircleObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRColorMapAggregator.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

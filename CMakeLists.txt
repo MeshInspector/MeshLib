@@ -3,9 +3,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 IF(NOT MR_EMSCRIPTEN)
+set(PYTHON_LIB python3.9)
 IF(APPLE)
  message("building for Apple")
- set(PYTHON_LIB python3.9)
  execute_process(
          COMMAND brew --prefix
          RESULT_VARIABLE CMD_ERROR
@@ -24,7 +24,6 @@ IF(APPLE)
  set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
 ELSE()
- set(PYTHON_LIB python3.8)
  # print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\"")
@@ -55,23 +54,24 @@ link_directories(${THIRDPARTY_LIB_DIR})
 
 find_package(PkgConfig REQUIRED)
 
+# Python
 IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
+ELSE()
+ include_directories(/usr/include) 
+ENDIF() # APPLE
 
- set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
- include_directories(${PYBIND11_DIR})
+set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
+include_directories(${PYBIND11_DIR})
+find_package(Python 3.9 EXACT REQUIRED)
 
- find_package(Python 3.9 EXACT REQUIRED)
+IF(APPLE)
  find_package(PythonInterp 3.9 EXACT REQUIRED)
  find_package(PythonLibs 3.9 EXACT REQUIRED)
  include_directories(${PYTHON_INCLUDE_DIRS})
-ELSE()
- include_directories(/usr/include)
- set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
- include_directories(${PYBIND11_DIR})
- find_package(PythonLibs 3.8 EXACT REQUIRED)
 ENDIF() # APPLE
+
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
 

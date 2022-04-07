@@ -5,7 +5,7 @@ gcc-10
 g++-10
 clang-11
 libtbb-dev
-libpython3.8-dev
+libpython3.9-dev
 libjsoncpp-dev
 libilmbase-dev
 libblosc-dev

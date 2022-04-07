@@ -49,9 +49,7 @@ jobs:
 
       - name: Python Tests
         run: |
-          docker exec meshlib-win powershell -command cd source\x64\${{ matrix.config }}
-          docker exec meshlib-win powershell -command Get-Location
-          docker exec meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
+          docker exec meshlib-win powershell -command cd source\x64\${{ matrix.config }} && Get-Location && py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ github.event_name == 'push' }}

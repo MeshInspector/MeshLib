@@ -43,6 +43,8 @@ jobs:
               - 'requirements/**'
               - 'scripts/**'
               - 'thirdparty/**'
+              - 'MeshLib/requirements/**'
+              - 'MeshLib/thirdparty/**'
 
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true'}}

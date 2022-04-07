@@ -37,7 +37,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name meshlib-win --workdir ${{ github.workspace }} -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:${{needs.prepare-image.outputs.image_tag}} ping -t localhost
+          docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:${{needs.prepare-image.outputs.image_tag}} ping -t localhost
 
       - name: Build
         run: |
@@ -49,7 +49,7 @@ jobs:
 
       - name: Python Tests
         run: |
-          docker exec -w ${{ github.workspace }}\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
+          docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ github.event_name == 'push' }}
@@ -63,9 +63,9 @@ jobs:
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
 
-      #- name: Clear workspace
-      #  if: always()
-      #  run: docker rm --force meshlib-win
+      - name: Clear workspace
+        if: always()
+        run: docker rm --force meshlib-win
 
   ubuntu-build-test:
     timeout-minutes: 40

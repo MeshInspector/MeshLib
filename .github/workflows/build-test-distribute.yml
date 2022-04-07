@@ -25,7 +25,7 @@ jobs:
     # to show the graph correctly
     needs: [prepare-image]
     # The type of runner that the job will run on
-    runs-on: windows-2019
+    runs-on: [self-hosted, windows, x64, docker]
     strategy:
       matrix:
         config: [Debug, Release]
@@ -63,9 +63,9 @@ jobs:
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
 
-      - name: Clear workspace
-        if: always()
-        run: docker rm --force meshlib-win
+      #- name: Clear workspace
+      #  if: always()
+      #  run: docker rm --force meshlib-win
 
   ubuntu-build-test:
     timeout-minutes: 40

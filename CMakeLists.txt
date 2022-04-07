@@ -65,13 +65,9 @@ ENDIF() # APPLE
 set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
 include_directories(${PYBIND11_DIR})
 find_package(Python 3.9 EXACT REQUIRED)
-
-IF(APPLE)
- find_package(PythonInterp 3.9 EXACT REQUIRED)
- find_package(PythonLibs 3.9 EXACT REQUIRED)
- include_directories(${PYTHON_INCLUDE_DIRS})
-ENDIF() # APPLE
-
+find_package(PythonInterp 3.9 EXACT REQUIRED)
+find_package(PythonLibs 3.9 EXACT REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
 

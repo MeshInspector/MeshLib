@@ -37,7 +37,7 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
+          docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows::${{needs.prepare-image.outputs.image_tag}} ping -t localhost
 
       - name: Build
         run: |
@@ -48,7 +48,6 @@ jobs:
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Tests
-        working-directory:
         run: |
           docker exec meshlib-win cd source\x64\${{ matrix.config }} && py -3 ..\..\..\scripts\run_python_test_script.py
 

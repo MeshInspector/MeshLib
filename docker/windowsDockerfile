@@ -38,16 +38,17 @@ COPY . ./MeshLib
 # Install python requirements
 RUN python -m pip install -r MeshLib\requirements\python.txt
 
+WORKDIR "C:\\"
 # Install vcpkg
 RUN git clone https://github.com/Microsoft/vcpkg.git
 
-WORKDIR "C:\\workspace\\vcpkg"
+WORKDIR "C:\\vcpkg"
 RUN git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
 RUN bootstrap-vcpkg.bat
 RUN sudo vcpkg integrate install
 
 # Install vcpkg requirements
-WORKDIR "C:\\workspace\\vcpkg"
+WORKDIR "C:\\vcpkg"
 COPY ./thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake ./triplets
 COPY ./thirdparty/vcpkg/downloads  ./downloads
 RUN C:\\workspace\\MeshLib\\thirdparty\\install.bat && rmdir /s /q buildtrees downloads ports packages

@@ -22,7 +22,7 @@ void ColorMapAggregator<Tag>::insert( int i, const ColorMap& colorMap, const Ele
 {
     assert( i < dataSet_.size() );
     checkInputData_( colorMap, elementsBitSet );
-    dataSet_.push_back( { colorMap, elementsBitSet } );
+    dataSet_.insert( dataSet_.begin() + i, { colorMap, elementsBitSet } );
 }
 
 template<typename Tag>

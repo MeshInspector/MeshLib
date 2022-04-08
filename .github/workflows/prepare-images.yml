@@ -79,13 +79,13 @@ jobs:
           if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           else
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           fi
 
   image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
-    #if: ${{ false }}
+    #if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
+    if: ${{ false }}
     timeout-minutes: 120
     runs-on: ${{ matrix.os }}
     strategy:

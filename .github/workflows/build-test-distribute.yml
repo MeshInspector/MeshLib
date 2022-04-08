@@ -23,8 +23,8 @@ jobs:
   windows-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    #  runs-on: [self-hosted, windows, x64]
-    runs-on: windows-2019
+    runs-on: [self-hosted, windows, x64, docker]
+    #runs-on: windows-2019
     strategy:
       matrix:
         config: [Debug, Release]
@@ -232,7 +232,8 @@ jobs:
   update-win-version-and-distribute:
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
-    runs-on: windows-2019
+    #runs-on: windows-2019
+    runs-on: [self-hosted, windows, x64, docker]
     needs: [versioning-and-release-url]
     steps:
       - name: Checkout

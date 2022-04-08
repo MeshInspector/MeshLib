@@ -34,10 +34,9 @@ jobs:
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
-        env:
-          GIT_USERNAME: "meshinspector-bot"
-          GIT_EMAIL: "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
         run: |
+          git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+          git config user.name "meshinspector-bot"
           git add -A
           git commit --allow-empty -m "Auto update docs" -a
           git push

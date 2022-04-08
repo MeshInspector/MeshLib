@@ -12,9 +12,9 @@ jobs:
     steps:
       - name: Install doxygen
         run: |
-          apt-get update
-          apt-get -y upgrade
-          apt-get -y install doxygen
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install doxygen
 
       - name: Checkout MeshLib
         uses: actions/checkout@v2

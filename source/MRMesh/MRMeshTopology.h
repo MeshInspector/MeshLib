@@ -128,7 +128,7 @@ public:
     const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
 
     // return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
-    MRMESH_API bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }
     // return true if given edge is inner for given region (or for whole mesh if region is nullptr)
     bool isInnerEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) && isLeftInRegion( e.sym(), region ); }
     // return true if given edge is boundary for given region (or for whole mesh if region is nullptr)

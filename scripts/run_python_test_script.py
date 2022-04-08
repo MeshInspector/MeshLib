@@ -5,7 +5,7 @@ import platform
 python_cmd = "py -3.10 "
 platformSystem = platform.system()
 if platformSystem == 'Linux':
-	python_cmd = "python3.8 "
+	python_cmd = "python3.9 "
 elif platformSystem == 'Darwin':
 	python_cmd = "python3 "
 

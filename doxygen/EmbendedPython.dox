@@ -5,11 +5,11 @@ namespace MR {
 Python is one of the most popular and widely used programming language in scientific researches, machine learning, data analysis and advanced testing.\n
 \b Requires \b python \b 3.10 (3.8 on linux)
 
-MeshRUs library allows you to call python scripts directly from the command line or use particular functions by `import mrmeshpy`. 
+MeshLib library allows you to call python scripts directly from the command line or use particular functions by `import mrmeshpy`. 
 
 \b Usage
 
-MeshRUs provides several usage options\n
+MeshLib provides several usage options\n
 1. Directly from system python
 \code
 import mrmeshpy
@@ -20,7 +20,7 @@ mesh = mrmeshpy.load_mesh("mesh.stl")
 # ...
 mrmeshpy.save_mesh("mesh.ply")
 \endcode
-2. Run scritp with MeshRUs executable file (MeshRUs.exe on windows or ./MRApp on linux)
+2. Run scritp with MeshInspector executable file (MeshInspector.exe on windows or ./MRApp on linux)
 \code
 $ ./MRApp script_path.py
 \endcode

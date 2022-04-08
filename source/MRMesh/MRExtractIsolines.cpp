@@ -16,8 +16,8 @@ using ValueInVertex = std::function<float(VertId)>;
 class Isoliner
 {
 public:
-    Isoliner( const MeshTopology & topology, ValueInVertex valueInVertex )
-        : topology_( topology ), valueInVertex_( valueInVertex ) { }
+    Isoliner( const MeshTopology & topology, ValueInVertex valueInVertex, const FaceBitSet * region )
+        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex ) { }
 
     std::vector<std::vector<MeshEdgePoint>> extract();
 
@@ -28,6 +28,7 @@ private:
 
 private:
     const MeshTopology & topology_;
+    const FaceBitSet * region_ = nullptr;
     ValueInVertex valueInVertex_;
     UndirectedEdgeBitSet seenEdges_;
 };
@@ -37,6 +38,8 @@ std::vector<std::vector<MeshEdgePoint>> Isoliner::extract()
     std::vector<std::vector<MeshEdgePoint>> res;
     for ( auto ue : undirectedEdges( topology_ ) )
     {
+        if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
+            continue;
         if ( seenEdges_.test( ue ) )
             continue;
         EdgeId e = ue;
@@ -61,7 +64,7 @@ inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e, float vo, float vd ) cons
 
 std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
 {
-    if ( !topology_.left( e ) )
+    if ( !topology_.isLeftInRegion( e, region_ ) )
         return {};
     VertId o, d, x;
     topology_.getLeftTriVerts( e, o, d, x );
@@ -116,19 +119,19 @@ std::vector<MeshEdgePoint> Isoliner::extractOneLine_( const MeshEdgePoint & firs
 }
 
 std::vector<std::vector<MeshEdgePoint>> extractIsolines( const MeshTopology & topology, 
-    const Vector<float,VertId> & vertValues, float isoValue )
+    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
 {
     MR_TIMER;
 
-    Isoliner s( topology, [&]( VertId v ) { return vertValues[v] - isoValue; } );
+    Isoliner s( topology, [&]( VertId v ) { return vertValues[v] - isoValue; }, region );
     return s.extract();
 }
 
-std::vector<std::vector<MeshEdgePoint>> extractPlaneSections( const Mesh & mesh, const Plane3f & plane )
+std::vector<std::vector<MeshEdgePoint>> extractPlaneSections( const MeshPart & mp, const Plane3f & plane )
 {
     MR_TIMER;
 
-    Isoliner s( mesh.topology, [&]( VertId v ) { return plane.distance( mesh.points[v] ); } );
+    Isoliner s( mp.mesh.topology, [&]( VertId v ) { return plane.distance( mp.mesh.points[v] ); }, mp.region );
     return s.extract();
 }
 

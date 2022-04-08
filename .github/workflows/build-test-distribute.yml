@@ -23,8 +23,8 @@ jobs:
   windows-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    runs-on: [self-hosted, windows, x64, docker]
-    #runs-on: windows-2019
+    #runs-on: [self-hosted, windows, x64, docker]
+    runs-on: windows-2019
     strategy:
       matrix:
         config: [Debug, Release]
@@ -250,17 +250,17 @@ jobs:
         with:
           name: WindowsArchiveRelease
 
-      - name: Extract Windows Debug Binaries Archive
+      - name: Extract Windows Release Binaries Archive
         run: tar -xvzf MREDist_Release.zip
 
-      - name: Extract Windows Release Binaries Archive
+      - name: Extract Windows Debug Binaries Archive
         run: tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: py -3.9 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
 
       - name: Distribute
-        run: py -3.9 scripts\zip_distribution.py MeshLibDist.zip
+        run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
         
       - name: Upload Windows Distribution
         uses: actions/upload-release-asset@v1

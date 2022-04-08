@@ -22,9 +22,8 @@ jobs:
 
   windows-build-test:
     timeout-minutes: 40
-    # to show the graph correctly
     needs: [prepare-image]
-    # The type of runner that the job will run on
+    #  runs-on: [self-hosted, windows, x64]
     runs-on: windows-2019
     strategy:
       matrix:
@@ -52,11 +51,11 @@ jobs:
           docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' }}
+        #if: ${{ github.event_name == 'push' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        if: ${{ github.event_name == 'push' }}
+        #if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v2
         with:
           name: WindowsArchive${{ matrix.config }}
@@ -112,11 +111,13 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         run: tar -cvf Deb${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
         
       - name: Upload Ubuntu Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Deb${{matrix.config}}BinArchive
@@ -168,11 +169,13 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
         run: tar -cvf Rpm${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
         
       - name: Upload Fedora Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        #if: ${{ matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Rpm${{matrix.config}}BinArchive
@@ -220,16 +223,16 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
   versioning-and-release-url:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-win-version-and-distribute:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
-    runs-on: [self-hosted, windows, x64]
+      runs-on: windows-2019
     needs: [versioning-and-release-url]
     steps:
       - name: Checkout
@@ -270,7 +273,7 @@ jobs:
           asset_content_type: application/zip
           
   update-deb-version-and-distribute:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
@@ -311,7 +314,7 @@ jobs:
           asset_content_type: application/vnd.debian.binary-package         
           
   update-rpm-version-and-distribute:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]

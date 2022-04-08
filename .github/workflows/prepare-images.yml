@@ -84,8 +84,7 @@ jobs:
 
   image-build-upload:
     needs: [image-select]
-    #if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
-    if: ${{ false }}
+    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
     timeout-minutes: 120
     runs-on: ${{ matrix.os }}
     strategy:

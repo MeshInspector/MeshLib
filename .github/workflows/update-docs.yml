@@ -30,7 +30,7 @@ jobs:
 
       - name: Run doxygen
         working-directory: MeshInspector.github.io
-        run: doxygen DoxyfileMRE.in
+        run: doxygen DoxyfileML.in
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

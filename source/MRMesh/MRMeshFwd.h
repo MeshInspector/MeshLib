@@ -277,6 +277,11 @@ class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;
 
+template <typename Tag>
+class MRMESH_CLASS ColorMapAggregator;
+using VertColorMapAggregator = ColorMapAggregator<VertTag>;
+using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
+
 template <typename T>
 constexpr inline T sqr( T x ) noexcept { return x * x; }
 

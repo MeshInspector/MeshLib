@@ -1246,7 +1246,9 @@
     <ClCompile Include="MRCircleObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRColorMapAggregator.cpp" />
+    <ClCompile Include="MRColorMapAggregator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

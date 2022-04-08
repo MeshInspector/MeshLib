@@ -8,153 +8,77 @@
 
 namespace MR
 {
-
+/**
+ * @brief Class for aggregate several color map in one
+ * @detail Color map are aggregated according order
+ */
 template<typename Tag>
 class ColorMapAggregator
 {
 public:
     using ColorMap = Vector<Color, Id<Tag>>;
-    using ElementsBitSet = TaggedBitSet<Tag>;
+    using ElementBitSet = TaggedBitSet<Tag>;
 
     ColorMapAggregator() = default;
 
-    void setDefaultColor( const Color& color );
+    /// set default (background) color
+    MRMESH_API void setDefaultColor( const Color& color );
 
-    void setColorMap( int i, const ColorMap& colorMap, const ElementsBitSet& elementsBitSet );
+    /**
+     * @brief add color map after all (more priority)
+     * @param colorMap color map for elements
+     * @param elementBitSet bitset of elements for which the color map is applied
+     */
+    MRMESH_API void pushBack( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
 
-    void resetColorMap( int i );
-    
+    /**
+     * @brief insert color map after element #i (0 - minimum priority)
+     * @param colorMap color map for elements
+     * @param elementBitSet bitset of elements for which the color map is applied
+     */
+    MRMESH_API void insert( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+
+    /**
+     * @brief replace color map in #i position
+     * @param colorMap color map for elements
+     * @param elementBitSet bitset of elements for which the color map is applied
+     */
+    MRMESH_API void replace( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+
+    /**
+     * @brief erase n color map from #i 
+     */
+    MRMESH_API void erase( int i, int n = 1 );
+
+    /// color map aggregating mode
     enum class AggregateMode
     {
-        Overlay,
-        Blending
+        Overlay, /// result element color is element color of more priority color map (or default color, if there isn't color map for this element)
+        Blending /// result element color is blending colors of all color map in this element and default color (https://en.wikipedia.org/wiki/Alpha_compositing)
     };
 
-    void setMode( AggregateMode mode );
+    /// set color map aggregating mode
+    MRMESH_API void setMode( AggregateMode mode );
 
-    ColorMap aggregate();
+    /// get aggregated color map
+    MRMESH_API ColorMap aggregate();
 private:
     Color defaultColor_;
-    static const int MaxColorMap{ 10 };
 
     struct Data
     {
-        bool active = false;
         ColorMap colorMap;
-        ElementsBitSet elements;
+        ElementBitSet elements;
     };
-    std::vector<Data> dataSet_{ MaxColorMap };
+    std::vector<Data> dataSet_;
 
     ColorMap aggregatedColorMap_;
     int colorMapSize_{ 0 };
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
+    void checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
     void updateAggregated();
 };
-
-template<typename Tag>
-void ColorMapAggregator<Tag>::setDefaultColor( const Color& color )
-{
-    defaultColor_ = color;
-}
-
-template<typename Tag>
-void ColorMapAggregator<Tag>::setColorMap( int i, const ColorMap& colorMap, const ElementsBitSet& elementsBitSet )
-{
-    assert( i >= 0 && i < MaxColorMap );
-    assert( !colorMap.empty() );
-    assert( colorMap.size() == elementsBitSet.size() );
-    if ( colorMapSize_ == 0 )
-        colorMapSize_ = int( colorMap.size() );
-    else
-        assert( colorMap.size() == colorMapSize_ );
-
-    dataSet_[i] = {true, colorMap, elementsBitSet};
-}
-
-template<typename Tag>
-void ColorMapAggregator<Tag>::resetColorMap( int i )
-{
-    assert( i >= 0 && i < MaxColorMap );
-    dataSet_[i].active = false;
-    needUpdate_ = true;
-
-    if ( !std::any_of( dataSet_.begin(), dataSet_.end(), [] ( auto e )
-    {
-        return e.active;
-    } ) )
-        colorMapSize_ = 0;
-}
-
-template<typename Tag>
-void ColorMapAggregator<Tag>::setMode( AggregateMode mode )
-{
-    if ( mode == mode_ )
-        return;
-    mode_ = mode;
-    needUpdate_ = true;
-}
-
-template<typename Tag>
-typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate()
-{
-    if ( needUpdate_ )
-        updateAggregated();
-    return aggregatedColorMap_;
-}
-
-template<typename Tag>
-void ColorMapAggregator<Tag>::updateAggregated()
-{
-    aggregatedColorMap_.clear();
-    aggregatedColorMap_.resize( colorMapSize_, defaultColor_ );
-
-    ElementsBitSet remaining;
-    remaining.resize( colorMapSize_, true );
-
-    if ( mode_ == AggregateMode::Overlay )
-    {
-        for ( int i = MaxColorMap - 1; i >= 0; --i )
-        {
-            if ( !dataSet_[i].active )
-                continue;
-
-            const auto& colors = dataSet_[i].colorMap;
-            ElementsBitSet availableElements = remaining & dataSet_[i].elements;
-            for ( const auto& e : availableElements )
-            {
-                aggregatedColorMap_[e] = colors[e];
-            }
-            remaining -= dataSet_[i].elements;
-        }
-    }
-    else
-    {
-        for ( int i = 0; i < MaxColorMap; ++i )
-        {
-            if ( !dataSet_[i].active )
-                continue;
-            const auto& colorMap = dataSet_[i].colorMap;
-            for ( const auto& e : dataSet_[i].elements )
-            {
-                const Vector4f frontColor4 = Vector4f( colorMap[e] );
-                const Vector3f a = Vector3f( frontColor4.x, frontColor4.y, frontColor4.z ) * frontColor4.w;
-                const Vector4f backColor4 = Vector4f( aggregatedColorMap_[e] );
-                const Vector3f b = Vector3f( backColor4.x, backColor4.y, backColor4.z ) * backColor4.w * ( 1 - frontColor4.w );
-                const float alphaRes = frontColor4.w + backColor4.w * ( 1 - frontColor4.w );
-                const Vector3f newColor = ( a + b ) / alphaRes;
-                aggregatedColorMap_[e] = Color( newColor.x, newColor.y, newColor.z, alphaRes );
-            }
-        }
-    }
-    
-
-    needUpdate_ = false;
-}
-
-
-using VertColorMapAggregator = ColorMapAggregator<VertTag>;
-using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
 }

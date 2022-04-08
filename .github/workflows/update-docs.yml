@@ -24,16 +24,16 @@ jobs:
       - name: Checkout doxygen data
         uses: actions/checkout@v2
         with:
-          repository: 'MeshInspector/MeshInspector.github.io.git'
-          path: 'MeshInspector.github.io.git/'
+          repository: 'MeshInspector/MeshInspector.github.io'
+          path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
 
       - name: Run doxygen
-        working-directory: MeshInspector.github.io.git
+        working-directory: MeshInspector.github.io
         run: doxygen DoxyfileMRE.in
 
       - name: Commit and push changes
-        working-directory: MeshInspector.github.io.git
+        working-directory: MeshInspector.github.io
         env:
           GIT_USERNAME: "meshinspector-bot"
           GIT_EMAIL: "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"

@@ -17,10 +17,10 @@ jobs:
           apt-get -y install doxygen
 
       - name: Checkout MeshLib
-          uses: actions/checkout@v2
-          with:
-            submodules: recursive
-            path: 'MeshLib/'
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          path: 'MeshLib/'
 
       - name: Checkout doxygen data
         uses: actions/checkout@v2

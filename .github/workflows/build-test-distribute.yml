@@ -232,8 +232,7 @@ jobs:
   update-win-version-and-distribute:
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
-    #runs-on: windows-2019
-    runs-on: [self-hosted, windows, x64, docker]
+    runs-on: windows-2019
     needs: [versioning-and-release-url]
     steps:
       - name: Checkout
@@ -258,10 +257,10 @@ jobs:
         run: tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: python scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: py -3.9 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
 
       - name: Distribute
-        run: python scripts\zip_distribution.py MeshLibDist.zip
+        run: py -3.9 scripts\zip_distribution.py MeshLibDist.zip
         
       - name: Upload Windows Distribution
         uses: actions/upload-release-asset@v1

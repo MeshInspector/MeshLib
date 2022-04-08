@@ -12,9 +12,10 @@ jobs:
     steps:
       - name: Install doxygen
         run: |
-          apt-get update
-          apt-get -y upgrade
-          apt-get -y install doxygen
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install doxygen
+
 
       - name: Checkout MeshLib
         uses: actions/checkout@v2
@@ -24,20 +25,19 @@ jobs:
       - name: Checkout doxygen data
         uses: actions/checkout@v2
         with:
-          repository: 'MeshInspector/MeshInspector.github.io.git'
-          path: 'MeshInspector.github.io.git/'
+          repository: 'MeshInspector/MeshInspector.github.io'
+          path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
 
       - name: Run doxygen
-        working-directory: MeshInspector.github.io.git
-        run: doxygen DoxyfileMRE.in
+        working-directory: MeshInspector.github.io
+        run: doxygen DoxyfileML.in
 
       - name: Commit and push changes
-        working-directory: MeshInspector.github.io.git
-        env:
-          GIT_USERNAME: "meshinspector-bot"
-          GIT_EMAIL: "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+        working-directory: MeshInspector.github.io
         run: |
+          git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+          git config user.name "meshinspector-bot"
           git add -A
           git commit --allow-empty -m "Auto update docs" -a
           git push

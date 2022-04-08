@@ -1,0 +1,44 @@
+name: Update MeshLib Documentation site
+
+on:
+  release:
+    types: [ published ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install doxygen
+        run: |
+          apt-get update
+          apt-get -y upgrade
+          apt-get -y install doxygen
+
+      - name: Checkout MeshLib
+          uses: actions/checkout@v2
+          with:
+            submodules: recursive
+            path: 'MeshLib/'
+
+      - name: Checkout doxygen data
+        uses: actions/checkout@v2
+        with:
+          repository: 'MeshInspector/MeshInspector.github.io.git'
+          path: 'MeshInspector.github.io.git/'
+          token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
+
+      - name: Run doxygen
+        working-directory: MeshInspector.github.io.git
+        run: doxygen DoxyfileMRE.in
+
+      - name: Commit and push changes
+        working-directory: MeshInspector.github.io.git
+        env:
+          GIT_USERNAME: "meshinspector-bot"
+          GIT_EMAIL: "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+        run: |
+          git add -A
+          git commit --allow-empty -m "Auto update docs" -a
+          git push

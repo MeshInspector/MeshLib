@@ -232,7 +232,7 @@ jobs:
   update-win-version-and-distribute:
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
-      runs-on: windows-2019
+    runs-on: windows-2019
     needs: [versioning-and-release-url]
     steps:
       - name: Checkout

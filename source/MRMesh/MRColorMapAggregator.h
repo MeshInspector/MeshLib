@@ -85,7 +85,7 @@ private:
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
-    void checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+    void checkInputData_( [[maybe_unused]] const ColorMap& colorMap, [[maybe_unused]] const ElementBitSet& elementBitSet );
     void updateAggregated_( int newSize );
 };
 

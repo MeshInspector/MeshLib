@@ -88,7 +88,7 @@ typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate( c
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementsBitSet )
+void ColorMapAggregator<Tag>::checkInputData_( [[maybe_unused]] const ColorMap& colorMap, [[maybe_unused]] const ElementBitSet& elementsBitSet )
 {
     assert( !colorMap.empty() );
     assert( colorMap.size() > lastValid( elementsBitSet ) );

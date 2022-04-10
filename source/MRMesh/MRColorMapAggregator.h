@@ -46,7 +46,7 @@ public:
     MRMESH_API void replace( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
 
     /// reset all accumulated color map
-    MRMESH_API void reset();;
+    MRMESH_API void reset();
 
     /// get number of accumulated color maps
     size_t getColorMapNumber() { return dataSet_.size(); };
@@ -85,7 +85,7 @@ private:
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
-    void checkInputData_( [[maybe_unused]] const ColorMap& colorMap, [[maybe_unused]] const ElementBitSet& elementBitSet );
+    void checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
     void updateAggregated_( int newSize );
 };
 

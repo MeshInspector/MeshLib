@@ -10,7 +10,7 @@ namespace MR
 {
 /**
  * @brief Class for aggregate several color map in one
- * @detail Color map are aggregated according order
+ * @detail Color maps are aggregated according order
  */
 template<typename Tag>
 class ColorMapAggregator
@@ -45,6 +45,15 @@ public:
      */
     MRMESH_API void replace( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
 
+    /// reset all accumulated color map
+    MRMESH_API void reset();;
+
+    /// get number of accumulated color maps
+    size_t getColorMapNumber() { return dataSet_.size(); };
+
+    /// get color map by index
+    const ColorMap& getColorMap( int i ) { return dataSet_[i].colorMap; };
+
     /**
      * @brief erase n color map from #i 
      */
@@ -60,8 +69,8 @@ public:
     /// set color map aggregating mode
     MRMESH_API void setMode( AggregateMode mode );
 
-    /// get aggregated color map
-    MRMESH_API ColorMap aggregate();
+    /// get aggregated color map for active elements
+    MRMESH_API ColorMap aggregate( const ElementBitSet& elementBitSet );
 private:
     Color defaultColor_;
 
@@ -73,12 +82,11 @@ private:
     std::vector<Data> dataSet_;
 
     ColorMap aggregatedColorMap_;
-    int colorMapSize_{ 0 };
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
     void checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
-    void updateAggregated();
+    void updateAggregated_( int newSize );
 };
 
 }

@@ -1,5 +1,6 @@
 #include "MRColorMapAggregator.h"
 #include "MRGTest.h"
+#include "MRBitSetParallelFor.h"
 
 namespace MR
 {
@@ -111,7 +112,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
         for ( int i = 0; i < int( dataSet_.size() ); ++i )
         {
             const auto& colorMap = dataSet_[i].colorMap;
-            for ( const auto& e : dataSet_[i].elements )
+            BitSetParallelFor( dataSet_[i].elements, [&]( ElementBitSet::IndexType e )
             {
                 const Vector4f frontColor4 = Vector4f( colorMap[e] );
                 const Vector3f a = Vector3f( frontColor4.x, frontColor4.y, frontColor4.z ) * frontColor4.w;
@@ -120,7 +121,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
                 const float alphaRes = frontColor4.w + backColor4.w * ( 1 - frontColor4.w );
                 const Vector3f newColor = ( a + b ) / alphaRes;
                 aggregatedColorMap_[e] = Color( newColor.x, newColor.y, newColor.z, alphaRes );
-            }
+            } );
         }
     }
 

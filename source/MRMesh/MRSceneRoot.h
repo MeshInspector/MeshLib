@@ -10,11 +10,16 @@ namespace MR
 class SceneRoot
 {
 public:
+#ifndef MR_SCENEROOT_CONST
     MRMESH_API static Object& get();
     MRMESH_API static std::shared_ptr<Object>& getSharedPtr();
 
-    MRMESH_API static std::filesystem::path getScenePath();
     MRMESH_API static void setScenePath( const std::filesystem::path& scenePath );
+#endif
+    MRMESH_API static const Object& constGet();
+    MRMESH_API static std::shared_ptr<const Object> constGetSharedPtr();
+
+    MRMESH_API static const std::filesystem::path& getScenePath();
 
 private:
     static SceneRoot& instace_();

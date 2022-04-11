@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Install doxygen
-        run: choco install doxygen.install --version=1.9.3
+        run: choco install doxygen.install
 
       - name: Checkout MeshLib
         uses: actions/checkout@v2

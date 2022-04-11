@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Install doxygen
-        run: choco install doxygen.install
+        run: choco install doxygen.install --version=1.9.3
 
       - name: Checkout MeshLib
         uses: actions/checkout@v2
@@ -27,7 +27,7 @@ jobs:
 
       - name: Run doxygen
         working-directory: MeshInspector.github.io
-        run: doxygen DoxyfileML.in
+        run: C:\Program Files\doxygen\bin\doxygen.exe DoxyfileML.in
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

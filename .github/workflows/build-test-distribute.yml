@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@docker-windows
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -39,6 +39,7 @@ jobs:
 
       - name: Build
         run: |
+          docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Unit Tests

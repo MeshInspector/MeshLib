@@ -36,6 +36,18 @@ BitSet & BitSet::operator -= ( const BitSet & rhs )
     return *this;
 }
 
+BitSet::IndexType BitSet::find_last() const
+{
+    if ( !any() )
+        return base::npos;
+    for ( IndexType i = size(); i-- >= 1; )
+    {
+        if ( test( i ) )
+            return i;
+    }
+    return base::npos;
+}
+
 TEST(MRMesh, BitSet) 
 {
     BitSet bs0(4);

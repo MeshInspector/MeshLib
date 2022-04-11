@@ -25,6 +25,7 @@ public:
     MRMESH_API BitSet & operator ^= ( const BitSet & b );
     MRMESH_API BitSet & operator -= ( const BitSet & b );
 
+    /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     MRMESH_API IndexType find_last() const;
 
     // this accessor automatically adjusts the size of the set to include i-th element

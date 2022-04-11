@@ -72,6 +72,10 @@ TEST(MRMesh, BitSet)
     EXPECT_EQ( BitSet( BitSet( bs0 ) -= bs1 ).count(), 1 );
     EXPECT_EQ( BitSet( BitSet( bs1 ) -= bs0 ).count(), 1 );
     EXPECT_EQ( BitSet( BitSet( bs0 ) ^= bs1 ).count(), 2 );
+
+    EXPECT_EQ( bs0.find_last(), size_t( 2 ) );
+    BitSet bs2( 5 );
+    EXPECT_EQ( bs2.find_last(), size_t( -1 ) );
 }
 
 TEST(MRMesh, TaggedBitSet) 

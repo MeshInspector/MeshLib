@@ -17,7 +17,7 @@ public:
     MRMESH_API static void setScenePath( const std::filesystem::path& scenePath );
 #endif
     MRMESH_API static const Object& constGet();
-    MRMESH_API static const std::shared_ptr<const Object>& constGetSharedPtr();
+    MRMESH_API static std::shared_ptr<const Object> constGetSharedPtr();
 
     MRMESH_API static const std::filesystem::path& getScenePath();
 

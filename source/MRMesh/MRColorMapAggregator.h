@@ -32,7 +32,7 @@ public:
     MRMESH_API void pushBack( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
 
     /**
-     * @brief insert color map after element #i (0 - minimum priority)
+     * @brief insert color map before element #i (0 - minimum priority)
      * @param colorMap color map for elements
      * @param elementBitSet bitset of elements for which the color map is applied
      */

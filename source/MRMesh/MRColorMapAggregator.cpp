@@ -5,16 +5,16 @@ namespace MR
 {
 
 template<typename Tag>
-int lastValid( TaggedBitSet<Tag> elementBitSet )
+Id<Tag> lastValid( const TaggedBitSet<Tag>& elementBitSet )
 {
     if ( !elementBitSet.any() )
-        return -1;
-    for ( int i = int( elementBitSet.size() ) - 1; i >= 0; --i )
+        return Id<Tag>();
+    for ( auto i = Id<Tag>( elementBitSet.size() ); i.valid(); --i )
     {
-        if ( elementBitSet.test( Id<Tag>( i ) ) )
+        if ( elementBitSet.test( i ) )
             return i;
     }
-    return -1;
+    return Id<Tag>();
 }
 
 template<typename Tag>
@@ -100,7 +100,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
     aggregatedColorMap_.clear();
     int maxSize = newSize;
     for ( int i = 0; i < dataSet_.size(); ++i )
-        maxSize = std::max( maxSize, lastValid( dataSet_[i].elements ) + 1 );
+        maxSize = std::max( maxSize, int( lastValid( dataSet_[i].elements ) ) + 1 );
     aggregatedColorMap_.resize( maxSize, defaultColor_ );
 
     ElementBitSet remaining;

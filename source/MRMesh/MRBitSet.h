@@ -83,6 +83,7 @@ public:
 
     IndexType find_first() const { return IndexType( base::find_first() ); }
     IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }
+    IndexType find_last() const;
 
     TaggedBitSet & operator &= ( const TaggedBitSet & b ) { base::operator &= ( b ); return * this; }
     TaggedBitSet & operator |= ( const TaggedBitSet & b ) { base::operator |= ( b ); return * this; }
@@ -169,6 +170,19 @@ inline auto begin( const TaggedBitSet<T> & a )
 template <typename T>
 inline auto end( const TaggedBitSet<T> & )
     { return SetBitIteratorT<TaggedBitSet<T>>(); }
+
+template <typename T>
+TaggedBitSet<T>::IndexType TaggedBitSet<T>::find_last() const
+{
+    if ( !any() )
+        return Id<T>();
+    for ( auto i = Id<T>( size() - 1 ); i.valid(); --i )
+    {
+        if ( test( i ) )
+            return i;
+    }
+    return Id<T>();
+}
 
 template <typename T>
 TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map ) const

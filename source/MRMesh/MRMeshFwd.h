@@ -280,6 +280,7 @@ class SwapRootAction;
 template <typename Tag>
 class MRMESH_CLASS ColorMapAggregator;
 using VertColorMapAggregator = ColorMapAggregator<VertTag>;
+using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
 using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
 template <typename T>

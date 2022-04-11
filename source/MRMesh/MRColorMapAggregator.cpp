@@ -5,49 +5,36 @@ namespace MR
 {
 
 template<typename Tag>
-Id<Tag> lastValid( const TaggedBitSet<Tag>& elementBitSet )
-{
-    if ( !elementBitSet.any() )
-        return Id<Tag>();
-    for ( auto i = Id<Tag>( elementBitSet.size() ); i.valid(); --i )
-    {
-        if ( elementBitSet.test( i ) )
-            return i;
-    }
-    return Id<Tag>();
-}
-
-template<typename Tag>
 void ColorMapAggregator<Tag>::setDefaultColor( const Color& color )
 {
     defaultColor_ = color;
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::pushBack( const ColorMap& colorMap, const ElementBitSet& elementsBitSet )
+void ColorMapAggregator<Tag>::pushBack( const PartitialColorMap& partitialColorMap )
 {
-    checkInputData_( colorMap, elementsBitSet );
-    dataSet_.push_back( { colorMap, elementsBitSet } );
+    assert( checkInputData_( partitialColorMap ) );
+    dataSet_.push_back( partitialColorMap );
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::insert( int i, const ColorMap& colorMap, const ElementBitSet& elementsBitSet )
+void ColorMapAggregator<Tag>::insert( int i, const PartitialColorMap& partitialColorMap )
 {
     assert( i <= dataSet_.size() );
-    checkInputData_( colorMap, elementsBitSet );
-    dataSet_.insert( dataSet_.begin() + i, { colorMap, elementsBitSet } );
+    assert( checkInputData_( partitialColorMap ) );
+    dataSet_.insert( dataSet_.begin() + i, partitialColorMap );
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::replace( int i, const ColorMap& colorMap, const ElementBitSet& elementsBitSet )
+void ColorMapAggregator<Tag>::replace( int i, const PartitialColorMap& partitialColorMap )
 {
     assert( i >= 0 && i < dataSet_.size() );
-    checkInputData_( colorMap, elementsBitSet );
-    dataSet_[i] = { colorMap, elementsBitSet };
+    assert( checkInputData_( partitialColorMap ) );
+    dataSet_[i] = partitialColorMap;
 }
 
 template<typename Tag>
-MRMESH_API void ColorMapAggregator<Tag>::reset()
+void ColorMapAggregator<Tag>::reset()
 {
     dataSet_.clear();
     needUpdate_ = true;
@@ -74,7 +61,7 @@ void ColorMapAggregator<Tag>::setMode( AggregateMode mode )
 template<typename Tag>
 typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate( const ElementBitSet& elementBitSet )
 {
-    int last = lastValid( elementBitSet );
+    int last = elementBitSet.find_last();
     if ( needUpdate_ )
         updateAggregated_( last + 1 );
     else if ( last >= aggregatedColorMap_.size() )
@@ -88,10 +75,10 @@ typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate( c
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::checkInputData_( [[maybe_unused]] const ColorMap& colorMap, [[maybe_unused]] const ElementBitSet& elementsBitSet )
+bool ColorMapAggregator<Tag>::checkInputData_( const PartitialColorMap& partitialColorMap )
 {
-    assert( !colorMap.empty() );
-    assert( colorMap.size() > lastValid( elementsBitSet ) );
+    return !partitialColorMap.colorMap.empty() &&
+        ( partitialColorMap.colorMap.size() > partitialColorMap.elements.find_last() );
 }
 
 template<typename Tag>
@@ -100,7 +87,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
     aggregatedColorMap_.clear();
     int maxSize = newSize;
     for ( int i = 0; i < dataSet_.size(); ++i )
-        maxSize = std::max( maxSize, int( lastValid( dataSet_[i].elements ) ) + 1 );
+        maxSize = std::max( maxSize, int( dataSet_[i].elements.find_last() ) + 1 );
     aggregatedColorMap_.resize( maxSize, defaultColor_ );
 
     ElementBitSet remaining;
@@ -140,8 +127,9 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
     needUpdate_ = false;
 }
 
-template class ColorMapAggregator<FaceTag>;
 template class ColorMapAggregator<VertTag>;
+template class ColorMapAggregator<UndirectedEdgeTag>;
+template class ColorMapAggregator<FaceTag>;
 
 
 TEST( MRColorMapAggregator, FaceTag )
@@ -156,8 +144,8 @@ TEST( MRColorMapAggregator, FaceTag )
     int size = 5;
     FaceBitSet faces;
     faces.resize( 5, true );
-    cma.pushBack( Vector<Color, FaceId>( size, cRed ), FaceBitSet( std::string( "00110" ) ) );
-    cma.pushBack( Vector<Color, FaceId>( size, cGreen ), FaceBitSet( std::string( "01100" ) ) );
+    cma.pushBack( { Vector<Color, FaceId>( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
+    cma.pushBack( { Vector<Color, FaceId>( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
     cma.setMode( FaceColorMapAggregator::AggregateMode::Overlay );
     Vector<Color, FaceId> res = cma.aggregate( faces );
 

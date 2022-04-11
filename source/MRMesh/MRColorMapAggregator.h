@@ -24,26 +24,21 @@ public:
     /// set default (background) color
     MRMESH_API void setDefaultColor( const Color& color );
 
-    /**
-     * @brief add color map after all (more priority)
-     * @param colorMap color map for elements
-     * @param elementBitSet bitset of elements for which the color map is applied
-     */
-    MRMESH_API void pushBack( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+    /// partial color map
+    struct PartitialColorMap
+    {
+        ColorMap colorMap; // color map
+        ElementBitSet elements; // bitset of elements for which the color map is applied
+    };
 
-    /**
-     * @brief insert color map before element #i (0 - minimum priority)
-     * @param colorMap color map for elements
-     * @param elementBitSet bitset of elements for which the color map is applied
-     */
-    MRMESH_API void insert( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+    /// add color map after all (more priority)
+    MRMESH_API void pushBack( const PartitialColorMap& partitialColorMap );
 
-    /**
-     * @brief replace color map in #i position
-     * @param colorMap color map for elements
-     * @param elementBitSet bitset of elements for which the color map is applied
-     */
-    MRMESH_API void replace( int i, const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+    /// insert color map before element #i (0 - minimum priority)
+    MRMESH_API void insert( int i, const PartitialColorMap& partitialColorMap );
+
+    /// replace color map in #i position
+    MRMESH_API void replace( int i, const PartitialColorMap& partitialColorMap );
 
     /// reset all accumulated color map
     MRMESH_API void reset();
@@ -54,9 +49,7 @@ public:
     /// get color map by index
     const ColorMap& getColorMap( int i ) { return dataSet_[i].colorMap; };
 
-    /**
-     * @brief erase n color map from #i 
-     */
+    /// erase n color map from #i 
     MRMESH_API void erase( int i, int n = 1 );
 
     /// color map aggregating mode
@@ -74,18 +67,14 @@ public:
 private:
     Color defaultColor_;
 
-    struct Data
-    {
-        ColorMap colorMap;
-        ElementBitSet elements;
-    };
-    std::vector<Data> dataSet_;
+    std::vector<PartitialColorMap> dataSet_;
 
     ColorMap aggregatedColorMap_;
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
-    void checkInputData_( const ColorMap& colorMap, const ElementBitSet& elementBitSet );
+    /// return false if partitialColorMap have invalid data
+    bool checkInputData_( const PartitialColorMap& partitialColorMap );
     void updateAggregated_( int newSize );
 };
 

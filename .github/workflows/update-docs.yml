@@ -27,7 +27,8 @@ jobs:
 
       - name: Run doxygen
         working-directory: MeshInspector.github.io
-        run: "C:\Program Files\doxygen\bin\doxygen.exe" DoxyfileML.in
+        run: |
+          "C:/Program Files/doxygen/bin/doxygen.exe" DoxyfileML.in
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

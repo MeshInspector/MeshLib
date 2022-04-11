@@ -43,7 +43,7 @@ const Object& SceneRoot::constGet()
 const std::shared_ptr<const Object>& SceneRoot::constGetSharedPtr()
 {
     // reinterpret_cast to avoid making a copy of shared_ptr ;
-    return reinterpret_cast<const std::shared_ptr<const Object>& >( instace_().root_ ); 
+    return reinterpret_cast< std::shared_ptr<const Object>& >( instace_().root_ ); 
 }
 
 const std::filesystem::path& SceneRoot::getScenePath()

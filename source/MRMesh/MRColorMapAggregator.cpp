@@ -12,14 +12,14 @@ void ColorMapAggregator<Tag>::setDefaultColor( const Color& color )
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::pushBack( const PartitialColorMap& partitialColorMap )
+void ColorMapAggregator<Tag>::pushBack( const PartialColorMap& partitialColorMap )
 {
     assert( checkInputData_( partitialColorMap ) );
     dataSet_.push_back( partitialColorMap );
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::insert( int i, const PartitialColorMap& partitialColorMap )
+void ColorMapAggregator<Tag>::insert( int i, const PartialColorMap& partitialColorMap )
 {
     assert( i <= dataSet_.size() );
     assert( checkInputData_( partitialColorMap ) );
@@ -27,7 +27,7 @@ void ColorMapAggregator<Tag>::insert( int i, const PartitialColorMap& partitialC
 }
 
 template<typename Tag>
-void ColorMapAggregator<Tag>::replace( int i, const PartitialColorMap& partitialColorMap )
+void ColorMapAggregator<Tag>::replace( int i, const PartialColorMap& partitialColorMap )
 {
     assert( i >= 0 && i < dataSet_.size() );
     assert( checkInputData_( partitialColorMap ) );
@@ -76,7 +76,7 @@ typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate( c
 }
 
 template<typename Tag>
-bool ColorMapAggregator<Tag>::checkInputData_( const PartitialColorMap& partitialColorMap )
+bool ColorMapAggregator<Tag>::checkInputData_( const PartialColorMap& partitialColorMap )
 {
     return !partitialColorMap.colorMap.empty() &&
         ( partitialColorMap.colorMap.size() > partitialColorMap.elements.find_last() );
@@ -91,11 +91,11 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
         maxSize = std::max( maxSize, int( dataSet_[i].elements.find_last() ) + 1 );
     aggregatedColorMap_.resize( maxSize, defaultColor_ );
 
-    ElementBitSet remaining;
-    remaining.resize( maxSize, true );
-
     if ( mode_ == AggregateMode::Overlay )
     {
+        ElementBitSet remaining;
+        remaining.resize( maxSize, true );
+
         for ( int i = int( dataSet_.size() ) - 1; i >= 0; --i )
         {
             const auto& colors = dataSet_[i].colorMap;
@@ -112,7 +112,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
         for ( int i = 0; i < int( dataSet_.size() ); ++i )
         {
             const auto& colorMap = dataSet_[i].colorMap;
-            BitSetParallelFor( dataSet_[i].elements, [&]( ElementBitSet::IndexType e )
+            BitSetParallelFor( dataSet_[i].elements, [&]( typename ElementBitSet::IndexType e )
             {
                 const Vector4f frontColor4 = Vector4f( colorMap[e] );
                 const Vector3f a = Vector3f( frontColor4.x, frontColor4.y, frontColor4.z ) * frontColor4.w;

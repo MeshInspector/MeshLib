@@ -25,20 +25,20 @@ public:
     MRMESH_API void setDefaultColor( const Color& color );
 
     /// partial color map
-    struct PartitialColorMap
+    struct PartialColorMap
     {
         ColorMap colorMap; // color map
         ElementBitSet elements; // bitset of elements for which the color map is applied
     };
 
     /// add color map after all (more priority)
-    MRMESH_API void pushBack( const PartitialColorMap& partitialColorMap );
+    MRMESH_API void pushBack( const PartialColorMap& partitialColorMap );
 
     /// insert color map before element #i (0 - minimum priority)
-    MRMESH_API void insert( int i, const PartitialColorMap& partitialColorMap );
+    MRMESH_API void insert( int i, const PartialColorMap& partitialColorMap );
 
     /// replace color map in #i position
-    MRMESH_API void replace( int i, const PartitialColorMap& partitialColorMap );
+    MRMESH_API void replace( int i, const PartialColorMap& partitialColorMap );
 
     /// reset all accumulated color map
     MRMESH_API void reset();
@@ -46,8 +46,8 @@ public:
     /// get number of accumulated color maps
     size_t getColorMapNumber() { return dataSet_.size(); };
 
-    /// get color map by index
-    const ColorMap& getColorMap( int i ) { return dataSet_[i].colorMap; };
+    /// get partial color map map by index
+    const PartialColorMap& getPartialColorMap( int i ) { return dataSet_[i]; }
 
     /// erase n color map from #i 
     MRMESH_API void erase( int i, int n = 1 );
@@ -67,14 +67,14 @@ public:
 private:
     Color defaultColor_;
 
-    std::vector<PartitialColorMap> dataSet_;
+    std::vector<PartialColorMap> dataSet_;
 
     ColorMap aggregatedColorMap_;
     bool needUpdate_{ true };
     AggregateMode mode_{ AggregateMode::Overlay };
 
     /// return false if partitialColorMap have invalid data
-    bool checkInputData_( const PartitialColorMap& partitialColorMap );
+    bool checkInputData_( const PartialColorMap& partitialColorMap );
     void updateAggregated_( int newSize );
 };
 

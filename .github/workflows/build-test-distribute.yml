@@ -39,7 +39,6 @@ jobs:
 
       - name: Build
         run: |
-          docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Unit Tests
@@ -60,10 +59,6 @@ jobs:
           name: WindowsArchive${{ matrix.config }}
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
-
-      - name: Clear workspace
-        if: always()
-        run: docker rm --force meshlib-win
 
   ubuntu-build-test:
     timeout-minutes: 40

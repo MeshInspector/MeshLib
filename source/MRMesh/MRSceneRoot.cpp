@@ -3,6 +3,8 @@
 namespace MR
 {
 
+#ifndef MR_SCENEROOT_CONST
+
 Object& SceneRoot::get()
 {
     return *instace_().root_;
@@ -12,6 +14,13 @@ std::shared_ptr<Object>& SceneRoot::getSharedPtr()
 {
     return instace_().root_;
 }
+
+void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
+{
+    instace_().scenePath_ = scenePath;
+}
+
+#endif
 
 SceneRoot& SceneRoot::instace_()
 {
@@ -26,12 +35,18 @@ SceneRoot::SceneRoot()
     root_->setAncillary( true );
 }
 
-void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
+const Object& SceneRoot::constGet()
 {
-    instace_().scenePath_ = scenePath;
+    return *instace_().root_;
 }
 
-std::filesystem::path SceneRoot::getScenePath()
+const std::shared_ptr<const Object>& SceneRoot::constGetSharedPtr()
+{
+    // reinterpret_cast to avoid making a copy of shared_ptr ;
+    return reinterpret_cast<const std::shared_ptr<const Object>& >( instace_().root_ ); 
+}
+
+const std::filesystem::path& SceneRoot::getScenePath()
 {
     return instace_().scenePath_;
 }

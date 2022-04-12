@@ -29,7 +29,11 @@ jobs:
 
       - name: Run doxygen
         working-directory: MeshInspector.github.io
-        run: doxygen DoxyfileML.in
+        run: |
+          pwd
+          ls -al
+          ls -al ..\MeshLib\source
+          doxygen DoxyfileML.in
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

@@ -8,15 +8,8 @@ on:
 
 jobs:
   update-documentation:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - name: Install doxygen
-        run: |
-          sudo apt-get update
-          sudo apt-get -y upgrade
-          sudo apt-get -y install doxygen
-
-
       - name: Checkout MeshLib
         uses: actions/checkout@v2
         with:
@@ -28,6 +21,15 @@ jobs:
           repository: 'MeshInspector/MeshInspector.github.io'
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
+
+      - name: Install Doxygen
+        run: choco install doxygen.install
+
+      - name: Add doxygen to path
+        run: echo "C:\Program Files\doxygen\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Check doxygen version
+        run: doxygen -v
 
       - name: Run doxygen
         working-directory: MeshInspector.github.io

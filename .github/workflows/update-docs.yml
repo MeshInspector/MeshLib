@@ -8,11 +8,8 @@ on:
 
 jobs:
   update-documentation:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
-      - name: Install doxygen
-        run: choco install doxygen.install
-
       - name: Checkout MeshLib
         uses: actions/checkout@v2
         with:
@@ -25,9 +22,13 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
 
+      - name: Install Doxygen
+        run: |
+          wget -qO- "https://sourceforge.net/projects/doxygen/files/rel-1.9.3/doxygen-1.9.3.linux.bin.tar.gz/download" | sudo tar --strip-components=1 -xz -C /usr/local
+          sudo apt-get install -y libclang-9-dev graphviz
+
       - name: Run doxygen
         working-directory: MeshInspector.github.io
-        shell: cmd
         run: doxygen DoxyfileML.in
 
       - name: Commit and push changes

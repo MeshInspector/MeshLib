@@ -22,38 +22,28 @@ jobs:
 
   windows-build-test:
     timeout-minutes: 40
-    # to show the graph correctly
     needs: [prepare-image]
-    # The type of runner that the job will run on
-    runs-on: [self-hosted, windows, x64]
+    runs-on: windows-2019
     strategy:
       matrix:
         config: [Debug, Release]
     steps:
-      - name: Clear workspace
-        run: |
-          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: Update thirdparty
-        run: thirdparty\install.bat
-
-      - name: Integrate vcpkg
-        run: vcpkg integrate install
+      - name: Start container
+        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:${{needs.prepare-image.outputs.image_tag}} ping -t localhost
 
       - name: Build
-        run: py -3 scripts\build_script.py ${{ matrix.config }}
+        run: docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Unit Tests
-        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Tests
-        working-directory: source\x64\${{ matrix.config }}
-        run: py -3 ..\..\..\scripts\run_python_test_script.py
+        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ github.event_name == 'push' }}
@@ -66,10 +56,6 @@ jobs:
           name: WindowsArchive${{ matrix.config }}
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
-
-      - name: Clear workspace
-        run: |
-          Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
 
   ubuntu-build-test:
     timeout-minutes: 40
@@ -233,7 +219,7 @@ jobs:
   update-win-version-and-distribute:
     if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
-    runs-on: [self-hosted, windows, x64]
+    runs-on: windows-2019
     needs: [versioning-and-release-url]
     steps:
       - name: Checkout
@@ -251,17 +237,17 @@ jobs:
         with:
           name: WindowsArchiveRelease
 
-      - name: Extract Windows Debug Binaries Archive
+      - name: Extract Windows Release Binaries Archive
         run: tar -xvzf MREDist_Release.zip
 
-      - name: Extract Windows Release Binaries Archive
+      - name: Extract Windows Debug Binaries Archive
         run: tar -xvzf MREDist_Debug.zip
 
       - name: Make Install Folder
-        run: python scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
+        run: py -3.10 scripts\make_install_folder.py ${{needs.versioning-and-release-url.outputs.version_tag}}
 
       - name: Distribute
-        run: python scripts\zip_distribution.py MeshLibDist.zip
+        run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
         
       - name: Upload Windows Distribution
         uses: actions/upload-release-asset@v1

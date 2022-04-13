@@ -11,6 +11,13 @@ namespace MRE
  * \brief This chapter represents documentation about mesh decimation
  */
 
+/// Defines the order of edge collapses inside Decimate algorithm
+enum DecimateStrategy
+{
+    MinimizeError,    // the next edge to collapse will be the one that introduced minimal error to the surface
+    ShortestEdgeFirst // the next edge to collapse will be the shortest one
+};
+
 /**
  * \struct MRE::DecimateSettings
  * \brief Parameters structure for MRE::decimateMesh
@@ -20,8 +27,13 @@ namespace MRE
  */
 struct DecimateSettings
 {  
-    /// Limit from above on the maximum distance from moved vertices to original mesh
+    DecimateStrategy strategy = DecimateStrategy::MinimizeError;
+    /// for DecimateStrategy::MinimizeError only:
+    /// limit from above on the maximum distance from moved vertices to original mesh
     float maxError = 0.001f;
+    /// for DecimateStrategy::ShortestEdgeFirst only:
+    /// stop the decimation as soon as the longest edge in the mesh is not greater than this value
+    float maxEdgeLength = 1.f;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
@@ -63,7 +75,8 @@ struct DecimateResult
 {
     int vertsDeleted = 0; ///< Number deleted verts. Same as the number of performed collapses
     int facesDeleted = 0; ///< Number deleted faces
-    float errorIntroduced = 0; ///< Max different (as distance) between original mesh and result mesh
+    float errorIntroduced = 0; ///< Max different (as distance) between original mesh and result mesh (for DecimateStrategy::MinimizeError only)
+    float maxEdgeLength = 0; ///< The longest remaining edge in the mesh (for DecimateStrategy::ShortestEdgeFirst only)
 };
 
 /**

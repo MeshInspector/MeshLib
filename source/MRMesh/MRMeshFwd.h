@@ -19,12 +19,12 @@
 namespace MR
 {
  
-class EdgeTag;
-class UndirectedEdgeTag;
-class FaceTag;
-class VertTag;
-class PixelTag;
-class VoxelTag;
+class MRMESH_CLASS EdgeTag;
+class MRMESH_CLASS UndirectedEdgeTag;
+class MRMESH_CLASS FaceTag;
+class MRMESH_CLASS VertTag;
+class MRMESH_CLASS PixelTag;
+class MRMESH_CLASS VoxelTag;
 
 template <typename T> class Id;
 

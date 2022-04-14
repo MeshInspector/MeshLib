@@ -27,7 +27,7 @@ COPY requirements requirements
 ENV MR_STATE=DOCKER_BUILD
 
 RUN dnf -y update && \
-    dnf -y install time python3-pip rpm-build && \
+    dnf -y install git time python3-pip rpm-build && \
     ./scripts/install_dnf_requirements.sh &&\
     dnf clean all
 

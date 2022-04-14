@@ -79,6 +79,10 @@ jobs:
             c-compiler: /usr/bin/gcc-10
 
     steps:
+        # https://github.com/actions/checkout/issues/760
+      - name: fix permission issue
+        run: git config --global --add safe.directory ${{ github.workspace }}
+        
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -135,6 +139,10 @@ jobs:
             c-compiler: /usr/bin/gcc
             
     steps:
+        # https://github.com/actions/checkout/issues/760
+      - name: fix permission issue
+        run: git config --global --add safe.directory ${{ github.workspace }}
+  
       - name: Checkout
         uses: actions/checkout@v2
         with:

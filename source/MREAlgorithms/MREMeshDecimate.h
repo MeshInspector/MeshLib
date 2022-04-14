@@ -28,12 +28,11 @@ enum DecimateStrategy
 struct DecimateSettings
 {  
     DecimateStrategy strategy = DecimateStrategy::MinimizeError;
-    /// for DecimateStrategy::MinimizeError only:
-    /// limit from above on the maximum distance from moved vertices to original mesh
-    float maxError = 0.001f;
+    /// for DecimateStrategy::MinimizeError: 
+    ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
     /// for DecimateStrategy::ShortestEdgeFirst only:
-    /// stop the decimation as soon as the longest edge in the mesh is not greater than this value
-    float maxEdgeLength = 1.f;
+    ///   stop the decimation as soon as the longest edge in the mesh is greater than this value
+    float maxError = 0.001f;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
@@ -75,8 +74,11 @@ struct DecimateResult
 {
     int vertsDeleted = 0; ///< Number deleted verts. Same as the number of performed collapses
     int facesDeleted = 0; ///< Number deleted faces
-    float errorIntroduced = 0; ///< Max different (as distance) between original mesh and result mesh (for DecimateStrategy::MinimizeError only)
-    float maxEdgeLength = 0; ///< The longest remaining edge in the mesh (for DecimateStrategy::ShortestEdgeFirst only)
+    /// for DecimateStrategy::MinimizeError:
+    ///    estimated distance deviation of decimated mesh from the original mesh
+    /// for DecimateStrategy::ShortestEdgeFirst:
+    ///    the shortest remaining edge in the mesh
+    float errorIntroduced = 0;
 };
 
 /**

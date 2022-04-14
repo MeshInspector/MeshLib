@@ -94,7 +94,6 @@ private:
     Mesh & mesh_;
     const DecimateSettings & settings_;
     const float maxErrorSq_;
-    const float maxEdgeLenSq_;
     Vector<QuadraticForm3f, VertId> vertForms_;
     struct QueueElement
     {
@@ -120,7 +119,6 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
     : mesh_( mesh )
     , settings_( settings )
     , maxErrorSq_( sqr( settings.maxError ) )
-    , maxEdgeLenSq_( sqr( settings.maxEdgeLength ) )
 {
 }
 
@@ -249,7 +247,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     else
     {
         res.c = mesh_.edgeLengthSq( e );
-        if ( res.c > maxEdgeLenSq_ )
+        if ( res.c > maxErrorSq_ )
             return {};
         std::tie( qf, pos ) = sum( vertForms_[o], mesh_.points[o], vertForms_[d], mesh_.points[d] );
     }
@@ -376,7 +374,6 @@ DecimateResult MeshDecimator::run()
     initializeQueue_();
 
     res_.errorIntroduced = settings_.maxError;
-    res_.maxEdgeLength = settings_.maxEdgeLength;
     while ( !queue_.empty() )
     {
         auto topQE = queue_.top();
@@ -384,10 +381,7 @@ DecimateResult MeshDecimator::run()
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
-            if ( settings_.strategy == DecimateStrategy::MinimizeError )
-                res_.errorIntroduced = std::sqrt( topQE.c );
-            else
-                res_.maxEdgeLength = std::sqrt( topQE.c );
+            res_.errorIntroduced = std::sqrt( topQE.c );
             break;
         }
 

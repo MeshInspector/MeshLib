@@ -723,7 +723,6 @@
     <ClInclude Include="MRPlaneObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline.h">
       <Filter>Source Files\Polyline3</Filter>
     </ClInclude>
@@ -738,6 +737,9 @@
     </ClInclude>
     <ClInclude Include="MRColorMapAggregator.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolyline2Collide.h">
+      <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1233,7 +1235,6 @@
     <ClCompile Include="MRPlaneObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline.cpp">
       <Filter>Source Files\Polyline3</Filter>
     </ClCompile>
@@ -1248,6 +1249,9 @@
     </ClCompile>
     <ClCompile Include="MRColorMapAggregator.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolyline2Collide.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

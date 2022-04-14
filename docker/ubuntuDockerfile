@@ -46,7 +46,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
 
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-COPY --from=0 /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/
+COPY --from=0 /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
 RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

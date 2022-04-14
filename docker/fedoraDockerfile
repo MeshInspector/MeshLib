@@ -21,18 +21,22 @@ RUN ./scripts/build_thirdparty.sh
 
 FROM fedora:35
 
-COPY scripts/install_dnf_requirements.sh scripts/install_dnf_requirements.sh
-COPY requirements requirements
-
 ENV MR_STATE=DOCKER_BUILD
+
+RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
+
+COPY scripts/install_dnf_requirements.sh scripts/install_dnf_requirements.sh
+COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
+COPY requirements requirements
 
 RUN dnf -y update && \
     dnf -y install git time python3-pip rpm-build && \
     ./scripts/install_dnf_requirements.sh &&\
     dnf clean all
 
-RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 COPY --from=0 /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
-RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+RUN sudo ./scripts/install_thirdparty.sh && \
+    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

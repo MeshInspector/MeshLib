@@ -25,9 +25,16 @@ COPY requirements requirements
 # build and install thirdparty
 RUN sudo ./scripts/build_thirdparty.sh
 
+
 FROM ubuntu:20.04
 
+ENV MR_STATE=DOCKER_BUILD
+
+RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
+
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 
 ENV MR_STATE=DOCKER_BUILD
@@ -44,9 +51,8 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-
-RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 COPY --from=0 /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
-RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+RUN sudo ./scripts/install_thirdparty.sh && \
+    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

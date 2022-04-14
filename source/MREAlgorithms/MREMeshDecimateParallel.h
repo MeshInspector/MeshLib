@@ -14,7 +14,11 @@ namespace MRE
  */
 struct DecimateParallelSettings
 {  
-    /// Limit from above on the maximum distance from moved vertices to original mesh
+    DecimateStrategy strategy = DecimateStrategy::MinimizeError;
+    /// for DecimateStrategy::MinimizeError: 
+    ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
+    /// for DecimateStrategy::ShortestEdgeFirst only:
+    ///   stop the decimation as soon as the longest edge in the mesh is greater than this value
     float maxError = 0.001f;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;

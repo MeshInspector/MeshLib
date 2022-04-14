@@ -1,10 +1,11 @@
 FROM fedora:35
 
-RUN dnf -y update && dnf -y install git time python3-pip rpm-build
+RUN dnf -y update && \
+    dnf -y install git && \
+    dnf clean all
 
-#copy files
-RUN mkdir /home/MeshRUs
-WORKDIR "/home/MeshRUs"
+RUN mkdir /home/MeshLib
+WORKDIR "/home/MeshLib"
 
 #copy files
 COPY .git .git
@@ -12,17 +13,26 @@ COPY thirdparty thirdparty
 COPY scripts scripts
 COPY requirements requirements
 
+ENV MR_STATE=DOCKER_BUILD
+
 # build and install thirdparty
-RUN sudo ./scripts/build_thirdparty.sh
-RUN sudo ./scripts/install_thirdparty.sh
+RUN ./scripts/build_thirdparty.sh
+
+
+FROM fedora:35
+
+COPY scripts/install_dnf_requirements.sh scripts/install_dnf_requirements.sh
+COPY requirements requirements
 
 ENV MR_STATE=DOCKER_BUILD
 
-# copy thirdparty libs
-RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-RUN cp -r lib /usr/local/lib/meshlib-thirdparty-lib/
-RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf
-RUN sudo ldconfig
+RUN dnf -y update && \
+    dnf -y install time python3-pip rpm-build && \
+    ./scripts/install_dnf_requirements.sh &&\
+    dnf clean all
 
-WORKDIR "/home/"
-RUN rm -rf MeshRUs
+RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+COPY --from=0 /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/
+
+RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+    sudo ldconfig

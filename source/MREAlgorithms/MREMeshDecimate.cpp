@@ -9,6 +9,7 @@
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRMeshDelone.h"
+#include "MRMesh/MRMeshSubdivide.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
@@ -435,6 +436,24 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
     return md.run();
 }
 
+void remesh( MR::Mesh& mesh, const RemeshSettings & settings )
+{
+    MR_TIMER;
+    MR_MESH_WRITER( mesh );
+
+    SubdivideSettings subs;
+    subs.maxEdgeLen = 2 * settings.targetEdgeLen;
+    subs.maxEdgeSplits = 10'000'000;
+    subs.maxDeviationAfterFlip = settings.maxDeviation;
+    subs.region = settings.region;
+    subdivideMesh( mesh, subs );
+
+    DecimateSettings decs;
+    decs.strategy = DecimateStrategy::ShortestEdgeFirst;
+    decs.maxError = settings.targetEdgeLen / 2;
+    decs.region = settings.region;
+    decimateMesh( mesh, decs );
+}
 
 // check if Decimator updates region
 TEST(MREAlgorithms, MeshDecimate)

@@ -110,4 +110,17 @@ MREALGORITHMS_API MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & 
  */
 MREALGORITHMS_API bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
 
+struct RemeshSettings
+{
+    // the algorithm will try to keep the length of all edges close to this value,
+    // splitting twice longer edges, and eliminating twice shorter edges
+    float targetEdgeLen = 0.001f;
+    // maximum allowed deviation during triangulation optimization
+    float maxDeviation = 1e-5f;
+    /// Region on mesh to be changed, it is updated during the operation
+    MR::FaceBitSet * region = nullptr;
+};
+// Splits too long and eliminates too short edges from the mesh
+MREALGORITHMS_API void remesh( MR::Mesh& mesh, const RemeshSettings & settings );
+
 } //namespace MR

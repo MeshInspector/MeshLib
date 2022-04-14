@@ -130,6 +130,8 @@ struct [[nodiscard]] Mesh
     // passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
     // if toWorld transformation is given then returns minimal bounding box in world space
     MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
+    // computes average length of an edge in this mesh
+    MRMESH_API float averageEdgeLength() const;
 
     // find center location of the mesh by different means
     MRMESH_API Vector3f findCenterFromPoints() const;

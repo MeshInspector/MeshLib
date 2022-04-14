@@ -3,6 +3,7 @@
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRTimer.h"
+#include "MREdgeIterator.h"
 #include "MRRingIterator.h"
 #include "MRMeshTriPoint.h"
 #include "MRBitSetParallelFor.h"
@@ -480,6 +481,19 @@ Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toW
     FaceBoundingBoxCalc calc( *this, *region, toWorld );
     parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
     return calc.box();
+}
+
+float Mesh::averageEdgeLength() const
+{
+    MR_TIMER
+    double sum = 0;
+    int n = 0;
+    for ( auto ue : undirectedEdges( topology ) )
+    {
+        sum += edgeLength( ue );
+        ++n;
+    }
+    return n > 0 ? float( sum / n ) : 0.0f;
 }
 
 void Mesh::transform( const AffineXf3f & xf )

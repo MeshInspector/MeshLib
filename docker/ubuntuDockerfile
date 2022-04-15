@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04 AS build
 
 # update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
@@ -14,22 +14,42 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
 
-#copy files
+# copy files
 COPY .git .git
 COPY thirdparty thirdparty
 COPY scripts scripts
 COPY requirements requirements
 
-ENV MR_STATE=DOCKER_BUILD
-
 # build and install thirdparty
+ENV MR_STATE=DOCKER_BUILD
 RUN sudo ./scripts/build_thirdparty.sh
-RUN sudo ./scripts/install_thirdparty.sh
+
+
+FROM ubuntu:20.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-RUN cp -r lib /usr/local/lib/meshlib-thirdparty-lib/
-RUN echo '/usr/local/lib' | tee -a  /etc/ld.so.conf
-RUN sudo ldconfig
+WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
-WORKDIR "/home/"
-RUN rm -rf MeshRUs
+COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
+COPY requirements requirements
+
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+
+ENV MR_STATE=DOCKER_BUILD
+
+# update and install req
+RUN export DEBIAN_FRONTEND=noninteractive; \
+    export DEBCONF_NONINTERACTIVE_SEEN=true; \
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends \
+        tzdata git sudo time python3-pip\
+ && ./scripts/install_apt_requirements.sh \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN sudo ./scripts/install_thirdparty.sh && \
+    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+    sudo ldconfig

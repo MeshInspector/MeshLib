@@ -136,7 +136,9 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
             if ( !fileSource )
                 return tl::make_unexpected( "Cannot open file " + utf8string( path ) + " for reading" );
 
-            const auto archiveFilePath = utf8string( std::filesystem::relative( path, base, ec ) );
+            auto archiveFilePath = utf8string( std::filesystem::relative( path, base, ec ) );
+            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
+            std::replace( archiveFilePath.begin(), archiveFilePath.end(), '\\', '/' );
             const auto index = zip_file_add( archive, archiveFilePath.c_str(), fileSource, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8 );
             if ( index < 0 )
             {
@@ -156,8 +158,13 @@ tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::file
         if ( !std::filesystem::is_directory( path, ec ) )
             return tl::make_unexpected( utf8string( path ) + " - is not file or directory." );
         if ( path != base )
-            if ( zip_dir_add( archive, utf8string( std::filesystem::relative( path, base, ec ) ).c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
-                return tl::make_unexpected( "Cannot add directory " + utf8string( path ) + " to archive" );
+        {
+            auto archiveDirPath = utf8string( std::filesystem::relative( path, base, ec ) );
+            // convert folder separators in Linux style for the latest 7-zip to open archive correctly
+            std::replace( archiveDirPath.begin(), archiveDirPath.end(), '\\', '/' );
+            if ( zip_dir_add( archive, archiveDirPath.c_str(), ZIP_FL_ENC_UTF_8 ) == -1 )
+                return tl::make_unexpected( "Cannot add directory " + archiveDirPath + " to archive" );
+        }
         for ( const auto& entry : std::filesystem::directory_iterator( path, ec ) )
         {
             auto res = compressOneItem( archive, entry.path(), base, excludeFiles, password );

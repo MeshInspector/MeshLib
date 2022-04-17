@@ -99,6 +99,9 @@ public:
     // constructs another bit set from this where every set bit index is transformed using given map
     TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map ) const;
     TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const;
+    // this is a faster version if the result size is known beforehand
+    TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
+    TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
 };
 
 template <typename T>
@@ -191,6 +194,26 @@ TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType>
     for ( auto b : *this )
         if ( auto mapped = getAt( map, b ) )
             res.autoResizeSet( mapped );
+    return res;
+}
+
+template <typename T>
+TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const
+{
+    TaggedBitSet<T> res( resSize );
+    for ( auto b : *this )
+        if ( auto mapped = map[b] )
+            res.set( mapped );
+    return res;
+}
+
+template <typename T>
+TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const
+{
+    TaggedBitSet<T> res( resSize );
+    for ( auto b : *this )
+        if ( auto mapped = getAt( map, b ) )
+            res.set( mapped );
     return res;
 }
 

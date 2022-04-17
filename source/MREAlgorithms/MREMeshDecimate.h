@@ -59,6 +59,8 @@ struct DecimateSettings
      * on output: quadratic form for each remaining vertex is returned there
      */
     MR::Vector<MR::QuadraticForm3f, MR::VertId> * vertForms = nullptr;
+    ///  whether to pack mesh at the end
+    bool packMesh = false;
 };
 
 /**
@@ -119,6 +121,8 @@ struct RemeshSettings
     float maxDeviation = 1e-5f;
     /// Region on mesh to be changed, it is updated during the operation
     MR::FaceBitSet * region = nullptr;
+    ///  whether to pack mesh at the end
+    bool packMesh = false;
 };
 // Splits too long and eliminates too short edges from the mesh
 MREALGORITHMS_API void remesh( MR::Mesh& mesh, const RemeshSettings & settings );

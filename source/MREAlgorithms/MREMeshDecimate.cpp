@@ -423,6 +423,27 @@ DecimateResult MeshDecimator::run()
         }
     }
 
+    if ( settings_.packMesh )
+    {
+        FaceMap fmap;
+        VertMap vmap;
+        mesh_.pack( 
+            settings_.region ? &fmap : nullptr,
+            settings_.vertForms ? &vmap : nullptr );
+
+        if ( settings_.region )
+            *settings_.region = settings_.region->getMapping( fmap, mesh_.topology.faceSize() );
+
+        if ( settings_.vertForms )
+        {
+            for ( VertId oldV{ 0 }; oldV < vmap.size(); ++oldV )
+                if ( auto newV = vmap[oldV] )
+                    if ( newV < oldV )
+                        vertForms_[newV] = vertForms_[oldV];
+            vertForms_.resize( mesh_.topology.vertSize() );
+        }
+    }
+
     if ( settings_.vertForms )
         *settings_.vertForms = std::move( vertForms_ );
     return res_;
@@ -452,6 +473,7 @@ void remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.strategy = DecimateStrategy::ShortestEdgeFirst;
     decs.maxError = settings.targetEdgeLen / 2;
     decs.region = settings.region;
+    decs.packMesh = settings.packMesh;
     decimateMesh( mesh, decs );
 }
 

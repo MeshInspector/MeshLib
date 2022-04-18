@@ -83,6 +83,15 @@ const T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
     return *obj_;
 }
 
+template<typename T>
+size_t UniqueThreadSafeOwner<T>::heapBytes() const
+{
+    std::unique_lock lock( mutex_ );
+    if ( !obj_ )
+        return 0;
+    return sizeof( T ) + obj_->heapBytes();
+}
+
 template class UniqueThreadSafeOwner<AABBTree>;
 template class UniqueThreadSafeOwner<AABBTreePolyline2>;
 template class UniqueThreadSafeOwner<AABBTreePolyline3>;

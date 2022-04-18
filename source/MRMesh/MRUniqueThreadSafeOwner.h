@@ -25,6 +25,8 @@ public:
     MRMESH_API void reset();
     // returns existing owned object or creates new one using creator function
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 protected:
     mutable std::mutex mutex_;

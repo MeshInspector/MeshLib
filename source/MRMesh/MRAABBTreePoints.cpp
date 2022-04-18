@@ -160,6 +160,13 @@ AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
     orderedPoints_ = std::move( orderedPoints );
 }
 
+size_t AABBTreePoints::heapBytes() const
+{
+    return 
+        nodes_.capacity() * sizeof( nodes_.front() ) +
+        orderedPoints_.capacity() * sizeof( orderedPoints_.front() );
+}
+
 TEST( MRMesh, AABBTreePoints )
 {
     PointCloud spherePC = meshToPointCloud( makeUVSphere( 1, 8, 8 ) );

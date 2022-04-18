@@ -28,6 +28,8 @@ public:
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     // returns true if given edge is within valid range and not-lone
     [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
     // given two half edges do either of two:
     // 1) if a and b were from distinct rings, puts them in one ring;

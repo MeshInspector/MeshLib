@@ -27,18 +27,18 @@ public:
         void setLeafPointRange( int first, int last ) { leftOrFirst = NodeId( -( first + 1 ) ); rightOrLast = NodeId( -( last + 1 ) ); }
     };
     using NodeVec = Vector<Node, NodeId>;
-    const NodeVec& nodes() const { return nodes_; }
-    const Node& operator[]( NodeId nid ) const { return nodes_[nid]; }
-    static NodeId rootNodeId() { return NodeId{0}; }
+    [[nodiscard]] const NodeVec& nodes() const { return nodes_; }
+    [[nodiscard]] const Node& operator[]( NodeId nid ) const { return nodes_[nid]; }
+    [[nodiscard]] static NodeId rootNodeId() { return NodeId{0}; }
     // returns the root node bounding box
-    Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_[rootNodeId()].box; }
+    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_[rootNodeId()].box; }
 
     struct Point
     {
         Vector3f coord;
         VertId id;
     };
-    const std::vector<Point>& orderedPoints() const { return orderedPoints_; }
+    [[nodiscard]] const std::vector<Point>& orderedPoints() const { return orderedPoints_; }
 
     // creates tree for given point cloud
     MRMESH_API AABBTreePoints( const PointCloud& pointCloud );
@@ -48,6 +48,9 @@ public:
 
     AABBTreePoints( AABBTreePoints && ) noexcept = default;
     AABBTreePoints & operator =( AABBTreePoints && ) noexcept = default;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 private:
     std::vector<Point> orderedPoints_;

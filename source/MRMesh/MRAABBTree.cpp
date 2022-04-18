@@ -135,6 +135,11 @@ auto AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const -> NodeBitSet
     return res;
 }
 
+size_t AABBTree::heapBytes() const
+{
+    return nodes_.capacity() * sizeof( nodes_.front() );
+}
+
 TEST(MRMesh, AABBTree) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );

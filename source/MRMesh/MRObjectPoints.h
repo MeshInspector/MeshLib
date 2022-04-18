@@ -70,7 +70,7 @@ public:
     // if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox() const override;
     // returns cached information about the number of selected faces in the mesh
-    MRMESH_API size_t numSelectedFaces() const;
+    MRMESH_API size_t numSelectedVertices() const;
 
 protected:
     VertBitSet selectedVertices_;

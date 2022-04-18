@@ -71,7 +71,7 @@ Box3f ObjectPoints::getWorldBox() const
     return box;
 }
 
-size_t ObjectPoints::numSelectedFaces() const
+size_t ObjectPoints::numSelectedVertices() const
 {
     if ( !numSelectedVertices_ )
         numSelectedVertices_ = selectedVertices_.count();
@@ -87,6 +87,7 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     if ( points_ )
     {
         std::stringstream ss;
+        bool showNormalsNum = false;
         if ( points_->normals.empty() )
             res.push_back( "points: " + std::to_string( points_->points.size() ) );
         else if ( points_->points.size() == points_->normals.size() )
@@ -94,8 +95,15 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
         else
         {
             res.push_back( "points: " + std::to_string( points_->points.size() ) );
-            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+            showNormalsNum = true;
         }
+
+        if ( auto nSelectedVertices = numSelectedVertices() )
+            res.back() += " / " + std::to_string( nSelectedVertices ) + " selected";
+
+        if ( showNormalsNum )
+            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+
         boundingBoxToInfoLines_( res );
     }
     else
@@ -157,9 +165,9 @@ AllVisualizeProperties ObjectPoints::getAllVisualizeProperties() const
 
 const ViewportMask& ObjectPoints::getVisualizePropertyMask( unsigned type ) const
 {
-    switch ( MeshVisualizePropertyType::Type( type ) )
+    switch ( PointsVisualizePropertyType::Type( type ) )
     {
-    case MR::PointsVisualizePropertyType::SelectedVertices:
+    case PointsVisualizePropertyType::SelectedVertices:
         return showSelectedVertices_;
     default:
         return VisualObject::getVisualizePropertyMask( type );

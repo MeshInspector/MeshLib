@@ -14,6 +14,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
+#include "MRSerializer.h"
 
 namespace MR
 {
@@ -70,6 +71,14 @@ Box3f ObjectPoints::getWorldBox() const
     return box;
 }
 
+size_t ObjectPoints::numSelectedVertices() const
+{
+    if ( !numSelectedVertices_ )
+        numSelectedVertices_ = selectedVertices_.count();
+
+    return *numSelectedVertices_;
+}
+
 std::vector<std::string> ObjectPoints::getInfoLines() const
 {
     std::vector<std::string> res;
@@ -78,6 +87,7 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
     if ( points_ )
     {
         std::stringstream ss;
+        bool showNormalsNum = false;
         if ( points_->normals.empty() )
             res.push_back( "points: " + std::to_string( points_->points.size() ) );
         else if ( points_->points.size() == points_->normals.size() )
@@ -85,8 +95,15 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
         else
         {
             res.push_back( "points: " + std::to_string( points_->points.size() ) );
-            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+            showNormalsNum = true;
         }
+
+        if ( auto nSelectedVertices = numSelectedVertices() )
+            res.back() += " / " + std::to_string( nSelectedVertices ) + " selected";
+
+        if ( showNormalsNum )
+            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+
         boundingBoxToInfoLines_( res );
     }
     else
@@ -120,6 +137,40 @@ void ObjectPoints::setDirtyFlags( uint32_t mask )
         worldBox_.reset();
         if ( points_ )
             points_->invalidateCaches();
+    }
+}
+
+void ObjectPoints::selectVertices( VertBitSet newSelection )
+{
+    selectedVertices_ = std::move( newSelection );
+    numSelectedVertices_.reset();
+    dirty_ |= DIRTY_SELECTION;
+}
+
+void ObjectPoints::setSelectedVerticesColor( const Color& color )
+{
+    if ( color == selectedVerticesColor_ )
+        return;
+    selectedVerticesColor_ = color;
+}
+
+AllVisualizeProperties ObjectPoints::getAllVisualizeProperties() const
+{
+    AllVisualizeProperties res;
+    res.resize( PointsVisualizePropertyType::PointsVisualizePropsCount );
+    for ( int i = 0; i < res.size(); ++i )
+        res[i] = getVisualizePropertyMask( unsigned( i ) );
+    return res;
+}
+
+const ViewportMask& ObjectPoints::getVisualizePropertyMask( unsigned type ) const
+{
+    switch ( PointsVisualizePropertyType::Type( type ) )
+    {
+    case PointsVisualizePropertyType::SelectedVertices:
+        return showSelectedVertices_;
+    default:
+        return VisualObject::getVisualizePropertyMask( type );
     }
 }
 
@@ -199,6 +250,17 @@ void ObjectPoints::serializeFields_( Json::Value& root ) const
     VisualObject::serializeFields_( root );
 
     root["Type"].append( ObjectPoints::TypeName() );
+    serializeToJson( Vector4f( selectedVerticesColor_ ), root["Colors"]["Selection"]["Points"] );
+    serializeToJson( selectedVertices_, root["SelectionVertBitSet"] );
+}
+
+void ObjectPoints::deserializeFields_( const Json::Value& root )
+{
+    Vector4f resVec;
+    deserializeFromJson( root["Colors"]["Selection"]["Points"], resVec );
+    selectedVerticesColor_ = Color( resVec );
+
+    deserializeFromJson( root["SelectionVertBitSet"], selectedVertices_ );
 }
 
 void ObjectPoints::setupRenderObject_() const

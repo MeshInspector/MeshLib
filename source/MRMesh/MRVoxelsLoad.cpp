@@ -210,6 +210,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     {
         data.dims.x = dims[0];
         data.dims.y = dims[1];
+        data.dims.z = 1;
     }
     if ( dimsNum == 3 )
     {

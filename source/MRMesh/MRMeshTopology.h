@@ -13,21 +13,21 @@ class MeshTopology
 {
 public:
     // creates an edge not associated with any vertex or face
-    MRMESH_API EdgeId makeEdge();
+    [[nodiscard]] MRMESH_API EdgeId makeEdge();
     // checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
-    MRMESH_API bool isLoneEdge( EdgeId a ) const;
+    [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
     // returns last not lone edge id, or invalid id if no such edge exists
-    MRMESH_API EdgeId lastNotLoneEdge() const;
+    [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
     // returns the number of half-edge records including lone ones
-    size_t edgeSize() const { return edges_.size(); }
+    [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
     // returns the number of undirected edges (pairs of half-edges) including lone ones
-    size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    [[nodiscard]] size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
     // computes the number of not-lone (valid) undirected edges
-    MRMESH_API size_t computeNotLoneUndirectedEdges() const;
+    [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
     // sets the capacity of half-edges vector
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     // returns true if given edge is within valid range and not-lone
-    bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
+    [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
 
     // given two half edges do either of two:
     // 1) if a and b were from distinct rings, puts them in one ring;
@@ -36,17 +36,17 @@ public:
     MRMESH_API void splice( EdgeId a, EdgeId b );
     
     // next (counter clock wise) half-edge in the origin ring
-    EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
+    [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
     // previous (clock wise) half-edge in the origin ring
-    EdgeId prev( EdgeId he ) const { assert(he.valid()); return edges_[he].prev; }
+    [[nodiscard]] EdgeId prev( EdgeId he ) const { assert(he.valid()); return edges_[he].prev; }
     // returns origin vertex of half-edge
-    VertId org( EdgeId he ) const { assert(he.valid()); return edges_[he].org; }
+    [[nodiscard]] VertId org( EdgeId he ) const { assert(he.valid()); return edges_[he].org; }
     // returns destination vertex of half-edge
-    VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
+    [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
     // returns left face of half-edge
-    FaceId left( EdgeId he ) const { assert(he.valid()); return edges_[he].left; }
+    [[nodiscard]] FaceId left( EdgeId he ) const { assert(he.valid()); return edges_[he].left; }
     // returns right face of half-edge
-    FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
+    [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
 
     // sets new origin to the full origin ring including this edge;
     // edgePerVertex_ table is updated accordingly
@@ -56,16 +56,16 @@ public:
     MRMESH_API void setLeft( EdgeId a, FaceId f );
 
     // returns true if a and b are both from the same origin ring
-    MRMESH_API bool fromSameOriginRing( EdgeId a, EdgeId b ) const;
+    [[nodiscard]] MRMESH_API bool fromSameOriginRing( EdgeId a, EdgeId b ) const;
     // returns true if a and b are both from the same left face ring
-    MRMESH_API bool fromSameLeftRing( EdgeId a, EdgeId b ) const;
+    [[nodiscard]] MRMESH_API bool fromSameLeftRing( EdgeId a, EdgeId b ) const;
 
     // returns the number of edges around the left face: 3 for triangular faces, ...
-    MRMESH_API int getLeftDegree( EdgeId a ) const;
+    [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
     // returns the number of edges around the given face: 3 for triangular faces, ...
-    int getFaceDegree( FaceId f ) const { return getLeftDegree( edgeWithLeft( f ) ); }
+    [[nodiscard]] int getFaceDegree( FaceId f ) const { return getLeftDegree( edgeWithLeft( f ) ); }
     // returns true if the cell to the left of a is triangular
-    MRMESH_API bool isLeftTri( EdgeId a ) const;
+    [[nodiscard]] MRMESH_API bool isLeftTri( EdgeId a ) const;
     // gets 3 vertices of given triangular face;
     // the vertices are returned in counter-clockwise order if look from mesh outside
     void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
@@ -75,107 +75,107 @@ public:
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
     // returns true if the cell to the left of a is quadrangular
-    MRMESH_API bool isLeftQuad( EdgeId a ) const;
+    [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;
 
     // for all valid vertices this vector contains an edge with the origin there
-    const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
+    [[nodiscard]] const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
     // returns valid edge if given vertex is present in the mesh
-    EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
+    [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
     // returns true if given vertex is present in the mesh
-    bool hasVert( VertId a ) const { return validVerts_.test( a ); }
+    [[nodiscard]] bool hasVert( VertId a ) const { return validVerts_.test( a ); }
     // returns the number of valid vertices
-    int numValidVerts() const { return numValidVerts_; }
+    [[nodiscard]] int numValidVerts() const { return numValidVerts_; }
     // returns last valid vertex id, or invalid id if no single valid vertex exists
-    MRMESH_API VertId lastValidVert() const;
+    [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     // creates new vert-id not associated with any edge yet
-    VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
+    [[nodiscard]] VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
     // explicitly increases the size of verts vector
     void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); validVerts_.resize( newSize ); } }
     // sets the capacity of verts vector
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     // returns the number of vertex records including invalid ones
-    size_t vertSize() const { return edgePerVertex_.size(); }
+    [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
      // returns cached set of all valid vertices
-    const VertBitSet & getValidVerts() const { return validVerts_; }
+    [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
     // if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
-    const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
 
     // for all valid faces this vector contains an edge with that face at left
-    const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
+    [[nodiscard]] const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
     // returns valid edge if given vertex is present in the mesh
-    EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) && edgePerFace_[a].valid() ? edgePerFace_[a] : EdgeId(); }
+    [[nodiscard]] EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) && edgePerFace_[a].valid() ? edgePerFace_[a] : EdgeId(); }
     // returns true if given face is present in the mesh
-    bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
+    [[nodiscard]] bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
     // if two valid faces share the same edge then it is found and returned
-    MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
+    [[nodiscard]] MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
     // if two valid faces share the same vertex then it is found and returned as Edge with this vertex in origin
-    MRMESH_API EdgeId sharedVertInOrg( FaceId l, FaceId r ) const;
+    [[nodiscard]] MRMESH_API EdgeId sharedVertInOrg( FaceId l, FaceId r ) const;
     // returns the number of valid faces
-    int numValidFaces() const{ return numValidFaces_; }
+    [[nodiscard]] int numValidFaces() const{ return numValidFaces_; }
     // returns last valid face id, or invalid id if no single valid face exists
-    MRMESH_API FaceId lastValidFace() const;
+    [[nodiscard]] MRMESH_API FaceId lastValidFace() const;
     // creates new face-id not associated with any edge yet
-    FaceId addFaceId() { edgePerFace_.push_back( {} ); validFaces_.push_back( false ); return FaceId( (int)edgePerFace_.size() - 1 ); }
+    [[nodiscard]] FaceId addFaceId() { edgePerFace_.push_back( {} ); validFaces_.push_back( false ); return FaceId( (int)edgePerFace_.size() - 1 ); }
     // explicitly increases the size of faces vector
     void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); validFaces_.resize( newSize ); } }
     // sets the capacity of faces vector
     void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); validFaces_.reserve( newCapacity ); }
     // returns the number of face records including invalid ones
-    size_t faceSize() const { return edgePerFace_.size(); }
+    [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
     // returns cached set of all valid faces
-    const FaceBitSet & getValidFaces() const { return validFaces_; }
+    [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
     // if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
-    const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
+    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
 
     // return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
-    bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }
+    [[nodiscard]] bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }
     // return true if given edge is inner for given region (or for whole mesh if region is nullptr)
-    bool isInnerEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) && isLeftInRegion( e.sym(), region ); }
+    [[nodiscard]] bool isInnerEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) && isLeftInRegion( e.sym(), region ); }
     // return true if given edge is boundary for given region (or for whole mesh if region is nullptr)
-    bool isBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region ); }
+    [[nodiscard]] bool isBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) != isLeftInRegion( e.sym(), region ); }
     // returns the first boundary edge (for given region or for whole mesh if region is nullptr) in counter-clockwise order starting from given edge with the same origin;
     // returns invalid edge if no boundary edge is found
-    MRMESH_API EdgeId bdEdgeSameOrigin( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API EdgeId bdEdgeSameOrigin( EdgeId e, const FaceBitSet * region = nullptr ) const;
     // returns true if edge's origin is on (region) boundary
-    bool isBdVertexInOrg( EdgeId e, const FaceBitSet * region = nullptr ) const { return bdEdgeSameOrigin( e, region ).valid(); }
+    [[nodiscard]] bool isBdVertexInOrg( EdgeId e, const FaceBitSet * region = nullptr ) const { return bdEdgeSameOrigin( e, region ).valid(); }
     // returns a boundary edge with given vertex in origin considering boundary of given region (or for whole mesh if region is nullptr);
     // returns invalid edge if no boundary edge is found
-    EdgeId bdEdgeWithOrigin( VertId v, const FaceBitSet * region = nullptr ) const { return bdEdgeSameOrigin( edgeWithOrg( v ), region ); }
+    [[nodiscard]] EdgeId bdEdgeWithOrigin( VertId v, const FaceBitSet * region = nullptr ) const { return bdEdgeSameOrigin( edgeWithOrg( v ), region ); }
     // returns true if given vertex is on (region) boundary
-    bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
+    [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
     // returns true if left face of given edge belongs to given region (if provided) and right face either does not exist or does not belong
-    bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
+    [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
     // return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr)
-    bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ) ) : true; }
+    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ) ) : true; }
 
     // finds and returns edge from o to d in the mesh; returns invalid edge otherwise
-    MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
+    [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
     // returns true if the mesh does not have any holes
-    MRMESH_API bool isClosed() const;
+    [[nodiscard]] MRMESH_API bool isClosed() const;
     // returns true if the mesh region does not have any neighboring holes
-    MRMESH_API bool isClosed( const FaceBitSet * region ) const;
+    [[nodiscard]] MRMESH_API bool isClosed( const FaceBitSet * region ) const;
     // returns closed loop of boundary edges starting from given boundary edge, 
     // which has region face to the right and does not have valid or in-region left face;
     // unlike MR::trackRegionBoundaryLoop this method returns loops in opposite orientation
-    MRMESH_API EdgeLoop trackBoundaryLoop( EdgeId e0, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API EdgeLoop trackBoundaryLoop( EdgeId e0, const FaceBitSet * region = nullptr ) const;
     // returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;
     // unlike MR::findRegionBoundary this method returns loops in opposite orientation
-    MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     // returns one edge with no valid left face for every boundary in the mesh
-    MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
     // returns all boundary edges, where each edge does not have valid left face
-    MRMESH_API EdgeBitSet findBoundaryEdges() const;
+    [[nodiscard]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
     // returns all boundary faces, having at least one boundary edge
-    MRMESH_API FaceBitSet findBoundaryFaces() const;
+    [[nodiscard]] MRMESH_API FaceBitSet findBoundaryFaces() const;
     // returns all boundary vertices, incident to at least one boundary edge
-    MRMESH_API VertBitSet findBoundaryVerts() const;
+    [[nodiscard]] MRMESH_API VertBitSet findBoundaryVerts() const;
 
     // returns all vertices incident to path edges
-    MRMESH_API VertBitSet getPathVertices( const EdgePath & path ) const;
+    [[nodiscard]] MRMESH_API VertBitSet getPathVertices( const EdgePath & path ) const;
     // returns all valid left faces of path edges
-    MRMESH_API FaceBitSet getPathLeftFaces( const EdgePath & path ) const;
+    [[nodiscard]] MRMESH_API FaceBitSet getPathLeftFaces( const EdgePath & path ) const;
     // returns all valid right faces of path edges
-    MRMESH_API FaceBitSet getPathRightFaces( const EdgePath & path ) const;
+    [[nodiscard]] MRMESH_API FaceBitSet getPathRightFaces( const EdgePath & path ) const;
 
     // given the edge with left and right triangular faces, which form together a quadrangle,
     // rotates the edge counter-clockwise inside the quadrangle
@@ -232,8 +232,8 @@ public:
     MRMESH_API bool read( std::istream & s );
 
     // comparison via edges (all other members are considered as not important caches)
-    bool operator ==( const MeshTopology & b ) const { return edges_ == b.edges_; }
-    bool operator !=( const MeshTopology & b ) const { return edges_ != b.edges_; }
+    [[nodiscard]] bool operator ==( const MeshTopology & b ) const { return edges_ == b.edges_; }
+    [[nodiscard]] bool operator !=( const MeshTopology & b ) const { return edges_ != b.edges_; }
 
     // These function are for parallel mesh creation from different threads. If you are not sure, do not use them.
     //

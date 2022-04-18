@@ -21,27 +21,27 @@ public:
 
     // converts this topology into contours of given type using the functor returning point by its Id
     template<typename T, typename F>
-    std::vector<std::vector<T>> convertToContours( F && getPoint ) const;
+    [[nodiscard]] std::vector<std::vector<T>> convertToContours( F && getPoint ) const;
 
     // creates an edge not associated with any vertex
-    MRMESH_API EdgeId makeEdge();
+    [[nodiscard]] MRMESH_API EdgeId makeEdge();
     // makes an edge from vertex a to b (both must be within reserved capacity for vertices);
     // if either of the vertices already has 2 incident edges, then makeEdge(a,b) fails and returns invalid edge
     MRMESH_API EdgeId makeEdge( VertId a, VertId b );
     // checks whether the edge is disconnected from all other edges and disassociated from all vertices (as if after makeEdge)
-    MRMESH_API bool isLoneEdge( EdgeId a ) const;
+    [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
     // returns last not lone edge id, or invalid id if no such edge exists
-    MRMESH_API EdgeId lastNotLoneEdge() const;
+    [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
     // returns the number of half-edge records including lone ones
-    size_t edgeSize() const { return edges_.size(); }
+    [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
     // returns the number of undirected edges (pairs of half-edges) including lone ones
-    size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    [[nodiscard]] size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
     // computes the number of not-lone (valid) undirected edges
-    MRMESH_API size_t computeNotLoneUndirectedEdges() const;
+    [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
     // sets the capacity of half-edges vector
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     // returns true if given edge is within valid range and not-lone
-    bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
+    [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
     // given edge becomes lone after the call, so it is un-spliced from connected edges, and if it was not connected at origin or destination, then that vertex is deleted as well
     MRMESH_API void deleteEdge( UndirectedEdgeId ue );
     // calls deleteEdge for every set bit
@@ -54,46 +54,46 @@ public:
     MRMESH_API void splice( EdgeId a, EdgeId b );
     
     // next (counter clock wise) half-edge in the origin ring
-    EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
+    [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
     // returns origin vertex of half-edge
-    VertId org( EdgeId he ) const { assert(he.valid()); return edges_[he].org; }
+    [[nodiscard]] VertId org( EdgeId he ) const { assert(he.valid()); return edges_[he].org; }
     // returns destination vertex of half-edge
-    VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
+    [[nodiscard]] VertId dest( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].org; }
 
     // sets new origin to the full origin ring including this edge;
     // edgePerVertex_ table is updated accordingly
     MRMESH_API void setOrg( EdgeId a, VertId v );
 
     // for all valid vertices this vector contains an edge with the origin there
-    const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
+    [[nodiscard]] const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
     // returns valid edge if given vertex is present in the mesh
-    EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
+    [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
     // returns true if given vertex is present in the mesh
-    bool hasVert( VertId a ) const { return validVerts_.test( a ); }
+    [[nodiscard]] bool hasVert( VertId a ) const { return validVerts_.test( a ); }
     // returns 0 if given vertex does not exist, 1 if it has one incident edge, and 2 if it has two incident edges
-    MRMESH_API int getVertDegree( VertId a ) const;
+    [[nodiscard]] MRMESH_API int getVertDegree( VertId a ) const;
     // returns the number of valid vertices
-    int numValidVerts() const { return numValidVerts_; }
+    [[nodiscard]] int numValidVerts() const { return numValidVerts_; }
     // returns last valid vertex id, or invalid id if no single valid vertex exists
-    MRMESH_API VertId lastValidVert() const;
+    [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     // creates new vert-id not associated with any edge yet
-    VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
+    [[nodiscard]] VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
     // explicitly increases the size of verts vector
     void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); validVerts_.resize( newSize ); } }
     // sets the capacity of verts vector
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     // returns the number of vertex records including invalid ones
-    size_t vertSize() const { return edgePerVertex_.size(); }
+    [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
      // returns cached set of all valid vertices
-    const VertBitSet & getValidVerts() const { return validVerts_; }
+    [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
     // if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
-    const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
 
     // finds and returns edge from o to d in the mesh; returns invalid edge otherwise
-    MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
+    [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
 
     // returns all vertices incident to path edges
-    MRMESH_API VertBitSet getPathVertices( const EdgePath & path ) const;
+    [[nodiscard]] MRMESH_API VertBitSet getPathVertices( const EdgePath & path ) const;
 
     // split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned)
     MRMESH_API VertId splitEdge( EdgeId e );
@@ -108,11 +108,11 @@ public:
     MRMESH_API bool read( std::istream & s );
 
     // comparison via edges (all other members are considered as not important caches)
-    bool operator ==( const PolylineTopology & b ) const { return edges_ == b.edges_; }
-    bool operator !=( const PolylineTopology & b ) const { return edges_ != b.edges_; }
+    [[nodiscard]] bool operator ==( const PolylineTopology & b ) const { return edges_ == b.edges_; }
+    [[nodiscard]] bool operator !=( const PolylineTopology & b ) const { return edges_ != b.edges_; }
 
     // returns true if for each edge e: e == e.next() || e.odd() == next( e ).sym().odd()
-    MRMESH_API bool isConsistentlyOriented() const;
+    [[nodiscard]] MRMESH_API bool isConsistentlyOriented() const;
     // changes the orientation of all edges: every edge e is replaced with e.sym()
     MRMESH_API void flip();
     // verifies that all internal data structures are valid
@@ -120,7 +120,8 @@ public:
     // computes numValidVerts_ and validVerts_ from edgePerVertex_
     MRMESH_API void computeValidsFromEdges();
     // returns true if the polyline does not have any holes
-    MRMESH_API bool isClosed() const;
+    [[nodiscard]] MRMESH_API bool isClosed() const;
+
 private:
     // sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );

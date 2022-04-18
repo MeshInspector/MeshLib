@@ -69,7 +69,7 @@ public:
     // returns cached bounding box of this point object in world coordinates;
     // if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox() const override;
-    // returns cached information about the number of selected faces in the mesh
+    // returns cached information about the number of selected vertices in the mesh
     MRMESH_API size_t numSelectedVertices() const;
 
 protected:

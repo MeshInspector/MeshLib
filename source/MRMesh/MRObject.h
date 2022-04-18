@@ -168,7 +168,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const;
 
     // return several info lines that can better describe object in the UI
-    virtual std::vector<std::string> getInfoLines() const { return { "type : Object" }; }
+    virtual std::vector<std::string> getInfoLines() const { return {}; }
 
     // creates futures that save this object subtree:
     //   models in the folder by given path and

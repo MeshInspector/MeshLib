@@ -183,7 +183,7 @@ const AABBTreePolyline<V>& Polyline<V>::getAABBTree() const
     return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline<V>( *this ); } );
 }
 
-TEST( Polyline2, Contour )
+TEST( MRMesh, Polyline2 )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );
@@ -216,7 +216,7 @@ TEST( Polyline2, Contour )
     }
 }
 
-TEST( Polyline3, Contour )
+TEST( MRMesh, Polyline3 )
 {
     Contour2f cont;
     cont.push_back( Vector2f( 0.f, 0.f ) );

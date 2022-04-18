@@ -315,7 +315,7 @@ DecimatePolylineResult decimateContour( Contour2f& contour, const DecimatePolyli
     return res;
 }
 
-TEST( MREContours, DecimatePolyline )
+TEST( MRMesh, DecimatePolyline )
 {
     std::vector< Contour2f> testContours;
     // rhombus

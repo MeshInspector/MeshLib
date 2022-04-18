@@ -14,7 +14,7 @@
 namespace MR
 {
 
-TEST(MeshRUs, QuadraticForm)
+TEST(MRMesh, QuadraticForm)
 {
     QuadraticForm3f q0, q1;
     q0.addDistToOrigin( 1 );

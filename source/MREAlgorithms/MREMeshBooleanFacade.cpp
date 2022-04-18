@@ -42,7 +42,7 @@ TransformedMesh & operator *= ( TransformedMesh & a, const TransformedMesh& b )
     return a;
 }
 
-TEST( MREAlgorithms, MeshBooleanFacade )
+TEST( MRMesh, MeshBooleanFacade )
 {
     Mesh gingivaCopy;
     Mesh combinedTooth;

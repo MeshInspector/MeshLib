@@ -222,7 +222,7 @@ void loadMREAlgorithmsDll()
 {
 }
 
-TEST( MREAlgorithms, MeshBoolean )
+TEST( MRMesh, MeshBoolean )
 {
     Mesh meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
     Mesh meshB = makeTorus( 1.0f, 0.2f, 8, 8 );

@@ -810,7 +810,7 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )
 }
 
 // check non-manifold vertices resolving
-TEST( MeshBuilder, duplicateNonManifoldVertices )
+TEST( MRMesh, duplicateNonManifoldVertices )
 {
     std::vector<Triangle> tris;
     tris.emplace_back( 0_v, 1_v, 2_v, 0_f );

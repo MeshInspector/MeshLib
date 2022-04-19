@@ -96,6 +96,13 @@ Box3f ObjectLinesHolder::getWorldBox() const
     return box;
 }
 
+size_t ObjectLinesHolder::heapBytes() const
+{
+    return VisualObject::heapBytes()
+        + linesColorMap_.heapBytes()
+        + ( polyline_ ? sizeof( *polyline_ ) + polyline_->heapBytes() : 0 );
+}
+
 std::vector<std::string> ObjectLinesHolder::getInfoLines() const
 {
     std::vector<std::string> res;

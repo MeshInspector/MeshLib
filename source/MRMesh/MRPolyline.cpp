@@ -183,6 +183,14 @@ const AABBTreePolyline<V>& Polyline<V>::getAABBTree() const
     return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline<V>( *this ); } );
 }
 
+template<typename V>
+size_t Polyline<V>::heapBytes() const
+{
+    return topology.heapBytes()
+        + points.heapBytes()
+        + AABBTreeOwner_.heapBytes();
+}
+
 TEST( MRMesh, Polyline2 )
 {
     Contour2f cont;

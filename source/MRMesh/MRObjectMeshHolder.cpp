@@ -371,6 +371,18 @@ double ObjectMeshHolder::totalArea() const
     return *totalArea_;
 }
 
+size_t ObjectMeshHolder::heapBytes() const
+{
+    return VisualObject::heapBytes()
+        + selectedTriangles_.heapBytes()
+        + selectedEdges_.heapBytes()
+        + creases_.heapBytes()
+        + cornerNormalsCache_.heapBytes()
+        + facesNormalsCache_.heapBytes()
+        + facesColorMap_.heapBytes()
+        + ( mesh_ ? sizeof( *mesh_ ) + mesh_->heapBytes() : 0 );
+}
+
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 {
     // selected faces and edges can be changed only by the methods of this class, 

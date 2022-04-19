@@ -37,6 +37,9 @@ public:
 
     MRMESH_API const DistanceMapToWorld& getToWorldParameters() const;
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 protected:
 
     MRMESH_API ObjectDistanceMap( const ObjectDistanceMap& other );

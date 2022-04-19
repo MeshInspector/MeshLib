@@ -79,6 +79,13 @@ size_t ObjectPoints::numSelectedVertices() const
     return *numSelectedVertices_;
 }
 
+size_t ObjectPoints::heapBytes() const
+{
+    return VisualObject::heapBytes()
+        + selectedVertices_.heapBytes()
+        + ( points_ ? sizeof( *points_ ) + points_->heapBytes() : 0 );
+}
+
 std::vector<std::string> ObjectPoints::getInfoLines() const
 {
     std::vector<std::string> res;

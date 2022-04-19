@@ -119,6 +119,9 @@ public:
     // returns [-1.-1] if all values are invalid
     MRMESH_API std::pair<size_t, size_t> getMaxIndex() const;
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return data_.capacity() * sizeof( data_[0] ); }
+
 private:
     std::vector<float> data_;
 };

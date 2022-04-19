@@ -30,6 +30,9 @@ public:
     // Gets minimum and maximum of diapason inherited by bin
     MRMESH_API std::pair<float, float> getBinMinMax( size_t binId ) const;
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return bins_.capacity() * sizeof( bins_[0] ); }
+
 private:
     std::vector<size_t> bins_;
     float min_{0.0f};

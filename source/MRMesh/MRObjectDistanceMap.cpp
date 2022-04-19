@@ -121,6 +121,12 @@ const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
     return toWorldParams_;
 }
 
+size_t ObjectDistanceMap::heapBytes() const
+{
+    return ObjectMeshHolder::heapBytes()
+        + ( dmap_ ? sizeof( *dmap_ ) + dmap_->heapBytes() : 0 );
+}
+
 ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :
     ObjectMeshHolder( other ),
     dmap_( nullptr ),

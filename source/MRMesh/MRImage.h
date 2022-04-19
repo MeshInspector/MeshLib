@@ -11,6 +11,9 @@ struct Image
 {
     std::vector<Color> pixels;
     Vector2i resolution;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return pixels.capacity() * sizeof( pixels.front() ); }
 };
 
 }

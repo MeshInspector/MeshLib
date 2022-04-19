@@ -333,6 +333,16 @@ Box3f VisualObject::getWorldBox() const
     return transformed( getBoundingBox(), worldXf() );
 }
 
+size_t VisualObject::heapBytes() const
+{
+    return Object::heapBytes()
+        + vertsColorMap_.heapBytes()
+        + texture_.heapBytes()
+        + uvCoordinates_.heapBytes()
+        + labels_.capacity() * sizeof( labels_.front() )
+        + vertsNormalsCache_.heapBytes();
+}
+
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const
 {
     auto bbox = getBoundingBox();

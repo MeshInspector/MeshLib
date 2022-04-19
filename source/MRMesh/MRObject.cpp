@@ -55,6 +55,16 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
             child->parent_ = nullptr;
 }
 
+size_t ObjectChildrenHolder::heapBytes() const
+{
+    auto res = children_.capacity() * sizeof( children_.front() )
+        + bastards_.capacity() * sizeof( bastards_.front() );
+    for ( const auto & child : children_ )
+        if ( child )
+            res += heapBytes();
+    return res;
+}
+
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {
     for ( const auto & child : children_ )
@@ -527,6 +537,12 @@ Box3f Object::getWorldTreeBox( ViewportMask viewportMask ) const
         if ( c && !c->isAncillary() && c->isVisible( viewportMask ) )
             res.include( c->getWorldTreeBox() );
     return res;
+}
+
+size_t Object::heapBytes() const
+{
+    return ObjectChildrenHolder::heapBytes()
+        + name_.capacity();
 }
 
 TEST( MRMesh, DataModelRemoveChild )

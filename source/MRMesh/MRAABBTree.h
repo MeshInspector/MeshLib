@@ -39,7 +39,7 @@ public:
     AABBTree & operator =( AABBTree && ) noexcept = default;
 
     // returns the amount of memory this object occupies on heap
-    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
 
 private:
     NodeVec nodes_;

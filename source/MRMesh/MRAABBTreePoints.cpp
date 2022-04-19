@@ -163,7 +163,7 @@ AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
 size_t AABBTreePoints::heapBytes() const
 {
     return 
-        nodes_.capacity() * sizeof( nodes_.front() ) +
+        nodes_.heapBytes() +
         orderedPoints_.capacity() * sizeof( orderedPoints_.front() );
 }
 

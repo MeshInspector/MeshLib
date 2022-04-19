@@ -58,7 +58,7 @@ public:
     AABBTreePolyline & operator =( AABBTreePolyline && ) noexcept = default;
 
     // returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return nodes_.capacity() * sizeof( nodes_.front() ); }
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
 
 private:
     AABBTreePolyline() = default;

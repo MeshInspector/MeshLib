@@ -110,9 +110,9 @@ void PolylineTopology::deleteEdges( const UndirectedEdgeBitSet & es )
 size_t PolylineTopology::heapBytes() const
 {
     return
-        edges_.capacity() * sizeof( edges_[0_e] ) +
-        edgePerVertex_.capacity() * sizeof( edgePerVertex_[0_v] ) +
-        validVerts_.capacity() / 8;
+        edges_.heapBytes() +
+        edgePerVertex_.heapBytes() +
+        validVerts_.heapBytes();
 }
 
 void PolylineTopology::splice( EdgeId a, EdgeId b )

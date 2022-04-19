@@ -256,6 +256,8 @@ void ObjectPoints::serializeFields_( Json::Value& root ) const
 
 void ObjectPoints::deserializeFields_( const Json::Value& root )
 {
+    VisualObject::deserializeFields_( root );
+
     Vector4f resVec;
     deserializeFromJson( root["Colors"]["Selection"]["Points"], resVec );
     selectedVerticesColor_ = Color( resVec );

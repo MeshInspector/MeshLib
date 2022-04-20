@@ -40,6 +40,12 @@ public:
         childrenOrder_ = std::move( oldOrder );
     };
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return childrenOrder_.capacity() * sizeof( childrenOrder_[0] )
+            + name_.capacity();
+    }
+
 private:
     std::vector<std::shared_ptr<Object>> childrenOrder_;
     std::shared_ptr<Object> obj_;

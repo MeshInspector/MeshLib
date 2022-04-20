@@ -37,9 +37,16 @@ public:
             visObj->setDirtyFlags( DIRTY_ALL );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity()
+            + ( cloneObj_ ? sizeof( Object ) + cloneObj_->heapBytes() : 0 );
+    }
+
 private:
     std::weak_ptr<Object> obj_;
     std::shared_ptr<Object> cloneObj_;
     std::string name_;
 };
+
 }

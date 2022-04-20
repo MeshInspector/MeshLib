@@ -44,6 +44,12 @@ public:
             obj->setDirtyFlags( DIRTY_ALL );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() +
+            ( cloneMesh_ ? sizeof( Mesh ) + cloneMesh_->heapBytes() : 0 );
+    }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     std::shared_ptr<Mesh> cloneMesh_;
@@ -91,6 +97,11 @@ public:
             obj->setDirtyFlags( DIRTY_POSITION );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + clonePoints_.heapBytes();
+    }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     VertCoords clonePoints_;
@@ -136,6 +147,11 @@ public:
     {
         if ( obj )
             obj->setDirtyFlags( DIRTY_FACE );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + cloneTopology_.heapBytes();
     }
 
 private:

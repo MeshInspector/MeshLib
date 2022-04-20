@@ -32,6 +32,15 @@ void ChangeSceneAction::action( HistoryAction::Type actionType )
     }
 }
 
+size_t ChangeSceneAction::heapBytes() const
+{
+    if ( !obj_ )
+        return name_.capacity();
+    return name_.capacity()
+        + sizeof( Object ) // TODO: size of actual sub-Object
+        + obj_->heapBytes();
+}
+
 void ChangeSceneAction::updateParent_()
 {
     if ( parent_ )

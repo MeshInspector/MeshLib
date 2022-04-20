@@ -35,4 +35,14 @@ bool CombinedHistoryAction::filter( HistoryStackFilter filteringCondition )
     return filterHistoryActionsVector( actions_, filteringCondition ).first;
 }
 
+size_t CombinedHistoryAction::heapBytes() const
+{
+    auto res = name_.capacity() +
+        actions_.capacity() * sizeof( actions_[0] );
+    for ( const auto & a : actions_ )
+        if ( a )
+            res += a->heapBytes();
+    return res;
+}
+
 }

@@ -38,8 +38,7 @@ size_t CombinedHistoryAction::heapBytes() const
 {
     auto res = name_.capacity() + MR::heapBytes( actions_ );
     for ( const auto & a : actions_ )
-        if ( a )
-            res += a->heapBytes();
+        res += MR::heapBytes( a );
     return res;
 }
 

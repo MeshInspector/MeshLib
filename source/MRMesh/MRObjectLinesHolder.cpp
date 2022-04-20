@@ -3,6 +3,7 @@
 #include "MRSerializer.h"
 #include "MRTimer.h"
 #include "MRMeshTexture.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
@@ -100,7 +101,7 @@ size_t ObjectLinesHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
         + linesColorMap_.heapBytes()
-        + ( polyline_ ? sizeof( *polyline_ ) + polyline_->heapBytes() : 0 );
+        + MR::heapBytes( polyline_ );
 }
 
 std::vector<std::string> ObjectLinesHolder::getInfoLines() const

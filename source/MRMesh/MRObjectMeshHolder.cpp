@@ -15,6 +15,7 @@
 #include "MRViewportId.h"
 #include "MRGTest.h"
 #include "MRSceneSettings.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -380,7 +381,7 @@ size_t ObjectMeshHolder::heapBytes() const
         + cornerNormalsCache_.heapBytes()
         + facesNormalsCache_.heapBytes()
         + facesColorMap_.heapBytes()
-        + ( mesh_ ? sizeof( *mesh_ ) + mesh_->heapBytes() : 0 );
+        + MR::heapBytes( mesh_ );
 }
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )

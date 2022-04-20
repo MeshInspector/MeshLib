@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObjectMesh.h"
 #include "MRMesh.h"
+#include "MRHeapBytes.h"
 #include <memory>
 
 namespace MR
@@ -46,8 +47,7 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() +
-            ( cloneMesh_ ? sizeof( Mesh ) + cloneMesh_->heapBytes() : 0 );
+        return name_.capacity() + MR::heapBytes( cloneMesh_ );
     }
 
 private:

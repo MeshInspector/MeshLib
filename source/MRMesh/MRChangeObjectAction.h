@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObject.h"
 #include "MRVisualObject.h"
+#include "MRHeapBytes.h"
 #include <memory>
 
 namespace MR
@@ -39,8 +40,7 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity()
-            + ( cloneObj_ ? sizeof( Object ) + cloneObj_->heapBytes() : 0 );
+        return name_.capacity() + MR::heapBytes( cloneObj_ );
     }
 
 private:

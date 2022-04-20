@@ -1,4 +1,5 @@
 #include "MRChangeSceneAction.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -34,11 +35,7 @@ void ChangeSceneAction::action( HistoryAction::Type actionType )
 
 size_t ChangeSceneAction::heapBytes() const
 {
-    if ( !obj_ )
-        return name_.capacity();
-    return name_.capacity()
-        + sizeof( Object ) // TODO: size of actual sub-Object
-        + obj_->heapBytes();
+    return name_.capacity() + MR::heapBytes( obj_ );
 }
 
 void ChangeSceneAction::updateParent_()

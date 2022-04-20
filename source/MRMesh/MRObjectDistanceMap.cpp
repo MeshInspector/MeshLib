@@ -4,8 +4,9 @@
 #include "MRSerializer.h"
 #include "MRDistanceMapSave.h"
 #include "MRDistanceMapLoad.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
+#include "MRHeapBytes.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 
@@ -123,8 +124,7 @@ const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
 
 size_t ObjectDistanceMap::heapBytes() const
 {
-    return ObjectMeshHolder::heapBytes()
-        + ( dmap_ ? sizeof( *dmap_ ) + dmap_->heapBytes() : 0 );
+    return ObjectMeshHolder::heapBytes() + MR::heapBytes( dmap_ );
 }
 
 ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :

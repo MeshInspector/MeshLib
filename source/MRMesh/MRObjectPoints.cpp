@@ -11,6 +11,7 @@
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
@@ -83,7 +84,7 @@ size_t ObjectPoints::heapBytes() const
 {
     return VisualObject::heapBytes()
         + selectedVertices_.heapBytes()
-        + ( points_ ? sizeof( *points_ ) + points_->heapBytes() : 0 );
+        + MR::heapBytes( points_ );
 }
 
 std::vector<std::string> ObjectPoints::getInfoLines() const

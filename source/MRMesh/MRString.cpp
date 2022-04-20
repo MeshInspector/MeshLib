@@ -3,7 +3,7 @@
 namespace MR
 {
 
-size_t findSubstring( const std::string& string, const std::string& substring )
+size_t findSubstringCaseInsensitive( const std::string& string, const std::string& substring )
 {
     auto iter = std::search( string.begin(), string.end(),
         substring.begin(), substring.end(),

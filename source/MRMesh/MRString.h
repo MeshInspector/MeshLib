@@ -6,7 +6,8 @@
 namespace MR
 {
 
-// finding the substring in the string. Returns false if substring does not exist
-MRMESH_API bool findSubstring( const std::string& string, const std::string& substring );
+// Finds the substring in the string. 
+// Returns position, npos if not found
+MRMESH_API size_t findSubstring( const std::string& string, const std::string& substring );
 
 }

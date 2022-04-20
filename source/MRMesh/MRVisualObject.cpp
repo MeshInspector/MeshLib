@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
 #include "MRTimer.h"
+#include "MRHeapBytes.h"
 #include <filesystem>
 #include <tl/expected.hpp>
 #include "MRPch/MRJson.h"
@@ -339,7 +340,7 @@ size_t VisualObject::heapBytes() const
         + vertsColorMap_.heapBytes()
         + texture_.heapBytes()
         + uvCoordinates_.heapBytes()
-        + labels_.capacity() * sizeof( labels_.front() )
+        + MR::heapBytes( labels_ )
         + vertsNormalsCache_.heapBytes();
 }
 

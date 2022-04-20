@@ -1,10 +1,9 @@
 #include "MRCombinedHistoryAction.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {
-
-
 
 CombinedHistoryAction::CombinedHistoryAction( const std::string& name, const std::vector<std::shared_ptr<HistoryAction>>& actions ) :
     actions_{ actions },
@@ -37,8 +36,7 @@ bool CombinedHistoryAction::filter( HistoryStackFilter filteringCondition )
 
 size_t CombinedHistoryAction::heapBytes() const
 {
-    auto res = name_.capacity() +
-        actions_.capacity() * sizeof( actions_[0] );
+    auto res = name_.capacity() + MR::heapBytes( actions_ );
     for ( const auto & a : actions_ )
         if ( a )
             res += a->heapBytes();

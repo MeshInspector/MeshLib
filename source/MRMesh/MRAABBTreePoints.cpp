@@ -4,6 +4,7 @@
 #include "MRUVSphere.h"
 #include "MRMesh.h"
 #include "MRMeshToPointCloud.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include "MRGTest.h"
 #include <stack>
@@ -164,7 +165,7 @@ size_t AABBTreePoints::heapBytes() const
 {
     return 
         nodes_.heapBytes() +
-        orderedPoints_.capacity() * sizeof( orderedPoints_.front() );
+        MR::heapBytes( orderedPoints_ );
 }
 
 TEST( MRMesh, AABBTreePoints )

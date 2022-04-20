@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
+
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -31,7 +32,7 @@ public:
     MRMESH_API std::pair<float, float> getBinMinMax( size_t binId ) const;
 
     // returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return bins_.capacity() * sizeof( bins_[0] ); }
+    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( bins_ ); }
 
 private:
     std::vector<size_t> bins_;

@@ -51,6 +51,7 @@
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
+    <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRImage.h" />

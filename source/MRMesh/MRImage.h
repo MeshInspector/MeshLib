@@ -1,6 +1,8 @@
 #pragma once
+
 #include "MRColor.h"
 #include "MRVector2.h"
+#include "MRHeapBytes.h"
 #include <vector>
 
 namespace MR
@@ -13,7 +15,7 @@ struct Image
     Vector2i resolution;
 
     // returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return pixels.capacity() * sizeof( pixels.front() ); }
+    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( pixels ); }
 };
 
 }

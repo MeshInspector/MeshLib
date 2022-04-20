@@ -1,8 +1,8 @@
 #pragma once
+
 #include "MRHistoryAction.h"
 #include "MRObject.h"
-//#include <memory>
-
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -42,7 +42,7 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return childrenOrder_.capacity() * sizeof( childrenOrder_[0] )
+        return MR::heapBytes( childrenOrder_ )
             + name_.capacity();
     }
 

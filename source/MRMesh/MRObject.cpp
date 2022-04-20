@@ -2,9 +2,10 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
-#include <filesystem>
 #include "MRGTest.h"
+#include <filesystem>
 
 namespace MR
 {
@@ -57,8 +58,7 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
 
 size_t ObjectChildrenHolder::heapBytes() const
 {
-    auto res = children_.capacity() * sizeof( children_.front() )
-        + bastards_.capacity() * sizeof( bastards_.front() );
+    auto res = MR::heapBytes( children_ ) + MR::heapBytes( bastards_ );
     for ( const auto & child : children_ )
         if ( child )
             res += heapBytes();

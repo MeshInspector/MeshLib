@@ -95,6 +95,9 @@ public:
     // this ctor is public only for std::make_shared used inside clone()
     ObjectVoxels( ProtectedStruct, const ObjectVoxels& obj ) : ObjectVoxels( obj ) {}
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 private:
     FloatGrid grid_;
     Vector3i dimensions_;

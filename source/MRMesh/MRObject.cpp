@@ -2,9 +2,10 @@
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
-#include <filesystem>
 #include "MRGTest.h"
+#include <filesystem>
 
 namespace MR
 {
@@ -53,6 +54,15 @@ ObjectChildrenHolder::~ObjectChildrenHolder()
     for ( const auto & wchild : bastards_ )
         if ( auto child = wchild.lock() )
             child->parent_ = nullptr;
+}
+
+size_t ObjectChildrenHolder::heapBytes() const
+{
+    auto res = MR::heapBytes( children_ ) + MR::heapBytes( bastards_ );
+    for ( const auto & child : children_ )
+        if ( child )
+            res += heapBytes();
+    return res;
 }
 
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
@@ -527,6 +537,12 @@ Box3f Object::getWorldTreeBox( ViewportMask viewportMask ) const
         if ( c && !c->isAncillary() && c->isVisible( viewportMask ) )
             res.include( c->getWorldTreeBox() );
     return res;
+}
+
+size_t Object::heapBytes() const
+{
+    return ObjectChildrenHolder::heapBytes()
+        + name_.capacity();
 }
 
 TEST( MRMesh, DataModelRemoveChild )

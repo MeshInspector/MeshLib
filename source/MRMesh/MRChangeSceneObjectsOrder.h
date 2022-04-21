@@ -1,8 +1,8 @@
 #pragma once
+
 #include "MRHistoryAction.h"
 #include "MRObject.h"
-//#include <memory>
-
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -39,6 +39,12 @@ public:
         }
         childrenOrder_ = std::move( oldOrder );
     };
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return MR::heapBytes( childrenOrder_ )
+            + name_.capacity();
+    }
 
 private:
     std::vector<std::shared_ptr<Object>> childrenOrder_;

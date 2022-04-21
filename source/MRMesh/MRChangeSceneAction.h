@@ -22,6 +22,8 @@ public:
 
     MRMESH_API virtual void action( HistoryAction::Type actionType ) override;
 
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 private:
     // updates parent and next child if it was not preset before
     void updateParent_();

@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
 #include "MRTimer.h"
+#include "MRHeapBytes.h"
 #include <filesystem>
 #include <tl/expected.hpp>
 #include "MRPch/MRJson.h"
@@ -331,6 +332,16 @@ void VisualObject::deserializeFields_( const Json::Value& root )
 Box3f VisualObject::getWorldBox() const
 {
     return transformed( getBoundingBox(), worldXf() );
+}
+
+size_t VisualObject::heapBytes() const
+{
+    return Object::heapBytes()
+        + vertsColorMap_.heapBytes()
+        + texture_.heapBytes()
+        + uvCoordinates_.heapBytes()
+        + MR::heapBytes( labels_ )
+        + vertsNormalsCache_.heapBytes();
 }
 
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const

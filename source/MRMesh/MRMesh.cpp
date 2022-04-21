@@ -725,6 +725,13 @@ void Mesh::invalidateCaches()
     AABBTreeOwner_.reset();
 }
 
+size_t Mesh::heapBytes() const
+{
+    return topology.heapBytes()
+        + points.heapBytes()
+        + AABBTreeOwner_.heapBytes();
+}
+
 Vector3f Mesh::findCenterFromPoints() const
 {
     Vector3f res;

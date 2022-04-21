@@ -741,6 +741,9 @@
     <ClInclude Include="MRPolyline2Collide.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRHeapBytes.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

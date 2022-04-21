@@ -15,6 +15,7 @@
 #include "MRViewportId.h"
 #include "MRGTest.h"
 #include "MRSceneSettings.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -369,6 +370,18 @@ double ObjectMeshHolder::totalArea() const
         totalArea_ = mesh_ ? mesh_->area() : 0.0;
 
     return *totalArea_;
+}
+
+size_t ObjectMeshHolder::heapBytes() const
+{
+    return VisualObject::heapBytes()
+        + selectedTriangles_.heapBytes()
+        + selectedEdges_.heapBytes()
+        + creases_.heapBytes()
+        + cornerNormalsCache_.heapBytes()
+        + facesNormalsCache_.heapBytes()
+        + facesColorMap_.heapBytes()
+        + MR::heapBytes( mesh_ );
 }
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )

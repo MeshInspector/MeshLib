@@ -31,20 +31,20 @@ public:
     using NodeId = typename Node::NodeId;
 
     using NodeVec = Vector<Node, NodeId>;
-    const NodeVec& nodes() const
+    [[nodiscard]] const NodeVec& nodes() const
     {
         return nodes_;
     }
-    const Node& operator[]( NodeId nid ) const
+    [[nodiscard]] const Node& operator[]( NodeId nid ) const
     {
         return nodes_[nid];
     }
-    static NodeId rootNodeId()
+    [[nodiscard]] static NodeId rootNodeId()
     {
         return NodeId{ 0 };
     }
     // returns the root node bounding box
-    Box<V> getBoundingBox() const
+    [[nodiscard]] Box<V> getBoundingBox() const
     {
         return nodes_.empty() ? Box<V>{} : nodes_[rootNodeId()].box;
     }
@@ -56,6 +56,9 @@ public:
 
     AABBTreePolyline( AABBTreePolyline && ) noexcept = default;
     AABBTreePolyline & operator =( AABBTreePolyline && ) noexcept = default;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
 
 private:
     AABBTreePolyline() = default;

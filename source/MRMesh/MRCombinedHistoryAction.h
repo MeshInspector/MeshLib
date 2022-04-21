@@ -24,6 +24,9 @@ public:
     MRMESH_API bool filter( HistoryStackFilter filteringCondition );
 
     bool empty() const { return actions_.empty(); };
+
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 private:
     HistoryActionsVector actions_;
     std::string name_;

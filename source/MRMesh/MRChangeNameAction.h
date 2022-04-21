@@ -35,6 +35,11 @@ public:
         objName_ = std::move( n );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return objName_.capacity() + actionName_.capacity();
+    }
+
 private:
     std::shared_ptr<Object> obj_;
     std::string objName_;

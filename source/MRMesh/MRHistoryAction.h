@@ -20,6 +20,9 @@ public:
     };
     // This function is called on history action (undo, redo, etc.)
     virtual void action( Type actionType ) = 0;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] virtual size_t heapBytes() const = 0;
 };
 
 using HistoryStackFilter = std::function<bool( const std::shared_ptr<HistoryAction>& )>;

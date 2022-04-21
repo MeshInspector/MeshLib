@@ -32,6 +32,11 @@ public:
         xf_ = tmpXf;
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity();
+    }
+
 private:
     std::shared_ptr<Object> obj_;
     AffineXf3f xf_;

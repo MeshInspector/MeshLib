@@ -46,6 +46,8 @@ public:
     MRMESH_API void deleteEdge( UndirectedEdgeId ue );
     // calls deleteEdge for every set bit
     MRMESH_API void deleteEdges( const UndirectedEdgeBitSet & es );
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
     // given two half edges do either of two:
     // 1) if a and b were from distinct rings, puts them in one ring;

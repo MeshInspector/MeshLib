@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObject.h"
 #include "MRVisualObject.h"
+#include "MRHeapBytes.h"
 #include <memory>
 
 namespace MR
@@ -37,9 +38,15 @@ public:
             visObj->setDirtyFlags( DIRTY_ALL );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + MR::heapBytes( cloneObj_ );
+    }
+
 private:
     std::weak_ptr<Object> obj_;
     std::shared_ptr<Object> cloneObj_;
     std::string name_;
 };
+
 }

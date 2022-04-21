@@ -4,6 +4,7 @@
 #include "MRUVSphere.h"
 #include "MRMesh.h"
 #include "MRMeshToPointCloud.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include "MRGTest.h"
 #include <stack>
@@ -158,6 +159,13 @@ AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
     auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( pointCloud );
     nodes_ = std::move( nodes ); 
     orderedPoints_ = std::move( orderedPoints );
+}
+
+size_t AABBTreePoints::heapBytes() const
+{
+    return 
+        nodes_.heapBytes() +
+        MR::heapBytes( orderedPoints_ );
 }
 
 TEST( MRMesh, AABBTreePoints )

@@ -72,6 +72,9 @@ public:
     // returns cached information about the number of selected vertices in the mesh
     MRMESH_API size_t numSelectedVertices() const;
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 protected:
     VertBitSet selectedVertices_;
     mutable std::optional<size_t> numSelectedVertices_;

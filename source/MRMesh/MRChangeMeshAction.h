@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObjectMesh.h"
 #include "MRMesh.h"
+#include "MRHeapBytes.h"
 #include <memory>
 
 namespace MR
@@ -42,6 +43,11 @@ public:
     {
         if ( obj )
             obj->setDirtyFlags( DIRTY_ALL );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + MR::heapBytes( cloneMesh_ );
     }
 
 private:
@@ -91,6 +97,11 @@ public:
             obj->setDirtyFlags( DIRTY_POSITION );
     }
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + clonePoints_.heapBytes();
+    }
+
 private:
     std::shared_ptr<ObjectMesh> objMesh_;
     VertCoords clonePoints_;
@@ -136,6 +147,11 @@ public:
     {
         if ( obj )
             obj->setDirtyFlags( DIRTY_FACE );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + cloneTopology_.heapBytes();
     }
 
 private:

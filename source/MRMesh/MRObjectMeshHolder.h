@@ -109,7 +109,7 @@ public:
 
     // reset dirty flags without some specific bits (useful for lazy normals update)
     MRMESH_API virtual void resetDirtyExeptMask( uint32_t mask ) const;
-public:
+
     // returns cached information whether the mesh is closed
     MRMESH_API bool isMeshClosed() const;
     // returns cached bounding box of this mesh object in world coordinates;
@@ -123,6 +123,10 @@ public:
     MRMESH_API size_t numCreaseEdges() const;
     // returns cached summed area of mesh triangles
     MRMESH_API double totalArea() const;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
@@ -182,6 +186,7 @@ protected:
     float edgeWidth_{ 0.5f };
 
     std::shared_ptr<Mesh> mesh_;
+
 private:
     // this is private function to set default colors of this type (ObjectMeshHolder) in constructor only
     void setDefaultColors_();

@@ -176,6 +176,9 @@ public:
     // this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
 protected:
 
     MRMESH_API VisualObject( const VisualObject& obj );

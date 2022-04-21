@@ -107,6 +107,14 @@ void PolylineTopology::deleteEdges( const UndirectedEdgeBitSet & es )
         deleteEdge( ue );
 }
 
+size_t PolylineTopology::heapBytes() const
+{
+    return
+        edges_.heapBytes() +
+        edgePerVertex_.heapBytes() +
+        validVerts_.heapBytes();
+}
+
 void PolylineTopology::splice( EdgeId a, EdgeId b )
 {
     assert( a.valid() && b.valid() );

@@ -27,6 +27,9 @@ public:
     // Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+
 private:
     mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreeOwner_;
 };

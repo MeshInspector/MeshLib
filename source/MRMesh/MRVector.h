@@ -24,26 +24,26 @@ public:
     explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
 
-    bool operator == ( const Vector & b ) const { return vec_ == b.vec_; }
-    bool operator != ( const Vector & b ) const { return vec_ != b.vec_; }
+    [[nodiscard]] bool operator == ( const Vector & b ) const { return vec_ == b.vec_; }
+    [[nodiscard]] bool operator != ( const Vector & b ) const { return vec_ != b.vec_; }
 
     void clear() { vec_.clear(); }
-    bool empty() const { return vec_.empty(); }
+    [[nodiscard]] bool empty() const { return vec_.empty(); }
 
-    auto size() const { return vec_.size(); }
+    [[nodiscard]] auto size() const { return vec_.size(); }
 
     void resize( size_t newSize ) { vec_.resize( newSize ); }
     void resize( size_t newSize, const T & t ) { vec_.resize( newSize, t ); }
 
-    auto capacity() const { return vec_.capacity(); }
+    [[nodiscard]] auto capacity() const { return vec_.capacity(); }
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
 
-    const_reference operator[]( I i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const
     {
         assert( i < vec_.size() );
         return vec_[i];
     }
-    reference operator[]( I i )
+    [[nodiscard]] reference operator[]( I i )
     {
         assert( i < vec_.size() );
         return vec_[i];
@@ -63,7 +63,7 @@ public:
     }
 
     // this accessor automatically adjusts the size of the vector
-    reference autoResizeAt( I i )
+    [[nodiscard]] reference autoResizeAt( I i )
     {
         if ( i + 1 > size() )
             resizeWithReserve( i + 1 );
@@ -75,40 +75,43 @@ public:
     void pop_back() { vec_.pop_back(); }
 
     template<typename... Args>
-    void emplace_back( Args&&... args )   { vec_.emplace_back( std::forward<Args>(args)... ); }
+    auto emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
 
-    const_reference front() const { return vec_.front(); }
-          reference front()       { return vec_.front(); }
-    const_reference  back() const { return vec_.back(); }
-          reference  back()       { return vec_.back(); }
+    [[nodiscard]] const_reference front() const { return vec_.front(); }
+    [[nodiscard]]       reference front()       { return vec_.front(); }
+    [[nodiscard]] const_reference  back() const { return vec_.back(); }
+    [[nodiscard]]       reference  back()       { return vec_.back(); }
     // returns the identifier of the back() element
-    I backId() const { assert( !vec_.empty() ); return I{ vec_.size() - 1 }; }
+    [[nodiscard]] I backId() const { assert( !vec_.empty() ); return I{ vec_.size() - 1 }; }
     // returns backId() + 1
-    I endId() const { return I{ vec_.size() }; }
+    [[nodiscard]] I endId() const { return I{ vec_.size() }; }
 
-    auto data() { return vec_.data(); }
-    auto data() const { return vec_.data(); }
+    [[nodiscard]] auto data() { return vec_.data(); }
+    [[nodiscard]] auto data() const { return vec_.data(); }
 
     void swap( Vector & b ) { vec_.swap( b.vec_ ); }
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
     // the user can directly manipulate the vector, anyway she cannot break anything
     std::vector<T> vec_;
 };
 
 template <typename T, typename I>
-inline auto begin( const Vector<T, I> & a )
+[[nodiscard]] inline auto begin( const Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-inline auto begin( Vector<T, I> & a )
+[[nodiscard]] inline auto begin( Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-inline auto end( const Vector<T, I> & a )
+[[nodiscard]] inline auto end( const Vector<T, I> & a )
     { return a.vec_.end(); }
 
 template <typename T, typename I>
-inline auto end( Vector<T, I> & a )
+[[nodiscard]] inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
 } //namespace MR

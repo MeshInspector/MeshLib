@@ -5,6 +5,7 @@
 #include "MRAffineXf3.h"
 #include "MRDistanceMapParams.h"
 #include "MRPolyline2.h"
+#include "MRHeapBytes.h"
 #include <tl/expected.hpp>
 #include <filesystem>
 #include <vector>
@@ -118,6 +119,9 @@ public:
     // finds maximum value X,Y
     // returns [-1.-1] if all values are invalid
     MRMESH_API std::pair<size_t, size_t> getMaxIndex() const;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( data_ ); }
 
 private:
     std::vector<float> data_;

@@ -38,6 +38,11 @@ public:
     // empty because set dirty is inside selectFaces
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + selection_.heapBytes();
+    }
+
 private:
     std::string name_;
     std::shared_ptr<ObjectMesh> objMesh_;
@@ -76,6 +81,11 @@ public:
     // empty because set dirty is inside selectEdges
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + selection_.heapBytes();
+    }
+
 private:
     std::string name_;
     std::shared_ptr<ObjectMesh> objMesh_;
@@ -113,6 +123,11 @@ public:
 
     // empty because set dirty is inside setCreases
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + creases_.heapBytes();
+    }
 
 private:
     std::string name_;

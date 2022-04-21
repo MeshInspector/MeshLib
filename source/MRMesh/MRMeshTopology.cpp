@@ -64,6 +64,16 @@ size_t MeshTopology::computeNotLoneUndirectedEdges() const
     return res;
 }
 
+size_t MeshTopology::heapBytes() const
+{
+    return
+        edges_.heapBytes() +
+        edgePerVertex_.heapBytes() +
+        validVerts_.heapBytes() +
+        edgePerFace_.heapBytes() +
+        validFaces_.heapBytes();
+}
+
 void MeshTopology::splice( EdgeId a, EdgeId b )
 {
     assert( a.valid() && b.valid() );
@@ -650,14 +660,13 @@ VertId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
 
 VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region )
 {
+    assert( !region || region->test( f ) );
+
     EdgeId e[3];
     e[0] = edgeWithLeft( f );
     assert( isLeftTri( e[0] ) );
     e[1] = prev( e[0].sym() );
     e[2] = prev( e[1].sym() );
-
-    if ( region )
-        region->test( f );
 
     setLeft_( e[0], FaceId{} );
 

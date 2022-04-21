@@ -3,6 +3,7 @@
 #include "MRSerializer.h"
 #include "MRTimer.h"
 #include "MRMeshTexture.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
@@ -94,6 +95,13 @@ Box3f ObjectLinesHolder::getWorldBox() const
     const auto box = polyline_->computeBoundingBox( &worldXf );
     worldBox_.set( worldXf, box );
     return box;
+}
+
+size_t ObjectLinesHolder::heapBytes() const
+{
+    return VisualObject::heapBytes()
+        + linesColorMap_.heapBytes()
+        + MR::heapBytes( polyline_ );
 }
 
 std::vector<std::string> ObjectLinesHolder::getInfoLines() const

@@ -48,6 +48,11 @@ struct ObjectChildrenHolder
     MRMESH_API ObjectChildrenHolder( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ObjectChildrenHolder & operator = ( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ~ObjectChildrenHolder();
+
+    // returns the amount of memory this object occupies on heap,
+    // including the memory of all recognized children
+    [[nodiscard]] size_t heapBytes() const;
+
 protected:
     Object * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; // recognized ones
@@ -190,6 +195,9 @@ public:
     virtual Box3f getWorldBox() const { return {}; } //empty box
     // returns bounding box of this object and all children visible in given viewports in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
     // signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;

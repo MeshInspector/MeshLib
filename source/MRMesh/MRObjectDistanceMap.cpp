@@ -4,8 +4,9 @@
 #include "MRSerializer.h"
 #include "MRDistanceMapSave.h"
 #include "MRDistanceMapLoad.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
+#include "MRHeapBytes.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 
@@ -119,6 +120,11 @@ const std::shared_ptr<MR::DistanceMap>& ObjectDistanceMap::getDistanceMap() cons
 const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
 {
     return toWorldParams_;
+}
+
+size_t ObjectDistanceMap::heapBytes() const
+{
+    return ObjectMeshHolder::heapBytes() + MR::heapBytes( dmap_ );
 }
 
 ObjectDistanceMap::ObjectDistanceMap( const ObjectDistanceMap& other ) :

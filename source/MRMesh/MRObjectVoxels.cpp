@@ -151,6 +151,13 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask )
         mesh_->invalidateCaches();
 }
 
+size_t ObjectVoxels::heapBytes() const
+{
+    return ObjectMeshHolder::heapBytes()
+        + ( grid_ ? sizeof( *grid_ ) + grid_->memUsage() : 0 )
+        + histogram_.heapBytes();
+}
+
 void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )

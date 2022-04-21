@@ -2,6 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
+#include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include <cassert>
 
@@ -81,6 +82,13 @@ const T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & crea
         } );
     }
     return *obj_;
+}
+
+template<typename T>
+size_t UniqueThreadSafeOwner<T>::heapBytes() const
+{
+    std::unique_lock lock( mutex_ );
+    return MR::heapBytes( obj_ );
 }
 
 template class UniqueThreadSafeOwner<AABBTree>;

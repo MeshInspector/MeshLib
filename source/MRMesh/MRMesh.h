@@ -216,6 +216,9 @@ struct [[nodiscard]] Mesh
     // Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology
     MRMESH_API void invalidateCaches();
 
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+
 private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
 };

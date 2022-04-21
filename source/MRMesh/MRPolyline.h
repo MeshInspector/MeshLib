@@ -76,6 +76,10 @@ public:
     // adds path to this polyline
     // returns the edge from first new to second new vertex
     MRMESH_API EdgeId addFromSurfacePath( const Mesh& mesh, const SurfacePath& path );
+
+    // returns the amount of memory this object occupies on heap
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
+
 private:
     mutable UniqueThreadSafeOwner<AABBTreePolyline<V>> AABBTreeOwner_;
 };

@@ -12,14 +12,33 @@ HistoryStore::~HistoryStore()
 
 void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
 {
+    if ( !action )
+        return;
     if ( scoped_ )
     {
         scopedBlock_.push_back( action );
         return;
     }
+
     stack_.resize( firstRedoIndex_ + 1 );
     stack_[firstRedoIndex_] = action;
     ++firstRedoIndex_;
+
+    size_t currentStackSize = 0;
+    for ( const auto& act : stack_ )
+        currentStackSize += act->heapBytes();
+
+    size_t numActionsToDelete = 0;
+    while ( currentStackSize > storageLimit_ )
+        currentStackSize -= stack_[numActionsToDelete++]->heapBytes();
+    
+    if ( numActionsToDelete > 0 )
+    {
+        stack_.erase( stack_.begin(), stack_.begin() + numActionsToDelete );
+        firstRedoIndex_ -= numActionsToDelete;
+        savedSceneIndex_ -= numActionsToDelete;
+    }
+
     changedSignal( *this, ChangeType::AppendAction );
 }
 

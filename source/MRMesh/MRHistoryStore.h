@@ -33,6 +33,11 @@ public:
     // Clears this HistoryStore
     MRMESH_API void clear();
 
+    // Set memory limit for this store, if history stack exceed it - old actions are removed 
+    void setMemoryLimit( size_t limit ) { storageLimit_ = limit; }
+    // Returns current memory limit for this store (by default uint64 max)
+    size_t getMemoryLimit() const { return storageLimit_; }
+
     // remove some actions according to condition
     MRMESH_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
 
@@ -65,6 +70,8 @@ private:
     // this index points to the position in stack_ corresponding to saved scene state;
     // if firstRedoIndex_ == savedSceneIndex_ then the scene is considered as not modified
     size_t savedSceneIndex_{ 0 };
+    // memory limit (bytes) to this HistoryStore if stack_ exceed it, old actions are removed
+    size_t storageLimit_{ size_t( ~0 ) };
 };
 
 /**

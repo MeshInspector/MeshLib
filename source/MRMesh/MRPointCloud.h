@@ -24,6 +24,10 @@ public:
     // if toWorld transformation is given then returns minimal bounding box in world space
     MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
+    /// appends points (and normals if it possible) (from) in addition to this points
+    /// if this obj have normals and from obj haven't it then don't do anything
+    MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts );
+
     // Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }
 

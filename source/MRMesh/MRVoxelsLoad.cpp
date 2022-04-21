@@ -205,6 +205,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     const auto& gimage = ir.GetImage();
     auto dimsNum = gimage.GetNumberOfDimensions();
     const unsigned* dims = gimage.GetDimensions();
+    bool needInvertZ = false;
 
     if ( data.dims.x == 0 || data.dims.y == 0 )
     {
@@ -237,7 +238,15 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
             data.voxelSize.y = float( spacing[1] / 1000 );
         }
         if ( data.voxelSize.z == 0.0f )
-            data.voxelSize.z = data.voxelSize.x;
+        {
+            if ( dimsNum == 3 )
+            {
+                needInvertZ = spacing[2] < 0.0f;
+                data.voxelSize.z = float( std::abs( spacing[2] ) / 1000 );
+            }
+            else
+                data.voxelSize.z = data.voxelSize.x;
+        }
     }
     else if ( data.dims.x != (int) dims[0] || data.dims.y != (int) dims[1] )
     {
@@ -277,10 +286,10 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     for ( unsigned z = 0; z < dimZ; ++z )
     {
         auto zOffset = z * dimXY;
-        auto invZOffset = dimXYZinv - zOffset;
+        auto correctZOffset = needInvertZ ? ( dimXYZinv - zOffset ) : zOffset;
         for ( size_t i = 0; i < dimXY; ++i )
         {
-            auto f = caster( &cacheBuffer[( invZOffset + i ) * pixelSize] );
+            auto f = caster( &cacheBuffer[( correctZOffset + i ) * pixelSize] );
             res.min = std::min( res.min, f );
             res.max = std::max( res.max, f );
             data.data[zOffset + offset + i] = f;

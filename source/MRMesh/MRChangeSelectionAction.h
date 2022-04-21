@@ -166,6 +166,11 @@ public:
     static void setObjectDirty( const std::shared_ptr<ObjectPoints>& )
     {}
 
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + selection_.heapBytes();
+    }
+
 private:
     std::string name_;
     std::shared_ptr<ObjectPoints> objPoints_;

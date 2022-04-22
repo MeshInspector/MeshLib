@@ -34,6 +34,8 @@ public:
     template <typename U>
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
+    static Box fromMinAndSize( const V& min, const V size ) { return Box{ min,min + size }; }
+
     // true if the box contains at least one point
     bool valid() const 
     { 
@@ -198,6 +200,27 @@ template <typename V>
 inline Box<V> transformed( const Box<V> & box, const AffineXf<V> * xf )
 {
     return xf ? transformed( box, *xf ) : box;
+}
+
+// returns size along x axis
+template <typename V>
+inline auto width( const Box<V>& box )
+{
+    return box.max.x - box.min.x;
+}
+
+// returns size along y axis
+template <typename V>
+inline auto height( const Box<V>& box )
+{
+    return box.max.y - box.min.y;
+}
+
+// returns size along z axis
+template <typename V>
+inline auto depth( const Box<V>& box )
+{
+    return box.max.z - box.min.z;
 }
 
 } //namespace MR

@@ -61,7 +61,7 @@ size_t ObjectChildrenHolder::heapBytes() const
     auto res = MR::heapBytes( children_ ) + MR::heapBytes( bastards_ );
     for ( const auto & child : children_ )
         if ( child )
-            res += heapBytes();
+            res += child->heapBytes();
     return res;
 }
 

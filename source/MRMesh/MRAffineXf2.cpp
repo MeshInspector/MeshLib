@@ -45,6 +45,15 @@ TEST(MRMesh, AffineXf2)
 
     for ( double d : Vector2d{1,1} )
         ASSERT_EQ( d, 1 );
+
+    for ( auto to : { Vector2d{ 1, 1 }, Vector2d{ 1, -1 }, Vector2d{ -1, -1 }, Vector2d{ -1, 1 } } )
+    {
+        auto from = Vector2d{ 0, 1 };
+        to = to.normalized();
+        auto m = Matrix2d::rotation( from, to );
+        auto xfrom = m * from;
+        ASSERT_NEAR( ( xfrom - to ).length(), 0., 1e-15 );
+    }
 }
 
 } //namespace MR

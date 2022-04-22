@@ -136,8 +136,11 @@ constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept
 template <typename T>
 constexpr Matrix2<T> Matrix2<T>::rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept
 {
-    if ( sqr( cross( from, to ) ) > 0 )
+    const auto x = cross( from, to );
+    if ( x > 0 )
         return rotation( angle( from, to ) );
+    if ( x < 0 )
+        return rotation( -angle( from, to ) );
     if ( dot( from, to ) >= 0 )
         return {}; // identity matrix
     return rotation( T( PI ) );

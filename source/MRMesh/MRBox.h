@@ -34,7 +34,7 @@ public:
     template <typename U>
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
-    static Box fromMinAndSize( const V& min, const V size ) { return Box{ min,min + size }; }
+    static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min,min + size }; }
 
     // true if the box contains at least one point
     bool valid() const 

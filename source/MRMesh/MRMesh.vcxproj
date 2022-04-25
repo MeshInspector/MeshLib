@@ -74,6 +74,7 @@
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
+    <ClInclude Include="MRObjectPointsHolder.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
@@ -301,6 +302,7 @@
     <ClCompile Include="MRMeshLoadObj.cpp" />
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
+    <ClCompile Include="MRObjectPointsHolder.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPlaneObject.cpp" />

@@ -14,7 +14,6 @@ struct RayOrigin
 
 /* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
 #if defined(__x86_64__) || defined(_M_X64)
-    #pragma message("Enable x86_64 instructions")
 template<>
 struct RayOrigin<float>
 {
@@ -51,6 +50,8 @@ inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigi
 
     return t0 <= t1;
 }
+#else
+    #pragma message("rayBoxIntersect: no hardware optimized instructions")
 #endif
 
 template<typename T>

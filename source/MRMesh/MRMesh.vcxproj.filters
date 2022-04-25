@@ -744,6 +744,7 @@
     <ClInclude Include="MRHeapBytes.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectPointsHolder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1256,6 +1257,7 @@
     <ClCompile Include="MRPolyline2Collide.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
+    <ClCompile Include="MRObjectPointsHolder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -249,6 +249,7 @@ class Object;
 class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
+class ObjectPointsHolder;
 class ObjectPoints;
 class ObjectVoxels;
 class ObjectLinesHolder;

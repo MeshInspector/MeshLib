@@ -1,25 +1,20 @@
 #include "MRObjectPointsHolder.h"
 #include "MRObjectFactory.h"
-#include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
-#include "MRMeshToPointCloud.h"
-#include "MRObjectMesh.h"
-#include "MRRegionBoundary.h"
-#include "MRMesh.h"
 #include "MRPointsSave.h"
 #include "MRPointsLoad.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRHeapBytes.h"
+#include "MRSerializer.h"
+#include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
-#include "MRSerializer.h"
 
 namespace MR
 {
 
-MR_ADD_CLASS_FACTORY( ObjectMeshHolder )
+MR_ADD_CLASS_FACTORY( ObjectPointsHolder )
 
 ObjectPointsHolder::ObjectPointsHolder()
 {
@@ -241,8 +236,6 @@ void ObjectPointsHolder::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ) );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
-
-    //setSelectedVerticesColor( SceneColors::get( SceneColors::Selected ) );
 }
 
 }

@@ -1,21 +1,11 @@
 #include "MRObjectPoints.h"
 #include "MRObjectFactory.h"
-#include "MRPlane3.h"
-#include "MRBitSetParallelFor.h"
 #include "MRMeshToPointCloud.h"
 #include "MRObjectMesh.h"
 #include "MRRegionBoundary.h"
 #include "MRMesh.h"
-#include "MRPointsSave.h"
-#include "MRPointsLoad.h"
-#include "MRTimer.h"
 #include "MRPch/MRJson.h"
-#include "MRSceneColors.h"
-#include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
-#include "MRSerializer.h"
 
 namespace MR
 {

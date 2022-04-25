@@ -1,24 +1,12 @@
 #include "MRObjectMesh.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
-#include "MRMeshSave.h"
-#include "MRSerializer.h"
-#include "MRMeshLoad.h"
-#include "MRMeshNormals.h"
-#include "MRSceneColors.h"
 #include "MRMeshComponents.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
-#include "MRRegionBoundary.h"
-#include "MRTimer.h"
-#include "MRIRenderObject.h"
-#include "MRViewportId.h"
 #include "MRGTest.h"
-#include "MRSceneSettings.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
-#include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
 
 namespace MR
 {

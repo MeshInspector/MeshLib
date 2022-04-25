@@ -110,7 +110,7 @@ protected:
 
 private:
 
-    // this is private function to set default colors of this type (ObjectPoints) in constructor only
+    // this is private function to set default colors of this type (ObjectPointsHolder) in constructor only
     void setDefaultColors_();
 };
 

@@ -6,6 +6,8 @@ namespace MR {
 
 This page contains some examples of using MeshLib
 
+Please note that MeshLib use ITERATOR_DEBUG_LEVEL=0 even in Debug configuration.
+
 \section CCodeExamples C++ Basic Examples
 
 Following code presents example of loading and saving mesh file

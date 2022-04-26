@@ -747,6 +747,9 @@
     <ClInclude Include="MRObjectPointsHolder.h">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangePointCloudAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

@@ -81,6 +81,14 @@ std::shared_ptr<Object> ObjectPoints::shallowClone() const
     return res;
 }
 
+void ObjectPoints::swapPointCloud( std::shared_ptr< PointCloud >& points )
+{
+    if ( points == points_ )
+        return;
+    points_.swap( points );
+    setDirtyFlags( DIRTY_ALL );
+}
+
 void ObjectPoints::swapBase_( Object& other )
 {
     if ( auto otherPoints = other.asType<ObjectPoints>() )

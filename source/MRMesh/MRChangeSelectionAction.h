@@ -139,6 +139,8 @@ private:
 class ChangePointPointSelectionAction : public HistoryAction
 {
 public:
+    using Obj = ObjectPoints;
+
     // use this constructor to remember object's vertex selection before making any changes in it
     ChangePointPointSelectionAction( const std::string& name, const std::shared_ptr<ObjectPoints>& objPoints ) :
         name_{ name },

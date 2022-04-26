@@ -195,6 +195,21 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
+std::vector<std::array<VertId, 3>> MeshTopology::getAllTriVerts() const
+{
+    MR_TIMER
+    std::vector<std::array<VertId, 3>> res;
+    res.reserve( numValidFaces_ );
+    for ( auto f : validFaces_ )
+    {
+        VertId vs[3];
+        getTriVerts( f, vs );
+        res.push_back( { vs[0], vs[1], vs[2] } );
+    }
+
+    return res;
+}
+
 bool MeshTopology::isLeftQuad( EdgeId a ) const
 {
     assert( a.valid() );

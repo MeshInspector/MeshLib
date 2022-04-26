@@ -14,6 +14,8 @@
 #include "MRLineSegm.h"
 #include "MRConstants.h"
 #include "MRComputeBoundingBox.h"
+#include "MRGTest.h"
+#include "MRCube.h"
 #include "MRPch/MRTBB.h"
 
 namespace
@@ -774,6 +776,19 @@ Vector3f Mesh::findCenterFromFaces() const
 Vector3f Mesh::findCenterFromBBox() const
 {
     return computeBoundingBox().center();
+}
+
+TEST( MRMesh, BasicExport )
+{
+    Mesh mesh = makeCube();
+
+    const std::vector<std::array<VertId, 3>> triangles = mesh.topology.getAllTriVerts();
+
+    const std::vector<Vector3f> & points =  mesh.points.vec_;
+    const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
+
+    (void)points;
+    (void)vertexTripples;
 }
 
 } //namespace MR

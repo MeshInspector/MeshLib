@@ -119,50 +119,60 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
+    bool hasNormals = pointCloud.normals.size() > size_t( pointCloud.validPoints.find_last() );
+
     for ( int i = 0; i < params.iterations; ++i )
     {
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
             PointAccumulator accum;
-            std::vector<VertId> neighbors;
-            Vector3d centroid;
+            std::vector<std::pair<VertId, double>> weightedNeighbors;
+
             findPointsInBall( pointCloud, pointCloud.points[v], radius,
                 [&] ( VertId newV, const Vector3f& position )
             {
-                Vector3d ptD = Vector3d( position );
-                centroid += ptD;
-                accum.addPoint( ptD );
-                neighbors.push_back( newV );
+                double w = 1.0;
+                if ( hasNormals )
+                    w = dot( pointCloud.normals[v], pointCloud.normals[newV] );
+                if ( w > 0.0 )
+                {
+                    weightedNeighbors.push_back( { newV,w } );
+                    accum.addPoint( Vector3d( position ), w );
+                }
             } );
-            if ( neighbors.size() < 6 )
+            if ( weightedNeighbors.size() < 6 )
                 return;
 
-            centroid /= double( neighbors.size() );
             auto& np = newPoints[v];
             Vector3f target;
-            auto plane = accum.getBestPlane();
             if ( params.type == RelaxApproxType::Planar )
-            {
-                target = Plane3f( plane ).project( np );
-            }
+                target = accum.getBestPlanef().project( np );
             else if ( params.type == RelaxApproxType::Quadric )
             {
-                AffineXf3d basis;
-                basis.A.z = plane.n.normalized();
-                auto [x, y] = basis.A.z.perpendicular();
-                basis.A.x = x;
-                basis.A.y = y;
+                AffineXf3d basis = accum.getBasicXf();
                 basis.A = basis.A.transposed();
-                basis.b = Vector3d( np );
+                std::swap( basis.A.x, basis.A.y );
+                std::swap( basis.A.y, basis.A.z );
+                basis.A = basis.A.transposed();
                 auto basisInv = basis.inverse();
+
                 QuadricApprox approxAccum;
-                for ( auto newV : neighbors )
-                    approxAccum.addPoint( basisInv( Vector3d( pointCloud.points[newV] ) ) );
-                auto res = QuadricApprox::findZeroProjection( approxAccum.calcBestCoefficients() );
-                target = Vector3f( basis( res ) );
+                for ( auto [newV, w] : weightedNeighbors )
+                    approxAccum.addPoint( basisInv( Vector3d( pointCloud.points[newV] ) ), w );
+
+                auto centerPoint = basisInv( Vector3d( pointCloud.points[v] ) );
+                const auto coefs = approxAccum.calcBestCoefficients();
+                centerPoint.z =
+                    coefs[0] * centerPoint.x * centerPoint.x +
+                    coefs[1] * centerPoint.x * centerPoint.y +
+                    coefs[2] * centerPoint.y * centerPoint.y +
+                    coefs[3] * centerPoint.x +
+                    coefs[4] * centerPoint.y +
+                    coefs[5];
+                target = Vector3f( basis( centerPoint ) );
             }
-            np += ( params.force * ( 0.5f * target + Vector3f( 0.5 * centroid ) - np ) );
+            np += ( params.force * ( target - np ) );
         } );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();

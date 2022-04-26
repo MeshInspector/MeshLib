@@ -120,12 +120,10 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params )
             dilateRegion( mesh, neighbors, surfaceRadius );
 
             PointAccumulator accum;
-            Vector3d centroid;
             int count = 0;
             for ( auto newV : neighbors )
             {
                 Vector3d ptD = Vector3d( mesh.points[newV] );
-                centroid += ptD;
                 accum.addPoint( ptD );
                 ++count;
             }
@@ -133,30 +131,35 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params )
                 return;
 
             auto& np = newPoints[v];
-            centroid /= double( count );
+
             Vector3f target;
-            auto plane = accum.getBestPlane();
             if ( params.type == RelaxApproxType::Planar )
-            {
-                target = Plane3f( plane ).project( np );
-            }
+                target = accum.getBestPlanef().project( np );
             else if ( params.type == RelaxApproxType::Quadric )
             {
-                AffineXf3d basis;
-                basis.A.z = plane.n.normalized();
-                auto [x, y] = basis.A.z.perpendicular();
-                basis.A.x = x;
-                basis.A.y = y;
+                AffineXf3d basis = accum.getBasicXf();
                 basis.A = basis.A.transposed();
-                basis.b = Vector3d( np );
+                std::swap( basis.A.x, basis.A.y );
+                std::swap( basis.A.y, basis.A.z );
+                basis.A = basis.A.transposed();
                 auto basisInv = basis.inverse();
+
                 QuadricApprox approxAccum;
                 for ( auto newV : neighbors )
                     approxAccum.addPoint( basisInv( Vector3d( mesh.points[newV] ) ) );
-                auto res = QuadricApprox::findZeroProjection( approxAccum.calcBestCoefficients() );
-                target = Vector3f( basis( res ) );
+
+                auto centerPoint = basisInv( Vector3d( mesh.points[v] ) );
+                const auto coefs = approxAccum.calcBestCoefficients();
+                centerPoint.z =
+                    coefs[0] * centerPoint.x * centerPoint.x +
+                    coefs[1] * centerPoint.x * centerPoint.y +
+                    coefs[2] * centerPoint.y * centerPoint.y +
+                    coefs[3] * centerPoint.x +
+                    coefs[4] * centerPoint.y +
+                    coefs[5];
+                target = Vector3f( basis( centerPoint ) );
             }
-            np += ( params.force * ( 0.5f * target + Vector3f( 0.5 * centroid ) - np ) );
+            np += ( params.force * ( target - np ) );
         } );
         mesh.points.swap( newPoints );
     }

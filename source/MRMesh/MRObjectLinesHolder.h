@@ -1,6 +1,5 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRMeshFwd.h"
 #include "MRPolyline.h"
 #include "MRXfBasedCache.h"
 

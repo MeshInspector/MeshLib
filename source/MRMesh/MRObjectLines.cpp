@@ -1,13 +1,8 @@
 #include "MRObjectLines.h"
 #include "MRObjectFactory.h"
 #include "MRPolyline.h"
-#include "MRSerializer.h"
-#include "MRTimer.h"
-#include "MRMeshTexture.h"
 #include "MRPch/MRJson.h"
-#include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
-#include <filesystem>
 
 namespace MR
 {

@@ -24,6 +24,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     virtual void setPointCloud( const std::shared_ptr<PointCloud>& pointCloud ) { points_ = pointCloud; setDirtyFlags( DIRTY_ALL ); }
+    // sets given point cloud to this, and returns back previous mesh of this;
+    // does not touch selection
+    MRMESH_API virtual void swapPointCloud( std::shared_ptr< PointCloud >& points );
 
     // this ctor is public only for std::make_shared used inside clone()
     ObjectPoints( ProtectedStruct, const ObjectPoints& obj ) : ObjectPoints( obj ) {}

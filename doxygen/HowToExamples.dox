@@ -52,6 +52,21 @@ mesh.transform( rotationXf );
 \sa \ref MR::subdivideMesh
 \sa \ref MR::Mesh
 
+Export example of points and triangles from mesh (e.g. for rendering)
+
+\code
+// create some mesh
+Mesh mesh = makeCube();
+
+// all vertices of valid triangles
+const std::vector<std::array<VertId, 3>> triangles = mesh.topology.getAllTriVerts();
+
+// all point coordinates
+const std::vector<Vector3f> & points =  mesh.points.vec_;
+// triangle vertices as tripples of ints (pointing to elements in points vector)
+const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
+\endcode
+
 \section PythonCodeExamples Python Basic Examples
 
 In this section we provide the same examples but with python code\n

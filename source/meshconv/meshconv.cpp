@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshSave.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
+#include <iostream>
 
 // can throw
 static int mainInternal( int argc, char **argv )

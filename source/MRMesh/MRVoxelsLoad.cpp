@@ -211,7 +211,6 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     {
         data.dims.x = dims[0];
         data.dims.y = dims[1];
-        data.dims.z = 1;
     }
     if ( dimsNum == 3 )
     {
@@ -498,6 +497,7 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
         if ( !cb( 0.0f ) )
             return {};
     SimpleVolume simleVolume;
+    simleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simleVolume, 0 );
     if ( !fileRes.success )
         return {};

@@ -16,11 +16,10 @@ PointObject::PointObject()
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
 {
     constructPointCloud_();
-    Vector3f center;
-    float n = float( pointsToApprox.size() );
+    Vector3d center;
     for ( auto& p : pointsToApprox )
-        center += p / n;
-    setPoint( center );
+        center += Vector3d( p );
+    setPoint( Vector3f( center / double( pointsToApprox.size() ) ) );
 }
 
 std::vector<std::string> PointObject::getInfoLines() const

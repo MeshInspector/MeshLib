@@ -150,9 +150,9 @@ Mesh PointCloudTriangulator::triangulate_()
             tris2.emplace_back( triplet.first.a, triplet.first.b, triplet.first.c, FaceId( faceCounter++ ) );
     }
     // create topology
-    MeshBuilder::addTriangles( mesh.topology, tris3 );
+    MeshBuilder::addTriangles( mesh.topology, tris3, false );
     tris2.insert( tris2.end(), tris3.begin(), tris3.end() );
-    MeshBuilder::addTriangles( mesh.topology, tris2 );
+    MeshBuilder::addTriangles( mesh.topology, tris2, false );
 
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.25f;

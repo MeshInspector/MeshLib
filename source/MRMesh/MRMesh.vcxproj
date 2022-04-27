@@ -80,6 +80,7 @@
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
+    <ClInclude Include="MRPointObject.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
@@ -311,6 +312,7 @@
     <ClCompile Include="MRPointCloudMakeNormals.cpp" />
     <ClCompile Include="MRPointCloudRadius.cpp" />
     <ClCompile Include="MRPointCloudRelax.cpp" />
+    <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />

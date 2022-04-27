@@ -750,6 +750,9 @@
     <ClInclude Include="MRChangePointCloudAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointObject.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1264,6 +1267,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectPointsHolder.cpp">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

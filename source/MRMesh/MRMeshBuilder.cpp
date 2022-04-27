@@ -99,13 +99,14 @@ enum class AddFaceResult
     UnsafeTryLater,       // unclear in which order to add new edges to existing vertices
     // permanently failed to add because ...
     FailDegenerateFace,   // ... input face is degenerate
+    FailNonManifoldEdge,  // ... one of face edges exists in topology and has another face from same side
     FailNonManifoldVertex // ... one of face vertices will be non-manifold
 };
 
 class FaceAdder
 {
 public:
-    AddFaceResult add( MeshTopology & m, FaceId face, const VertId * first, const VertId * last );
+    AddFaceResult add( MeshTopology& m, FaceId face, const VertId* first, const VertId* last, bool allowNonManifoldEdge = true );
 
 private:
     std::vector<VertId> dupVertices_; //of the face being created
@@ -114,7 +115,7 @@ private:
     std::vector<EdgeId> onlyLeftHole_;
 };
 
-AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * first, const VertId * last )
+AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * first, const VertId * last, bool allowNonManifoldEdge )
 {
     const auto sz = std::distance( first, last );
     dupVertices_.assign( first, last );
@@ -142,9 +143,14 @@ AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * firs
         }
 
         int i1 = (i + 1) % sz;
-        e_[i] = findEdgeNoLeft( m, first[i], first[i1] );
+        if ( allowNonManifoldEdge )
+            e_[i] = findEdgeNoLeft( m, first[i], first[i1] );
+        else
+            e_[i] = m.findEdge( first[i], first[i1] );
         if ( e_[i].valid() )
         {
+            if ( !allowNonManifoldEdge && m.left( e_[i] ).valid() )
+                return AddFaceResult::FailNonManifoldEdge; // the edge exists and has another face from the left
             // 2) edge exists but does not have face at this side - good
             simpleVert_[i] = true;
             simpleVert_[i1] = true;
@@ -201,7 +207,7 @@ AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * firs
     return AddFaceResult::Success;
 }
 
-static void addTrianglesSeqCore( MeshTopology & res, std::vector<Triangle> & tris )
+static void addTrianglesSeqCore( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge = true )
 {
     MR_TIMER
 
@@ -214,7 +220,7 @@ static void addTrianglesSeqCore( MeshTopology & res, std::vector<Triangle> & tri
     {
         for ( const auto & tri : tris )
         {
-            auto x = fa.add( res, tri.f, tri.v, tri.v + 3 );
+            auto x = fa.add( res, tri.f, tri.v, tri.v + 3, allowNonManifoldEdge );
             if ( x == AddFaceResult::UnsafeTryLater )
                 nextPass.push_back( tri );
             else if ( x != AddFaceResult::Success )
@@ -269,7 +275,7 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRe
     return res;
 }
 
-void addTriangles( MeshTopology & res, std::vector<Triangle> & tris )
+void addTriangles( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge )
 {
     MR_TIMER
 
@@ -278,7 +284,7 @@ void addTriangles( MeshTopology & res, std::vector<Triangle> & tris )
     res.faceResize( maxFaceId + 1 );
     res.vertResize( maxVertId + 1 );
 
-    addTrianglesSeqCore( res, tris );
+    addTrianglesSeqCore( res, tris, allowNonManifoldEdge );
 }
 
 void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,

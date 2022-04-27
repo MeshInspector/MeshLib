@@ -87,7 +87,7 @@ MRMESH_API MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & p
 
 // adds triangles in the existing topology, given face indecies must be free;
 // tris on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh
-MRMESH_API void addTriangles( MeshTopology & res, std::vector<Triangle> & tris );
+MRMESH_API void addTriangles( MeshTopology & res, std::vector<Triangle> & tris, bool allowNonManifoldEdge = true );
 
 // adds triangles in the existing topology, auto selecting face ids for them;
 // vertTriples on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh

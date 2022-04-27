@@ -4,6 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (meshconv CXX)
 
+IF (NOT MR_EMSCRIPTEN)
+  find_package(Boost COMPONENTS REQUIRED )
+ENDIF()
+
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
 IF(NOT ${distro} STREQUAL "Fedora Linux")
@@ -13,6 +17,7 @@ IF(NOT ${distro} STREQUAL "Fedora Linux")
          MRMesh
          spdlog
          mrmeshpy
+         Boost::boost
  )
 ELSE()
   IF (NOT MR_EMSCRIPTEN)
@@ -24,6 +29,7 @@ ELSE()
         gtest
         spdlog
         mrmeshpy
+        Boost::boost
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
@@ -36,6 +42,3 @@ ELSE()
     )    
   ENDIF()    
 ENDIF()
-
-add_test(NAME    ${PROJECT_NAME}
-         COMMAND ${PROJECT_NAME})

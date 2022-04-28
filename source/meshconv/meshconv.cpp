@@ -29,8 +29,10 @@ static int mainInternal( int argc, char **argv )
 
     if (vm.count("help") || !vm.count("input-file") || !vm.count("output-file"))
     {
-        std::cerr << "meshconv input-file output-file [options]" << std::endl;
-        std::cerr << desc << "\n";
+        std::cerr << 
+            "meshconv is mesh file conversion utility based on MeshInspector/MeshLib\n"
+            "Usage: meshconv input-file output-file [options]\n"
+            << desc << "\n";
         return 1;
     }
 

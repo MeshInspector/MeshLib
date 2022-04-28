@@ -113,5 +113,6 @@ IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrealgorithmspy ./mrealgorithmspy)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)

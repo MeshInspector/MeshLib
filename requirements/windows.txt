@@ -3,6 +3,7 @@ boost-functional
 boost-geometry
 boost-integer
 boost-move
+boost-program-options
 boost-range
 boost-signals2
 libjpeg-turbo

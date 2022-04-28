@@ -11,19 +11,10 @@ endif()
 
 add_executable(${PROJECT_NAME} meshconv.cpp)
 
-IF(${distro} STREQUAL "Fedora Linux")
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-          MREAlgorithms
-          MRMesh
-          spdlog
-          Boost::boost
-          )
-ELSE() # Ubuntu and macOS
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-          MREAlgorithms
-          MRMesh
-          fmt
-          spdlog
-          Boost::boost
-          )
-ENDIF()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        MREAlgorithms
+        MRMesh
+        fmt
+        spdlog
+        Boost::boost
+)

@@ -496,18 +496,18 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
     if ( cb )
         if ( !cb( 0.0f ) )
             return {};
-    SimpleVolume simleVolume;
-    simleVolume.dims.z = 1;
-    auto fileRes = loadSingleFile( path, simleVolume, 0 );
+    SimpleVolume simpleVolume;
+    simpleVolume.dims.z = 1;
+    auto fileRes = loadSingleFile( path, simpleVolume, 0 );
     if ( !fileRes.success )
         return {};
     if ( cb )
         if ( !cb( 0.5f ) )
             return {};
-    simleVolume.max = fileRes.max;
-    simleVolume.min = fileRes.min; ObjectVoxels voxels;
+    simpleVolume.max = fileRes.max;
+    simpleVolume.min = fileRes.min; ObjectVoxels voxels;
 
-    voxels.construct( simleVolume, [&]( float proc )
+    voxels.construct( simpleVolume, [&]( float proc )
     {
         if ( cb )
             cb( 0.5f + 0.5f * proc );

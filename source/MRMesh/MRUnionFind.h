@@ -4,8 +4,13 @@
 
 namespace MR
 {
-// Simple union find data structure
-template <typename I> // I is an id type, e.g. FaceId
+
+/** 
+ * \brief Simple union find data structure
+ * \tparam I is an id type, e.g. FaceId
+ * \ingroup BasicGroup
+ */
+template <typename I>
 class UnionFind
 {
 public:
@@ -14,7 +19,7 @@ public:
     {
         reset( size );
     }
-    // reset roots to represent each element as disjoint set of rank 0
+    /// reset roots to represent each element as disjoint set of rank 0
     void reset( size_t size )
     {
         roots_.resize( size );
@@ -23,14 +28,14 @@ public:
         sizes_.clear();
         sizes_.resize( size, 1 );
     }
-    // unite two elements, returns new common root
+    /// unite two elements, returns new common root
     I unite( I first, I second )
     {
         auto firstRoot = getRoot_( first );
         auto secondRoot = getRoot_( second );
         if ( firstRoot == secondRoot )
             return firstRoot;
-        // select root by size for best performance
+        /// select root by size for best performance
         if ( sizes_[firstRoot] < sizes_[secondRoot] )
         {
             roots_[firstRoot] = secondRoot;
@@ -44,19 +49,19 @@ public:
             return firstRoot;
         }
     }
-    // returns true if given two elements are from one component
+    /// returns true if given two elements are from one component
     bool united( I first, I second )
     {
         auto firstRoot = getRoot_( first );
         auto secondRoot = getRoot_( second );
         return firstRoot == secondRoot;
     }
-    // finds root of element
+    /// finds root of element
     I find( I a )
     {
         return getRoot_( a );
     }
-    // gets roots for all elements
+    /// gets roots for all elements
     const Vector<I, I> & roots()
     {
         for ( I i{ 0 }; i < roots_.size(); ++i )
@@ -73,9 +78,9 @@ private:
         }
         return a;
     }
-    // roots for each element
+    /// roots for each element
     Vector<I, I> roots_;
-    // sizes of each set
+    /// sizes of each set
     Vector<int, I> sizes_;
 };
 

@@ -10,7 +10,13 @@
 namespace MR
 {
 
-// container of bits
+/**
+ * \defgroup BasicGroup Basic elements overview
+ * \brief This chapter represents documentation about basic elements
+ * \{
+ */
+
+/// container of bits
 class BitSet : public boost::dynamic_bitset<std::uint64_t>
 {
     using base = boost::dynamic_bitset<std::uint64_t>;
@@ -28,7 +34,7 @@ public:
     /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     [[nodiscard]] MRMESH_API IndexType find_last() const;
 
-    // this accessor automatically adjusts the size of the set to include i-th element
+    /// this accessor automatically adjusts the size of the set to include i-th element
     void autoResizeSet( size_t pos, bool val = true )
     {
         auto sz = size();
@@ -50,7 +56,7 @@ public:
         set( pos, val );
     }
 
-    // same as autoResizeSet(...) and returns previous value of pos-bit
+    /// same as \ref autoResizeSet and returns previous value of pos-bit
     [[nodiscard]] bool autoResizeTestSet( size_t pos, bool val = true )
     {
         bool const b = test( pos );
@@ -59,11 +65,11 @@ public:
         return b;
     }
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() / 8; }
 };
 
-// container of bits representing specific indices (faces, verts or edges)
+/// container of bits representing specific indices (faces, verts or edges)
 template <typename T>
 class TaggedBitSet : public BitSet
 {
@@ -99,10 +105,10 @@ public:
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
-    // constructs another bit set from this where every set bit index is transformed using given map
+    /// constructs another bit set from this where every set bit index is transformed using given map
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const;
-    // this is a faster version if the result size is known beforehand
+    /// this is a faster version if the result size is known beforehand
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
 };
@@ -119,7 +125,7 @@ template <typename T>
     return id.valid() && bitset.test( id );
 }
 
-// iterator to enumerate all indices with set bits in BitSet class or its derivatives
+/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
 template <typename T>
 class SetBitIteratorT
 {
@@ -129,12 +135,12 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using value_type        = IndexType;
     using difference_type   = std::ptrdiff_t;
-    using reference         = const IndexType; //intentionally not a reference
+    using reference         = const IndexType; ///< intentionally not a reference
     using pointer           = const IndexType *;
 
-    //constructs end iterator
+    /// constructs end iterator
     SetBitIteratorT() = default;
-    //constructs begin iterator
+    /// constructs begin iterator
     SetBitIteratorT( const T & bitset )
         : bitset_( &bitset ), index_( bitset.find_first() )
     {
@@ -229,5 +235,7 @@ template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator & ( const Ta
 template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator | ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res |= b; return res; }
 template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator ^ ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res ^= b; return res; }
 template <typename T> [[nodiscard]] inline TaggedBitSet<T> operator - ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b ) { auto res{ a }; res -= b; return res; }
+
+/// \}
 
 } // namespace MR

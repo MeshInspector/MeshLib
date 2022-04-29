@@ -6,8 +6,11 @@
 namespace MR
 {
 
-// Finds the substring in the string. 
-// Returns position, npos if not found
+/** 
+ * Finds the substring in the string.
+ * \return position, npos if not found
+ * \ingroup BasicGroup
+ */
 MRMESH_API size_t findSubstringCaseInsensitive( const std::string& string, const std::string& substring );
 
 }

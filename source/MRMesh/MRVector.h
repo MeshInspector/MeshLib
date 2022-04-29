@@ -6,10 +6,13 @@
 
 namespace MR
 {
- 
-// std::vector<T>-like container that requires specific indexing type,
-// T - type of stored elements
-// I - type of index (shall be convertible to size_t)
+
+/**
+ * \brief std::vector<T>-like container that requires specific indexing type,
+ * \tparam T type of stored elements
+ * \tparam I type of index (shall be convertible to size_t)
+ * \ingroup BasicGroup
+ */
 template <typename T, typename I>
 class Vector
 {
@@ -49,7 +52,7 @@ public:
         return vec_[i];
     }
 
-    // doubles reserved memory until resize(newSize) can be done without reallocation
+    /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
     {
         auto reserved = vec_.capacity();
@@ -62,7 +65,7 @@ public:
         vec_.resize( newSize );
     }
 
-    // this accessor automatically adjusts the size of the vector
+    /// this accessor automatically adjusts the size of the vector
     [[nodiscard]] reference autoResizeAt( I i )
     {
         if ( i + 1 > size() )
@@ -81,9 +84,9 @@ public:
     [[nodiscard]]       reference front()       { return vec_.front(); }
     [[nodiscard]] const_reference  back() const { return vec_.back(); }
     [[nodiscard]]       reference  back()       { return vec_.back(); }
-    // returns the identifier of the back() element
+    /// returns the identifier of the back() element
     [[nodiscard]] I backId() const { assert( !vec_.empty() ); return I{ vec_.size() - 1 }; }
-    // returns backId() + 1
+    /// returns backId() + 1
     [[nodiscard]] I endId() const { return I{ vec_.size() }; }
 
     [[nodiscard]] auto data() { return vec_.data(); }
@@ -91,10 +94,10 @@ public:
 
     void swap( Vector & b ) { vec_.swap( b.vec_ ); }
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    // the user can directly manipulate the vector, anyway she cannot break anything
+    /// the user can directly manipulate the vector, anyway she cannot break anything
     std::vector<T> vec_;
 };
 
@@ -114,4 +117,4 @@ template <typename T, typename I>
 [[nodiscard]] inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
-} //namespace MR
+} // namespace MR

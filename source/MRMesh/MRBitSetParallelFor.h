@@ -6,8 +6,11 @@
 namespace MR
 {
 
-// executes given function f for each bit in bs in parallel threads;
-// it is guaranteed that every individual block in bit-set is processed by one thread only
+/// \addtogroup BasicGroup
+/// \{
+
+/// executes given function f for each bit in bs in parallel threads;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F>
 void BitSetParallelForAll( const BS & bs, F f )
 {
@@ -26,8 +29,8 @@ void BitSetParallelForAll( const BS & bs, F f )
         } );
 }
 
-// executes given function f for every set bit in bs in parallel threads;
-// it is guaranteed that every individual block in bit-set is processed by one thread only
+/// executes given function f for every set bit in bs in parallel threads;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F>
 void BitSetParallelFor( const BS& bs, F f )
 {
@@ -41,4 +44,6 @@ void BitSetParallelFor( const BS& bs, F f )
     } );
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

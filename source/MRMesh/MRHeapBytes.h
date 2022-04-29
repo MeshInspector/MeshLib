@@ -7,14 +7,17 @@
 namespace MR
 {
 
-// returns the amount of memory given vector occupies on heap
+/// \addtogroup BasicGroup
+/// \{
+
+/// returns the amount of memory given vector occupies on heap
 template<typename T>
 [[nodiscard]] inline size_t heapBytes( const std::vector<T> & vec )
 {
     return vec.capacity() * sizeof( T );
 }
 
-// returns the amount of memory this smart pointer and its pointed object own together on heap
+/// returns the amount of memory this smart pointer and its pointed object own together on heap
 template<typename T>
 [[nodiscard]] inline size_t heapBytes( const std::unique_ptr<T> & ptr )
 {
@@ -23,7 +26,7 @@ template<typename T>
     return sizeof( T ) + ptr->heapBytes();
 }
 
-// returns the amount of memory this smart pointer and its pointed object own together on heap
+/// returns the amount of memory this smart pointer and its pointed object own together on heap
 template<typename T>
 [[nodiscard]] inline size_t heapBytes( const std::shared_ptr<T> & ptr )
 {
@@ -32,4 +35,6 @@ template<typename T>
     return sizeof( T ) + ptr->heapBytes();
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

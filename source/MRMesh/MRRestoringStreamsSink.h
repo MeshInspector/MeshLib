@@ -9,7 +9,10 @@
 namespace MR
 {
 
-// A custom streambuf that outputs things directly to the default `spdlog` logger.
+/// \addtogroup BasicGroup
+/// \{
+
+/// A custom streambuf that outputs things directly to the default `spdlog` logger.
 class LoggingStreambuf : public std::streambuf
 {
 public:
@@ -20,14 +23,14 @@ protected:
     MRMESH_API int_type overflow( int_type ch = traits_type::eof() ) override;
 
 private:
-    // The log level for this stream.
+    /// The log level for this stream.
     spdlog::level::level_enum level_;
     std::mutex bufMutex_;
     std::string buf_;
 };
 
-// This class is provided as spdlog::base_sink, spdlog::logger to manage its lifetime 
-// and restore std streams once logger is destructed
+/// This class is provided as spdlog::base_sink, spdlog::logger to manage its lifetime 
+/// and restore std streams once logger is destructed
 class RestoringStreamsSink : public spdlog::sinks::base_sink<spdlog::details::null_mutex>
 {
 public:
@@ -47,4 +50,6 @@ private:
     LoggingStreambuf spdClogBuf_;
 };
 
-} //namespace MR
+/// \}
+
+} // namespace MR

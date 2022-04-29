@@ -7,10 +7,15 @@
 namespace MR
 {
 
-// stores map from element id in [0,size) to T;
-// and provides two operations:
-// 1) change the value of any element;
-// 2) find the element with the largest value
+/// \addtogroup BasicGroup
+/// \{
+
+/**
+ * \brief stores map from element id in[0, size) to T;
+ * \details provides two operations:
+ * 1) change the value of any element;
+ * 2) find the element with the largest value
+ */ 
 template <typename T, typename I, typename P = std::less<T>>
 class Heap
 {
@@ -21,30 +26,30 @@ public:
         T val;
     };
 
-    // constructs heap for given number of elements, assigning given default value to each element
+    /// constructs heap for given number of elements, assigning given default value to each element
     Heap( int size, T def = {}, P pred = {} );
-    // returns the size of the heap
+    /// returns the size of the heap
     int size() const { return (int)heap_.size(); }
-    // increases the size of the heap by adding elements at the end
+    /// increases the size of the heap by adding elements at the end
     void resize( int size, T def = {} );
-    // returns the value associated with given element
+    /// returns the value associated with given element
     const T & value( I elemId ) const { return heap_[ id2PosInHeap_[ elemId ] ].val; }
-    // returns the element with the largest value
+    /// returns the element with the largest value
     const Element & top() const { return heap_[0]; }
-    // sets new value to given element
+    /// sets new value to given element
     void setValue( I elemId, const T & newVal );
-    // sets new value to given element, which shall be larger/smaller than the current value
+    /// sets new value to given element, which shall be larger/smaller than the current value
     void setLargerValue( I elemId, const T & newVal );
     void setSmallerValue( I elemId, const T & newVal );
     template<typename U>
     void increaseValue( I elemId, const U & inc ) { setLargerValue( elemId, value( elemId ) + inc ); }
-    // sets new value to the current top element, returning its previous value
+    /// sets new value to the current top element, returning its previous value
     Element setTopValue( const T & newVal ) { Element res = top(); setValue( res.id, newVal ); return res; }
 
 private:
-    // tests whether heap element at posA is less than posB
+    /// tests whether heap element at posA is less than posB
     bool less_( int posA, int posB ) const;
-    // lifts the element in the queue according to its value
+    /// lifts the element in the queue according to its value
     void lift_( int pos, I elemId );
 
 private:
@@ -179,4 +184,6 @@ inline bool Heap<T, I, P>::less_( int posA, int posB ) const
     return a.id < b.id;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

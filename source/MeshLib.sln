@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MREAlgorithms", "MREAlgorit
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mrealgorithmspy", "mrealgorithmspy\mrealgorithmspy.vcxproj", "{3999F1C8-DCFD-41B9-9C26-F18E9718B86D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "meshconv", "meshconv\meshconv.vcxproj", "{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -63,6 +65,10 @@ Global
 		{3999F1C8-DCFD-41B9-9C26-F18E9718B86D}.Debug|x64.Build.0 = Debug|x64
 		{3999F1C8-DCFD-41B9-9C26-F18E9718B86D}.Release|x64.ActiveCfg = Release|x64
 		{3999F1C8-DCFD-41B9-9C26-F18E9718B86D}.Release|x64.Build.0 = Release|x64
+		{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB}.Debug|x64.ActiveCfg = Debug|x64
+		{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB}.Debug|x64.Build.0 = Debug|x64
+		{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB}.Release|x64.ActiveCfg = Release|x64
+		{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,6 +82,7 @@ Global
 		{36516AEE-2FB9-41C0-A176-A2D49C1C26B2} = {AE8B4895-7920-4AD3-B554-C858A08B1680}
 		{2CF79B9B-6419-4D84-84A1-1EC549BC218D} = {AE8B4895-7920-4AD3-B554-C858A08B1680}
 		{3999F1C8-DCFD-41B9-9C26-F18E9718B86D} = {DAEF3759-BD96-475D-AA71-96ACC5279E43}
+		{0FE8A0D0-A227-4DF7-8F4F-D6EBA8CB6BFB} = {E0BE85ED-C366-40EF-8BDE-70E1EDC8860F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6F7912D7-5687-4CBB-828B-1BEDD18B8249}

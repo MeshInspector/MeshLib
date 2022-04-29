@@ -51,10 +51,13 @@ jobs:
         id: branch-name
         uses: tj-actions/branch-names@v4.9
 
+      # if nothing to rebuild: "latest"
+      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
+      # fix/mesh -> fix-mesh
       - name: Select image tag
         id: select-tag
         run: |
-          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" || \
+          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
           echo "latest")"
 
       - name: Set image tag base path
@@ -71,7 +74,10 @@ jobs:
       - name: Checking whether to start image rebuild
         id: need-rebuild
         run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
-        
+
+        #                    [os,     runner-label ]
+        # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
+        # for MeshInspector: [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [emscripten, ubuntu-latest]
       - name: Select matrix
         id: matrix-set
         run: |

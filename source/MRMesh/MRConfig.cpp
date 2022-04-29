@@ -30,7 +30,8 @@ void Config::reset( const std::string& appName )
 void Config::writeToFile()
 {
     std::ofstream os( filePath_ );
-    spdlog::info( "Saving config file: " + utf8string( filePath_ ) );
+    if ( loggerHandle_ )
+        loggerHandle_->info( "Saving config file: " + utf8string( filePath_ ) );
     if ( os.is_open() )
     {
         os << config_;
@@ -38,7 +39,8 @@ void Config::writeToFile()
     }
     else
     {
-        spdlog::warn( "Failed to save json config file " + utf8string( filePath_ ) );
+        if ( loggerHandle_ )
+            loggerHandle_->warn( "Failed to save json config file " + utf8string( filePath_ ) );
     }
 }
 
@@ -49,7 +51,8 @@ void Config::reset( const std::filesystem::path& filePath )
         auto readRes = deserializeJsonValue( filePath );
         if ( !readRes.has_value() )
         {
-            spdlog::error( readRes.error() );
+            if ( loggerHandle_ )
+                loggerHandle_->error( readRes.error() );
         }
         else
         {
@@ -59,7 +62,8 @@ void Config::reset( const std::filesystem::path& filePath )
     }
     else
     {
-        spdlog::warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
+        if ( loggerHandle_ )
+            loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
         filePath_ = filePath;
     }
 }
@@ -85,7 +89,8 @@ bool Config::getBool( const std::string& key, bool defaultValue ) const
     {
         return config_[key].asBool();
     }
-    spdlog::warn( "Key does not exist. False returned" );
+    if ( loggerHandle_ )
+        loggerHandle_->warn( "Key does not exist. False returned" );
     return defaultValue;
 }
 void Config::setBool( const std::string& key, bool keyValue )
@@ -108,7 +113,8 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         deserializeFromJson( val, res );
         return res;
     }
-    spdlog::warn( "Key does not exist. False returned" );
+    if ( loggerHandle_ )
+        loggerHandle_->warn( "Key does not exist. False returned" );
     return defaultValue;
 }
 void Config::setColor( const std::string& key, const Color& keyValue )
@@ -132,7 +138,8 @@ FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStac
         }
         return res;
     }
-    spdlog::warn( "Key does not exist. False returned" );
+    if ( loggerHandle_ )
+        loggerHandle_->warn( "Key does not exist. False returned" );
     return defaultValue;
 }
 void Config::setFileStack( const std::string& key, const FileNamesStack& keyValue )

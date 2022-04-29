@@ -3,9 +3,10 @@
 #include "MRColor.h"
 #include "MRSerializer.h"
 #include "MRPch/MRJson.h"
+#include "MRMesh/MRVector2.h"
+#include "MRLog.h"
 #include <filesystem>
 #include <string>
-#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -78,6 +79,8 @@ private:
 
     Json::Value config_;
     std::filesystem::path filePath_;
+    // prolong logger life
+    std::shared_ptr<spdlog::logger> loggerHandle_ = Logger::instance().getSpdLogger();
 };
 
 // returns the list of libraries with plugins for application. See Json file from the executable directory for details.

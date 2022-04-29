@@ -9,7 +9,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 /// bounding volume hierarchy for point cloud structure
 class AABBTreePoints
@@ -64,6 +64,6 @@ private:
     friend class UniqueThreadSafeOwner<AABBTreePoints>;
 };
 
-/// @}
+/// \}
 
 } // namespace MR

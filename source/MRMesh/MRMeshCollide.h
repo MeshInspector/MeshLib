@@ -7,7 +7,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 /**
  * \brief finds all pairs of colliding triangles from two meshes or two mesh regions
@@ -23,7 +23,7 @@ MRMESH_API std::pair<FaceBitSet, FaceBitSet> findCollidingTriangleBitsets( const
 
 /// finds all pairs of colliding triangles from one mesh or a region
 MRMESH_API std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp );
-/// the same but returns the union of all self-intersecting faces
+/// the same \ref findSelfCollidingTriangles but returns the union of all self-intersecting faces
 MRMESH_API FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp );
  
 /**
@@ -32,6 +32,6 @@ MRMESH_API FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp );
  */
 MRMESH_API bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A = nullptr );
 
-/// @}
+/// \}
 
 } // namespace MR

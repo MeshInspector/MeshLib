@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 struct MeshDistanceResult
 {
@@ -42,6 +42,6 @@ MRMESH_API MeshDistanceResult findDistance( const MeshPart & a, const MeshPart &
 MRMESH_API MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b,
     const AffineXf3f* rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );
 
-/// @}
+/// \}
 
 } // namespace MR

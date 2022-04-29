@@ -9,7 +9,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 template<typename L, typename B>
 struct ABBTreeTraits
@@ -48,6 +48,6 @@ using AABBTreeNodeId = typename AABBTreeNode<T>::NodeId;
 template<typename T>
 using AABBTreeNodeVec = Vector<AABBTreeNode<T>, AABBTreeNodeId<T>>;
 
-/// @}
+/// \}
 
 } // namespace MR

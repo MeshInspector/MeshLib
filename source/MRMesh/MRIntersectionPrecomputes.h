@@ -7,11 +7,11 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 /**
  * \brief finds index of maximum axis and stores it into dimZ
- * \detail \ref http://jcgt.org/published/0002/01/05/paper.pdf
+ * \details \ref http://jcgt.org/published/0002/01/05/paper.pdf
  * Example input: dir = (1,1,-2). Result: dimZ = 2, dimX = 1, dimY = 0.
  * \param[out] dimX are filled by right-hand rule from dimZ
  * \param[out] dimY are filled by right-hand rule from dimZ
@@ -107,7 +107,7 @@ void findMaxVectorDim( int& dimX, int& dimY, int& dimZ, const Vector3<T>& dir )
 }
 
 /// stores useful precomputed values for presented direction vector
-/// \detail allows to avoid repeatable computations during intersection finding
+/// \details allows to avoid repeatable computations during intersection finding
 template<typename T>
 struct IntersectionPrecomputes
 {
@@ -177,7 +177,7 @@ struct IntersectionPrecomputes<float>
 
 };
 
-/// @}
+/// \}
 
 #else
     #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")

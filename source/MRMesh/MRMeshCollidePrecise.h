@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 /// edge from one mesh and triangle from another mesh
 struct EdgeTri
@@ -73,6 +73,6 @@ MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
 MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b,
     const AffineXf3f* rigidB2A = nullptr );
 
-/// @}
+/// \}
 
 } // namespace MR

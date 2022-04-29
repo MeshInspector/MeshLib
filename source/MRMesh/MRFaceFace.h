@@ -6,7 +6,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 struct FaceFace
 {
@@ -28,6 +28,6 @@ struct UndirectedEdgeUndirectedEdge
     bool operator==( const UndirectedEdgeUndirectedEdge& rhs ) const = default;
 };
 
-/// @}
+/// \}
 
 } // namespace MR

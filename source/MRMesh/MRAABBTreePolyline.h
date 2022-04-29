@@ -7,7 +7,7 @@ namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
-/// @{
+/// \{
 
 template<typename V>
 struct PolylineTraits;
@@ -72,6 +72,6 @@ private:
     NodeVec nodes_;
 };
 
-/// @}
+/// \}
 
 } // namespace MR

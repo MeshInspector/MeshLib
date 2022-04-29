@@ -30,8 +30,9 @@ struct SymbolMeshParams
 // converts text string into set of contours
 MRMESH_API Contours2d createSymbolContours( const SymbolMeshParams& params );
 
-// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on -1 to make a volumetric closed mesh
-MRMESH_API void addBaseToPlanarMesh( Mesh & mesh );
+// given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh
+// zOffset should be > 0
+MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset = 1.0f );
 
 // converts text string into Z-facing symbol mesh
 MRMESH_API Mesh createSymbolsMesh( const SymbolMeshParams& params );

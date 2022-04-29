@@ -6,6 +6,9 @@
 namespace MR
 {
 
+/// \addtogroup AABBTreeGroup
+/// \{
+
 template<typename T>
 struct BoxedLeaf
 {
@@ -13,7 +16,7 @@ struct BoxedLeaf
     typename T::BoxT box;
 };
 
-// returns the number of nodes in the binary tree with given number of leaves
+/// returns the number of nodes in the binary tree with given number of leaves
 inline int getNumNodes( int numLeaves )
 {
     assert( numLeaves >  0 );
@@ -23,4 +26,6 @@ inline int getNumNodes( int numLeaves )
 template<typename T>
 AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> boxedLeaves );
 
-} //namespace MR
+/// \}
+
+} // namespace MR

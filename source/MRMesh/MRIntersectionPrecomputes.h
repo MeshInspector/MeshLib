@@ -6,10 +6,17 @@
 namespace MR
 {
 
-// http://jcgt.org/published/0002/01/05/paper.pdf
-// this functions finds index of maximum axis and stores it into dimZ
-// dimX and dimY are filled by right-hand rule from dimZ
-// Example input: dir = (1,1,-2). Result: dimZ = 2, dimX = 1, dimY = 0.
+/// \addtogroup AABBTreeGroup
+/// @{
+
+/**
+ * \brief finds index of maximum axis and stores it into dimZ
+ * \detail \ref http://jcgt.org/published/0002/01/05/paper.pdf
+ * Example input: dir = (1,1,-2). Result: dimZ = 2, dimX = 1, dimY = 0.
+ * \param[out] dimX are filled by right-hand rule from dimZ
+ * \param[out] dimY are filled by right-hand rule from dimZ
+ * \param[out] dimZ index of maximum axis
+ */
 template <typename T>
 void findMaxVectorDim( int& dimX, int& dimY, int& dimZ, const Vector3<T>& dir )
 {
@@ -99,8 +106,8 @@ void findMaxVectorDim( int& dimX, int& dimY, int& dimZ, const Vector3<T>& dir )
     }
 }
 
-// stores useful precomputed values for presented direction vector
-// allows to avoid repeatable computations during intersection finding
+/// stores useful precomputed values for presented direction vector
+/// \detail allows to avoid repeatable computations during intersection finding
 template<typename T>
 struct IntersectionPrecomputes
 {
@@ -112,10 +119,10 @@ struct IntersectionPrecomputes
     int idxX = 0;
     int idxY = 1;
 
-    // stores signs of direction vector;
+    /// stores signs of direction vector;
     Vector3i sign;
 
-    // precomputed factors
+    /// precomputed factors
     T Sx, Sy, Sz;
     IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<T>& dir )
@@ -150,7 +157,7 @@ struct IntersectionPrecomputes<float>
     int idxX = 0;
     int idxY = 1;
 
-    // precomputed factors
+    /// precomputed factors
     float Sx, Sy, Sz;
     IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<float>& dir )
@@ -169,6 +176,9 @@ struct IntersectionPrecomputes<float>
     }
 
 };
+
+/// @}
+
 #else
     #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")
 #endif

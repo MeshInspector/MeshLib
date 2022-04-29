@@ -8,8 +8,11 @@
 namespace MR
 {
 
-// This class is base class for unique thread safe owning of some objects, for example AABBTree
-// classes derived from this one should have function like getOrCreate
+/// \addtogroup AABBTreeGroup
+/// \{
+
+/// This class is base class for unique thread safe owning of some objects, for example AABBTree
+/// classes derived from this one should have function like getOrCreate
 template<typename T>
 class UniqueThreadSafeOwner
 {
@@ -21,11 +24,11 @@ public:
     MRMESH_API UniqueThreadSafeOwner& operator =( UniqueThreadSafeOwner&& b ) noexcept;
     MRMESH_API ~UniqueThreadSafeOwner();
 
-    // deletes owned object
+    /// deletes owned object
     MRMESH_API void reset();
-    // returns existing owned object or creates new one using creator function
+    /// returns existing owned object or creates new one using creator function
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 protected:
@@ -33,4 +36,6 @@ protected:
     std::unique_ptr<T> obj_;
 };
 
-} //namespace MR
+/// \}
+
+} // namespace MR

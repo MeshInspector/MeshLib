@@ -6,6 +6,9 @@
 namespace MR
 {
 
+/// \addtogroup AABBTreeGroup
+/// @{
+
 template<typename V>
 struct PolylineTraits;
 
@@ -21,7 +24,7 @@ struct PolylineTraits<Vector3f>
     using Polyline = MR::Polyline3;
 };
 
-// bounding volume hierarchy for line segments
+/// bounding volume hierarchy for line segments
 template<typename V>
 class AABBTreePolyline
 {
@@ -43,21 +46,21 @@ public:
     {
         return NodeId{ 0 };
     }
-    // returns the root node bounding box
+    /// returns the root node bounding box
     [[nodiscard]] Box<V> getBoundingBox() const
     {
         return nodes_.empty() ? Box<V>{} : nodes_[rootNodeId()].box;
     }
 
-    // creates tree for given polyline
+    /// creates tree for given polyline
     MRMESH_API AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
-    // creates tree for selected edges on the mesh (only for 3d tree)
+    /// creates tree for selected edges on the mesh (only for 3d tree)
     MRMESH_API AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet );
 
     AABBTreePolyline( AABBTreePolyline && ) noexcept = default;
     AABBTreePolyline & operator =( AABBTreePolyline && ) noexcept = default;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
 
 private:
@@ -69,4 +72,6 @@ private:
     NodeVec nodes_;
 };
 
-} //namespace MR
+/// @}
+
+} // namespace MR

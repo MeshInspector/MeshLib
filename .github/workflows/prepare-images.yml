@@ -76,8 +76,8 @@ jobs:
         run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
 
         #                    [os,     runner-label ]
-        # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [emscripten, ubuntu-latest]
-        # for MeshInspector: [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
+        # for MeshInspector: [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [emscripten, ubuntu-latest]
+        # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
       - name: Select matrix
         id: matrix-set
         run: |

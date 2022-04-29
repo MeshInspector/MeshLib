@@ -5,7 +5,8 @@
 namespace MR
 {
 
-// This singleton struct contains default settings for scene objects
+/// This singleton struct contains default settings for scene objects
+/// \ingroup BasicStructuresGroup
 class SceneSettings
 {
 public:

@@ -8,13 +8,14 @@
 namespace MR
 {
 
-// struct to hold Image data
+/// struct to hold Image data
+/// \ingroup BasicStructuresGroup
 struct Image
 {
     std::vector<Color> pixels;
     Vector2i resolution;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( pixels ); }
 };
 

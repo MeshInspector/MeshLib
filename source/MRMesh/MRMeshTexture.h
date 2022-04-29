@@ -5,6 +5,10 @@
 
 namespace MR
 {
+
+/// \addtogroup BasicStructuresGroup
+/// \{
+
 struct MeshTexture : Image
 {
     enum class FilterType
@@ -21,12 +25,14 @@ struct MeshTexture : Image
     } warp = WarpType::Clamp;
 };
 
-// Coordinates on texture 
-// u,v [0..1], otherwise result depends on warp type of texture (no need to clamp it, it is done on GPU if warp type is "Clamp" )
+/// Coordinates on texture 
+/// \param u,v should be in range [0..1], otherwise result depends on warp type of texture (no need to clamp it, it is done on GPU if warp type is "Clamp" )
 struct UVCoord
 {
     float u{0.0f};
     float v{0.0f};
 };
+
+/// \}
 
 }

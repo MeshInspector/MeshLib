@@ -7,6 +7,9 @@
 namespace MR
 {
 
+/// \addtogroup BasicGroup
+/// \{
+
 struct TimeRecord;
 
 class Timer
@@ -31,13 +34,15 @@ private:
     std::string name_;
 };
 
-// enables or disables printing of timing tree when application terminates
+/// enables or disables printing of timing tree when application terminates
 MRMESH_API void printTimingTreeAtEnd( bool on );
 
-// prints the current timing tree, then calls printTimingTreeAtEnd( false );
+/// prints the current timing tree, then calls printTimingTreeAtEnd( false );
 MRMESH_API void printTimingTreeAndStop();
 
-} //namespace MR
+/// \}
+
+} // namespace MR
 
 #define MR_TIMER MR::Timer _timer( __FUNCTION__ );
 #define MR_NAMED_TIMER(name) MR::Timer _named_timer( name );

@@ -1,9 +1,12 @@
 #pragma once
 
-// simple alternative to boost/iterator_range
-
 namespace MR
 {
+
+/// \brief simple alternative to boost/iterator_range
+/// \defgroup IteratorRange
+/// \ingroup BasicGroup
+/// \{
     
 template <typename I>
 struct IteratorRange
@@ -19,5 +22,7 @@ inline I begin( const IteratorRange<I> & range )
 template <typename I>
 inline I end( const IteratorRange<I> & range )
     { return range.end_; }
+
+/// \}
 
 } //namespace MR

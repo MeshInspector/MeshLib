@@ -33,4 +33,4 @@ struct hash<MR::Vector3f>
     }
 };
 
-} //namespace std
+} // namespace std

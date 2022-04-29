@@ -6,4 +6,4 @@
 namespace MR
 {
 
-} //namespace MR
+} // namespace MR

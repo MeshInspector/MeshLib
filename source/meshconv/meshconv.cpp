@@ -1,6 +1,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
+#include "MREAlgorithms/MREMeshDecimate.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
@@ -10,13 +11,15 @@ static int mainInternal( int argc, char **argv )
 {
     std::filesystem::path inFilePath;
     std::filesystem::path outFilePath;
+    float targetEdgeLen = 0;
 
     namespace po = boost::program_options;
-    po::options_description desc("Available options");
+    po::options_description desc( "Available options" );
     desc.add_options()
         ("help", "produce help message")
         ("input-file", po::value<std::filesystem::path>( &inFilePath ), "filename of input mesh")
         ("output-file", po::value<std::filesystem::path>( &outFilePath ), "filename of output mesh")
+        ("remesh", po::value<float>( &targetEdgeLen )->implicit_value( targetEdgeLen ), "optional argument if positive is target edge length after remeshing")
         ;
 
     po::positional_options_description p;
@@ -27,7 +30,7 @@ static int mainInternal( int argc, char **argv )
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     po::notify(vm);
 
-    if (vm.count("help") || !vm.count("input-file") || !vm.count("output-file"))
+    if ( vm.count("help") || !vm.count("input-file") || !vm.count("output-file") )
     {
         std::cerr << 
             "meshconv is mesh file conversion utility based on MeshInspector/MeshLib\n"
@@ -42,13 +45,30 @@ static int mainInternal( int argc, char **argv )
         std::cerr << "Mesh load error: " << loadRes.error() << "\n";
         return 1;
     }
+    auto mesh = std::move( loadRes.value() );
+    std::cout << inFilePath << " loaded successfully\n";
 
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
+    if ( vm.count("remesh") )
+    {
+        if ( targetEdgeLen <= 0 )
+            targetEdgeLen = mesh.averageEdgeLength();
+
+        MRE::RemeshSettings rems;
+        rems.targetEdgeLen = targetEdgeLen;
+        rems.maxDeviation = targetEdgeLen / 100;
+        MRE::remesh( mesh, rems );
+
+        std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";
+    }
+
+    auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, outFilePath );
     if ( !saveRes.has_value() )
     {
         std::cerr << "Mesh save error:" << saveRes.error() << "\n";
         return 1;
     }
+    std::cout << outFilePath << " saved successfully\n";
+
     return 0;
 }
 
@@ -60,7 +80,7 @@ int main( int argc, char **argv )
     }
     catch ( ... )
     {
-        std::cerr << "Exceptino: " << boost::current_exception_diagnostic_information();
+        std::cerr << "Exception: " << boost::current_exception_diagnostic_information();
         return 2;
     }
 }

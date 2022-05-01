@@ -13,23 +13,27 @@ namespace
 {
 using namespace MR;
 
+bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d,
+    const Vector3f& aNorm, const Vector3f& cNorm,
+    float planeDist )
+{
+    if ( dot( aNorm, cNorm ) < 0.0f )
+        return true;
+
+    if ( planeDist * planeDist > ( b - d ).lengthSq() )
+        return true;
+
+    if ( ( c - a ).lengthSq() < ( 0.5f * ( b + d ) - a ).lengthSq() )
+        return false;
+    return true;
+}
+
+
 float deloneFlipProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
 {
-    auto dir = [] ( const auto& p, const auto& q, const auto& r )
-    {
-        return cross( q - p, r - p );
-    };
-    auto dirABD = dir( a, b, d );
-    auto dirDBC = dir( d, b, c );
-
-    float deloneProfit = -1.0f;
-    if ( dot( dirABD, dirDBC ) >= 0.0f )
-    {
-        auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
-        auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
-        deloneProfit = metricAC - metricBD;
-    }
-    return deloneProfit;
+    auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
+    auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
+    return metricAC - metricBD;
 }
 
 // check that edge angle is less then critical, and C point is further than B and D
@@ -42,12 +46,7 @@ float trisAngleProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, 
     auto dirABC = cross( ab, ac );
     auto dirACD = cross( ac, ad );
 
-    float profit = -1.0f;
-    if ( ac.lengthSq() < ( ( ab + ad ) * 0.5f ).lengthSq() )
-        return profit;
-
-    profit = angle( dirABC, dirACD ) - critAng;
-    return profit;
+    return angle( dirABC, dirACD ) - critAng;
 }
 }
 
@@ -158,24 +157,37 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     const auto& c = points_[getVertByPos_( *it )];
     const auto& d = points_[getVertByPos_( *cyclePrev( list, it ) )];
 
+    const auto& aNorm = normals_[centerVert_];
+    const auto& cNorm = normals_[getVertByPos_( *it )];
+
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
     {
         res.weight = FLT_MAX;
         return res;
     }
+    float planeDist = ( plane_.project( c ) - c ).length();
     auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
-    if ( deloneProf < 0.0f && angleProf < 0.0f )
-        res.stable = true;
+    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm, planeDist ) && ( deloneProf >= 0.0f || angleProf >= 0.0f ) );
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 
-    res.weight += ( plane_.project( c ) - c ).length() / normVal;
+    res.weight += planeDist / normVal;
 
-    res.weight += 2.0f * ( 1.0f - dot( normals_[centerVert_], normals_[getVertByPos_( *it )] ) );
+    res.weight += 5.0f * ( 1.0f - dot( normals_[centerVert_], cNorm ) );
+
+    auto abcNorm = cross( b - a, c - a );
+    auto acdNorm = cross( c - a, d - a );
+
+    auto triNormWeight = dot( ( abcNorm + acdNorm ).normalized(), cNorm );
+    if ( triNormWeight < 0.0f )
+        res.weight = FLT_MAX;
+    else
+        res.weight += 5.0f * ( 1.0f - triNormWeight );
+
     return res;
 }
 

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <queue>
 #include <numeric>
+#include <limits>
 
 namespace
 {
@@ -60,7 +61,7 @@ using namespace MR;
 namespace TriangulationHelpers
 {
 template<typename T>
-std::list<T>::const_iterator cycleNext( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
+typename std::list<T>::const_iterator cycleNext( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
 {
     if ( std::next( it ) == list.end() )
         return list.begin();
@@ -68,7 +69,7 @@ std::list<T>::const_iterator cycleNext( const std::list<T>& list, const typename
 }
 
 template<typename T>
-std::list<T>::const_iterator cyclePrev( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
+typename std::list<T>::const_iterator cyclePrev( const std::list<T>& list, const typename std::list<T>::const_iterator& it )
 {
     if ( it == list.begin() )
         return std::prev( list.end() );
@@ -167,7 +168,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
     {
-        res.weight = FLT_MAX;
+        res.weight = std::numeric_limits<float>::max();
         return res;
     }
     float planeDist = std::abs( plane_.distance( c ) );
@@ -189,7 +190,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
 
     auto triNormWeight = dot( ( abcNorm + acdNorm ).normalized(), cNorm );
     if ( triNormWeight < 0.0f )
-        res.weight = FLT_MAX;
+        res.weight = std::numeric_limits<float>::max();
     else
         res.weight += 5.0f * ( 1.0f - triNormWeight );
 

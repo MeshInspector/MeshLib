@@ -175,6 +175,7 @@ Mesh PointCloudTriangulator::triangulate_()
 
 Mesh triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */ )
 {
+    MR_TIMER
     PointCloudTriangulator triangulator( pointCloud, params );
     return triangulator.triangulate();
 }

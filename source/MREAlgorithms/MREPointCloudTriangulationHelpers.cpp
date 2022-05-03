@@ -13,6 +13,10 @@ namespace
 {
 using namespace MR;
 
+// this function check that abc acd is allowed to be flipped to abd dbc
+// aNorm - normal in point a
+// cNorm - normal in point c
+// planeDist - distance from c to plane (a,aNorm)
 bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d,
     const Vector3f& aNorm, const Vector3f& cNorm,
     float planeDist )
@@ -102,10 +106,10 @@ std::vector<VertId> findNeighbors( const PointCloud& pointCloud, VertId v, float
 
 struct FanOptimizerQueueElement
 {
-    float weight{ 0.0f };
-    std::list<int>::const_iterator pIt;
-    int id;
-    bool stable{ false };
+    float weight{ 0.0f }; // profit of flipping this edge
+    std::list<int>::const_iterator pIt; // iterator to get neighbors
+    int id{ -1 }; // id in FanOptimizer::angleOrder_, to check if this element is still present in FanOptimizer::presentNeighbors_
+    bool stable{ false }; // if this flag is true, edge cannot be flipped
     bool operator < ( const FanOptimizerQueueElement& other ) const
     {
         if ( stable == other.stable )
@@ -141,7 +145,7 @@ private:
     VertId getVertByPos_( int i ) const;
 
     FanOptimizerQueueElement calcQueueElement_( 
-        const std::list<int>& list, const std::list<int>::const_iterator& it, 
+        const std::list<int>& list, const std::list<int>::const_iterator& it,
         float critAngle ) const;
 };
 
@@ -166,10 +170,11 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
         res.weight = FLT_MAX;
         return res;
     }
-    float planeDist = ( plane_.project( c ) - c ).length();
+    float planeDist = std::abs( plane_.distance( c ) );
     auto deloneProf = deloneFlipProfit( a, b, c, d ) / normVal;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
-    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm, planeDist ) && ( deloneProf >= 0.0f || angleProf >= 0.0f ) );
+    // ( deloneProf > 0.0f || angleProf > 0.0f )  strict condition to have more faces options if flip is not profitable
+    res.stable = !( flipPossibility( a, b, c, d, aNorm, cNorm, planeDist ) && ( deloneProf > 0.0f || angleProf > 0.0f ) );
     if ( deloneProf > 0.0f )
         res.weight += deloneProf;
     if ( angleProf > 0.0f )

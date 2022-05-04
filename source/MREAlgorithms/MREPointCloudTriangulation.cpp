@@ -62,9 +62,8 @@ void PointCloudTriangulator::optimizeAll_()
     optimizedFans_.resize( pointCloud_.points.size() );
     BitSetParallelFor( pointCloud_.validPoints, [&]( VertId v )
     {
-        const auto& norm = normals[v];
         auto candidates = TriangulationHelpers::findNeighbors( pointCloud_, v, radius );
-        auto optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, norm, params_.critAngle );
+        auto optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
         const auto& optimized = optimizedRes.optimized;
 
         float maxRadius = ( candidates.size() < 2 ) ? radius * 2.0f :
@@ -74,7 +73,7 @@ void PointCloudTriangulator::optimizeAll_()
         {
             // update triangulation if radius was increased
             candidates = TriangulationHelpers::findNeighbors( pointCloud_, v, radius );
-            optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, norm, params_.critAngle );
+            optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
         }
         optimizedFans_[v] = optimizedRes;
     } );
@@ -123,17 +122,21 @@ Mesh PointCloudTriangulator::triangulate_()
     for ( auto cV : pointCloud_.validPoints )
     {
         const auto& disc = optimizedFans_[cV];
-        for ( int i = 0; i < disc.optimized.size(); ++i )
+        for ( auto it = disc.optimized.begin(); it != disc.optimized.end(); ++it )
         {
-            if ( disc.border.valid() && disc.optimized[i] == disc.border )
+            if ( disc.border.valid() && *it == disc.border )
                 continue;
 
-            VertTriplet triplet{cV,disc.optimized[( i + 1 ) % disc.optimized.size()],disc.optimized[i]};
-            auto it = map.find( triplet );
-            if ( it == map.end() )
+            auto next = std::next( it );
+            if ( next == disc.optimized.end() )
+                next = disc.optimized.begin();
+
+            VertTriplet triplet{ cV,*next,*it };
+            auto mIt = map.find( triplet );
+            if ( mIt == map.end() )
                 map[triplet] = 1;
             else
-                ++it->second;
+                ++mIt->second;
         }
     }
     Mesh mesh;
@@ -172,6 +175,7 @@ Mesh PointCloudTriangulator::triangulate_()
 
 Mesh triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */ )
 {
+    MR_TIMER
     PointCloudTriangulator triangulator( pointCloud, params );
     return triangulator.triangulate();
 }

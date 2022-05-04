@@ -7,7 +7,8 @@
 namespace MR
 {
 
-// This class stores information about distance map object
+/// This class stores information about distance map object
+/// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectDistanceMap : public ObjectMeshHolder
 {
 public:
@@ -16,7 +17,7 @@ public:
     ObjectDistanceMap& operator = ( ObjectDistanceMap&& ) noexcept = default;
     virtual ~ObjectDistanceMap() = default;
 
-    // this ctor is public only for std::make_shared used inside clone()
+    /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectDistanceMap( ProtectedStruct, const ObjectDistanceMap& obj ) : ObjectDistanceMap( obj ) {}
 
     constexpr static const char* TypeName() noexcept { return "ObjectDistanceMap"; }
@@ -29,22 +30,22 @@ public:
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
-    //setters
+    /// setters
     MRMESH_API void setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams );
     
-    //getters
+    /// getters
     MRMESH_API const std::shared_ptr<DistanceMap>& getDistanceMap() const;
 
     MRMESH_API const DistanceMapToWorld& getToWorldParameters() const;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
 protected:
 
     MRMESH_API ObjectDistanceMap( const ObjectDistanceMap& other );
 
-    // swaps this object with other
+    /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
@@ -59,10 +60,10 @@ private:
     std::shared_ptr<DistanceMap> dmap_;
     DistanceMapToWorld toWorldParams_;
 
-    //rebuild mesh according sets DistanceMap & DistanceMapToWorld
+    /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
     void construct_();
 
-    // this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
+    /// this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
     void setDefaultColors_();
 };
 

@@ -6,7 +6,8 @@
 namespace MR
 {
 
-// Singleton to store scene root object
+/// Singleton to store scene root object
+/// \ingroup DataModelGroup
 class SceneRoot
 {
 public:
@@ -27,7 +28,7 @@ private:
 
     std::shared_ptr<Object> root_;
 
-    // path to the recently opened scene
+    /// path to the recently opened scene
     std::filesystem::path scenePath_;
 };
 }

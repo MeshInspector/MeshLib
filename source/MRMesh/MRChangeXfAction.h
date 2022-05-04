@@ -7,10 +7,12 @@
 namespace MR
 {
 
+/// History action for xf change
+/// \ingroup HistoryGroup
 class ChangeXfAction : public HistoryAction
 {
 public:
-    // Constructed from original obj
+    /// Constructed from original obj
     ChangeXfAction( const std::string& name, const std::shared_ptr<Object>& obj ) :
         obj_{ obj },
         xf_{ obj->xf() },
@@ -42,4 +44,5 @@ private:
     AffineXf3f xf_;
     std::string name_;
 };
+
 }

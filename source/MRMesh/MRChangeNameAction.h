@@ -8,11 +8,12 @@
 namespace MR
 {
 
-// This action to undo/redo the change of object name
+/// This action to undo/redo the change of object name
+/// \ingroup HistoryGroup
 class ChangeNameAction : public HistoryAction
 {
 public:
-    // construct before giving new name to the object
+    /// construct before giving new name to the object
     ChangeNameAction( const std::string& actionName, std::shared_ptr<Object> obj ) :
         obj_{ std::move( obj ) },
         actionName_{ actionName }
@@ -47,4 +48,4 @@ private:
     std::string actionName_;
 };
 
-} //namespace MR
+} // namespace MR

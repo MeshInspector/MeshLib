@@ -6,13 +6,16 @@
 namespace MR
 {
 
-// Undo action for ObjectMesh face selection
+/// \addtogroup HistoryGroup
+/// \{
+
+/// Undo action for ObjectMesh face selection
 class ChangeMeshFaceSelectionAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's face selection before making any changes in it
+    /// use this constructor to remember object's face selection before making any changes in it
     ChangeMeshFaceSelectionAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh ):
         name_{name},
         objMesh_{objMesh}
@@ -35,7 +38,7 @@ public:
 
     const FaceBitSet & selection() const { return selection_; }
 
-    // empty because set dirty is inside selectFaces
+    /// empty because set dirty is inside selectFaces
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
 
     [[nodiscard]] virtual size_t heapBytes() const override
@@ -49,13 +52,13 @@ private:
     FaceBitSet selection_;
 };
 
-// Undo action for ObjectMesh edge selection
+/// Undo action for ObjectMesh edge selection
 class ChangeMeshEdgeSelectionAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's edge selection before making any changes in it
+    /// use this constructor to remember object's edge selection before making any changes in it
     ChangeMeshEdgeSelectionAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh ) :
         name_{ name },
         objMesh_{ objMesh }
@@ -78,7 +81,7 @@ public:
 
     const UndirectedEdgeBitSet & selection() const { return selection_; }
 
-    // empty because set dirty is inside selectEdges
+    /// empty because set dirty is inside selectEdges
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
 
     [[nodiscard]] virtual size_t heapBytes() const override
@@ -92,13 +95,13 @@ private:
     UndirectedEdgeBitSet selection_;
 };
 
-// Undo action for ObjectMesh creases
+/// Undo action for ObjectMesh creases
 class ChangeMeshCreasesAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's creases before making any changes in it
+    /// use this constructor to remember object's creases before making any changes in it
     ChangeMeshCreasesAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh ) :
         name_{ name },
         objMesh_{ objMesh }
@@ -121,7 +124,7 @@ public:
 
     const UndirectedEdgeBitSet & creases() const { return creases_; }
 
-    // empty because set dirty is inside setCreases
+    /// empty because set dirty is inside setCreases
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& ) {}
 
     [[nodiscard]] virtual size_t heapBytes() const override
@@ -135,13 +138,13 @@ private:
     UndirectedEdgeBitSet creases_;
 };
 
-// Undo action for ObjectPoints point selection
+/// Undo action for ObjectPoints point selection
 class ChangePointPointSelectionAction : public HistoryAction
 {
 public:
     using Obj = ObjectPoints;
 
-    // use this constructor to remember object's vertex selection before making any changes in it
+    /// use this constructor to remember object's vertex selection before making any changes in it
     ChangePointPointSelectionAction( const std::string& name, const std::shared_ptr<ObjectPoints>& objPoints ) :
         name_{ name },
         objPoints_{ objPoints }
@@ -164,7 +167,7 @@ public:
 
     const VertBitSet& selection() const { return selection_; }
 
-    // empty because set dirty is inside selectPoints
+    /// empty because set dirty is inside selectPoints
     static void setObjectDirty( const std::shared_ptr<ObjectPoints>& )
     {}
 
@@ -178,4 +181,7 @@ private:
     std::shared_ptr<ObjectPoints> objPoints_;
     VertBitSet selection_;
 };
+
+/// \}
+
 }

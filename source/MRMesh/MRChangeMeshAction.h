@@ -8,13 +8,16 @@
 namespace MR
 {
 
-// Undo action for ObjectMesh mesh change
+/// \defgroup HistoryGroup History group
+/// \{
+
+/// Undo action for ObjectMesh mesh change
 class ChangeMeshAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's mesh before making any changes in it
+    /// use this constructor to remember object's mesh before making any changes in it
     ChangeMeshAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
         objMesh_{ obj },
         name_{ std::move( name ) }
@@ -57,13 +60,13 @@ private:
     std::string name_;
 };
 
-// Undo action for ObjectMesh points only (not topology) change
+/// Undo action for ObjectMesh points only (not topology) change
 class ChangeMeshPointsAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's mesh points before making any changes in it
+    /// use this constructor to remember object's mesh points before making any changes in it
     ChangeMeshPointsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
         objMesh_{ obj },
         name_{ std::move( name ) }
@@ -109,13 +112,13 @@ private:
     std::string name_;
 };
 
-// Undo action for ObjectMesh topology only (not points) change
+/// Undo action for ObjectMesh topology only (not points) change
 class ChangeMeshTopologyAction : public HistoryAction
 {
 public:
     using Obj = ObjectMesh;
 
-    // use this constructor to remember object's mesh points before making any changes in it
+    /// use this constructor to remember object's mesh points before making any changes in it
     ChangeMeshTopologyAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
         objMesh_{ obj },
         name_{ std::move( name ) }
@@ -160,5 +163,7 @@ private:
 
     std::string name_;
 };
+
+/// \}
 
 } // namespace MR

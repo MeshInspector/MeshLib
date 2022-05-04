@@ -7,10 +7,12 @@
 namespace MR
 {
 
-class MRMESH_CLASS ChangeSceneObjectsOrder : public HistoryAction
+/// History action for scene objects order change
+/// \ingroup HistoryGroup
+class ChangeSceneObjectsOrder : public HistoryAction
 {
 public:
-    // Constructed before change order
+    /// Constructed before change order
     ChangeSceneObjectsOrder( const std::string& name, const std::shared_ptr<Object>& obj ) :
         obj_( obj ),
         name_( name )

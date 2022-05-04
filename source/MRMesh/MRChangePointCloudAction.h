@@ -9,13 +9,14 @@
 namespace MR
 {
 
-// Undo action for ObjectMesh mesh change
+/// Undo action for ObjectMesh mesh change
+/// \ingroup HistoryGroup
 class ChangePointCloudAction : public HistoryAction
 {
 public:
     using Obj = ObjectPoints;
 
-    // use this constructor to remember object's point cloud before making any changes in it
+    /// use this constructor to remember object's point cloud before making any changes in it
     ChangePointCloudAction( std::string name, const std::shared_ptr<ObjectPoints>& obj ) :
         objPoints_{ obj },
         name_{ std::move( name ) }

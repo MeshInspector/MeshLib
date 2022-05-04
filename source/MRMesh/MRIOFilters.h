@@ -5,6 +5,11 @@
 
 namespace MR
 {
+
+/// \defgroup IOFiltersGroup IO Filters
+/// \ingroup IOGroup
+/// \{
+
 struct IOFilter
 {
     IOFilter() = default;
@@ -29,5 +34,7 @@ inline IOFilters operator | ( const IOFilters& a, const IOFilters& b )
     }
     return copy;
 }
+
+/// \}
 
 }

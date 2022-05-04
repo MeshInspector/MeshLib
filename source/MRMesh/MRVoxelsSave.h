@@ -11,9 +11,14 @@ namespace MR
 namespace VoxelsSave
 {
 
+/// \addtogroup IOGroup
+/// \{
+
 MRMESH_API extern const IOFilters Filters;
 
 MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const ObjectVoxels& voxelsObject );
+
+/// \}
 
 }
 

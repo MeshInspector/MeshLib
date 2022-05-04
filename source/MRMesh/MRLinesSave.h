@@ -13,17 +13,21 @@ namespace MR
 namespace LinesSave
 {
 
+/// \defgroup LinesSaveGroup Lines Save
+/// \ingroup IOGroup
+/// \{
+
 MRMESH_API extern const IOFilters Filters;
 
-// saves in .mrlines file
+/// saves in .mrlines file
 MRMESH_API tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std::filesystem::path& file );
 MRMESH_API tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostream& out );
 
-// detects the format from file extension and saves polyline in it
+/// detects the format from file extension and saves polyline in it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file );
-// extension in `*.ext` format
+/// extension in `*.ext` format
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension );
 
-} //namespace LinesSave
+} // namespace LinesSave
 
-} //namespace MR
+} // namespace MR

@@ -10,6 +10,10 @@ namespace MR
 namespace DistanceMapLoad
 {
 
+/// \defgroup DistanceMapLoadGroup DistanceMap Load
+/// \ingroup IOGroup
+/// \{
+
 MRMESH_API extern const IOFilters Filters;
 
 /**
@@ -19,6 +23,8 @@ MRMESH_API extern const IOFilters Filters;
  * [resX * resY] float - matrix of values
  */
 MRMESH_API tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& path );
+
+/// \}
 
 } // namespace DistanceMapLoad
 

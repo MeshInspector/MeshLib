@@ -55,6 +55,7 @@
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
@@ -71,6 +72,7 @@
     <ClInclude Include="MRMatrix.h" />
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
+    <ClInclude Include="MRMeshBuilderTypes.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
@@ -287,6 +289,7 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRIntersection.cpp" />

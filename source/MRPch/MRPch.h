@@ -90,6 +90,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <ctype.h>
 #include <filesystem>
 #include <fstream>

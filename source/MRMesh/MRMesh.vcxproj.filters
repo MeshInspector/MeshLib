@@ -76,15 +76,15 @@
     <Filter Include="Source Files\DataModel\ModelHolder">
       <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\MeshBuilder">
+      <UniqueIdentifier>{c83e4212-7072-40c2-8354-827c896c1628}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRId.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshBuilder.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTopology.h">
@@ -753,12 +753,18 @@
     <ClInclude Include="MRPointObject.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshBuilder.h">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIdentifyVertices.h">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBuilderTypes.h">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshBuilder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTopology.cpp">
@@ -774,9 +780,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDelete.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshBuildDeleteTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRObject.cpp">
@@ -1270,6 +1273,15 @@
     </ClCompile>
     <ClCompile Include="MRPointObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBuilder.cpp">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBuildDeleteTest.cpp">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIdentifyVertices.cpp">
+      <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

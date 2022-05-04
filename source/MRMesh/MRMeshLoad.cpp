@@ -1,5 +1,6 @@
 #include "MRMeshLoad.h"
 #include "MRMeshBuilder.h"
+#include "MRIdentifyVertices.h"
 #include "MRMesh.h"
 #include "MRphmap.h"
 #include "MRTimer.h"
@@ -156,19 +157,6 @@ tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & fil
     return fromBinaryStl( in );
 }
 
-// this makes bit-wise comparison of two Vector3f's thus making two NaNs equal
-struct equalVector3f
-{
-    bool operator() ( const Vector3f & a, const Vector3f & b ) const
-    {
-        static_assert( sizeof( Vector3f ) == 12 );
-        char ax[12], bx[12];
-        memcpy( ax, &a, 12 );
-        memcpy( bx, &b, 12 );
-        return memcmp( ax, bx, 12 ) == 0;
-    }
-};
-
 tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Color>* )
 {
     MR_TIMER
@@ -188,14 +176,8 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Col
     if ( posEnd - posCur < 50 * numTris )
         return tl::make_unexpected( std::string( "Binary STL-file is too short" ) );
 
-    using HMap = phmap::parallel_flat_hash_map<Vector3f, VertId, phmap::priv::hash_default_hash<Vector3f>, equalVector3f>;
-
-    HMap hmap;
-    hmap.reserve( numTris / 2 ); // there should be about twice more triangles than vertices
-    Mesh res;
-
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( numTris );
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( numTris );
 
     #pragma pack(push, 1)
     struct StlTriangle
@@ -209,22 +191,20 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Col
 
     const auto itemsInBuffer = std::min( numTris, 32768u );
     std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
+    std::vector<MeshBuilder::ThreePoints> chunk( itemsInBuffer );
 
     // first chunk
     in.read( (char*)buffer.data(), sizeof(StlTriangle) * itemsInBuffer );
     if ( !in  )
         return tl::make_unexpected( std::string( "Binary STL read error" ) );
 
-    using VertInHMap = std::array<VertId*, 3>;
-    std::vector<VertInHMap> vertsInHMap( itemsInBuffer );
-
-    for ( std::uint32_t i = 0;; )
+    for ( ;; )
     {
         tbb::task_group taskGroup;
         bool hasTask = false;
-        if ( i + buffer.size() < numTris )
+        if ( vi.numTris() + buffer.size() < numTris )
         {
-            const auto itemsInNextChuck = std::min( numTris - i - (std::uint32_t)buffer.size(), itemsInBuffer );
+            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             hasTask = true;
             taskGroup.run( [&in, &nextBuffer] ()
@@ -233,51 +213,11 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Col
             } );
         }
 
-        for (;;)
-        {
-            auto buckets0 = hmap.bucket_count();
-
-            const auto subcnt = hmap.subcnt();
-            tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&]( const tbb::blocked_range<size_t> & range )
-            {
-                assert( range.begin() + 1 == range.end() );
-                for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
-                {
-                    for ( size_t j = 0; j < buffer.size(); ++j )
-                    {
-                        const auto & st = buffer[j];
-                        auto & it = vertsInHMap[j];
-                        for ( int k = 0; k < 3; ++k )
-                        {
-                            const auto & p = st.vert[k];
-                            auto hashval = hmap.hash( p );
-                            auto idx = hmap.subidx( hashval );
-                            if ( idx != myPartId )
-                                continue;
-                            it[k] = &hmap[ p ];
-                        }
-                    }
-                }
-            } );
-
-            if ( buckets0 == hmap.bucket_count() )
-                break; // the number of buckets has not changed - all pointers are valid
-        }
-
-        for ( size_t j = 0; j < buffer.size(); ++j )
-        {
-            const auto & st = buffer[j];
-            const auto & it = vertsInHMap[j];
-            for ( int k = 0; k < 3; ++k )
-            {
-                if ( !it[k]->valid() )
-                {
-                    *it[k] = VertId( (int)res.points.size() );
-                    res.points.push_back( st.vert[k] );
-                }
-            }
-            tris.emplace_back( *it[0], *it[1], *it[2], FaceId( int( i++ ) ) );
-        }
+        chunk.resize( buffer.size() );
+        for ( int i = 0; i < buffer.size(); ++i )
+            for ( int j = 0; j < 3; ++j )
+                chunk[i][j] = buffer[i].vert[j];
+        vi.addTriangles( chunk );
 
         if ( !hasTask )
             break;
@@ -296,7 +236,9 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Col
 //         "load_factor = " << hmap.load_factor() << "\n"
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
-    res.topology = MeshBuilder::fromTriangles( tris );
+    Mesh res;
+    res.points = vi.takePoints();
+    res.topology = MeshBuilder::fromTriangles( vi.takeTris() );
 
     return std::move( res );
 }

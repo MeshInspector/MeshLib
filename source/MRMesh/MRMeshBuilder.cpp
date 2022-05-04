@@ -1,4 +1,5 @@
 #include "MRMeshBuilder.h"
+#include "MRIdentifyVertices.h"
 #include "MRMeshDelete.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
@@ -813,6 +814,18 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )
         tris.push_back( tri );
     }
     return fromTriangles( tris );
+}
+
+Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )
+{
+    MR_TIMER
+    VertexIdentifier vi;
+    vi.reserve( posTriples.size() );
+    vi.addTriangles( posTriples );
+    Mesh res;
+    res.points = vi.takePoints();
+    res.topology = fromTriangles( vi.takeTris() );
+    return res;
 }
 
 // check non-manifold vertices resolving

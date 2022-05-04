@@ -64,7 +64,7 @@ jobs:
         id: set-path
         run: |
           repo_path=${{github.repository}}
-          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
             repo_path="MeshRUs/MeshInspector"
           else
             repo_path="MeshRUs/MeshLib"
@@ -82,7 +82,7 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
-          if [ "${{github.repository}}" == "MeshInspector/MeshInspector" ]; then
+          if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           else
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"

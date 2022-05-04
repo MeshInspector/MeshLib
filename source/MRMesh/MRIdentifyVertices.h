@@ -3,6 +3,7 @@
 #include "MRMeshBuilderTypes.h"
 #include "MRVector3.h"
 #include "MRVector.h"
+#include "MRphmap.h"
 #include <array>
 #include <cstring>
 

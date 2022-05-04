@@ -5,7 +5,8 @@
 namespace MR
 {
 
-// This object type has not visual representation, just holder for lines in scene
+/// This object type has not visual representation, just holder for lines in scene
+/// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectLines : public ObjectLinesHolder
 {
 public:
@@ -26,7 +27,7 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
 
-    // this ctor is public only for std::make_shared used inside clone()
+    /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
@@ -34,7 +35,7 @@ public:
 protected:
     MRMESH_API ObjectLines( const ObjectLines& other );
 
-    // swaps this object with other
+    /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;

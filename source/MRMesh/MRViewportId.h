@@ -5,9 +5,13 @@
 
 namespace MR
 {
- 
-// stores unique identifier of a viewport, which is power of two;
-// id=0 has a special meaning of default viewport in some contexts
+
+/// \defgroup ViewportGroup Vieport group
+/// \ingroup DataModelGroup
+/// \{
+
+/// stores unique identifier of a viewport, which is power of two;
+/// id=0 has a special meaning of default viewport in some contexts
 class ViewportId
 {
 public:
@@ -29,7 +33,7 @@ private:
     unsigned id_ = 0;
 };
 
-// stores mask of viewport unique identifiers
+/// stores mask of viewport unique identifiers
 class ViewportMask
 {
 public:
@@ -37,7 +41,7 @@ public:
     explicit constexpr ViewportMask( unsigned i ) noexcept : mask_( i ) { }
     constexpr ViewportMask( ViewportId i ) noexcept : mask_( i.value() ) { }
 
-    // mask meaning all or any viewports
+    /// mask meaning all or any viewports
     static ViewportMask all() { return ViewportMask{ ~0u }; }
     static ViewportMask any() { return ViewportMask{ ~0u }; }
 
@@ -63,16 +67,16 @@ inline ViewportMask operator & ( ViewportMask a, ViewportMask b ) { a &= b; retu
 inline ViewportMask operator | ( ViewportMask a, ViewportMask b ) { a |= b; return a; }
 inline ViewportMask operator ^ ( ViewportMask a, ViewportMask b ) { a ^= b; return a; }
 
-// iterates over all ViewportIds in given ViewportMask
+/// iterates over all ViewportIds in given ViewportMask
 class ViewportIterator
 {
 public:
     using iterator_category = std::forward_iterator_tag;
     using value_type        = ViewportId;
 
-    //constructs end iterator
+    /// constructs end iterator
     ViewportIterator() = default;
-    //constructs begin iterator
+    /// constructs begin iterator
     ViewportIterator( ViewportMask mask )
         : mask_( mask )
     {
@@ -110,4 +114,6 @@ inline auto begin( ViewportMask mask )
 inline auto end( ViewportMask )
     { return ViewportIterator(); }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

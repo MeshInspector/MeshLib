@@ -15,6 +15,8 @@ struct PointsVisualizePropertyType : VisualizeMaskType
     };
 };
 
+/// an object that stores a points
+/// \ingroup ModelHolderGroup
 class MRMESH_CLASS ObjectPointsHolder : public VisualObject
 {
 public:
@@ -29,7 +31,6 @@ public:
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
-    // returns const point cloud, if variable point cloud is needed use `varPointCloud()` instead
     const std::shared_ptr<const PointCloud>& pointCloud() const 
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 
@@ -42,32 +43,32 @@ public:
     
     const VertBitSet& getSelectedVertices() const { return selectedVertices_; }
     MRMESH_API virtual void selectVertices( VertBitSet newSelection );
-    // returns colors of selected vertices
+    /// returns colors of selected vertices
     const Color& getSelectedVerticesColor() const { return selectedVerticesColor_; }
-    // sets colors of selected vertices
+    /// sets colors of selected vertices
     MRMESH_API virtual void setSelectedVerticesColor( const Color& color );
 
-    // get all visualize properties masks as array
+    /// get all visualize properties masks as array
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
-    // returns mask of viewports where given property is set
+    /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
     
-    // sets size of points on screen in pixels
+    /// sets size of points on screen in pixels
     MRMESH_API virtual void setPointSize( float size );
-    // returns size of points on screen in pixels
+    /// returns size of points on screen in pixels
     float getPointSize() const { return pointSize_; }
 
-    // this ctor is public only for std::make_shared used inside clone()
+    /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectPointsHolder( ProtectedStruct, const ObjectPointsHolder& obj ) : ObjectPointsHolder( obj )
     {}
 
-    // returns cached bounding box of this point object in world coordinates;
-    // if you need bounding box in local coordinates please call getBoundingBox()
+    /// returns cached bounding box of this point object in world coordinates;
+    /// if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox() const override;
-    // returns cached information about the number of selected vertices in the mesh
+    /// returns cached information about the number of selected vertices in the mesh
     MRMESH_API size_t numSelectedVertices() const;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
     
 protected:
@@ -79,12 +80,12 @@ protected:
     std::shared_ptr<PointCloud> points_;
     mutable XfBasedCache<Box3f> worldBox_;
 
-    // size of point in pixels
+    /// size of point in pixels
     float pointSize_{ 5.0f };
 
     ObjectPointsHolder( const ObjectPointsHolder& other ) = default;
 
-    // swaps this object with other
+    /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     virtual Vector<Vector3f, VertId> computeVertsNormals_() const override
@@ -110,7 +111,7 @@ protected:
 
 private:
 
-    // this is private function to set default colors of this type (ObjectPointsHolder) in constructor only
+    /// this is private function to set default colors of this type (ObjectPointsHolder) in constructor only
     void setDefaultColors_();
 };
 

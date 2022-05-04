@@ -6,6 +6,9 @@
 namespace MR
 {
 
+/// \defgroup ModelHolderGroup Model Holder
+/// \ingroup DataModelGroup
+
 struct LinesVisualizePropertyType : VisualizeMaskType
 {
     enum Type : unsigned
@@ -17,7 +20,8 @@ struct LinesVisualizePropertyType : VisualizeMaskType
     };
 };
 
-// an object that stores a lines
+/// an object that stores a lines
+/// \ingroup ModelHolderGroup
 class MRMESH_CLASS ObjectLinesHolder : public VisualObject
 {
 public:
@@ -44,7 +48,7 @@ public:
     MRMESH_API virtual void setPointSize( float size );
     float getPointSize() const { return pointSize_; }
 
-    // this ctor is public only for std::make_shared used inside clone()
+    /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
@@ -53,22 +57,22 @@ public:
     virtual void setLinesColorMap( Vector<Color, UndirectedEdgeId> linesColorMap )
     { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
-    // get all visualize properties masks as array
+    /// get all visualize properties masks as array
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
-    // returns mask of viewports where given property is set
+    /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 
-    // returns cached bounding box of this point object in world coordinates;
-    // if you need bounding box in local coordinates please call getBoundingBox()
+    /// returns cached bounding box of this point object in world coordinates;
+    /// if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox() const override;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
 protected:
     MRMESH_API ObjectLinesHolder( const ObjectLinesHolder& other );
 
-    // swaps this object with other
+    /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
@@ -88,14 +92,16 @@ protected:
     ViewportMask showPoints_;
     ViewportMask smoothConnections_;
 
-    // width on lines on screen in pixels
+    /// width on lines on screen in pixels
     float lineWidth_{ 1.0f };
     float pointSize_{ 5.f };
     std::shared_ptr<Polyline3> polyline_;
 
 private:
-    // this is private function to set default colors of this type (ObjectLinesHolder) in constructor only
+    /// this is private function to set default colors of this type (ObjectLinesHolder) in constructor only
     void setDefaultColors_();
 };
 
-}
+/// \}
+
+} // namespace MR

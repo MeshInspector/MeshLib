@@ -23,7 +23,13 @@ class Value;
 namespace MR
 {
 
-// This class exists to provide default copy and move operations on std::mutex
+/**
+ * \defgroup DataModelGroup Data Model
+ * \brief This chapter represents documentation about data models
+ * \{
+ */
+
+/// This class exists to provide default copy and move operations on std::mutex
 class MutexOwner
 {
 public:
@@ -38,8 +44,8 @@ private:
 };
 
 
-// since every object stores a pointer on its parent,
-// copying of this object is prohibited and moving is taken with care
+/// since every object stores a pointer on its parent,
+/// copying of this object is prohibited and moving is taken with care
 struct ObjectChildrenHolder
 {
     ObjectChildrenHolder() = default;
@@ -49,17 +55,17 @@ struct ObjectChildrenHolder
     MRMESH_API ObjectChildrenHolder & operator = ( ObjectChildrenHolder && ) noexcept;
     MRMESH_API ~ObjectChildrenHolder();
 
-    // returns the amount of memory this object occupies on heap,
-    // including the memory of all recognized children
+    /// returns the amount of memory this object occupies on heap,
+    /// including the memory of all recognized children
     [[nodiscard]] size_t heapBytes() const;
 
 protected:
     Object * parent_ = nullptr;
-    std::vector< std::shared_ptr< Object > > children_; // recognized ones
-    std::vector< std::weak_ptr< Object > > bastards_; // unrecognized children to hide from the pubic
+    std::vector< std::shared_ptr< Object > > children_; /// recognized ones
+    std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
 };
 
-// named object in the data model
+/// named object in the data model
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
 public:
@@ -79,158 +85,159 @@ public:
     const std::string & name() const { return name_; }
     virtual void setName( std::string name ) { name_ = std::move( name ); }
 
-    // finds a direct child by name
+    /// finds a direct child by name
     MRMESH_API std::shared_ptr<const Object> find( const std::string_view & name ) const;
     std::shared_ptr<Object> find( const std::string_view & name ) { return std::const_pointer_cast<Object>( const_cast<const Object*>( this )->find( name ) ); }
 
-    // finds a direct child by name and type
+    /// finds a direct child by name and type
     template <typename T>
     std::shared_ptr<const T> find( const std::string_view & name ) const;
     template <typename T>
     std::shared_ptr<T> find( const std::string_view & name ) { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>( name ) ); }
 
-    // this space to parent space transformation (to world space if no parent)
+    /// this space to parent space transformation (to world space if no parent)
     const AffineXf3f & xf() const { return xf_; }
     MRMESH_API virtual void setXf( const AffineXf3f& xf );
 
-    // this space to world space transformation
+    /// this space to world space transformation
     MRMESH_API AffineXf3f worldXf() const;
     MRMESH_API void setWorldXf( const AffineXf3f& xf );
 
-    // scale object size (all point positions)
+    /// scale object size (all point positions)
     MRMESH_API virtual void applyScale( float scaleFactor );
 
-    // returns all viewports where this object is visible together with all its parents
+    /// returns all viewports where this object is visible together with all its parents
     MRMESH_API ViewportMask globalVisibilityMask() const;
-    // returns true if this object is visible together with all its parents in any of given viewports
+    /// returns true if this object is visible together with all its parents in any of given viewports
     bool globalVisibilty( ViewportMask viewportMask = ViewportMask::any() ) const { return !( globalVisibilityMask() & viewportMask ).empty(); }
-    // if true sets all predecessors visible, otherwise sets this object invisible
+    /// if true sets all predecessors visible, otherwise sets this object invisible
     MRMESH_API void setGlobalVisibilty( bool on, ViewportMask viewportMask = ViewportMask::any() );
 
-    // object properties lock for UI
+    /// object properties lock for UI
     const bool isLocked() const { return locked_; }
     virtual void setLocked( bool on ) { locked_ = on; }
 
-    // returns parent object in the tree
+    /// returns parent object in the tree
     const Object * parent() const { return parent_; }
     Object * parent() { return parent_; }
 
-    // return true if given object is ancestor of this one, false otherwise
+    /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;
 
-    // removes this from its parent children list
-    // returns false if it was already orphan
+    /// removes this from its parent children list
+    /// returns false if it was already orphan
     MRMESH_API virtual bool detachFromParent();
-    // an object can hold other sub-objects
+    /// an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
-    // adds given object at the end of children (recognized or not);
-    // returns false if it was already child of this, of if given pointer is empty
+    /// adds given object at the end of children (recognized or not);
+    /// returns false if it was already child of this, of if given pointer is empty
     MRMESH_API virtual bool addChild( std::shared_ptr<Object> child, bool recognizedChild = true );
-    // adds given object in the recognized children before existingChild;
-    // if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
-    // returns false if newChild is nullptr, or existingChild is not a child of this
+    /// adds given object in the recognized children before existingChild;
+    /// if newChild was already among this children then moves it just before existingChild keeping the order of other children intact;
+    /// returns false if newChild is nullptr, or existingChild is not a child of this
     MRMESH_API virtual bool addChildBefore( std::shared_ptr<Object> newChild, const std::shared_ptr<Object> & existingChild );
-    // returns false if it was not child of this
+    /// returns false if it was not child of this
     bool removeChild( const std::shared_ptr<Object>& child ) { return removeChild( child.get() ); }
     MRMESH_API virtual bool removeChild( Object* child );
-    // detaches all recognized children from this, keeping all unrecognized ones
+    /// detaches all recognized children from this, keeping all unrecognized ones
     MRMESH_API virtual void removeAllChildren();
     /// sort recognized children by name
     MRMESH_API void sortChildren();
 
-    // selects the object, returns true if value changed, otherwise returns false
+    /// selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
     bool isSelected() const { return selected_; }
 
-    // ancillary object is an object hidden (in scene menu) from a regular user
-    // such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
+    /// ancillary object is an object hidden (in scene menu) from a regular user
+    /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
     MRMESH_API virtual void setAncillary( bool ancillary );
     bool isAncillary() const { return ancillary_; }
 
-    // sets the object visible in the viewports specified by the mask (by default in all viewports)
+    /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );
-    // checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
+    /// checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
     bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask_ & viewportMask ).empty(); }
-    // specifies object visibility as bitmask of viewports
+    /// specifies object visibility as bitmask of viewports
     virtual void setVisibilityMask( ViewportMask viewportMask ) { visibilityMask_ = viewportMask; }
-    // gets object visibility as bitmask of viewports
+    /// gets object visibility as bitmask of viewports
     ViewportMask visibilityMask() const { return visibilityMask_; }
 
-    // this method virtual because others data model types could have dirty flags or something 
+    /// this method virtual because others data model types could have dirty flags or something 
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
 
-    // clones all tree of this object (except ancillary and unrecognized children)
+    /// clones all tree of this object (except ancillary and unrecognized children)
     MRMESH_API std::shared_ptr<Object> cloneTree() const;
-    // clones current object only, without parent and/or children
+    /// clones current object only, without parent and/or children
     MRMESH_API virtual std::shared_ptr<Object> clone() const;
-    // clones all tree of this object (except ancillary and unrecognied children)
-    // clones only pointers to mesh, points or voxels
+    /// clones all tree of this object (except ancillary and unrecognied children)
+    /// clones only pointers to mesh, points or voxels
     MRMESH_API std::shared_ptr<Object> shallowCloneTree() const;
-    // clones current object only, without parent and/or children
-    // clones only pointers to mesh, points or voxels
+    /// clones current object only, without parent and/or children
+    /// clones only pointers to mesh, points or voxels
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const;
 
-    // return several info lines that can better describe object in the UI
+    /// return several info lines that can better describe object in the UI
     virtual std::vector<std::string> getInfoLines() const { return {}; }
 
-    // creates futures that save this object subtree:
-    //   models in the folder by given path and
-    //   fields in given JSON
-    tl::expected<std::vector<std::future<void>>, std::string> serializeRecursive( const std::filesystem::path& path, Json::Value& root,
-        int childId ) const; // childId is its ordinal number within the parent
+    /// creates futures that save this object subtree:
+    ///   models in the folder by given path and
+    ///   fields in given JSON
+    /// \param childId is its ordinal number within the parent
+    tl::expected<std::vector<std::future<void>>, std::string> serializeRecursive( const std::filesystem::path& path,
+        Json::Value& root, int childId ) const;
 
-    // loads subtree into this Object
-    //   models from the folder by given path and
-    //   fields from given JSON
+    /// loads subtree into this Object
+    ///   models from the folder by given path and
+    ///   fields from given JSON
     tl::expected<void, std::string> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root );
 
-    // swaps this object with other
-    // note: do not swap object signals, so listeners will get notifications from swapped object
-    // requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
+    /// swaps this object with other
+    /// note: do not swap object signals, so listeners will get notifications from swapped object
+    /// requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
     MRMESH_API void swap( Object& other );
 
-    // returns bounding box of this object in world coordinates
-    virtual Box3f getWorldBox() const { return {}; } //empty box
-    // returns bounding box of this object and all children visible in given viewports in world coordinates
+    /// returns bounding box of this object in world coordinates
+    virtual Box3f getWorldBox() const { return {}; } ///empty box
+    /// returns bounding box of this object and all children visible in given viewports in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    // signal about xf changing, triggered in setXf and setWorldXf
+    /// signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;
     XfChangedSignal xfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:
-    // this ctor is public only for std::make_shared used inside clone()
+    /// \note this ctor is public only for std::make_shared used inside clone()
     Object( ProtectedStruct, const Object& obj ) : Object( obj ) {}
 
 protected:
-    // user should not be able to call copy implicitly, use clone() function instead
+    /// user should not be able to call copy implicitly, use clone() function instead
     MRMESH_API Object( const Object& obj );
 
-    // swaps whole object (signals too)
+    /// swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );
-    // swaps signals, used in `swap` function to return back signals after `swapBase_`
-    // pls call Parent::swapSignals_ first when overriding this function
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// \note pls call Parent::swapSignals_ first when overriding this function
     MRMESH_API virtual void swapSignals_( Object& other );
 
-    // Creates future to save object model (e.g. mesh) in given file
-    // path is full filename without extension
+    /// Creates future to save object model (e.g. mesh) in given file
+    /// path is full filename without extension
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const;
 
-    // Write parameters to given Json::Value,
-    // if you override this method, please call Base::serializeFields_(root) in the beginning
+    /// Write parameters to given Json::Value,
+    /// \note if you override this method, please call Base::serializeFields_(root) in the beginning
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const;
 
-    // Reads model from file
+    /// Reads model from file
     MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path );
 
-    // Reads parameters from json value
-    // if you override this method, please call Base::deserializeFields_(root) in the beginning
+    /// Reads parameters from json value
+    /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
@@ -253,4 +260,6 @@ std::shared_ptr<const T> Object::find( const std::string_view & name ) const
     return {}; // not found
 }
 
-} //namespace MR
+/// \}
+
+} ///namespace MR

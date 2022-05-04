@@ -83,7 +83,7 @@ This list is not full and updating each day
    - Point to plane.
 
 ## Some useful links
-[MeshInspector releases page](https://github.com/MeshInspector/MeshInspectorReleases/releases)
+[MeshInspector releases page](https://github.com/MeshInspector/MeshInspector/releases)
 
 [Our YouTube channel with updates](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 

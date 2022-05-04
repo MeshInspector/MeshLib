@@ -1,4 +1,5 @@
 #include "MRIdentifyVertices.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -15,6 +16,7 @@ void VertexIdentifier::reserve( size_t numTris )
 
 void VertexIdentifier::addTriangles( const std::vector<ThreePoints> & buffer )
 {
+    MR_TIMER
     assert ( tris_.size() + buffer.size() <= tris_.capacity() );
     vertsInHMap_.resize( buffer.size() );
 

@@ -4,7 +4,6 @@
 #include "MRVector3.h"
 #include "MRVector.h"
 #include "MRphmap.h"
-#include <array>
 #include <cstring>
 
 namespace MR
@@ -12,8 +11,6 @@ namespace MR
 
 namespace MeshBuilder
 {
-
-using ThreePoints = std::array<Vector3f, 3>;
 
 /// this makes bit-wise comparison of two Vector3f's thus making two NaNs equal
 struct equalVector3f

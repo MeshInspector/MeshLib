@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRId.h"
+#include <array>
 
 namespace MR
 {
@@ -8,6 +9,10 @@ namespace MR
 namespace MeshBuilder
 {
 
+/// three vector3-coordinates describing a triangle
+using ThreePoints = std::array<Vector3f, 3>;
+
+/// mesh triangle represented by its three vertices and by its face ID
 struct Triangle
 {
     Triangle() noexcept = default;

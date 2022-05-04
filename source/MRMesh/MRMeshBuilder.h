@@ -1,9 +1,7 @@
 #pragma once
 
 #include "MRMeshBuilderTypes.h"
-#include "MRMeshTopology.h"
-#include "MRVector.h"
-#include <vector>
+#include "MRMesh.h"
 
 namespace MR
 {
@@ -33,7 +31,7 @@ namespace MR
 namespace MeshBuilder
 {
 
-// construct mesh from a set of triangles with given ids;
+// construct mesh topology from a set of triangles with given ids;
 // if skippedTris is given then it receives all input triangles not added in the resulting topology
 MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
 
@@ -48,14 +46,18 @@ struct VertDuplication
 MRMESH_API size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris,
     std::vector<VertDuplication>* dups = nullptr );
 
-// construct mesh from a set of triangles with given ids;
+// construct mesh topology from a set of triangles with given ids;
 // unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
 MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( const std::vector<Triangle> & tris,
     std::vector<VertDuplication> * dups = nullptr,
     std::vector<Triangle> * skippedTris = nullptr );
 
-// construct mesh from vertex-index triples
+// construct mesh topology from vertex-index triples
 MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples );
+
+// construct mesh from point triples;
+// all coinciding points are given the same VertId in the result
+MRMESH_API Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples );
 
 // a part of a whole mesh to be constructed
 struct MeshPiece
@@ -66,7 +68,7 @@ struct MeshPiece
     std::vector<Triangle> tris; // remaining triangles, not in topology
 };
 
-// construct mesh in parallel from given disjoint mesh pieces (which do not have any shared vertex)
+// construct mesh topology in parallel from given disjoint mesh pieces (which do not have any shared vertex)
 // and some additional triangles that join the pieces
 MRMESH_API MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, VertId maxVertId, FaceId maxFaceId,
     std::vector<Triangle> & borderTris ); //< on output borderTris will contain not added triangles
@@ -88,7 +90,7 @@ struct FaceRecord
     int lastVertex = 0;
 };
 
-// construct mesh from face soup, where each face can have arbitrary degree (not only triangles)
+// construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
 MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces );
 
 } //namespace MeshBuilder

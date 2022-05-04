@@ -6,10 +6,12 @@
 namespace MR
 {
 
+/// History action for combine some history actions
+/// \ingroup HistoryGroup
 class MRMESH_CLASS CombinedHistoryAction : public HistoryAction
 {
 public:
-    // Will call action() for each actions in given order (undo in reverse, redo in forward)
+    /// Will call action() for each actions in given order (undo in reverse, redo in forward)
     MRMESH_API CombinedHistoryAction( const std::string& name, const std::vector<std::shared_ptr<HistoryAction>>& actions );
 
     virtual std::string name() const override

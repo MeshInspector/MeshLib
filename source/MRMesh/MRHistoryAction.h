@@ -5,7 +5,9 @@
 
 namespace MR
 {
-// Abstract class for history actions
+
+/// Abstract class for history actions
+/// \ingroup HistoryGroup
 class HistoryAction
 {
 public:
@@ -18,10 +20,10 @@ public:
         Undo,
         Redo
     };
-    // This function is called on history action (undo, redo, etc.)
+    /// This function is called on history action (undo, redo, etc.)
     virtual void action( Type actionType ) = 0;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] virtual size_t heapBytes() const = 0;
 };
 

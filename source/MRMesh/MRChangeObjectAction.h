@@ -8,10 +8,12 @@
 namespace MR
 {
 
+/// History action for object change
+/// \ingroup HistoryGroup
 class ChangeObjectAction : public HistoryAction
 {
 public:
-    // Constructed from original Object
+    /// Constructed from original Object
     ChangeObjectAction( const std::string& name, const std::shared_ptr<Object>& obj ):
         obj_{ obj },
         name_{name}

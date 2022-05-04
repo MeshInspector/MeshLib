@@ -4,6 +4,7 @@
 #include "MRVector3.h"
 #include "MRVector.h"
 #include <array>
+#include <cstring>
 
 namespace MR
 {
@@ -20,9 +21,9 @@ struct equalVector3f
     {
         static_assert( sizeof( Vector3f ) == 12 );
         char ax[12], bx[12];
-        memcpy( ax, &a, 12 );
-        memcpy( bx, &b, 12 );
-        return memcmp( ax, bx, 12 ) == 0;
+        std::memcpy( ax, &a, 12 );
+        std::memcpy( bx, &b, 12 );
+        return std::memcmp( ax, bx, 12 ) == 0;
     }
 };
 

@@ -11,8 +11,15 @@
 #include "MRAffineXf3.h"
 #include "MRPointOnFace.h"
 
-// simple Vector structure elements are separated with spaces ' '
-// complex structures (Matrix, Plane, AffineXf, ...) elements (Vector, numerics) are separated with '\n'
+
+/**
+ * \brief Overloaded operators for IO base structures (Vector, Matrix, Plane, AffineXf, ...)
+ * \details simple Vector structure elements are separated with spaces ' '
+ * complex structures (Matrix, Plane, AffineXf, ...) elements (Vector, numerics) are separated with '\n'
+ * \defgroup StreamOperatorsGroup Stream Operators
+ * \ingroup IOGroup
+ * \{
+ */
 
 namespace MR
 {
@@ -165,3 +172,5 @@ namespace MR
         return s >> box.min >> box.max;
     }
 }
+
+/// \}

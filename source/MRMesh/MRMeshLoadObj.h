@@ -14,7 +14,11 @@ namespace MR
 namespace MeshLoad
 {
 
-// loads scene from obj file
+/// \defgroup MeshLoadObjGroup Mesh Load Obj
+/// \ingroup IOGroup
+/// \{
+
+/// loads scene from obj file
 struct NamedMesh
 {
     std::string name;
@@ -23,6 +27,8 @@ struct NamedMesh
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects );
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects );
 
-} //namespace MeshLoad
+/// \}
 
-} //namespace MR
+} // namespace MeshLoad
+
+} // namespace MR

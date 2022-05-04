@@ -10,6 +10,10 @@ namespace MR
 namespace DistanceMapSave
 {
 
+/// \defgroup DistanceMapSaveGroup DistanceMap Save
+/// \ingroup IOGroup
+/// \{
+
 MRMESH_API extern const IOFilters Filters;
 
 /**
@@ -19,6 +23,8 @@ MRMESH_API extern const IOFilters Filters;
  * [resX * resY] float - matrix of values
  */
 MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const DistanceMap& dmapObject );
+
+/// \}
 
 } // namespace DistanceMapSave
 

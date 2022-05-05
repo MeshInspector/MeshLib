@@ -12,7 +12,7 @@
 namespace MR
 {
 
-void relax( Mesh& mesh, const RelaxParams params )
+void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -24,6 +24,15 @@ void relax( Mesh& mesh, const RelaxParams params )
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb;
+        if ( cb )
+        {
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
+
         newPoints = mesh.points;
         BitSetParallelFor( zone, [&]( VertId v )
         {
@@ -40,12 +49,12 @@ void relax( Mesh& mesh, const RelaxParams params )
             auto& np = newPoints[v];
             auto pushForce = params.force * ( Vector3f{sum / double( count )} - np );
             np += pushForce;
-        } );
+        }, internalCb );
         mesh.points.swap( newPoints );
     }
 }
 
-void relaxKeepVolume( Mesh& mesh, const RelaxParams params )
+void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -59,6 +68,18 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params )
     std::vector<Vector3f> vertPushForces( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb1, internalCb2;
+        if ( cb )
+        {
+            internalCb1 = [&] ( float p )
+            {
+                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+            };
+            internalCb2 = [&] ( float p )
+            {
+                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
+            };
+        }
         newPoints = mesh.points;
         BitSetParallelFor( zone, [&]( VertId v )
         {
@@ -73,7 +94,7 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params )
                 ++count;
             }
             vertPushForces[v] = params.force * ( Vector3f{sum / double( count )} - mesh.points[v] );
-        } );
+        }, internalCb1 );
         BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
@@ -89,12 +110,12 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params )
             auto modifier = 1.0f / count;
             for ( auto e : orgRing( mesh.topology, e0 ) )
                 np -= ( vertPushForces[mesh.topology.dest( e )] * modifier );
-        } );
+        }, internalCb2 );
         mesh.points.swap( newPoints );
     }
 }
 
-void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params )
+void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -108,6 +129,14 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params )
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb;
+        if ( cb )
+        {
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = mesh.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
@@ -160,7 +189,7 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params )
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
-        } );
+        }, internalCb );
         mesh.points.swap( newPoints );
     }
 }

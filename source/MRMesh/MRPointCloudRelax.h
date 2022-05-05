@@ -13,11 +13,11 @@ struct PointCloudRelaxParams : RelaxParams
 };
 
 // applies given number of relaxation iterations to the whole pointCloud ( or some region if it is specified )
-MRMESH_API void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params = {} );
+MRMESH_API void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params = {}, SimpleProgressCallback cb = {} );
 
 // applies given number of relaxation iterations to the whole pointCloud ( or some region if it is specified )
 // do not really keeps volume but tries hard
-MRMESH_API void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params = {} );
+MRMESH_API void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params = {}, SimpleProgressCallback cb = {} );
 
 struct PointCloudApproxRelaxParams : PointCloudRelaxParams
 {
@@ -26,6 +26,6 @@ struct PointCloudApproxRelaxParams : PointCloudRelaxParams
 
 // applies given number of relaxation iterations to the whole pointCloud ( or some region if it is specified )
 // approx neighborhoods
-MRMESH_API void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params = {} );
+MRMESH_API void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params = {}, SimpleProgressCallback cb = {} );
 
 }

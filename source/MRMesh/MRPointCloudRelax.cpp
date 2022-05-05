@@ -11,7 +11,7 @@
 namespace MR
 {
 
-void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */ )
+void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -27,6 +27,14 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
 
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb;
+        if ( cb )
+        {
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
@@ -46,13 +54,13 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             auto& np = newPoints[v];
             auto pushForce = params.force * ( Vector3f{ sumPos / double( count ) } - np );
             np += pushForce;
-        } );
+        }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
     }
 }
 
-void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */ )
+void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -70,6 +78,18 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
     std::vector<std::vector<VertId>> neighbors( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb1, internalCb2;
+        if ( cb )
+        {
+            internalCb1 = [&] ( float p )
+            {
+                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+            };
+            internalCb2 = [&] ( float p )
+            {
+                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
+            };
+        }
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
@@ -88,7 +108,7 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             if ( neighs.empty() )
                 return;
             vertPushForces[v] = params.force * ( Vector3f{ sumPos / double( neighs.size() ) } - pointCloud.points[v] );
-        } );
+        }, internalCb1 );
         BitSetParallelFor( zone, [&] ( VertId v )
         {
             auto& np = newPoints[v];
@@ -99,13 +119,13 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
                 if ( zone.test( nv ) )
                     np -= ( vertPushForces[nv] * modifier );
             }
-        } );
+        }, internalCb2 );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
     }
 }
 
-void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params /*= {} */ )
+void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params /*= {} */, SimpleProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return;
@@ -123,6 +143,14 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
 
     for ( int i = 0; i < params.iterations; ++i )
     {
+        SimpleProgressCallback internalCb;
+        if ( cb )
+        {
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
@@ -173,7 +201,7 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
-        } );
+        }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
     }

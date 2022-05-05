@@ -1,6 +1,6 @@
 #pragma once
-
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -16,11 +16,11 @@ struct RelaxParams
 };
 
 // applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
-MRMESH_API void relax( Mesh& mesh, const RelaxParams params = {} );
+MRMESH_API void relax( Mesh& mesh, const RelaxParams params = {}, SimpleProgressCallback cb = {} );
 
 // applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 // do not really keeps volume but tries hard
-MRMESH_API void relaxKeepVolume( Mesh& mesh, const RelaxParams params = {} );
+MRMESH_API void relaxKeepVolume( Mesh& mesh, const RelaxParams params = {}, SimpleProgressCallback cb = {} );
 
 enum class RelaxApproxType 
 {
@@ -38,7 +38,7 @@ struct MeshApproxRelaxParams : RelaxParams
 
 // applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 // approx neighborhoods
-MRMESH_API void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params = {} );
+MRMESH_API void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params = {}, SimpleProgressCallback cb = {} );
 
 // applies at most given number of relaxation iterations the spikes detected by given threshold
 MRMESH_API void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region = nullptr );

@@ -37,6 +37,9 @@ void BitSetParallelForAll( const BS & bs, F f )
 template <typename BS, typename F>
 void BitSetParallelForAll( const BS& bs, F f, SimpleProgressCallback progressCb )
 {
+    if ( !progressCb )
+        return BitSetParallelForAll( bs, f );
+
     using IndexType = typename BS::IndexType;
 
     const int endBlock = int( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
@@ -51,7 +54,7 @@ void BitSetParallelForAll( const BS& bs, F f, SimpleProgressCallback progressCb 
         for ( ; id < idEnd; ++id )
         {
             f( id );
-            if ( progressCb && std::this_thread::get_id() == mainThreadId )
+            if ( std::this_thread::get_id() == mainThreadId )
             {
                 progressCb( float( int( id ) - idBegin ) / idRange );
             }

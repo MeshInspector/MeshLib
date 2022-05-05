@@ -25,13 +25,13 @@ class PointCloudTriangulator
 public:
     PointCloudTriangulator( const PointCloud& pointCloud, const TriangulationParameters& params );
 
-    Mesh triangulate();
+    Mesh triangulate( SimpleProgressCallback progressCb );
 
 private:
     // parallel creates local triangulated fans for each point
-    void optimizeAll_();
+    void optimizeAll_( SimpleProgressCallback progressCb );
     // accumulate local funs to surface
-    Mesh triangulate_();
+    Mesh triangulate_( SimpleProgressCallback progressCb );
 
     const PointCloud& pointCloud_;
     TriangulationParameters params_;
@@ -45,14 +45,14 @@ PointCloudTriangulator::PointCloudTriangulator( const PointCloud& pointCloud, co
 {
 }
 
-Mesh PointCloudTriangulator::triangulate()
+Mesh PointCloudTriangulator::triangulate( SimpleProgressCallback progressCb )
 {
     MR_TIMER;
-    optimizeAll_();
-    return triangulate_();
+    optimizeAll_( progressCb );
+    return triangulate_( progressCb );
 }
 
-void PointCloudTriangulator::optimizeAll_()
+void PointCloudTriangulator::optimizeAll_( SimpleProgressCallback progressCb )
 {
     MR_TIMER;
     float radius = findAvgPointsRadius( pointCloud_, params_.avgNumNeighbours );
@@ -60,7 +60,8 @@ void PointCloudTriangulator::optimizeAll_()
     const VertCoords& normals = pointCloud_.normals.empty() ? makeNormals( pointCloud_, params_.avgNumNeighbours ) : pointCloud_.normals;
 
     optimizedFans_.resize( pointCloud_.points.size() );
-    BitSetParallelFor( pointCloud_.validPoints, [&]( VertId v )
+
+    auto body = [&] ( VertId v )
     {
         auto candidates = TriangulationHelpers::findNeighbors( pointCloud_, v, radius );
         auto optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
@@ -76,7 +77,18 @@ void PointCloudTriangulator::optimizeAll_()
             optimizedRes = TriangulationHelpers::trianglulateFan( pointCloud_.points, v, candidates, normals, params_.critAngle );
         }
         optimizedFans_[v] = optimizedRes;
-    } );
+    };
+
+    SimpleProgressCallback partialProgressCb;
+    if ( progressCb )
+    {
+        // 0% - 35%
+        partialProgressCb = [&] ( float p )
+        {
+            progressCb( 0.35f * p );
+        };
+    }
+    BitSetParallelFor( pointCloud_.validPoints, body, partialProgressCb );
 }
 
 struct VertTriplet
@@ -114,7 +126,7 @@ struct VertTripletHasher
     }
 };
 
-Mesh PointCloudTriangulator::triangulate_()
+Mesh PointCloudTriangulator::triangulate_( SimpleProgressCallback progressCb )
 {
     MR_TIMER;
     // accumulate triplets
@@ -138,6 +150,8 @@ Mesh PointCloudTriangulator::triangulate_()
             else
                 ++mIt->second;
         }
+        if ( progressCb )
+            progressCb( 0.35f + 0.30f * float( cV ) / float( pointCloud_.validPoints.size() ) ); // 35% - 65%
     }
     Mesh mesh;
     mesh.points = pointCloud_.points;
@@ -155,29 +169,37 @@ Mesh PointCloudTriangulator::triangulate_()
     // create topology
     MeshBuilder::addTriangles( mesh.topology, tris3, false );
     tris2.insert( tris2.end(), tris3.begin(), tris3.end() );
+    if ( progressCb )
+        progressCb( 0.67f ); // 67%
     MeshBuilder::addTriangles( mesh.topology, tris2, false );
+    if ( progressCb )
+        progressCb( 0.70f ); // 70%
 
     // fill small holes
-    const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.25f;
+    const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;
     auto boundaries = mesh.topology.findBoundary();
-    for ( const auto& boundary : boundaries )
+    for ( int i = 0; i < boundaries.size(); ++i )
     {
+        const auto& boundary = boundaries[i];
         float length = 0.0f;
         for ( auto e : boundary )
             length += mesh.edgeLength( e );
 
         if ( length < bigLength )
             fillHole( mesh, boundary.front() );
+        if ( progressCb )
+            progressCb( 0.7f + 0.3f * float( i + 1 ) / float( boundaries.size() ) ); // 70% - 100%
     }
 
     return mesh;
 }
 
-Mesh triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */ )
+Mesh triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params /*= {} */,
+    SimpleProgressCallback progressCb )
 {
     MR_TIMER
     PointCloudTriangulator triangulator( pointCloud, params );
-    return triangulator.triangulate();
+    return triangulator.triangulate( progressCb );
 }
 
 }

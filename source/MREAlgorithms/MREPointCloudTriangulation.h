@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRProgressCallback.h"
 
 namespace MRE
 {
@@ -50,7 +51,7 @@ struct TriangulationParameters
     float critAngle{MR::PI2_F};
     /**
      * \brief Critical length of hole (all holes with length less then this value will be filled)
-     * \details If value is subzero it is set automaticly to 0.25*bbox.diagonal()
+     * \details If value is subzero it is set automaticly to 0.7*bbox.diagonal()
      */
     float critHoleLength{-FLT_MAX};
 };
@@ -66,5 +67,6 @@ struct TriangulationParameters
         </tr>
     </table>
  */
-MREALGORITHMS_API MR::Mesh triangulatePointCloud( const MR::PointCloud& pointCloud, const TriangulationParameters& params = {} );
+MREALGORITHMS_API MR::Mesh triangulatePointCloud( const MR::PointCloud& pointCloud, const TriangulationParameters& params = {},
+    MR::SimpleProgressCallback progressCb = {} );
 }

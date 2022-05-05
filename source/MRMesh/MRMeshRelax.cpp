@@ -26,10 +26,12 @@ void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
     {
         SimpleProgressCallback internalCb;
         if ( cb )
-            internalCb = [&] ( float p )
         {
-            cb( ( float( i ) + p ) / float( params.iterations ) );
-        };
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
 
         newPoints = mesh.points;
         BitSetParallelFor( zone, [&]( VertId v )
@@ -129,10 +131,12 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgress
     {
         SimpleProgressCallback internalCb;
         if ( cb )
-            internalCb = [&] ( float p )
         {
-            cb( ( float( i ) + p ) / float( params.iterations ) );
-        };
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = mesh.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {

@@ -29,10 +29,12 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
     {
         SimpleProgressCallback internalCb;
         if ( cb )
-            internalCb = [&] ( float p )
         {
-            cb( ( float( i ) + p ) / float( params.iterations ) );
-        };
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {
@@ -143,10 +145,12 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     {
         SimpleProgressCallback internalCb;
         if ( cb )
-            internalCb = [&] ( float p )
         {
-            cb( ( float( i ) + p ) / float( params.iterations ) );
-        };
+            internalCb = [&] ( float p )
+            {
+                cb( ( float( i ) + p ) / float( params.iterations ) );
+            };
+        }
         newPoints = pointCloud.points;
         BitSetParallelFor( zone, [&] ( VertId v )
         {

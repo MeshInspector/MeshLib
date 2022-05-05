@@ -7,7 +7,8 @@
 namespace MR
 {
  
-// three-dimensional vector
+/// three-dimensional vector
+/// \ingroup VectorGroup
 template <typename T> 
 struct Vector3
 {
@@ -54,18 +55,21 @@ struct Vector3
         }
     }
 
-    // returns one of 3 basis unit vector that makes the biggest angle with the direction specified by this
+    /// returns one of 3 basis unit vector that makes the biggest angle with the direction specified by this
     Vector3 furthestBasisVector() const;
 
-    // returns 2 unit vector, which together with this vector make an orthogonal basis
+    /// returns 2 unit vector, which together with this vector make an orthogonal basis
     std::pair<Vector3, Vector3> perpendicular() const;
 
-    // returns this vector transformed by xf if it is
+    /// returns this vector transformed by xf if it is
     Vector3 transformed( const AffineXf3<T>* xf ) const
     {
         return xf ? ( *xf )( *this ) : *this;
     }
 };
+
+/// \related Vector3
+/// \{
 
 template <typename T> 
 inline Vector3<T> & operator +=( Vector3<T> & a, const Vector3<T> & b ) { a.x += b.x; a.y += b.y; a.z += b.z; return a; }
@@ -91,7 +95,7 @@ inline Vector3<T> operator -( const Vector3<T> & a ) { return Vector3<T>( -a.x, 
 template <typename T> 
 inline const Vector3<T> & operator +( const Vector3<T> & a ) { return a; }
 
-// cross product
+/// cross product
 template <typename T> 
 inline Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b )
 {
@@ -102,21 +106,21 @@ inline Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b )
     };
 }
 
-// dot product
+/// dot product
 template <typename T> 
 inline T dot( const Vector3<T> & a, const Vector3<T> & b )
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-// mixed product
+/// mixed product
 template <typename T> 
 inline T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
     return dot( a, cross( b, c ) );
 }
 
-// per component multiplication
+/// per component multiplication
 template <typename T>
 inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
 {
@@ -124,7 +128,7 @@ inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
 }
 
 
-// angle in radians between two vectors
+/// angle in radians between two vectors
 template <typename T> 
 inline T angle( const Vector3<T> & a, const Vector3<T> & b )
 {
@@ -188,4 +192,6 @@ inline auto end( const Vector3<T> & v ) { return &v[3]; }
 template <typename T> 
 inline auto end( Vector3<T> & v ) { return &v[3]; }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

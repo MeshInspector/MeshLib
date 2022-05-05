@@ -6,9 +6,15 @@
 namespace MR
 {
 
+/// \defgroup HighPrecisionGroup High Precision
+/// \ingroup MathGroup
+/// \{
+
 using HighPrecisionInt = boost::multiprecision::checked_int128_t;
 
 using Vector2hp = Vector2<HighPrecisionInt>;
 using Vector3hp = Vector3<HighPrecisionInt>;
 
-} //namespace MR
+/// \}
+
+} // namespace MR

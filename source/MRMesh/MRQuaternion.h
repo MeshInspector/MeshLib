@@ -5,58 +5,59 @@
 namespace MR
 {
 
-// Represents a quaternion following the notations from
-// https://en.wikipedia.org/wiki/Quaternion
+/// Represents a quaternion following the notations from
+/// https://en.wikipedia.org/wiki/Quaternion
+/// \ingroup MathGroup
 template <typename T>
 struct Quaternion
 {
-    T a = 1; // real part of the quaternion
-    T b = 0, c = 0, d = 0; // imaginary part: b*i + c*j + d*k
+    T a = 1; ///< real part of the quaternion
+    T b = 0, c = 0, d = 0; ///< imaginary part: b*i + c*j + d*k
 
     constexpr Quaternion() noexcept = default;
     constexpr Quaternion( T a, T b, T c, T d ) noexcept : a( a ), b( b ), c( c ), d( d ) { }
     constexpr Quaternion( const Vector3<T> & axis, T angle ) noexcept;
     constexpr Quaternion( T real, const Vector3<T> & im ) noexcept : a( real ), b( im.x ), c( im.y ), d( im.z ) { }
     constexpr Quaternion( const Matrix3<T> & m );
-    // finds shorter arc rotation quaternion from one vector to another
+    /// finds shorter arc rotation quaternion from one vector to another
     constexpr Quaternion( const Vector3<T>& from, const Vector3<T>& to ) noexcept;
 
-    // returns imaginary part of the quaternion as a vector
+    /// returns imaginary part of the quaternion as a vector
     [[nodiscard]] constexpr Vector3<T> im() const noexcept { return Vector3<T>{ b, c, d }; }
 
-    // returns angle of rotation encoded in this quaternion
+    /// returns angle of rotation encoded in this quaternion
     [[nodiscard]] constexpr T angle() const noexcept { return 2 * std::acos( std::clamp( a, T(-1), T(1) ) ); }
-    // returns axis of rotation encoded in this quaternion
+    /// returns axis of rotation encoded in this quaternion
     [[nodiscard]] constexpr Vector3<T> axis() const noexcept { return im().normalized(); }
 
     [[nodiscard]] constexpr T normSq() const { return a * a + b * b + c * c + d * d; }
     [[nodiscard]] constexpr T norm() const { return std::sqrt( normSq() ); }
-    // returns quaternion representing the same rotation, using the opposite rotation direction and opposite angle
+    /// returns quaternion representing the same rotation, using the opposite rotation direction and opposite angle
     [[nodiscard]] constexpr Quaternion operator-() const { return {-a, -b, -c, -d}; }
 
-    // scales this quaternion to make its norm unit
+    /// scales this quaternion to make its norm unit
     void normalize() { if ( T n = norm(); n > 0 ) *this /= n; }
     [[nodiscard]] Quaternion normalized() const { Quaternion res( *this ); res.normalize(); return res; }
 
-    // computes conjugate quaternion, which for unit quaternions encodes the opposite rotation
+    /// computes conjugate quaternion, which for unit quaternions encodes the opposite rotation
     [[nodiscard]] constexpr Quaternion conjugate() const noexcept { return {a, -b, -c, -d}; }
-    // computes reciprocal quaternion
+    /// computes reciprocal quaternion
     [[nodiscard]] constexpr Quaternion inverse() const noexcept { return conjugate() / normSq(); }
-    // for unit quaternion returns the rotation of point p, which is faster to compute for single point;
-    // for multiple points it is faster to create matrix representation and apply it to the points
+    /// for unit quaternion returns the rotation of point p, which is faster to compute for single point;
+    /// for multiple points it is faster to create matrix representation and apply it to the points
     [[nodiscard]] constexpr Vector3<T> operator()( const Vector3<T> & p ) const noexcept;
 
-    // converts this into 3x3 rotation matrix
+    /// converts this into 3x3 rotation matrix
     [[nodiscard]] operator Matrix3<T>() const;
 
-    // given t in [0,1], interpolates linearly two quaternions giving in general not-unit quaternion
+    /// given t in [0,1], interpolates linearly two quaternions giving in general not-unit quaternion
     [[nodiscard]] static Quaternion lerp( const Quaternion & q0, const Quaternion & q1, T t ) { return ( 1 - t ) * q0 + t * q1; }
-    // given t in [0,1] and two unit quaternions, interpolates them spherically and produces another unit quaternion
+    /// given t in [0,1] and two unit quaternions, interpolates them spherically and produces another unit quaternion
     [[nodiscard]] static Quaternion slerp( Quaternion q0, Quaternion q1, T t );
-    // given t in [0,1] and two rotation matrices, interpolates them spherically and produces another rotation matrix
+    /// given t in [0,1] and two rotation matrices, interpolates them spherically and produces another rotation matrix
     [[nodiscard]] static Matrix3<T> slerp( const Matrix3<T> & m0, const Matrix3<T> & m1, T t ) { return slerp( Quaternion<T>{ m0 }, Quaternion<T>{ m1 }, t ); }
-    // given t in [0,1] and rigid transformations, interpolates them spherically and produces another rigid transformation;
-    // p is the only point that will have straight line movement during interpolation
+    /// given t in [0,1] and rigid transformations, interpolates them spherically and produces another rigid transformation;
+    /// p is the only point that will have straight line movement during interpolation
     [[nodiscard]] static AffineXf3<T> slerp( const AffineXf3<T> & xf0, const AffineXf3<T> & xf1, T t, const Vector3<T> & p = {} )
     {
         auto xfA = slerp( xf0.A, xf1.A, t );
@@ -66,6 +67,9 @@ struct Quaternion
     Quaternion & operator *=( T s ) { a *= s; b *= s; c *= s; d *= s; return * this; }
     Quaternion & operator /=( T s ) { return *this *= ( 1 / s ); }
 };
+
+/// \related Quaternion
+/// \{
 
 template <typename T>
 constexpr Quaternion<T>::Quaternion( const Vector3<T> & axis, T angle ) noexcept
@@ -90,7 +94,7 @@ constexpr Quaternion<T>::Quaternion( const Matrix3<T> & m )
 template <typename T>
 constexpr Quaternion<T>::Quaternion( const Vector3<T>& from, const Vector3<T>& to) noexcept
 {
-    //https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+    // https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
     a = dot( from, to );
     auto cr = cross( from, to );
     if( cr.x == 0 && cr.y == 0 && cr.z == 0 )
@@ -191,14 +195,14 @@ template <typename T>
     return b * ( 1 / a );
 }
 
-// dot product
+/// dot product
 template <typename T>
 [[nodiscard]] inline T dot( const Quaternion<T> & a, const Quaternion<T> & b )
 {
     return a.a * b.a + a.b * b.b + a.c * b.c + a.d * b.d;
 }
 
-// Hamilton product
+/// Hamilton product
 template <typename T>
 [[nodiscard]] inline Quaternion<T> operator *( const Quaternion<T> & q1, const Quaternion<T> & q2 )
 {
@@ -254,7 +258,7 @@ template<typename T>
     return canonQuats;
 }
 
-// returns closest to base canonical quaternion
+/// returns closest to base canonical quaternion
 template<typename T>
 [[nodiscard]] Quaternion<T> getClosestCanonicalQuaternion( const Quaternion<T>& base ) noexcept
 {
@@ -284,30 +288,30 @@ template <typename T>
     return Matrix3<T>( closestQuat );
 }
 
-// given t in [0,1] and two rotation matrices, interpolates them spherically and produces another rotation matrix
+/// given t in [0,1] and two rotation matrices, interpolates them spherically and produces another rotation matrix
 template <typename T>
 [[nodiscard]] inline Matrix3<T> slerp( const Matrix3<T> & m0, const Matrix3<T> & m1, T t )
 {
     return Quaternion<T>::slerp( m0, m1, t );
 }
 
-// given t in [0,1] and rigid transformations, interpolates them spherically and produces another rigid transformation;
-// p is the only point that will have straight line movement during interpolation
+/// given t in [0,1] and rigid transformations, interpolates them spherically and produces another rigid transformation;
+/// p is the only point that will have straight line movement during interpolation
 template <typename T>
 [[nodiscard]] inline AffineXf3<T> slerp( const AffineXf3<T> & xf0, const AffineXf3<T> & xf1, T t, const Vector3<T> & p = {} )
 {
     return Quaternion<T>::slerp( xf0, xf1, t, p );
 }
 
-// given any matrix, returns a close rotation matrix
+/// given any matrix, returns a close rotation matrix
 template <typename T>
 [[nodiscard]] inline Matrix3<T> orthonormalized( const Matrix3<T> & m )
 {
     return Matrix3<T>{ Quaternion<T>{ m }.normalized() };
 }
 
-// given any affine transformation, returns a close rigid transformation;
-// center point will be transformed to same point by both input and output transformations
+/// given any affine transformation, returns a close rigid transformation;
+/// center point will be transformed to same point by both input and output transformations
 template <typename T>
 [[nodiscard]] inline AffineXf3<T> orthonormalized( const AffineXf3<T> & xf, const Vector3<T> & center = {} )
 {
@@ -317,4 +321,6 @@ template <typename T>
     return res;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

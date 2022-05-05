@@ -5,7 +5,8 @@
 namespace MR
 {
  
-// 3-dimensional line: cross( x - p, d ) = 0
+/// 3-dimensional line: cross( x - p, d ) = 0
+/// \ingroup MathGroup
 template <typename T> 
 struct Line3
 {
@@ -16,24 +17,27 @@ struct Line3
     template <typename U>
     constexpr explicit Line3( const Line3<U> & l ) noexcept : p( l.p ), d( l.d ) { }
 
-    // returns squared distance from given point to this line
+    /// returns squared distance from given point to this line
     [[nodiscard]] T distanceSq( const Vector3<T> & x ) const 
         { return ( x - project( x ) ).lengthSq(); }
 
-    // returns same line represented with flipped direction of d-vector
+    /// returns same line represented with flipped direction of d-vector
     [[nodiscard]] Line3 operator -() const { return Line3( p, -d ); }
-    // returns same representation
+    /// returns same representation
     [[nodiscard]] const Line3 & operator +() const { return *this; }
-    // returns same line represented with unit d-vector
+    /// returns same line represented with unit d-vector
     [[nodiscard]] Line3 normalized() const { return { p, d.normalized() }; }
 
-    // finds the closest point on line
+    /// finds the closest point on line
     [[nodiscard]] Vector3<T> project( const Vector3<T> & x ) const { return p + dot( d, x - p ) / d.lengthSq() * d; }
 };
 
-// given line: l(x) = 0, and transformation: y=xf(x);
-// returns the same line in y reference frame: l'(y) = 0;
-// if given transformation is not rigid, then it is a good idea to normalize returned line
+/// \related Line3
+/// \{
+
+/// given line: l(x) = 0, and transformation: y=xf(x);
+/// \return the same line in y reference frame: l'(y) = 0;
+/// \details if given transformation is not rigid, then it is a good idea to normalize returned line
 template <typename T>
 [[nodiscard]] inline Line3<T> transformed( const Line3<T> & l, const AffineXf3<T> & xf )
 {
@@ -52,4 +56,6 @@ template <typename T>
     return !( a == b );
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

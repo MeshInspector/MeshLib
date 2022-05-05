@@ -7,7 +7,8 @@
 namespace MR
 {
 
-// Aspect ratio of a triangle is the ratio of the circum-radius to twice its in-radius
+/// Aspect ratio of a triangle is the ratio of the circum-radius to twice its in-radius
+/// \ingroup MathGroup
 template<typename T>
 T triangleAspectRatio( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
@@ -22,4 +23,4 @@ T triangleAspectRatio( const Vector3<T> & a, const Vector3<T> & b, const Vector3
     return bc * ca * ab / den;
 }
 
-} //namespace MR
+} // namespace MR

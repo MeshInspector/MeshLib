@@ -6,8 +6,12 @@
 
 namespace MR
 {
+
+/// \defgroup VectorGroup Vector
+/// \ingroup MathGroup
  
-// two-dimensional vector
+/// two-dimensional vector
+/// \ingroup VectorGroup
 template <typename T> 
 struct Vector2
 {
@@ -48,7 +52,7 @@ struct Vector2
     Vector2 operator -() const { return Vector2( -x, -y ); }
     const Vector2 & operator +() const { return *this; }
 
-    // returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
+    /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
     Vector2 furthestBasisVector() const;
 
     Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
@@ -63,21 +67,24 @@ struct Vector2
     }
 };
 
-// cross product
+/// \related Vector2
+/// \{
+
+/// cross product
 template <typename T> 
 inline T cross( const Vector2<T> & a, const Vector2<T> & b )
 {
     return a.x * b.y - a.y * b.x;
 }
 
-// dot product
+/// dot product
 template <typename T> 
 inline T dot( const Vector2<T> & a, const Vector2<T> & b )
 {
     return a.x * b.x + a.y * b.y;
 }
 
-// angle in radians between two vectors
+/// angle in radians between two vectors
 template <typename T> 
 inline T angle( const Vector2<T> & a, const Vector2<T> & b )
 {
@@ -131,4 +138,6 @@ inline auto end( const Vector2<T> & v ) { return &v[2]; }
 template <typename T> 
 inline auto end( Vector2<T> & v ) { return &v[2]; }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

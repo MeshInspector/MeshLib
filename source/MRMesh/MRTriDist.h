@@ -42,23 +42,19 @@
 
 \**************************************************************************/
 
-
-// TriDist()
-//
-// computes the closest points on two triangles, and returns the 
-// squared distance between them.
-// 
-// s and t are the triangles, stored tri[point][dimension].
-//
-// If the triangles are disjoint, p and q give the closest points of 
-// s and t respectively. However, if the triangles overlap, p and q 
-// are basically a random pair of points from the triangles, not 
-// coincident points on the intersection of the triangles, as might 
-// be expected.
-
 namespace MR
 {
 
+/// \brief computes the closest points on two triangles, and returns the 
+/// squared distance between them.
+/// 
+/// \param s,t are the triangles, stored tri[point][dimension].
+///
+/// \details If the triangles are disjoint, p and q give the closest points of 
+/// s and t respectively. However, if the triangles overlap, p and q 
+/// are basically a random pair of points from the triangles, not 
+/// coincident points on the intersection of the triangles, as might 
+/// be expected.
 MRMESH_API float TriDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
 
 } // namespace MR

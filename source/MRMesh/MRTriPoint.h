@@ -6,40 +6,44 @@
 namespace MR
 {
 
-// encodes a point inside a triangle using barycentric coordinates
+/// \brief encodes a point inside a triangle using barycentric coordinates
+/// \ingroup MathGroup
+/// \details Notations used below: v0, v1, v2 - points of the triangle
 template <typename T>
 struct TriPoint
 {
-    // Notations used below: v0, v1, v2 - points of the triangle
 
-    // barycentric coordinates:
-    T a = 0; // a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
-    T b = 0; // b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
-    // a+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge
+    /// barycentric coordinates:
+    /// a+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge
+    T a = 0; ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
+    T b = 0; ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
 
     static constexpr auto eps = 10 * std::numeric_limits<T>::epsilon();
 
     TriPoint() = default;
     TriPoint( T a, T b ) : a( a ), b( b ) { }
 
-    // given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point
+    /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point
     TriPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2 ) : TriPoint( p - v0, v1 - v0, v2 - v0 ) { }
-    // given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point
+    /// given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point
     TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2 );
 
-    // given three values in three vertices, computes interpolated value at this barycentric coordinates
+    /// given three values in three vertices, computes interpolated value at this barycentric coordinates
     template <typename U>
     U interpolate( const U & v0, const U & v1, const U & v2 ) const
     {
         return ( 1 - a - b ) * v0 + a * v1 + b * v2;
     }
 
-    // returns [0,2] if the point is in a vertex or -1 otherwise
+    /// returns [0,2] if the point is in a vertex or -1 otherwise
     int inVertex() const;
-    // returns [0,2] if the point is on edge or -1 otherwise:
-    // 0 means edge [v1,v2]; 1 means edge [v2,v0]; 2 means edge [v0,v1]
+    /// returns [0,2] if the point is on edge or -1 otherwise:
+    /// 0 means edge [v1,v2]; 1 means edge [v2,v0]; 2 means edge [v0,v1]
     int onEdge() const;
 };
+
+/// \related TriPoint
+/// \{
 
 template <typename T>
 TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2 )
@@ -101,5 +105,7 @@ int TriPoint<T>::onEdge() const
 
     return -1;
 }
+
+/// \}
 
 } // namespace MR

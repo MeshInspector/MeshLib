@@ -11,6 +11,10 @@
 
 #include <type_traits>
 
+/// \defgroup TupleBindingsGroup Tuple Bindings
+/// \ingroup MathGroup
+/// \{
+
 namespace std
 {
 
@@ -157,4 +161,6 @@ constexpr uint8_t& get( Color& c ) noexcept
     return c[int( I )];
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

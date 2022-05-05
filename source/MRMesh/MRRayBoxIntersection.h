@@ -5,6 +5,10 @@
 namespace MR
 {
 
+/// \defgroup RayBoxIntersectionGroup Ray Box Intersection
+/// \ingroup MathGroup
+/// \{
+
 template<typename T>
 struct RayOrigin
 {
@@ -21,9 +25,9 @@ struct RayOrigin<float>
     RayOrigin( const Vector3f & ro ) { p = _mm_set_ps( ro.x, ro.y, ro.z, 0 ); }
 };
 
-    //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.64.7663&rep=rep1&type=pdf
-// finds intersection between the Ray and the Box.
-// Precompute values could be useful for several calls with the same direction
+/// finds intersection between the Ray and the Box.
+/// Precompute values could be useful for several calls with the same direction
+/// \details http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.64.7663&rep=rep1&type=pdf
 inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigin, float & t0, float & t1, const IntersectionPrecomputes<float>& prec )
 {
     __m128 l = _mm_set_ps( box.min.x, box.min.y, box.min.z, t0 );
@@ -79,5 +83,7 @@ bool rayBoxIntersect( const Box3<T>& box, const Line3<T>& line, T t0, T t1 )
     IntersectionPrecomputes<T> prec( line.d );
     return rayBoxIntersect( box, line, t0, t1, prec );
 }
+
+/// \}
 
 }

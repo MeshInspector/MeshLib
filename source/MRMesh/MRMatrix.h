@@ -6,7 +6,11 @@
 namespace MR
 {
 
-// Row-major matrix with T values
+/// \defgroup MatrixGroup Matrix
+/// \ingroup MathGroup
+
+/// Row-major matrix with T values
+/// \ingroup MatrixGroup
 template <typename T>
 struct Matrix : RectIndexer
 {
@@ -19,7 +23,7 @@ public:
         data_.resize( size_ );
     }
 
-    // main access method
+    /// main access method
     constexpr T& operator ()( size_t row, size_t col ) noexcept { return data_[toIndex( { (int)col, (int)row } )]; }
     constexpr T& operator ()( size_t i ) noexcept { return data_[i]; }
     constexpr const T& operator ()( size_t row, size_t col ) const noexcept { return data_[toIndex( { (int)col, (int)row } )]; }
@@ -38,7 +42,7 @@ public:
         return res;
     }
 
-    // computes transposed matrix
+    /// computes transposed matrix
     constexpr Matrix transposed() const
     {
         Matrix res( dims_.x, dims_.y );
@@ -85,4 +89,4 @@ private:
     std::vector<T> data_;
 };
 
-} //namespace MR
+} // namespace MR

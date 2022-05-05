@@ -5,13 +5,14 @@
 namespace MR
 {
  
-// symmetric 3x3 matrix
+/// symmetric 3x3 matrix
+/// \ingroup MatrixGroup
 template <typename T>
 struct SymMatrix3
 {
     using ValueType = T;
 
-    // zero matrix by default
+    /// zero matrix by default
     T xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
 
     constexpr SymMatrix3() noexcept = default;
@@ -20,9 +21,9 @@ struct SymMatrix3
     static constexpr SymMatrix3 identity() noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = 1; return res; }
     static constexpr SymMatrix3 diagonal( T diagVal ) noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = diagVal; return res; }
 
-    // computes determinant of the matrix
+    /// computes determinant of the matrix
     constexpr T det() const noexcept;
-    // computes inverse matrix
+    /// computes inverse matrix
     constexpr SymMatrix3<T> inverse() const noexcept;
 
     SymMatrix3 & operator +=( const SymMatrix3<T> & b ) { xx += b.xx; xy += b.xy; xz += b.xz; yy += b.yy; yz += b.yz; zz += b.zz; return * this; }
@@ -37,7 +38,10 @@ struct SymMatrix3
     }
 };
 
-// x = a * b
+/// \related SymMatrix3
+/// \{
+
+/// x = a * b
 template <typename T> 
 inline Vector3<T> operator *( const SymMatrix3<T> & a, const Vector3<T> & b )
 {
@@ -49,7 +53,7 @@ inline Vector3<T> operator *( const SymMatrix3<T> & a, const Vector3<T> & b )
     };
 }
 
-// x = a * a^T
+/// x = a * a^T
 template <typename T> 
 inline SymMatrix3<T> outerSquare( const Vector3<T> & a )
 {
@@ -116,4 +120,6 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse() const noexcept
     return res;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

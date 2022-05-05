@@ -8,6 +8,10 @@
 namespace MR
 {
 
+/// \defgroup TriangleIntersectionGroup Triangle intersection
+/// \ingroup MathGroup
+/// \{
+
 struct TriIntersectResult
 {
     // barycentric representation
@@ -20,7 +24,7 @@ struct TriIntersectResult
     }
 };
 
-// checks whether triangles ABC and DEF intersect
+/// checks whether triangles ABC and DEF intersect
 template <typename T>
 bool doTrianglesIntersect(
     Vector3<T> a, Vector3<T> b, Vector3<T> c,
@@ -79,7 +83,7 @@ bool doTrianglesIntersect(
     return false;
 }
 
-// returns true if a plane containing edge XY separates point Z from triangle UVW
+/// returns true if a plane containing edge XY separates point Z from triangle UVW
 template <typename T>
 bool doesEdgeXySeparate(
     const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z,
@@ -97,8 +101,8 @@ bool doesEdgeXySeparate(
         dz * dot( d, w - x ) < 0;
 }
 
-// checks whether triangles ABC and DEF intersect;
-// performs more checks to avoid false positives of simple doTrianglesIntersect
+/// checks whether triangles ABC and DEF intersect;
+/// performs more checks to avoid false positives of simple doTrianglesIntersect
 template <typename T>
 bool doTrianglesIntersectExt(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
@@ -120,7 +124,7 @@ bool doTrianglesIntersectExt(
         !doesEdgeXySeparate( f, d, e, a, b, c, dir );
 }
 
-// checks whether triangle ABC and segment DE intersect
+/// checks whether triangle ABC and segment DE intersect
 template <typename T> 
 bool doTriangleSegmentIntersect(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
@@ -147,7 +151,7 @@ bool doTriangleSegmentIntersect(
     return true;
 }
 
-// this function input should have intersection
+/// this function input should have intersection
 template <typename T>
 Vector3<T> findTriangleSegmentIntersection(
     const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c,
@@ -223,5 +227,7 @@ inline std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3d& o
     const IntersectionPrecomputes<double> prec( dir );
     return rayTriangleIntersect_( oriA, oriB, oriC, prec );
 }
+
+/// \}
 
 } // namespace MR

@@ -6,8 +6,13 @@
 namespace MR
 {
 
-// >0 for clockwise loop, < 0 for CCW loop
-template<typename T, typename R = T> //R is the type for the accumulation and for result
+/// \defgroup ContourGroup Contour
+/// \ingroup MathGroup
+/// \{
+
+/// >0 for clockwise loop, < 0 for CCW loop
+/// \tparam R is the type for the accumulation and for result
+template<typename T, typename R = T>
 R calcOrientedArea( const Contour2<T> & contour )
 {
     if ( contour.size() < 3 )
@@ -26,9 +31,10 @@ R calcOrientedArea( const Contour2<T> & contour )
     return R(0.5) * area;
 }
 
-// returns the vector with the magnitude equal to contour area, and directed to see the contour
-// in ccw order from the vector tip
-template<typename T, typename R = T> //R is the type for the accumulation and for result
+/// returns the vector with the magnitude equal to contour area, and directed to see the contour
+/// in ccw order from the vector tip
+/// \tparam R is the type for the accumulation and for result
+template<typename T, typename R = T>
 Vector3<R> calcOrientedArea( const Contour3<T> & contour )
 {
     if ( contour.size() < 3 )
@@ -47,7 +53,7 @@ Vector3<R> calcOrientedArea( const Contour3<T> & contour )
     return R(0.5) * area;
 }
 
-// copy double-contour to float-contour, or vice versa
+/// copy double-contour to float-contour, or vice versa
 template<typename To, typename From>
 To copyContour( const From & from )
 {
@@ -58,7 +64,7 @@ To copyContour( const From & from )
     return res;
 }
 
-// copy double-contours to float-contours, or vice versa
+/// copy double-contours to float-contours, or vice versa
 template<typename To, typename From>
 To copyContours( const From & from )
 {
@@ -69,4 +75,6 @@ To copyContours( const From & from )
     return res;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

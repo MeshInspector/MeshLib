@@ -79,13 +79,14 @@ void PointCloudTriangulator::optimizeAll_( SimpleProgressCallback progressCb )
         optimizedFans_[v] = optimizedRes;
     };
 
-    SimpleProgressCallback partialProgressCb;
+    ProgressCallback partialProgressCb;
     if ( progressCb )
     {
         // 0% - 35%
         partialProgressCb = [&] ( float p )
         {
             progressCb( 0.35f * p );
+            return true;
         };
     }
     BitSetParallelFor( pointCloud_.validPoints, body, partialProgressCb );

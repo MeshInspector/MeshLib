@@ -8,9 +8,13 @@
 namespace MR
 {
 
-// finds an intersection between a plane1 and a plane2
-// plane1 and plane2 should be normalized for check parallelism
-// returns nullopt if they are parallel (even if they match)
+/// \defgroup IntersectionGroup Intersection
+/// \ingroup MathGroup
+/// \{
+
+/// finds an intersection between a plane1 and a plane2
+/// \param plane1,plane2 should be normalized for check parallelism
+/// \return nullopt if they are parallel (even if they match)
 template<typename T>
 std::optional<Line3<T>> intersection( const Plane3<T>& plane1, const Plane3<T>& plane2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -26,9 +30,9 @@ std::optional<Line3<T>> intersection( const Plane3<T>& plane1, const Plane3<T>& 
     return Line3<T>( point, crossDir.normalized() );
 }
 
-// finds an intersection between a plane and a line
-// plane and line should be normalized for check parallelism
-// returns nullopt if they are parallel (even line belongs to plane)
+/// finds an intersection between a plane and a line
+/// \param plane,line should be normalized for check parallelism
+/// \return nullopt if they are parallel (even line belongs to plane)
 template<typename T>
 std::optional<Vector3<T>> intersection( const Plane3<T>& plane, const Line3<T>& line,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -39,9 +43,9 @@ std::optional<Vector3<T>> intersection( const Plane3<T>& plane, const Line3<T>& 
     return line.p + ( plane.d - dot( plane.n, line.p ) ) / den * line.d;
 }
 
-// finds an intersection between a line1 and a line2
-// line1 and line2 should be normalized for check parallelism
-// returns nullopt if they are not intersect (even if they match)
+/// finds an intersection between a line1 and a line2
+/// \param line1,line2 should be normalized for check parallelism
+/// \return nullopt if they are not intersect (even if they match)
 template<typename T>
 std::optional<Vector3<T>> intersection( const Line3<T>& line1, const Line3<T>& line2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -65,8 +69,8 @@ std::optional<Vector3<T>> intersection( const Line3<T>& line1, const Line3<T>& l
 
 
 
-// finds distance between a plane1 and a plane2
-// returns nullopt if they intersect
+/// finds distance between a plane1 and a plane2
+/// \return nullopt if they intersect
 template<typename T>
 std::optional<T> distance( const Plane3<T>& plane1, const Plane3<T>& plane2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -79,8 +83,8 @@ std::optional<T> distance( const Plane3<T>& plane1, const Plane3<T>& plane2,
     return ( plane2.n * plane2.d - plane1.n * plane1.d ).length();
 }
 
-// finds distance between a plane and a line;
-// returns nullopt if they intersect
+/// finds distance between a plane and a line;
+/// \return nullopt if they intersect
 template<typename T>
 std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -92,8 +96,8 @@ std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
     return std::abs( dot( line.p, plane.n ) - plane.d );
 }
 
-// finds distance between parallel or skew lines ( a line1 and a line2 )
-// returns nullopt if they intersect
+/// finds distance between parallel or skew lines ( a line1 and a line2 )
+/// \return nullopt if they intersect
 template<typename T>
 std::optional<T> distance( const Line3<T>& line1, const Line3<T>& line2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -110,8 +114,8 @@ std::optional<T> distance( const Line3<T>& line1, const Line3<T>& line2,
     return std::abs( p1 - p2 );
 }
 
-// finds closest point between skew lines ( a line1 and a line2 )
-// returns nullopt if they intersect or parallel
+/// finds closest point between skew lines ( a line1 and a line2 )
+/// \return nullopt if they intersect or parallel
 template<typename T>
 std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>& line2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
@@ -127,11 +131,13 @@ std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>
 
     const auto n2 = cross( line2.d, crossDir );
     const T den = dot( line1.d, n2 );
-    if ( den == 0 ) // check for calculation
+    if ( den == 0 ) /// check for calculation
         return {};
     const auto closest1 = line1.p + dot( ( line2.p - line1.p ), n2 ) / den * line1.d;
     const auto closest2 = closest1 + ( p2 - p1 ) * crossDir;
     return LineSegm3<T>( closest1, closest2 );
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

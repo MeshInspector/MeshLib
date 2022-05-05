@@ -6,55 +6,56 @@
 namespace MR
 {
 
-// arbitrary 2x2 matrix
+/// arbitrary 2x2 matrix
+/// \ingroup MatrixGroup
 template <typename T>
 struct Matrix2
 {
     using ValueType = T;
     using VectorType = Vector2<T>;
 
-    // rows, identity matrix by default
+    /// rows, identity matrix by default
     Vector2<T> x{ 1, 0 };
     Vector2<T> y{ 0, 1 };
 
     constexpr Matrix2() noexcept = default;
-    // initializes matrix from its 2 rows
+    /// initializes matrix from its 2 rows
     constexpr Matrix2( const Vector2<T> & x, const Vector2<T> & y ) : x( x ), y( y ) { }
     template <typename U>
     constexpr explicit Matrix2( const Matrix2<U> & m ) : x( m.x ), y( m.y ) { }
     static constexpr Matrix2 zero() noexcept { return Matrix2( Vector2<T>(), Vector2<T>() ); }
-    // returns a matrix that scales uniformly
+    /// returns a matrix that scales uniformly
     static constexpr Matrix2 scale( T s ) noexcept { return Matrix2( { s, T(0) }, { T(0), s } ); }
-    // returns a matrix that has its own scale along each axis
+    /// returns a matrix that has its own scale along each axis
     static constexpr Matrix2 scale( T sx, T sy ) noexcept { return Matrix2( { sx, T(0) }, { T(0), sy } ); }
     static constexpr Matrix2 scale( const Vector2<T> & s ) noexcept { return Matrix2( { s.x, T(0) }, { T(0), s.y } ); }
-    // creates matrix representing rotation around origin on given angle
+    /// creates matrix representing rotation around origin on given angle
     static constexpr Matrix2 rotation( T angle ) noexcept;
-    // creates matrix representing rotation that after application to (from) makes (to) vector
+    /// creates matrix representing rotation that after application to (from) makes (to) vector
     static constexpr Matrix2 rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept;
-    // constructs a matrix from its 2 rows
+    /// constructs a matrix from its 2 rows
     static constexpr Matrix2 fromRows( const Vector2<T> & x, const Vector2<T> & y ) noexcept { return Matrix2( x, y ); }
-    // constructs a matrix from its 2 columns;
-    // use this method to get the matrix that transforms basis vectors ( plusX, plusY ) into vectors ( x, y ) respectively
+    /// constructs a matrix from its 2 columns;
+    /// use this method to get the matrix that transforms basis vectors ( plusX, plusY ) into vectors ( x, y ) respectively
     static constexpr Matrix2 fromColumns( const Vector2<T> & x, const Vector2<T> & y ) noexcept { return Matrix2( x, y ).transposed(); }
 
-    // row access
+    /// row access
     constexpr const Vector2<T> & operator []( int row ) const noexcept { return *( &x + row ); }
     constexpr       Vector2<T> & operator []( int row )       noexcept { return *( &x + row ); }
 
-    // column access
+    /// column access
     constexpr Vector2<T> col( int i ) const noexcept { return { x[i], y[i] }; }
 
-    // computes trace of the matrix
+    /// computes trace of the matrix
     constexpr T trace() const noexcept { return x.x + y.y; }
-    // compute sum of squared matrix elements
+    /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
-    // computes determinant of the matrix
+    /// computes determinant of the matrix
     constexpr T det() const noexcept;
-    // computes inverse matrix
+    /// computes inverse matrix
     constexpr Matrix2<T> inverse() const noexcept;
-    // computes transposed matrix
+    /// computes transposed matrix
     constexpr Matrix2<T> transposed() const noexcept;
 
     Matrix2 & operator +=( const Matrix2<T> & b ) { x += b.x; y += b.y; return * this; }
@@ -69,14 +70,17 @@ struct Matrix2
     }
 };
 
-// x = a * b
+/// \related Matrix2
+/// \{
+
+/// x = a * b
 template <typename T>
 inline Vector2<T> operator *( const Matrix2<T> & a, const Vector2<T> & b )
 {
     return { dot( a.x, b ), dot( a.y, b ) };
 }
 
-// product of two matrices
+/// product of two matrices
 template <typename T>
 inline Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
 {
@@ -87,7 +91,7 @@ inline Matrix2<T> operator *( const Matrix2<T> & a, const Matrix2<T> & b )
     return res;
 }
 
-// x = a * b^T
+/// x = a * b^T
 template <typename T>
 inline Matrix2<T> outer( const Vector2<T> & a, const Vector2<T> & b )
 {
@@ -175,4 +179,6 @@ constexpr Matrix2<T> Matrix2<T>::transposed() const noexcept
     };
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

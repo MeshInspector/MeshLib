@@ -9,22 +9,26 @@
 namespace MR
 {
 
-// returns all corners of given box
+/// \defgroup BoxGroup Box
+/// \ingroup MathGroup
+/// \{
+
+/// returns all corners of given box
 template <typename T>
 std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box );
 
-// Box given by its min- and max- corners
+/// Box given by its min- and max- corners
 template <typename V> 
 struct Box
 {
 public:
     using T = typename V::ValueType;
 
-    // create invalid box by default
+    /// create invalid box by default
     V min = V::diagonal( std::numeric_limits<T>::max() );
     V max = V::diagonal( std::numeric_limits<T>::lowest() );
 
-    // min/max access by 0/1 index
+    /// min/max access by 0/1 index
     const V & operator []( int e ) const { return *( &min + e ); }
           V & operator []( int e )       { return *( &min + e ); }
 
@@ -36,7 +40,7 @@ public:
 
     static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min,min + size }; }
 
-    // true if the box contains at least one point
+    /// true if the box contains at least one point
     bool valid() const 
     { 
         for ( int i = 0; i < V::elements; ++i )
@@ -45,16 +49,16 @@ public:
         return true;
     }
 
-    // computes center of the box
+    /// computes center of the box
     V center() const { assert( valid() ); return ( min + max ) / T(2); }
 
-    // computes size of the box in all dimensions
+    /// computes size of the box in all dimensions
     V size() const { assert( valid() ); return max - min; }
 
-    // computes length from min to max
+    /// computes length from min to max
     T diagonal() const { return size().length(); }
 
-    // computes the volume of this box
+    /// computes the volume of this box
     T volume() const
     {
         assert( valid() );
@@ -64,7 +68,7 @@ public:
         return res;
     }
 
-    // minimally increases the box to include given point
+    /// minimally increases the box to include given point
     void include( const V & pt )
     {
         for ( int i = 0; i < V::elements; ++i )
@@ -74,7 +78,7 @@ public:
         }
     }
 
-    // minimally increases the box to include another box
+    /// minimally increases the box to include another box
     void include( const Box & b )
     {
         for ( int i = 0; i < V::elements; ++i )
@@ -84,7 +88,7 @@ public:
         }
     }
 
-    // checks whether given point is inside (including the surface) of the box
+    /// checks whether given point is inside (including the surface) of the box
     bool contains( const V & pt ) const
     {
         for ( int i = 0; i < V::elements; ++i )
@@ -93,7 +97,7 @@ public:
         return true;
     }
 
-    // returns closest point in the box to given point
+    /// returns closest point in the box to given point
     V getBoxClosestPointTo( const V & pt ) const
     {
         assert( valid() );
@@ -103,7 +107,7 @@ public:
         return res;
     }
 
-    // checks whether this box intersects or touches given box
+    /// checks whether this box intersects or touches given box
     bool intersects( const Box & b ) const
     {
         for ( int i = 0; i < V::elements; ++i )
@@ -114,7 +118,7 @@ public:
         return true;
     }
 
-    // computes intersection between this and other box
+    /// computes intersection between this and other box
     Box intersection( const Box & b ) const
     {
         Box res;
@@ -127,8 +131,8 @@ public:
     }
     Box & intersect( const Box & b ) { return *this = intersection( b ); }
 
-    // returns squared distance between this box and given one;
-    // returns zero if the boxes touch or intersect
+    /// returns squared distance between this box and given one;
+    /// returns zero if the boxes touch or intersect
     T getDistanceSq( const Box & b ) const
     {
         auto ibox = intersection( b );
@@ -139,7 +143,7 @@ public:
         return distSq;
     }
 
-    // expands min and max to their closest representable value 
+    /// expands min and max to their closest representable value 
     Box insignificantlyExpanded() const
     {
         assert( valid() );
@@ -186,7 +190,7 @@ inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
     };
 }
 
-// find the tightest box enclosing this one after transformation
+/// find the tightest box enclosing this one after transformation
 template <typename V>
 inline Box<V> transformed( const Box<V> & box, const AffineXf<V> & xf )
 {
@@ -195,32 +199,34 @@ inline Box<V> transformed( const Box<V> & box, const AffineXf<V> & xf )
         res.include( xf( p ) );
     return res;
 }
-// this version returns input box as is if pointer to transformation is null
+/// this version returns input box as is if pointer to transformation is null
 template <typename V>
 inline Box<V> transformed( const Box<V> & box, const AffineXf<V> * xf )
 {
     return xf ? transformed( box, *xf ) : box;
 }
 
-// returns size along x axis
+/// returns size along x axis
 template <typename V>
 inline auto width( const Box<V>& box )
 {
     return box.max.x - box.min.x;
 }
 
-// returns size along y axis
+/// returns size along y axis
 template <typename V>
 inline auto height( const Box<V>& box )
 {
     return box.max.y - box.min.y;
 }
 
-// returns size along z axis
+/// returns size along z axis
 template <typename V>
 inline auto depth( const Box<V>& box )
 {
     return box.max.z - box.min.z;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

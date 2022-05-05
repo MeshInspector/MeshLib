@@ -6,63 +6,64 @@
 namespace MR
 {
 
-// arbitrary 3x3 matrix
+/// arbitrary 3x3 matrix
+/// \ingroup MatrixGroup
 template <typename T>
 struct Matrix3
 {
     using ValueType = T;
     using VectorType = Vector3<T>;
 
-    // rows, identity matrix by default
+    /// rows, identity matrix by default
     Vector3<T> x{ 1, 0, 0 };
     Vector3<T> y{ 0, 1, 0 };
     Vector3<T> z{ 0, 0, 1 };
 
     constexpr Matrix3() noexcept = default;
-    // initializes matrix from its 3 rows
+    /// initializes matrix from its 3 rows
     constexpr Matrix3( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) : x( x ), y( y ), z( z ) { }
     template <typename U>
     constexpr explicit Matrix3( const Matrix3<U> & m ) : x( m.x ), y( m.y ), z( m.z ) { }
     static constexpr Matrix3 zero() noexcept { return Matrix3( Vector3<T>(), Vector3<T>(), Vector3<T>() ); }
-    // returns a matrix that scales uniformly
+    /// returns a matrix that scales uniformly
     static constexpr Matrix3 scale( T s ) noexcept { return Matrix3( { s, T(0), T(0) }, { T(0), s, T(0) }, { T(0), T(0), s } ); }
-    // returns a matrix that has its own scale along each axis
+    /// returns a matrix that has its own scale along each axis
     static constexpr Matrix3 scale( T sx, T sy, T sz ) noexcept { return Matrix3( { sx, T(0), T(0) }, { T(0), sy, T(0) }, { T(0), T(0), sz } ); }
     static constexpr Matrix3 scale( const Vector3<T> & s ) noexcept { return Matrix3( { s.x, T(0), T(0) }, { T(0), s.y, T(0) }, { T(0), T(0), s.z } ); }
-    // creates matrix representing rotation around given axis on given angle
+    /// creates matrix representing rotation around given axis on given angle
     static constexpr Matrix3 rotation( const Vector3<T> & axis, T angle ) noexcept;
-    // creates matrix representing rotation that after application to (from) makes (to) vector
+    /// creates matrix representing rotation that after application to (from) makes (to) vector
     static constexpr Matrix3 rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept;
-    // creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)
-    // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
+    /// creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)
+    /// see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
     static constexpr Matrix3 rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept;
-    // constructs a matrix from its 3 rows
+    /// constructs a matrix from its 3 rows
     static constexpr Matrix3 fromRows( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ); }
-    // constructs a matrix from its 3 columns;
-    // use this method to get the matrix that transforms basis vectors ( plusX, plusY, plusZ ) into vectors ( x, y, z ) respectively
+    /// constructs a matrix from its 3 columns;
+    /// use this method to get the matrix that transforms basis vectors ( plusX, plusY, plusZ ) into vectors ( x, y, z ) respectively
     static constexpr Matrix3 fromColumns( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ).transposed(); }
 
-    // row access
+    /// row access
     constexpr const Vector3<T> & operator []( int row ) const noexcept { return *( &x + row ); }
     constexpr       Vector3<T> & operator []( int row )       noexcept { return *( &x + row ); }
 
-    // column access
+    /// column access
     constexpr Vector3<T> col( int i ) const noexcept { return { x[i], y[i], z[i] }; }
 
-    // computes trace of the matrix
+    /// computes trace of the matrix
     constexpr T trace() const noexcept { return x.x + y.y + z.z; }
-    // compute sum of squared matrix elements
+    /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
-    // computes determinant of the matrix
+    /// computes determinant of the matrix
     constexpr T det() const noexcept;
-    // computes inverse matrix
+    /// computes inverse matrix
     constexpr Matrix3<T> inverse() const noexcept;
-    // computes transposed matrix
+    /// computes transposed matrix
     constexpr Matrix3<T> transposed() const noexcept;
-    // returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
+    /// returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
     constexpr Vector3<T> toEulerAngles() const noexcept;
-    // returns scaling factors by axes (Ox, Oy, Oz)
+    /// returns scaling factors by axes (Ox, Oy, Oz)
     constexpr Vector3<T> toScale() const noexcept;
 
     Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
@@ -77,14 +78,17 @@ struct Matrix3
     }
 };
 
-// x = a * b
+/// \related Matrix3
+/// \{
+
+/// x = a * b
 template <typename T>
 inline Vector3<T> operator *( const Matrix3<T> & a, const Vector3<T> & b )
 {
     return { dot( a.x, b ), dot( a.y, b ), dot( a.z, b ) };
 }
 
-// product of two matrices
+/// product of two matrices
 template <typename T>
 inline Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )
 {
@@ -95,7 +99,7 @@ inline Matrix3<T> operator *( const Matrix3<T> & a, const Matrix3<T> & b )
     return res;
 }
 
-// x = a * b^T
+/// x = a * b^T
 template <typename T>
 inline Matrix3<T> outer( const Vector3<T> & a, const Vector3<T> & b )
 {
@@ -227,4 +231,6 @@ constexpr Vector3<T> Matrix3<T>::toScale() const noexcept
     return { scaleX, scaleY, scaleZ };
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

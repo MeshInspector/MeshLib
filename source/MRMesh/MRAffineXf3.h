@@ -6,11 +6,14 @@
 namespace MR
 {
 
-// computes rigid transformation xf:
-// xf.z - directed from center to eye
-// xf.x - directed orthogonal to up and xf.z
-// xf.y - directed orthogonal to xf.z and xf.x
-// xf(eye) = 0
+/**
+ * \brief computes rigid transformation xf
+ * \details xf.z - directed from center to eye \n
+ * xf.x - directed orthogonal to up and xf.z \n
+ * xf.y - directed orthogonal to xf.z and xf.x \n
+ * xf(eye) = 0
+ * \ingroup MathGroup
+ */
 template<typename T>
 AffineXf3<T> lookAt( const Vector3<T>& center, const Vector3<T>& eye, const Vector3<T>& up )
 {
@@ -24,4 +27,4 @@ AffineXf3<T> lookAt( const Vector3<T>& center, const Vector3<T>& eye, const Vect
     };
 }
 
-} //namespace MR
+} // namespace MR

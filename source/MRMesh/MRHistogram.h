@@ -4,34 +4,35 @@
 
 namespace MR
 {
-// Simple class for calculating histogram
+/// Simple class for calculating histogram
+/// \ingroup MathGroup
 class Histogram
 {
 public:
     Histogram() = default;
 
-    // Initialize histogram with minimum and maximum values, and number of bins
+    /// Initialize histogram with minimum and maximum values, and number of bins
     MRMESH_API Histogram( float min, float max, size_t size );
 
-    // Adds sample to corresponding bin
+    /// Adds sample to corresponding bin
     MRMESH_API void addSample( float sample );
-    // Adds bins of input hist to this
+    /// Adds bins of input hist to this
     MRMESH_API void addHistogram( const Histogram& hist );
 
-    // Gets bins
+    /// Gets bins
     MRMESH_API const std::vector<size_t>& getBins() const;
 
-    // Gets minimum value of histogram
+    /// Gets minimum value of histogram
     MRMESH_API float getMin() const;
-    // Gets maximum value of histogram
+    /// Gets maximum value of histogram
     MRMESH_API float getMax() const;
 
-    // Gets id of bin that inherits sample
+    /// Gets id of bin that inherits sample
     MRMESH_API size_t getBinId( float sample ) const;
-    // Gets minimum and maximum of diapason inherited by bin
+    /// Gets minimum and maximum of diapason inherited by bin
     MRMESH_API std::pair<float, float> getBinMinMax( size_t binId ) const;
 
-    // returns the amount of memory this object occupies on heap
+    /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( bins_ ); }
 
 private:

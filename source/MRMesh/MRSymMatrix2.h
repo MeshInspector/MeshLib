@@ -5,13 +5,14 @@
 namespace MR
 {
  
-// symmetric 2x2 matrix
+/// symmetric 2x2 matrix
+/// \ingroup MatrixGroup
 template <typename T>
 struct SymMatrix2
 {
     using ValueType = T;
 
-    // zero matrix by default
+    /// zero matrix by default
     T xx = 0, xy = 0, yy = 0;
 
     constexpr SymMatrix2() noexcept = default;
@@ -20,9 +21,9 @@ struct SymMatrix2
     static constexpr SymMatrix2 identity() noexcept { SymMatrix2 res; res.xx = res.yy = 1; return res; }
     static constexpr SymMatrix2 diagonal( T diagVal ) noexcept { SymMatrix2 res; res.xx = res.yy = diagVal; return res; }
 
-    // computes determinant of the matrix
+    /// computes determinant of the matrix
     constexpr T det() const noexcept;
-    // computes inverse matrix
+    /// computes inverse matrix
     constexpr SymMatrix2<T> inverse() const noexcept;
 
     SymMatrix2 & operator +=( const SymMatrix2<T> & b ) { xx += b.xx; xy += b.xy; yy += b.yy; return * this; }
@@ -37,7 +38,10 @@ struct SymMatrix2
     }
 };
 
-// x = a * b
+/// \related SymMatrix2
+/// \{
+
+/// x = a * b
 template <typename T> 
 inline Vector2<T> operator *( const SymMatrix2<T> & a, const Vector2<T> & b )
 {
@@ -48,7 +52,7 @@ inline Vector2<T> operator *( const SymMatrix2<T> & a, const Vector2<T> & b )
     };
 }
 
-// x = a * a^T
+/// x = a * a^T
 template <typename T> 
 inline SymMatrix2<T> outerSquare( const Vector2<T> & a )
 {
@@ -106,4 +110,6 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse() const noexcept
     return res;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

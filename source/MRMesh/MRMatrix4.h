@@ -7,24 +7,25 @@
 namespace MR
 {
 
-// arbitrary 4x4 matrix
+/// arbitrary 4x4 matrix
+/// \ingroup MatrixGroup
 template <typename T>
 struct Matrix4
 {
     using ValueType = T;
     using VectorType = Vector4<T>;
 
-    // rows, identity matrix by default
+    /// rows, identity matrix by default
     Vector4<T> x{ 1, 0, 0, 0 };
     Vector4<T> y{ 0, 1, 0, 0 };
     Vector4<T> z{ 0, 0, 1, 0 };
     Vector4<T> w{ 0, 0, 0, 1 };
 
     constexpr Matrix4() noexcept = default;
-    // initializes matrix from 4 row-vectors
+    /// initializes matrix from 4 row-vectors
     constexpr Matrix4( const Vector4<T>& x, const Vector4<T>& y, const Vector4<T>& z, const Vector4<T>& w ) : x( x ), y( y ), z( z ), w( w ) { }
 
-    // construct from rotation matrix and translation vector
+    /// construct from rotation matrix and translation vector
     constexpr Matrix4( const Matrix3<T>& r, const Vector3<T>& t )
     {
         x = Vector4<T>( r.x.x, r.x.y, r.x.z, t.x );
@@ -38,26 +39,26 @@ struct Matrix4
     template <typename U>
     constexpr explicit Matrix4( const Matrix4<U> & m ) : x( m.x ), y( m.y ), z( m.z ), w( m.w ) { }
     static constexpr Matrix4 zero() noexcept { return Matrix4( Vector4<T>(), Vector4<T>(), Vector4<T>(), Vector4<T>() ); }
-    // returns a matrix that scales uniformly
+    /// returns a matrix that scales uniformly
     static constexpr Matrix4 scale( T s ) noexcept { return Matrix4( { s, T(0), T(0), T(0) }, { T(0), s, T(0), T(0) }, { T(0), T(0), s, T(0) }, { T(0), T(0), T(0), s } ); }
 
-    // element access
+    /// element access
     constexpr const T& operator ()( int row, int col ) const noexcept { return operator[]( row )[col]; }
     constexpr       T& operator ()( int row, int col )       noexcept { return operator[]( row )[col]; }
 
-    // row access
+    /// row access
     constexpr const Vector4<T> & operator []( int row ) const noexcept { return *( &x + row ); }
     constexpr       Vector4<T> & operator []( int row )       noexcept { return *( &x + row ); }
 
-    // column access
+    /// column access
     constexpr Vector4<T> col( int i ) const noexcept { return { x[i], y[i], z[i], w[i] }; }
 
-    // computes trace of the matrix
+    /// computes trace of the matrix
     constexpr T trace() const noexcept { return x.x + y.y + z.z + w.w; }
-    // compute sum of squared matrix elements
+    /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq() + w.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
-    // computes transposed matrix
+    /// computes transposed matrix
     constexpr Matrix4<T> transposed() const noexcept;
     constexpr Matrix4<T> inverse() const noexcept;
 
@@ -91,12 +92,15 @@ struct Matrix4
         return res;
     }
 
-    // converts 3d-vector b in 4d-vector (b,1), multiplies matrix on it, 
-    // and assuming the result is in homogeneous coordinates returns it as 3d-vector
+    /// converts 3d-vector b in 4d-vector (b,1), multiplies matrix on it, 
+    /// and assuming the result is in homogeneous coordinates returns it as 3d-vector
     Vector3<T> operator ()( const Vector3<T> & b ) const;
 };
 
-// x = a * b
+/// \related Matrix4
+/// \{
+
+/// x = a * b
 template <typename T>
 inline Vector4<T> operator *( const Matrix4<T> & a, const Vector4<T> & b )
 {
@@ -109,7 +113,7 @@ inline Vector3<T> Matrix4<T>::operator ()( const Vector3<T> & b ) const
     return ( *this * Vector4<T>{ b.x, b.y, b.z, T(1) } ).proj3d();
 }
 
-// product of two matrices
+/// product of two matrices
 template <typename T>
 inline Matrix4<T> operator *( const Matrix4<T> & a, const Matrix4<T> & b )
 {
@@ -120,7 +124,7 @@ inline Matrix4<T> operator *( const Matrix4<T> & a, const Matrix4<T> & b )
     return res;
 }
 
-// x = a * b^T
+/// x = a * b^T
 template <typename T>
 inline Matrix4<T> outer( const Vector4<T> & a, const Vector4<T> & b )
 {
@@ -331,4 +335,6 @@ void Matrix4<T>::setTranslation( const Vector3<T>& t ) noexcept
     x.w = t.x; y.w = t.y; z.w = t.z;
 }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

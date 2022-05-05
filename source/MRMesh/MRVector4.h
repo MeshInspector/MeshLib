@@ -6,7 +6,8 @@
 namespace MR
 {
 
-// three-dimensional vector
+/// three-dimensional vector
+/// \ingroup VectorGroup
 template <typename T>
 struct Vector4
 {
@@ -69,12 +70,15 @@ struct Vector4
             return *this *= ( 1 / b );
     }
 
-    // assuming this is a point represented in homogeneous 4D coordinates, returns the point as 3D-vector
+    /// assuming this is a point represented in homogeneous 4D coordinates, returns the point as 3D-vector
     Vector3<T> proj3d() const
     {
         return { x / w, y / w, z / w };
     }
 };
+
+/// \related Vector4
+/// \{
 
 template <typename T>
 inline bool operator ==( const Vector4<T> & a, const Vector4<T> & b )
@@ -117,7 +121,7 @@ inline Vector4<T> operator /( Vector4<T> b, T a )
     { b /= a; return b; }
 
 
-// dot product
+/// dot product
 template <typename T>
 inline T dot( const Vector4<T>& a, const Vector4<T>& b )
 {
@@ -134,4 +138,6 @@ inline auto end( const Vector4<T> & v ) { return &v[3]; }
 template <typename T> 
 inline auto end( Vector4<T> & v ) { return &v[3]; }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

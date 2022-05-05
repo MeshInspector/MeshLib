@@ -75,7 +75,7 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
             };
             internalCb2 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
             };
         }
         newPoints = mesh.points;

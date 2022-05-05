@@ -85,7 +85,7 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             };
             internalCb2 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
             };
         }
         newPoints = pointCloud.points;

@@ -7,7 +7,7 @@ namespace MR
 
 /**
  * \brief Segment voxels of given volume on two sets using graph-cut, returning source set
- * \ingroup VolumeSegmentationGroup
+ * \ingroup VoxelGroup
  * \param k - coefficient in the exponent of the metric affecting edge capacity:\n
  *        increasing k you force to find a higher steps in the density on the boundary, decreasing k you ask for smoother boundary
  * \param sourceSeeds - these voxels will be included in the result

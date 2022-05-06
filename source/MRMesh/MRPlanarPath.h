@@ -6,12 +6,19 @@
 namespace MR
 {
 
-// given path s-v-e, tries to decrease its length by moving away from v
-MRMESH_API bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & start, VertId v, const MeshTriPoint & end, 
-    std::vector<MeshEdgePoint> & outPath, // intermediate locations between s and e will be added here
-    std::vector<Vector2f> & tmp ); // elements will be temporary allocated here
+/// \defgroup PlanarPathGroup Planar Path
+/// \ingroup SurfacePathGroup
+/// \{
 
-// reduces the length of given surface path: s-path-e
+/// given path s-v-e, tries to decrease its length by moving away from v
+/// \param outPath intermediate locations between s and e will be added here
+/// \param tmp elements will be temporary allocated here
+MRMESH_API bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & start, VertId v, const MeshTriPoint & end, 
+    std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp );
+
+/// reduces the length of given surface path: start-path-end
 MRMESH_API void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter = 5 );
 
-} //namespace MR
+/// \}
+
+} // namespace MR

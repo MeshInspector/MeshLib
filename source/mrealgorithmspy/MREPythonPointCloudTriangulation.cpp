@@ -2,6 +2,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MREAlgorithms/MREPointCloudTriangulation.h"
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrealgorithmspy, TriangulationParameters, []( pybind11::module_& m )
 {

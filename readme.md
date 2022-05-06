@@ -5,7 +5,7 @@
 
 There is a multitude of general purpose libraries which deal with 3D data. Some stem from popular CAD packages, some are open source. The commercial ones tend to be quite expensive while open source are free though tend to be limited in functionality provided. Also those libraries value generality above other features  to allow maximum number of applications, but with the growing amounts of 3D data, performance is critical as it never has  been. Some of it can be addressed by using the scale of a commercial cloud, last generation CPU or GPU but underlying complexity of data representation makes it very hard and laborsome.
 
-The goal which we set when designing MeshRus was to value simplicity and performance while providing a wide gamut of useful computational algorithms. The library also supports the most important data structures today’s sensors can produce - pointcloud, mesh, volume and more. For example, mesh is represented by half-edge data structure and cannot be made non-manifold. Some applications may require non-manifoldness, but most practical scans can be represented as manifoldness meshes without an issue. 
+The goal which we set when designing MeshLib was to value simplicity and performance while providing a wide gamut of useful computational algorithms. The library also supports the most important data structures today’s sensors can produce - pointcloud, mesh, volume and more. For example, mesh is represented by half-edge data structure and cannot be made non-manifold. Some applications may require non-manifoldness, but most practical scans can be represented as manifoldness meshes without an issue. 
 
 ## Some features
 This list is not full and updating each day
@@ -138,7 +138,28 @@ sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 sudo apt install ./distr/meshrus-dev.deb
 ```
 
-Note! ./scripts/install*.sh scripts could be used as well, but apt install is prefferable.
-Note! ./scripts/install*.sh scripts copy MR files directly to /usr/local/lib. Remove this directory manually if exists before apt install deb package
-Note! You could specify build type to Debug by ```export MESHRUS_BUILD_TYPE=Debug```. Release is default.
+> **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
+> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
+
+> **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
+
+# Integration
+## Windows
+There are two general options of integrating MeshLib into your project:
+1. [Submodule](#submodule)
+2. [Distribution](#distribution)
+
+**Common for both options:** [install thirdparty](#vcpkg)
+### Submodule
+You can have MeshLib as submodule in your repository, and inculde MeshLib's projects to your solution.
+> **_NOTE:_** You should use `MeshLib/source/common.props` in other projects of your solution.
+
+> **_NOTE:_** You can customize props by defining `CustomMRProps.props` in directory above `common.props`
+
+### Distribution
+You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects
+> **_NOTE:_** Distribution is build with ITERATOR_DEBUG_LEVEL=0 in debug so you will need to setup this for your projects
+
+## Linux Ubuntu/Fedora
+You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager

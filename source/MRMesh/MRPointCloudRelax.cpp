@@ -11,20 +11,21 @@
 namespace MR
 {
 
-void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, SimpleProgressCallback cb )
+bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
 
     MR_TIMER
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
-        return;
+        return true;
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb;
@@ -32,12 +33,11 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
         {
             internalCb = [&] ( float p )
             {
-                cb( ( float( i ) + p ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
         newPoints = pointCloud.points;
-        BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             Vector3d sumPos;
             int count = 0;
@@ -58,25 +58,30 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
         }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
-void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, SimpleProgressCallback cb )
+bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
 
     MR_TIMER
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
-        return;
+        return true;
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
     std::vector<Vector3f> vertPushForces( zone.size() );
     std::vector<std::vector<VertId>> neighbors( zone.size() );
+
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb1, internalCb2;
@@ -84,17 +89,15 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         {
             internalCb1 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
             };
             internalCb2 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
             };
         }
         newPoints = pointCloud.points;
-        BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             Vector3d sumPos;
             auto& neighs = neighbors[v];
@@ -112,7 +115,9 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
                 return;
             vertPushForces[v] = params.force * ( Vector3f{ sumPos / double( neighs.size() ) } - pointCloud.points[v] );
         }, internalCb1 );
-        BitSetParallelFor( zone, [&] ( VertId v )
+        if ( !keepGoing )
+            break;
+        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             auto& np = newPoints[v];
             np += vertPushForces[v];
@@ -125,25 +130,28 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
-void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params /*= {} */, SimpleProgressCallback cb )
+bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& params /*= {} */, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
 
     MR_TIMER;
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
-        return;
+        return true;
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
     bool hasNormals = pointCloud.normals.size() > size_t( pointCloud.validPoints.find_last() );
-
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb;
@@ -151,12 +159,11 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
         {
             internalCb = [&] ( float p )
             {
-                cb( ( float( i ) + p ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
         newPoints = pointCloud.points;
-        BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             PointAccumulator accum;
             std::vector<std::pair<VertId, double>> weightedNeighbors;
@@ -208,7 +215,10 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
         }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
 }

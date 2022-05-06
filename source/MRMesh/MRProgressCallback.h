@@ -9,9 +9,4 @@ namespace MR
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-/// Argument value - progress in [0,1];
-/// cannot stop operation
-/// \ingroup BasicStructuresGroup
-typedef std::function<void( float )> SimpleProgressCallback;
-
 }

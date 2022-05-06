@@ -27,12 +27,13 @@ void relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
 
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb;
+        ProgressCallback internalCb;
         if ( cb )
         {
             internalCb = [&] ( float p )
             {
                 cb( ( float( i ) + p ) / float( params.iterations ) );
+                return true;
             };
         }
         newPoints = pointCloud.points;
@@ -78,16 +79,18 @@ void relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
     std::vector<std::vector<VertId>> neighbors( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb1, internalCb2;
+        ProgressCallback internalCb1, internalCb2;
         if ( cb )
         {
             internalCb1 = [&] ( float p )
             {
                 cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+                return true;
             };
             internalCb2 = [&] ( float p )
             {
                 cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
+                return true;
             };
         }
         newPoints = pointCloud.points;
@@ -143,12 +146,13 @@ void relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
 
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb;
+        ProgressCallback internalCb;
         if ( cb )
         {
             internalCb = [&] ( float p )
             {
                 cb( ( float( i ) + p ) / float( params.iterations ) );
+                return true;
             };
         }
         newPoints = pointCloud.points;

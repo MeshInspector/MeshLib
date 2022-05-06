@@ -24,12 +24,13 @@ void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb;
+        ProgressCallback internalCb;
         if ( cb )
         {
             internalCb = [&] ( float p )
             {
                 cb( ( float( i ) + p ) / float( params.iterations ) );
+                return true;
             };
         }
 
@@ -68,16 +69,18 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
     std::vector<Vector3f> vertPushForces( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb1, internalCb2;
+        ProgressCallback internalCb1, internalCb2;
         if ( cb )
         {
             internalCb1 = [&] ( float p )
             {
                 cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
+                return true;
             };
             internalCb2 = [&] ( float p )
             {
                 cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
+                return true;
             };
         }
         newPoints = mesh.points;
@@ -129,12 +132,13 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgress
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     for ( int i = 0; i < params.iterations; ++i )
     {
-        SimpleProgressCallback internalCb;
+        ProgressCallback internalCb;
         if ( cb )
         {
             internalCb = [&] ( float p )
             {
                 cb( ( float( i ) + p ) / float( params.iterations ) );
+                return true;
             };
         }
         newPoints = mesh.points;

@@ -12,13 +12,14 @@ namespace MR
 class ObjectVoxels;
 
 /**
- * \defgroup VolumeSegmentationGroup Volume (Voxel) Segmentation overview
+ * \defgroup VolumeSegmentationGroup Volume (Voxel) Segmentation
  * \brief This chapter represents documentation about Volume (Voxel) Segmentation
+ * \ingroup VoxelGroup
+ * \{
  */
 
  /**
   * \brief Parameters for volume segmentation
-  * \ingroup VolumeSegmentationGroup
   * 
   * \sa \ref segmentVolume
   */
@@ -34,7 +35,6 @@ struct VolumeSegmentationParameters
 
 /**
  * \brief Simple segment volume
- * \ingroup VolumeSegmentationGroup
  * \details
  * 1. Build paths between points pairs \n
  * 2. Mark paths as inside part seeds \n
@@ -48,7 +48,6 @@ struct VoxelMetricParameters;
 
 /**
  * \brief Class for voxels segmentation
- * \ingroup VolumeSegmentationGroup
  *
  * <table border=0> <caption id="VolumeSegmenter_examples"></caption>
  * <tr> <td> \image html voxel_segmentation/voxel_segmentation_0_0.png "Before (a)" width = 350cm </td>
@@ -106,6 +105,8 @@ private:
 
     void setupVolumePart_( int voxelsExpansion );
 };
+
+/// \}
 
 }
 #endif

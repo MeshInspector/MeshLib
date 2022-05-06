@@ -4,6 +4,7 @@
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRProgressCallback.h"
+#include <optional>
 
 namespace MRE
 {
@@ -58,6 +59,7 @@ struct TriangulationParameters
 
 /**
  * \brief Creates mesh from given point cloud according params
+ * Returns empty optional if was interrupted by progress bar
  * \ingroup PointCloudTriangulationGroup
     <table border=0>
         <caption id="triangulatePointCloud_examples"></caption>
@@ -67,6 +69,6 @@ struct TriangulationParameters
         </tr>
     </table>
  */
-MREALGORITHMS_API MR::Mesh triangulatePointCloud( const MR::PointCloud& pointCloud, const TriangulationParameters& params = {},
-    MR::SimpleProgressCallback progressCb = {} );
+MREALGORITHMS_API std::optional<MR::Mesh> triangulatePointCloud( const MR::PointCloud& pointCloud, const TriangulationParameters& params = {},
+    MR::ProgressCallback progressCb = {} );
 }

@@ -12,16 +12,17 @@
 namespace MR
 {
 
-void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
+bool relax( Mesh& mesh, const RelaxParams params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
 
     MR_TIMER;
     MR_MESH_WRITER( mesh );
 
     VertCoords newPoints;
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb;
@@ -29,13 +30,12 @@ void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
         {
             internalCb = [&] ( float p )
             {
-                cb( ( float( i ) + p ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
 
         newPoints = mesh.points;
-        BitSetParallelFor( zone, [&]( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
             if ( !e0.valid() )
@@ -52,13 +52,16 @@ void relax( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
             np += pushForce;
         }, internalCb );
         mesh.points.swap( newPoints );
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
-void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallback cb )
+bool relaxKeepVolume( Mesh& mesh, const RelaxParams params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
 
     MR_TIMER;
     MR_MESH_WRITER( mesh );
@@ -67,6 +70,7 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
 
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     std::vector<Vector3f> vertPushForces( zone.size() );
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb1, internalCb2;
@@ -74,17 +78,15 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
         {
             internalCb1 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
             };
             internalCb2 = [&] ( float p )
             {
-                cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
             };
         }
         newPoints = mesh.points;
-        BitSetParallelFor( zone, [&]( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
             if ( !e0.valid() )
@@ -98,7 +100,9 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
             }
             vertPushForces[v] = params.force * ( Vector3f{sum / double( count )} - mesh.points[v] );
         }, internalCb1 );
-        BitSetParallelFor( zone, [&]( VertId v )
+        if ( !keepGoing )
+            break;
+        keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
             if ( !e0.valid() )
@@ -115,13 +119,16 @@ void relaxKeepVolume( Mesh& mesh, const RelaxParams params, SimpleProgressCallba
                 np -= ( vertPushForces[mesh.topology.dest( e )] * modifier );
         }, internalCb2 );
         mesh.points.swap( newPoints );
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
-void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgressCallback cb )
+bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
-        return;
+        return true;
     MR_TIMER;
     MR_MESH_WRITER( mesh );
 
@@ -130,6 +137,7 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgress
 
     VertCoords newPoints;
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
+    bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
         ProgressCallback internalCb;
@@ -137,12 +145,11 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgress
         {
             internalCb = [&] ( float p )
             {
-                cb( ( float( i ) + p ) / float( params.iterations ) );
-                return true;
+                return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
         newPoints = mesh.points;
-        BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
             if ( !e0.valid() )
@@ -195,7 +202,10 @@ void relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, SimpleProgress
             np += ( params.force * ( target - np ) );
         }, internalCb );
         mesh.points.swap( newPoints );
+        if ( !keepGoing )
+            break;
     }
+    return keepGoing;
 }
 
 void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region )

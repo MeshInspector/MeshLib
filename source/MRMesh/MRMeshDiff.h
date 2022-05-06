@@ -6,16 +6,17 @@
 namespace MR
 {
 
-// this object stores a difference between two meshes: both in coordinates and in topology;
-// if the meshes are similar then this object is small, if the meshes are very distinct then this object will be comparable to a mesh in size
+/// this object stores a difference between two meshes: both in coordinates and in topology
+/// \details if the meshes are similar then this object is small, if the meshes are very distinct then this object will be comparable to a mesh in size
+/// \ingroup MeshAlgorithmGroup
 class MeshDiff
 {
 public:
-    // computes the difference, that can be applied to mesh-from in order to get mesh-to
+    /// computes the difference, that can be applied to mesh-from in order to get mesh-to
     MRMESH_API MeshDiff( const Mesh & from, const Mesh & to );
 
-    // given mesh-from on input converts it in mesh-to,
-    // this object is updated to become the reverse difference from original mesh-to to original mesh-from
+    /// given mesh-from on input converts it in mesh-to,
+    /// this object is updated to become the reverse difference from original mesh-to to original mesh-from
     MRMESH_API void applyAndSwap( Mesh & m );
 
 private:

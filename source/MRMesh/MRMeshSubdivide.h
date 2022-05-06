@@ -6,6 +6,10 @@
 namespace MR
 {
 
+/// \defgroup MeshSubdivideGroup Mesh Subdivide
+/// \ingroup MeshAlgorithmGroup
+/// \{
+
 struct SubdivideSettings
 {
     /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
@@ -29,7 +33,9 @@ struct SubdivideSettings
 };
 
 /// Split edges in mesh region according to the settings;\n
-/// \returns The total number of edge flips performed
+/// \return The total number of edge flips performed
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
+
+/// \}
 
 }

@@ -9,6 +9,10 @@
 namespace MR
 {
 
+/// \defgroup MeshGroup Mesh
+
+/// Mesh Class
+/// \ingroup MeshGroup
 struct [[nodiscard]] Mesh
 {
     MeshTopology topology;

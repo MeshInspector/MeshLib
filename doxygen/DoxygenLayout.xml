@@ -3,6 +3,7 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="Overview"/>
+    <tab type="user" url="@ref Integration" title="Integration" />
     <tab type="user" url="@ref HowToBasic" title="Basic usage" />
     <tab type="user" url="@ref EmbendedPythonOverview" title="Python overview" />
     <tab type="user" url="@ref DataModel" title="Data model overview" />

@@ -138,9 +138,9 @@ sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 sudo apt install ./distr/meshrus-dev.deb
 ```
 
-> **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is prefferable.
+> **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
-> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package
+> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
 

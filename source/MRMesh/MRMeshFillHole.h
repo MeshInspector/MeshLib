@@ -10,11 +10,12 @@ namespace MR
 
 /** \defgroup FillHoleGroup Fill/Stitch Holes overview
   * \brief This chapter represents documentation about hole triangulations or stitching two holes
+  * \ingroup MeshAlgorithmGroup
+  * \{
   */
 
 /** \struct MR::FillHoleParams
   * \brief Parameters structure for MR::fillHole\n
-  * \ingroup FillHoleGroup
   * Structure has some options to control MR::fillHole
   * 
   * \sa \ref fillHole
@@ -51,7 +52,6 @@ struct FillHoleParams
 
 /** \struct MR::StitchHolesParams
   * \brief Parameters structure for MR::buildCylinderBetweenTwoHoles\n
-  * \ingroup FillHoleGroup
   * Structure has some options to control MR::buildCylinderBetweenTwoHoles
   *
   * \sa \ref buildCylinderBetweenTwoHoles
@@ -69,7 +69,6 @@ struct StitchHolesParams
 };
 
 /** \brief Stitches two holes in Mesh\n
-  * \ingroup FillHoleGroup
   *
   * Build cylindrical patch to fill space between two holes represented by one of their edges each,\n
   * default metric: ComplexStitchMetric
@@ -97,7 +96,6 @@ MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesPara
 
 
 /** \brief Fills hole in mesh\n
-  * \ingroup FillHoleGroup
   * 
   * Fills given hole represented by one of its edges (having no valid left face),\n
   * uses fillHoleTrivially if cannot fill hole without multiple edges,\n
@@ -144,32 +142,34 @@ MRMESH_API void fillHole( Mesh& mesh, EdgeId a, const FillHoleParams& params = {
   */
 MRMESH_API VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
-// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
-// by adding new vertices located in given plane and 2 * number_of_hole_edge triangles;
-// returns the edge of new hole opposite to input edge (a)
+/// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
+/// by adding new vertices located in given plane and 2 * number_of_hole_edge triangles;
+/// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces = nullptr );
 
-// adds extension of given hole represented by one of its edges (having no valid left face)
-// by adding new vertices located at getVertPos( existing vertex position );
-// returns the edge of new hole opposite to input edge (a)
+/// adds extension of given hole represented by one of its edges (having no valid left face)
+/// by adding new vertices located at getVertPos( existing vertex position );
+/// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos, FaceBitSet * outNewFaces = nullptr );
 
-// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
-// by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;
-// returns the edge of new hole opposite to input edge (a)
+/// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
+/// by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;
+/// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, FaceBitSet* outNewFaces = nullptr );
 
-// creates a band of degenerate triangles around given hole;
-// returns the edge of new hole opposite to input edge (a)
+/// creates a band of degenerate triangles around given hole;
+/// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
-// creates a bridge between two boundary edges a and b (both having no valid left face);
-// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
-// the function returns false if bridge cannot be created because otherwise multiple edges appear
+/// creates a bridge between two boundary edges a and b (both having no valid left face);
+/// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
+/// \return false if bridge cannot be created because otherwise multiple edges appear
 MRMESH_API bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
 
-// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
-// the function returns invalid id if bridge cannot be created because otherwise multiple edges appear
+/// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
+/// \return invalid id if bridge cannot be created because otherwise multiple edges appear
 MRMESH_API EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b );
 
-} //namespace MR
+/// \}
+
+} // namespace MR

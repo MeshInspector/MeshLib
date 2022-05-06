@@ -5,10 +5,11 @@
 
 namespace MR
 {
+/// \addtogroup FillHoleGroup
+/// \{
 
 /** \struct MR::FillHoleMetric
   * \brief Provides interface for controlling fillHole and buildCylinderBetweenTwoHoles triangulation\n
-  * \ingroup FillHoleGroup
   * 
   * This is abstract struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions\n
   * 
@@ -35,7 +36,6 @@ struct FillHoleMetric
 };
 
 /** \struct MR::CircumscribedFillMetric
-  * \ingroup FillHoleGroup
   * Provides triangle metric as circumscribed circle diameter\n
   * getEdgeMetric - always returns zero
   * \sa \ref FillHoleMetric
@@ -52,7 +52,6 @@ struct MRMESH_CLASS CircumscribedFillMetric final : FillHoleMetric
 };
 
 /** \struct MR::PlaneFillMetric
-  * \ingroup FillHoleGroup
   * As far as hole is planar, only outside triangles should have penalty,\n
   * this metric is good for planar holes 
   * 
@@ -74,7 +73,6 @@ struct MRMESH_CLASS PlaneFillMetric final : FillHoleMetric
 };
 
 /** \struct MR::PlaneNormalizedFillMetricPlaneNormalizedFillMetric
-  * \ingroup FillHoleGroup
   * As far as hole is planar, only outside triangles should have penalty,\n
   * this metric is good for planar holes
   *
@@ -96,7 +94,6 @@ struct MRMESH_CLASS PlaneNormalizedFillMetric final : FillHoleMetric
 };
 
 /** \struct MR::ComplexStitchMetric
-  * \ingroup FillHoleGroup
   * Forbids connecting vertices from different holes \n
   * 
   * Complex metric for non-trivial holes, forbids degenerate triangles\n
@@ -117,7 +114,6 @@ struct MRMESH_CLASS ComplexStitchMetric final : FillHoleMetric
 };
 
 /** \struct MR::EdgeLengthFillMetric
-  * \ingroup FillHoleGroup
   * Simple metric minimizing edge length
   * \sa \ref FillHoleMetric
   */
@@ -132,7 +128,6 @@ struct MRMESH_CLASS EdgeLengthFillMetric final : FillHoleMetric
 };
 
 /** \struct MR::EdgeLengthStitchMetric
-  * \ingroup FillHoleGroup
   * Forbids connecting vertices from different holes\n
   *
   * Simple metric minimizing edge length
@@ -149,7 +144,6 @@ struct MRMESH_CLASS EdgeLengthStitchMetric final : FillHoleMetric
 };
 
 /** \struct MR::CircumscribedStitchMetric
-  * \ingroup FillHoleGroup
   * Forbids connecting vertices from different holes\n
   * 
   * Provides triangle metric as circumscribed circle diameter\n
@@ -167,7 +161,6 @@ struct MRMESH_CLASS CircumscribedStitchMetric final : FillHoleMetric
 };
 
 /** \struct MR::VerticalStitchMetric
-  * \ingroup FillHoleGroup
   * Forbids connecting vertices from different holes\n
   *
   * All new faces should be parallel to given direction\n
@@ -185,5 +178,7 @@ struct MRMESH_CLASS VerticalStitchMetric final : FillHoleMetric
     /// 0.0
     MRMESH_API virtual double getEdgeMetric( const VertId&, const VertId&, const VertId&, const VertId& ) const override;
 };
+
+/// \}
 
 }

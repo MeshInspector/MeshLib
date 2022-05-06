@@ -5,6 +5,7 @@ namespace MR
 {
 struct PointCloud;
 
-// Finds radius of ball that avg points in the radius is close to avgPoints parameter
+/// \brief Finds radius of ball that avg points in the radius is close to avgPoints parameter
+/// \ingroup PointCloudGroup
 MRMESH_API float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints );
 }

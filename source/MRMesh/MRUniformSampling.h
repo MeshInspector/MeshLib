@@ -6,7 +6,8 @@
 namespace MR
 {
 
-// Sample vertices, removing ones that are too close
+/// Sample vertices, removing ones that are too close
+/// \ingroup PointCloudGroup
 MRMESH_API VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance );
 
 }

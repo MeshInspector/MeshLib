@@ -7,7 +7,8 @@
 namespace MR
 {
  
-// The iterator to find all not-lone undirected edges in the polyline topology
+/// The iterator to find all not-lone undirected edges in the polyline topology
+/// \ingroup PolylineGroup
 class PolylineUndirectedEdgeIterator
 {
 public:
@@ -49,6 +50,9 @@ private:
     UndirectedEdgeId edge_;
 };
 
+/// \related PolylineUndirectedEdgeIterator
+/// \{
+
 inline bool operator ==( const PolylineUndirectedEdgeIterator & a, const PolylineUndirectedEdgeIterator & b )
     { return *a == *b; }
 
@@ -58,4 +62,6 @@ inline bool operator !=( const PolylineUndirectedEdgeIterator & a, const Polylin
 inline IteratorRange<PolylineUndirectedEdgeIterator> undirectedEdges( const PolylineTopology & topology )
     { return { PolylineUndirectedEdgeIterator( topology ), PolylineUndirectedEdgeIterator() }; }
 
-} //namespace MR
+/// \}
+
+} // namespace MR

@@ -7,7 +7,22 @@ There is a multitude of general purpose libraries which deal with 3D data. Some 
 
 The goal which we set when designing MeshLib was to value simplicity and performance while providing a wide gamut of useful computational algorithms. The library also supports the most important data structures today’s sensors can produce - pointcloud, mesh, volume and more. For example, mesh is represented by half-edge data structure and cannot be made non-manifold. Some applications may require non-manifoldness, but most practical scans can be represented as manifoldness meshes without an issue. 
 
-## Some features
+## Some useful links
+[MeshInspector](https://github.com/MeshInspector/MeshInspector/) is a free application based on MeshLib
+
+[MeshInspector web-browser version](https://demo.meshinspector.com/)
+
+[Slides about MeshLib and MeshInspector](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
+
+[MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
+
+[Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+
+[Email us](mailto:support@meshinspector.com)
+
+[Contact us anonymously](https://meshinspector.github.io/ReportIssue/)
+
+## Major features
 This list is not full and updating each day
 ### Math basics
  - Math primitives and operations support (Vectors 2D, 3D, 4D; Lines; Planes; Bounding Boxes; Matrices; Affine transformations; Quaternions; Histograms; etc.)
@@ -81,18 +96,6 @@ This list is not full and updating each day
  - Iterative Closest Points (ICP), two meshes aligning
    - Point to point,
    - Point to plane.
-
-## Some useful links
-[MeshInspector releases page](https://github.com/MeshInspector/MeshInspector/releases)
-
-[Our YouTube channel with updates](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
-
-[Slides](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
-
-[Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
-
-[Report an issue anonymously](https://meshinspector.github.io/ReportIssue/)
-
 
 # Build
 ## Build with VS2019 on Windows

@@ -25,6 +25,8 @@ struct DecimateParallelSettings
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
+    /// Region on mesh to be decimated, it is updated during the operation
+    MR::FaceBitSet * region = nullptr;
     /// Subdivides mesh on given number of parts to process them in parallel
     int subdivideParts = 32;
     /**

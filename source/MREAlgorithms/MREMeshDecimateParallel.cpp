@@ -21,6 +21,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     seqSettings.maxError = settings.maxError;
     seqSettings.maxTriangleAspectRatio = settings.maxTriangleAspectRatio;
     seqSettings.stabilizer = settings.stabilizer;
+    seqSettings.region = settings.region;
     if ( settings.preCollapse )
     {
         seqSettings.preCollapse = [&mesh, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool
@@ -45,6 +46,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         VertBitSet mBdVerts;
         MR::Vector<MR::QuadraticForm3f, MR::VertId> mVertForms;
         VertMap subVertToOriginal;
+        FaceBitSet region;
         DecimateResult decimRes;
     };
     std::vector<SubMesh> submeshes( sz );
@@ -56,36 +58,47 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         {
             auto faces = tree.getSubtreeFaces( subroots[i] );
             auto & submesh = submeshes[i];
-            VertMap subToFull;
+            VertMap vertSubToFull;
+            FaceHashMap faceFullToSub;
             PartMapping map;
-            map.tgt2srcVerts = &subToFull;
+            map.tgt2srcVerts = &vertSubToFull;
+            if ( settings.region )
+                map.src2tgtFaces = &faceFullToSub;
             submesh.m.addPartByMask( mesh, faces, map );
 
             auto subSeqSettings = seqSettings;
             subSeqSettings.touchBdVertices = false;
             subSeqSettings.vertForms = &submesh.mVertForms;
+            if ( settings.region )
+            {
+                submesh.region = settings.region->getMapping( faceFullToSub );
+                subSeqSettings.region = &submesh.region;
+            }
             if ( settings.preCollapse )
             {
-                subSeqSettings.preCollapse = [&submesh, &subToFull, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool
+                subSeqSettings.preCollapse = [&submesh, &vertSubToFull, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool
                 {
                     return cb( 
-                        subToFull[ submesh.m.topology.org( edgeToCollapse ) ],
-                        subToFull[ submesh.m.topology.dest( edgeToCollapse ) ],
+                        vertSubToFull[ submesh.m.topology.org( edgeToCollapse ) ],
+                        vertSubToFull[ submesh.m.topology.dest( edgeToCollapse ) ],
                         newEdgeOrgPos );
                 };
             }
             submesh.decimRes = decimateMesh( submesh.m, subSeqSettings );
 
-            VertMap subToPacked;
-            submesh.m.pack( nullptr, &subToPacked );
+            VertMap vertSubToPacked;
+            FaceMap faceSubToPacked;
+            submesh.m.pack( settings.region ? &faceSubToPacked : nullptr, &vertSubToPacked );
+            if ( settings.region )
+                submesh.region = submesh.region.getMapping( faceSubToPacked );
 
             submesh.subVertToOriginal.resize( submesh.m.topology.lastValidVert() + 1 );
-            for ( VertId beforePackId{ 0 }; beforePackId < subToPacked.size(); ++beforePackId )
+            for ( VertId beforePackId{ 0 }; beforePackId < vertSubToPacked.size(); ++beforePackId )
             {
-                VertId packedId = subToPacked[beforePackId];
+                VertId packedId = vertSubToPacked[beforePackId];
                 if ( packedId )
                 {
-                    submesh.subVertToOriginal[packedId] = subToFull[beforePackId];
+                    submesh.subVertToOriginal[packedId] = vertSubToFull[beforePackId];
                     assert( packedId <= beforePackId );
                     submesh.mVertForms[packedId] = submesh.mVertForms[beforePackId];
                 }
@@ -99,6 +112,8 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     VertBitSet bdOfSomePiece( mesh.topology.vertSize() );
     std::vector<MR::MeshBuilder::Triangle> tris;
     FaceId nextFace{ 0 };
+    if ( settings.region )
+        settings.region->clear();
     for ( const auto & submesh : submeshes )
     {
         for ( auto t : submesh.m.topology.getValidFaces() )
@@ -110,6 +125,8 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             for ( int i = 0; i < 3; ++i )
                 tri.v[i] = submesh.subVertToOriginal[ tri.v[i] ];
             tris.push_back( tri );
+            if ( settings.region && submesh.region.test( t ) )
+                settings.region->autoResizeSet( tri.f );
         }
         for ( auto v : submesh.m.topology.getValidVerts() )
         {
@@ -129,7 +146,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     mesh.topology = fromTriangles( tris );
     BitSetParallelFor( bdOfSomePiece, [&]( VertId v )
     {
-        unitedVertForms[v] = computeFormAtVertex( mesh, v, settings.stabilizer );
+        unitedVertForms[v] = computeFormAtVertex( { mesh, settings.region }, v, settings.stabilizer );
     } );
 
     seqSettings.vertForms = &unitedVertForms;

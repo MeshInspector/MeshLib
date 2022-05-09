@@ -24,7 +24,11 @@ public:
     using base::base;
     using IndexType = size_t;
 
+    // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
+    BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
+    BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
+    BitSet & reset() { base::reset(); return * this; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );

@@ -151,7 +151,7 @@ public:
     {
         if ( !objPoints_ )
             return;
-        selection_ = objPoints_->getSelectedVertices();
+        selection_ = objPoints_->getSelectedPoints();
     }
 
     virtual std::string name() const override { return name_; }
@@ -160,8 +160,8 @@ public:
     {
         if ( !objPoints_ )
             return;
-        auto tmp = objPoints_->getSelectedVertices();
-        objPoints_->selectVertices( selection_ );
+        auto tmp = objPoints_->getSelectedPoints();
+        objPoints_->selectPoints( selection_ );
         selection_ = std::move( tmp );
     }
 

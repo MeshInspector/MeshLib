@@ -67,6 +67,9 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
 {
     VisualObject::setDirtyFlags( mask );
 
+    if ( mask & DIRTY_FACE )
+        numValidPoints_.reset();
+
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         worldBox_.reset();
@@ -75,10 +78,10 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
     }
 }
 
-void ObjectPointsHolder::selectVertices( VertBitSet newSelection )
+void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
 {
-    selectedVertices_ = std::move( newSelection );
-    numSelectedVertices_.reset();
+    selectedPoints_ = std::move( newSelection );
+    numSelectedPoints_.reset();
     dirty_ |= DIRTY_SELECTION;
 }
 
@@ -130,18 +133,26 @@ Box3f ObjectPointsHolder::getWorldBox() const
     return box;
 }
 
-size_t ObjectPointsHolder::numSelectedVertices() const
+size_t ObjectPointsHolder::numValidPoints() const
 {
-    if ( !numSelectedVertices_ )
-        numSelectedVertices_ = selectedVertices_.count();
+    if ( !numValidPoints_ )
+        numValidPoints_ = points_ ? points_->validPoints.count() : 0;
 
-    return *numSelectedVertices_;
+    return *numValidPoints_;
+}
+
+size_t ObjectPointsHolder::numSelectedPoints() const
+{
+    if ( !numSelectedPoints_ )
+        numSelectedPoints_ = selectedPoints_.count();
+
+    return *numSelectedPoints_;
 }
 
 size_t ObjectPointsHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
-        + selectedVertices_.heapBytes()
+        + selectedPoints_.heapBytes()
         + MR::heapBytes( points_ );
 }
 
@@ -212,7 +223,7 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
     VisualObject::serializeFields_( root );
 
     serializeToJson( Vector4f( selectedVerticesColor_ ), root["Colors"]["Selection"]["Points"] );
-    serializeToJson( selectedVertices_, root["SelectionVertBitSet"] );
+    serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -223,7 +234,7 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["Colors"]["Selection"]["Points"], resVec );
     selectedVerticesColor_ = Color( resVec );
 
-    deserializeFromJson( root["SelectionVertBitSet"], selectedVertices_ );
+    deserializeFromJson( root["SelectionVertBitSet"], selectedPoints_ );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const

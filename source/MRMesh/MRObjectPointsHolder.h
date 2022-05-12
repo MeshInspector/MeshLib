@@ -41,8 +41,8 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
     
-    const VertBitSet& getSelectedVertices() const { return selectedVertices_; }
-    MRMESH_API virtual void selectVertices( VertBitSet newSelection );
+    const VertBitSet& getSelectedPoints() const { return selectedPoints_; }
+    MRMESH_API virtual void selectPoints( VertBitSet newSelection );
     /// returns colors of selected vertices
     const Color& getSelectedVerticesColor() const { return selectedVerticesColor_; }
     /// sets colors of selected vertices
@@ -65,15 +65,18 @@ public:
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox() const override;
-    /// returns cached information about the number of selected vertices in the mesh
-    MRMESH_API size_t numSelectedVertices() const;
+    /// returns cached information about the number of valid points
+    MRMESH_API size_t numValidPoints() const;
+    /// returns cached information about the number of selected points
+    MRMESH_API size_t numSelectedPoints() const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
     
 protected:
-    VertBitSet selectedVertices_;
-    mutable std::optional<size_t> numSelectedVertices_;
+    VertBitSet selectedPoints_;
+    mutable std::optional<size_t> numValidPoints_;
+    mutable std::optional<size_t> numSelectedPoints_;
     Color selectedVerticesColor_;
     ViewportMask showSelectedVertices_ = ViewportMask::all();
 

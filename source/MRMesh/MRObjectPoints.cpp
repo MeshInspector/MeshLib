@@ -39,23 +39,14 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
 
     if ( points_ )
     {
-        std::stringstream ss;
-        bool showNormalsNum = false;
         if ( points_->normals.empty() )
-            res.push_back( "points: " + std::to_string( points_->points.size() ) );
-        else if ( points_->points.size() == points_->normals.size() )
-            res.push_back( "points with normals: " + std::to_string( points_->points.size() ) );
+            res.push_back( "points: " );
         else
-        {
-            res.push_back( "points: " + std::to_string( points_->points.size() ) );
-            showNormalsNum = true;
-        }
+            res.push_back( "points with normals: " );
+        res.back() += std::to_string( numValidPoints() );
 
-        if ( auto nSelectedVertices = numSelectedVertices() )
-            res.back() += " / " + std::to_string( nSelectedVertices ) + " selected";
-
-        if ( showNormalsNum )
-            res.push_back( "normals: " + std::to_string( points_->normals.size() ) );
+        if ( auto nSelectedPoints = numSelectedPoints() )
+            res.back() += " / " + std::to_string( nSelectedPoints ) + " selected";
 
         boundingBoxToInfoLines_( res );
     }

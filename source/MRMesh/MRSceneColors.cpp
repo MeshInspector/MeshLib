@@ -37,7 +37,8 @@ const char* SceneColors::getName( Type type )
         "Labels",
         "Edges",
         "SelectedFaces",
-        "SelectedEdges"
+        "SelectedEdges",
+        "SelectedPoints"
     };
     return names[int( type )];
 }
@@ -62,6 +63,8 @@ SceneColors::SceneColors()
     colors_[SelectedFaces] = Color( Vector4f{ 0.8f,0.2f,0.2f,1.0f } );
     // color of selected edges
     colors_[SelectedEdges] = Color( Vector4f{ 0.7f,0.2f,0.7f,1.0f } );
+    // color of selected points
+    colors_[SelectedPoints] = Color( Vector4f{ 0.8f,0.2f,0.2f,1.0f } );
 }
 
 }

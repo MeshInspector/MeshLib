@@ -29,6 +29,7 @@ struct SceneColors
         Edges,
         SelectedFaces,
         SelectedEdges,
+        SelectedPoints,
         Count
     };
 

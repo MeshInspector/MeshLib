@@ -236,6 +236,7 @@ void ObjectPointsHolder::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ) );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
+    setSelectedVerticesColor( SceneColors::get( SceneColors::SelectedPoints ) );
 }
 
 }

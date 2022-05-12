@@ -300,6 +300,8 @@ VertId FanOptimizer::getVertByPos_( int i ) const
 TriangulatedFan trianglulateFan( const VertCoords& points, VertId centerVert, const std::vector<VertId>& neighbors, 
     const VertCoords& normals, float critAngle, int steps /*= INT_MAX */ )
 {
+    if ( neighbors.empty() )
+        return {};
     FanOptimizer optimizer( points, normals, neighbors, centerVert );
     return optimizer.optimize( steps, critAngle );
 }

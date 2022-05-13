@@ -682,8 +682,7 @@ EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, Fac
             min = dist;
             minVert = vid;
         }
-        next = mesh.topology.prev( next.sym() );
-    };
+    }
 
     return extendHole( mesh, a, Plane3f::fromDirAndPt( dir, mesh.points[minVert] - holeExtension * dir ), outNewFaces );
 }

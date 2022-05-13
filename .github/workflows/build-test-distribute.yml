@@ -63,14 +63,16 @@ jobs:
   ubuntu-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64, docker-ready]
     container:
       image: meshrus/meshlib-ubuntu:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:
-        config: [Debug, Release]
-        compiler: [Сlang 11, GCC 10]
+        #config: [Debug, Release]
+        #compiler: [Сlang 11, GCC 10]
+        config: [Release]
+        compiler: [GCC 10]
         include:
           - compiler: Сlang 11
             cxx-compiler: /usr/bin/clang++-11
@@ -121,14 +123,16 @@ jobs:
   fedora-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, x64, docker-ready]
     container:
       image: meshrus/meshlib-fedora:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:
-        config: [Debug, Release]
-        compiler: [Сlang 13, GCC 11]
+        #config: [Debug, Release]
+        #compiler: [Сlang 13, GCC 11]
+        config: [ Release ]
+        compiler: [ СGCC 11 ]
         include:
           - compiler: Сlang 13
             cxx-compiler: /usr/bin/clang++-13
@@ -219,7 +223,8 @@ jobs:
 
   versioning-and-release-url:
     #if: ${{ github.event_name == 'push' }}
-    needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
+    #needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
+    needs: [  ubuntu-build-test, fedora-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

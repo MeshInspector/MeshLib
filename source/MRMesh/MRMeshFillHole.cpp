@@ -707,22 +707,25 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNe
         std::swap( a, b );
     if ( topology.prev( a.sym() ) == b )
     {
-        const auto bDest = topology.dest( b );
-        for ( auto e : orgRing0( topology, a ) )
-        {
-            if ( topology.dest( e ) == bDest )
-            {
-                // there is an edge between org(a) and dest(b), so if create another one, then multiple edges appear
-                return false;
-            }
-        }
-
-        // specific case of neighboring edges
         if ( !topology.isLeftTri( a ) )
         {
-            auto e = topology.makeEdge();
-            topology.splice( a, e );
-            topology.splice( topology.prev( b.sym() ), e.sym() );
+            const auto bDest = topology.dest( b );
+            for ( auto e : orgRing0( topology, a ) )
+            {
+                if ( topology.dest( e ) == bDest )
+                {
+                    // there is an edge between org(a) and dest(b), so if create another one, then multiple edges appear
+                    return false;
+                }
+            }
+
+            // specific case of neighboring edges
+            if ( !topology.isLeftTri( a ) )
+            {
+                auto e = topology.makeEdge();
+                topology.splice( a, e );
+                topology.splice( topology.prev( b.sym() ), e.sym() );
+            }
         }
         auto f = topology.addFaceId();
         topology.setLeft( a, f );

@@ -353,6 +353,11 @@ jobs:
     #needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
     needs: [versioning-and-release-url, update-deb-version, update-rpm-version]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
       #- name: Download Windows Developer Distribution
        #uses: actions/download-artifact@v2
         #with:
@@ -400,6 +405,12 @@ jobs:
         with:
           name: WindowsArchiveRelease
           failOnError: false
+
+      - name: Delete Windows Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: WindowsDistribution
+          failOnError: false
           
         # all Ubuntu
       - name: Delete Ubuntu Binaries artifact
@@ -408,9 +419,21 @@ jobs:
           name: DebReleaseBinArchive
           failOnError: false
 
+      - name: Delete Ubuntu Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: UbuntuDistribution
+          failOnError: false
+
         # all RPM
       - name: Delete Fedora Binaries artifact
         uses: geekyeggo/delete-artifact@v1
         with:
           name: RpmReleaseBinArchive
+          failOnError: false
+
+      - name: Delete Fedora Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: FedoraDistribution
           failOnError: false

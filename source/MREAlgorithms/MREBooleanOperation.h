@@ -83,10 +83,6 @@ struct BooleanResultMapper
     std::array<Maps, size_t( MapObject::Count )> maps;
 };
 
-/// find intersection paths between two meshs and cut its by this paths
-MREALGORITHMS_API std::string findBooleanIntersections( MR::Mesh& meshA, MR::Mesh& meshB,
-    std::vector<MR::EdgePath>& cutARes_, std::vector<MR::EdgePath>& cutBRes_ );
-
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead

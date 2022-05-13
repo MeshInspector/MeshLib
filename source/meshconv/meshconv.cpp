@@ -2,17 +2,65 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MREAlgorithms/MREMeshDecimate.h"
-#include "MREAlgorithms/MREBooleanOperation.h"
+#include "MREAlgorithms/MREMeshBoolean.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 
+bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
+{
+    namespace po = boost::program_options;
+    if ( option.string_key == "remesh" )
+    {
+        float targetEdgeLen = std::stof( option.value[0] );
+        if ( targetEdgeLen <= 0 )
+            targetEdgeLen = mesh.averageEdgeLength();
+
+        MRE::RemeshSettings rems;
+        rems.targetEdgeLen = targetEdgeLen;
+        rems.maxDeviation = targetEdgeLen / 100;
+        MRE::remesh( mesh, rems );
+
+        std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";
+    }
+    else if ( option.string_key == "unite" || option.string_key == "subtract" || option.string_key == "intersect" )
+    {
+        std::filesystem::path meshPath = option.value[0];
+
+        auto loadRes = MR::MeshLoad::fromAnySupportedFormat( meshPath );
+        if ( !loadRes.has_value() )
+        {
+            std::cerr << "Mesh load error: " << loadRes.error() << "\n";
+            return false;
+        }
+        auto meshB = std::move( loadRes.value() );
+        std::cout << meshPath << " loaded successfully\n";
+
+        MRE::BooleanOperation bo{ MRE::BooleanOperation::Union };
+        if ( option.string_key == "subtract" )
+            bo = MRE::BooleanOperation::OutsideA;
+        if ( option.string_key == "intersect" )
+            bo = MRE::BooleanOperation::Intersection;
+        auto booleanRes = MRE::boolean( mesh, meshB, bo );
+
+        if ( !booleanRes )
+        {
+            std::cerr << booleanRes.errorString << "\n";
+            return 1;
+        }
+        else
+        {
+            std::cout << option.string_key << " success!\n";
+            mesh = std::move( booleanRes.mesh );
+        }
+    }
+    return true;
+}
 
 // can throw
 static int mainInternal( int argc, char **argv )
 {
     std::filesystem::path inFilePath;
-    std::filesystem::path inFilePathSecond;
     std::filesystem::path outFilePath;
     float targetEdgeLen = 0;
 
@@ -24,34 +72,68 @@ static int mainInternal( int argc, char **argv )
         ("output-file,o", po::value<std::filesystem::path>( &outFilePath ), "filename of output mesh")
         ;
 
-    po::options_description operations( "Operations" );
-    operations.add_options()
+    po::options_description commands( "Commands" );
+    commands.add_options()
         ( "remesh", po::value<float>( &targetEdgeLen )->implicit_value( targetEdgeLen ), "optional argument if positive is target edge length after remeshing" )
-        ( "unite", po::value<std::filesystem::path>( &inFilePathSecond ), "unite mesh from input file and given mesh" )
-        ( "subtract", po::value<std::filesystem::path>( &inFilePathSecond ), "subtract given mesh from input file mesh given mesh" )
-        ( "intersect", po::value<std::filesystem::path>( &inFilePathSecond ), "intersect mesh from input file and given mesh" )
+        ( "unite", po::value<std::filesystem::path>(), "unite mesh from input file and given mesh" )
+        ( "subtract", po::value<std::filesystem::path>(), "subtract given mesh from input file mesh given mesh" )
+        ( "intersect", po::value<std::filesystem::path>(), "intersect mesh from input file and given mesh" )
         ;
 
-    po::options_description cmdLine( "Available options" );
-    cmdLine.add( generalOptions ).add( operations );
+    po::options_description allCommands( "Available options" );
+    allCommands.add( generalOptions ).add( commands );
 
     po::positional_options_description p;
     p.add("input-file", 1);
     p.add("output-file", 1);
 
+    po::parsed_options parsedGeneral = po::command_line_parser( argc, argv )
+        .options( generalOptions )
+        .positional( p )
+        .allow_unregistered()
+        .run();
+
+    std::vector<std::string> unregisteredOptions;
+    for ( const auto& o : parsedGeneral.options )
+    {
+        if ( o.unregistered )
+            unregisteredOptions.insert( unregisteredOptions.end(), o.original_tokens.begin(), o.original_tokens.end() );
+    }
+    
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options( cmdLine ).positional(p).run(), vm);
+    po::store(parsedGeneral, vm);
     po::notify(vm);
 
+    po::parsed_options parsedCommands = po::command_line_parser( unregisteredOptions )
+        .options( commands )
+        .allow_unregistered()
+        .run();
 
-    if ( vm.count("help") || !vm.count("input-file") || !vm.count("output-file") ||
-        ( vm.count( "remesh" ) + vm.count( "unite" ) + vm.count( "subtract" ) + vm.count( "intersect" ) > 1) )
+    for ( const auto& o : parsedCommands.options )
+    {
+        std::cout << "\ntokens\n";
+        for ( const auto& i : o.original_tokens )
+        {
+            std::cout << "\t" << i << "\n";
+        }
+        std::cout << o.string_key << "\n";
+        std::cout << o.case_insensitive << "\n";
+        std::cout << o.position_key << "\n";
+        std::cout << o.unregistered << "\n";
+        for ( const auto& v : o.value )
+            std::cout << "\t" << v << "\n";
+    }
+
+    if ( argv > 0 )
+        return 2;
+
+    if ( vm.count("help") || !vm.count("input-file") || !vm.count("output-file") )
     {
         std::cerr << 
             "meshconv is mesh file conversion utility based on MeshInspector/MeshLib\n"
             "Usage: meshconv input-file output-file [options]\n"
             "Do not select more than one operation\n"
-            << cmdLine << "\n";
+            << allCommands << "\n";
         return 1;
     }
 
@@ -64,58 +146,13 @@ static int mainInternal( int argc, char **argv )
     auto mesh = std::move( loadRes.value() );
     std::cout << inFilePath << " loaded successfully\n";
 
-
-    if ( vm.count( "remesh" ) )
+    std::vector<std::vector<std::string>> lists;
+    for ( const po::option& o : parsedCommands.options )
     {
-        if ( targetEdgeLen <= 0 )
-            targetEdgeLen = mesh.averageEdgeLength();
-
-        MRE::RemeshSettings rems;
-        rems.targetEdgeLen = targetEdgeLen;
-        rems.maxDeviation = targetEdgeLen / 100;
-        MRE::remesh( mesh, rems );
-
-        std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";
-    }
-    else
-    {
-        loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePathSecond );
-        if ( !loadRes.has_value() )
+        if ( !doCommand( o, mesh ) )
         {
-            std::cerr << "Mesh load error: " << loadRes.error() << "\n";
+            std::cerr << "Error in command : \""<< o.string_key << " " << o.value[0] << "\"\nBreak\n";
             return 1;
-        }
-        auto meshB = std::move( loadRes.value() );
-        std::cout << inFilePathSecond << " loaded successfully\n";
-
-        std::vector<MR::EdgePath> cutARes_;
-        std::vector<MR::EdgePath> cutBRes_;
-
-        auto intersectRes = MRE::findBooleanIntersections( mesh, meshB, cutARes_, cutBRes_ );
-        if ( !intersectRes.empty() )
-        {
-            std::cerr << "Boolean intersection error: " << intersectRes << "\n";
-            return 1;
-        }
-
-        MRE::BooleanOperation bo{ MRE::BooleanOperation::Union };
-        if ( vm.count( "unite" ) )
-            bo = MRE::BooleanOperation::Union;
-        if ( vm.count( "subtract" ) )
-            bo = MRE::BooleanOperation::OutsideA;
-        if ( vm.count( "intersect" ) )
-            bo = MRE::BooleanOperation::Intersection;
-        auto resMesh = doBooleanOperation( mesh, meshB, cutARes_, cutBRes_, bo );
-
-        if ( !resMesh.has_value() )
-        {
-            std::cerr << resMesh.error() << "\n";
-            return 1;
-        }
-        else
-        {
-            std::cout << "Success!\n";
-            mesh = std::move( resMesh.value() );
         }
     }
 

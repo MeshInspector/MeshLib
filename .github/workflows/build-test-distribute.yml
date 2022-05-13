@@ -21,7 +21,6 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
-    if: ${{false}}
     timeout-minutes: 40
     needs: [prepare-image]
     runs-on: windows-2019
@@ -49,11 +48,11 @@ jobs:
         run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' }}
+        #if: ${{ github.event_name == 'push' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        if: ${{ github.event_name == 'push' }}
+        #if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v2
         with:
           name: WindowsArchive${{ matrix.config }}
@@ -63,20 +62,18 @@ jobs:
   ubuntu-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    runs-on: [self-hosted, x64, docker-ready]
+    runs-on: ubuntu-latest
     container:
       image: meshrus/meshlib-ubuntu:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:
-        #config: [Debug, Release]
-        #compiler: [Сlang 11, GCC 10]
-        config: [Release]
-        compiler: [GCC 10]
+        config: [Debug, Release]
+        compiler: [Сlang 11, GCC 10]
         include:
-          #- compiler: Сlang 11
-           # cxx-compiler: /usr/bin/clang++-11
-            #c-compiler: /usr/bin/clang-11
+          - compiler: Сlang 11
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
           - compiler: GCC 10
             cxx-compiler: /usr/bin/g++-10
             c-compiler: /usr/bin/gcc-10
@@ -123,20 +120,18 @@ jobs:
   fedora-build-test:
     timeout-minutes: 40
     needs: [prepare-image]
-    runs-on: [self-hosted, x64, docker-ready]
+    runs-on: ubuntu-latest
     container:
       image: meshrus/meshlib-fedora:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
     strategy:
       matrix:
-        #config: [Debug, Release]
-        #compiler: [Сlang 13, GCC 11]
-        config: [ Release ]
-        compiler: [ GCC 11 ]
+        config: [Debug, Release]
+        compiler: [Сlang 13, GCC 11]
         include:
-          #- compiler: Сlang 13
-           # cxx-compiler: /usr/bin/clang++-13
-            #c-compiler: /usr/bin/clang-13
+          - compiler: Сlang 13
+            cxx-compiler: /usr/bin/clang++-13
+            c-compiler: /usr/bin/clang-13
           - compiler: GCC 11
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
@@ -181,7 +176,6 @@ jobs:
           retention-days: 1
 
   macos-build-test:
-    if: ${{false}}
     timeout-minutes: 60
     # to show the graph correctly
     needs: [prepare-image]
@@ -223,14 +217,12 @@ jobs:
 
   versioning-and-release-url:
     #if: ${{ github.event_name == 'push' }}
-    #needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
-    needs: [  ubuntu-build-test, fedora-build-test]
+    needs: [windows-build-test,   ubuntu-build-test, fedora-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-win-version:
-    if: ${{false}}
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
     runs-on: windows-2019
@@ -350,7 +342,7 @@ jobs:
     #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    #needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
     needs: [versioning-and-release-url, update-deb-version, update-rpm-version]
     steps:
       - name: Checkout
@@ -358,10 +350,10 @@ jobs:
         with:
           submodules: recursive
 
-      #- name: Download Windows Developer Distribution
-       #uses: actions/download-artifact@v2
-        #with:
-          #name: WindowsDistribution
+      - name: Download Windows Developer Distribution
+        uses: actions/download-artifact@v2
+        with:
+          name: WindowsDistribution
 
       - name: Download Ubuntu Developer Distribution
         uses: actions/download-artifact@v2
@@ -374,16 +366,16 @@ jobs:
           name: FedoraDistribution
 
       - name: Rename Distributions
-        #          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
         run: |
+          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
           mv meshlib-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
       - name: Upload Distributions
-        #MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
+                            MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 

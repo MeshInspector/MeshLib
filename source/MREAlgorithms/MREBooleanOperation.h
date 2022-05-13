@@ -7,7 +7,10 @@
 namespace MRE
 {
 
-/** \ingroup BooleanGroup
+/// \addtogroup BooleanGroup
+/// \{
+
+/**
   * Enum class of available CSG operations
   * \image html boolean/no_bool.png "Two separate meshes" width = 300cm
   * \sa \ref MRE::boolean
@@ -42,10 +45,9 @@ enum class BooleanOperation
     Count ///< not a valid operation
 };
 
-/// Structure to map old mesh BitSets to new
 /** \struct MRE::BooleanResultMapper
-  * \ingroup BooleanGroup
-  * \brief Structure to easily map topology of MRE::boolean input meshes to result mesh
+  * \brief Structure to map old mesh BitSets to new
+  * \details Structure to easily map topology of MRE::boolean input meshes to result mesh
   * 
   * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MRE::boolean to result mesh topology primitives
   * \sa \ref MRE::boolean
@@ -81,13 +83,14 @@ struct BooleanResultMapper
     std::array<Maps, size_t( MapObject::Count )> maps;
 };
 
-
-// Perform boolean operation on cut meshes,
-// returns mesh in space of meshA or error.
-// note: actually this function is meant to be internal, use "boolean" instead
+/// Perform boolean operation on cut meshes
+/// \return mesh in space of meshA or error.
+/// \note: actually this function is meant to be internal, use "boolean" instead
 MREALGORITHMS_API tl::expected<MR::Mesh, std::string> doBooleanOperation( const MR::Mesh& meshACut, const MR::Mesh& meshBCut,
                                                                const std::vector<MR::EdgePath>& cutEdgesA, const std::vector<MR::EdgePath>& cutEdgesB,
                                                                BooleanOperation operation, const MR::AffineXf3f* rigidB2A = nullptr,
                                                                BooleanResultMapper* mapper = nullptr );
+
+/// \}
 
 }

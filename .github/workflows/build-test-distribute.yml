@@ -377,7 +377,7 @@ jobs:
       - name: Upload Distributions
         #MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
         run: |
-          gh auth login --with-token ${{ secrets.BUILD_MACHINE_TOKEN }}
+          echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm

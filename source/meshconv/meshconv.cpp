@@ -109,24 +109,6 @@ static int mainInternal( int argc, char **argv )
         .allow_unregistered()
         .run();
 
-    for ( const auto& o : parsedCommands.options )
-    {
-        std::cout << "\ntokens\n";
-        for ( const auto& i : o.original_tokens )
-        {
-            std::cout << "\t" << i << "\n";
-        }
-        std::cout << o.string_key << "\n";
-        std::cout << o.case_insensitive << "\n";
-        std::cout << o.position_key << "\n";
-        std::cout << o.unregistered << "\n";
-        for ( const auto& v : o.value )
-            std::cout << "\t" << v << "\n";
-    }
-
-    if ( argv > 0 )
-        return 2;
-
     if ( vm.count("help") || !vm.count("input-file") || !vm.count("output-file") )
     {
         std::cerr << 

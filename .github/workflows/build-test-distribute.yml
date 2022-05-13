@@ -218,7 +218,7 @@ jobs:
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
-  update-win-version-and-distribute:
+  update-win-version:
     if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
     runs-on: windows-2019
@@ -250,18 +250,15 @@ jobs:
 
       - name: Distribute
         run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
-        
+
       - name: Upload Windows Distribution
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        uses: actions/upload-artifact@v2
         with:
-          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: MeshLibDist.zip
-          asset_name: MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
-          asset_content_type: application/zip
+          name: WindowsDistribution
+          path: MeshLibDist.zip
+          retention-days: 1
           
-  update-deb-version-and-distribute:
+  update-deb-version:
     if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -293,16 +290,13 @@ jobs:
           MESHRUS_BUILD_DEBUG: OFF
 
       - name: Upload Ubuntu Developer Distribution
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        uses: actions/upload-artifact@v2
         with:
-          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./distr/meshlib-dev.deb
-          asset_name: meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb
-          asset_content_type: application/vnd.debian.binary-package         
+          name: UbuntuDistribution
+          path: ./distr/meshlib-dev.deb
+          retention-days: 1
           
-  update-rpm-version-and-distribute:
+  update-rpm-version:
     if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -334,19 +328,56 @@ jobs:
           MESHRUS_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        uses: actions/upload-artifact@v2
         with:
-          upload_url: ${{ needs.versioning-and-release-url.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: meshlib-dev.rpm
-          asset_name: meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
-          asset_content_type: application/octet-stream       
+          name: FedoraDistribution
+          path: meshlib-dev.rpm
+          retention-days: 1
+
+  upload-distributions:
+    if: ${{ github.event_name == 'push' }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Download Windows Developer Distribution
+        uses: actions/download-artifact@v2
+        with:
+          name: WindowsDistribution
+
+      - name: Download Ubuntu Developer Distribution
+        uses: actions/download-artifact@v2
+        with:
+          name: UbuntuDistribution
+
+      - name: Download Fedora Developer Distribution
+        uses: actions/download-artifact@v2
+        with:
+          name: FedoraDistribution
+
+      - name: Rename Distributions
+        run: |
+          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
+          mv meshlib-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb
+          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+
+      - name: Upload Distributions
+        run: |
+          echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
+          gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
+                            MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
   delete-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-latest
-    needs: [update-win-version-and-distribute, update-deb-version-and-distribute, update-rpm-version-and-distribute]
+    needs: [upload-distributions]
     if: always()
     steps:
         # all Windows
@@ -361,6 +392,12 @@ jobs:
         with:
           name: WindowsArchiveRelease
           failOnError: false
+
+      - name: Delete Windows Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: WindowsDistribution
+          failOnError: false
           
         # all Ubuntu
       - name: Delete Ubuntu Binaries artifact
@@ -369,9 +406,21 @@ jobs:
           name: DebReleaseBinArchive
           failOnError: false
 
+      - name: Delete Ubuntu Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: UbuntuDistribution
+          failOnError: false
+
         # all RPM
       - name: Delete Fedora Binaries artifact
         uses: geekyeggo/delete-artifact@v1
         with:
           name: RpmReleaseBinArchive
+          failOnError: false
+
+      - name: Delete Fedora Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: FedoraDistribution
           failOnError: false

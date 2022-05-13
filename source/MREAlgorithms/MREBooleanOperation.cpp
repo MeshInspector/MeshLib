@@ -7,13 +7,6 @@
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRAffineXf3.h"
 
-#include "MRMesh/MRMesh.h"
-#include "MREAlgorithms/MREBooleanOperation.h"
-#include "MRMesh/MRMeshCollidePrecise.h"
-#include "MREAlgorithms/MREIntersectionContour.h"
-#include "MREAlgorithms/MREContoursCut.h"
-#include "MRPch/MRTBB.h"
-
 #pragma warning(disable: 4996) //deprecated function call
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

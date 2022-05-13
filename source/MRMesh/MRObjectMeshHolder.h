@@ -2,6 +2,7 @@
 
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
+#include "MRMeshPart.h"
 
 namespace MR
 {
@@ -39,6 +40,9 @@ public:
 
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
+
+    /// \return the pair ( mesh, selected triangles ) if any triangle is selected or whole mesh otherwise
+    MeshPart meshPart() const { return selectedTriangles_.any() ? MeshPart{ *mesh_, &selectedTriangles_ } : *mesh_; }
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 

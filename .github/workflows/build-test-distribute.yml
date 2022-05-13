@@ -21,6 +21,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
+    if: ${{false}}
     timeout-minutes: 40
     needs: [prepare-image]
     runs-on: windows-2019
@@ -104,11 +105,13 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         run: tar -cvf Deb${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
         
       - name: Upload Ubuntu Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Deb${{matrix.config}}BinArchive
@@ -160,11 +163,13 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
         run: tar -cvf Rpm${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
         
       - name: Upload Fedora Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        #if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Rpm${{matrix.config}}BinArchive
@@ -172,6 +177,7 @@ jobs:
           retention-days: 1
 
   macos-build-test:
+    if: ${{false}}
     timeout-minutes: 60
     # to show the graph correctly
     needs: [prepare-image]
@@ -212,14 +218,15 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
   versioning-and-release-url:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-win-version:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{false}}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 15
     runs-on: windows-2019
     needs: [versioning-and-release-url]
@@ -259,7 +266,7 @@ jobs:
           retention-days: 1
           
   update-deb-version:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
@@ -297,7 +304,7 @@ jobs:
           retention-days: 1
           
   update-rpm-version:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
@@ -335,15 +342,16 @@ jobs:
           retention-days: 1
 
   upload-distributions:
-    if: ${{ github.event_name == 'push' }}
+    #if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    #needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    needs: [versioning-and-release-url, update-deb-version, update-rpm-version]
     steps:
-      - name: Download Windows Developer Distribution
-        uses: actions/download-artifact@v2
-        with:
-          name: WindowsDistribution
+      #- name: Download Windows Developer Distribution
+       #uses: actions/download-artifact@v2
+        #with:
+          #name: WindowsDistribution
 
       - name: Download Ubuntu Developer Distribution
         uses: actions/download-artifact@v2
@@ -356,17 +364,16 @@ jobs:
           name: FedoraDistribution
 
       - name: Rename Distributions
+        #          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
         run: |
-          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
           mv meshlib-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
       - name: Upload Distributions
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+        #MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
         run: |
+          gh auth login --with-token ${{ secrets.BUILD_MACHINE_TOKEN }}
           gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
-                            MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 

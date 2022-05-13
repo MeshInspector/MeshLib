@@ -74,9 +74,9 @@ jobs:
         config: [Release]
         compiler: [GCC 10]
         include:
-          - compiler: Сlang 11
-            cxx-compiler: /usr/bin/clang++-11
-            c-compiler: /usr/bin/clang-11
+          #- compiler: Сlang 11
+           # cxx-compiler: /usr/bin/clang++-11
+            #c-compiler: /usr/bin/clang-11
           - compiler: GCC 10
             cxx-compiler: /usr/bin/g++-10
             c-compiler: /usr/bin/gcc-10
@@ -132,11 +132,11 @@ jobs:
         #config: [Debug, Release]
         #compiler: [Сlang 13, GCC 11]
         config: [ Release ]
-        compiler: [ СGCC 11 ]
+        compiler: [ GCC 11 ]
         include:
-          - compiler: Сlang 13
-            cxx-compiler: /usr/bin/clang++-13
-            c-compiler: /usr/bin/clang-13
+          #- compiler: Сlang 13
+           # cxx-compiler: /usr/bin/clang++-13
+            #c-compiler: /usr/bin/clang-13
           - compiler: GCC 11
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc

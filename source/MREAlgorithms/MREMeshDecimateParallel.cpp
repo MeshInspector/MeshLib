@@ -30,15 +30,21 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         };
     }
 
+    DecimateResult res;
     if ( settings.subdivideParts <= 1 )
     {
-        return decimateMesh( mesh, seqSettings );
+        seqSettings.progressCallback = settings.progressCallback;
+        res = decimateMesh( mesh, seqSettings );
+        return res;
     }
 
     MR_MESH_WRITER( mesh );
     const auto & tree = mesh.getAABBTree();
     const auto subroots = tree.getSubtrees( settings.subdivideParts );
     const auto sz = subroots.size();
+
+    if ( settings.progressCallback && !settings.progressCallback( 0.05f ) )
+        return res;
 
     struct alignas(64) SubMesh
     {
@@ -51,11 +57,25 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     };
     std::vector<SubMesh> submeshes( sz );
 
+    const auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> cancelled{ false };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
+        const bool reportProgressFromThisThread = settings.progressCallback && mainThreadId == std::this_thread::get_id();
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
+            auto reportThreadProgress = [&]( float p )
+            {
+                if ( reportProgressFromThisThread && !settings.progressCallback( 0.05f + 0.7f * ( i - range.begin() + p ) / range.size() ) )
+                {
+                    cancelled.store( true, std::memory_order_relaxed );
+                    return false;
+                }
+                return !cancelled.load( std::memory_order_relaxed );
+            };
+            if ( !reportThreadProgress( 0 ) )
+                break;
             auto faces = tree.getSubtreeFaces( subroots[i] );
             auto & submesh = submeshes[i];
             VertMap vertSubToFull;
@@ -65,6 +85,9 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             if ( settings.region )
                 map.src2tgtFaces = &faceFullToSub;
             submesh.m.addPartByMask( mesh, faces, map );
+
+            if ( !reportThreadProgress( 0.1f ) )
+                break;
 
             auto subSeqSettings = seqSettings;
             subSeqSettings.touchBdVertices = false;
@@ -84,13 +107,22 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
                         newEdgeOrgPos );
                 };
             }
+            if ( reportProgressFromThisThread )
+                subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( 0.1f + 0.75f * p ); };
+            else if ( settings.progressCallback )
+                subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
             submesh.decimRes = decimateMesh( submesh.m, subSeqSettings );
+            if ( submesh.decimRes.cancelled || !reportThreadProgress( 0.85f ) )
+                break;
 
             VertMap vertSubToPacked;
             FaceMap faceSubToPacked;
             submesh.m.pack( settings.region ? &faceSubToPacked : nullptr, &vertSubToPacked );
             if ( settings.region )
                 submesh.region = submesh.region.getMapping( faceSubToPacked );
+
+            if ( !reportThreadProgress( 0.9f ) )
+                break;
 
             submesh.subVertToOriginal.resize( submesh.m.topology.lastValidVert() + 1 );
             for ( VertId beforePackId{ 0 }; beforePackId < vertSubToPacked.size(); ++beforePackId )
@@ -106,6 +138,9 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             submesh.mBdVerts = submesh.m.topology.findBoundaryVerts();
         }
     } );
+
+    if ( cancelled.load( std::memory_order_relaxed ) || settings.progressCallback && !settings.progressCallback( 0.75f ) )
+        return res;
 
     // recombine mesh from parts
     MR::Vector<MR::QuadraticForm3f, MR::VertId> unitedVertForms( mesh.topology.vertSize() );
@@ -143,14 +178,27 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             }
         }
     }
+
+    if ( settings.progressCallback && !settings.progressCallback( 0.8f ) )
+        return res;
+
     mesh.topology = fromTriangles( tris );
+
+    if ( settings.progressCallback && !settings.progressCallback( 0.85f ) )
+        return res;
+
     BitSetParallelFor( bdOfSomePiece, [&]( VertId v )
     {
         unitedVertForms[v] = computeFormAtVertex( { mesh, settings.region }, v, settings.stabilizer );
     } );
 
+    if ( settings.progressCallback && !settings.progressCallback( 0.9f ) )
+        return res;
+
     seqSettings.vertForms = &unitedVertForms;
-    auto res = decimateMesh( mesh, seqSettings );
+    if ( settings.progressCallback )
+        seqSettings.progressCallback = [cb = settings.progressCallback](float p) { return cb( 0.9f + 0.1f * p ); };
+    res = decimateMesh( mesh, seqSettings );
     // update res from submesh decimations
     for ( const auto & submesh : submeshes )
     {

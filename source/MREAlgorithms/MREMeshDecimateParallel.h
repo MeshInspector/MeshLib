@@ -37,6 +37,8 @@ struct DecimateParallelSettings
      * \note This callback will be called from parallel threads when they process subparts
      */
     std::function<bool( MR::VertId v0, MR::VertId v1, const MR::Vector3f & newV0Pos )> preCollapse;
+    /// callback to report algorithm progress and cancel it by user request
+    MR::ProgressCallback progressCallback = {};
 };
 
 /**

@@ -110,7 +110,7 @@ private:
     std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
-    void initializeQueue_();
+    bool initializeQueue_();
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
     VertId collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
@@ -199,7 +199,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation 
     return meshChanged;
 }
 
-void MeshDecimator::initializeQueue_()
+bool MeshDecimator::initializeQueue_()
 {
     MR_TIMER;
 
@@ -220,12 +220,23 @@ void MeshDecimator::initializeQueue_()
         } );
     }
 
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
+        return false;
+
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
+
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.2f ) )
+        return false;
+
     presentInQueue_.resize( mesh_.topology.undirectedEdgeSize() );
     for ( const auto & qe : calc.elements() )
         presentInQueue_.set( qe.uedgeId );
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
+
+    if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
+        return false;
+    return true;
 }
 
 auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
@@ -372,9 +383,13 @@ DecimateResult MeshDecimator::run()
 {
     MR_TIMER;
 
-    initializeQueue_();
+    if ( !initializeQueue_() )
+        return res_;
 
     res_.errorIntroduced = settings_.maxError;
+    int lastProgressFacesDeleted = 0;
+    const int maxFacesDeleted = std::min(
+        settings_.region ? (int)settings_.region->count() : mesh_.topology.numValidFaces(), settings_.maxDeletedFaces );
     while ( !queue_.empty() )
     {
         auto topQE = queue_.top();
@@ -384,6 +399,13 @@ DecimateResult MeshDecimator::run()
         {
             res_.errorIntroduced = std::sqrt( topQE.c );
             break;
+        }
+
+        if ( settings_.progressCallback && res_.facesDeleted >= 1000 + lastProgressFacesDeleted ) 
+        {
+            if ( !settings_.progressCallback( 0.25f + 0.75f * res_.facesDeleted / maxFacesDeleted ) )
+                return res_;
+            lastProgressFacesDeleted = res_.facesDeleted;
         }
 
         if ( mesh_.topology.isLoneEdge( topQE.uedgeId ) )
@@ -446,6 +468,7 @@ DecimateResult MeshDecimator::run()
 
     if ( settings_.vertForms )
         *settings_.vertForms = std::move( vertForms_ );
+    res_.cancelled = false;
     return res_;
 }
 

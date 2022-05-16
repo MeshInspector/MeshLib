@@ -1,6 +1,7 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRProgressCallback.h"
 #include <climits>
 #include <functional>
 
@@ -61,6 +62,8 @@ struct DecimateSettings
     MR::Vector<MR::QuadraticForm3f, MR::VertId> * vertForms = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
+    /// callback to report algorithm progress and cancel it by user request
+    MR::ProgressCallback progressCallback = {};
 };
 
 /**
@@ -81,6 +84,8 @@ struct DecimateResult
     /// for DecimateStrategy::ShortestEdgeFirst:
     ///    the shortest remaining edge in the mesh
     float errorIntroduced = 0;
+    /// whether the algorithm was cancelled by the callback
+    bool cancelled = true;
 };
 
 /**

@@ -67,12 +67,14 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         {
             auto reportThreadProgress = [&]( float p )
             {
-                if ( reportProgressFromThisThread && !settings.progressCallback( 0.05f + 0.7f * ( i - range.begin() + p ) / range.size() ) )
+                if ( cancelled.load( std::memory_order_relaxed ) )
+                    return false;
+                if ( reportProgressFromThisThread && !settings.progressCallback( 0.05f + 0.7f * ( i + p ) / sz ) )
                 {
                     cancelled.store( true, std::memory_order_relaxed );
                     return false;
                 }
-                return !cancelled.load( std::memory_order_relaxed );
+                return true;
             };
             if ( !reportThreadProgress( 0 ) )
                 break;

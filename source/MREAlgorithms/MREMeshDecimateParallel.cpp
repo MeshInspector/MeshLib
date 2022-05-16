@@ -59,6 +59,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
 
     const auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> cancelled{ false };
+    std::atomic<int> finishedSubmeshes{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
@@ -69,7 +70,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             {
                 if ( cancelled.load( std::memory_order_relaxed ) )
                     return false;
-                if ( reportProgressFromThisThread && !settings.progressCallback( 0.05f + 0.7f * ( i + p ) / sz ) )
+                if ( reportProgressFromThisThread && !settings.progressCallback( 0.05f + 0.7f * ( finishedSubmeshes.load( std::memory_order_relaxed ) + p ) / sz ) )
                 {
                     cancelled.store( true, std::memory_order_relaxed );
                     return false;
@@ -138,10 +139,11 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
                 }
             }
             submesh.mBdVerts = submesh.m.topology.findBoundaryVerts();
+            finishedSubmeshes.fetch_add( 1, std::memory_order_relaxed );
         }
     } );
 
-    if ( cancelled.load( std::memory_order_relaxed ) || settings.progressCallback && !settings.progressCallback( 0.75f ) )
+    if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.75f ) ) )
         return res;
 
     // recombine mesh from parts

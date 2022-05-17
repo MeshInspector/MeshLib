@@ -14,6 +14,7 @@ namespace MRE
  *
  * \sa \ref decimatePolyline
  */
+template<typename V>
 struct DecimatePolylineSettings
 {
     /// Limit from above on the maximum distance from moved vertices to original contour
@@ -34,14 +35,17 @@ struct DecimatePolylineSettings
      * and its origin vertex will get new position (provided as the second argument) after collapse;
      * If the callback returns false, then the collapse is prohibited
      */
-    std::function<bool( MR::EdgeId edgeToCollapse, const MR::Vector2f& newEdgeOrgPos )> preCollapse;
+    std::function<bool( MR::EdgeId edgeToCollapse, const V & newEdgeOrgPos )> preCollapse;
     /**
      * \brief  If not null, then
      * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
      * on output: quadratic form for each remaining vertex is returned there
      */
-    MR::Vector<MR::QuadraticForm2f, MR::VertId>* vertForms = nullptr;
+    MR::Vector<MR::QuadraticForm<V>, MR::VertId>* vertForms = nullptr;
 };
+
+using DecimatePolylineSettings2 = DecimatePolylineSettings<MR::Vector2f>;
+using DecimatePolylineSettings3 = DecimatePolylineSettings<MR::Vector3f>;
 
 /**
  * \struct MRE::DecimatePolylineResult
@@ -57,12 +61,14 @@ struct DecimatePolylineResult
  * \brief Collapse edges in the polyline according to the settings
  * \ingroup DecimateGroup
  */
-MREALGORITHMS_API DecimatePolylineResult decimatePolyline( MR::Polyline2& polyline, const DecimatePolylineSettings& settings = {} );
+MREALGORITHMS_API DecimatePolylineResult decimatePolyline( MR::Polyline2& polyline, const DecimatePolylineSettings2& settings = {} );
+MREALGORITHMS_API DecimatePolylineResult decimatePolyline( MR::Polyline3& polyline, const DecimatePolylineSettings3& settings = {} );
 
 /**
  * \brief Collapse edges in the contour according to the settings
  * \ingroup DecimateGroup
  */ 
-MREALGORITHMS_API DecimatePolylineResult decimateContour( MR::Contour2f& contour, const DecimatePolylineSettings& settings = {} );
+MREALGORITHMS_API DecimatePolylineResult decimateContour( MR::Contour2f& contour, const DecimatePolylineSettings2& settings = {} );
+MREALGORITHMS_API DecimatePolylineResult decimateContour( MR::Contour3f& contour, const DecimatePolylineSettings3& settings = {} );
 
 } //namespace MRE

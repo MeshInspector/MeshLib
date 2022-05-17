@@ -160,10 +160,19 @@ using LineSegm3d = LineSegm3<double>;
 
 template <typename V> using Contour = std::vector<V>;
 template <typename T> using Contour2 = Contour<Vector2<T>>;
+template <typename T> using Contour3 = Contour<Vector3<T>>;
 using Contour2d = Contour2<double>;
-using Contours2d = std::vector<Contour2d>;
 using Contour2f = Contour2<float>;
-using Contours2f = std::vector<Contour2f>;
+using Contour3d = Contour3<double>;
+using Contour3f = Contour3<float>;
+
+template <typename V> using Contours = std::vector<Contour<V>>;
+template <typename T> using Contours2 = Contours<Vector2<T>>;
+template <typename T> using Contours3 = Contours<Vector3<T>>;
+using Contours2d = Contours2<double>;
+using Contours2f = Contours2<float>;
+using Contours3d = Contours3<double>;
+using Contours3f = Contours3<float>;
 
 template <typename T> using Contour3 = Contour<Vector3<T>>;
 using Contour3d = Contour3<double>;

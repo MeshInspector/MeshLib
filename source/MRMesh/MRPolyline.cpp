@@ -27,7 +27,27 @@ Polyline<V>::Polyline( const Contours2f& contours )
             if constexpr ( V::elements == 2 )
                 points.emplace_back( p.x, p.y );
             else
-            points.emplace_back( p.x, p.y, 0.0f );
+                points.emplace_back( p.x, p.y, 0.0f );
+            return points.backId();
+        } 
+    );
+}
+
+template<typename V>
+Polyline<V>::Polyline( const Contours3f& contours )
+{
+    MR_TIMER
+    topology.buildFromContours( contours, 
+        [&points = this->points]( size_t sz )
+        {
+            points.reserve( sz );
+        },
+        [&points = this->points]( const Vector3f & p )
+        {
+            if constexpr ( V::elements == 2 )
+                points.emplace_back( p.x, p.y );
+            else
+                points.push_back( p );
             return points.backId();
         } 
     );
@@ -95,7 +115,19 @@ Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 }
 
 template<typename V>
-Contours2f Polyline<V>::contours() const
+Contours<V> Polyline<V>::contours() const
+{
+    MR_TIMER
+    return topology.convertToContours<V>( 
+        [&points = this->points]( VertId v )
+        {
+            return points[v];
+        } 
+    );
+}
+
+template<typename V>
+Contours2f Polyline<V>::contours2() const
 {
     MR_TIMER
     return topology.convertToContours<Vector2f>( 

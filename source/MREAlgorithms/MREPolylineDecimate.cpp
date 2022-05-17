@@ -50,20 +50,21 @@ EdgeId collapseEdge( PolylineTopology & topology, const EdgeId e )
     return eNext != e ? eNext : EdgeId();
 }
 
+template<typename V>
 class PolylineDecimator
 {
 public:
-    PolylineDecimator( Polyline2 & polyline, const DecimatePolylineSettings & settings );
+    PolylineDecimator( MR::Polyline<V> & polyline, const DecimatePolylineSettings<V> & settings );
     DecimatePolylineResult run();
 
     // returns true if the collapse of given edge is permitted by the region and settings
     bool isInRegion( EdgeId e ) const;
 
 private: 
-    Polyline2 & polyline_;
-    const DecimatePolylineSettings & settings_;
+    MR::Polyline<V> & polyline_;
+    const DecimatePolylineSettings<V> & settings_;
     const float maxErrorSq_;
-    Vector<QuadraticForm2f, VertId> vertForms_;
+    Vector<QuadraticForm<V>, VertId> vertForms_;
     struct QueueElement
     {
         float c = 0;
@@ -77,12 +78,13 @@ private:
     class EdgeMetricCalc;
 
     void initializeQueue_();
-    QueueElement computeQueueElement_( UndirectedEdgeId ue, QuadraticForm2f * outCollapseForm = nullptr, Vector2f * outCollapsePos = nullptr ) const;
+    QueueElement computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm = nullptr, V * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
-    VertId collapse_( EdgeId edgeToCollapse, const Vector2f & collapsePos );
+    VertId collapse_( EdgeId edgeToCollapse, const V & collapsePos );
 };
 
-PolylineDecimator::PolylineDecimator( Polyline2 & polyline, const DecimatePolylineSettings & settings )
+template<typename V>
+PolylineDecimator<V>::PolylineDecimator( MR::Polyline<V> & polyline, const DecimatePolylineSettings<V> & settings )
     : polyline_( polyline )
     , settings_( settings )
     , maxErrorSq_( sqr( settings.maxError ) )
@@ -96,7 +98,8 @@ static bool isRegionEdge( const PolylineTopology & topology, EdgeId e, const Ver
     return region->test( topology.org( e ) ) && region->test( topology.dest( e ) );
 }
 
-bool PolylineDecimator::isInRegion( EdgeId e ) const
+template<typename V>
+bool PolylineDecimator<V>::isInRegion( EdgeId e ) const
 {
     if ( !isRegionEdge( polyline_.topology, e, settings_.region ) )
         return false;
@@ -110,10 +113,11 @@ bool PolylineDecimator::isInRegion( EdgeId e ) const
     return true;
 }
 
-class PolylineDecimator::EdgeMetricCalc 
+template<typename V>
+class PolylineDecimator<V>::EdgeMetricCalc 
 {
 public:
-    EdgeMetricCalc( const PolylineDecimator & decimator ) : decimator_( decimator ) { }
+    EdgeMetricCalc( const PolylineDecimator<V> & decimator ) : decimator_( decimator ) { }
     EdgeMetricCalc( EdgeMetricCalc & x, tbb::split ) : decimator_( x.decimator_ ) { }
     void join( EdgeMetricCalc & y ) { auto yes = y.takeElements(); elems_.insert( elems_.end(), yes.begin(), yes.end() ); }
 
@@ -137,13 +141,14 @@ public:
     }
             
 public:
-    const PolylineDecimator & decimator_;
+    const PolylineDecimator<V> & decimator_;
     std::vector<QueueElement> elems_;
 };
 
-MR::QuadraticForm2f computeFormAtVertex( const MR::Polyline2 & polyline, MR::VertId v, float stabilizer )
+template<typename V>
+MR::QuadraticForm<V> computeFormAtVertex( const MR::Polyline<V> & polyline, MR::VertId v, float stabilizer )
 {
-    QuadraticForm2f qf;
+    QuadraticForm<V> qf;
     
     const auto e = polyline.topology.edgeWithOrg( v );
     qf.addDistToLine( polyline.edgeVector( e ).normalized() );
@@ -157,7 +162,8 @@ MR::QuadraticForm2f computeFormAtVertex( const MR::Polyline2 & polyline, MR::Ver
     return qf;
 }
 
-void PolylineDecimator::initializeQueue_()
+template<typename V>
+void PolylineDecimator<V>::initializeQueue_()
 {
     MR_TIMER;
 
@@ -186,7 +192,8 @@ void PolylineDecimator::initializeQueue_()
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 }
 
-auto PolylineDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm2f * outCollapseForm, Vector2f * outCollapsePos ) const -> QueueElement
+template<typename V>
+auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm, V * outCollapsePos ) const -> QueueElement
 {
     QueueElement res;
     res.uedgeId = ue;
@@ -203,7 +210,8 @@ auto PolylineDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm
     return res;
 }
 
-void PolylineDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
+template<typename V>
+void PolylineDecimator<V>::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     EdgeId e{ ue };
     if ( !isInRegion( e ) )
@@ -215,7 +223,8 @@ void PolylineDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
         queue_.push( qe );
 }
 
-VertId PolylineDecimator::collapse_( EdgeId edgeToCollapse, const Vector2f & collapsePos )
+template<typename V>
+VertId PolylineDecimator<V>::collapse_( EdgeId edgeToCollapse, const V & collapsePos )
 {
     auto & topology = polyline_.topology;
     const auto vo = topology.org( edgeToCollapse );
@@ -236,7 +245,8 @@ VertId PolylineDecimator::collapse_( EdgeId edgeToCollapse, const Vector2f & col
     return topology.hasVert( vo ) ? vo : VertId{};
 }
 
-DecimatePolylineResult PolylineDecimator::run()
+template<typename V>
+DecimatePolylineResult PolylineDecimator<V>::run()
 {
     MR_TIMER;
 
@@ -261,8 +271,8 @@ DecimatePolylineResult PolylineDecimator::run()
             continue;
         }
 
-        QuadraticForm2f collapseForm;
-        Vector2f collapsePos;
+        QuadraticForm<V> collapseForm;
+        V collapsePos;
         auto qe = computeQueueElement_( topQE.uedgeId, &collapseForm, &collapsePos );
 
         if ( qe.c > topQE.c )
@@ -293,18 +303,40 @@ DecimatePolylineResult PolylineDecimator::run()
     return res_;
 }
 
-DecimatePolylineResult decimatePolyline( Polyline2 & polyline, const DecimatePolylineSettings & settings )
+DecimatePolylineResult decimatePolyline( MR::Polyline2 & polyline, const DecimatePolylineSettings2 & settings )
 {
     MR_TIMER;
     //MR_POLYLINE_WRITER( polyline );
-    PolylineDecimator md( polyline, settings );
+    PolylineDecimator<Vector2f> md( polyline, settings );
     return md.run();
 }
 
-DecimatePolylineResult decimateContour( Contour2f& contour, const DecimatePolylineSettings& settings )
+DecimatePolylineResult decimatePolyline( MR::Polyline3 & polyline, const DecimatePolylineSettings3 & settings )
 {
     MR_TIMER;
-    Polyline2 p( { contour } );
+    //MR_POLYLINE_WRITER( polyline );
+    PolylineDecimator<Vector3f> md( polyline, settings );
+    return md.run();
+}
+
+DecimatePolylineResult decimateContour( Contour2f& contour, const DecimatePolylineSettings2& settings )
+{
+    MR_TIMER;
+    MR::Polyline2 p( { contour } );
+    auto res = decimatePolyline( p, settings );
+    auto resContours = p.contours();
+    assert ( p.contours().size() == 1 );
+    if ( !p.contours().empty() )
+        contour = p.contours()[0];
+    else
+        contour.clear();
+    return res;
+}
+
+DecimatePolylineResult decimateContour( Contour3f& contour, const DecimatePolylineSettings3& settings )
+{
+    MR_TIMER;
+    MR::Polyline3 p( { contour } );
     auto res = decimatePolyline( p, settings );
     auto resContours = p.contours();
     assert ( p.contours().size() == 1 );
@@ -362,12 +394,12 @@ TEST( MRMesh, DecimatePolyline )
 
     for( auto& cont : testContours )
     {
-        DecimatePolylineSettings settings;
+        DecimatePolylineSettings2 settings;
         settings.maxDeletedVertices = 3;
         settings.maxError = 100.f;
         settings.touchBdVertices = false;
 
-        Polyline2 pl( { cont } );
+        MR::Polyline2 pl( { cont } );
         auto plBack = pl;
         auto decRes = decimatePolyline( pl, settings );
 

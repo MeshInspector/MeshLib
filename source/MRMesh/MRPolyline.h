@@ -19,8 +19,10 @@ public:
 
     Polyline() = default;
 
-    /// creates polyline from 2d contours
+    /// creates polyline from 2D contours, 3D polyline will get zero z-component
     MRMESH_API Polyline( const Contours2f& contours );
+    /// creates polyline from 3D contours, 2D polyline will lose z-component
+    MRMESH_API Polyline( const Contours3f& contours );
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)
     /// \details if closed argument is true then the last and the first points will be additionally connected
@@ -66,7 +68,11 @@ public:
 
     /// convert Polyline to simple contour structures with vector of points inside
     /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
-    MRMESH_API Contours2f contours() const;
+    MRMESH_API Contours<V> contours() const;
+
+    /// convert Polyline to simple 2D contour structures with vector of points inside
+    /// \details if all even edges are consistently oriented, then the output contours will be oriented the same
+    MRMESH_API Contours2f contours2() const;
 
     /// convert Polyline3 to Polyline2 or vice versa
     template<typename U>

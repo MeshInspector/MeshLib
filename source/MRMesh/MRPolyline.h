@@ -21,7 +21,7 @@ public:
 
     /// creates polyline from 2D contours, 3D polyline will get zero z-component
     MRMESH_API Polyline( const Contours2f& contours );
-    /// creates polyline from 3D contours, 2D polyline will lost z-component
+    /// creates polyline from 3D contours, 2D polyline will lose z-component
     MRMESH_API Polyline( const Contours3f& contours );
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)

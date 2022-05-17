@@ -96,6 +96,8 @@ This list is not full and updating each day
  - Iterative Closest Points (ICP), two meshes aligning
    - Point to point,
    - Point to plane.
+### Upcoming features
+We plan to add computed-tomography reconstruction in MeshLib (already present in MeshInspector). Please write us if you like to see some other features.
 
 # Build
 ## Build with VS2019 on Windows

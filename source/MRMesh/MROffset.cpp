@@ -4,6 +4,8 @@
 #include "MRBox.h"
 #include "MRVDBConversions.h"
 #include "MRTimer.h"
+#include "MRPolyline.h"
+#include "MRMeshFillHole.h"
 
 namespace
 {
@@ -66,6 +68,38 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
         newMesh.topology.flipOrientation();
 
     return newMesh;
+}
+
+Mesh offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
+{
+    MR_TIMER;
+
+    float voxelSize = params.voxelSize;
+    // Compute voxel size if needed
+    if ( voxelSize <= 0.0f )
+    {
+        auto bb = polyline.computeBoundingBox();
+        auto size = bb.size();
+        auto maxDim = std::max( { size.x,size.y,size.z } );
+        voxelSize = maxDim * std::cbrt( 1.0f / autoVoxelNumber );
+    }
+
+    Mesh mesh;
+    auto contours = polyline.topology.convertToContours<Vector3f>(
+        [&points = polyline.points]( VertId v )
+    {
+        return points[v];
+    } );
+
+    std::vector<EdgeId> newHoles;
+    newHoles.reserve( contours.size() );
+    for ( const auto& cont : contours )
+        newHoles.push_back( mesh.addSeparateEdgeLoop( cont ) );
+
+    for ( auto h : newHoles )
+        makeDegenerateBandAroundHole( mesh, h );
+
+    return offsetMesh( mesh, offset, params );
 }
 
 }

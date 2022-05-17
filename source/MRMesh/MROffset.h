@@ -25,7 +25,7 @@ struct OffsetParameters
 // so result mesh is always closed
 [[nodiscard]] MRMESH_API Mesh offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 
-// Offsets polyline by converting it to voxels and back
+// Offsets polyline by converting it to voxels and building iso-surface
 // do offset in both directions (normal and -normal)
 // so result mesh is always closed
 [[nodiscard]] MRMESH_API Mesh offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );

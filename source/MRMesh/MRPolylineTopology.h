@@ -154,13 +154,11 @@ void PolylineTopology::buildFromContours( const std::vector<std::vector<T>> & co
     size_t size = 0;
     std::vector<bool> closed;
     closed.reserve( contours.size() );
-    int numNotEmpty = 0;
     int numClosed = 0;
     for ( const auto& c : contours )
     {
         if ( c.size() > 2 )
         {
-            ++numNotEmpty;
             closed.push_back( c.front() == c.back() );
         }
         else

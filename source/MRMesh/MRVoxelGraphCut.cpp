@@ -282,7 +282,7 @@ void VoxelGraphCut::augment_( VoxelId vSource, OutEdge vSourceOutEdge, VoxelId v
     auto & srcD = voxelData_[vSource];
     auto & snkD = voxelData_[vSink];
 
-    for ( int iter = 0;; ++iter )
+    for ( ;; )
     {
         assert( srcD.side() == Side::Source );
         assert( snkD.side() == Side::Sink );
@@ -448,7 +448,7 @@ bool VoxelGraphCut::isGrandparent_( VoxelId v, VoxelId grand ) const
 bool VoxelGraphCut::checkNotSaturatedPath_( VoxelId v, Side side ) const
 {
     assert( side != Side::Unknown );
-    for ( int iter = 0;; ++iter )
+    for ( ;; )
     {
         const auto & vd = voxelData_[v];
         assert( vd.side() == side );

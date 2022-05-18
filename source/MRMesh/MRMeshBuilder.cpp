@@ -2,6 +2,8 @@
 #include "MRIdentifyVertices.h"
 #include "MRMeshDelete.h"
 #include "MRRingIterator.h"
+#include "MRAABBTreePoints.h"
+#include "MRPointsInBall.h"
 #include "MRTimer.h"
 #include "MRMesh/MRGTest.h"
 #include "MRPch/MRTBB.h"
@@ -826,6 +828,50 @@ Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )
     res.points = vi.takePoints();
     res.topology = fromTriangles( vi.takeTris() );
     return res;
+}
+
+int uniteCloseVertices( Mesh & mesh, float closeDist, VertMap * optionalVertOldToNew )
+{
+    MR_TIMER
+    AABBTreePoints tree( mesh );
+    VertMap vertOldToNew( mesh.topology.vertSize() );
+    int numChanged = 0;
+    for ( VertId v : mesh.topology.getValidVerts() )
+    {
+        VertId smallestCloseVert = v;
+        findPointsInBall( tree, mesh.points[v], closeDist, [&]( VertId cv, const Vector3f& )
+        {
+            if ( cv == v )
+                return;
+            if ( vertOldToNew[cv] != cv )
+                return; // cv vertex is removed by itself
+            smallestCloseVert = std::min( smallestCloseVert, cv );
+        } );
+        vertOldToNew[v] = smallestCloseVert;
+        if ( v != smallestCloseVert )
+            ++numChanged;
+    }
+    if ( numChanged <= 0 )
+        return numChanged;
+
+    std::vector<Triangle> tris;
+    tris.reserve( mesh.topology.numValidFaces() );
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        VertId vs[3];
+        mesh.topology.getTriVerts( f, vs );
+        tris.emplace_back(
+            vertOldToNew[vs[0]],
+            vertOldToNew[vs[1]],
+            vertOldToNew[vs[2]],
+            f );
+    }
+    mesh.topology = fromTriangles( tris );
+    mesh.invalidateCaches();
+    if ( optionalVertOldToNew )
+        *optionalVertOldToNew = std::move( vertOldToNew );
+
+    return numChanged;
 }
 
 // check non-manifold vertices resolving

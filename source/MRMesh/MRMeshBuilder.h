@@ -93,6 +93,12 @@ struct FaceRecord
 // construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
 MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces );
 
+/// the function finds groups of mesh vertices located closer to each other than \ref closeDist, and unites such vertices in one;
+/// then the mesh is rebuilt from the remaining triangles
+/// \param optionalVertOldToNew is the mapping of vertices: before -> after
+/// \return the number of vertices united, 0 means no change in the mesh
+MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, VertMap * optionalVertOldToNew = nullptr );
+
 } //namespace MeshBuilder
 
 } //namespace MR

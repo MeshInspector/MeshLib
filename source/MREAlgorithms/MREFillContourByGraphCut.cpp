@@ -147,7 +147,7 @@ void GraphCut::augment_( EdgeId e )
     auto r = topology_.right( e );
     assert( l && r );
 
-    for ( int iter = 0;; ++iter )
+    for ( ;; )
     {
         assert( filled_[Left].test( l ) );
         assert( !filled_[Left].test( r ) );
@@ -285,7 +285,7 @@ bool GraphCut::isGrandparent_( FaceId f, FaceId grand ) const
 
 bool GraphCut::checkNotSaturatedPath_( FaceId f, int side ) const
 {
-    for ( int iter = 0;; ++iter )
+    for ( ;; )
     {
         assert( filled_[side].test( f ) );
         assert( !filled_[1 - side].test( f ) );

@@ -5,7 +5,13 @@
 namespace MR
 {
 
+
 void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius, const FoundPointCallback& foundCallback )
+{
+    findPointsInBall( pointCloud.getAABBTree(), center, radius, foundCallback );
+}
+
+void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float radius, const FoundPointCallback& foundCallback )
 {
     if ( !foundCallback )
     {
@@ -13,7 +19,6 @@ void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, flo
         return;
     }
 
-    const AABBTreePoints& tree = pointCloud.getAABBTree();
     if ( tree.nodes().empty() )
     {
         assert( false );

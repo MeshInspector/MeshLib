@@ -42,7 +42,8 @@ struct SubtreePoints
 class AABBTreePointsMaker
 {
 public:
-    std::pair<AABBTreePoints::NodeVec,std::vector<AABBTreePoints::Point>> construct( const PointCloud& pointCloud );
+    std::pair<AABBTreePoints::NodeVec,std::vector<AABBTreePoints::Point>> construct(
+        const VertCoords & points, const VertBitSet & validPoints );
 
 private:
     std::vector<AABBTreePoints::Point> orderedPoints_;
@@ -135,18 +136,19 @@ void AABBTreePointsMaker::makeSubtree( const SubtreePoints& s, int numThreads )
     }
 }
 
-std::pair<AABBTreePoints::NodeVec, std::vector<AABBTreePoints::Point>> AABBTreePointsMaker::construct( const PointCloud& pointCloud )
+std::pair<AABBTreePoints::NodeVec, std::vector<AABBTreePoints::Point>> AABBTreePointsMaker::construct(
+    const VertCoords & points, const VertBitSet & validPoints )
 {
     MR_TIMER;
 
-    const int numPoints = int( pointCloud.validPoints.count() );
+    const int numPoints = int( validPoints.count() );
     if ( numPoints <= 0 )
         return {};
 
     orderedPoints_.resize( numPoints );
     int n = 0;
-    for ( auto v : pointCloud.validPoints )
-        orderedPoints_[n++] = {pointCloud.points[v],v};
+    for ( auto v : validPoints )
+        orderedPoints_[n++] = { points[v], v };
 
     nodes_.resize( getNumNodesPoints( numPoints ) );
     makeSubtree( SubtreePoints( AABBTreePoints::rootNodeId(), 0, numPoints ), std::thread::hardware_concurrency() );
@@ -156,8 +158,15 @@ std::pair<AABBTreePoints::NodeVec, std::vector<AABBTreePoints::Point>> AABBTreeP
 
 AABBTreePoints::AABBTreePoints( const PointCloud& pointCloud )
 {
-    auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( pointCloud );
+    auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( pointCloud.points, pointCloud.validPoints );
     nodes_ = std::move( nodes ); 
+    orderedPoints_ = std::move( orderedPoints );
+}
+
+AABBTreePoints::AABBTreePoints( const Mesh& mesh )
+{
+    auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( mesh.points, mesh.topology.getValidVerts() );
+    nodes_ = std::move( nodes );
     orderedPoints_ = std::move( orderedPoints );
 }
 
@@ -177,6 +186,26 @@ TEST( MRMesh, AABBTreePoints )
     Box3f box;
     for ( auto v : spherePC.validPoints )
         box.include( spherePC.points[v] );
+
+    EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
+
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].leftOrFirst.valid() );
+    EXPECT_TRUE( tree[AABBTreePoints::rootNodeId()].rightOrLast.valid() );
+
+    assert( !tree.nodes().empty() );
+    auto m = std::move( tree );
+    assert( tree.nodes().empty() );
+}
+
+TEST( MRMesh, AABBTreePointsFromMesh )
+{
+    Mesh sphere = makeUVSphere( 1, 8, 8 );
+    AABBTreePoints tree( sphere );
+    EXPECT_EQ( tree.nodes().size(), getNumNodesPoints( sphere.topology.numValidVerts() ) );
+
+    Box3f box;
+    for ( auto v : sphere.topology.getValidVerts() )
+        box.include( sphere.points[v] );
 
     EXPECT_EQ( tree[AABBTreePoints::rootNodeId()].box, box );
 

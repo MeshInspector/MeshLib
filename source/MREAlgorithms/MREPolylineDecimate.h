@@ -19,15 +19,18 @@ struct DecimatePolylineSettings
 {
     /// Limit from above on the maximum distance from moved vertices to original contour
     float maxError = 0.001f;
-    /// Small stabilizer is important to achieve good results on completely linear polyline parts,
-    /// if your polyline is not-linear everywhere, then you can set it to zero
+    /// Stabilizer is dimensionless coefficient.
+    /// The larger is stabilizer, the more Decimator will strive to retain the density of input points.
+    /// If stabilizer is zero, then only the shape of input line will be preserved.
     float stabilizer = 0.001f;
     /// Limit on the number of deleted vertices
     int maxDeletedVertices = INT_MAX;
     /// Region of the polyline to be decimated, it is updated during the operation
     /// Remain nullptr to include the whole polyline
     MR::VertBitSet* region = nullptr;
-    /// Whether to allow collapsing edges with at least one vertex on (region) boundary
+    /// Whether to allow collapsing edges with at least one vertex on the end of not-closed polyline
+    /// (or on region boundary if region is given);
+    /// if touchBdVertices is false then boundary vertices are strictly fixed
     bool touchBdVertices = true;
     /**
      * \brief The user can provide this optional callback that is invoked immediately before edge collapse;

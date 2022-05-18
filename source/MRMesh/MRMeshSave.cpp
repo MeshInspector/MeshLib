@@ -136,7 +136,7 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
 {
     MR_TIMER
 
-    char header[80] = "MeshRUs";
+    char header[80] = "MeshInspector.com";
     out.write( header, 80 );
 
     auto notDegenTris = mesh.topology.getValidFaces();
@@ -196,7 +196,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     int numVertices = mesh.topology.lastValidVert() + 1;
     bool saveColors = perVertColors && perVertColors->size() >= numVertices;
 
-    out << "ply\nformat binary_little_endian 1.0\ncomment MeshRUs\n"
+    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( saveColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";

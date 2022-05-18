@@ -56,7 +56,7 @@ struct CtmSaveOptions
     /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed
     bool rearrangeTriangles = false;
     /// comment saved in the file
-    const char * comment = "MeshRUs";
+    const char * comment = "MeshInspector.com";
 };
 
 /// saves in .ctm file

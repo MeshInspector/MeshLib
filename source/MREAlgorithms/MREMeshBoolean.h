@@ -10,7 +10,7 @@ namespace MRE
 /** \defgroup BooleanGroup Surface Boolean overview
   * \brief Chapter about Constructive Solid Geometry operations
   * 
-  * This chapter represents documentation of MeshRusExt CSG
+  * This chapter represents documentation of MeshLib CSG
   */
 
 

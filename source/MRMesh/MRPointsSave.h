@@ -29,7 +29,7 @@ struct CtmSavePointsOptions
     /// 0 - minimal compression, but fast; 9 - maximal compression, but slow
     int compressionLevel = 1;
     /// comment saved in the file
-    const char* comment = "MeshRUs Points";
+    const char* comment = "MeshInspector Points";
 };
 
 /// saves in .ctm file

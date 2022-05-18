@@ -59,7 +59,7 @@ UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDele
     auto t0 = std::time( nullptr );
     for ( int i = 0; i < MAX_ATTEMPTS; ++i )
     {
-        auto folder = tmp / ( "MeshRUsScene" + std::to_string( t0 + i ) );
+        auto folder = tmp / ( "MeshInspectorScene" + std::to_string( t0 + i ) );
         if ( create_directories( folder, ec ) )
         {
             folder_ = std::move( folder );
@@ -89,7 +89,7 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
 
 const IOFilters SceneFileFilters =
 {
-    {"MeshRUs scene file (.mru)","*.mru"}
+    {"MeshInspector scene (.mru)","*.mru"}
 };
 
 tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
@@ -119,7 +119,7 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
     return root;
 }
 
-// path of item in filesystem, base - base path of scene root (%temp%/MeshRUsScene)
+// path of item in filesystem, base - base path of scene root (%temp%/MeshInspectorScene)
 tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {

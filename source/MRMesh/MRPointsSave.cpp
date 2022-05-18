@@ -34,7 +34,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
 
     size_t numVertices = points.points.size();
 
-    out << "ply\nformat binary_little_endian 1.0\ncomment MeshRUs\n"
+    out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
     if ( colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";

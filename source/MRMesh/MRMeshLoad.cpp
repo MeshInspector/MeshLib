@@ -528,7 +528,7 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const 
 MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<tl::expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,std::vector<Color>*)>(fromMrmesh)}} );
 */
 
-MR_ADD_MESH_LOADER( IOFilter( "MeshRUs Mesh (.mrmesh)", "*.mrmesh" ), fromMrmesh )
+MR_ADD_MESH_LOADER( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh )
 MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl )
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )

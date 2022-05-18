@@ -127,7 +127,7 @@ std::filesystem::path GetResourcesDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshRUs is not installed to system
+    // "build" in path means that MeshInspector is not installed to system
     // so all resources are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
@@ -145,7 +145,7 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshRUs is not installed to system
+    // "build" in path means that MeshInspector is not installed to system
     // so all fonts are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
@@ -163,7 +163,7 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshRUs is not installed to system
+    // "build" in path means that MeshInspector is not installed to system
     // so all libs are near executable file
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;

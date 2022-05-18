@@ -170,6 +170,13 @@ AABBTreePoints::AABBTreePoints( const Mesh& mesh )
     orderedPoints_ = std::move( orderedPoints );
 }
 
+AABBTreePoints::AABBTreePoints( const VertCoords & points, const VertBitSet & validPoints )
+{
+    auto [nodes, orderedPoints] = AABBTreePointsMaker().construct( points, validPoints );
+    nodes_ = std::move( nodes );
+    orderedPoints_ = std::move( orderedPoints );
+}
+
 size_t AABBTreePoints::heapBytes() const
 {
     return 

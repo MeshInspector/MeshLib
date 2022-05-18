@@ -830,10 +830,14 @@ Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )
     return res;
 }
 
-int uniteCloseVertices( Mesh & mesh, float closeDist, VertMap * optionalVertOldToNew )
+int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )
 {
     MR_TIMER
-    AABBTreePoints tree( mesh );
+    VertBitSet bdVerts;
+    if ( uniteOnlyBd )
+        bdVerts = mesh.topology.findBoundaryVerts();
+
+    AABBTreePoints tree( mesh.points, uniteOnlyBd ? bdVerts : mesh.topology.getValidVerts() );
     VertMap vertOldToNew( mesh.topology.vertSize() );
     int numChanged = 0;
     for ( VertId v : mesh.topology.getValidVerts() )

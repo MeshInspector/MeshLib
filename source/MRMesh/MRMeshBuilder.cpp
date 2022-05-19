@@ -843,14 +843,17 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     for ( VertId v : mesh.topology.getValidVerts() )
     {
         VertId smallestCloseVert = v;
-        findPointsInBall( tree, mesh.points[v], closeDist, [&]( VertId cv, const Vector3f& )
+        if ( !uniteOnlyBd || bdVerts.test( v ) )
         {
-            if ( cv == v )
-                return;
-            if ( vertOldToNew[cv] != cv )
-                return; // cv vertex is removed by itself
-            smallestCloseVert = std::min( smallestCloseVert, cv );
-        } );
+            findPointsInBall( tree, mesh.points[v], closeDist, [&]( VertId cv, const Vector3f& )
+            {
+                if ( cv == v )
+                    return;
+                if ( vertOldToNew[cv] != cv )
+                    return; // cv vertex is removed by itself
+                smallestCloseVert = std::min( smallestCloseVert, cv );
+            } );
+        }
         vertOldToNew[v] = smallestCloseVert;
         if ( v != smallestCloseVert )
             ++numChanged;

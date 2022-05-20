@@ -1,5 +1,4 @@
 #include "MRMeshBuilder.h"
-#include "MRMeshDelete.h"
 #include "MRMeshTopology.h"
 #include "MRBitSet.h"
 #include "MRExpandShrink.h"
@@ -91,14 +90,14 @@ TEST(MRMesh, BuildQuadDelete)
     EXPECT_EQ( getInnerFaces( topology, verts ).count(), 0 );
 
     // now check deletion
-    deleteFace( topology, FaceId( 1 ) );
+    topology.deleteFace( 1_f );
     EXPECT_EQ( topology.numValidVerts(), 3 );
     EXPECT_EQ( topology.getValidVerts().count(), 3 );
     EXPECT_EQ( topology.numValidFaces(), 1 );
     EXPECT_EQ( topology.getValidFaces().count(), 1 );
     EXPECT_EQ( topology.computeNotLoneUndirectedEdges(), 3 );
 
-    deleteFace( topology, FaceId( 0 ) );
+    topology.deleteFace( 0_f );
     EXPECT_EQ( topology.numValidVerts(), 0 );
     EXPECT_EQ( topology.getValidVerts().count(), 0 );
     EXPECT_EQ( topology.numValidFaces(), 0 );

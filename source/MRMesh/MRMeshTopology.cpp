@@ -524,6 +524,43 @@ FaceId MeshTopology::lastValidFace() const
     return {};
 }
 
+void MeshTopology::deleteFace( FaceId f )
+{
+    EdgeId e = edgeWithLeft( f );
+    assert( e.valid() );
+    if ( !e.valid() )
+        return;
+
+    // delete the face itself
+    setLeft( e, FaceId{} );
+
+    // delete not shared vertices and edges
+    const int d = getLeftDegree( e );
+    for ( int i = 0; i < d; ++i )
+    {
+        if ( !right( e ).valid() && prev( e ) == next( e ) )
+        {
+            // only two edges from e.origin, so this vertex does not belong to any other face
+            setOrg( e, VertId{} );
+        }
+        EdgeId e1 = e;
+        e = prev( e.sym() );
+        if ( !left( e1.sym() ).valid() )
+        {
+            // no face to the right of e1, delete it
+            splice( prev( e1 ), e1 );
+            splice( prev( e1.sym() ), e1.sym() );
+        }
+    }
+}
+
+void MeshTopology::deleteFaces( const FaceBitSet& fs )
+{
+    MR_TIMER
+    for ( auto f : fs )
+        deleteFace( f );
+}
+
 auto MeshTopology::translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const EdgeMap & emap, bool flipOrientation ) const -> HalfEdgeRecord
 {
     const HalfEdgeRecord & from = edges_[i];

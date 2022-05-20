@@ -2,7 +2,6 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRMeshBuilder.h"
-#include "MRMeshDelete.h"
 #include "MRGTest.h"
 
 namespace MR
@@ -99,7 +98,7 @@ TEST(MRMesh, MeshDiff)
     mesh0.points.emplace_back( 0.f, 1.f, 0.f );
 
     Mesh mesh1 = mesh0;
-    deleteFace( mesh1.topology, 1_f );
+    mesh1.topology.deleteFace( 1_f );
     mesh1.points.pop_back();
 
     MeshDiff diff( mesh0, mesh1 );

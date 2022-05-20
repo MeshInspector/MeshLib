@@ -12,40 +12,12 @@ namespace MR
 
 void deleteFace( MeshTopology & topology, FaceId f )
 {
-    EdgeId e = topology.edgeWithLeft( f );
-    assert( e.valid() );
-    if ( !e.valid() )
-        return;
-
-    // delete the face itself
-    topology.setLeft( e, FaceId{} );
-
-    // delete not shared vertices and edges
-    const int d = topology.getLeftDegree( e );
-    for ( int i = 0; i < d; ++i )
-    {
-        if ( !topology.right( e ).valid() && topology.prev( e ) == topology.next( e ) )
-        {
-            // only two edges from e.origin, so this vertex does not belong to any other face
-            topology.setOrg( e, VertId{} );
-        }
-        EdgeId e1 = e;
-        e = topology.prev( e.sym() );
-        if ( !topology.left( e1.sym() ).valid() )
-        {
-            // no face to the right of e1, delete it
-            topology.splice( topology.prev( e1 ), e1 );
-            topology.splice( topology.prev( e1.sym() ), e1.sym() );
-        }
-    } 
+    topology.deleteFace( f );
 }
 
 void deleteFaces( MeshTopology & topology, const FaceBitSet & fs )
 {
-    MR_TIMER
-
-    for ( auto f : fs )
-        deleteFace( topology, f );
+    topology.deleteFaces( fs );
 }
 
 void deleteTargetFaces( Mesh& obj, const Vector3f& targetCenter )
@@ -68,7 +40,7 @@ void deleteTargetFaces( Mesh& obj, const Vector3f& targetCenter )
         auto v = dot( norm, targetCenter - center );
         if ( v > 0.f )
         {
-            deleteFace( topology, i );
+            topology.deleteFace( i );
         }
     }
 }

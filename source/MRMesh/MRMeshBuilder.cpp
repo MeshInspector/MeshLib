@@ -1,6 +1,5 @@
 #include "MRMeshBuilder.h"
 #include "MRIdentifyVertices.h"
-#include "MRMeshDelete.h"
 #include "MRRingIterator.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
@@ -490,7 +489,7 @@ static void leaveOneStar( MeshTopology & topology, VertId v, std::vector<Triangl
         assert( t.f );
         topology.getLeftTriVerts( e, t.v );
         deleted.push_back( t );
-        deleteFace( topology, t.f );
+        topology.deleteFace( t.f );
     }
 }
 

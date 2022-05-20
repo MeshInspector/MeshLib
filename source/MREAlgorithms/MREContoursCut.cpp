@@ -12,7 +12,6 @@
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRFillContour.h"
-#include "MRMesh/MRMeshDelete.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRMeshComponents.h"
 #include "MRPch/MRSpdlog.h"
@@ -1609,7 +1608,7 @@ std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& p
     }
     auto removedFaces = mesh.topology.getValidFaces() - goodFaces;
 
-    deleteFaces( mesh.topology, removedFaces );
+    mesh.topology.deleteFaces( removedFaces );
     if ( mapNew2Old )
     {
         MR::FaceMap& map = *mapNew2Old;

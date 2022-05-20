@@ -86,6 +86,7 @@
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
+    <ClInclude Include="MRPolyline2Intersect.h" />
     <ClInclude Include="MRPolyline2Project.h" />
     <ClInclude Include="MRPolylineEdgeIterator.h" />
     <ClInclude Include="MRLinesLoad.h" />
@@ -321,6 +322,7 @@
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
+    <ClCompile Include="MRPolyline2Intersect.cpp" />
     <ClCompile Include="MRPolyline2Project.cpp" />
     <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />

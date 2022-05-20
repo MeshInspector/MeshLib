@@ -41,10 +41,22 @@ public:
     MRMESH_API std::optional<float> get( size_t i ) const;
     /// returns value in (X,Y) element without check on valid
     /// use this only if you sure that distance map has no invalid values or for serialization
-    float& getValue( size_t x, size_t y )       { return data_[ toIndex( { int( x ), int( y ) } ) ]; }
-    float  getValue( size_t x, size_t y ) const { return data_[ toIndex( { int( x ), int( y ) } ) ]; }
-    float& getValue( size_t i )       { return data_[i]; }
-    float  getValue( size_t i ) const { return data_[i]; }
+    float& getValue( size_t x, size_t y )
+    {
+        return data_[toIndex( { int( x ), int( y ) } )];
+    }
+    float  getValue( size_t x, size_t y ) const
+    {
+        return data_[toIndex( { int( x ), int( y ) } )];
+    }
+    float& getValue( size_t i )
+    {
+        return data_[i];
+    }
+    float  getValue( size_t i ) const
+    {
+        return data_[i];
+    }
 
 
     /**
@@ -75,13 +87,13 @@ public:
 
     /// boolean operators
     /// returns new Distance Map with cell-wise maximum values. Invalid values remain only if both corresponding cells are invalid
-    MRMESH_API DistanceMap max( const DistanceMap& rhs) const;
+    MRMESH_API DistanceMap max( const DistanceMap& rhs ) const;
     /// replaces values with cell-wise maximum values. Invalid values remain only if both corresponding cells are invalid
     MRMESH_API const DistanceMap& mergeMax( const DistanceMap& rhs );
     /// returns new Distance Map with cell-wise minimum values. Invalid values remain only if both corresponding cells are invalid
     MRMESH_API DistanceMap min( const DistanceMap& rhs ) const;
     /// replaces values with cell-wise minimum values. Invalid values remain only if both corresponding cells are invalid
-    MRMESH_API const DistanceMap& mergeMin ( const DistanceMap& rhs );
+    MRMESH_API const DistanceMap& mergeMin( const DistanceMap& rhs );
     /// returns new Distance Map with cell-wise subtracted values. Invalid values remain only if both corresponding cells are invalid
     MRMESH_API DistanceMap operator- ( const DistanceMap& rhs ) const;
     /// replaces values with cell-wise subtracted values. Invalid values remain only if both corresponding cells are invalid
@@ -110,12 +122,21 @@ public:
     MRMESH_API std::vector< std::pair<size_t, size_t> > getLocalMaximums() const;
 
     ///returns X resolution
-    size_t resX() const { return dims_.x; }
+    size_t resX() const
+    {
+        return dims_.x;
+    }
     ///returns Y resolution
-    size_t resY() const { return dims_.y; }
+    size_t resY() const
+    {
+        return dims_.y;
+    }
 
     ///returns the number of pixels
-    size_t numPoints() const { return size(); }
+    size_t numPoints() const
+    {
+        return size();
+    }
 
     /// finds minimum and maximum values
     /// returns min_float and max_float if all values are invalid
@@ -128,7 +149,10 @@ public:
     MRMESH_API std::pair<size_t, size_t> getMaxIndex() const;
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( data_ ); }
+    [[nodiscard]] size_t heapBytes() const
+    {
+        return MR::heapBytes( data_ );
+    }
 
 private:
     std::vector<float> data_;
@@ -156,16 +180,33 @@ struct ContoursDistanceMapOffset
     } type{ OffsetType::Shell };
 };
 
+struct ContoursDistanceMapOptions
+{
+    /// method to calculate sign
+    enum SignedDetectionMethod
+    {
+        /// detect sign of distance based on closest contour's edge turn\n
+        /// (recommended for good contours with no self-intersections)
+        /// \note that polyline topology should be consistently oriented \n
+        ContourOrientation,
+        /// detect sign of distance based on number of ray intersections with contours\n
+        /// (recommended for contours with self-intersections)
+        WindingRule
+    } signMethod{ ContourOrientation };
+    /// optional input offset for each edges of polyline, find more on `ContoursDistanceMapOffset` structure description
+    const ContoursDistanceMapOffset* offsetParameters{ nullptr };
+    /// if pointer is valid, then only these pixels will be filled
+    const PixelBitSet* region{ nullptr };
+    /// optional output vector of closest polyline edge per each pixel of distance map
+    std::vector<UndirectedEdgeId>* outClosestEdges{ nullptr };
+};
+
 /**
  * \brief Computes distance of 2d contours according ContourToDistanceMapParams
- * \param offsetParameters - optional input offset for each edges of polyline, find more on `ContoursDistanceMapOffset` structure description
- * \param outClosestEdges - optional output vector of closest polyline edge per each pixel of distance map
- * \note that polyline topology should be consistently oriented
+ * \param options - optional input and output options for distance map calculation, find more \ref ContoursDistanceMapOptions
  */
 MRMESH_API DistanceMap distanceMapFromContours( const Polyline2& contours, const ContourToDistanceMapParams& params,
-    const ContoursDistanceMapOffset* offsetParameters = nullptr,
-    std::vector<UndirectedEdgeId>* outClosestEdges = nullptr,
-    const PixelBitSet * region = nullptr ); ///< if pointer is valid, then only these pixels will be filled
+    const ContoursDistanceMapOptions& options = {} );
 
 /// Makes distance map and filter out pixels with large (>threshold) distance between closest points on contour in neighbor pixels
 /// Converts such points back in 3d space and return

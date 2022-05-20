@@ -306,9 +306,11 @@ TEST( MRMesh, DistanceMapOffsetMap )
     for ( auto& off : perEdgeOffset )
         off = 20.0f * ( offsetCounter++ );
 
+    
     ContoursDistanceMapOffset offsetParams{ perEdgeOffset, ContoursDistanceMapOffset::OffsetType::Shell };
-
-    auto distMap = distanceMapFromContours( p2, params, &offsetParams );
+    ContoursDistanceMapOptions options;
+    options.offsetParameters = &offsetParams;
+    auto distMap = distanceMapFromContours( p2, params, options );
     //saveDistanceMapToImage( distMap, "org.png" );
 
     int counter = 0;

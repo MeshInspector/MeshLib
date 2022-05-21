@@ -122,6 +122,10 @@ public:
     [[nodiscard]] MRMESH_API FaceId lastValidFace() const;
     /// creates new face-id not associated with any edge yet
     [[nodiscard]] FaceId addFaceId() { edgePerFace_.push_back( {} ); validFaces_.push_back( false ); return FaceId( (int)edgePerFace_.size() - 1 ); }
+    /// deletes the face, also deletes its edges and vertices if they were not shared with other faces
+    MRMESH_API void deleteFace( FaceId f );
+    /// deletes multiple given faces
+    MRMESH_API void deleteFaces( const FaceBitSet& fs );
     /// explicitly increases the size of faces vector
     void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); validFaces_.resize( newSize ); } }
     /// sets the capacity of faces vector

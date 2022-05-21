@@ -23,7 +23,6 @@
 #include "MRMesh/MRAlignTextToMesh.h"
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
-#include "MRMesh/MRMeshDelete.h"
 #include "MRMesh/MRMeshFixer.h"
 #include <tl/expected.hpp>
 
@@ -233,6 +232,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
 
 // TODO: introduce MeshPart
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, subdivide_mesh, &subdivideMesh, "split edges in mesh with settings" )
+
+static void deleteFaces( MeshTopology& topology, const FaceBitSet& fs )
+{
+    topology.deleteFaces( fs );
+}
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, delete_faces, &deleteFaces, "delete faces from topology" )
 

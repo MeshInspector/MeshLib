@@ -1,6 +1,5 @@
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
-#include "MRMeshDelete.h"
 #include "MRBitSet.h"
 #include "MRGTest.h"
 
@@ -36,7 +35,7 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( dbl.topology.numValidFaces(), 4 );
     EXPECT_EQ( dbl.topology.lastNotLoneEdge(), EdgeId(19) ); // 10*2 = 20 half-edges in total
 
-    deleteFace( mesh.topology, FaceId( 1 ) );
+    mesh.topology.deleteFace( 1_f );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_EQ( mesh.points.size(), 4 );
     EXPECT_EQ( mesh.topology.edgePerVertex().size(), 4 );
@@ -51,7 +50,7 @@ TEST(MRMesh, Pack)
     EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(5) ); // 3*2 = 6 half-edges in total
 
-    deleteFace( mesh.topology, FaceId( 0 ) );
+    mesh.topology.deleteFace( FaceId( 0 ) );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_EQ( mesh.points.size(), 3 );
     EXPECT_EQ( mesh.topology.edgePerVertex().size(), 3 );

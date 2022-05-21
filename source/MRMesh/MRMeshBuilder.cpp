@@ -861,18 +861,20 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
         return numChanged;
 
     std::vector<Triangle> tris;
-    tris.reserve( mesh.topology.numValidFaces() );
     for ( auto f : mesh.topology.getValidFaces() )
     {
-        VertId vs[3];
-        mesh.topology.getTriVerts( f, vs );
-        tris.emplace_back(
-            vertOldToNew[vs[0]],
-            vertOldToNew[vs[1]],
-            vertOldToNew[vs[2]],
-            f );
+        Triangle oldt, newt;
+        newt.f = oldt.f = f;
+        mesh.topology.getTriVerts( f, oldt.v );
+        for ( int i = 0; i < 3; ++i )
+            newt.v[i] = vertOldToNew[oldt.v[i]];
+        if ( oldt != newt )
+        {
+            mesh.topology.deleteFace( f );
+            tris.push_back( newt );
+        }
     }
-    mesh.topology = fromTriangles( tris );
+    addTriangles( mesh.topology, tris );
     mesh.invalidateCaches();
     if ( optionalVertOldToNew )
         *optionalVertOldToNew = std::move( vertOldToNew );

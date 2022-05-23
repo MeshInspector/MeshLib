@@ -297,6 +297,65 @@ EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )
     return e0;
 }
 
+void PolylineTopology::addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask, 
+    VertMap* outVmap /*= nullptr*/, EdgeMap* outEmap /*= nullptr */ )
+{
+    // in all maps: from index -> to index
+    EdgeMap emap;
+    EdgeId lastFromValidEdgeId = from.lastNotLoneEdge();
+    emap.resize( lastFromValidEdgeId + 1 );
+    for ( auto ue : mask )
+    {
+        if ( from.isLoneEdge( ue ) )
+            continue;
+        auto e = EdgeId( ue );
+        emap[e] = makeEdge();
+        emap[e.sym()] = emap[e].sym();
+    }
+
+    VertMap vmap;
+    VertId lastFromValidVertId = from.lastValidVert();
+    vmap.resize( lastFromValidVertId + 1 );
+    VertId maxValidVert_;
+    for ( auto ue : mask )
+    {
+        auto e = EdgeId( ue );
+        if ( from.isLoneEdge( e ) )
+            continue;
+        auto fromVerts = { from.org( e ) ,from.dest( e ) };
+        for ( auto v : fromVerts )
+        {
+            if ( vmap[v].valid() )
+                continue;
+            auto nv = addVertId();
+            vmap[v] = nv;
+            edgePerVertex_[nv] = emap[e];
+            validVerts_.set( nv );
+            maxValidVert_ = std::max( maxValidVert_, v );
+            ++numValidVerts_;
+        }
+    }
+    
+    const auto& fromEdges = from.edges_;
+    for ( auto ue : mask )
+    {
+        auto e = EdgeId( ue );
+        edges_[emap[e]].next = emap[fromEdges[e].next];
+        edges_[emap[e.sym()]].next = emap[fromEdges[e.sym()].next];
+        
+        edges_[emap[e]].org = vmap[fromEdges[e].org];
+        edges_[emap[e.sym()]].org = vmap[fromEdges[e.sym()].org];
+    }
+
+    vmap.resize( maxValidVert_ + 1 );
+    emap.resize( EdgeId( mask.find_last() + 1 ) );
+
+    if ( outVmap )
+        *outVmap = std::move( vmap );
+    if ( outEmap )
+        *outEmap = std::move( emap );
+}
+
 void PolylineTopology::write( std::ostream & s ) const
 {
     // write edges

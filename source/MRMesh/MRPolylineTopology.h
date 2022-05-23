@@ -106,6 +106,10 @@ public:
     /// return the edge from first to second vertex
     MRMESH_API EdgeId makePolyline( const VertId * vs, size_t num );
 
+    /// appends polyline topology (from) in addition to the current topology: creates new edges, verts;
+    MRMESH_API void addPartByMask( const PolylineTopology& from, const UndirectedEdgeBitSet& mask,
+        VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
+
     /// saves and loads in binary stream
     MRMESH_API void write( std::ostream & s ) const;
     MRMESH_API bool read( std::istream & s );

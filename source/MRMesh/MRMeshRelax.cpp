@@ -254,7 +254,7 @@ void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const Vert
         auto spikeVerts = mesh.findSpikeVertices( minSumAngle, region );
         if ( spikeVerts.count() == 0 )
             break;
-        relax( mesh, { 1,&spikeVerts } );
+        relax( mesh, { { 1,&spikeVerts } } );
     }
 }
 

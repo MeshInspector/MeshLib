@@ -116,6 +116,27 @@ std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
     return res;
 }
 
+VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )
+{
+    const auto& zone = topology.getVertIds( region );
+    VertBitSet result( zone.size() );
+    BitSetParallelFor( zone, [&] ( VertId v )
+    {
+        int counter = 0;
+        for ( auto e : orgRing( topology, v ) )
+        {
+            if ( !topology.left( e ) )
+                return;
+            ++counter;
+            if ( counter > n )
+                return;
+        }
+        assert( counter == n );
+        result.set( v );
+    } );
+    return result;
+}
+
 void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges )
 {
     if ( multipleEdges.empty() )

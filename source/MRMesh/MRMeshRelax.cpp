@@ -8,11 +8,12 @@
 #include "MREdgePaths.h"
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
+#include "MRMeshFixer.h"
 
 namespace MR
 {
 
-bool relax( Mesh& mesh, const RelaxParams params, ProgressCallback cb )
+bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -55,10 +56,21 @@ bool relax( Mesh& mesh, const RelaxParams params, ProgressCallback cb )
         if ( !keepGoing )
             break;
     }
+    if ( keepGoing && params.hardSmoothTetrahedrons )
+    {
+        auto tetrahedrons = findNRingVerts( mesh.topology, 3, params.region );
+        BitSetParallelFor( tetrahedrons, [&] ( VertId v )
+        {
+            Vector3f center;
+            for ( auto e : orgRing( mesh.topology, v ) )
+                center += mesh.destPnt( e );
+            mesh.points[v] = center / 3.0f;
+        } );
+    }
     return keepGoing;
 }
 
-bool relaxKeepVolume( Mesh& mesh, const RelaxParams params, ProgressCallback cb )
+bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -122,10 +134,21 @@ bool relaxKeepVolume( Mesh& mesh, const RelaxParams params, ProgressCallback cb 
         if ( !keepGoing )
             break;
     }
+    if ( keepGoing && params.hardSmoothTetrahedrons )
+    {
+        auto tetrahedrons = findNRingVerts( mesh.topology, 3, params.region );
+        BitSetParallelFor( tetrahedrons, [&] ( VertId v )
+        {
+            Vector3f center;
+            for ( auto e : orgRing( mesh.topology, v ) )
+                center += mesh.destPnt( e );
+            mesh.points[v] = center / 3.0f;
+        } );
+    }
     return keepGoing;
 }
 
-bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, ProgressCallback cb )
+bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -204,6 +227,17 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams params, ProgressCallba
         mesh.points.swap( newPoints );
         if ( !keepGoing )
             break;
+    }
+    if ( keepGoing && params.hardSmoothTetrahedrons )
+    {
+        auto tetrahedrons = findNRingVerts( mesh.topology, 3, params.region );
+        BitSetParallelFor( tetrahedrons, [&] ( VertId v )
+        {
+            Vector3f center;
+            for ( auto e : orgRing( mesh.topology, v ) )
+                center += mesh.destPnt( e );
+            mesh.points[v] = center / 3.0f;
+        } );
     }
     return keepGoing;
 }

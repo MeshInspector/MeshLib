@@ -1,4 +1,3 @@
-#ifndef __EMSCRIPTEN__
 #include "MRImageLoad.h"
 #include "MRImage.h"
 #include "MRFile.h"
@@ -7,7 +6,11 @@
 #include <filesystem>
 #include <tl/expected.hpp>
 #include <string>
+#ifdef __EMSCRIPTEN__
+#include <png.h>
+#else
 #include <libpng16/png.h>
+#endif
 
 namespace MR
 {
@@ -109,4 +112,3 @@ tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::
 }
 
 }
-#endif

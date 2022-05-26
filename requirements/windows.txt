@@ -1,6 +1,5 @@
 boost-dynamic-bitset
 boost-functional
-boost-geometry
 boost-integer
 boost-move
 boost-program-options

@@ -2,6 +2,7 @@ boost-dynamic-bitset
 boost-functional
 boost-integer
 boost-move
+boost-multiprecision
 boost-program-options
 boost-range
 boost-signals2

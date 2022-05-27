@@ -55,7 +55,8 @@ jobs:
             src:
               - 'docker/windowsDockerfile'
               - 'requirements/windows.txt'
-              - 'thirdparty/**'
+              - 'thirdparty/vcpkg/**'
+              - 'thirdparty/install.bat'
 
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true'}}

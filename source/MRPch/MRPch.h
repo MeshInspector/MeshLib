@@ -19,9 +19,6 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/dynamic_bitset.hpp>
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-#include <boost/geometry/geometries/polygon.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
 #pragma warning(pop)

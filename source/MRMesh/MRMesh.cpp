@@ -530,6 +530,8 @@ EdgeId Mesh::addSeparateEdgeLoop( const std::vector<Vector3f>& contourPoints )
     // close loop
     topology.splice( newEdges.front(), newEdges.back().sym() );
 
+    invalidateCaches();
+
     return newEdges.front();
 }
 
@@ -551,6 +553,8 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
     topology.splice( newEdges.front(), firstConnectorEdge.sym() );
 
     topology.splice( last, newEdges.back().sym() );
+
+    invalidateCaches();
 }
 
 VertId Mesh::splitEdge( EdgeId e, FaceBitSet * region )

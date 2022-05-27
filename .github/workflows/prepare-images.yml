@@ -46,6 +46,18 @@ jobs:
               - 'MeshLib/requirements/**'
               - 'MeshLib/thirdparty/**'
 
+      - name: Filter Windows paths
+        uses: dorny/paths-filter@v2
+        id: windows-changes
+        with:
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          filters: |
+            src:
+              - 'docker/windowsDockerfile'
+              - 'requirements/windows.txt'
+              - 'thirdparty/vcpkg/**'
+              - 'thirdparty/install.bat'
+
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true'}}
         id: branch-name
@@ -53,7 +65,7 @@ jobs:
 
       # if nothing to rebuild: "latest"
       # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
-      # fix/mesh -> fix-mesh
+      # example: fix/mesh -> fix-mesh
       - name: Select image tag
         id: select-tag
         run: |
@@ -84,8 +96,10 @@ jobs:
           echo ${{github.repository}}
           if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
-          else
+          elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
+          else
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"}]}"
           fi
 
   image-build-upload:

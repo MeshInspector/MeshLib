@@ -76,7 +76,9 @@ EdgeId Polyline<V>::addFromPoints( const V * vs, size_t num, bool closed )
     if ( closed )
         newVerts.back() = newVerts.front();
 
-    return topology.makePolyline( newVerts.data(), numSegmEnds );
+    auto e = topology.makePolyline( newVerts.data(), numSegmEnds );
+    invalidateCaches();
+    return e;
 }
 
 template<typename V>
@@ -186,7 +188,10 @@ EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
     {
         newVerts.back() = newVerts.front();
     }
-    return topology.makePolyline( newVerts.data(), newVerts.size() );
+
+    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
+    invalidateCaches();
+    return e;
 }
 
 template<typename V>
@@ -213,7 +218,10 @@ EdgeId Polyline<V>::addFromSurfacePath( const Mesh& mesh, const SurfacePath& pat
     {
         newVerts.back() = newVerts.front();
     }
-    return topology.makePolyline( newVerts.data(), newVerts.size() );
+
+    auto e = topology.makePolyline( newVerts.data(), newVerts.size() );
+    invalidateCaches();
+    return e;
 }
 
 template<typename V>

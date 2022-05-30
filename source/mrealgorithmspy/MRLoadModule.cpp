@@ -1,6 +1,6 @@
 #include "MRLoadModule.h"
 
-namespace MRE
+namespace MR
 {
 
 void loadMREAlgorithmsPyModule(){}

@@ -1,7 +1,7 @@
 #pragma once
 #include "exports.h"
 
-namespace MRE
+namespace MR
 {
 MREALGORITHMSPY_API void loadMREAlgorithmsPyModule();
 }

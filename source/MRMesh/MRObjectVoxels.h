@@ -86,6 +86,10 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// signal about ISO changing, triggered in setIsoValue
+    using IsoChangedSignal = boost::signals2::signal<void()>;
+    IsoChangedSignal isoChangedSignal;
+
 private:
     FloatGrid grid_;
     Vector3i dimensions_;
@@ -109,6 +113,9 @@ protected:
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

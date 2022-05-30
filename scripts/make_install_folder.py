@@ -8,6 +8,8 @@ path_to_includes = os.path.join(path_to_install_folder,'include')
 path_to_libs = os.path.join(path_to_install_folder,'lib')
 path_to_app = os.path.join(path_to_install_folder,'app')
 path_to_sources = os.path.join(base_path,'source')
+path_to_phmap = os.path.join(os.path.join(base_path,'thirdparty'),'parallel-hashmap')
+path_to_pybind11 = os.path.join(os.path.join(os.path.join(base_path,'thirdparty'),'pybind11'),'include')
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 
 
@@ -15,6 +17,7 @@ include_extentions = ['.h','.hpp','.cuh']
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 lib_extentions = ['.lib','.pdb']
 includes_src_dst = list()
+includes_src_dst_thirdparty = list()
 
 def check_python_version():
 	if (sys.version_info[0] < 3 or (sys.version_info[0] ==3 and sys.version_info[1] < 8)):
@@ -38,20 +41,26 @@ def create_directories():
 	os.makedirs(path_to_libs,exist_ok=True)
 	os.makedirs(path_to_app,exist_ok=True)
 
-def append_incudes_list(path,recursive = True):
+def append_incudes_list(path,thirdparty = False, subfolder = '' ):
 	folder = os.walk(path)
 	for address, dirs, files in folder:
-		if ((not recursive) and (address!=path)):
-			continue
 		for file in files:
+			if (subfolder and subfolder not in address[len(path):]):
+				continue
 			if (extention_is_one_of(file,include_extentions)):
 				src = os.path.join(address,file)
 				dst = os.path.join(path_to_includes + address[len(path):],file)
-				includes_src_dst.append((src,dst))
+				if (thirdparty):
+					includes_src_dst.append((src,dst))
+				else:
+					includes_src_dst_thirdparty.append((src,dst))
 
 def prepare_includes_list():
 	includes_src_dst.clear()
+	includes_src_dst_thirdparty.clear()
 	append_incudes_list(path_to_sources)
+	append_incudes_list(path_to_phmap, True,'parallel_hashmap')
+	append_incudes_list(path_to_pybind11, True)
 
 def inject_copyright():
 	copyright_header = open(path_to_copyright_header,'r').read()
@@ -65,6 +74,10 @@ def copy_includes():
 		os.makedirs(dst_folder,exist_ok=True)
 		shutil.copyfile(src, dst)
 	inject_copyright()
+	for src,dst in includes_src_dst_thirdparty:
+		dst_folder = os.path.dirname(dst)
+		os.makedirs(dst_folder,exist_ok=True)
+		shutil.copyfile(src, dst)
 
 def copy_app():
 	shutil.copytree(os.path.join(path_to_sources,'x64'),path_to_app,dirs_exist_ok=True)

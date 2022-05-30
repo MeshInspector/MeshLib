@@ -13,17 +13,25 @@ You can find example project in `MeshLib/source/meshconv`
 Following code presents example of loading and saving mesh file
 
 \code
-std::filesystem::path inFilePath = "mesh.stl";
-tl::expected<MR::Mesh,std::string> loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
-if ( loadRes.has_value() )
+#include <iostream>
+#include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRMeshSave.h"
+
+int main()
 {
-	std::filesystem::path outFilePath = "mesh.ply";
-	tl::expected<void,std::string> saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
-	if ( !saveRes.has_value() )
-		std::cerr << saveRes.error() << "\n";
+    std::filesystem::path inFilePath = "mesh.stl";
+    tl::expected<MR::Mesh,std::string> loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
+    if ( loadRes.has_value() )
+    {
+	    std::filesystem::path outFilePath = "mesh.ply";
+	    tl::expected<void,std::string> saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
+	    if ( !saveRes.has_value() )
+    		std::cerr << saveRes.error() << "\n";
+    }
+    else
+	    std::cerr << loadRes.error() << "\n";
+	return 0;
 }
-else
-	std::cerr << loadRes.error() << "\n";
 \endcode
 
 \sa \ref MR::MeshLoad
@@ -32,20 +40,31 @@ else
 Some examples of mesh modification are presented here
 
 \code
-// load mesh
-MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" ).value();
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRMeshRelax.h"
+#include "MRMesh/MRMeshSubdivide.h"
+#include "MRMesh/MRAffineXf3.h"
 
-// relax mesh (5 iterations)
-MR::relax( mesh, 5 );
+int main()
+{
+    // load mesh
+    MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" ).value();
 
-// subdivide mesh
-MR::SubdivideSettings props;
-props.maxDeviationAfterFlip = 0.5f;
-MR::subdivideMesh( mesh, props );
+    // relax mesh (5 iterations)
+    MR::relax( mesh, {{5}} );
 
-// rotate mesh
-MR::AffindeXf3f rotationXf = MR::AffineXf3::linear( MR::Matrix3f::rotation( MR::Vector3f::plusZ(), MR::PI_F*0.5f ) );
-mesh.transform( rotationXf );
+    // subdivide mesh
+    MR::SubdivideSettings props;
+    props.maxDeviationAfterFlip = 0.5f;
+    MR::subdivideMesh( mesh, props );
+
+    // rotate mesh
+    MR::AffineXf3f rotationXf = MR::AffineXf3f::linear( MR::Matrix3f::rotation( MR::Vector3f::plusZ(), MR::PI_F*0.5f ) );
+    mesh.transform( rotationXf );
+
+    return 0;
+}
 \endcode
 
 \sa \ref MR::relax
@@ -55,16 +74,24 @@ mesh.transform( rotationXf );
 Export example of points and triangles from mesh (e.g. for rendering)
 
 \code
-// create some mesh
-Mesh mesh = makeCube();
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRCube.h"
 
-// all vertices of valid triangles
-const std::vector<std::array<VertId, 3>> triangles = mesh.topology.getAllTriVerts();
+int main()
+{
+    // create some mesh
+    MR::Mesh mesh = MR::makeCube();
 
-// all point coordinates
-const std::vector<Vector3f> & points =  mesh.points.vec_;
-// triangle vertices as tripples of ints (pointing to elements in points vector)
-const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
+    // all vertices of valid triangles
+    const std::vector<std::array<MR::VertId, 3>> triangles = mesh.topology.getAllTriVerts();
+
+    // all point coordinates
+    const std::vector<MR::Vector3f> & points =  mesh.points.vec_;
+    // triangle vertices as tripples of ints (pointing to elements in points vector)
+    const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
+
+    return 0;
+}
 \endcode
 
 \section PythonCodeExamples Python Basic Examples

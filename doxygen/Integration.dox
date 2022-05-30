@@ -16,17 +16,18 @@ $ cd vcpkg
 $ git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
 $ .\bootstrap-vcpkg.bat
 $ .\vcpkg integrate install (with admin rights)
+$ cd ..
 \endcode
 More details here: [vcpkg](https://github.com/microsoft/vcpkg)
-2. Copy \b thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake  to \b vcpkg/triplets folder of vcpkg installation.
+2. Copy \b MeshLib/thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake  to \b vcpkg/triplets folder of vcpkg installation.
 3. Execute install.bat
 \code
 $ cd vcpkg # or add vcpcg to PATH
-$ work/MeshLib/thirdparty/install.bat
+$ ../MeshLib/thirdparty/install.bat
 \endcode
 
 \b Submodule: \n
-You can have MeshLib as submodule in your repository, and inculde MeshLib's projects to your solution.
+You can have MeshLib as submodule in your repository, and inculde all MeshLib's projects to your solution.
 \parblock
 \note You should use `MeshLib/source/common.props` in other projects of your solution.
 \endparblock
@@ -35,8 +36,19 @@ You can have MeshLib as submodule in your repository, and inculde MeshLib's proj
 \endparblock
 
 \b Distribution: \n
-You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects
+You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects.
+1. In your project settings `C/C++ -> General -> Additional Include Directories` add `distribution\install\include;`
+2. In your project settings `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
+3. In your project settings `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
+4. In your Debug projct settings `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
+5. In your project settings 'vcpkg -> Triplet' set `x64-windows-meshrus`
+6. Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
+\parblock
+\note MeshLib distribution has x64 build only
+\endparblock
+\parblock
 \note Distribution is build with ITERATOR_DEBUG_LEVEL=0 in debug so you will need to setup this for your projects
+\endparblock
 
 \section Linux Ubuntu/Fedora
 You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager

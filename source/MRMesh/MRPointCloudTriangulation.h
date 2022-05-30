@@ -1,12 +1,11 @@
 #pragma once
-#include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRConstants.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRProgressCallback.h"
+
+#include "MRConstants.h"
+#include "MRMesh.h"
+#include "MRProgressCallback.h"
 #include <optional>
 
-namespace MRE
+namespace MR
 {
 /**
  * \defgroup PointCloudTriangulationGroup PointCloud triangulation overview
@@ -49,7 +48,7 @@ struct TriangulationParameters
             </tr>
         </table>
      */
-    float critAngle{MR::PI2_F};
+    float critAngle{PI2_F};
     /**
      * \brief Critical length of hole (all holes with length less then this value will be filled)
      * \details If value is subzero it is set automaticly to 0.7*bbox.diagonal()
@@ -69,6 +68,7 @@ struct TriangulationParameters
         </tr>
     </table>
  */
-MREALGORITHMS_API std::optional<MR::Mesh> triangulatePointCloud( const MR::PointCloud& pointCloud, const TriangulationParameters& params = {},
-    MR::ProgressCallback progressCb = {} );
-}
+MRMESH_API std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const TriangulationParameters& params = {},
+    ProgressCallback progressCb = {} );
+
+} //namespace MR

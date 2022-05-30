@@ -1,24 +1,23 @@
-#include "MREPointCloudTriangulation.h"
-#include "MRMesh/MRPointCloud.h"
-#include "MRMesh/MRVector.h"
-#include "MRMesh/MRId.h"
-#include "MRMesh/MRPointCloudRadius.h"
-#include "MRMesh/MRPointCloudMakeNormals.h"
-#include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRMeshDelone.h"
-#include "MRMesh/MRMeshBuilder.h"
-#include "MRMesh/MRMeshFillHole.h"
-#include "MRMesh/MRPointsInBall.h"
-#include "MRMesh/MRBestFit.h"
-#include "MRMesh/MRPlane3.h"
-#include "MRMesh/MRVector3.h"
-#include "MRMesh/MRTimer.h"
-#include "MREPointCloudTriangulationHelpers.h"
+#include "MRPointCloudTriangulation.h"
+#include "MRPointCloud.h"
+#include "MRVector.h"
+#include "MRId.h"
+#include "MRPointCloudRadius.h"
+#include "MRPointCloudMakeNormals.h"
+#include "MRBitSetParallelFor.h"
+#include "MRMeshDelone.h"
+#include "MRMeshBuilder.h"
+#include "MRMeshFillHole.h"
+#include "MRPointsInBall.h"
+#include "MRBestFit.h"
+#include "MRPlane3.h"
+#include "MRVector3.h"
+#include "MRTimer.h"
+#include "MRPointCloudTriangulationHelpers.h"
 #include <parallel_hashmap/phmap.h>
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 class PointCloudTriangulator
 {
@@ -209,4 +208,4 @@ std::optional<Mesh> triangulatePointCloud( const PointCloud& pointCloud, const T
     return triangulator.triangulate( progressCb );
 }
 
-}
+} //namespace MR

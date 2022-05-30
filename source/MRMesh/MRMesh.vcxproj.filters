@@ -94,6 +94,9 @@
     <Filter Include="Source Files\Decimation">
       <UniqueIdentifier>{c0473824-4c92-4d7b-8dd8-53467111d7b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Triangulation">
+      <UniqueIdentifier>{e8616b21-1a75-42a5-990d-2f54914e7219}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -807,6 +810,15 @@
     <ClInclude Include="MRPolylineDecimate.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
+    <ClInclude Include="MRFillHoleMetrics.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudTriangulation.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudTriangulationHelpers.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1360,6 +1372,15 @@
     </ClCompile>
     <ClCompile Include="MRPolylineDecimate.cpp">
       <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFillHoleMetrics.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudTriangulation.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">
+      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

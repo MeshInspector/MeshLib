@@ -13,21 +13,15 @@
   <ItemGroup>
     <ClInclude Include="exports.h" />
     <ClInclude Include="MREBooleanOperation.h" />
-    <ClInclude Include="MREFillHoleMetrics.h" />
     <ClInclude Include="MREMeshBoolean.h" />
     <ClInclude Include="MREMeshBooleanFacade.h" />
     <ClInclude Include="MREPartialOffset.h" />
-    <ClInclude Include="MREPointCloudTriangulation.h" />
-    <ClInclude Include="MREPointCloudTriangulationHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp" />
-    <ClCompile Include="MREFillHoleMetrics.cpp" />
     <ClCompile Include="MREMeshBoolean.cpp" />
     <ClCompile Include="MREMeshBooleanFacade.cpp" />
     <ClCompile Include="MREPartialOffset.cpp" />
-    <ClCompile Include="MREPointCloudTriangulation.cpp" />
-    <ClCompile Include="MREPointCloudTriangulationHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshRUs\source\.editorconfig" />

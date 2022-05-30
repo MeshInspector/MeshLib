@@ -1,9 +1,9 @@
-#include "MREFillHoleMetrics.h"
-#include "MRMesh/MRTriMath.h"
-#include "MRMesh/MRRingIterator.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRPlane3.h"
-#include "MRMesh/MRBestFit.h"
+#include "MRFillHoleMetrics.h"
+#include "MRTriMath.h"
+#include "MRRingIterator.h"
+#include "MRMesh.h"
+#include "MRPlane3.h"
+#include "MRBestFit.h"
 
 namespace
 {
@@ -11,9 +11,8 @@ namespace
 constexpr double TriangleAreaModifier = 1e2;
 }
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 double ComplexFillMetric::getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const
 {
@@ -92,4 +91,4 @@ double ParallelPlaneFillMetric::getEdgeMetric( const MR::VertId& a, const MR::Ve
     return -std::abs( dot( normal, points[b] - points[a] ) );
 }
 
-}
+} //namespace MR

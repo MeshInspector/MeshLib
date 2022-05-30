@@ -1,18 +1,20 @@
-#include "MREPointCloudTriangulationHelpers.h"
-#include "MRMesh/MRMeshDelone.h"
-#include "MRMesh/MRVector3.h"
-#include "MRMesh/MRPointCloud.h"
-#include "MRMesh/MRPointsInBall.h"
-#include "MRMesh/MRBestFit.h"
-#include "MRMesh/MRPlane3.h"
+#include "MRPointCloudTriangulationHelpers.h"
+#include "MRMeshDelone.h"
+#include "MRVector3.h"
+#include "MRPointCloud.h"
+#include "MRPointsInBall.h"
+#include "MRBestFit.h"
+#include "MRPlane3.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>
 #include <limits>
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 
 // this function check that abc acd is allowed to be flipped to abd dbc
 // aNorm - normal in point a
@@ -55,9 +57,6 @@ float trisAngleProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, 
 }
 }
 
-namespace MRE
-{
-using namespace MR;
 namespace TriangulationHelpers
 {
 template<typename T>
@@ -306,5 +305,5 @@ TriangulatedFan trianglulateFan( const VertCoords& points, VertId centerVert, co
     return optimizer.optimize( steps, critAngle );
 }
 
-}
-}
+} //namespace TriangulationHelpers
+} //namespace MR

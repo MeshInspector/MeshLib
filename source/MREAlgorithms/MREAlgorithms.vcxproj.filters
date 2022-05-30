@@ -4,9 +4,6 @@
     <Filter Include="Boolean">
       <UniqueIdentifier>{19a184b1-71c6-44cb-98cb-9960ef08133f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Triangulation">
-      <UniqueIdentifier>{52bc0a6e-a10e-4e53-8cd9-efb8d3ec75a0}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp">
@@ -20,15 +17,6 @@
     </ClCompile>
     <ClCompile Include="MREPartialOffset.cpp">
       <Filter>Boolean</Filter>
-    </ClCompile>
-    <ClCompile Include="MREPointCloudTriangulation.cpp">
-      <Filter>Triangulation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREPointCloudTriangulationHelpers.cpp">
-      <Filter>Triangulation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREFillHoleMetrics.cpp">
-      <Filter>Triangulation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -44,15 +32,6 @@
     </ClInclude>
     <ClInclude Include="MREPartialOffset.h">
       <Filter>Boolean</Filter>
-    </ClInclude>
-    <ClInclude Include="MREPointCloudTriangulation.h">
-      <Filter>Triangulation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREPointCloudTriangulationHelpers.h">
-      <Filter>Triangulation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREFillHoleMetrics.h">
-      <Filter>Triangulation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

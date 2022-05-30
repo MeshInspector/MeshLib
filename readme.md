@@ -105,6 +105,7 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 git submodule update --init --recursive
+cd ..
 ```
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
@@ -117,14 +118,16 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
+    cd ..
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
-2. Copy **thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake** to **vcpkg/triplets** folder of vcpkg installation.
+2. Copy **MeshLib/thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake** to **vcpkg/triplets** folder of vcpkg installation.
 3. Execute install.bat
     ```sh
     cd vcpkg # or add vcpkg to PATH
-    <path_to_MeshLib>/thirdparty/install.bat
+    ../MeshLib/thirdparty/install.bat
+    cd ..
     ```
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
@@ -157,13 +160,24 @@ There are two general options of integrating MeshLib into your project:
 
 **Common for both options:** [install thirdparty](#vcpkg)
 ### Submodule
-You can have MeshLib as submodule in your repository, and inculde MeshLib's projects to your solution.
+You can have MeshLib as submodule in your repository, and inculde all MeshLib's projects to your solution.
 > **_NOTE:_** You should use `MeshLib/source/common.props` in other projects of your solution.
 
 > **_NOTE:_** You can customize props by defining `CustomMRProps.props` in directory above `common.props`
 
 ### Distribution
-You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects
+You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects.
+
+Project settings:
+1. `C/C++ -> General -> Additional Include Directories` add `distribution\install\include;`
+2. `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
+3. `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
+4. Debug: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
+5. `vcpkg -> Triplet` set `x64-windows-meshrus`
+
+Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
+> **_NOTE:_** MeshLib distribution has x64 build only
+
 > **_NOTE:_** Distribution is build with ITERATOR_DEBUG_LEVEL=0 in debug so you will need to setup this for your projects
 
 ## Linux Ubuntu/Fedora

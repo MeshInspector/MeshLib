@@ -1,17 +1,15 @@
-#include "MREPolylineDecimate.h"
-#include "MRMesh/MRQuadraticForm.h"
-#include "MRMesh/MRBitSet.h"
-#include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRGTest.h"
-#include "MRMesh/MRPolyline2.h"
-#include "MRMesh/MRTimer.h"
+#include "MRPolylineDecimate.h"
+#include "MRQuadraticForm.h"
+#include "MRBitSet.h"
+#include "MRBitSetParallelFor.h"
+#include "MRGTest.h"
+#include "MRPolyline2.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
-namespace MRE
+namespace MR
 {
-
-using namespace MR;
 
 // collapses given edge and
 // 1) deletes vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
@@ -413,4 +411,4 @@ TEST( MRMesh, DecimatePolyline )
     }
 }
 
-} //namespace MRE
+} //namespace MR

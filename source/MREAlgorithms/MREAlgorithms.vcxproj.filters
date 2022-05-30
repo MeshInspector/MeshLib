@@ -7,9 +7,6 @@
     <Filter Include="Triangulation">
       <UniqueIdentifier>{52bc0a6e-a10e-4e53-8cd9-efb8d3ec75a0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Decimation">
-      <UniqueIdentifier>{8510f809-b17c-40c2-a558-977a3664dd0c}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp">
@@ -32,15 +29,6 @@
     </ClCompile>
     <ClCompile Include="MREFillHoleMetrics.cpp">
       <Filter>Triangulation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREMeshDecimate.cpp">
-      <Filter>Decimation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREMeshDecimateParallel.cpp">
-      <Filter>Decimation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREPolylineDecimate.cpp">
-      <Filter>Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -65,15 +53,6 @@
     </ClInclude>
     <ClInclude Include="MREFillHoleMetrics.h">
       <Filter>Triangulation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREMeshDecimate.h">
-      <Filter>Decimation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREMeshDecimateParallel.h">
-      <Filter>Decimation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREPolylineDecimate.h">
-      <Filter>Decimation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,10 +1,10 @@
 #pragma once
-#include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
+
+#include "MRMeshFwd.h"
 #include <climits>
 #include <functional>
 
-namespace MRE
+namespace MR
 {
 
 /**
@@ -27,7 +27,7 @@ struct DecimatePolylineSettings
     int maxDeletedVertices = INT_MAX;
     /// Region of the polyline to be decimated, it is updated during the operation
     /// Remain nullptr to include the whole polyline
-    MR::VertBitSet* region = nullptr;
+    VertBitSet* region = nullptr;
     /// Whether to allow collapsing edges with at least one vertex on the end of not-closed polyline
     /// (or on region boundary if region is given);
     /// if touchBdVertices is false then boundary vertices are strictly fixed
@@ -38,17 +38,17 @@ struct DecimatePolylineSettings
      * and its origin vertex will get new position (provided as the second argument) after collapse;
      * If the callback returns false, then the collapse is prohibited
      */
-    std::function<bool( MR::EdgeId edgeToCollapse, const V & newEdgeOrgPos )> preCollapse;
+    std::function<bool( EdgeId edgeToCollapse, const V & newEdgeOrgPos )> preCollapse;
     /**
      * \brief  If not null, then
      * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
      * on output: quadratic form for each remaining vertex is returned there
      */
-    MR::Vector<MR::QuadraticForm<V>, MR::VertId>* vertForms = nullptr;
+    Vector<QuadraticForm<V>, VertId>* vertForms = nullptr;
 };
 
-using DecimatePolylineSettings2 = DecimatePolylineSettings<MR::Vector2f>;
-using DecimatePolylineSettings3 = DecimatePolylineSettings<MR::Vector3f>;
+using DecimatePolylineSettings2 = DecimatePolylineSettings<Vector2f>;
+using DecimatePolylineSettings3 = DecimatePolylineSettings<Vector3f>;
 
 /**
  * \struct MRE::DecimatePolylineResult
@@ -64,14 +64,14 @@ struct DecimatePolylineResult
  * \brief Collapse edges in the polyline according to the settings
  * \ingroup DecimateGroup
  */
-MREALGORITHMS_API DecimatePolylineResult decimatePolyline( MR::Polyline2& polyline, const DecimatePolylineSettings2& settings = {} );
-MREALGORITHMS_API DecimatePolylineResult decimatePolyline( MR::Polyline3& polyline, const DecimatePolylineSettings3& settings = {} );
+MRMESH_API DecimatePolylineResult decimatePolyline( Polyline2& polyline, const DecimatePolylineSettings2& settings = {} );
+MRMESH_API DecimatePolylineResult decimatePolyline( Polyline3& polyline, const DecimatePolylineSettings3& settings = {} );
 
 /**
  * \brief Collapse edges in the contour according to the settings
  * \ingroup DecimateGroup
  */ 
-MREALGORITHMS_API DecimatePolylineResult decimateContour( MR::Contour2f& contour, const DecimatePolylineSettings2& settings = {} );
-MREALGORITHMS_API DecimatePolylineResult decimateContour( MR::Contour3f& contour, const DecimatePolylineSettings3& settings = {} );
+MRMESH_API DecimatePolylineResult decimateContour( Contour2f& contour, const DecimatePolylineSettings2& settings = {} );
+MRMESH_API DecimatePolylineResult decimateContour( Contour3f& contour, const DecimatePolylineSettings3& settings = {} );
 
-} //namespace MRE
+} //namespace MR

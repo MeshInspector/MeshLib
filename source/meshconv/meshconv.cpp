@@ -1,7 +1,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
-#include "MREAlgorithms/MREMeshDecimate.h"
+#include "MRMesh/MRMeshDecimate.h"
 #include "MREAlgorithms/MREMeshBoolean.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
@@ -18,10 +18,10 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
         if ( targetEdgeLen <= 0 )
             targetEdgeLen = mesh.averageEdgeLength();
 
-        MRE::RemeshSettings rems;
+        MR::RemeshSettings rems;
         rems.targetEdgeLen = targetEdgeLen;
         rems.maxDeviation = targetEdgeLen / 100;
-        MRE::remesh( mesh, rems );
+        MR::remesh( mesh, rems );
 
         std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";
     }

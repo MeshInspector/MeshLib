@@ -1,16 +1,14 @@
-#include "MREMeshDecimateParallel.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRAABBTree.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRMeshBuilder.h"
-#include "MRMesh/MRQuadraticForm.h"
-#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMeshDecimateParallel.h"
+#include "MRMesh.h"
+#include "MRAABBTree.h"
+#include "MRTimer.h"
+#include "MRMeshBuilder.h"
+#include "MRQuadraticForm.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRTBB.h"
 
-namespace MRE
+namespace MR
 {
-
-using namespace MR;
 
 DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSettings & settings )
 {
@@ -213,4 +211,4 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     return res;
 }
 
-} //namespace MRE
+} //namespace MR

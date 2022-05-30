@@ -1,8 +1,8 @@
 #pragma once
 
-#include "MREMeshDecimate.h"
+#include "MRMeshDecimate.h"
 
-namespace MRE
+namespace MR
 {
 
 /**
@@ -26,7 +26,7 @@ struct DecimateParallelSettings
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
     /// Region on mesh to be decimated, it is updated during the operation
-    MR::FaceBitSet * region = nullptr;
+    FaceBitSet * region = nullptr;
     /// Subdivides mesh on given number of parts to process them in parallel
     int subdivideParts = 32;
     /**
@@ -36,9 +36,9 @@ struct DecimateParallelSettings
      * If the callback returns false, then the collapse is prohibited;
      * \note This callback will be called from parallel threads when they process subparts
      */
-    std::function<bool( MR::VertId v0, MR::VertId v1, const MR::Vector3f & newV0Pos )> preCollapse;
+    std::function<bool( VertId v0, VertId v1, const Vector3f & newV0Pos )> preCollapse;
     /// callback to report algorithm progress and cancel it by user request
-    MR::ProgressCallback progressCallback = {};
+    ProgressCallback progressCallback = {};
 };
 
 /**
@@ -48,6 +48,6 @@ struct DecimateParallelSettings
  * 
  * \sa \ref decimateMesh
  */
-MREALGORITHMS_API DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSettings & settings = {} );
+MRMESH_API DecimateResult decimateParallelMesh( Mesh & mesh, const DecimateParallelSettings & settings = {} );
 
-} //namespace MRE
+} //namespace MR

@@ -91,6 +91,9 @@
     <Filter Include="Source Files\Contours">
       <UniqueIdentifier>{d4c0f533-10a6-48fd-9e33-a1aa4bf27a4d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Decimation">
+      <UniqueIdentifier>{c0473824-4c92-4d7b-8dd8-53467111d7b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -795,6 +798,15 @@
     <ClInclude Include="MRIntersectionContour.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDecimate.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDecimateParallel.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolylineDecimate.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1339,6 +1351,15 @@
     </ClCompile>
     <ClCompile Include="MRIntersectionContour.cpp">
       <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimate.cpp">
+      <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimateParallel.cpp">
+      <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineDecimate.cpp">
+      <Filter>Source Files\Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

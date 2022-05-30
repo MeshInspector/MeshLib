@@ -1,22 +1,20 @@
-#include "MREMeshDecimate.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRQuadraticForm.h"
-#include "MRMesh/MRRegionBoundary.h"
-#include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRRingIterator.h"
-#include "MRMesh/MRTriMath.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRCylinder.h"
-#include "MRMesh/MRGTest.h"
-#include "MRMesh/MRMeshDelone.h"
-#include "MRMesh/MRMeshSubdivide.h"
+#include "MRMeshDecimate.h"
+#include "MRMesh.h"
+#include "MRQuadraticForm.h"
+#include "MRRegionBoundary.h"
+#include "MRBitSetParallelFor.h"
+#include "MRRingIterator.h"
+#include "MRTriMath.h"
+#include "MRTimer.h"
+#include "MRCylinder.h"
+#include "MRGTest.h"
+#include "MRMeshDelone.h"
+#include "MRMeshSubdivide.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 
-namespace MRE
+namespace MR
 {
-
-using namespace MR;
 
 // collapses given edge and deletes
 // 1) faces: left( e ) and right( e );
@@ -521,4 +519,5 @@ TEST( MRMesh, MeshDecimate )
     ASSERT_GT(decimateResults.vertsDeleted, 0);
     ASSERT_GT(decimateResults.facesDeleted, 0);
 }
+
 } //namespace MR

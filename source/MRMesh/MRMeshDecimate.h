@@ -1,11 +1,11 @@
 #pragma once
-#include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRProgressCallback.h"
+
+#include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 #include <climits>
 #include <functional>
 
-namespace MRE
+namespace MR
 {
 /**
  * \defgroup DecimateGroup Decimate overview
@@ -44,7 +44,7 @@ struct DecimateSettings
     /// Limit on the number of deleted faces
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
-    MR::FaceBitSet * region = nullptr;
+    FaceBitSet * region = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
     /**
@@ -53,17 +53,17 @@ struct DecimateSettings
      * and its origin vertex will get new position (provided as the second argument) after collapse;
      * If the callback returns false, then the collapse is prohibited
      */
-    std::function<bool( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos)> preCollapse;
+    std::function<bool( EdgeId edgeToCollapse, const Vector3f & newEdgeOrgPos)> preCollapse;
     /**
      * \brief  If not null, then
      * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
      * on output: quadratic form for each remaining vertex is returned there
      */
-    MR::Vector<MR::QuadraticForm3f, MR::VertId> * vertForms = nullptr;
+    Vector<QuadraticForm3f, VertId> * vertForms = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
     /// callback to report algorithm progress and cancel it by user request
-    MR::ProgressCallback progressCallback = {};
+    ProgressCallback progressCallback = {};
 };
 
 /**
@@ -99,13 +99,13 @@ struct DecimateResult
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
  */ 
-MREALGORITHMS_API DecimateResult decimateMesh( MR::Mesh & mesh, const DecimateSettings & settings = {} );
+MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup
  */
-MREALGORITHMS_API MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer );
+MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
 
 /**
  * \brief Resolves degenerate triangles in given mesh
@@ -115,7 +115,7 @@ MREALGORITHMS_API MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & 
  * 
  * \sa \ref decimateMesh
  */
-MREALGORITHMS_API bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
 
 struct RemeshSettings
 {
@@ -125,11 +125,11 @@ struct RemeshSettings
     // maximum allowed deviation during triangulation optimization
     float maxDeviation = 1e-5f;
     /// Region on mesh to be changed, it is updated during the operation
-    MR::FaceBitSet * region = nullptr;
+    FaceBitSet * region = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
 };
 // Splits too long and eliminates too short edges from the mesh
-MREALGORITHMS_API void remesh( MR::Mesh& mesh, const RemeshSettings & settings );
+MRMESH_API void remesh( Mesh& mesh, const RemeshSettings & settings );
 
 } //namespace MR

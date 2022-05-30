@@ -33,7 +33,7 @@ struct MRMESH_CLASS ComplexFillMetric final : FillHoleMetric
     MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const override;
 };
 
-/** \struct MRE::ParallelPlaneFillMetric
+/** \struct MR::ParallelPlaneFillMetric
   * \ingroup FillHoleGroup
   *
   * This metric minimizes summary projection of new edges to plane normal, (try do produce edges parallel to plane)

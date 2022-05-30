@@ -6,8 +6,8 @@ namespace MR
 {
 
 /**
- * \struct MRE::DecimateParallelSettings
- * \brief Parameters structure for MRE::decimateParallelMesh
+ * \struct MR::DecimateParallelSettings
+ * \brief Parameters structure for MR::decimateParallelMesh
  * \ingroup DecimateGroup
  *
  * \sa \ref decimateParallelMesh

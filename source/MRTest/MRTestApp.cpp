@@ -32,7 +32,6 @@ int main(int argc, char **argv)
 
 #ifndef __EMSCRIPTEN__
     MR::loadMRMeshPyModule();
-    MRE::loadMREAlgorithmsPyModule();
 #endif
 
     MR::setupLoggerByDefault();

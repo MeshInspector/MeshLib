@@ -20,8 +20,8 @@ enum DecimateStrategy
 };
 
 /**
- * \struct MRE::DecimateSettings
- * \brief Parameters structure for MRE::decimateMesh
+ * \struct MR::DecimateSettings
+ * \brief Parameters structure for MR::decimateMesh
  * \ingroup DecimateGroup
  * 
  * \sa \ref decimateMesh
@@ -67,8 +67,8 @@ struct DecimateSettings
 };
 
 /**
- * \struct MRE::DecimateResult
- * \brief Results of MRE::decimateMesh
+ * \struct MR::DecimateResult
+ * \brief Results of MR::decimateMesh
  * \ingroup DecimateGroup
  * 
  * \sa \ref decimateMesh

@@ -8,8 +8,8 @@ namespace MR
 {
 
 /**
- * \struct MRE::DecimatePolylineSettings
- * \brief Parameters structure for MRE::decimatePolyline
+ * \struct MR::DecimatePolylineSettings
+ * \brief Parameters structure for MR::decimatePolyline
  * \ingroup DecimateGroup
  *
  * \sa \ref decimatePolyline
@@ -51,8 +51,8 @@ using DecimatePolylineSettings2 = DecimatePolylineSettings<Vector2f>;
 using DecimatePolylineSettings3 = DecimatePolylineSettings<Vector3f>;
 
 /**
- * \struct MRE::DecimatePolylineResult
- * \brief Results of MRE::decimateContour
+ * \struct MR::DecimatePolylineResult
+ * \brief Results of MR::decimateContour
  */
 struct DecimatePolylineResult
 {

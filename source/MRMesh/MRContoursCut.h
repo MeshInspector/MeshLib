@@ -38,11 +38,11 @@ struct OneMeshContour
     bool closed{false};
 };
 /** \ingroup BooleanGroup
-  * \brief Special data type for MRE::cutMesh
+  * \brief Special data type for MR::cutMesh
   * 
-  * This is special data for MRE::cutMesh, you can convert some other contours representation to it by:\n
-  * \ref MRE::convertMeshTriPointsToClosedContour
-  * \ref MRE::convertSurfacePathsToMeshContours
+  * This is special data for MR::cutMesh, you can convert some other contours representation to it by:\n
+  * \ref MR::convertMeshTriPointsToClosedContour
+  * \ref MR::convertSurfacePathsToMeshContours
   */
 using OneMeshContours = std::vector<OneMeshContour>;
 
@@ -58,14 +58,14 @@ MRMESH_API OneMeshContours getOneMeshIntersectionContours( const Mesh& meshA, co
 /** \ingroup BooleanGroup
   * \brief Makes closed continuous contour by mesh tri points
   * 
-  * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MRE::cutMesh input
+  * Finds shortest paths between neighbor \p meshTriPoints and build closed contour MR::cutMesh input
   */
 MRMESH_API OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints );
 
 /** \ingroup BooleanGroup
   * \brief Converts SurfacePath to OneMeshContours
   *
-  * Creates MRE::OneMeshContour object from given surface path with ends for MRE::cutMesh input
+  * Creates MR::OneMeshContour object from given surface path with ends for MR::cutMesh input
   * `start` and surfacePath.front() should be from same face
   * surfacePath.back() and `end` should be from same face
   * 
@@ -88,40 +88,40 @@ MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& m
 /** \ingroup BooleanGroup
   * \brief Converts SurfacePaths to OneMeshContours
   * 
-  * Creates MRE::OneMeshContours object from given surface paths for MRE::cutMesh input
+  * Creates MR::OneMeshContours object from given surface paths for MR::cutMesh input
   */
 MRMESH_API OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths );
 
-/** \struct MRE::CutMeshParameters
+/** \struct MR::CutMeshParameters
   * \ingroup BooleanGroup
-  * \brief Parameters of MRE::cutMesh
+  * \brief Parameters of MR::cutMesh
   * 
-  * This structure contains some options and optional outputs of MRE::cutMesh function
-  * \sa \ref MRE::CutMeshResult
+  * This structure contains some options and optional outputs of MR::cutMesh function
+  * \sa \ref MR::CutMeshResult
   */
 struct CutMeshParameters
 {
     /// This is optional input for better contours resolving\n
     /// it provides additional info from other mesh used in boolean operation, useful to solve some degeneration
-    /// \note Most likely you don't need this in case you call MRE::cutMesh manualy, use case of it is MRE::boolean
+    /// \note Most likely you don't need this in case you call MR::cutMesh manualy, use case of it is MR::boolean
     const SortIntersectionsData* sortData{nullptr};
     /// This is optional output - map from newly generated faces to old faces (N-1)
     FaceMap* new2OldMap{nullptr};
-    /// If this flag is set, MRE::cutMesh will fill all possible triangles, except bad ones; otherwise it will leave deleted faces on all contours line (only in case of bad triangles)
+    /// If this flag is set, MR::cutMesh will fill all possible triangles, except bad ones; otherwise it will leave deleted faces on all contours line (only in case of bad triangles)
     /// \note Bad triangles here mean faces where contours have intersections and cannot be cut and filled in an good way
     bool forceFillAfterBadCut{false};
 };
 
-/** \struct MRE::CutMeshResult
+/** \struct MR::CutMeshResult
   * \ingroup BooleanGroup
-  * This structure contains result of MRE::cutMesh function
+  * This structure contains result of MR::cutMesh function
   */
 struct CutMeshResult
 {
     /// Paths of new edges on mesh, they represent same contours as input, but already cut
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
-    /// \sa \ref MRE::CutMeshParameters
+    /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithCountourIntersections;
 };
 
@@ -130,9 +130,9 @@ struct CutMeshResult
   * 
   * This function cuts mesh making new edges paths on place of input contours
   * \param mesh Input mesh that will be cut
-  * \param contours Input contours to cut mesh with, find more \ref MRE::OneMeshContours
-  * \param params Parameters describing some cut options, find more \ref MRE::CutMeshParameters
-  * \return New edges that correspond to given contours, find more \ref MRE::CutMeshResult
+  * \param contours Input contours to cut mesh with, find more \ref MR::OneMeshContours
+  * \param params Parameters describing some cut options, find more \ref MR::CutMeshParameters
+  * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
   * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill
   * \endparblock
@@ -151,7 +151,7 @@ MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, c
   * \param plane Input plane to cut mesh with
   * \param mapNew2Old (this is optional output) map from newly generated faces to old faces (N-1)
   * \note This function changes input mesh
-  * \return New edges that correspond to given contours, find more \ref MRE::CutMeshResult
+  * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   */
 MRMESH_API std::vector<EdgePath> cutMeshWithPlane( Mesh& mesh, const Plane3f& plane, FaceMap* mapNew2Old = nullptr );
 

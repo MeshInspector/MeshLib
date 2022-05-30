@@ -1,6 +1,5 @@
 #pragma once
 
-#include "exports.h"
 #include "MRVector3.h"
 #include "MREdgePaths.h"
 #include <vector>

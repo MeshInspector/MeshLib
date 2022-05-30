@@ -1,12 +1,10 @@
-#include "MREIntersectionContour.h"
-#include "MRMesh/MRMeshTopology.h"
-#include "MRMesh/MRTimer.h"
+#include "MRIntersectionContour.h"
+#include "MRMeshTopology.h"
+#include "MRTimer.h"
 #include <parallel_hashmap/phmap.h>
-#include <unordered_set>
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 struct EdgeTriHash
 {
@@ -196,4 +194,4 @@ void removeLoneContours( ContinuousContours& contours )
     }
 }
 
-}
+} //namespace MR

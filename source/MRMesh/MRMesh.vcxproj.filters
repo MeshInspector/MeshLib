@@ -88,6 +88,9 @@
     <Filter Include="Source Files\Segmentation">
       <UniqueIdentifier>{482540be-d903-4a0a-8c4c-c783316c31e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Contours">
+      <UniqueIdentifier>{d4c0f533-10a6-48fd-9e33-a1aa4bf27a4d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -783,6 +786,15 @@
     <ClInclude Include="MRSurroundingContour.h">
       <Filter>Source Files\Segmentation</Filter>
     </ClInclude>
+    <ClInclude Include="MRContoursCut.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
+    <ClInclude Include="MRContoursSeparation.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIntersectionContour.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1318,6 +1330,15 @@
     </ClCompile>
     <ClCompile Include="MRSurroundingContour.cpp">
       <Filter>Source Files\Segmentation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRContoursCut.cpp">
+      <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRContoursSeparation.cpp">
+      <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIntersectionContour.cpp">
+      <Filter>Source Files\Contours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

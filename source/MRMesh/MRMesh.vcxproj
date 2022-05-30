@@ -37,6 +37,8 @@
     <ClInclude Include="MRCombinedHistoryAction.h" />
     <ClInclude Include="MRConfig.h" />
     <ClInclude Include="MRContour.h" />
+    <ClInclude Include="MRContoursCut.h" />
+    <ClInclude Include="MRContoursSeparation.h" />
     <ClInclude Include="MRContoursStitch.h" />
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRDenseBox.h" />
@@ -61,6 +63,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRIntersection.h" />
+    <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
@@ -263,6 +266,8 @@
     <ClCompile Include="MRComputeBoundingBox.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
+    <ClCompile Include="MRContoursCut.cpp" />
+    <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
@@ -299,6 +304,7 @@
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
+    <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />

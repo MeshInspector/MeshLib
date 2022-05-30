@@ -1,28 +1,26 @@
-#include "MREContoursCut.h"
-#include "MRMesh/MRAffineXf3.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRTriangleIntersection.h"
-#include "MRMesh/MRMeshTopology.h"
-#include "MRMesh/MRMeshDelone.h"
-#include "MRMesh/MRRingIterator.h"
-#include "MRMesh/MRMeshFillHole.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRPrecisePredicates3.h"
-#include "MRMesh/MRSurfacePath.h"
-#include "MRMesh/MRMeshBuilder.h"
-#include "MRMesh/MRBox.h"
-#include "MRMesh/MRFillContour.h"
-#include "MRMesh/MRGTest.h"
-#include "MRMesh/MRMeshComponents.h"
+#include "MRContoursCut.h"
+#include "MRAffineXf3.h"
+#include "MRMesh.h"
+#include "MRTriangleIntersection.h"
+#include "MRMeshTopology.h"
+#include "MRMeshDelone.h"
+#include "MRRingIterator.h"
+#include "MRMeshFillHole.h"
+#include "MRTimer.h"
+#include "MRPrecisePredicates3.h"
+#include "MRSurfacePath.h"
+#include "MRMeshBuilder.h"
+#include "MRBox.h"
+#include "MRFillContour.h"
+#include "MRGTest.h"
+#include "MRMeshComponents.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
 
-namespace MRE
+namespace MR
 {
-
-using namespace MR;
 
 class ContourTag;
 class IntersectionTag;
@@ -1671,4 +1669,4 @@ TEST( MRMesh, BooleanIntersectionsSort )
         EXPECT_TRUE( dot( meshA.dirDblArea( f ), aNorm ) > 0.0f );
 }
 
-}
+} //namespace MR

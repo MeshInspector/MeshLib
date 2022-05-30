@@ -10,9 +10,6 @@
     <Filter Include="Decimation">
       <UniqueIdentifier>{8510f809-b17c-40c2-a558-977a3664dd0c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Contours">
-      <UniqueIdentifier>{d7c359bd-2022-4549-badd-3794e7bd8383}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp">
@@ -38,15 +35,6 @@
     </ClCompile>
     <ClCompile Include="MREMeshDecimate.cpp">
       <Filter>Decimation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREContoursCut.cpp">
-      <Filter>Contours</Filter>
-    </ClCompile>
-    <ClCompile Include="MREContoursSeparation.cpp">
-      <Filter>Contours</Filter>
-    </ClCompile>
-    <ClCompile Include="MREIntersectionContour.cpp">
-      <Filter>Contours</Filter>
     </ClCompile>
     <ClCompile Include="MREMeshDecimateParallel.cpp">
       <Filter>Decimation</Filter>
@@ -80,15 +68,6 @@
     </ClInclude>
     <ClInclude Include="MREMeshDecimate.h">
       <Filter>Decimation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREContoursCut.h">
-      <Filter>Contours</Filter>
-    </ClInclude>
-    <ClInclude Include="MREContoursSeparation.h">
-      <Filter>Contours</Filter>
-    </ClInclude>
-    <ClInclude Include="MREIntersectionContour.h">
-      <Filter>Contours</Filter>
     </ClInclude>
     <ClInclude Include="MREMeshDecimateParallel.h">
       <Filter>Decimation</Filter>

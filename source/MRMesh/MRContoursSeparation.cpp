@@ -1,15 +1,13 @@
-#include "MREContoursSeparation.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRSurfacePath.h"
-#include "MRMesh/MRRingIterator.h"
-#include "MRMesh/MRMeshComponents.h"
-#include "MRMesh/MRTimer.h"
+#include "MRContoursSeparation.h"
+#include "MRMesh.h"
+#include "MRSurfacePath.h"
+#include "MRRingIterator.h"
+#include "MRMeshComponents.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
-
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vector<Vector3f>& contour,
                                                const PathMeshEdgePointCallback& cb )
@@ -85,4 +83,5 @@ std::vector<FaceBitSet> separateClosedContour( const Mesh& mesh, const std::vect
     return MeshComponents::getAllComponents( {mesh,&facesForSeparation} );
 }
 
-}
+} //namespace MR
+

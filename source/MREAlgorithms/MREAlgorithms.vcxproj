@@ -14,10 +14,7 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="MREBooleanOperation.h" />
     <ClInclude Include="MREPolylineDecimate.h" />
-    <ClInclude Include="MREContoursCut.h" />
-    <ClInclude Include="MREContoursSeparation.h" />
     <ClInclude Include="MREFillHoleMetrics.h" />
-    <ClInclude Include="MREIntersectionContour.h" />
     <ClInclude Include="MREMeshBoolean.h" />
     <ClInclude Include="MREMeshBooleanFacade.h" />
     <ClInclude Include="MREMeshDecimate.h" />
@@ -29,10 +26,7 @@
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp" />
     <ClCompile Include="MREPolylineDecimate.cpp" />
-    <ClCompile Include="MREContoursCut.cpp" />
-    <ClCompile Include="MREContoursSeparation.cpp" />
     <ClCompile Include="MREFillHoleMetrics.cpp" />
-    <ClCompile Include="MREIntersectionContour.cpp" />
     <ClCompile Include="MREMeshBoolean.cpp" />
     <ClCompile Include="MREMeshBooleanFacade.cpp" />
     <ClCompile Include="MREMeshDecimate.cpp" />

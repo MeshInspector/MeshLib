@@ -1,12 +1,11 @@
-#include "MRESurroundingContour.h"
-#include <MRMesh/MRMesh.h>
-#include <MRMesh/MRPlane3.h>
-#include <MRMesh/MREdgePaths.h>
-#include <MRMesh/MRTimer.h>
+#include "MRSurroundingContour.h"
+#include "MRMesh.h"
+#include "MRPlane3.h"
+#include "MREdgePaths.h"
+#include "MRTimer.h"
 #include <array>
 
-using namespace MR;
-namespace MRE
+namespace MR
 {
 
 static Plane3f getPlaneFromTwoPointsAndDir( const Vector3f & p0, const Vector3f & p1, const Vector3f & dir )
@@ -98,4 +97,4 @@ std::vector<EdgeId> surroundingContour(
     return res;
 }
 
-} //namespace MRE
+} //namespace MR

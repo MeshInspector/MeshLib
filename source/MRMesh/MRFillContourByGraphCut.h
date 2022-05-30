@@ -1,11 +1,10 @@
 #pragma once
 
 #include "exports.h"
-#include <MRMesh/MRMeshFwd.h>
-#include <MRMesh/MREdgePaths.h>
+#include "MREdgePaths.h"
 #include <vector>
 
-namespace MRE
+namespace MR
 {
 /**
  * \defgroup MeshSegmentationGroup Mesh Segmentation overwiev
@@ -28,14 +27,14 @@ namespace MRE
  * \brief Fill region located to the left from given contour, by minimizing the sum of metric over the boundary
  * \ingroup MeshSegmentationGroup
  */
-MREALGORITHMS_API MR::FaceBitSet fillContourLeftByGraphCut( const MR::MeshTopology & topology, const MR::EdgePath & contour,
-    const MR::EdgeMetric & metric );
+MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour,
+    const EdgeMetric & metric );
 
 /**
  * \brief Fill region located to the left from given contours, by minimizing the sum of metric over the boundary
  * \ingroup MeshSegmentationGroup
  */
-MREALGORITHMS_API MR::FaceBitSet fillContourLeftByGraphCut( const MR::MeshTopology & topology, const std::vector<MR::EdgePath> & contours,
-    const MR::EdgeMetric & metric );
+MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours,
+    const EdgeMetric & metric );
 
-} //namespace MRE
+} //namespace MR

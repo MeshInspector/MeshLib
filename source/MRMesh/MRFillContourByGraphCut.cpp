@@ -1,14 +1,13 @@
-#include "MREFillContourByGraphCut.h"
-#include <MRMesh/MRMeshTopology.h>
-#include <MRMesh/MREdgeIterator.h>
-#include <MRMesh/MRRingIterator.h>
-#include <MRMesh/MRBitSet.h>
-#include <MRMesh/MRTimer.h>
+#include "MRFillContourByGraphCut.h"
+#include "MRMeshTopology.h"
+#include "MREdgeIterator.h"
+#include "MRRingIterator.h"
+#include "MRBitSet.h"
+#include "MRTimer.h"
 #include <cfloat>
 #include <deque>
 
-using namespace MR;
-namespace MRE
+namespace MR
 {
 
 static constexpr int Left = 0;
@@ -318,4 +317,4 @@ FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::
     return filler.fill();
 }
 
-} // namespace MRE
+} // namespace MR

@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Segmentation">
-      <UniqueIdentifier>{22b97524-151e-4d27-950f-1c2a8561b9f8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Boolean">
       <UniqueIdentifier>{19a184b1-71c6-44cb-98cb-9960ef08133f}</UniqueIdentifier>
     </Filter>
@@ -18,12 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MRESurroundingContour.cpp">
-      <Filter>Segmentation</Filter>
-    </ClCompile>
-    <ClCompile Include="MREFillContourByGraphCut.cpp">
-      <Filter>Segmentation</Filter>
-    </ClCompile>
     <ClCompile Include="MREBooleanOperation.cpp">
       <Filter>Boolean</Filter>
     </ClCompile>
@@ -65,12 +56,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MRESurroundingContour.h">
-      <Filter>Segmentation</Filter>
-    </ClInclude>
-    <ClInclude Include="MREFillContourByGraphCut.h">
-      <Filter>Segmentation</Filter>
-    </ClInclude>
     <ClInclude Include="exports.h" />
     <ClInclude Include="MREBooleanOperation.h">
       <Filter>Boolean</Filter>

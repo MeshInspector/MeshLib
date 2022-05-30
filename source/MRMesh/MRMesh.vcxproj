@@ -48,6 +48,7 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGTest.h" />
@@ -102,6 +103,7 @@
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
+    <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
@@ -286,6 +288,7 @@
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFile.cpp" />
     <ClCompile Include="MRFillContour.cpp" />
+    <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
@@ -361,6 +364,7 @@
     <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
+    <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />

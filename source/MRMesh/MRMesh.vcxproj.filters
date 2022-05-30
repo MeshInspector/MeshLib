@@ -85,6 +85,9 @@
     <Filter Include="Source Files\MeshAlgorithm">
       <UniqueIdentifier>{90f9bd42-738e-4a33-a884-2a347d12cbb7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Segmentation">
+      <UniqueIdentifier>{482540be-d903-4a0a-8c4c-c783316c31e6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -774,6 +777,12 @@
     <ClInclude Include="MRPolylineComponents.h">
       <Filter>Source Files\Components</Filter>
     </ClInclude>
+    <ClInclude Include="MRFillContourByGraphCut.h">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurroundingContour.h">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1303,6 +1312,12 @@
     </ClCompile>
     <ClCompile Include="MRExampleTest.cpp">
       <Filter>Source Files\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFillContourByGraphCut.cpp">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSurroundingContour.cpp">
+      <Filter>Source Files\Segmentation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

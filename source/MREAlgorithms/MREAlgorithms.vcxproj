@@ -25,15 +25,12 @@
     <ClInclude Include="MREPartialOffset.h" />
     <ClInclude Include="MREPointCloudTriangulation.h" />
     <ClInclude Include="MREPointCloudTriangulationHelpers.h" />
-    <ClInclude Include="MRESurroundingContour.h" />
-    <ClInclude Include="MREFillContourByGraphCut.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MREBooleanOperation.cpp" />
     <ClCompile Include="MREPolylineDecimate.cpp" />
     <ClCompile Include="MREContoursCut.cpp" />
     <ClCompile Include="MREContoursSeparation.cpp" />
-    <ClCompile Include="MREFillContourByGraphCut.cpp" />
     <ClCompile Include="MREFillHoleMetrics.cpp" />
     <ClCompile Include="MREIntersectionContour.cpp" />
     <ClCompile Include="MREMeshBoolean.cpp" />
@@ -43,7 +40,6 @@
     <ClCompile Include="MREPartialOffset.cpp" />
     <ClCompile Include="MREPointCloudTriangulation.cpp" />
     <ClCompile Include="MREPointCloudTriangulationHelpers.cpp" />
-    <ClCompile Include="MRESurroundingContour.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshRUs\source\.editorconfig" />

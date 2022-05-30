@@ -12,6 +12,8 @@ namespace MR
 
 TEST( MRMesh, BasicExample )
 {
+    // please update MeshLib/doxygen/HowToExamples.dox according to this file
+    
     // load mesh
     MR::Mesh mesh = MR::makeTorus();
 
@@ -30,6 +32,8 @@ TEST( MRMesh, BasicExample )
 
 TEST( MRMesh, PrimitivesExtractionExapmle )
 {
+    // please update MeshLib/doxygen/HowToExamples.dox according to this file
+
     // create some mesh
     MR::Mesh mesh = MR::makeCube();
 

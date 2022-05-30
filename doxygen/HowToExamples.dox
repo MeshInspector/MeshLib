@@ -20,11 +20,11 @@ Following code presents example of loading and saving mesh file
 int main()
 {
     std::filesystem::path inFilePath = "mesh.stl";
-    tl::expected<MR::Mesh,std::string> loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
+    auto loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
     if ( loadRes.has_value() )
     {
 	    std::filesystem::path outFilePath = "mesh.ply";
-	    tl::expected<void,std::string> saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
+	    auto saveRes = MR::MeshSave::toAnySupportedFormat( loadRes.value(), outFilePath );
 	    if ( !saveRes.has_value() )
     		std::cerr << saveRes.error() << "\n";
     }

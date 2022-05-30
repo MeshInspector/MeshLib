@@ -85,6 +85,21 @@
     <Filter Include="Source Files\MeshAlgorithm">
       <UniqueIdentifier>{90f9bd42-738e-4a33-a884-2a347d12cbb7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Segmentation">
+      <UniqueIdentifier>{482540be-d903-4a0a-8c4c-c783316c31e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Contours">
+      <UniqueIdentifier>{d4c0f533-10a6-48fd-9e33-a1aa4bf27a4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Decimation">
+      <UniqueIdentifier>{c0473824-4c92-4d7b-8dd8-53467111d7b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Triangulation">
+      <UniqueIdentifier>{e8616b21-1a75-42a5-990d-2f54914e7219}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Boolean">
+      <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -774,6 +789,51 @@
     <ClInclude Include="MRPolylineComponents.h">
       <Filter>Source Files\Components</Filter>
     </ClInclude>
+    <ClInclude Include="MRFillContourByGraphCut.h">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurroundingContour.h">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRContoursCut.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
+    <ClInclude Include="MRContoursSeparation.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIntersectionContour.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDecimate.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshDecimateParallel.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolylineDecimate.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFillHoleMetrics.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudTriangulation.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudTriangulationHelpers.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBooleanOperation.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBoolean.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBooleanFacade.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPartialOffset.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1303,6 +1363,51 @@
     </ClCompile>
     <ClCompile Include="MRExampleTest.cpp">
       <Filter>Source Files\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFillContourByGraphCut.cpp">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSurroundingContour.cpp">
+      <Filter>Source Files\Segmentation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRContoursCut.cpp">
+      <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRContoursSeparation.cpp">
+      <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIntersectionContour.cpp">
+      <Filter>Source Files\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimate.cpp">
+      <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimateParallel.cpp">
+      <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineDecimate.cpp">
+      <Filter>Source Files\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFillHoleMetrics.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudTriangulation.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBooleanOperation.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBoolean.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBooleanFacade.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPartialOffset.cpp">
+      <Filter>Source Files\Boolean</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

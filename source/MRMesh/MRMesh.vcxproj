@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />
@@ -37,6 +38,8 @@
     <ClInclude Include="MRCombinedHistoryAction.h" />
     <ClInclude Include="MRConfig.h" />
     <ClInclude Include="MRContour.h" />
+    <ClInclude Include="MRContoursCut.h" />
+    <ClInclude Include="MRContoursSeparation.h" />
     <ClInclude Include="MRContoursStitch.h" />
     <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRDenseBox.h" />
@@ -48,7 +51,9 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
+    <ClInclude Include="MRFillHoleMetrics.h" />
     <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGTest.h" />
     <ClInclude Include="MRHash.h" />
@@ -60,6 +65,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRIntersection.h" />
+    <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
@@ -72,16 +78,23 @@
     <ClInclude Include="MRMatrix.h" />
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
+    <ClInclude Include="MRMeshBoolean.h" />
+    <ClInclude Include="MRMeshBooleanFacade.h" />
     <ClInclude Include="MRMeshBuilderTypes.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshDecimateParallel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
+    <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
+    <ClInclude Include="MRPointCloudTriangulation.h" />
+    <ClInclude Include="MRPointCloudTriangulationHelpers.h" />
     <ClInclude Include="MRPointObject.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2.h" />
@@ -89,6 +102,7 @@
     <ClInclude Include="MRPolyline2Intersect.h" />
     <ClInclude Include="MRPolyline2Project.h" />
     <ClInclude Include="MRPolylineComponents.h" />
+    <ClInclude Include="MRPolylineDecimate.h" />
     <ClInclude Include="MRPolylineEdgeIterator.h" />
     <ClInclude Include="MRLinesLoad.h" />
     <ClInclude Include="MRLinesSave.h" />
@@ -102,6 +116,7 @@
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
+    <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
@@ -254,6 +269,7 @@
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
     <ClCompile Include="MRColorMapAggregator.cpp" />
@@ -261,6 +277,8 @@
     <ClCompile Include="MRComputeBoundingBox.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContour.cpp" />
+    <ClCompile Include="MRContoursCut.cpp" />
+    <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
@@ -286,7 +304,9 @@
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFile.cpp" />
     <ClCompile Include="MRFillContour.cpp" />
+    <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
+    <ClCompile Include="MRFillHoleMetrics.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
@@ -296,13 +316,18 @@
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRIntersection.cpp" />
+    <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
+    <ClCompile Include="MRMeshBoolean.cpp" />
+    <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />
@@ -311,6 +336,7 @@
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRObjectPointsHolder.cpp" />
+    <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPlaneObject.cpp" />
@@ -318,6 +344,8 @@
     <ClCompile Include="MRPointCloudMakeNormals.cpp" />
     <ClCompile Include="MRPointCloudRadius.cpp" />
     <ClCompile Include="MRPointCloudRelax.cpp" />
+    <ClCompile Include="MRPointCloudTriangulation.cpp" />
+    <ClCompile Include="MRPointCloudTriangulationHelpers.cpp" />
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
@@ -328,6 +356,7 @@
     <ClCompile Include="MRPolyline2Project.cpp" />
     <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineComponents.cpp" />
+    <ClCompile Include="MRPolylineDecimate.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
@@ -361,6 +390,7 @@
     <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
+    <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />

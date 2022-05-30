@@ -1,11 +1,10 @@
-#include "MREMeshBooleanFacade.h"
-#include "MREMeshBoolean.h"
-#include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRGTest.h"
+#include "MRMeshBooleanFacade.h"
+#include "MRMeshBoolean.h"
+#include "MRObjectMesh.h"
+#include "MRGTest.h"
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 TransformedMesh MeshMeshConverter::operator() ( const ObjectMesh & obj ) const
 {

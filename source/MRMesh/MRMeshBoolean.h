@@ -1,10 +1,10 @@
 #pragma once
-#include "exports.h"
-#include "MREBooleanOperation.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRBitSet.h"
 
-namespace MRE
+#include "MRBooleanOperation.h"
+#include "MRMesh.h"
+#include "MRBitSet.h"
+
+namespace MR
 {
 
 /** \defgroup BooleanGroup Surface Boolean overview
@@ -14,28 +14,28 @@ namespace MRE
   */
 
 
-/** \struct MRE::BooleanResult
+/** \struct MR::BooleanResult
   * \ingroup BooleanGroup
   * \brief Structure contain boolean result
   * 
-  * This structure store result mesh of MRE::boolean or some error info
+  * This structure store result mesh of MR::boolean or some error info
   */
 struct BooleanResult
 {    
     /// Result mesh of boolean operation, if error occurred it would be empty
-    MR::Mesh mesh;
+    Mesh mesh;
     /// If input contours have intersections, this face bit set presents faces of mesh `A` on which contours intersect
-    MR::FaceBitSet meshABadContourFaces;
+    FaceBitSet meshABadContourFaces;
     /// If input contours have intersections, this face bit set presents faces of mesh `B` on which contours intersect
-    MR::FaceBitSet meshBBadContourFaces;
+    FaceBitSet meshBBadContourFaces;
     /// Holds error message, empty if boolean succeed
     std::string errorString;
     /// Returns true if boolean succeed, false otherwise
     bool valid() const { return errorString.empty(); }
-    MR::Mesh& operator*() { return mesh; }
-    const MR::Mesh& operator*() const { return mesh; }
-    MR::Mesh* operator->() { return &mesh; }
-    const MR::Mesh* operator->() const { return &mesh; }
+    Mesh& operator*() { return mesh; }
+    const Mesh& operator*() const { return mesh; }
+    Mesh* operator->() { return &mesh; }
+    const Mesh* operator->() const { return &mesh; }
     operator bool()const { return valid(); }
 };
 
@@ -52,9 +52,7 @@ struct BooleanResult
   * \note Input meshes should have no self-intersections in intersecting zone
   * \note If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)
   */
-MREALGORITHMS_API BooleanResult boolean( const MR::Mesh& meshA, const MR::Mesh& meshB, BooleanOperation operation,
-                                         const MR::AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
+MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
 
-MREALGORITHMS_API void loadMREAlgorithmsDll();
-
-}
+} //namespace MR

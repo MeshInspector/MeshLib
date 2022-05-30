@@ -1,10 +1,10 @@
 #ifndef __EMSCRIPTEN__
-#include "MREPartialOffset.h"
-#include "MRMesh/MRMesh.h"
-#include "MREMeshBoolean.h"
+#include "MRPartialOffset.h"
+#include "MRMesh.h"
+#include "MRMeshBoolean.h"
 #include "MRPch/MRSpdlog.h"
 
-namespace MRE
+namespace MR
 {
 
 Mesh partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params /*= {} */ )
@@ -19,5 +19,5 @@ Mesh partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters
     return std::move( res.mesh );
 }
 
-}
-#endif
+} //namespace MR
+#endif //!__EMSCRIPTEN__

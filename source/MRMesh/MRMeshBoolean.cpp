@@ -1,19 +1,18 @@
-#include "MREMeshBoolean.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRMeshCollidePrecise.h"
-#include "MRMesh/MRIntersectionContour.h"
-#include "MRMesh/MRContoursCut.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRTorus.h"
-#include "MRMesh/MRMatrix3.h"
-#include "MRMesh/MRAffineXf3.h"
-#include "MRMesh/MRLog.h"
-#include "MRMesh/MRGTest.h"
+#include "MRMeshBoolean.h"
+#include "MRMesh.h"
+#include "MRMeshCollidePrecise.h"
+#include "MRIntersectionContour.h"
+#include "MRContoursCut.h"
+#include "MRTimer.h"
+#include "MRTorus.h"
+#include "MRMatrix3.h"
+#include "MRAffineXf3.h"
+#include "MRLog.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation opearation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
@@ -218,10 +217,6 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return result;
 }
 
-void loadMREAlgorithmsDll()
-{
-}
-
 TEST( MRMesh, MeshBoolean )
 {
     Mesh meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
@@ -259,4 +254,4 @@ TEST( MRMesh, MeshBoolean )
     }
 }
 
-}
+} //namespace MR

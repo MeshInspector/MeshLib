@@ -17,9 +17,6 @@
     <ProjectReference Include="..\mrealgorithmspy\mrealgorithmspy.vcxproj">
       <Project>{3999f1c8-dcfd-41b9-9c26-f18e9718b86d}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MREAlgorithms\MREAlgorithms.vcxproj">
-      <Project>{2cf79b9b-6419-4d84-84a1-1ec549bc218d}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\mrmeshpy\mrmeshpy.vcxproj">
       <Project>{cc7f9661-34a7-4756-8791-acfd10a427eb}</Project>
     </ProjectReference>

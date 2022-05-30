@@ -17,7 +17,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	MRMesh
-	MREAlgorithms
 	mrmeshpy
 	${PYTHON_LIB}
 )

@@ -1,11 +1,11 @@
-#include "MREBooleanOperation.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRFillContour.h"
-#include "MRMesh/MRContoursStitch.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRMeshComponents.h"
-#include "MRMesh/MRMeshCollide.h"
-#include "MRMesh/MRAffineXf3.h"
+#include "MRBooleanOperation.h"
+#include "MRMesh.h"
+#include "MRFillContour.h"
+#include "MRContoursStitch.h"
+#include "MRTimer.h"
+#include "MRMeshComponents.h"
+#include "MRMeshCollide.h"
+#include "MRAffineXf3.h"
 
 #pragma warning(disable: 4996) //deprecated function call
 #if defined(__clang__)
@@ -14,9 +14,8 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-namespace MRE
+namespace MR
 {
-using namespace MR;
 
 // almost the same as MR::isInside but without collision check (it should be cheked already in this context)
 bool isCompInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
@@ -333,4 +332,4 @@ VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) co
     return res;
 }
 
-}
+} //namespace MR

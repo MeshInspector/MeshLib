@@ -1,10 +1,10 @@
 #pragma once
-#include "exports.h"
-#include "MRMesh/MRVector.h"
+
+#include "MRVector.h"
 #include <tl/expected.hpp>
 #include <array>
 
-namespace MRE
+namespace MR
 {
 
 /// \addtogroup BooleanGroup
@@ -13,7 +13,7 @@ namespace MRE
 /**
   * Enum class of available CSG operations
   * \image html boolean/no_bool.png "Two separate meshes" width = 300cm
-  * \sa \ref MRE::boolean
+  * \sa \ref MR::boolean
   */
 enum class BooleanOperation
 {
@@ -45,12 +45,12 @@ enum class BooleanOperation
     Count ///< not a valid operation
 };
 
-/** \struct MRE::BooleanResultMapper
+/** \struct MR::BooleanResultMapper
   * \brief Structure to map old mesh BitSets to new
-  * \details Structure to easily map topology of MRE::boolean input meshes to result mesh
+  * \details Structure to easily map topology of MR::boolean input meshes to result mesh
   * 
-  * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MRE::boolean to result mesh topology primitives
-  * \sa \ref MRE::boolean
+  * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MR::boolean to result mesh topology primitives
+  * \sa \ref MR::boolean
   */
 struct BooleanResultMapper
 {
@@ -60,23 +60,23 @@ struct BooleanResultMapper
     BooleanResultMapper() = default;
     
     /// Returns faces bitset of result mesh corresponding input one
-    MREALGORITHMS_API MR::FaceBitSet map( const MR::FaceBitSet& oldBS, MapObject obj ) const;
+    MRMESH_API FaceBitSet map( const FaceBitSet& oldBS, MapObject obj ) const;
     /// Returns vertices bitset of result mesh corresponding input one
-    MREALGORITHMS_API MR::VertBitSet map( const MR::VertBitSet& oldBS, MapObject obj ) const;
+    MRMESH_API VertBitSet map( const VertBitSet& oldBS, MapObject obj ) const;
     /// Returns edges bitset of result mesh corresponding input one
-    MREALGORITHMS_API MR::EdgeBitSet map( const MR::EdgeBitSet& oldBS, MapObject obj ) const;
+    MRMESH_API EdgeBitSet map( const EdgeBitSet& oldBS, MapObject obj ) const;
 
     struct Maps
     {
         /// "after cut" faces to "origin" faces
         /// this map is not 1-1, but N-1
-        MR::FaceMap cut2origin;
+        FaceMap cut2origin;
         /// "after cut" faces to "after stitch" faces (1-1)
-        MR::FaceMap cut2newFaces;
+        FaceMap cut2newFaces;
         /// "origin" edges to "after stitch" edges (1-1)
-        MR::EdgeMap old2newEdges;
+        EdgeMap old2newEdges;
         /// "origin" vertices to "after stitch" vertices (1-1)
-        MR::VertMap old2newVerts;
+        VertMap old2newVerts;
         /// old topology indexes are valid if true
         bool identity{false};
     };
@@ -86,11 +86,11 @@ struct BooleanResultMapper
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
-MREALGORITHMS_API tl::expected<MR::Mesh, std::string> doBooleanOperation( const MR::Mesh& meshACut, const MR::Mesh& meshBCut,
-                                                               const std::vector<MR::EdgePath>& cutEdgesA, const std::vector<MR::EdgePath>& cutEdgesB,
-                                                               BooleanOperation operation, const MR::AffineXf3f* rigidB2A = nullptr,
+MRMESH_API tl::expected<Mesh, std::string> doBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut,
+                                                               const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
+                                                               BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
                                                                BooleanResultMapper* mapper = nullptr );
 
 /// \}
 
-}
+} //namespace MR

@@ -108,7 +108,6 @@ add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
-add_subdirectory(${PROJECT_SOURCE_DIR}/MREAlgorithms ./MREAlgorithms)
 IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)

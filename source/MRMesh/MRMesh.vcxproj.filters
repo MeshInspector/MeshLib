@@ -97,6 +97,9 @@
     <Filter Include="Source Files\Triangulation">
       <UniqueIdentifier>{e8616b21-1a75-42a5-990d-2f54914e7219}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Boolean">
+      <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -819,6 +822,18 @@
     <ClInclude Include="MRPointCloudTriangulationHelpers.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRBooleanOperation.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBoolean.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBooleanFacade.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPartialOffset.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1381,6 +1396,18 @@
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">
       <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBooleanOperation.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBoolean.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBooleanFacade.cpp">
+      <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPartialOffset.cpp">
+      <Filter>Source Files\Boolean</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,7 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRMeshDecimate.h"
-#include "MREAlgorithms/MREMeshBoolean.h"
+#include "MRMesh/MRMeshBoolean.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
@@ -38,12 +38,12 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
         auto meshB = std::move( loadRes.value() );
         std::cout << meshPath << " loaded successfully\n";
 
-        MRE::BooleanOperation bo{ MRE::BooleanOperation::Union };
+        MR::BooleanOperation bo{ MR::BooleanOperation::Union };
         if ( option.string_key == "subtract" )
-            bo = MRE::BooleanOperation::OutsideA;
+            bo = MR::BooleanOperation::OutsideA;
         if ( option.string_key == "intersect" )
-            bo = MRE::BooleanOperation::Intersection;
-        auto booleanRes = MRE::boolean( mesh, meshB, bo );
+            bo = MR::BooleanOperation::Intersection;
+        auto booleanRes = MR::boolean( mesh, meshB, bo );
 
         if ( !booleanRes )
         {

@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRColorMapAggregator.h" />
     <ClInclude Include="MR2to3.h" />
@@ -77,6 +78,8 @@
     <ClInclude Include="MRMatrix.h" />
     <ClInclude Include="MRMatrix2.h" />
     <ClInclude Include="MRMatrix4.h" />
+    <ClInclude Include="MRMeshBoolean.h" />
+    <ClInclude Include="MRMeshBooleanFacade.h" />
     <ClInclude Include="MRMeshBuilderTypes.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
@@ -85,6 +88,7 @@
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
+    <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
@@ -265,6 +269,7 @@
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRBooleanOperation.cpp" />
     <ClCompile Include="MRChangeSceneAction.cpp" />
     <ClCompile Include="MRCircleObject.cpp" />
     <ClCompile Include="MRColorMapAggregator.cpp" />
@@ -318,6 +323,8 @@
     <ClCompile Include="MRLineObject.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
+    <ClCompile Include="MRMeshBoolean.cpp" />
+    <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
@@ -329,6 +336,7 @@
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRObjectPointsHolder.cpp" />
+    <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPlaneObject.cpp" />

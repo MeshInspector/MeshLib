@@ -2,7 +2,7 @@
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
-#include "MREAlgorithms/MREMeshBoolean.h"
+#include "MRMesh/MRMeshBoolean.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
@@ -29,7 +29,6 @@ TEST(MRMesh, QuadraticForm)
 int main(int argc, char **argv)
 {
     MR::loadMeshDll();
-    MRE::loadMREAlgorithmsDll();
 
 #ifndef __EMSCRIPTEN__
     MR::loadMRMeshPyModule();

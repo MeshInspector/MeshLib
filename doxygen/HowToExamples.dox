@@ -109,7 +109,9 @@ Mesh modification examples
 import mrmeshpy
 mesh = mrmeshpy.load_mesh("mesh.stl")
 
-mrmeshpy.relax(mesh,5,Null)
+relaxParams = mrmeshpy.MeshRelaxParams()
+relaxParams.iterations = 5
+mrmeshpy.relax(mesh, relaxParams)
 
 props = mrmeshpy.SubdivideSettings()
 props.maxDeviationAfterFlip = 0.5

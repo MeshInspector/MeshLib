@@ -215,7 +215,25 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorMeshEdgePoint, MR::MeshEdgePoint )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, compute_surface_path, &computeSurfacePath, "finds closest surface path between points" )
 
 // Relax Mesh
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, relax, &relax, "relax mesh" )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
+{
+    pybind11::class_<RelaxParams>( m, "RelaxParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "force", &RelaxParams::force ).
+        def_readwrite( "iterations", &RelaxParams::iterations ).
+        def_readwrite( "region", &RelaxParams::region );
+
+    pybind11::class_<MeshRelaxParams, RelaxParams>( m, "MeshRelaxParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons );
+
+    m.def( "relax", [] ( Mesh& mesh, const MeshRelaxParams& params )
+    {
+        return relax( mesh, params );
+    },
+        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{},
+        "Relax mesh" );
+} )
 
 // Re-mesh
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_delone_edge_flips, &makeDeloneEdgeFlips, "Delone flips edges" )

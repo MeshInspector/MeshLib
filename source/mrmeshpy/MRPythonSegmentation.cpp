@@ -5,14 +5,9 @@
 #include "MRMesh/MRSurroundingContour.h"
 #include "MRMesh/MRFillContourByGraphCut.h"
 
-MR_INIT_PYTHON_MODULE_PRECALL( mrealgorithmspy, [] ()
-{
-    pybind11::module_::import( "mrmeshpy" );
-} )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, cut_mesh_with_plane, MR::cutMeshWithPlane, "cuts mesh with given plane" )
 
-MR_ADD_PYTHON_FUNCTION( mrealgorithmspy, cut_mesh_with_plane, MR::cutMeshWithPlane, "cuts mesh with given plane" )
-
-MR_ADD_PYTHON_CUSTOM_DEF( mrealgorithmspy, Segmentation, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
 {
     m.def( "surroundingContour", &MR::surroundingContour,
         pybind11::arg( "mesh" ), pybind11::arg( "includeEdgeOrgs" ), pybind11::arg( "edgeMetric" ), pybind11::arg( "dir" ),

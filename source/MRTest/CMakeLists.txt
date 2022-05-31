@@ -8,7 +8,6 @@ add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
 IF(NOT ${distro} STREQUAL "Fedora Linux")
  target_link_libraries(${PROJECT_NAME} PRIVATE
-         mrealgorithmspy
          MRMesh
          spdlog
          mrmeshpy
@@ -16,7 +15,6 @@ IF(NOT ${distro} STREQUAL "Fedora Linux")
 ELSE()
   IF (NOT MR_EMSCRIPTEN)
     target_link_libraries(${PROJECT_NAME} PRIVATE
-        mrealgorithmspy
         MRMesh
         fmt
         gtest

@@ -2,7 +2,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshDecimate.h"
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrealgorithmspy, Decimate, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::DecimateSettings>( m, "DecimateSettings" ).
         def( pybind11::init<>() ).

@@ -2,7 +2,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrealgorithmspy, BooleanExposing, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::BooleanOperation>( m, "BooleanOperation" ).
         value( "InsideA", MR::BooleanOperation::InsideA ).

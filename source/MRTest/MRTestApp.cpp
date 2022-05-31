@@ -8,7 +8,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "mrmeshpy/MRLoadModule.h"
-#include "mrealgorithmspy/MRLoadModule.h"
 #endif
 
 namespace MR
@@ -32,7 +31,6 @@ int main(int argc, char **argv)
 
 #ifndef __EMSCRIPTEN__
     MR::loadMRMeshPyModule();
-    MR::loadMREAlgorithmsPyModule();
 #endif
 
     MR::setupLoggerByDefault();
@@ -56,19 +54,6 @@ int main(int argc, char **argv)
             "for f in funcs :\n"
             " if not f.startswith( '_' ) :\n"
             "  print( \"mrmeshpy.\" + f )\n"
-            "print( \"\\n\" )";
-
-        if ( !MR::EmbeddedPython::runString( str ) )
-            return 1;
-    }
-    //Test python mrealgorithmspy
-    {
-        auto str = "import mrealgorithmspy\n"
-            "print( \"List of python module functions available in mrealgorithmspy:\\n\" )\n"
-            "funcs = dir( mrealgorithmspy )\n"
-            "for f in funcs :\n"
-            " if not f.startswith( '_' ) :\n"
-            "  print( \"mrealgorithmspy.\" + f )\n"
             "print( \"\\n\" )";
 
         if ( !MR::EmbeddedPython::runString( str ) )

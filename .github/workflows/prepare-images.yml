@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.select-tag.outputs.image_tag}}
+      windows_image_tag: ${{ steps.select-tag.outputs.windows_image_tag}}
       image_path: ${{ steps.set-path.outputs.image_path}}
       need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
       matrix: ${{ steps.matrix-set.outputs.matrix}}

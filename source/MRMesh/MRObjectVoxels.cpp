@@ -170,7 +170,7 @@ void ObjectVoxels::swapBase_( Object& other )
 
 void ObjectVoxels::swapSignals_( Object& other )
 {
-    VisualObject::swapSignals_( other );
+    ObjectMeshHolder::swapSignals_( other );
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
         std::swap( isoChangedSignal, otherVoxels->isoChangedSignal );
     else

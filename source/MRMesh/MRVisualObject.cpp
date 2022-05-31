@@ -134,7 +134,9 @@ void VisualObject::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION )
         mask |= DIRTY_ALL_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     if ( mask & DIRTY_FACE )
-        mask |= DIRTY_ALL_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+        mask |= DIRTY_ALL_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
+    // DIRTY_POSITION because we use corner rendering and need to update render verts
+
     dirty_ |= mask;
 }
 

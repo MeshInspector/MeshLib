@@ -79,6 +79,8 @@ bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
     setDirtyFlags( DIRTY_ALL );
 
     ancillary_ = false;
+    isoChangedSignal();
+
     return true;
 }
 
@@ -162,6 +164,15 @@ void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
         std::swap( *this, *otherVoxels );
+    else
+        assert( false );
+}
+
+void ObjectVoxels::swapSignals_( Object& other )
+{
+    ObjectMeshHolder::swapSignals_( other );
+    if ( auto otherVoxels = other.asType<ObjectVoxels>() )
+        std::swap( isoChangedSignal, otherVoxels->isoChangedSignal );
     else
         assert( false );
 }

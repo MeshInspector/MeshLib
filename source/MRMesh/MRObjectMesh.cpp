@@ -126,7 +126,7 @@ void ObjectMesh::swapBase_( Object& other )
 
 void ObjectMesh::swapSignals_( Object& other )
 {
-    VisualObject::swapSignals_( other );
+    ObjectMeshHolder::swapSignals_( other );
     if ( auto otherMesh = other.asType<ObjectMesh>() )
         std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     else

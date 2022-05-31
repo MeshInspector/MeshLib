@@ -13,9 +13,9 @@ pos3 = mrmesh.Vector3.diagonal( 1 )
 meshA = mrmesh.make_cube(size, pos1)
 meshB = mrmesh.make_cube(size, pos2)
 
-bOperation = mrealgorithms.BooleanOperation.Intersection
-bResMapper = mrealgorithms.BooleanResultMapper()
-bResult = mrealgorithms.boolean( meshA, meshB, bOperation, None, bResMapper )
+bOperation = mrmesh.BooleanOperation.Intersection
+bResMapper = mrmesh.BooleanResultMapper()
+bResult = mrmesh.boolean( meshA, meshB, bOperation, None, bResMapper )
 
 bResMesh = bResult.mesh
 
@@ -27,10 +27,10 @@ assert( bResMesh.topology.getValidVerts().count() == 14 )
 assert( bResMesh.topology.findHoleRepresentiveEdges().size() == 0 )
 
 
-brmmAA = bResMapper.map( meshA.topology.getValidVerts(), mrealgorithms.BooleanResMapObj.A )
-brmmAB = bResMapper.map( meshA.topology.getValidVerts(), mrealgorithms.BooleanResMapObj.B )
-brmmBA = bResMapper.map( meshB.topology.getValidVerts(), mrealgorithms.BooleanResMapObj.A )
-brmmBB = bResMapper.map( meshB.topology.getValidVerts(), mrealgorithms.BooleanResMapObj.B )
+brmmAA = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
+brmmAB = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
+brmmBA = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
+brmmBB = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
 
 assert( brmmAA.size() == 14)
 assert( brmmAA.count() == 1)

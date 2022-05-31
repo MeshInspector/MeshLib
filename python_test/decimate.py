@@ -14,9 +14,9 @@ pos3 = mrmesh.Vector3.diagonal( 1 )
 # TEST 1
 
 mesh = mrmesh.make_cube(size, pos1)
-settings = mrealgorithms.DecimateSettings()
+settings = mrmesh.DecimateSettings()
 
-result = mrealgorithms.decimate( mesh, settings )
+result = mrmesh.decimate( mesh, settings )
 
 assert( result.vertsDeleted == 0 )
 assert( result.facesDeleted == 0 )
@@ -32,14 +32,14 @@ assert( mesh.topology.findHoleRepresentiveEdges().size() == 0 )
 meshA = mrmesh.make_cube(size, pos1)
 meshB = mrmesh.make_cube(size, pos2)
 
-bOperation = mrealgorithms.BooleanOperation.Intersection
-bResMapper = mrealgorithms.BooleanResultMapper()
-bResult = mrealgorithms.boolean( meshA, meshB, bOperation, None, bResMapper )
+bOperation = mrmesh.BooleanOperation.Intersection
+bResMapper = mrmesh.BooleanResultMapper()
+bResult = mrmesh.boolean( meshA, meshB, bOperation, None, bResMapper )
 
 mesh = bResult.mesh
-settings = mrealgorithms.DecimateSettings()
+settings = mrmesh.DecimateSettings()
 
-result = mrealgorithms.decimate( mesh, settings )
+result = mrmesh.decimate( mesh, settings )
 
 assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3() ).min , pos1 ) )
 assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3() ).max , pos3 ) )

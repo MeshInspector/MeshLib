@@ -75,7 +75,7 @@ std::vector<std::string> PlaneObject::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : PlaneObject" );
+    res.push_back( "type: Plane" );
     return res;
 }
 

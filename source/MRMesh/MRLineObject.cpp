@@ -76,7 +76,7 @@ std::vector<std::string> LineObject::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : LineObject" );
+    res.push_back( "type: Line" );
     return res;
 }
 

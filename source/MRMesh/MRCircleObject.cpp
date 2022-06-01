@@ -109,7 +109,7 @@ std::vector<std::string> CircleObject::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : CircleObject" );
+    res.push_back( "type: Circle" );
     return res;
 }
 

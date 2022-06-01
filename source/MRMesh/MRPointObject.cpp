@@ -26,7 +26,7 @@ std::vector<std::string> PointObject::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : PointObject" );
+    res.push_back( "type: Point" );
     return res;
 }
 

@@ -51,8 +51,6 @@ public:
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}
 
-    MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
     const Vector<Color, UndirectedEdgeId>& getLinesColorMap() const { return linesColorMap_; }
     virtual void setLinesColorMap( Vector<Color, UndirectedEdgeId> linesColorMap )
     { linesColorMap_ = std::move( linesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }

@@ -274,14 +274,6 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-std::vector<std::string> ObjectMeshHolder::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type : MeshHolder" );
-    return res;
-}
-
 std::shared_ptr<Object> ObjectMeshHolder::clone() const
 {
     auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );

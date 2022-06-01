@@ -44,8 +44,6 @@ public:
     /// \return the pair ( mesh, selected triangles ) if any triangle is selected or whole mesh otherwise
     MeshPart meshPart() const { return selectedTriangles_.any() ? MeshPart{ *mesh_, &selectedTriangles_ } : *mesh_; }
 
-    MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 

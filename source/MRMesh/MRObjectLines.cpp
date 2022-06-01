@@ -61,7 +61,7 @@ void ObjectLines::serializeFields_( Json::Value& root ) const
 std::vector<std::string> ObjectLines::getInfoLines() const
 {
     std::vector<std::string> res;
-    res.push_back( "type : ObjectLines" );
+    res.push_back( "type: Lines" );
 
     std::stringstream ss;
     if ( polyline_ )

@@ -102,14 +102,6 @@ size_t ObjectLinesHolder::heapBytes() const
         + MR::heapBytes( polyline_ );
 }
 
-std::vector<std::string> ObjectLinesHolder::getInfoLines() const
-{
-    std::vector<std::string> res;
-    res.push_back( "type : LinesHolder" );
-
-    return res;
-}
-
 ObjectLinesHolder::ObjectLinesHolder( const ObjectLinesHolder& other ) :
     VisualObject( other )
 {

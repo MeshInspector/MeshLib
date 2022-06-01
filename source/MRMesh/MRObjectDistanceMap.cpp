@@ -69,7 +69,7 @@ std::vector<std::string> ObjectDistanceMap::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : ObjectDistanceMap" );
+    res.push_back( "type: Distance Map" );
 
     std::stringstream ss;
     if ( dmap_ )

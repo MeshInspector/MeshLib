@@ -39,14 +39,6 @@ void ObjectPointsHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-std::vector<std::string> ObjectPointsHolder::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type : MeshHolder" );
-    return res;
-}
-
 std::shared_ptr<MR::Object> ObjectPointsHolder::clone() const
 {
     auto res = std::make_shared<ObjectPointsHolder>( ProtectedStruct{}, *this );

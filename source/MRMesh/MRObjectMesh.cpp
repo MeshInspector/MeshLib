@@ -52,7 +52,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : ObjectMesh" );
+    res.push_back( "type: Mesh" );
     if ( mesh_ )
     {
         if ( !meshStat_ )

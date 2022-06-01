@@ -76,7 +76,7 @@ std::vector<std::string> SphereObject::getInfoLines() const
 {
     std::vector<std::string> res;
 
-    res.push_back( "type : SphereObject" );
+    res.push_back( "type: Sphere" );
     return res;
 }
 

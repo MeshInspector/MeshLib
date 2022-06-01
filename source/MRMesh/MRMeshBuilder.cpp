@@ -4,7 +4,7 @@
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
 #include "MRTimer.h"
-#include "MRMesh/MRGTest.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR

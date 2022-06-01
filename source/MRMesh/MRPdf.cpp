@@ -1,12 +1,12 @@
 #ifndef __EMSCRIPTEN__
 #include "MRPdf.h"
-#include "MRMesh/MRSerializer.h"
-#include "MRMesh/MRImageSave.h"
-#include "MRMesh/MRVector2.h"
-#include "MRMesh/MRImage.h"
-#include "MRMesh/MRBox.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRGTest.h"
+#include "MRSerializer.h"
+#include "MRImageSave.h"
+#include "MRVector2.h"
+#include "MRImage.h"
+#include "MRBox.h"
+#include "MRStringConvert.h"
+#include "MRGTest.h"
 #include "MRPch/MRSpdlog.h"
 #include <fstream>
 

@@ -1,6 +1,6 @@
 #pragma once
 #ifndef __EMSCRIPTEN__
-#include "MRMesh/MRMeshFwd.h"
+#include "MRMeshFwd.h"
 #include <filesystem>
 
 namespace PoDoFo

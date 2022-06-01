@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMesh/MRMeshFwd.h"
+#include "MRMeshFwd.h"
 #include "MRHistoryAction.h"
 #include <memory>
 

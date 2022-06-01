@@ -3,7 +3,7 @@
 #include "MRColor.h"
 #include "MRSerializer.h"
 #include "MRPch/MRJson.h"
-#include "MRMesh/MRVector2.h"
+#include "MRVector2.h"
 #include "MRLog.h"
 #include <filesystem>
 #include <string>

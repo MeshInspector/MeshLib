@@ -15,8 +15,8 @@
 // ======================================================================== //
 #pragma once
 
-#include <MRMesh/MRVector3.h>
-#include <MRMesh/MRTriPoint.h>
+#include "MRVector3.h"
+#include "MRTriPoint.h"
 
 namespace MR
 {

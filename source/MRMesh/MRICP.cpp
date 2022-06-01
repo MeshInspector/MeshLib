@@ -1,6 +1,6 @@
 #include "MRICP.h"
 #include "MRMesh.h"
-#include "MRMesh/MRMeshNormals.h"
+#include "MRMeshNormals.h"
 #include "MRGridSampling.h"
 #include "MRTimer.h"
 #include "MRBox.h"

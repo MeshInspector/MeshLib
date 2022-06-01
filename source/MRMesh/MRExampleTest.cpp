@@ -1,10 +1,10 @@
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRTorus.h"
-#include "MRMesh/MRMeshLoad.h"
-#include "MRMesh/MRMeshRelax.h"
-#include "MRMesh/MRMeshSubdivide.h"
-#include "MRMesh/MRAffineXf3.h"
-#include "MRMesh/MRGTest.h"
+#include "MRMesh.h"
+#include "MRTorus.h"
+#include "MRMeshLoad.h"
+#include "MRMeshRelax.h"
+#include "MRMeshSubdivide.h"
+#include "MRAffineXf3.h"
+#include "MRGTest.h"
 #include "MRCube.h"
 
 namespace MR

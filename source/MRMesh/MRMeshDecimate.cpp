@@ -239,17 +239,21 @@ bool MeshDecimator::initializeQueue_()
 
 auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
 {
+    EdgeId e{ ue };
+    const auto o = mesh_.topology.org( e );
+    const auto d = mesh_.topology.org( e.sym() );
+    const auto po = mesh_.points[o];
+    const auto pd = mesh_.points[d];
+    if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
+        return {};
+
     QueueElement res;
     res.uedgeId = ue;
-    EdgeId e{ ue };
-    auto o = mesh_.topology.org( e );
-    auto d = mesh_.topology.org( e.sym() );
-
     QuadraticForm3f qf;
     Vector3f pos;
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {
-        std::tie( qf, pos ) = sum( vertForms_[o], mesh_.points[o], vertForms_[d], mesh_.points[d] );
+        std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
         if ( qf.c > maxErrorSq_ )
             return {};
         res.c = qf.c;
@@ -259,7 +263,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
         res.c = mesh_.edgeLengthSq( e );
         if ( res.c > maxErrorSq_ )
             return {};
-        std::tie( qf, pos ) = sum( vertForms_[o], mesh_.points[o], vertForms_[d], mesh_.points[d] );
+        std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
     }
 
     if ( outCollapseForm )

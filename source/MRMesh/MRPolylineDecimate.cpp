@@ -192,20 +192,24 @@ void PolylineDecimator<V>::initializeQueue_()
 template<typename V>
 auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm, V * outCollapsePos ) const -> std::optional<QueueElement>
 {
+    EdgeId e{ ue };
+    const auto o = polyline_.topology.org( e );
+    const auto d = polyline_.topology.org( e.sym() );
+    const auto po = polyline_.points[o];
+    const auto pd = polyline_.points[d];
+    if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
+        return {};
+    auto [qf, pos] = sum( vertForms_[o], po, vertForms_[d], pd );
+    if ( qf.c > maxErrorSq_ )
+        return {};
+
     QueueElement res;
     res.uedgeId = ue;
-    EdgeId e{ ue };
-    auto o = polyline_.topology.org( e );
-    auto d = polyline_.topology.org( e.sym() );
-    auto [qf, pos] = sum( vertForms_[o], polyline_.points[o], vertForms_[d], polyline_.points[d] );
     res.c = qf.c;
     if ( outCollapseForm )
         *outCollapseForm = qf;
     if ( outCollapsePos )
         *outCollapsePos = pos;
-    if ( qf.c > maxErrorSq_ )
-        return {};
-
     return res;
 }
 

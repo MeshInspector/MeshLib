@@ -19,6 +19,8 @@ struct DecimatePolylineSettings
 {
     /// Limit from above on the maximum distance from moved vertices to original contour
     float maxError = 0.001f;
+    /// Edges longer than this value will not be collapsed (but they can appear after collapsing of shorter ones)
+    float maxEdgeLen = 1;
     /// Stabilizer is dimensionless coefficient.
     /// The larger is stabilizer, the more Decimator will strive to retain the density of input points.
     /// If stabilizer is zero, then only the shape of input line will be preserved.

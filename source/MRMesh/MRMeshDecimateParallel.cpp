@@ -17,6 +17,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     DecimateSettings seqSettings;
     seqSettings.strategy = settings.strategy;
     seqSettings.maxError = settings.maxError;
+    seqSettings.maxEdgeLen = settings.maxEdgeLen;
     seqSettings.maxTriangleAspectRatio = settings.maxTriangleAspectRatio;
     seqSettings.stabilizer = settings.stabilizer;
     seqSettings.region = settings.region;

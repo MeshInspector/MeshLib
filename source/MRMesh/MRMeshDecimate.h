@@ -32,8 +32,10 @@ struct DecimateSettings
     /// for DecimateStrategy::MinimizeError: 
     ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
     /// for DecimateStrategy::ShortestEdgeFirst only:
-    ///   stop the decimation as soon as the longest edge in the mesh is greater than this value
+    ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
     float maxError = 0.001f;
+    /// Edges longer than this value will not be collapsed (but they can appear after collapsing of shorter ones)
+    float maxEdgeLen = 1;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,

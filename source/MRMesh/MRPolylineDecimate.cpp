@@ -76,7 +76,7 @@ private:
     class EdgeMetricCalc;
 
     void initializeQueue_();
-    QueueElement computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm = nullptr, V * outCollapsePos = nullptr ) const;
+    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm = nullptr, V * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
     VertId collapse_( EdgeId edgeToCollapse, const V & collapsePos );
 };
@@ -132,9 +132,8 @@ public:
                 continue;
             if ( !decimator_.isInRegion( e ) )
                 continue;
-            auto qe = decimator_.computeQueueElement_( ue );
-            if ( qe.c <= decimator_.maxErrorSq_ )
-                elems_.push_back( qe );
+            if ( auto qe = decimator_.computeQueueElement_( ue ) )
+                elems_.push_back( *qe );
         }
     }
             
@@ -191,7 +190,7 @@ void PolylineDecimator<V>::initializeQueue_()
 }
 
 template<typename V>
-auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm, V * outCollapsePos ) const -> QueueElement
+auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm<V> * outCollapseForm, V * outCollapsePos ) const -> std::optional<QueueElement>
 {
     QueueElement res;
     res.uedgeId = ue;
@@ -204,6 +203,8 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
         *outCollapseForm = qf;
     if ( outCollapsePos )
         *outCollapsePos = pos;
+    if ( qf.c > maxErrorSq_ )
+        return {};
 
     return res;
 }
@@ -216,9 +217,8 @@ void PolylineDecimator<V>::addInQueueIfMissing_( UndirectedEdgeId ue )
         return;
     if ( presentInQueue_.test_set( ue ) )
         return;
-    auto qe = computeQueueElement_( ue );
-    if ( qe.c <= maxErrorSq_ )
-        queue_.push( qe );
+    if ( auto qe = computeQueueElement_( ue ) )
+        queue_.push( *qe );
 }
 
 template<typename V>
@@ -272,13 +272,15 @@ DecimatePolylineResult PolylineDecimator<V>::run()
         QuadraticForm<V> collapseForm;
         V collapsePos;
         auto qe = computeQueueElement_( topQE.uedgeId, &collapseForm, &collapsePos );
-
-        if ( qe.c > topQE.c )
+        if ( !qe )
         {
-            if ( qe.c <= maxErrorSq_ )
-                queue_.push( qe );
-            else
-                presentInQueue_.reset( topQE.uedgeId );
+            presentInQueue_.reset( topQE.uedgeId );
+            continue;
+        }
+
+        if ( qe->c > topQE.c )
+        {
+            queue_.push( *qe );
             continue;
         }
 

@@ -4,3 +4,7 @@
 
 image:
   file: docker/ubuntuDockerfile
+
+tasks:
+  - name: Install thirdparty libs
+    init: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib

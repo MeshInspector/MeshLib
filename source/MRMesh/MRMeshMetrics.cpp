@@ -154,7 +154,7 @@ double EdgeLengthStitchMetric::getEdgeMetric( const VertId&, const VertId&, cons
 
 VerticalStitchMetric::VerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir ):
     points{ mesh.points },
-    upDirection{ upDir }
+    upDirection{ upDir.normalized() }
 {
     hasEdgeMetric = false;
 }
@@ -165,7 +165,7 @@ double VerticalStitchMetric::getTriangleMetric( const VertId& a, const VertId& b
     auto ac = points[c] - points[a];
 
     auto norm = cross( ab, ac ); // dbl area
-    auto parallelFine = std::abs( dot( upDirection, norm ) );
+    auto parallelFine = std::abs( dot( upDirection, norm.normalized() ) );
 
     return norm.lengthSq() + sqr( parallelFine );
 

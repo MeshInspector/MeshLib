@@ -240,9 +240,10 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap
     }
     for ( auto& [faceId, conts] : face2contoursMap )
     {
+        assert( !conts.empty() );
         Vector3f massCenter;
         int counter = 0;
-        for ( const auto& p : contours.front().intersections )
+        for ( const auto& p : contours[conts.front()].intersections )
         {
             ++counter;
             massCenter += p.coordinate;

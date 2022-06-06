@@ -192,14 +192,17 @@ void removeDegeneratedContours( OneMeshContours& contours )
     for ( int i = int( contours.size() ) - 1; i >= 0; --i )
     {
         bool sameCoord = true;
-        const auto& firstCoord = contours[i].intersections[0].coordinate;
-        for ( int j = 1; j < contours[i].intersections.size(); ++j )
+        if ( !contours[i].intersections.empty() )
         {
-            // we can compare floats here as far as it is result of back-conversion from int
-            if ( contours[i].intersections[j].coordinate != firstCoord )
+            const auto& firstCoord = contours[i].intersections[0].coordinate;
+            for ( int j = 1; j < contours[i].intersections.size(); ++j )
             {
-                sameCoord = false;
-                break;
+                // we can compare floats here as far as it is result of back-conversion from int
+                if ( contours[i].intersections[j].coordinate != firstCoord )
+                {
+                    sameCoord = false;
+                    break;
+                }
             }
         }
         if ( sameCoord )

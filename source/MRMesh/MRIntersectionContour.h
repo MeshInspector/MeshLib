@@ -5,6 +5,9 @@
 namespace MR
 {
 
+struct OneMeshContour;
+using OneMeshContours = std::vector<OneMeshContour>;
+
 struct VariableEdgeTri : EdgeTri
 {
     bool isEdgeATriB{false};
@@ -22,6 +25,9 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 // Detects contours that fully lay inside one triangle
 // returns they indices in contours
 MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours );
+
+// Removes contours with all points in same coordinate
+MRMESH_API void removeDegeneratedContours( OneMeshContours& contours );
 
 // Removes contours that fully lay inside one triangle from the contours
 MRMESH_API void removeLoneContours( ContinuousContours& contours );

@@ -76,6 +76,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         if ( !loneA.empty() && needCutMeshA )
         {
             auto loneIntsA = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, loneA, true, converters, rigidB2A );
+            removeDegeneratedContours( loneIntsA );
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshACut, loneIntsA, mapPointer );
@@ -98,6 +99,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         if ( !loneB.empty() && needCutMeshB )
         {
             auto loneIntsB = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, loneB, false, converters, rigidB2A );
+            removeDegeneratedContours( loneIntsB );
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
             subdivideLoneContours( meshBCut, loneIntsB, mapPointer );

@@ -246,6 +246,20 @@ static VertBitSet getIncidentVerts_( const MeshTopology & topology, const Undire
     return res;
 }
 
+FaceBitSet getIncidentFaces( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
+{
+    MR_TIMER
+    FaceBitSet res( topology.faceSize() );
+    for ( auto ue : edges )
+    {
+        if ( auto l = topology.left( ue ) )
+            res.set( l );
+        if ( auto r = topology.right( ue ) )
+            res.set( r );
+    } 
+    return res;
+}
+
 static VertBitSet getInnerVerts_( const MeshTopology & topology, const UndirectedEdgeBitSet & edges )
 {
     MR_TIMER

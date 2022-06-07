@@ -200,8 +200,6 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
     if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
         return {};
     auto [qf, pos] = sum( vertForms_[o], po, vertForms_[d], pd );
-    if ( qf.c > maxErrorSq_ )
-        return {};
 
     QueueElement res;
     res.uedgeId = ue;
@@ -209,6 +207,8 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
 
     if ( settings_.adjustCollapse )
         settings_.adjustCollapse( ue, res.c, pos );
+    if ( res.c > maxErrorSq_ )
+        return {};
 
     if ( outCollapseForm )
         *outCollapseForm = qf;

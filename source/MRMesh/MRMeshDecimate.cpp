@@ -254,20 +254,24 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {
         std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
-        if ( qf.c > maxErrorSq_ )
+        if ( !settings_.adjustCollapse && qf.c > maxErrorSq_ )
             return {};
         res.c = qf.c;
     }
     else
     {
         res.c = mesh_.edgeLengthSq( e );
-        if ( res.c > maxErrorSq_ )
+        if ( !settings_.adjustCollapse && res.c > maxErrorSq_ )
             return {};
         std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
     }
 
     if ( settings_.adjustCollapse )
+    {
         settings_.adjustCollapse( ue, res.c, pos );
+        if ( res.c > maxErrorSq_ )
+            return {};
+    }
 
     if ( outCollapseForm )
         *outCollapseForm = qf;

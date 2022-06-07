@@ -266,6 +266,9 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
         std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
     }
 
+    if ( settings_.adjustCollapse )
+        settings_.adjustCollapse( ue, res.c, pos );
+
     if ( outCollapseForm )
         *outCollapseForm = qf;
     if ( outCollapsePos )

@@ -42,6 +42,15 @@ struct DecimatePolylineSettings
      */
     std::function<bool( EdgeId edgeToCollapse, const V & newEdgeOrgPos )> preCollapse;
     /**
+     * \brief The user can provide this optional callback for adjusting error introduced by this
+     * edge collapse and the collapse position.
+     * \details On input the callback gets the error and position computed by standard means,
+     * and callback can modify any of them. The larger the error, the later this edge will be collapsed.
+     * This callback can be called from many threads in parallel and must be thread-safe.
+     * This callback can be called many times for each edge before real collapsing, and it is important to make the same adjustment.
+     */
+    std::function<void( UndirectedEdgeId ue, float & collapseError, V & collapsePos )> adjustCollapse;
+    /**
      * \brief  If not null, then
      * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
      * on output: quadratic form for each remaining vertex is returned there

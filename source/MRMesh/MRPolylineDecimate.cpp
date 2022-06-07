@@ -206,6 +206,10 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
     QueueElement res;
     res.uedgeId = ue;
     res.c = qf.c;
+
+    if ( settings_.adjustCollapse )
+        settings_.adjustCollapse( ue, res.c, pos );
+
     if ( outCollapseForm )
         *outCollapseForm = qf;
     if ( outCollapsePos )

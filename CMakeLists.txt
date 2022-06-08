@@ -44,13 +44,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
 
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
-set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
+set(MESHLIB_THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 
-IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
+IF(NOT EXISTS "${MESHLIB_THIRDPARTY_LIB_DIR}")
  message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
 ENDIF()
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-link_directories(${THIRDPARTY_LIB_DIR})
+link_directories(${MESHLIB_THIRDPARTY_LIB_DIR})
 
 find_package(PkgConfig REQUIRED)
 
@@ -76,14 +76,14 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
-  link_directories(${THIRDPARTY_LIB_DIR}/lib)
+  link_directories(${MESHLIB_THIRDPARTY_LIB_DIR}/lib)
   link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
-  include_directories(${THIRDPARTY_LIB_DIR}/libzip)
+  include_directories(${MESHLIB_THIRDPARTY_LIB_DIR}/libzip)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s ALLOW_MEMORY_GROWTH=1 -s USE_LIBPNG=1")

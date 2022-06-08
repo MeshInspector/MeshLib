@@ -73,11 +73,11 @@ ELSE()
 	find_package(tl-expected REQUIRED)
 	set(CPR_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/cpr)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CPR_DIR}/include)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${THIRDPARTY_LIB_DIR}/cpr/cpr_generated_includes)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/cpr/cpr_generated_includes)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
 
-	set(CURL_INCLUDES ${THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)
+	set(CURL_INCLUDES ${MESHLIB_THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDES})
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -73,12 +73,12 @@ private:
         float yPos{ FLT_MAX };
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
-    struct LoneRightMostLeft
+    struct LoneRightmostLeft
     {
         EdgeId id;
         EdgeId upper;
         EdgeId lower;
-    } loneRightMostLeft_;
+    } loneRightmostLeft_;
     bool processOneVert_( VertId v );
     bool resolveIntersectios_();
 };
@@ -365,28 +365,28 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
         windingInfo_.resize( newE.undirected() + 1 );
         windingInfo_[newE.undirected()].winding = 1; // mark inside
-        loneRightMostLeft_.id = EdgeId{};
+        loneRightmostLeft_.id = EdgeId{};
     }
 
-    // connect rightmost left with no left edges to this edge, if needed
-    if ( loneRightMostLeft_.id )
+    // connect rightmost left with no right edges to this edge, if needed
+    if ( loneRightmostLeft_.id )
     {
         bool canConnect =
-            ( v == mesh_.topology.dest( loneRightMostLeft_.lower ) &&
-                v == mesh_.topology.dest( loneRightMostLeft_.upper ) ) ||
-            ( v == mesh_.topology.dest( loneRightMostLeft_.lower ) &&
+            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
+                v == mesh_.topology.dest( loneRightmostLeft_.upper ) ) ||
+            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
                 activeVPosition != INT_MAX &&
-                activeSweepEdges_[activeVPosition + 1].id == loneRightMostLeft_.upper ) ||
-            ( v == mesh_.topology.dest( loneRightMostLeft_.upper ) &&
+                activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper ) ||
+            ( v == mesh_.topology.dest( loneRightmostLeft_.upper ) &&
                 activeVPosition != -1 &&
-                activeSweepEdges_[activeVPosition != INT_MAX ? activeVPosition : int( activeSweepEdges_.size() )].id == loneRightMostLeft_.lower ) ||
+                activeSweepEdges_[activeVPosition != INT_MAX ? activeVPosition : int( activeSweepEdges_.size() )].id == loneRightmostLeft_.lower ) ||
             ( activeVPosition != -1 && activeVPosition != INT_MAX &&
-                activeSweepEdges_[activeVPosition].id == loneRightMostLeft_.lower &&
-               activeSweepEdges_[activeVPosition + 1].id == loneRightMostLeft_.upper );
+                activeSweepEdges_[activeVPosition].id == loneRightmostLeft_.lower &&
+               activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper );
 
         if ( canConnect )
         {
-            const auto& orgPt = mesh_.orgPnt( loneRightMostLeft_.id );
+            const auto& orgPt = mesh_.orgPnt( loneRightmostLeft_.id );
 
             Vector3f baseVec = ( orgPt - mesh_.points[v] ).normalized();
             float maxDiffAng = -FLT_MAX;
@@ -402,14 +402,14 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 }
             }
             auto newE = mesh_.topology.makeEdge();
-            mesh_.topology.splice( loneRightMostLeft_.id, newE );
+            mesh_.topology.splice( loneRightmostLeft_.id, newE );
             mesh_.topology.splice( maxDiffE, newE.sym() );
 
             windingInfo_.resize( newE.undirected() + 1 );
             windingInfo_[newE.undirected()].winding = 1; // mark inside
             if ( maxDiffE == lowestLeftEdge && activePoint.y > orgPt.y )
                 lowestLeftEdge = newE.sym();
-            loneRightMostLeft_.id = EdgeId{};
+            loneRightmostLeft_.id = EdgeId{};
         }
     }
 
@@ -424,9 +424,9 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     {
         assert( hasLeft );
         activeSweepEdges_[activeVPosition].helperId = lowestLeftEdge;
-        loneRightMostLeft_.id = lowestLeftEdge;
-        loneRightMostLeft_.lower = activeSweepEdges_[activeVPosition].id;
-        loneRightMostLeft_.upper = activeSweepEdges_[activeVPosition + 1].id;
+        loneRightmostLeft_.id = lowestLeftEdge;
+        loneRightmostLeft_.lower = activeSweepEdges_[activeVPosition].id;
+        loneRightmostLeft_.upper = activeSweepEdges_[activeVPosition + 1].id;
     }
 
     int windingLast = 0;

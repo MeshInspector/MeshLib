@@ -19,7 +19,7 @@ const IOFilters Filters =
     {"PTS (.pts)",        "*.pts"}
 };
 
-tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/ )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -28,7 +28,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, const std::file
     return toPly( points, out, colors );
 }
 
-tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const std::vector<Color>* colors /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/ )
 {
     MR_TIMER;
 
@@ -74,7 +74,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     return {};
 }
 
-tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors /*= nullptr */,
+tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/ )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -84,7 +84,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, const std::file
     return toCtm( points, out, colors, options );
 }
 
-tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const std::vector<Color>* colors /*= nullptr */,
+tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/ )
 {
     MR_TIMER;
@@ -124,7 +124,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     {
         colors4f.resize( colors->size() );
         for ( int i = 0; i < colors4f.size(); ++i )
-            colors4f[i] = Vector4f( ( *colors )[i] );
+            colors4f[i] = Vector4f( ( *colors )[VertId{i}] );
 
         ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
     }
@@ -164,7 +164,7 @@ tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& o
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors /*= nullptr */ )
+tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */ )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -179,7 +179,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
         res = MR::PointsSave::toPts( points, file );
     return res;
 }
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const std::vector<Color>* colors /*= nullptr */ )
+tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */ )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

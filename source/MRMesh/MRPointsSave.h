@@ -21,8 +21,8 @@ namespace PointsSave
 MRMESH_API extern const IOFilters Filters;
 
 /// saves in .ply file
-MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors = nullptr );
-MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const std::vector<Color>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors = nullptr );
 
 struct CtmSavePointsOptions
 {
@@ -33,9 +33,9 @@ struct CtmSavePointsOptions
 };
 
 /// saves in .ctm file
-MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors = nullptr,
+MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
                                                   const CtmSavePointsOptions& options = {} );
-MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const std::vector<Color>* colors = nullptr,
+MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors = nullptr,
                                                   const CtmSavePointsOptions& options = {} );
 
 /// saves in .pts file
@@ -43,9 +43,9 @@ MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, cons
 MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out );
 
 /// detects the format from file extension and save points to it
-MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const std::vector<Color>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr );
 /// extension in `*.ext` format
-MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const std::vector<Color>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors = nullptr );
 
 /// \}
 

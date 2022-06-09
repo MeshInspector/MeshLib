@@ -65,6 +65,8 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowBordersHighlight"] = showBordersHighlight_.value();
     root["ShowSelectedEdges"] = showSelectedEdges_.value();
     root["FaceBased"] = !flatShading_.empty();
+    root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
+
     // edges
     serializeToJson( Vector4f( edgesColor_ ), root["Colors"]["Edges"] );
     // borders
@@ -94,6 +96,12 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         showSelectedEdges_ = ViewportMask{ root["ShowSelectedEdges"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
         flatShading_ = root["FaceBased"].asBool() ? ViewportMask::all() : ViewportMask{};
+    if ( root["ColoringType"].isString() )
+    {
+        const auto stype = root["ColoringType"].asString();
+        if ( stype == "PerVertex" )
+            setColoringType( ColoringType::VertsColorMap );
+    }
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -116,9 +124,6 @@ tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::
     auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
-
-    if ( !vertsColorMap_.empty() )
-        setColoringType( ColoringType::VertsColorMap );
 
     mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};

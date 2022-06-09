@@ -48,8 +48,12 @@ tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( 
     if ( ancillary_ || !mesh_ )
         return {};
 
-    return std::async( getAsyncLaunchType(),
-        [mesh = mesh_, filename = path.u8string() + u8".ctm"]() { MR::MeshSave::toCtm( *mesh, filename ); } );
+    auto save = [mesh = mesh_, filename = path.u8string() + u8".ctm", this]() 
+    { 
+        MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
+    };
+
+    return std::async( getAsyncLaunchType(), save );
 }
 
 void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
@@ -108,9 +112,13 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path )
 {
-    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm" );
+    vertsColorMap_.clear();
+    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
+
+    if ( !vertsColorMap_.empty() )
+        setColoringType( ColoringType::VertsColorMap );
 
     mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};

@@ -36,8 +36,8 @@ MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const
 MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out );
 
 /// saves in .ply file
-MRMESH_API tl::expected<void, std::string> toPly( const Mesh& mesh, const std::filesystem::path& file, const std::vector<Color>* perVertColors = nullptr );
-MRMESH_API tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const std::vector<Color>* perVertColors = nullptr );
+MRMESH_API tl::expected<void, std::string> toPly( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors = nullptr );
 
 struct CtmSaveOptions
 {
@@ -60,13 +60,13 @@ struct CtmSaveOptions
 };
 
 /// saves in .ctm file
-MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {} );
-MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {} );
+MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr );
+MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr );
 
 /// detects the format from file extension and save mesh to it
-MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const std::vector<Color>* perVertColors = nullptr );
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors = nullptr );
 /// extension in `*.ext` format
-MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const std::vector<Color>* perVertColors = nullptr );
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors = nullptr );
 
 /// \}
 

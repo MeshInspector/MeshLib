@@ -180,21 +180,21 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
     return {};
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem::path & file, const std::vector<Color>* perVertColors )
+tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPly( mesh, out, perVertColors );
+    return toPly( mesh, out, colors );
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const std::vector<Color>* perVertColors )
+tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors )
 {
     MR_TIMER
 
     int numVertices = mesh.topology.lastValidVert() + 1;
-    bool saveColors = perVertColors && perVertColors->size() >= numVertices;
+    bool saveColors = colors && colors->size() >= numVertices;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numVertices << "\nproperty float x\nproperty float y\nproperty float z\n";
@@ -211,11 +211,11 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     }
     else
     {
-        static_assert( sizeof( perVertColors->front() ) == 4, "wrong size of Color" );
-        for ( int i = 0; i < numVertices; ++i )
+        static_assert( sizeof( colors->front() ) == 4, "wrong size of Color" );
+        for ( VertId i{ 0 }; i < numVertices; ++i )
         {
-            out.write( (const char*) &mesh.points[VertId( i )].x, 12 );
-            out.write( (const char*) &( *perVertColors )[i].r, 3 ); // write only r g b, not a
+            out.write( (const char*) &mesh.points[i].x, 12 );
+            out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
         }
     }
 
@@ -242,16 +242,16 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     return {};
 }
 
-tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options )
+tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toCtm( mesh, out, options );
+    return toCtm( mesh, out, options, colors );
 }
 
-tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options )
+tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors )
 {
     MR_TIMER
 
@@ -310,6 +310,20 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
     if ( ctmGetError(context) != CTM_NONE )
         return tl::make_unexpected( "Error encoding in CTM-format" );
 
+    std::vector<Vector4f> colors4f; // should be alive when save is performed
+    if ( colors )
+    {
+        colors4f.resize( aVertexCount );
+        const auto maxV = (int)std::min( aVertexCount, (CTMuint)colors->size() );
+        for ( VertId i{ 0 }; i < maxV; ++i )
+            colors4f[i] = Vector4f( ( *colors )[i] );
+
+        ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
+    }
+
+    if ( ctmGetError( context ) != CTM_NONE )
+        return tl::make_unexpected( "Error encoding in CTM-format colors" );
+
     ctmSaveCustom( context, []( const void * buf, CTMuint size, void * data )
     {
         std::ostream & s = *reinterpret_cast<std::ostream *>( data );
@@ -323,7 +337,7 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const std::vector<Color>* perVertColors )
+tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors )
 {
     auto ext = file.extension().u8string();
     for ( auto & c : ext )
@@ -337,15 +351,15 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
     else if ( ext == u8".stl" )
         res = MR::MeshSave::toBinaryStl( mesh, file );
     else if ( ext == u8".ply" )
-        res = MR::MeshSave::toPly( mesh, file, perVertColors );
+        res = MR::MeshSave::toPly( mesh, file, colors );
     else if ( ext == u8".ctm" )
-        res = MR::MeshSave::toCtm( mesh, file );
+        res = MR::MeshSave::toCtm( mesh, file, {}, colors );
     else if ( ext == u8".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, file );
     return res;
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const std::vector<Color>* perVertColors /*= nullptr */ )
+tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */ )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -359,9 +373,9 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ost
     else if ( ext == ".stl" )
         res = MR::MeshSave::toBinaryStl( mesh, out );
     else if ( ext == ".ply" )
-        res = MR::MeshSave::toPly( mesh, out, perVertColors );
+        res = MR::MeshSave::toPly( mesh, out, colors );
     else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, out );
+        res = MR::MeshSave::toCtm( mesh, out, {}, colors );
     else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, out );
     return res;

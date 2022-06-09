@@ -73,6 +73,12 @@ private:
         float yPos{ FLT_MAX };
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
+    struct LoneRightmostLeft
+    {
+        EdgeId id;
+        EdgeId upper;
+        EdgeId lower;
+    } loneRightmostLeft_;
     bool processOneVert_( VertId v );
     bool resolveIntersectios_();
 };
@@ -312,26 +318,36 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     {
         auto org = mesh_.orgPnt( activeSweepEdges_[i].id );
         auto dest = mesh_.destPnt( activeSweepEdges_[i].id );
-        auto n = Vector3f{ activePoint.x - org.x,0.0f,0.0f };
-        if ( n.x == 0.0f )
+        auto xLength = dest.x - org.x;
+        assert( xLength >= 0.0f );
+        auto aXLength = activePoint.x - org.x;
+        if ( xLength == 0.0f )
             activeSweepEdges_[i].yPos = ( org.y + dest.y ) * 0.5f; // vertical edge (as far as edges cannot intersect on the sweep line, we can safely use middle point as yPos )
         else
-            activeSweepEdges_[i].yPos = ( org + ( dest - org ) * ( n.lengthSq() / dot( dest - org, n ) ) ).y;
+        {
+            auto ratio = aXLength / xLength;
+            activeSweepEdges_[i].yPos = ( 1 - ratio ) * org.y + ratio * dest.y;
+        }
         if ( activePoint.y < activeSweepEdges_[i].yPos && activeVPosition == INT_MAX )
             activeVPosition = i - 1;
     }
 
     // find lowest rightGoingEdge (for correct insertion right edges into active sweep edges)
+    auto findAngle = [&] ( const Vector3f& target, const Vector3f& baseVec )->float
+    {
+        auto edgeVec = ( target - mesh_.points[v] ).normalized();
+        auto crossRes = cross( baseVec, edgeVec );
+        float ang = std::atan2( std::copysign( crossRes.length(), crossRes.z ), dot( baseVec, edgeVec ) );
+        if ( ang < 0.0f )
+            ang += 2.0f * PI_F;
+        return ang;
+    };
     assert( hasLeft || !rightGoingEdges.empty() );
     int lowestRight = INT_MAX;
     float minAng = FLT_MAX;
     for ( int i = 0; i < rightGoingEdges.size(); ++i )
     {
-        auto edgeVec = mesh_.edgeVector( rightGoingEdges[i].id ).normalized();
-        auto crossRes = cross( Vector3f::minusY(), edgeVec );
-        float ang = std::atan2( std::copysign( crossRes.length(), crossRes.z ), dot( Vector3f::minusY(), edgeVec ) );
-        if ( ang < 0.0f )
-            ang += 2.0f * PI_F;
+        float ang = findAngle( mesh_.destPnt( rightGoingEdges[i].id ), Vector3f::minusY() );
         if ( ang < minAng )
         {
             minAng = ang;
@@ -349,6 +365,52 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
         windingInfo_.resize( newE.undirected() + 1 );
         windingInfo_[newE.undirected()].winding = 1; // mark inside
+        loneRightmostLeft_.id = EdgeId{};
+    }
+
+    // connect rightmost left with no right edges to this edge, if needed
+    if ( loneRightmostLeft_.id )
+    {
+        bool canConnect =
+            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
+                v == mesh_.topology.dest( loneRightmostLeft_.upper ) ) ||
+            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
+                activeVPosition != INT_MAX &&
+                activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper ) ||
+            ( v == mesh_.topology.dest( loneRightmostLeft_.upper ) &&
+                activeVPosition != -1 &&
+                activeSweepEdges_[activeVPosition != INT_MAX ? activeVPosition : int( activeSweepEdges_.size() )].id == loneRightmostLeft_.lower ) ||
+            ( activeVPosition != -1 && activeVPosition != INT_MAX &&
+                activeSweepEdges_[activeVPosition].id == loneRightmostLeft_.lower &&
+               activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper );
+
+        if ( canConnect )
+        {
+            const auto& orgPt = mesh_.orgPnt( loneRightmostLeft_.id );
+
+            Vector3f baseVec = ( orgPt - mesh_.points[v] ).normalized();
+            float maxDiffAng = -FLT_MAX;
+            EdgeId maxDiffE;
+            for ( auto e : orgRing( mesh_.topology, v ) )
+            {
+                auto diffAng = findAngle( mesh_.destPnt( e ), baseVec );
+
+                if ( diffAng > maxDiffAng )
+                {
+                    maxDiffAng = diffAng;
+                    maxDiffE = e;
+                }
+            }
+            auto newE = mesh_.topology.makeEdge();
+            mesh_.topology.splice( loneRightmostLeft_.id, newE );
+            mesh_.topology.splice( maxDiffE, newE.sym() );
+
+            windingInfo_.resize( newE.undirected() + 1 );
+            windingInfo_[newE.undirected()].winding = 1; // mark inside
+            if ( maxDiffE == lowestLeftEdge && activePoint.y > orgPt.y )
+                lowestLeftEdge = newE.sym();
+            loneRightmostLeft_.id = EdgeId{};
+        }
     }
 
     // insert right going to active
@@ -362,6 +424,9 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     {
         assert( hasLeft );
         activeSweepEdges_[activeVPosition].helperId = lowestLeftEdge;
+        loneRightmostLeft_.id = lowestLeftEdge;
+        loneRightmostLeft_.lower = activeSweepEdges_[activeVPosition].id;
+        loneRightmostLeft_.upper = activeSweepEdges_[activeVPosition + 1].id;
     }
 
     int windingLast = 0;

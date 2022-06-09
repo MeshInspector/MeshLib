@@ -45,6 +45,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-com
 
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
+set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
 
 IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
  message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")

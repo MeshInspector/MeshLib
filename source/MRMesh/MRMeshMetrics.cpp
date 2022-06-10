@@ -173,7 +173,7 @@ double VerticalStitchMetric::getTriangleMetric( const VertId& a, const VertId& b
     // side length sq sq - m^4
     return 
         norm.lengthSq() + 
-        sqr( parallelPenalty ) + 
+        100.0f * sqr( parallelPenalty ) + // this should be big
         sqr( ab.lengthSq() + ac.lengthSq() + ( points[c] - points[b] ).lengthSq() ) * 0.5f;
 
 }

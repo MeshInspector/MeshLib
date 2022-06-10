@@ -20,7 +20,7 @@ namespace MR
 namespace MeshLoad
 {
 
-tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path & file, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path & file, Vector<Color, VertId>* )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -29,7 +29,7 @@ tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path & file, 
     return fromMrmesh( in );
 }
 
-tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, VertId>* )
 {
     MR_TIMER
 
@@ -50,7 +50,7 @@ tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, std::vector<Color>
     return std::move( mesh );
 }
 
-tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, Vector<Color, VertId>* )
 {
     std::ifstream in( file );
     if ( !in )
@@ -59,7 +59,7 @@ tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, std
     return fromOff( in );
 }
 
-tl::expected<Mesh, std::string> fromOff( std::istream& in, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>* )
 {
     MR_TIMER
     std::string header;
@@ -103,7 +103,7 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, std::vector<Color>* )
     return std::move( res );
 }
 
-tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vector<Color, VertId>* )
 {
     std::ifstream in( file );
     if ( !in )
@@ -112,7 +112,7 @@ tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, std
     return fromObj( in );
 }
 
-tl::expected<Mesh, std::string> fromObj( std::istream& in, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>* )
 {
     MR_TIMER
 
@@ -125,7 +125,7 @@ tl::expected<Mesh, std::string> fromObj( std::istream& in, std::vector<Color>* )
     return std::move( (*objs)[0].mesh );
 }
 
-tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, std::vector<Color>* )
+tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, Vector<Color, VertId>* )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -134,7 +134,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& fil
     return fromAnyStl( in );
 }
 
-tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, std::vector<Color>* )
+tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, Vector<Color, VertId>* )
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in );
@@ -148,7 +148,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, std::vector<Co
     return tl::make_unexpected( resBin.error() + '\n' + resAsc.error() );
 }
 
-tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, Vector<Color, VertId>* )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -157,7 +157,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & fil
     return fromBinaryStl( in );
 }
 
-tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, VertId>* )
 {
     MR_TIMER
 
@@ -243,7 +243,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, std::vector<Col
     return std::move( res );
 }
 
-tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, Vector<Color, VertId>* )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -253,7 +253,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file,
 
 }
 
-tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, std::vector<Color>* )
+tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, VertId>* )
 {
     MR_TIMER;
 
@@ -322,7 +322,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, std::vector<Colo
     return std::move( res );
 }
 
-tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -331,7 +331,7 @@ tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, std:
     return fromPly( in, colors );
 }
 
-tl::expected<Mesh, std::string> fromPly( std::istream& in, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors )
 {
     MR_TIMER
 
@@ -398,7 +398,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, std::vector<Color>* c
     if ( colors && !colorsBuffer.empty() )
     {
         colors->resize( res.points.size() );
-        for ( int i = 0; i < res.points.size(); ++i )
+        for ( VertId i{ 0 }; i < res.points.size(); ++i )
         {
             int ind = 3 * i;
             ( *colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
@@ -409,7 +409,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, std::vector<Color>* c
     return std::move( res );
 }
 
-tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -418,7 +418,7 @@ tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, std
     return fromCtm( in, colors );
 }
 
-tl::expected<Mesh, std::string> fromCtm( std::istream & in, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId>* colors )
 {
     MR_TIMER
 
@@ -456,7 +456,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, std::vector<Color>* 
         {
             auto colorArray = ctmGetFloatArray( context, colorAttrib );
             colors->resize( vertCount );
-            for ( CTMuint i = 0; i < vertCount; ++i )
+            for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
             {
                 auto j = 4 * i;
                 (*colors)[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
@@ -479,7 +479,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, std::vector<Color>* 
     return std::move( mesh );
 }
 
-tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors )
 {
     auto ext = file.extension().u8string();
     for ( auto & c : ext )
@@ -502,7 +502,7 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::p
     return loader( file, colors );
 }
 
-tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, std::vector<Color>* colors )
+tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors )
 {
     auto ext = extension;
     for ( auto& c : ext )
@@ -525,7 +525,7 @@ tl::expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const 
 }
 
 /*
-MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<tl::expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,std::vector<Color>*)>(fromMrmesh)}} );
+MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<tl::expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,Vector<Color, VertId>*)>(fromMrmesh)}} );
 */
 
 MR_ADD_MESH_LOADER( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh )

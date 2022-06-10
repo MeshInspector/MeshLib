@@ -192,14 +192,14 @@ tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_
     if ( ancillary_ || !points_ )
         return {};
 
-    const std::vector<Color>* colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_.vec_;
+    const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
 }
 
 tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path )
 {
-    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_.vec_ );
+    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

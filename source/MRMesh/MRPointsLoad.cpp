@@ -23,7 +23,7 @@ const IOFilters Filters =
     {"PTS (.pts)",        "*.pts"}
 };
 
-tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -32,7 +32,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& 
     return fromCtm( in, colors );
 }
 
-tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     MR_TIMER;
 
@@ -70,7 +70,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, std::vector
         {
             auto colorArray = ctmGetFloatArray( context, colorAttrib );
             colors->resize( vertCount );
-            for ( CTMuint i = 0; i < vertCount; ++i )
+            for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
             {
                 auto j = 4 * i;
                 ( *colors )[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
@@ -95,7 +95,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, std::vector
     return points;
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -104,7 +104,7 @@ tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& 
     return fromPly( in, colors );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     MR_TIMER;
 
@@ -147,7 +147,7 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, std::vector
     if ( colors && !colorsBuffer.empty() )
     {
         colors->resize( res.points.size() );
-        for ( int i = 0; i < res.points.size(); ++i )
+        for ( VertId i{ 0 }; i < res.points.size(); ++i )
         {
             int ind = 3 * i;
             ( *colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
@@ -287,7 +287,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in )
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -307,7 +307,7 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
     return res;
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, std::vector<Color>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors /*= nullptr */ )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

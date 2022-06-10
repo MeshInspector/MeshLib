@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRId.h"
-#include "MRMeshFwd.h"
 #include <cfloat>
 
 namespace MR

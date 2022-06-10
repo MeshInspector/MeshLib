@@ -268,9 +268,12 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
 
     if ( settings_.adjustCollapse )
     {
+        const auto pos0 = pos;
         settings_.adjustCollapse( ue, res.c, pos );
         if ( res.c > maxErrorSq_ )
             return {};
+        if ( outCollapseForm && pos != pos0 )
+            qf.c = vertForms_[o].eval( po - pos ) + vertForms_[d].eval( pd - pos );
     }
 
     if ( outCollapseForm )

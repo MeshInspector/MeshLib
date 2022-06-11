@@ -111,19 +111,19 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 // finds best candidate among all given steps
 void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,
     const FillHoleMetric& metricRef,
-    const std::vector<unsigned>& optimalStepsCache, WeightedConn& proccessedConn )
+    const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
     for ( unsigned s = 0; s < optimalStepsCache.size(); ++s )
     {
         auto v = optimalStepsCache[s];
-        const auto& abConn = map[proccessedConn.a][v];
-        const auto& bcConn = map[v][proccessedConn.b];
+        const auto& abConn = map[processedConn.a][v];
+        const auto& bcConn = map[v][processedConn.b];
         double weight = abConn.weight + bcConn.weight;
-        if ( weight > proccessedConn.weight )
+        if ( weight > processedConn.weight )
             continue;
 
-        VertId aVert = topology.org( loop[proccessedConn.a] );
-        VertId bVert = topology.org( loop[proccessedConn.b] );
+        VertId aVert = topology.org( loop[processedConn.a] );
+        VertId bVert = topology.org( loop[processedConn.b] );
 
         if ( aVert == bVert )
             continue;
@@ -132,12 +132,12 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         weight += metricRef.getTriangleMetric(
             aVert, topology.org( loop[v] ), bVert,
             !bcConn.hasPrev() ? topology.dest( topology.prev( loop[v] ) ) : topology.org( loop[bcConn.prevA] ),
-            !abConn.hasPrev() ? topology.dest( topology.prev( loop[proccessedConn.a] ) ) : topology.org( loop[abConn.prevA] )
+            !abConn.hasPrev() ? topology.dest( topology.prev( loop[processedConn.a] ) ) : topology.org( loop[abConn.prevA] )
         );
-        if ( weight < proccessedConn.weight )
+        if ( weight < processedConn.weight )
         {
-            proccessedConn.weight = weight;
-            proccessedConn.prevA = v; // In this case prevA describes chosen triangulation
+            processedConn.weight = weight;
+            processedConn.prevA = v; // In this case prevA describes chosen triangulation
         }
     }
 }

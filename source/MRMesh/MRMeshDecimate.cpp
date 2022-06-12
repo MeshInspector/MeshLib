@@ -298,6 +298,12 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
 {
     auto & topology = mesh_.topology;
+    // cannot collapse edge if its left and right faces share another edge
+    if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
+        return {};
+    if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+        return {};
+
     const auto vo = topology.org( edgeToCollapse );
     const auto vd = topology.dest( edgeToCollapse );
     const auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};

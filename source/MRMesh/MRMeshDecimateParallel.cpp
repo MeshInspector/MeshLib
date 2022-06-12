@@ -20,12 +20,20 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     seqSettings.maxEdgeLen = settings.maxEdgeLen;
     seqSettings.maxTriangleAspectRatio = settings.maxTriangleAspectRatio;
     seqSettings.stabilizer = settings.stabilizer;
+    seqSettings.optimizeVertexPos = settings.optimizeVertexPos;
     seqSettings.region = settings.region;
     if ( settings.preCollapse )
     {
         seqSettings.preCollapse = [&mesh, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool
         {
             return cb( mesh.topology.org( edgeToCollapse ), mesh.topology.dest( edgeToCollapse ), newEdgeOrgPos );
+        };
+    }
+    if ( settings.adjustCollapse )
+    {
+        seqSettings.adjustCollapse = [&mesh, cb = settings.adjustCollapse]( MR::EdgeId edgeToCollapse, float & collapseErrorSq, Vector3f & collapsePos )
+        {
+            cb( mesh.topology.org( edgeToCollapse ), mesh.topology.dest( edgeToCollapse ), collapseErrorSq, collapsePos );
         };
     }
 
@@ -107,6 +115,16 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
                         vertSubToFull[ submesh.m.topology.org( edgeToCollapse ) ],
                         vertSubToFull[ submesh.m.topology.dest( edgeToCollapse ) ],
                         newEdgeOrgPos );
+                };
+            }
+            if ( settings.adjustCollapse )
+            {
+                subSeqSettings.adjustCollapse = [&submesh, &vertSubToFull, cb = settings.adjustCollapse]( MR::EdgeId edgeToCollapse, float & collapseErrorSq, Vector3f & collapsePos )
+                {
+                    cb( 
+                        vertSubToFull[ submesh.m.topology.org( edgeToCollapse ) ],
+                        vertSubToFull[ submesh.m.topology.dest( edgeToCollapse ) ],
+                        collapseErrorSq, collapsePos );
                 };
             }
             if ( reportProgressFromThisThread )

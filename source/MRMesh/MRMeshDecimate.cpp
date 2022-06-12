@@ -244,26 +244,30 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     const auto d = mesh_.topology.org( e.sym() );
     const auto po = mesh_.points[o];
     const auto pd = mesh_.points[d];
+    const auto vo = vertForms_[o];
+    const auto vd = vertForms_[d];
     if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
         return {};
 
     QueueElement res;
     res.uedgeId = ue;
-    QuadraticForm3f qf;
-    Vector3f pos;
-    if ( settings_.strategy == DecimateStrategy::MinimizeError )
-    {
-        std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
-        if ( !settings_.adjustCollapse && qf.c > maxErrorSq_ )
-            return {};
-        res.c = qf.c;
-    }
-    else
+
+    if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )
     {
         res.c = mesh_.edgeLengthSq( e );
         if ( !settings_.adjustCollapse && res.c > maxErrorSq_ )
             return {};
-        std::tie( qf, pos ) = sum( vertForms_[o], po, vertForms_[d], pd );
+    }
+
+    QuadraticForm3f qf;
+    Vector3f pos;
+    std::tie( qf, pos ) = sum( vo, po, vd, pd, !settings_.optimizeVertexPos );
+
+    if ( settings_.strategy == DecimateStrategy::MinimizeError )
+    {
+        if ( !settings_.adjustCollapse && qf.c > maxErrorSq_ )
+            return {};
+        res.c = qf.c;
     }
 
     if ( settings_.adjustCollapse )
@@ -273,7 +277,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
         if ( res.c > maxErrorSq_ )
             return {};
         if ( outCollapseForm && pos != pos0 )
-            qf.c = vertForms_[o].eval( po - pos ) + vertForms_[d].eval( pd - pos );
+            qf.c = vo.eval( po - pos ) + vd.eval( pd - pos );
     }
 
     if ( outCollapseForm )
@@ -304,10 +308,19 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
         return {};
 
-    const auto vo = topology.org( edgeToCollapse );
-    const auto vd = topology.dest( edgeToCollapse );
-    const auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
-    const auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
+    auto vo = topology.org( edgeToCollapse );
+    auto vd = topology.dest( edgeToCollapse );
+    auto po = mesh_.points[vo];
+    auto pd = mesh_.points[vd];
+    if ( !settings_.optimizeVertexPos && collapsePos == pd )
+    {
+        // reverse the edge to have its origin in remaining fixed vertex
+        edgeToCollapse = edgeToCollapse.sym();
+        std::swap( vo, vd );
+        std::swap( po, pd );
+    }
+    auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
+    auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
     auto dirDblArea = [&]( VertId nei1, VertId nei2 )
     {
@@ -326,7 +339,6 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
-    const Vector3f oldOrig = mesh_.points[vo];
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
         auto eDest = topology.dest( e );
@@ -342,11 +354,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             sumDblArea_ += Vector3d{ da };
             maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, eDest, eDest2 ) );
         }
-        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( oldOrig, eDest, eDest2 ) );
+        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, eDest, eDest2 ) );
     }
     std::sort( originNeis_.begin(), originNeis_.end() );
 
-    const Vector3f oldDest = mesh_.points[vd];
     for ( EdgeId e : orgRing0( topology, edgeToCollapse.sym() ) )
     {
         auto eDest = topology.dest( e );
@@ -361,14 +372,14 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             sumDblArea_ += Vector3d{ da };
             maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, eDest, eDest2 ) );
         }
-        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( oldDest, eDest, eDest2 ) );
+        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, eDest, eDest2 ) );
     }
 
     if ( maxNewAspectRatio > maxOldAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( ( oldOrig != oldDest ) || ( oldOrig != collapsePos ) )
+    if ( ( po != pd ) || ( po != collapsePos ) )
     {
         auto n = Vector3f{ sumDblArea_.normalized() };
         for ( const auto da : triDblAreas_ )

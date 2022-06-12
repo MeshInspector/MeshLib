@@ -41,6 +41,9 @@ struct DecimateSettings
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
+    /// if true then after each edge collapse the position of remaining vertex is optimized to
+    /// minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position
+    bool optimizeVertexPos = true;
     /// Limit on the number of deleted vertices
     int maxDeletedVertices = INT_MAX;
     /// Limit on the number of deleted faces

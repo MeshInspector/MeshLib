@@ -84,6 +84,7 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
+    <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
@@ -329,6 +330,7 @@
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
+    <ClCompile Include="MRObjectLabel.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />

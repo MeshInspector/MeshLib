@@ -15,38 +15,38 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

@@ -58,7 +58,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 else
   cd lib
   cmake ../${MR_THIRDPARTY_DIR}
-  make -j 8 #VERBOSE=1
+  make -j `nproc` #VERBOSE=1
   cd ..
 fi
 

@@ -6,6 +6,7 @@
 #include <ostream>
 #include <string>
 #include "MRIOFilters.h"
+#include "MRAffineXf3.h"
 
 namespace MR
 {
@@ -28,8 +29,10 @@ MRMESH_API tl::expected<void, std::string> toOff( const Mesh & mesh, const std::
 MRMESH_API tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out );
 
 /// saves in .obj file
-MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file );
-MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out );
+/// \param xf will be applied to all mesh vertices prior to saving;
+/// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
+MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf = {}, int firstVertId = 1 );
+MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf = {}, int firstVertId = 1 );
 
 /// saves in binary .stl file
 MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file );

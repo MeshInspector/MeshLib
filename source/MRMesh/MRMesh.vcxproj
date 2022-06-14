@@ -160,7 +160,7 @@
     <ClInclude Include="MRMeshDistance.h" />
     <ClInclude Include="MRMeshEdgePoint.h" />
     <ClInclude Include="MRMeshFixer.h" />
-    <ClInclude Include="MRMeshLabel.h" />
+    <ClInclude Include="MRPositionedText.h" />
     <ClInclude Include="MRMeshMetrics.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshProject.h" />

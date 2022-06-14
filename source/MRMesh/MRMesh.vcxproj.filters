@@ -342,7 +342,7 @@
     <ClInclude Include="MRColor.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshLabel.h">
+    <ClInclude Include="MRPositionedText.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePaths.h">

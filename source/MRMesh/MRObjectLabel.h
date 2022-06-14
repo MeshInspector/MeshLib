@@ -6,7 +6,7 @@ namespace MR
 {
 
 
-/// This object type render label in scene
+/// This object type renders label in scene
 /// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectLabel : public VisualObject
 {
@@ -31,7 +31,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    /// sets size of label font on screen in pixels
+    /// sets size of label font in pixels
     virtual void setFontHeight( float size )
     {
         fontHeight_ = size;
@@ -43,8 +43,8 @@ public:
     }
 
     /// sets text and position of label
-    MRMESH_API void setLabel( const MeshLabel& label );
-    const MeshLabel& getLabel() const { return label_; }
+    MRMESH_API void setLabel( const PositionedText& label );
+    const PositionedText& getLabel() const { return label_; }
 
     /// sets path to font file
     MRMESH_API void setFontPath( const std::filesystem::path& pathToFont );
@@ -64,7 +64,7 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 protected:
-    MeshLabel label_;
+    PositionedText label_;
     std::filesystem::path pathToFont_;
 
     std::shared_ptr<Mesh> mesh_;

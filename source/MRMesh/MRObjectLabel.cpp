@@ -15,8 +15,10 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectLabel )
 
-void ObjectLabel::setLabel( const MeshLabel& label )
+void ObjectLabel::setLabel( const PositionedText& label )
 {
+    if ( label == label_ )
+        return;
     label_ = label;
     if ( !pathToFont_.empty() )
         buildMesh_();
@@ -24,6 +26,8 @@ void ObjectLabel::setLabel( const MeshLabel& label )
 
 void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
 {
+    if ( pathToFont_ == pathToFont )
+        return;
     pathToFont_ = pathToFont;
     if ( !label_.text.empty() )
         buildMesh_();
@@ -145,7 +149,7 @@ size_t ObjectLabel::heapBytes() const
     return VisualObject::heapBytes() +
         sizeof( std::filesystem::path::value_type ) * pathToFont_.native().capacity() +
         label_.text.capacity() +
-        ( mesh_ ? mesh_->heapBytes() : 0 );
+        MR::heapBytes( mesh_ );
 }
 
 void ObjectLabel::applyScale( float scaleFactor )

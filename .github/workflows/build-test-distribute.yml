@@ -15,7 +15,6 @@ on:
 
 env:
   WORKFLOW_BUILD_TEST_PATH: "MeshInspector/MeshLib/.github/workflows/build-test"
-  WORKFLOW_BRANCH: "ubuntu22" # default branch is "master"
 
 jobs:
   prepare-image:
@@ -26,31 +25,31 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/windows.yml@${{ env.WORKFLOW_BRANCH }}
+    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/windows.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/ubuntu20.yml@${{ env.WORKFLOW_BRANCH }}
+    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/ubuntu20.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/ubuntu22.yml@${{ env.WORKFLOW_BRANCH }}
+    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/ubuntu22.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/fedora35.yml@${{ env.WORKFLOW_BRANCH }}
+    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/fedora35.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
     needs: [ prepare-image ]
-    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/macos.yml@${{ env.WORKFLOW_BRANCH }}
+    uses: ${{ env.WORKFLOW_BUILD_TEST_PATH }}/macos.yml@ubuntu22
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

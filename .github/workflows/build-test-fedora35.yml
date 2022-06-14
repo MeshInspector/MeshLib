@@ -1,0 +1,64 @@
+name: Build and test Ubuntu22
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+
+jobs:
+  fedora35-build-test:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/meshlib-fedora:${{inputs.image_tag}}
+      options: --user root
+    strategy:
+      matrix:
+        config: [Debug, Release]
+        compiler: [Сlang 13, GCC 11]
+        include:
+          - compiler: Сlang 13
+            cxx-compiler: /usr/bin/clang++-13
+            c-compiler: /usr/bin/clang-13
+          - compiler: GCC 11
+            cxx-compiler: /usr/bin/g++
+            c-compiler: /usr/bin/gcc
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        run: tar -cvf Rpm${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+
+      - name: Upload Fedora Binaries Archive
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Rpm${{matrix.config}}BinArchive
+          path: Rpm${{matrix.config}}Bin.tar
+          retention-days: 1

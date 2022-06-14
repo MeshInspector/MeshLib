@@ -24,7 +24,12 @@ ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")
  string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
- IF( NOT ${distro} STREQUAL "Fedora Linux")
+ file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
+ string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+ string(FIND ${version_id} "." dot-pos)
+ string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+
+ IF( NOT ${distro} STREQUAL "Fedora Linux" )
   set(OPENVDB_ENABLE_UNINSTALL OFF)
   set(OPENVDB_ENABLE_INSTALL OFF)
   add_subdirectory(./openvdb ./openvdb)

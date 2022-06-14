@@ -21,199 +21,36 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
-    timeout-minutes: 40
-    needs: [prepare-image]
-    runs-on: windows-2019
-    strategy:
-      matrix:
-        config: [Debug, Release]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
+    with:
+      image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
 
-      - name: Start container
-        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:${{needs.prepare-image.outputs.windows_image_tag}} ping -t localhost
+  ubuntu20-build-test:
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
+    with:
+      image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
-      - name: Build
-        run: |
-          docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+  ubuntu22-build-test:
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
+    with:
+      image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
-      - name: Unit Tests
-        run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
-
-      - name: Python Tests
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
-
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' }}
-        run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
-
-      - name: Upload Windows Binaries Archive
-        if: ${{ github.event_name == 'push' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: WindowsArchive${{ matrix.config }}
-          path: MREDist_${{ matrix.config }}.zip
-          retention-days: 1
-
-  ubuntu-build-test:
-    timeout-minutes: 40
-    needs: [prepare-image]
-    runs-on: ubuntu-latest
-    container:
-      image: meshrus/meshlib-ubuntu:${{needs.prepare-image.outputs.image_tag}}
-      options: --user root
-    strategy:
-      matrix:
-        config: [Debug, Release]
-        compiler: [Сlang 11, GCC 10]
-        include:
-          - compiler: Сlang 11
-            cxx-compiler: /usr/bin/clang++-11
-            c-compiler: /usr/bin/clang-11
-          - compiler: GCC 10
-            cxx-compiler: /usr/bin/g++-10
-            c-compiler: /usr/bin/gcc-10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
-      - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-
-      - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
-        
-      - name: Python Tests
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py
-
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
-        run: tar -cvf Deb${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
-        
-      - name: Upload Ubuntu Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
-        uses: actions/upload-artifact@v2
-        with:
-          name: Deb${{matrix.config}}BinArchive
-          path: Deb${{matrix.config}}Bin.tar
-          retention-days: 1
-
-  fedora-build-test:
-    timeout-minutes: 40
-    needs: [prepare-image]
-    runs-on: ubuntu-latest
-    container:
-      image: meshrus/meshlib-fedora:${{needs.prepare-image.outputs.image_tag}}
-      options: --user root
-    strategy:
-      matrix:
-        config: [Debug, Release]
-        compiler: [Сlang 13, GCC 11]
-        include:
-          - compiler: Сlang 13
-            cxx-compiler: /usr/bin/clang++-13
-            c-compiler: /usr/bin/clang-13
-          - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
-            
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
-      - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-
-      - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
-
-      - name: Python Tests
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py
-
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
-        run: tar -cvf Rpm${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
-        
-      - name: Upload Fedora Binaries Archive
-        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
-        uses: actions/upload-artifact@v2
-        with:
-          name: Rpm${{matrix.config}}BinArchive
-          path: Rpm${{matrix.config}}Bin.tar
-          retention-days: 1
+  fedora35-build-test:
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
+    with:
+      image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
-    timeout-minutes: 60
-    # to show the graph correctly
-    needs: [prepare-image]
-    runs-on: [macos-latest]
-    strategy:
-      matrix:
-        config: [Release]
-        compiler: [Сlang]
-        include:
-          - compiler: Сlang
-            cxx-compiler: /usr/bin/clang++
-            c-compiler: /usr/bin/clang
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          submodules: recursive
-
-      - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-
-      - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
-
-      - name: Python Tests
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
-    needs: [windows-build-test, ubuntu-build-test, fedora-build-test]
+    needs: [windows-build-test, ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

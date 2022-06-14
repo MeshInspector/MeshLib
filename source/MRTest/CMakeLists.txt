@@ -6,7 +6,7 @@ project (MRTest CXX)
 
 add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
-IF(NOT ${distro} STREQUAL "Fedora Linux")
+IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22})
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh
          spdlog

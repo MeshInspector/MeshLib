@@ -10,7 +10,7 @@ file(GLOB HEADERS "*.h")
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-IF (NOT MR_EMSCRIPTEN)
+IF(NOT MR_EMSCRIPTEN)
   find_package(GDCM CONFIG REQUIRED)
   find_package(Freetype REQUIRED)
   include_directories(${FREETYPE_INCLUDE_DIRS})

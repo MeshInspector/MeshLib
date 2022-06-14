@@ -22,31 +22,31 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test/windows.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test/ubuntu20.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test/ubuntu22.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test/fedora35.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@ubuntu22
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test/macos.yml@ubuntu22
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@ubuntu22
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

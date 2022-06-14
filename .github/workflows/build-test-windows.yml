@@ -1,4 +1,4 @@
-name: Build and test Ubuntu22
+name: Build and test Windows
 
 on:
   workflow_call:

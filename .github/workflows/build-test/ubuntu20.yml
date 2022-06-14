@@ -1,0 +1,64 @@
+name: Build and test Ubuntu22
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+
+jobs:
+  ubuntu22-build-test:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/meshlib-ubuntu:${{inputs.image_tag}}
+      options: --user root
+    strategy:
+      matrix:
+        config: [Debug, Release]
+        compiler: [Сlang 11, GCC 10]
+        include:
+          - compiler: Сlang 11
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
+          - compiler: GCC 10
+            cxx-compiler: /usr/bin/g++-10
+            c-compiler: /usr/bin/gcc-10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        run: tar -cvf Deb${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+
+      - name: Upload Ubuntu Binaries Archive
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Deb${{matrix.config}}BinArchive
+          path: Deb${{matrix.config}}Bin.tar
+          retention-days: 1

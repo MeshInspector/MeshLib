@@ -1,0 +1,59 @@
+FROM ubuntu:22.04 AS build
+
+# update and install req
+RUN export DEBIAN_FRONTEND=noninteractive; \
+    export DEBCONF_NONINTERACTIVE_SEEN=true; \
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends \
+        tzdata git sudo time python3-pip\
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /home/MeshLib
+WORKDIR "/home/MeshLib"
+
+# copy files
+COPY .git .git
+COPY thirdparty thirdparty
+COPY scripts scripts
+COPY requirements requirements
+
+# build and install thirdparty
+ENV MR_STATE=DOCKER_BUILD
+RUN sudo ./scripts/build_thirdparty.sh
+
+
+FROM ubuntu:22.04 AS production
+
+RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
+
+COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
+COPY requirements requirements
+
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+
+ENV MR_STATE=DOCKER_BUILD
+
+# update and install req
+RUN export DEBIAN_FRONTEND=noninteractive; \
+    export DEBCONF_NONINTERACTIVE_SEEN=true; \
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends \
+        tzdata git sudo time python3-pip curl \
+ && ./scripts/install_apt_requirements.sh \
+ && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+ && apt-get update -y \
+ && apt-get install -y gh \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN sudo ./scripts/install_thirdparty.sh && \
+    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
+    sudo ldconfig

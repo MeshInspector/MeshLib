@@ -27,6 +27,9 @@ struct DecimateParallelSettings
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
+    /// if true then after each edge collapse the position of remaining vertex is optimized to
+    /// minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position
+    bool optimizeVertexPos = true;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
     /// Subdivides mesh on given number of parts to process them in parallel
@@ -39,6 +42,15 @@ struct DecimateParallelSettings
      * \note This callback will be called from parallel threads when they process subparts
      */
     std::function<bool( VertId v0, VertId v1, const Vector3f & newV0Pos )> preCollapse;
+    /**
+     * \brief The user can provide this optional callback for adjusting error introduced by
+     * edge collapse between vertices v0 and v1 of the original mesh, and the collapse position.
+     * \details On input the callback gets the squared error and position computed by standard means,
+     * and callback can modify any of them. The larger the error, the later this edge will be collapsed.
+     * This callback can be called from many threads in parallel and must be thread-safe.
+     * This callback can be called many times for each edge before real collapsing, and it is important to make the same adjustment.
+     */
+    std::function<void( VertId v0, VertId v1, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback = {};
 };

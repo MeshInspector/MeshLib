@@ -834,6 +834,9 @@
     <ClInclude Include="MRPartialOffset.h">
       <Filter>Source Files\Boolean</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSaveObj.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRObjectLabel.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -1411,6 +1414,9 @@
     </ClCompile>
     <ClCompile Include="MRPartialOffset.cpp">
       <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSaveObj.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLabel.cpp">
       <Filter>Source Files\DataModel</Filter>

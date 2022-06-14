@@ -87,23 +87,23 @@ tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out )
 }
 
 
-tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file )
+tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf, int firstVertId )
 {
     std::ofstream out( file );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toObj( mesh, out );
+    return toObj( mesh, out, xf, firstVertId );
 }
 
-tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out )
+tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf, int firstVertId )
 {
     MR_TIMER
     VertId lastValidPoint = mesh.topology.lastValidVert();
 
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
     {
-        auto p = mesh.points[i];
+        auto p = xf( mesh.points[i] );
         out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
     }
 
@@ -114,7 +114,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out )
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        out << "f " << a+1 << ' ' << b+1 << ' ' << c+1 << '\n';
+        out << "f " << a + firstVertId << ' ' << b + firstVertId << ' ' << c + firstVertId << '\n';
     }
 
     if ( !out )

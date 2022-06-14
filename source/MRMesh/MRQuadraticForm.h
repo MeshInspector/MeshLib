@@ -38,6 +38,7 @@ struct QuadraticForm
 template <typename V>
 MRMESH_API std::pair< QuadraticForm<V>, V > sum(
     const QuadraticForm<V> & q0, const V & x0,
-    const QuadraticForm<V> & q1, const V & x1 );
+    const QuadraticForm<V> & q1, const V & x1, 
+    bool minAmong01 = false ); ///< if true then the minimum is selected only between points x0 and x1
 
 } // namespace MR

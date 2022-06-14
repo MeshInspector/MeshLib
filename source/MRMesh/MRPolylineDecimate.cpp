@@ -199,15 +199,22 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
     const auto pd = polyline_.points[d];
     if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
         return {};
-    auto [qf, pos] = sum( vertForms_[o], po, vertForms_[d], pd );
+    auto [qf, pos] = sum( vertForms_[o], po, vertForms_[d], pd, !settings_.optimizeVertexPos );
 
     QueueElement res;
     res.uedgeId = ue;
     res.c = qf.c;
 
     if ( settings_.adjustCollapse )
+    {
+        const auto pos0 = pos;
         settings_.adjustCollapse( ue, res.c, pos );
-    if ( res.c > maxErrorSq_ )
+        if ( res.c > maxErrorSq_ )
+            return {};
+        if ( outCollapseForm && pos != pos0 )
+            qf.c = vertForms_[o].eval( po - pos ) + vertForms_[d].eval( pd - pos );
+    }
+    else if ( res.c > maxErrorSq_ )
         return {};
 
     if ( outCollapseForm )
@@ -233,7 +240,13 @@ template<typename V>
 VertId PolylineDecimator<V>::collapse_( EdgeId edgeToCollapse, const V & collapsePos )
 {
     auto & topology = polyline_.topology;
-    const auto vo = topology.org( edgeToCollapse );
+    auto vo = topology.org( edgeToCollapse );
+    if ( !settings_.optimizeVertexPos && collapsePos == polyline_.destPnt( edgeToCollapse ) )
+    {
+        // reverse the edge to have its origin in remaining fixed vertex
+        edgeToCollapse = edgeToCollapse.sym();
+        vo = topology.org( edgeToCollapse );
+    }
 
     const auto e1 = topology.next( edgeToCollapse ).sym();
     const auto e2 = topology.next( e1 ).sym();

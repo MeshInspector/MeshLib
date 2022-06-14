@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include "MRMesh.h"
 #include <tl/expected.hpp>
 #include <filesystem>

@@ -25,6 +25,9 @@ struct DecimatePolylineSettings
     /// The larger is stabilizer, the more Decimator will strive to retain the density of input points.
     /// If stabilizer is zero, then only the shape of input line will be preserved.
     float stabilizer = 0.001f;
+    /// if true then after each edge collapse the position of remaining vertex is optimized to
+    /// minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position
+    bool optimizeVertexPos = true;
     /// Limit on the number of deleted vertices
     int maxDeletedVertices = INT_MAX;
     /// Region of the polyline to be decimated, it is updated during the operation

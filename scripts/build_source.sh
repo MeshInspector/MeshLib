@@ -9,6 +9,7 @@ printf "Project build script started.\nYou could find output in ${logfile}\n"
 
 if [[ $OSTYPE != 'darwin'* ]]; then
   source /etc/os-release
+  printf "${NAME} ${VERSION_ID}\n"
   if [ "${NAME}" == "Fedora Linux" ]; then
    if [ "${CMAKE_C_COMPILER}" = "" ]; then
     CMAKE_C_COMPILER=/usr/bin/gcc
@@ -16,6 +17,13 @@ if [[ $OSTYPE != 'darwin'* ]]; then
    if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
     CMAKE_CXX_COMPILER=/usr/bin/g++
    fi
+  elif [ "${NAME}" == "Ubuntu" ] && [ "${VERSION_ID}" != "20.04" ]; then
+    if [ "${CMAKE_C_COMPILER}" = "" ]; then
+        CMAKE_C_COMPILER=/usr/bin/gcc
+    fi
+    if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
+      CMAKE_CXX_COMPILER=/usr/bin/g++
+    fi
   else
    if [ "${CMAKE_C_COMPILER}" = "" ]; then
     CMAKE_C_COMPILER=/usr/bin/gcc-10

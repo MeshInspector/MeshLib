@@ -1,0 +1,42 @@
+name: Build and test MacOS
+
+on:
+  workflow_call:
+
+jobs:
+  macos-build-test:
+    timeout-minutes: 60
+    runs-on: [macos-latest]
+    strategy:
+      matrix:
+        config: [Release]
+        compiler: [Сlang]
+        include:
+          - compiler: Сlang
+            cxx-compiler: /usr/bin/clang++
+            c-compiler: /usr/bin/clang
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ./scripts/build_thirdparty.sh
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHRUS_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHRUS_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py

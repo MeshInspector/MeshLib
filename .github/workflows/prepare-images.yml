@@ -44,8 +44,12 @@ jobs:
             src:
               - '.github/workflows/docker-images.yml'
               - 'docker/**'
+              - '!docker/windowsDockerfile'              
               - 'requirements/**'
-              - 'scripts/**'
+              - '!requirements/windows.txt'
+              - '!requirements/macos.txt'              
+              - 'scripts/build_thirdparty.sh'    
+              - 'scripts/install_**.sh'  
               - 'thirdparty/**'
               - 'MeshLib/requirements/**'
               - 'MeshLib/thirdparty/**'

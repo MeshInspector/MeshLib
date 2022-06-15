@@ -110,12 +110,21 @@ struct [[nodiscard]] Mesh
     // positive if the faces form convex surface,
     // negative if the faces form concave surface
     MRMESH_API float dihedralAngleSin( EdgeId e ) const;
-
     // given an edge between two triangular faces, computes cosine of dihedral angle between them:
     // 1 if both faces are in the same plane,
     // 0 if the surface makes right angle turn at the edge,
     // -1 if the faces overlap one another
     MRMESH_API float dihedralAngleCos( EdgeId e ) const;
+    // given an edge between two triangular faces, computes the dihedral angle between them:
+    // 0 if both faces are in the same plane,
+    // positive if the faces form convex surface,
+    // negative if the faces form concave surface;
+    // please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
+    MRMESH_API float dihedralAngle( EdgeId e ) const;
+
+    // computes discrete mean curvature in given vertex measures in length^-1;
+    // 0 for planar regions, positive for convex surface, negative for concave surface
+    MRMESH_API float disceteMeanCurvature( VertId v ) const;
 
     // finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
     MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;

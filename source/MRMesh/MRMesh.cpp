@@ -389,7 +389,7 @@ float Mesh::dihedralAngle( EdgeId e ) const
     return std::atan2( sin, cos );
 }
 
-float Mesh::disceteMeanCurvature( VertId v ) const
+float Mesh::discreteMeanCurvature( VertId v ) const
 {
     float sumArea = 0;
     float sumAngLen = 0;

@@ -124,7 +124,7 @@ struct [[nodiscard]] Mesh
 
     // computes discrete mean curvature in given vertex measures in length^-1;
     // 0 for planar regions, positive for convex surface, negative for concave surface
-    MRMESH_API float disceteMeanCurvature( VertId v ) const;
+    MRMESH_API float discreteMeanCurvature( VertId v ) const;
 
     // finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
     MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;

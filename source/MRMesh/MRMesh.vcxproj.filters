@@ -342,7 +342,7 @@
     <ClInclude Include="MRColor.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshLabel.h">
+    <ClInclude Include="MRPositionedText.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePaths.h">
@@ -836,6 +836,9 @@
     </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
       <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectLabel.h">
+      <Filter>Source Files\DataModel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1414,6 +1417,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectLabel.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

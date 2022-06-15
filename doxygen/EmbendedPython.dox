@@ -9,10 +9,10 @@ MeshLib library allows you to call python scripts directly from the command line
 
 \b Usage
 
-On windows path to MeshLib modules should be added to python before importing 
+On Windows: path to the directory that contains MeshLib python modules (mrmeshpy.pyd, mrmeshnumpy.pyd ...) should be added to python before importing the modules
 \code
 import sys
-sys.path.append('C:\\Program Files\\MeshInspector\\MeshInspector')
+sys.path.append('path_to_modules_directory')
 \endcode
 
 MeshLib provides several usage options\n

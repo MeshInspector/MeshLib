@@ -377,6 +377,35 @@ float Mesh::dihedralAngleCos( EdgeId e ) const
     return dot( leftNorm, rightNorm );
 }
 
+float Mesh::dihedralAngle( EdgeId e ) const
+{
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    auto leftNorm = leftNormal( e );
+    auto rightNorm = leftNormal( e.sym() );
+    auto edgeDir = edgeVector( e ).normalized();
+    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
+    auto cos = dot( leftNorm, rightNorm );
+    return std::atan2( sin, cos );
+}
+
+float Mesh::discreteMeanCurvature( VertId v ) const
+{
+    float sumArea = 0;
+    float sumAngLen = 0;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        auto l = topology.left( e );
+        if ( !l )
+            continue; // area( l ) is not defined and dihedralAngle( e ) = 0
+        sumArea += area( l );
+        sumAngLen += dihedralAngle( e ) * edgeLength( e );
+    }
+    // sumAngLen / (2*2) because of mean curvature definition * each edge has 2 vertices,
+    // sumArea / 3 because each triangle has 3 vertices
+    return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
+}
+
 class CreaseEdgesCalc 
 {
 public:

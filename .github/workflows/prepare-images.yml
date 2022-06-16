@@ -35,7 +35,7 @@ jobs:
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           submodules: recursive
 
-      - name: Filter paths
+      - name: Filter Linux paths
         uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -43,12 +43,11 @@ jobs:
           filters: |
             src:
               - '.github/workflows/docker-images.yml'
-              - 'docker/**'
-              - 'requirements/**'
-              - 'scripts/**'
-              - 'thirdparty/**'
-              - 'MeshLib/requirements/**'
-              - 'MeshLib/thirdparty/**'
+              - 'docker/!(windowsDockerfile)'              
+              - 'requirements/!(windows.txt|macos.txt)'              
+              - 'scripts/build_thirdparty.sh'    
+              - 'scripts/install_**.sh'  
+              - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths
         uses: dorny/paths-filter@v2

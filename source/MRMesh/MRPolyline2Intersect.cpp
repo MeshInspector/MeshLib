@@ -1,7 +1,7 @@
 #include "MRPolyline2Intersect.h"
 #include "MRPolyline2.h"
 #include "MRVector2.h"
-#include "MRAABBTreePolyline2.h"
+#include "MRAABBTreePolyline.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR

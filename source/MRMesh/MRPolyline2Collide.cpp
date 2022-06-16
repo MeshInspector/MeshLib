@@ -1,5 +1,5 @@
 #include "MRPolyline2Collide.h"
-#include "MRAABBTreePolyline2.h"
+#include "MRAABBTreePolyline.h"
 #include "MRPolyline2.h"
 #include "MRPolyline2Project.h"
 #include "MRTimer.h"

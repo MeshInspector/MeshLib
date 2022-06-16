@@ -1,7 +1,7 @@
 #include "MRPolylineProject.h"
 #include "MRMesh.h"
 #include "MRPolyline.h"
-#include "MRAABBTreePolyline3.h"
+#include "MRAABBTreePolyline.h"
 #include "MRLineSegm.h"
 #include <algorithm>
 #include <execution>

@@ -465,9 +465,6 @@
     <ClInclude Include="MRLineSegm3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRAABBTreePolyline3.h">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
     <ClInclude Include="MRPolylineProject.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -572,9 +569,6 @@
     </ClInclude>
     <ClInclude Include="MRPolyline2.h">
       <Filter>Source Files\Polyline3</Filter>
-    </ClInclude>
-    <ClInclude Include="MRAABBTreePolyline2.h">
-      <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Project.h">
       <Filter>Source Files\AABBTree</Filter>

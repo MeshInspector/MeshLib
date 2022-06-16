@@ -1,6 +1,6 @@
 #include "MRPolyline.h"
 #include "MRPolylineEdgeIterator.h"
-#include "MRAABBTreePolyline3.h"
+#include "MRAABBTreePolyline.h"
 #include "MRAffineXf2.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"

@@ -22,8 +22,6 @@
     <ClInclude Include="MRAABBTreeMaker.h" />
     <ClInclude Include="MRAABBTreeNode.h" />
     <ClInclude Include="MRAABBTreePoints.h" />
-    <ClInclude Include="MRAABBTreePolyline3.h" />
-    <ClInclude Include="MRAABBTreePolyline2.h" />
     <ClInclude Include="MRBase64.h" />
     <ClInclude Include="MRBestFitQuadric.h" />
     <ClInclude Include="MRCircleObject.h" />

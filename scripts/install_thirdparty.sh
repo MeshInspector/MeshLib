@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # This script copy built thirlparty to `/usr/local/lib`
 # Generally, better choise is to install deb package
 

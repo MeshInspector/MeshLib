@@ -678,47 +678,6 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap, bool r
     *this = std::move( packed );
 }
 
-bool Mesh::intersectRay( const Vector3d& org, const Vector3d& dir, PointOnFace& res,
-    double rayStart /*= 0.0f*/, double rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { org, dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-bool Mesh::intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res,
-    float rayStart /*= 0.0f*/, float rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { org, dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool Mesh::intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res, const AffineXf3f& rayToMeshXf,
-    float rayStart /*= 0*/, float rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { rayToMeshXf(org),rayToMeshXf.A * dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
 {
     auto proj = findProjection( point, { *this, region }, maxDistSq, xf );

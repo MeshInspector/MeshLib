@@ -204,24 +204,12 @@ struct [[nodiscard]] Mesh
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
-    // All intersectRay methods are DEPRECATED! Use MRMeshIntersect.h instead
-    // Intersects ray with this geometry only
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res,
-        float rayStart = 0.0f, float rayEnd = FLT_MAX, const FaceBitSet* region = nullptr ) const;
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3d& org, const Vector3d& dir, PointOnFace& res,
-        double rayStart = 0.0, double rayEnd = DBL_MAX, const FaceBitSet* region = nullptr ) const;
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res, const AffineXf3f& rayToMeshXf,
-        float rayStart = 0.0f, float rayEnd = FLT_MAX, const FaceBitSet* region = nullptr ) const;
-
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed
-    MRMESH_API bool projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
-    MRMESH_API bool projectPoint( const Vector3f& point, MeshProjectionResult& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API bool projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API bool projectPoint( const Vector3f& point, MeshProjectionResult& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
     // this version returns optional without value instead of false
-    MRMESH_API std::optional<MeshProjectionResult> projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API std::optional<MeshProjectionResult> projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
 
     // returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;

@@ -43,7 +43,7 @@ jobs:
           filters: |
             src:
               - '.github/workflows/docker-images.yml'
-              - 'docker/!(windowsDockerfile.txt)'              
+              - 'docker/!(windowsDockerfile)'              
               - 'requirements/!(windows.txt|macos.txt)'              
               - 'scripts/build_thirdparty.sh'    
               - 'scripts/install_**.sh'  

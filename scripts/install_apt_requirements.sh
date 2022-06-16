@@ -16,8 +16,13 @@ function checkPackage {
 
 BASEDIR=$(dirname "$0")
 requirements_file="$BASEDIR"/../requirements/ubuntu.txt
+. /etc/lsb-release
+if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "22.04" ]; then
+  requirements_file="$BASEDIR"/../requirements/ubuntu22.txt
+fi
+
 for req in `cat $requirements_file`
-do	
+do
   checkPackage "${req}"
 done
 
@@ -38,16 +43,24 @@ if [ $MR_STATE != "DOCKER_BUILD" ]; then
  sudo -s printf "Root access acquired!\n" && \
  sudo apt update && sudo apt install ${MISSED_PACKAGES}
 else
- sudo apt -y update && sudo apt -y  install ${MISSED_PACKAGES}
+ sudo apt-get -y update && sudo apt-get -y  install ${MISSED_PACKAGES}
 fi
 
-# check and upgrade python3 pip
-python3.9 -m ensurepip --upgrade
-python3.9 -m pip install --upgrade pip
+. /etc/lsb-release
+if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "22.04" ]; then
+  python3.10 -m ensurepip --upgrade
+  python3.10 -m pip install --upgrade pip
 
-# install requirements for python libs
-python3.9 -m pip install -r requirements/python.txt
+  # install requirements for python libs
+  python3.10 -m pip install -r requirements/python.txt
+else
+  # check and upgrade python3 pip
+  python3.9 -m ensurepip --upgrade
+  python3.9 -m pip install --upgrade pip
 
+  # install requirements for python libs
+  python3.9 -m pip install -r requirements/python.txt
+fi
 # fix boost signal2 C++20 error in default version 1.71.0 from `apt`
 # NOTE: 1.75+ version already has this fix
 # https://github.com/boostorg/signals2/commit/15fcf213563718d2378b6b83a1614680a4fa8cec

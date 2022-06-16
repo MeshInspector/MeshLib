@@ -22,8 +22,6 @@
     <ClInclude Include="MRAABBTreeMaker.h" />
     <ClInclude Include="MRAABBTreeNode.h" />
     <ClInclude Include="MRAABBTreePoints.h" />
-    <ClInclude Include="MRAABBTreePolyline3.h" />
-    <ClInclude Include="MRAABBTreePolyline2.h" />
     <ClInclude Include="MRBase64.h" />
     <ClInclude Include="MRBestFitQuadric.h" />
     <ClInclude Include="MRCircleObject.h" />
@@ -84,6 +82,8 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
+    <ClInclude Include="MRMeshSaveObj.h" />
+    <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
@@ -158,7 +158,7 @@
     <ClInclude Include="MRMeshDistance.h" />
     <ClInclude Include="MRMeshEdgePoint.h" />
     <ClInclude Include="MRMeshFixer.h" />
-    <ClInclude Include="MRMeshLabel.h" />
+    <ClInclude Include="MRPositionedText.h" />
     <ClInclude Include="MRMeshMetrics.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshProject.h" />
@@ -329,6 +329,8 @@
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
+    <ClCompile Include="MRMeshSaveObj.cpp" />
+    <ClCompile Include="MRObjectLabel.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />

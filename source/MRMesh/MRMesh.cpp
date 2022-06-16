@@ -377,6 +377,35 @@ float Mesh::dihedralAngleCos( EdgeId e ) const
     return dot( leftNorm, rightNorm );
 }
 
+float Mesh::dihedralAngle( EdgeId e ) const
+{
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    auto leftNorm = leftNormal( e );
+    auto rightNorm = leftNormal( e.sym() );
+    auto edgeDir = edgeVector( e ).normalized();
+    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
+    auto cos = dot( leftNorm, rightNorm );
+    return std::atan2( sin, cos );
+}
+
+float Mesh::discreteMeanCurvature( VertId v ) const
+{
+    float sumArea = 0;
+    float sumAngLen = 0;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        auto l = topology.left( e );
+        if ( !l )
+            continue; // area( l ) is not defined and dihedralAngle( e ) = 0
+        sumArea += area( l );
+        sumAngLen += dihedralAngle( e ) * edgeLength( e );
+    }
+    // sumAngLen / (2*2) because of mean curvature definition * each edge has 2 vertices,
+    // sumArea / 3 because each triangle has 3 vertices
+    return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
+}
+
 class CreaseEdgesCalc 
 {
 public:
@@ -647,47 +676,6 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap, bool r
     Mesh packed;
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
-}
-
-bool Mesh::intersectRay( const Vector3d& org, const Vector3d& dir, PointOnFace& res,
-    double rayStart /*= 0.0f*/, double rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { org, dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-bool Mesh::intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res,
-    float rayStart /*= 0.0f*/, float rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { org, dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool Mesh::intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res, const AffineXf3f& rayToMeshXf,
-    float rayStart /*= 0*/, float rayEnd /*= FLT_MAX */, const FaceBitSet* region /*= nullptr*/ ) const
-{
-    if( auto mir = rayMeshIntersect( { *this, region }, { rayToMeshXf(org),rayToMeshXf.A * dir }, rayStart, rayEnd ) )
-    {
-        res = mir->proj;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

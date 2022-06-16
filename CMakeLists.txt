@@ -3,7 +3,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 IF(NOT MR_EMSCRIPTEN)
-set(PYTHON_LIB python3.9)
 IF(APPLE)
  message("building for Apple")
  execute_process(
@@ -45,6 +44,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-com
 
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
+set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
 
 IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
  message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
@@ -54,19 +54,52 @@ link_directories(${THIRDPARTY_LIB_DIR})
 
 find_package(PkgConfig REQUIRED)
 
+SET(MR_UBUNTU FALSE)
+SET(MR_UBUNTU22 FALSE)
+SET(MR_FEDORA FALSE)
 # Python
 IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
 ELSE()
- include_directories(/usr/include) 
+ # set platform dependent flags
+ file(STRINGS /etc/os-release distro REGEX "^NAME=")
+ string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
+
+ # check version (major)
+ file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
+ string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+ string(FIND ${version_id} "." dot-pos)
+ string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ message("using ${distro} ${version_id}")
+
+ IF( ${distro} STREQUAL "Ubuntu")
+  SET(MR_UBUNTU TRUE)
+  IF( ${version_id} STREQUAL "22")
+   SET(MR_UBUNTU22 TRUE)
+  ENDIF() # Ubuntu 22
+ ENDIF() # Ubuntu
+
+ IF( ${distro} STREQUAL "Fedora Linux")
+  SET(MR_FEDORA TRUE)
+ ENDIF() # Fedora
+
+ include_directories(/usr/include)
 ENDIF() # APPLE
+
+IF(${MR_UBUNTU22})
+ SET(PYTHON_VERSION 3.10)
+ set(PYTHON_LIB python3.10)
+ELSE()
+ SET(PYTHON_VERSION 3.9)
+ set(PYTHON_LIB python3.9)
+ENDIF()
 
 set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
 include_directories(${PYBIND11_DIR})
-find_package(Python 3.9 EXACT REQUIRED)
-find_package(PythonInterp 3.9 EXACT REQUIRED)
-find_package(PythonLibs 3.9 EXACT REQUIRED)
+find_package(Python ${PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonInterp ${PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonLibs ${PYTHON_VERSION} EXACT REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
@@ -93,14 +126,11 @@ enable_testing()
 
 IF(NOT MR_EMSCRIPTEN)
 IF(NOT APPLE)
- # set platform dependent flags
- file(STRINGS /etc/os-release distro REGEX "^NAME=")
- string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
- message("using ${distro}")
- IF(NOT ${distro} STREQUAL "Fedora Linux")
+ IF(NOT ${MR_FEDORA})
   set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
   include_directories(${OPENVDB_DIR})
- ELSE()
+ ENDIF()
+ IF(${MR_FEDORA} OR ${MR_UBUNTU22})
   add_compile_definitions(SPDLOG_FMT_EXTERNAL)
  ENDIF()
 ENDIF()

@@ -4,7 +4,7 @@
 #include "MRMeshTexture.h"
 #include "MRVector.h"
 #include "MRColor.h"
-#include "MRMeshLabel.h"
+#include "MRPositionedText.h"
 #include "MRIRenderObject.h"
 #include "MRMeshNormals.h"
 
@@ -165,8 +165,8 @@ public:
     float getShininess() const { return shininess_; }
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
-    const std::vector<MeshLabel>& getLabels() const { return labels_; }
-    virtual void setLabels( std::vector<MeshLabel> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
+    const std::vector<PositionedText>& getLabels() const { return labels_; }
+    virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -224,7 +224,7 @@ protected:
     MeshTexture texture_;
     Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
 
-    std::vector<MeshLabel> labels_;
+    std::vector<PositionedText> labels_;
 
     MRMESH_API ViewportMask& getVisualizePropertyMask_( unsigned type );
 

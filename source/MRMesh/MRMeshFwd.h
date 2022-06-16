@@ -284,6 +284,7 @@ class ObjectVoxels;
 class ObjectLinesHolder;
 class ObjectLines;
 class ObjectDistanceMap;
+class ObjectLabel;
 class PointObject;
 class LineObject;
 class CircleObject;

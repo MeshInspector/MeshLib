@@ -57,7 +57,15 @@ void ObjectVoxels::updateHistogramAndSurface( const ProgressCallback& cb )
         return;
 
     float min{0.0f}, max{0.0f};
+
+#if OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1
+    auto minMax = openvdb::tools::minMax(grid_->tree());
+    min = minMax.min();
+    max = minMax.max();
+#else
     grid_->evalMinMax( min, max );
+#endif
+
     updateHistogram_( min, max );
 
     if ( mesh_ )

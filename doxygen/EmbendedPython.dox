@@ -3,11 +3,17 @@ namespace MR {
 /** \page EmbendedPythonOverview Python overview
 
 Python is one of the most popular and widely used programming language in scientific researches, machine learning, data analysis and advanced testing.\n
-\b Requires \b python \b 3.10 (3.8 on linux)
+\b Requires \b python \b 3.10 (3.9 on linux)
 
 MeshLib library allows you to call python scripts directly from the command line or use particular functions by `import mrmeshpy`. 
 
 \b Usage
+
+On Windows: path to the directory that contains MeshLib python modules (mrmeshpy.pyd, mrmeshnumpy.pyd ...) should be added to python before importing the modules
+\code
+import sys
+sys.path.append('path_to_modules_directory')
+\endcode
 
 MeshLib provides several usage options\n
 1. Directly from system python

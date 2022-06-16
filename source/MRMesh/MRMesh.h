@@ -110,12 +110,21 @@ struct [[nodiscard]] Mesh
     // positive if the faces form convex surface,
     // negative if the faces form concave surface
     MRMESH_API float dihedralAngleSin( EdgeId e ) const;
-
     // given an edge between two triangular faces, computes cosine of dihedral angle between them:
     // 1 if both faces are in the same plane,
     // 0 if the surface makes right angle turn at the edge,
     // -1 if the faces overlap one another
     MRMESH_API float dihedralAngleCos( EdgeId e ) const;
+    // given an edge between two triangular faces, computes the dihedral angle between them:
+    // 0 if both faces are in the same plane,
+    // positive if the faces form convex surface,
+    // negative if the faces form concave surface;
+    // please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
+    MRMESH_API float dihedralAngle( EdgeId e ) const;
+
+    // computes discrete mean curvature in given vertex measures in length^-1;
+    // 0 for planar regions, positive for convex surface, negative for concave surface
+    MRMESH_API float discreteMeanCurvature( VertId v ) const;
 
     // finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
     MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;
@@ -195,24 +204,12 @@ struct [[nodiscard]] Mesh
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
-    // All intersectRay methods are DEPRECATED! Use MRMeshIntersect.h instead
-    // Intersects ray with this geometry only
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res,
-        float rayStart = 0.0f, float rayEnd = FLT_MAX, const FaceBitSet* region = nullptr ) const;
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3d& org, const Vector3d& dir, PointOnFace& res,
-        double rayStart = 0.0, double rayEnd = DBL_MAX, const FaceBitSet* region = nullptr ) const;
-    [[deprecated]]
-    MRMESH_API bool intersectRay( const Vector3f& org, const Vector3f& dir, PointOnFace& res, const AffineXf3f& rayToMeshXf,
-        float rayStart = 0.0f, float rayEnd = FLT_MAX, const FaceBitSet* region = nullptr ) const;
-
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed
-    MRMESH_API bool projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
-    MRMESH_API bool projectPoint( const Vector3f& point, MeshProjectionResult& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API bool projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API bool projectPoint( const Vector3f& point, MeshProjectionResult& res, float maxDistSq = FLT_MAX, const FaceBitSet* region = nullptr, const AffineXf3f * xf = nullptr ) const;
     // this version returns optional without value instead of false
-    MRMESH_API std::optional<MeshProjectionResult> projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API std::optional<MeshProjectionResult> projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
 
     // returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;

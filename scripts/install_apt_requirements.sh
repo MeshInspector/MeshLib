@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # NODE: using this script is deprecated! Better install meshrus(-dev).deb package
 # This script installs requirements by `apt` if not already installed
 # `distribution.sh` uses this script as preinstall

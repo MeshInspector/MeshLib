@@ -100,7 +100,7 @@ jobs:
         run: |
           echo ${{github.repository}}
           if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-buld\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-buld\"}]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           else

@@ -47,9 +47,7 @@ jobs:
               - 'requirements/!(windows.txt|macos.txt)'              
               - 'scripts/build_thirdparty.sh'    
               - 'scripts/install_**.sh'  
-              - 'thirdparty/**'
-              - 'MeshLib/requirements/**'
-              - 'MeshLib/thirdparty/**'
+              - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths
         uses: dorny/paths-filter@v2

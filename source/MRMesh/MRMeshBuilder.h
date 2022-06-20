@@ -48,7 +48,8 @@ MRMESH_API size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris,
 
 // construct mesh topology from a set of triangles with given ids;
 // unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
-MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( const std::vector<Triangle> & tris,
+MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( 
+    std::vector<Triangle> & tris,
     std::vector<VertDuplication> * dups = nullptr,
     std::vector<Triangle> * skippedTris = nullptr );
 

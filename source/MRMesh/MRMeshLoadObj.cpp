@@ -47,16 +47,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     t.v[i] -= minV;
             }
 
-            Mesh & m = res.back().mesh;
-            m.points.vec_.assign( points.begin() + minV, points.begin() + maxV + 1 );
-
-            std::vector<MeshBuilder::VertDuplication> dups;
-            MeshBuilder::duplicateNonManifoldVertices( tris, &dups );
-            m.topology = fromTriangles( tris );
-            m.points.resize( m.topology.vertSize() );
-            for ( const auto & d : dups )
-                m.points[d.dupVert] = m.points[d.srcVert];
-            
+            res.back().mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), tris );
             tris.clear();
         }
         currentObjName.clear();

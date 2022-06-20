@@ -456,60 +456,6 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
     return res;
 }
 
-static EdgeId smallestNoLeft( const MeshTopology & topology, VertId v )
-{
-    EdgeId res;
-    if ( !topology.hasVert( v ) )
-        return res;
-    for ( EdgeId e : orgRing( topology, v ) )
-    {
-        auto lf = topology.left( e );
-        if ( lf )
-            continue;
-        if ( res && topology.left( res ) < lf )
-            continue;
-        res = e;
-    }
-    return res;
-}
-
-static void leaveOneStar( MeshTopology & topology, VertId v, std::vector<Triangle> & deleted )
-{
-    EdgeId nle = smallestNoLeft( topology, v );
-    if ( !nle )
-        return;
-    assert( !topology.left( nle ) );
-    EdgeId nre = nle;
-    while ( topology.right( nre ) )
-        nre = topology.prev( nre );
-    for ( EdgeId e = topology.next( nle ); e != nre; e = topology.next( nle ) )
-    {
-        Triangle t;
-        t.f = topology.left( e );
-        assert( t.f );
-        topology.getLeftTriVerts( e, t.v );
-        deleted.push_back( t );
-        topology.deleteFace( t.f );
-    }
-}
-
-static void temporaryDeleteNonManifoldStars( MeshTopology & topology, std::vector<Triangle> & remainingTris )
-{
-    std::vector<Triangle> deleted;
-    for ( auto & t : remainingTris )
-    {
-        for ( auto & v : t.v )
-        {
-            leaveOneStar( topology, v, deleted );
-        }
-    }
-    if ( deleted.empty() )
-        return;
-    addTrianglesSeqCore( topology, remainingTris );
-    remainingTris.insert( remainingTris.end(), deleted.begin(), deleted.end() );
-    addTrianglesSeqCore( topology, remainingTris );
-}
-
 // two incident vertices can be found using this struct
 struct IncidentVert {
     FaceId f; // to find triangle in triangleToVertices vector
@@ -749,51 +695,25 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
     return duplicatedVerticesCnt;
 }
 
-MeshTopology fromTrianglesDuplicatingNonManifoldVertices( const std::vector<Triangle> & tris,
+MeshTopology fromTrianglesDuplicatingNonManifoldVertices( std::vector<Triangle> & tris,
     std::vector<VertDuplication> * dups, std::vector<Triangle> * skippedTris )
 {
     MR_TIMER
-    std::vector<Triangle> remainingTris;
-    MeshTopology res = fromTriangles( tris, &remainingTris );
-    HashMap<VertId, VertId> vert2duplicate;
-    constexpr int MaxIter = 7;
-    for ( int i = 0; i < MaxIter && !remainingTris.empty(); ++i )
+    std::vector<Triangle> localSkippedTries;
+    // try happy path first
+    MeshTopology res = fromTriangles( tris, &localSkippedTries );
+    if ( localSkippedTries.empty() )
     {
-        vert2duplicate.clear();
-        for ( auto & t : remainingTris )
-        {
-            for ( auto & v : t.v )
-            {
-                auto [it, inserted] = vert2duplicate.insert( std::make_pair( v, VertId{} ) );
-                if ( inserted )
-                {
-                    // this vertex was not considered yet
-                    if ( res.hasVert( v ) && !res.isBdVertex( v ) )
-                    {
-                        // full star found, make duplicate vertex
-                        auto vd = res.addVertId();
-                        if ( dups )
-                            dups->push_back( { v, vd } );
-                        it->second = v = vd;
-                    }
-                }
-                else
-                {
-                    if ( it->second ) // if valid duplicate
-                        v = it->second;
-                }
-            }
-        }
-        const auto sz0 = remainingTris.size();
-        addTrianglesSeqCore( res, remainingTris );
-        if ( sz0 == remainingTris.size() )
-        {
-            temporaryDeleteNonManifoldStars( res, remainingTris );
-        }
+        // all triangles added successfully, which means no non-manifold vertices
+        if ( dups )
+            dups->clear();
+        if ( skippedTris )
+            skippedTris->clear();
+        return res;
     }
-    if ( skippedTris )
-        *skippedTris = std::move( remainingTris );
-    return res;
+    // full path
+    MeshBuilder::duplicateNonManifoldVertices( tris, dups );
+    return fromTriangles( tris, skippedTris );
 }
 
 MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )

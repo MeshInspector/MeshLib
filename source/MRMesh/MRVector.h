@@ -26,6 +26,8 @@ public:
     explicit Vector( size_t size ) : vec_( size ) { }
     explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
     Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
+    template< class InputIt >
+    Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
 
     [[nodiscard]] bool operator == ( const Vector & b ) const { return vec_ == b.vec_; }
     [[nodiscard]] bool operator != ( const Vector & b ) const { return vec_ != b.vec_; }

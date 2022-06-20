@@ -38,11 +38,8 @@ MR::Mesh makeCylinder(float radius, float length,
         tris.emplace_back(VertId(((i + 1) % resolution) + 2), VertId(((i + 1) % resolution) + 2 + resolution),
             VertId(i + 2 + resolution), FaceId(4 * i + 3));
     }
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles(tris);
-    res.points.vec_ = std::move(points);
 
-    return res;
+    return Mesh::fromTriangles( std::move( points ), tris );
 }
 
 MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,

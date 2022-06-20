@@ -1,4 +1,5 @@
 #include "MRMesh.h"
+#include "MRMeshBuilder.h"
 #include "MRBox.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
@@ -18,9 +19,11 @@
 #include "MRCube.h"
 #include "MRPch/MRTBB.h"
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 
 // makes edge loop from points, all connected but not first with last edge
 std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector3f>& contourPoints )
@@ -40,8 +43,36 @@ std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector
 }
 }
 
-namespace MR
+Mesh Mesh::fromTriangles(
+    VertCoords vertexCoordinates,
+    const std::vector<MeshBuilder::Triangle> & tris,
+    std::vector<MeshBuilder::Triangle> * skippedTris )
 {
+    MR_TIMER
+    Mesh res;
+    res.points = std::move( vertexCoordinates );
+    res.topology = MeshBuilder::fromTriangles( tris, skippedTris );
+    return res;
+}
+
+Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
+    VertCoords vertexCoordinates,
+    std::vector<MeshBuilder::Triangle> & tris,
+    std::vector<MeshBuilder::VertDuplication> * dups,
+    std::vector<MeshBuilder::Triangle> * skippedTris )
+{
+    MR_TIMER
+    Mesh res;
+    res.points = std::move( vertexCoordinates );
+    std::vector<MeshBuilder::VertDuplication> localDups;
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( tris, &localDups, skippedTris );
+    res.points.resize( res.topology.vertSize() );
+    for ( const auto & d : localDups )
+        res.points[d.dupVert] = res.points[d.srcVert];
+    if ( dups )
+        *dups = std::move( localDups );
+    return res;
+}
 
 void Mesh::getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const
 {

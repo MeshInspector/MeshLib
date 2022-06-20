@@ -236,11 +236,8 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
 //         "load_factor = " << hmap.load_factor() << "\n"
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
-    Mesh res;
-    res.points = vi.takePoints();
-    res.topology = MeshBuilder::fromTriangles( vi.takeTris() );
-
-    return std::move( res );
+    auto tris = vi.takeTris();
+    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), tris );
 }
 
 tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, Vector<Color, VertId>* )
@@ -259,7 +256,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
 
     using HMap = ParallelHashMap<Vector3f, VertId>;
     HMap hmap;
-    Mesh res;
+    VertCoords points;
     std::vector<MeshBuilder::Triangle> tris;
 
     std::string line;
@@ -298,8 +295,8 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
             VertId& id = hmap[point];
             if ( !id.valid() )
             {
-                id = VertId( res.points.size() );
-                res.points.push_back( point );
+                id = VertId( points.size() );
+                points.push_back( point );
             }
             currTri.v[triPos] = id;
             ++triPos;
@@ -317,9 +314,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
     if ( !solidFound )
         return tl::make_unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 
-    res.topology = MeshBuilder::fromTriangles( tris );
-
-    return std::move( res );
+    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), tris );
 }
 
 tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors )

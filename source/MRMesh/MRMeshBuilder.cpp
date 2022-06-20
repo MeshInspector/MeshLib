@@ -712,8 +712,20 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( std::vector<Triangle> 
         return res;
     }
     // full path
-    MeshBuilder::duplicateNonManifoldVertices( tris, dups );
-    return fromTriangles( tris, skippedTris );
+    std::vector<VertDuplication> localDups;
+    MeshBuilder::duplicateNonManifoldVertices( tris, &localDups );
+    const bool noDuplicates = localDups.empty();
+    if ( dups )
+        *dups = std::move( localDups );
+    if ( noDuplicates )
+    {
+        // no duplicates creates, so res is ok
+        if ( skippedTris )
+            *skippedTris = std::move( localSkippedTries );
+        return res;
+    }
+    res = fromTriangles( tris, skippedTris );
+    return res;
 }
 
 MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )

@@ -578,6 +578,9 @@ void preprocessTriangles( std::vector<Triangle>& tris, std::vector<IncidentVert>
     faceToVertices.resize( maxFaceId );
     for ( const auto& tr : tris )
     {
+        if ( tr.v[0] == tr.v[1] || tr.v[1] == tr.v[2] || tr.v[2] == tr.v[0] )
+            continue;
+
         std::copy( std::begin( tr.v ), std::end( tr.v ), std::begin( faceToVertices[tr.f] ) );
         for ( int i = 0; i < 3; ++i )
             incidentVertVector.emplace_back( tr.f, i, tr.v[i]);
@@ -654,6 +657,8 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
         {
             VertId currVertex = incidentItems.getFirstVertex();
             VertId nextVertex = incidentItems.getNextIncidentVertex( currVertex );
+            
+            assert( nextVertex.valid() );
 
             std::vector<VertId> path = { currVertex, nextVertex };
             while ( true )

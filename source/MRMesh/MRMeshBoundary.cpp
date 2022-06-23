@@ -9,7 +9,7 @@ namespace MR
 void straightenBoundary( Mesh & mesh, EdgeId bd, float minNeiNormalsDot, float maxTriAspectRatio, FaceBitSet* newFaces )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     assert( !mesh.topology.left( bd ).valid() );
 

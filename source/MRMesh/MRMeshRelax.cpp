@@ -19,7 +19,7 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
         return true;
 
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     VertCoords newPoints;
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
@@ -76,7 +76,7 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         return true;
 
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     VertCoords newPoints;
 
@@ -153,7 +153,7 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
     if ( params.iterations <= 0 )
         return true;
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
         ( float( std::sqrt( mesh.area() ) ) * 1e-3f ) : params.surfaceDilateRadius;

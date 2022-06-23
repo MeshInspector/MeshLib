@@ -91,7 +91,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip,
     if ( numIters <= 0 )
         return 0;
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )
@@ -113,7 +113,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip,
 
 void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, const FaceBitSet * region )
 {
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     const EdgeId e0 = e;
     for (;;)
     {

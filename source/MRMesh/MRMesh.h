@@ -4,6 +4,7 @@
 #include "MRMeshProject.h"
 #include "MRMeshEdgePoint.h"
 #include "MRUniqueThreadSafeOwner.h"
+#include "MRWriter.h"
 #include <cfloat>
 
 namespace MR
@@ -238,15 +239,7 @@ private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
 };
 
-// the purpose of this struct is to invalidate mesh cache in its destructor
-struct MeshWriter
-{
-    Mesh & mesh;
-    MeshWriter( Mesh & m ) : mesh( m ) { }
-    ~MeshWriter() { mesh.invalidateCaches(); }
-};
-
-#define MR_MESH_WRITER(mesh) MR::MeshWriter _meshWriter( mesh );
-
+// deprecated, please use MR_WRITER directly
+#define MR_MESH_WRITER( mesh ) MR_WRITER( mesh );
 
 } //namespace MR

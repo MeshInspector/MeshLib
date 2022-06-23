@@ -231,7 +231,7 @@ std::function<bool( int, int )> getLessFunc( const EdgeData& edgeData, const std
 void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     phmap::flat_hash_map<int, std::vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
@@ -1548,7 +1548,7 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     CutMeshResult res;
 
@@ -1586,7 +1586,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 std::vector<MR::EdgePath> cutMeshWithPlane( MR::Mesh& mesh, const MR::Plane3f& plane, MR::FaceMap* mapNew2Old /*= nullptr*/ )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     auto sections = extractPlaneSections( mesh, -plane );
     auto contours = convertSurfacePathsToMeshContours( mesh, sections );

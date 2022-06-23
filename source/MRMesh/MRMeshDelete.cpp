@@ -23,7 +23,7 @@ void deleteFaces( MeshTopology & topology, const FaceBitSet & fs )
 void deleteTargetFaces( Mesh& obj, const Vector3f& targetCenter )
 {
     MR_TIMER;
-    MR_MESH_WRITER( obj );
+    MR_WRITER( obj );
 
     auto& topology = obj.topology;
     auto& edgePerFaces = topology.edgePerFace();
@@ -48,7 +48,7 @@ void deleteTargetFaces( Mesh& obj, const Vector3f& targetCenter )
 void deleteTargetFaces( Mesh & obj, const Mesh & target )
 {
     MR_TIMER;
-    MR_MESH_WRITER( obj );
+    MR_WRITER( obj );
 
     // lets find the center of the tooth root
     Vector3f targetCenter = target.findCenterFromFaces();

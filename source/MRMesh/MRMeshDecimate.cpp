@@ -504,7 +504,7 @@ DecimateResult MeshDecimator::run()
 DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     MeshDecimator md( mesh, settings );
     return md.run();
 }
@@ -512,7 +512,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
 void remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     SubdivideSettings subs;
     subs.maxEdgeLen = 2 * settings.targetEdgeLen;

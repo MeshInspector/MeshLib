@@ -834,6 +834,9 @@
     <ClInclude Include="MRObjectLabel.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRWriter.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

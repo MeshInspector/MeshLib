@@ -9,6 +9,7 @@
 #include "MR2DContoursTriangulation.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRJson.h"
+#include "MRString.h"
 
 namespace MR
 {
@@ -131,11 +132,25 @@ void ObjectLabel::setDefaultColors_()
 
 void ObjectLabel::buildMesh_()
 {
-    SymbolMeshParams params;
-    params.text = label_.text;
-    params.pathToFontFile = pathToFont_;
-    auto contours = createSymbolContours( params );
-    mesh_ = std::make_shared<Mesh>( PlanarTriangulation::triangulateContours( contours ) );
+    std::vector<std::string> splited = split( label_.text, '\n' );
+
+    mesh_ = std::make_shared<Mesh>();
+    for ( int i = 0; i < splited.size(); ++i )
+    {
+        const auto& s = splited[i];
+        if ( s.empty() )
+            continue;
+        SymbolMeshParams params;
+        params.text = s;
+        params.pathToFontFile = pathToFont_;
+        auto contours = createSymbolContours( params );
+        auto mesh = PlanarTriangulation::triangulateContours( contours );
+        // 1.3f - line spacing
+        mesh.transform( AffineXf3f::translation( 
+            Vector3f::minusY() * SymbolMeshParams::MaxGeneratedFontHeight * 1.3f * float( i ) ) );
+
+        mesh_->addPart( mesh );
+    }
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 }
 

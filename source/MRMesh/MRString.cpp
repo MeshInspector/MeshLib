@@ -1,5 +1,4 @@
 #include "MRString.h"
-#include <ranges>
 
 namespace MR
 {
@@ -17,21 +16,20 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
     return std::distance( string.begin(), iter );
 }
 
-std::vector<std::string> split( const std::string& string, char delimiter )
+std::vector<std::string> split( const std::string& string, const std::string& delimiter )
 {
-    auto to_string = [] ( auto&& r ) -> std::string
+    std::vector<std::string> res;
+    size_t pos = 0;
+    for ( ;;)
     {
-        const auto data = &*r.begin();
-        const auto size = std::size_t( std::ranges::distance( r ) );
+        auto delimPos = string.find( delimiter, pos );
+        res.push_back( string.substr( pos, delimPos - pos ) );
+        if ( delimPos == std::string::npos )
+            break;
+        pos = delimPos + delimiter.size();
+    }
 
-        return std::string{ data, size };
-    };
-
-    auto range = string |
-        std::ranges::views::split( delimiter ) |
-        std::ranges::views::transform( to_string );
-
-    return { std::ranges::begin( range ), std::ranges::end( range ) };
+    return res;
 }
 
 }

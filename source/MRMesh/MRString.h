@@ -19,6 +19,6 @@ MRMESH_API size_t findSubstringCaseInsensitive( const std::string& string, const
  * \return vector of split strings
  * \ingroup BasicGroup
  */
-MRMESH_API std::vector<std::string> split( const std::string& string, char delimiter );
+MRMESH_API std::vector<std::string> split( const std::string& string, const std::string& delimiter );
 
 }

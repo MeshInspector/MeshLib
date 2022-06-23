@@ -132,7 +132,7 @@ void ObjectLabel::setDefaultColors_()
 
 void ObjectLabel::buildMesh_()
 {
-    std::vector<std::string> splited = split( label_.text, '\n' );
+    std::vector<std::string> splited = split( label_.text, "\n" );
 
     mesh_ = std::make_shared<Mesh>();
     for ( int i = 0; i < splited.size(); ++i )

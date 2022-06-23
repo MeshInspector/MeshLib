@@ -112,6 +112,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             std::string str;
             std::getline( in, str );
         }
+        if ( in.eof() )
+            break;
     }
 
     finishObject();

@@ -32,7 +32,7 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
     std::priority_queue<EdgeLength> queue;

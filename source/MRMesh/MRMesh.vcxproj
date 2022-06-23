@@ -253,6 +253,7 @@
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
+    <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
   </ItemGroup>
   <ItemGroup>

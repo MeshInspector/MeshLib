@@ -95,7 +95,7 @@ void fixFullByPart( FloatGrid& full, const FloatGrid& part, int zOffset )
 void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     if ( voxelSize == 0.0f )
     {
         // count voxel size if needed
@@ -123,7 +123,7 @@ void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxel
 void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upDirectionMeshSpace, float voxelSize, float bottomExtension )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     if ( voxelSize == 0.0f )
     {
         // count voxel size if needed

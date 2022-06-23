@@ -302,7 +302,7 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
 void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
 
     auto newFace = [&] ()
     {
@@ -424,7 +424,7 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
 void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     if ( mesh.topology.left( a0 ) )
         return;
     assert( !mesh.topology.left( a0 ) );
@@ -567,7 +567,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     assert( !mesh.topology.left( a ) );
 
     auto addFaceId = [&]()
@@ -614,7 +614,7 @@ VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nul
 EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_TIMER;
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     assert( !mesh.topology.left( a ) );
 
     auto addFaceId = [&]()

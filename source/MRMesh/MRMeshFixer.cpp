@@ -142,7 +142,7 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
     if ( multipleEdges.empty() )
         return;
     MR_TIMER
-    MR_MESH_WRITER( mesh )
+    MR_WRITER( mesh )
 
     for ( const auto & mE : multipleEdges )
     {

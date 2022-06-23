@@ -45,7 +45,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         return res;
     }
 
-    MR_MESH_WRITER( mesh );
+    MR_WRITER( mesh );
     const auto & tree = mesh.getAABBTree();
     const auto subroots = tree.getSubtrees( settings.subdivideParts );
     const auto sz = subroots.size();

@@ -16,4 +16,20 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
     return std::distance( string.begin(), iter );
 }
 
+std::vector<std::string> split( const std::string& string, const std::string& delimiter )
+{
+    std::vector<std::string> res;
+    size_t pos = 0;
+    for ( ;;)
+    {
+        auto delimPos = string.find( delimiter, pos );
+        res.push_back( string.substr( pos, delimPos - pos ) );
+        if ( delimPos == std::string::npos )
+            break;
+        pos = delimPos + delimiter.size();
+    }
+
+    return res;
+}
+
 }

@@ -25,6 +25,9 @@ struct SymbolMeshParams
     // Path to font file
     std::filesystem::path pathToFontFile;
 #endif // _WIN32
+
+    // max font size with 128 << 6 FT_F26Dot6 font size
+    static constexpr float MaxGeneratedFontHeight = 5826.0f * 1e-3f;
 };
 
 // converts text string into set of contours

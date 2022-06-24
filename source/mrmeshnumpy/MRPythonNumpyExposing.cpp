@@ -260,7 +260,7 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
 
     return pybind11::array_t<double>(
         { numVerts }, // shape
-        { sizeof( double ) }, // C-style contiguous strides for bool
+        { sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }

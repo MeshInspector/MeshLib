@@ -242,6 +242,15 @@ void Polyline<V>::transform( const AffineXf<V> & xf )
 }
 
 template<typename V>
+VertId Polyline<V>::splitEdge( EdgeId e )
+{
+    auto newPos = 0.5f * ( orgPnt( e ) + destPnt( e ) );
+    VertId newv = topology.splitEdge( e );
+    points.autoResizeAt( newv ) = newPos;
+    return newv;
+}
+
+template<typename V>
 const AABBTreePolyline<V>& Polyline<V>::getAABBTree() const
 {
     return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePolyline<V>( *this ); } );
@@ -254,6 +263,9 @@ size_t Polyline<V>::heapBytes() const
         + points.heapBytes()
         + AABBTreeOwner_.heapBytes();
 }
+
+template struct Polyline<Vector2f>;
+template struct Polyline<Vector3f>;
 
 TEST( MRMesh, Polyline2 )
 {
@@ -321,7 +333,24 @@ TEST( MRMesh, Polyline3 )
     }
 }
 
-template struct Polyline<Vector2f>;
-template struct Polyline<Vector3f>;
+TEST( MRMesh, PolylineSplitEdge )
+{
+    Contour2f cont;
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+    Polyline2 polyline( { cont } );
+
+    EXPECT_EQ( polyline.topology.numValidVerts(), 2 );
+    EXPECT_EQ( polyline.points.size(), 2 );
+    EXPECT_EQ( polyline.topology.lastNotLoneEdge(), EdgeId(1) ); // 1*2 = 2 half-edges in total
+
+    auto e01 = polyline.topology.findEdge( 0_v, 1_v );
+    EXPECT_TRUE( e01.valid() );
+    VertId v01 = polyline.splitEdge( e01 );
+    EXPECT_EQ( polyline.topology.numValidVerts(), 3 );
+    EXPECT_EQ( polyline.points.size(), 3 );
+    EXPECT_EQ( polyline.topology.lastNotLoneEdge(), EdgeId(3) ); // 2*2 = 4 half-edges in total
+    EXPECT_EQ( polyline.points[v01], ( Vector2f(.5f, 0.f) ) );
+}
 
 } //namespace MR

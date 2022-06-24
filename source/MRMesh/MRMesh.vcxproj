@@ -106,6 +106,7 @@
     <ClInclude Include="MRPolylineEdgeIterator.h" />
     <ClInclude Include="MRLinesLoad.h" />
     <ClInclude Include="MRLinesSave.h" />
+    <ClInclude Include="MRPolylineSubdivide.h" />
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
@@ -362,6 +363,7 @@
     <ClCompile Include="MRPolylineDecimate.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />
     <ClCompile Include="MRLinesSave.cpp" />
+    <ClCompile Include="MRPolylineSubdivide.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />

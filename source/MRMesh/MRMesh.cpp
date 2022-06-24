@@ -619,7 +619,7 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
 
 VertId Mesh::splitEdge( EdgeId e, FaceBitSet * region )
 {
-    auto newPos = 0.5f * ( points[ topology.org( e ) ] + points[ topology.dest( e ) ] );
+    auto newPos = 0.5f * ( orgPnt( e ) + destPnt( e ) );
     VertId newv = topology.splitEdge( e, region );
     points.autoResizeAt( newv ) = newPos;
     return newv;
@@ -812,6 +812,91 @@ TEST( MRMesh, BasicExport )
 
     (void)points;
     (void)vertexTripples;
+}
+
+TEST(MRMesh, SplitEdge) 
+{
+    std::vector<VertId> v{ 
+        VertId{0}, VertId{1}, VertId{2}, 
+        VertId{0}, VertId{2}, VertId{3}
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f );
+    mesh.points.emplace_back( 1.f, 0.f, 0.f );
+    mesh.points.emplace_back( 1.f, 1.f, 0.f );
+    mesh.points.emplace_back( 0.f, 1.f, 0.f );
+
+    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
+    EXPECT_EQ( mesh.points.size(), 4 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(9) ); // 5*2 = 10 half-edges in total
+
+    FaceBitSet region( 2 );
+    region.set( 0_f );
+
+    auto e02 = mesh.topology.findEdge( VertId{0}, VertId{2} );
+    EXPECT_TRUE( e02.valid() );
+    VertId v02 = mesh.splitEdge( e02, &region );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 5 );
+    EXPECT_EQ( mesh.points.size(), 5 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(15) ); // 8*2 = 16 half-edges in total
+    EXPECT_EQ( mesh.points[v02], ( Vector3f(.5f, .5f, 0.f) ) );
+    EXPECT_EQ( region.count(), 2 );
+
+    auto e01 = mesh.topology.findEdge( VertId{0}, VertId{1} );
+    EXPECT_TRUE( e01.valid() );
+    VertId v01 = mesh.splitEdge( e01, &region );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
+    EXPECT_EQ( mesh.points.size(), 6 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 5 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(19) ); // 10*2 = 20 half-edges in total
+    EXPECT_EQ( mesh.points[v01], ( Vector3f(.5f, 0.f, 0.f) ) );
+    EXPECT_EQ( region.count(), 3 );
+}
+
+TEST(MRMesh, SplitEdge1) 
+{
+    Mesh mesh;
+    const auto e01 = mesh.topology.makeEdge();
+    mesh.topology.setOrg( e01, mesh.topology.addVertId() );
+    mesh.topology.setOrg( e01.sym(), mesh.topology.addVertId() );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f );
+    mesh.points.emplace_back( 1.f, 0.f, 0.f );
+
+    EXPECT_EQ( mesh.topology.numValidVerts(), 2 );
+    EXPECT_EQ( mesh.points.size(), 2 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(1) ); // 1*2 = 2 half-edges in total
+
+    VertId v01 = mesh.splitEdge( e01 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
+    EXPECT_EQ( mesh.points.size(), 3 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(3) ); // 2*2 = 4 half-edges in total
+    EXPECT_EQ( mesh.points[v01], ( Vector3f( .5f, 0.f, 0.f ) ) );
+}
+
+TEST(MRMesh, SplitFace) 
+{
+    std::vector<VertId> v{ 
+        VertId{0}, VertId{1}, VertId{2}
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f );
+    mesh.points.emplace_back( 0.f, 0.f, 1.f );
+    mesh.points.emplace_back( 0.f, 1.f, 0.f );
+
+    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
+    EXPECT_EQ( mesh.points.size(), 3 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 1 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(5) ); // 3*2 = 6 half-edges in total
+
+    mesh.splitFace( 0_f );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
+    EXPECT_EQ( mesh.points.size(), 4 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
+    EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
 }
 
 } //namespace MR

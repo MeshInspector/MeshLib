@@ -7,29 +7,48 @@
 namespace MR
 {
 
-bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d )
+static double dihedralAngle( const Vector3d & leftNorm, const Vector3d & rightNorm, const Vector3d & edgeVec )
+{
+    auto edgeDir = edgeVec.normalized();
+    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
+    auto cos = dot( leftNorm, rightNorm );
+    return std::atan2( sin, cos );
+}
+
+bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
     auto dir = []( const auto& p, const auto& q, const auto& r )
     {
         return cross( q - p, r - p );
     };
-    auto dirABD = dir( a, b, d );
-    auto dirDBC = dir( d, b, c );
+    const auto dirABD = dir( a, b, d );
+    const auto dirDBC = dir( d, b, c );
 
     if ( dot( dirABD, dirDBC ) < 0 )
         return true; // flipping of given edge will create two faces with opposite normals
+
+    if ( maxAngleChange < NoAngleChangeLimit )
+    {
+        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
+        const auto dirABC = dir( a, b, c );
+        const auto dirACD = dir( a, c, d );
+        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+        const auto angleChange = std::abs( oldAngle - newAngle );
+        if ( angleChange > maxAngleChange )
+            return true;
+    }
 
     auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
     auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
     return metricAC <= metricBD;
 }
 
-bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
 {
-    return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d} );
+    return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange );
 }
 
-bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDeviationAfterFlip, const FaceBitSet * region )
+bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
 {
     if ( !mesh.topology.isInnerEdge( edge, region ) )
         return true; // consider condition satisfied for not inner edges
@@ -83,10 +102,10 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDevia
             return true; // flipping of given edge will change the surface shape too much
     }
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp );
+    return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
 }
 
-int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip, const FaceBitSet * region )
+int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
 {
     if ( numIters <= 0 )
         return 0;
@@ -99,7 +118,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip,
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( checkDeloneQuadrangleInMesh( mesh, e, maxDeviationAfterFlip, region ) )
+            if ( checkDeloneQuadrangleInMesh( mesh, e, maxDeviationAfterFlip, maxAngleChange, region ) )
                 continue;
 
             mesh.topology.flipEdge( e );
@@ -111,7 +130,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip,
     return flipsDone;
 }
 
-void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, const FaceBitSet * region )
+void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
 {
     MR_WRITER( mesh );
     const EdgeId e0 = e;
@@ -119,7 +138,7 @@ void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, c
     {
         auto testEdge = mesh.topology.prev( e.sym() );
         if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid() 
-            || checkDeloneQuadrangleInMesh( mesh, testEdge, maxDeviationAfterFlip, region ) )
+            || checkDeloneQuadrangleInMesh( mesh, testEdge, maxDeviationAfterFlip, maxAngleChange, region ) )
         {
             e = mesh.topology.next( e );
             if ( e == e0 )

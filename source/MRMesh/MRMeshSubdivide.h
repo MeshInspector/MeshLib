@@ -16,8 +16,10 @@ struct SubdivideSettings
     float maxEdgeLen = 0;
     /// Maximum number of edge splits allowed
     int maxEdgeSplits = 1000;
-    /// Improves local mesh triangulation after each edge flip if it does not make too big surface deviation
+    /// Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation
     float maxDeviationAfterFlip = 1;
+    /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
+    float maxAngleChangeAfterFlip = 10;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
     /// New vertices appeared during subdivision will be added here

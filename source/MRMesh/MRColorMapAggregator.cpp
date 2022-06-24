@@ -9,6 +9,7 @@ template<typename Tag>
 void ColorMapAggregator<Tag>::setDefaultColor( const Color& color )
 {
     defaultColor_ = color;
+    needUpdate_ = true;
 }
 
 template<typename Tag>
@@ -16,6 +17,7 @@ void ColorMapAggregator<Tag>::pushBack( const PartialColorMap& partitialColorMap
 {
     assert( checkInputData_( partitialColorMap ) );
     dataSet_.push_back( partitialColorMap );
+    needUpdate_ = true;
 }
 
 template<typename Tag>
@@ -24,6 +26,7 @@ void ColorMapAggregator<Tag>::insert( int i, const PartialColorMap& partitialCol
     assert( i <= dataSet_.size() );
     assert( checkInputData_( partitialColorMap ) );
     dataSet_.insert( dataSet_.begin() + i, partitialColorMap );
+    needUpdate_ = true;
 }
 
 template<typename Tag>
@@ -32,6 +35,7 @@ void ColorMapAggregator<Tag>::replace( int i, const PartialColorMap& partitialCo
     assert( i >= 0 && i < dataSet_.size() );
     assert( checkInputData_( partitialColorMap ) );
     dataSet_[i] = partitialColorMap;
+    needUpdate_ = true;
 }
 
 template<typename Tag>
@@ -46,7 +50,6 @@ void ColorMapAggregator<Tag>::erase( int i, int n /*= 1*/ )
 {
     assert( i >= 0 && i + n <= dataSet_.size() );
     dataSet_.erase( dataSet_.begin() + i, dataSet_.begin() + i + n );
-
     needUpdate_ = true;
 }
 

@@ -227,8 +227,36 @@ pybind11::array_t<bool> getNumpyBitSet( const boost::dynamic_bitset<std::uint64_
         freeWhenDone ); // numpy array references this parent
 }
 
+pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
+{
+    using namespace MR;
+    // Allocate and initialize some data;
+    const size_t size = mesh.points.size();
+    double* data = new double[size];
+    for ( int i = 0; i < size; i++ )
+    {
+        if ( mesh.topology.hasVert( VertId( i ) ) )
+            data[i] = double( mesh.discreteMeanCurvature( VertId( i ) ) );
+    }
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    pybind11::capsule freeWhenDone( data, [] ( void* f )
+    {
+        double* data = reinterpret_cast< double* >( f );
+        delete[] data;
+    } );
+
+    return pybind11::array_t<double>(
+        { size }, // shape
+        { sizeof( double ) }, // C-style contiguous strides for bool
+        data, // the data pointer
+        freeWhenDone ); // numpy array references this parent
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
+    m.def( "getNumpyFaces", &getNumpyCurvature );
     m.def( "getNumpyFaces", &getNumpyFaces );
     m.def( "getNumpyVerts", &getNumpyVerts );
     m.def( "getNumpyBitSet", &getNumpyBitSet );

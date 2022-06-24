@@ -92,7 +92,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.onVertCreated )
             settings.onVertCreated( newVertId );
         ++splitsDone;
-        makeDeloneOriginRing( mesh, el.edge, settings.maxDeviationAfterFlip, settings.region );
+        makeDeloneOriginRing( mesh, el.edge, settings.maxDeviationAfterFlip, settings.maxAngleChangeAfterFlip, settings.region );
         for ( auto e : orgRing( mesh.topology, EdgeId{ el.edge } ) )
             addInQueue( e.undirected() );
     }

@@ -20,7 +20,7 @@ class GraphCut
 public:
     GraphCut( const MeshTopology & topology, const EdgeMetric & metric );
     void addContour( const std::vector<EdgeId> & contour );
-    void addFaces( const FaceBitSet& faces, bool source );
+    void addFaces( const FaceBitSet& source, const FaceBitSet& sink );
     FaceBitSet fill();
 
 private:
@@ -89,14 +89,19 @@ void GraphCut::addContour( const std::vector<EdgeId> & contour )
     filled_[Right] -= bothLabels;
 }
 
-void GraphCut::addFaces( const FaceBitSet& faces, bool source )
+void GraphCut::addFaces( const FaceBitSet& source, const FaceBitSet& sink )
 {
     MR_TIMER
-    auto index = source ? Left : Right;
-    for ( auto f : faces - filled_[index] )
-        active_[index].push_back( f );
 
-    filled_[index] |= faces;
+    auto unionFilled = filled_[Left] | filled_[Right];
+    for ( auto f : source - unionFilled )
+        active_[Left].push_back( f );
+
+    for ( auto f : sink - unionFilled )
+        active_[Right].push_back( f );
+
+    filled_[Left] |= source;
+    filled_[Right] |= sink;
 
     auto bothLabels = filled_[Left] & filled_[Right];
     filled_[Left] -= bothLabels;
@@ -336,8 +341,7 @@ FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& so
 {
     MR_TIMER
     GraphCut filler( topology, metric );
-    filler.addFaces( source, true );
-    filler.addFaces( sink, false );
+    filler.addFaces( source, sink );
     return filler.fill();
 }
 

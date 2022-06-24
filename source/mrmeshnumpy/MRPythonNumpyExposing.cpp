@@ -267,7 +267,7 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
-    m.def( "getNumpyFaces", &getNumpyCurvature );
+    m.def( "getNumpyCurvature", &getNumpyCurvature );
     m.def( "getNumpyFaces", &getNumpyFaces );
     m.def( "getNumpyVerts", &getNumpyVerts );
     m.def( "getNumpyBitSet", &getNumpyBitSet );

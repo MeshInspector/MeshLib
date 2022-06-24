@@ -15,6 +15,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MREdgeIterator.h"
+#include "MRMesh/MRMeshCollide.h"
 
 using namespace MR;
 
@@ -111,6 +112,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "area", ( double( MR::Mesh::* )( const FaceBitSet* fs )const )& MR::Mesh::area, pybind11::arg( "fs" ) = nullptr ).
         def( "volume", &MR::Mesh::volume, pybind11::arg( "region" ) = nullptr ).
         def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false ).
+        def( "discreteMeanCurvature", &MR::Mesh::discreteMeanCurvature ).
         def_readwrite( "topology", &MR::Mesh::topology ).
         def_readwrite( "points", &MR::Mesh::points ).
         def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint ).
@@ -245,13 +247,6 @@ Mesh pythonMergeMehses( const pybind11::list& meshes )
     return res;
 }
 
-void pythonHealSelfIntersections( Mesh& mesh, float voxelSize )
-{
-    MeshVoxelsConverter convert;
-    convert.voxelSize = voxelSize;
-    mesh = convert( convert( mesh ) );
-}
-
 MR::FaceBitSet getFacesByMinEdgeLength( const MR::Mesh& mesh, float minLength )
 {
     using namespace MR;
@@ -273,8 +268,6 @@ MR::FaceBitSet getFacesByMinEdgeLength( const MR::Mesh& mesh, float minLength )
 }
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, getFacesByMinEdgeLength, getFacesByMinEdgeLength, "return faces with at least one edge longer than min edge length" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, self_intersections_heal, pythonHealSelfIntersections, "heals self intersections by converting mesh to voxels and back" )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, merge_meshes, pythonMergeMehses, "merge python list of meshes to one mesh" )
 
@@ -299,4 +292,6 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_spikes_test_torus, MR::makeTorusWithSpike
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_components_test_torus, MR::makeTorusWithComponents, "creates spetial torus without some segments" )
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_selfintersect_test_torus, MR::makeTorusWithSelfIntersections, "creates spetial torus with self-intersections" )
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, find_self_colliding_faces, MR::findSelfCollidingTrianglesBS, "fins FaceBitSet of self-intersections on mesh")
 

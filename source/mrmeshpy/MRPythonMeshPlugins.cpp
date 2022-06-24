@@ -96,11 +96,7 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, stitch_two_holes,
     "stitches holes on the mesh with exact two holes" )
 
 // Fix Tunnels
-FaceBitSet detectTunnelFacesMesh (const Mesh& mesh, float maxLength)
-{
-    return detectTunnelFaces(mesh, maxLength);
-}
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_tunnel_faces, &detectTunnelFacesMesh,
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_tunnel_faces, &MR::detectTunnelFaces,
     "returns tunnel faces. Remove them and stitch new holes to fill tunnels. Tunnel length is the treshold for big holes" )
 
 // Homology Basis

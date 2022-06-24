@@ -4,6 +4,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRBitSetParallelFor.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
@@ -139,13 +140,13 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     // Allocate and initialize some data;
     const int size = numFaces * 3;
     int* data = new int[size];
-    for ( int i = 0; i < numFaces; i++ )
+    BitSetParallelForAll( validFaces, [&] ( FaceId f )
     {
-        auto ind = i * 3;
-        if ( validFaces.test( FaceId( i ) ) )
+        auto ind = f * 3;
+        if ( validFaces.test( f ) )
         {
             VertId v[3];
-            topology.getTriVerts( FaceId( i ), v );
+            topology.getTriVerts( f, v );
             for ( int vi = 0; vi < 3; ++vi )
                 data[ind + vi] = v[vi];
         }
@@ -154,7 +155,7 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
             for ( int vi = 0; vi < 3; ++vi )
                 data[ind + vi] = 0;
         }
-    }
+    } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:
@@ -179,12 +180,16 @@ pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
     // Allocate and initialize some data;
     const int size = numVerts * 3;
     double* data = new double[size];
-    for ( int i = 0; i < numVerts; i++ )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
+        [&] ( const tbb::blocked_range<int>& range )
     {
-        int ind = 3 * i;
-        for ( int vi = 0; vi < 3; ++vi )
-            data[ind + vi] = mesh.points.vec_[i][vi];
-    }
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            int ind = 3 * i;
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = mesh.points.vec_[i][vi];
+        }
+    } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:
@@ -231,13 +236,19 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
 {
     using namespace MR;
     // Allocate and initialize some data;
-    const size_t size = mesh.points.size();
-    double* data = new double[size];
-    for ( int i = 0; i < size; i++ )
+    int numVerts = mesh.topology.lastValidVert() + 1;
+    double* data = new double[numVerts];
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
+        [&] ( const tbb::blocked_range<int>& range )
     {
-        if ( mesh.topology.hasVert( VertId( i ) ) )
-            data[i] = double( mesh.discreteMeanCurvature( VertId( i ) ) );
-    }
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            if ( mesh.topology.hasVert( VertId( i ) ) )
+                data[i] = double( mesh.discreteMeanCurvature( VertId( i ) ) );
+            else
+                data[i] = 0.0;
+        }
+    } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:
@@ -248,7 +259,7 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
     } );
 
     return pybind11::array_t<double>(
-        { size }, // shape
+        { numVerts }, // shape
         { sizeof( double ) }, // C-style contiguous strides for bool
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent

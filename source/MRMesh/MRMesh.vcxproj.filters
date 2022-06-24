@@ -52,9 +52,6 @@
     <Filter Include="Source Files\PointCloud">
       <UniqueIdentifier>{c300f0c9-5a9b-44ee-98c2-1ac7dad01b16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Polyline3">
-      <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\History">
       <UniqueIdentifier>{81c8f6c2-9f7d-4609-9a19-a4aaa5edfbbd}</UniqueIdentifier>
     </Filter>
@@ -99,6 +96,9 @@
     </Filter>
     <Filter Include="Source Files\Boolean">
       <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Polyline">
+      <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -565,10 +565,10 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2.h">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Project.h">
       <Filter>Source Files\AABBTree</Filter>
@@ -646,7 +646,7 @@
       <Filter>Source Files\Python</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineEdgeIterator.h">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRComputeBoundingBox.h">
       <Filter>Source Files\Math</Filter>
@@ -685,7 +685,7 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline.h">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLinesHolder.h">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
@@ -836,6 +836,9 @@
     </ClInclude>
     <ClInclude Include="MRWriter.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolylineSubdivide.h">
+      <Filter>Source Files\Polyline</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1188,7 +1191,7 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTopology.cpp">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecisePredicates2.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1272,7 +1275,7 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline.cpp">
-      <Filter>Source Files\Polyline3</Filter>
+      <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLinesHolder.cpp">
       <Filter>Source Files\DataModel\ModelHolder</Filter>
@@ -1417,6 +1420,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectLabel.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineSubdivide.cpp">
+      <Filter>Source Files\Polyline</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

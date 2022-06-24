@@ -33,7 +33,7 @@ struct SubdivideSettings
 };
 
 /// Split edges in mesh region according to the settings;\n
-/// \return The total number of edge flips performed
+/// \return The total number of edge splits performed
 MRMESH_API int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings = {} );
 
 /// \}

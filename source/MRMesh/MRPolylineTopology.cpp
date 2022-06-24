@@ -246,14 +246,25 @@ VertId PolylineTopology::splitEdge( EdgeId e )
 {
     // disconnect edge e from its origin
     EdgeId eNext = next( e );
+    VertId v0;
     if ( eNext != e )
+    {
         splice( eNext, e );
+    }
+    else
+    {
+        v0 = org( e );
+        setOrg( e, {} );
+    }
 
     // e now becomes the second part of split edge, add first part to it
     EdgeId e0 = makeEdge();
+    assert( !org(e) );
     splice( e, e0.sym() );
     if ( eNext != e )
         splice( eNext, e0 );
+    else
+        setOrg( e0, v0 );
 
     // allocate id from new vertex
     VertId newv = addVertId();

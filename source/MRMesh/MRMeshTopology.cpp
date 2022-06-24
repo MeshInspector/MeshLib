@@ -664,14 +664,25 @@ VertId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
     
     // disconnect edge e from its origin
     EdgeId ePrev = prev( e );
+    VertId v0;
     if ( ePrev != e )
+    {
         splice( ePrev, e );
+    }
+    else
+    {
+        v0 = org( e );
+        setOrg( e, {} );
+    }
 
     // e now becomes the second part of split edge, add first part to it
     EdgeId e0 = makeEdge();
+    assert( !org(e) );
     splice( e, e0.sym() );
     if ( ePrev != e )
         splice( ePrev, e0 );
+    else
+        setOrg( e0, v0 );
 
     // subdivide left and right triangles
     EdgeId eSymPrev = prev( e.sym() );

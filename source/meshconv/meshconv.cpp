@@ -20,7 +20,6 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 
         MR::RemeshSettings rems;
         rems.targetEdgeLen = targetEdgeLen;
-        rems.maxDeviation = targetEdgeLen / 100;
         MR::remesh( mesh, rems );
 
         std::cout << "re-meshed successfully to target edge length " << targetEdgeLen << "\n";

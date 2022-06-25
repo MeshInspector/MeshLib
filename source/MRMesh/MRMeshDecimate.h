@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include "MRConstants.h"
 #include <climits>
 #include <functional>
 
@@ -136,8 +137,8 @@ struct RemeshSettings
     // the algorithm will try to keep the length of all edges close to this value,
     // splitting twice longer edges, and eliminating twice shorter edges
     float targetEdgeLen = 0.001f;
-    // maximum allowed deviation during triangulation optimization
-    float maxDeviation = 1e-5f;
+    /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
+    float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
     ///  whether to pack mesh at the end

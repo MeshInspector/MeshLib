@@ -517,7 +517,7 @@ void remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     SubdivideSettings subs;
     subs.maxEdgeLen = 2 * settings.targetEdgeLen;
     subs.maxEdgeSplits = 10'000'000;
-    subs.maxDeviationAfterFlip = settings.maxDeviation;
+    subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.region = settings.region;
     subdivideMesh( mesh, subs );
 

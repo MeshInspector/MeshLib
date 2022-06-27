@@ -242,11 +242,10 @@ void Polyline<V>::transform( const AffineXf<V> & xf )
 }
 
 template<typename V>
-VertId Polyline<V>::splitEdge( EdgeId e )
+VertId Polyline<V>::splitEdge( EdgeId e, const V & newVertPos )
 {
-    auto newPos = 0.5f * ( orgPnt( e ) + destPnt( e ) );
     VertId newv = topology.splitEdge( e );
-    points.autoResizeAt( newv ) = newPos;
+    points.autoResizeAt( newv ) = newVertPos;
     return newv;
 }
 

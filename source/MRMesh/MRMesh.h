@@ -44,6 +44,7 @@ struct [[nodiscard]] Mesh
     // returns a point on the edge: origin point for f=0 and destination point for f=1
     Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
+    Vector3f edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
     // returns three points of left face of e
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
@@ -182,10 +183,12 @@ struct [[nodiscard]] Mesh
     // note that first and last edge should have no left face
     MRMESH_API void attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vector3f>& contourPoints );
 
-    // split given edge on two equal parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned);
+    // split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned);
     // left and right faces if valid are also subdivide by new edge each;
     // if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
-    MRMESH_API VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    MRMESH_API VertId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr );
+    // same, but split given edge on two equal parts
+    VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr ) { return splitEdge( e, edgeCenter( e ), region ); }
 
     // split given triangle on three triangles, introducing new vertex (which is returned) in the centroid of original triangle and connecting it to its vertices;
     // if region is given, then it must include (f) and new faces will be added there as well

@@ -82,19 +82,23 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     int splitsDone = 0;
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
-        auto el = queue.top();
+        const auto el = queue.top();
+        const EdgeId e = el.edge;
         queue.pop();
-        if ( el.lenSq != mesh.edgeLengthSq( el.edge ) )
+
+        if ( el.lenSq != mesh.edgeLengthSq( e ) )
             continue; // outdated record in the queue
-        auto newVertId = mesh.splitEdge( el.edge, settings.region );
+
+        auto newVertId = mesh.splitEdge( e, settings.region );
+
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
         if ( settings.onVertCreated )
             settings.onVertCreated( newVertId );
         ++splitsDone;
-        makeDeloneOriginRing( mesh, el.edge, settings.maxDeviationAfterFlip, settings.maxAngleChangeAfterFlip, settings.region );
-        for ( auto e : orgRing( mesh.topology, EdgeId{ el.edge } ) )
-            addInQueue( e.undirected() );
+        makeDeloneOriginRing( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChangeAfterFlip, settings.region );
+        for ( auto ei : orgRing( mesh.topology, e ) )
+            addInQueue( ei.undirected() );
     }
 
     return splitsDone;

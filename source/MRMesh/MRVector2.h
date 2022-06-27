@@ -88,7 +88,9 @@ inline T dot( const Vector2<T> & a, const Vector2<T> & b )
 template <typename T> 
 inline T angle( const Vector2<T> & a, const Vector2<T> & b )
 {
-    return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
+    return std::atan2( std::abs( cross( a, b ) ), dot( a, b ) );
+    // this version is slower and less precise
+    //return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
 }
 
 template <typename T> 

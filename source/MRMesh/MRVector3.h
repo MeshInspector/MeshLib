@@ -132,7 +132,9 @@ inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
 template <typename T> 
 inline T angle( const Vector3<T> & a, const Vector3<T> & b )
 {
-    return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
+    return std::atan2( cross( a, b ).length(), dot( a, b ) );
+    // this version is slower and less precise
+    //return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
 }
 
 template <typename T> 

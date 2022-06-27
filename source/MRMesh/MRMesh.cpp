@@ -280,7 +280,7 @@ Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const
         {
             auto d0 = edgeVector( e );
             auto d1 = edgeVector( topology.next( e ) );
-            auto angle = std::acos( std::clamp( dot( d0.normalized(), d1.normalized() ), -1.0f, 1.0f ) );
+            auto angle = MR::angle( d0, d1 );
             auto n = cross( d0, d1 );
             assert( n.lengthSq() > 0.0f );
             sum += angle * n.normalized();
@@ -366,7 +366,7 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
         {
             auto d0 = edgeVector( e );
             auto d1 = edgeVector( topology.next( e ) );
-            auto angle = acos( std::clamp( dot( d0.normalized(), d1.normalized() ), -1.0f, 1.0f ) );
+            auto angle = MR::angle( d0, d1 );
             sum += angle;
         }
         else if ( outBoundaryVert )

@@ -30,6 +30,9 @@ struct SubdivideSettings
     /// If subdivideBorder is off subdivider can produce narrow triangles near border\n
     /// this parameter prevents subdivision of such triangles
     float critAspectRatio = 20.0f;
+    /// This option works best for natural surfaces, where all triangles are close to equilateral and have similar area,
+    /// and no sharp edges in between
+    bool useCurvature = false;
     /// this function is called each time a new vertex has been created, but before the ring is made Delone
     std::function<void(VertId)> onVertCreated;
 };

@@ -89,7 +89,19 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( el.lenSq != mesh.edgeLengthSq( e ) )
             continue; // outdated record in the queue
 
-        auto newVertId = mesh.splitEdge( e, settings.region );
+        Vector3f newVertPos;
+        if ( settings.useCurvature )
+        {
+            const auto po = mesh.orgPnt( e );
+            const auto pd = mesh.destPnt( e );
+            const auto no = mesh.pseudonormal( mesh.topology.org( e ) );
+            const auto nd = mesh.pseudonormal( mesh.topology.dest( e ) );
+            const float sign = dot( pd - po, nd - no ) >= 0 ? 1.f : -1.f;
+            newVertPos = 0.5f * ( po + pd + sign * std::tan( angle( no, nd ) / 4 ) * ( pd - po ).length() * ( no + nd ).normalized()  );
+        }
+        else
+            newVertPos = mesh.edgeCenter( e );
+        const auto newVertId = mesh.splitEdge( e, newVertPos, settings.region );
 
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );

@@ -21,3 +21,5 @@ tbb-devel
 time
 libzip-devel
 libzstd-devel
+gtkmm30-devel
+glfw-devel

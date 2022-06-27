@@ -1,0 +1,39 @@
+#pragma once
+#include "MRMesh/MRIRenderObject.h"
+
+namespace MR
+{
+class RenderLabelObject : public IRenderObject
+{
+public:
+    RenderLabelObject( const VisualObject& visObj );
+    ~RenderLabelObject();
+
+    virtual void render( const RenderParams& params ) const override;
+    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const override;
+
+private:
+    const ObjectLabel* objLabel_;
+
+    mutable std::vector<Vector3i> facesIndicesBufferObj_;
+    typedef unsigned int GLuint;
+
+    GLuint labelArrayObjId_{ 0 };
+    GLuint vertPosBufferObjId_{ 0 };
+    GLuint facesIndicesBufferObjId_{ 0 };
+
+    void bindLabel_() const;
+
+    // Create a new set of OpenGL buffer objects
+    void initBuffers_();
+
+    // Release the OpenGL buffer objects
+    void freeBuffers_();
+
+    void update_() const;
+
+    // Marks dirty buffers that need to be uploaded to OpenGL
+    mutable uint32_t dirty_;
+};
+
+}

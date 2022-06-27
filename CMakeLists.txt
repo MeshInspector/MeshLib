@@ -40,7 +40,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
 # turn on warnings as errors
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS")
 
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
@@ -122,9 +122,18 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s ALLOW_MEMORY_GROWTH=1 -s USE_LIBPNG=1")
 ENDIF() # MR_EMSCRIPTEN
 
+set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
+include_directories(${IMGUI_DIR})
+
 enable_testing()
 
 IF(NOT MR_EMSCRIPTEN)
+
+find_package(glfw3 CONFIG REQUIRED)
+pkg_check_modules(GTKMM gtkmm-3.0)
+pkg_check_modules(JSONCPP jsoncpp)
+include_directories(${JSONCPP_INCLUDE_DIRS})
+
 IF(NOT APPLE)
  IF(NOT ${MR_FEDORA})
   set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
@@ -138,9 +147,11 @@ add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
 IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)

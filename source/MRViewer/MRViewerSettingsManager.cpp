@@ -1,0 +1,236 @@
+#include "MRViewerSettingsManager.h"
+#include "MRMeshViewport.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRConfig.h"
+#include "MRMeshViewer.h"
+#include "MRColorTheme.h"
+#include "MRRibbonMenu.h"
+#include "MRMesh/MRSceneSettings.h"
+#include "MRViewer/MRCommandLoop.h"
+#include "MRPch/MRSpdlog.h"
+#include "GLFW/glfw3.h"
+
+namespace
+{
+const std::string cOrthogrphicParamKey = "orthographic";
+const std::string cFlatShadingParamKey = "flatShading";
+const std::string cColorThemeParamKey = "colorTheme";
+const std::string cSceneControlParamKey = "sceneControls";
+const std::string cTopPanelPinnedKey = "topPanelPinned";
+const std::string cQuickAccesListKey = "quickAccesList";
+const std::string cMainWindowSize = "mainWindowSize";
+const std::string cMainWindowPos = "mainWindowPos";
+const std::string cMainWindowMaximized = "mainWindowMaximized";
+const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
+const std::string cShowSelectedObjects = "showSelectedObjects";
+const std::string lastExtextentionsParamKey = "lastExtextentions";
+}
+
+namespace MR
+{
+
+ViewerSettingsManager::ViewerSettingsManager( std::string appName ) :
+    appName_{ std::move( appName ) }
+{
+    lastExtentionNums_.resize( int( ObjType::Count ), 0 );
+}
+
+void ViewerSettingsManager::loadSettings( Viewer& viewer )
+{
+    auto& viewport = viewer.viewport();
+    auto params = viewport.getParameters();
+    auto& cfg = Config::instance();
+    params.orthographic = cfg.getBool( cOrthogrphicParamKey, params.orthographic );
+    viewport.setParameters( params );
+
+    auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
+    if ( ribbonMenu )
+        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
+
+    if ( cfg.hasJsonValue( cSceneControlParamKey ) )
+    {
+        const auto& controls = cfg.getJsonValue( cSceneControlParamKey );
+        for ( int i = 0; i < int( MouseMode::Count ); ++i )
+        {
+            MouseMode mode = MouseMode( i );
+            if ( mode == MouseMode::None )
+                continue;
+            auto modeName = getMouseModeString( mode );
+            if ( !controls[modeName].isInt() )
+                continue;
+            int key = controls[modeName].asInt();
+            if ( key == -1 )
+                continue;
+            viewer.mouseController.setMouseControl( MouseController::keyToMouseAndMod( key ), mode );
+        }
+    }
+
+    SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
+
+    ColorTheme::Type colorThemeType = ColorTheme::Type::Default;
+    std::string colorThemeName = ColorTheme::getPresetName( ColorTheme::Preset::Dark ); // default
+    if ( cfg.hasJsonValue( cColorThemeParamKey ) )
+    {
+        const auto& presetCfg = cfg.getJsonValue( cColorThemeParamKey );
+        if ( presetCfg.isObject() )
+        {
+
+            if ( presetCfg["TypeId"].isInt() )
+                colorThemeType = ColorTheme::Type( presetCfg["TypeId"].asInt() );
+            if ( presetCfg["Name"].isString() )
+                colorThemeName = presetCfg["Name"].asString();
+        }
+    }
+
+    if ( ribbonMenu )
+    {
+        if ( cfg.hasJsonValue( cQuickAccesListKey ) )
+            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
+
+        if ( cfg.hasJsonValue( cRibbonLeftWindowSize ) )
+            ribbonMenu->setSceneSize( cfg.getVector2i( cRibbonLeftWindowSize ) );
+    }
+
+    if ( cfg.hasVector2i( cMainWindowSize ) )
+    {
+        const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
+        CommandLoop::appendCommand( [&viewer, size]
+        {
+            viewer.resize( size.x, size.y );
+        } );
+    }
+    if ( cfg.hasVector2i( cMainWindowPos ) )
+    {
+        auto pos = cfg.getVector2i( cMainWindowPos, Vector2i( 100, 100 ) );
+        if ( pos.x > -32000 && pos.y > -32000 )
+        {
+            if ( pos.y <= 0 )
+                pos.y = 40; // handle for one rare issue
+            CommandLoop::appendCommand( [&viewer, pos]
+            {
+                if ( viewer.window )
+                    glfwSetWindowPos( viewer.window, pos.x, pos.y );
+            } );
+        }
+    }
+    if ( cfg.hasBool( cMainWindowMaximized ) )
+    {
+        const bool maximized = cfg.getBool( cMainWindowMaximized );
+        CommandLoop::appendCommand( [&viewer, maximized]
+        {
+            if ( !viewer.window )
+                return;
+            if ( maximized )
+                glfwMaximizeWindow( viewer.window );
+            else
+                glfwRestoreWindow( viewer.window );
+        } );
+    }
+
+    if ( ribbonMenu )
+    {
+        if ( cfg.hasBool( cShowSelectedObjects ) )
+            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects ) );
+    }
+
+    ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
+    ColorTheme::apply();
+
+    Json::Value lastExtentions = cfg.getJsonValue( lastExtextentionsParamKey );
+    int count = 0;
+    if ( !lastExtentions["Count"].isNull() && lastExtentions["Count"].isInt() )
+        count = lastExtentions["Count"].asInt();
+    assert( int( ObjType::Count ) >= count );
+
+    if ( !lastExtentions["Nums"].isNull() && lastExtentions["Nums"].isArray() )
+    {
+        auto& nums = lastExtentions["Nums"];
+        for ( int i = 0; i < std::min( count, int( ObjType::Count ) ); ++i )
+        {
+            if ( !nums[i].isNull() && nums[i].isInt() )
+                lastExtentionNums_[i] = nums[i].asInt();
+            else
+                lastExtentionNums_[i] = 0;
+        }
+
+    }
+}
+
+void ViewerSettingsManager::saveSettings( const Viewer& viewer )
+{
+    const auto& viewport = viewer.viewport();
+    const auto& params = viewport.getParameters();
+    auto& cfg = Config::instance();
+    cfg.setBool( cOrthogrphicParamKey, params.orthographic );
+
+    auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
+    if ( ribbonMenu )
+        cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
+
+    Json::Value sceneControls;
+    for ( int i = 0; i < int( MouseMode::Count ); ++i )
+    {
+        MouseMode mode = MouseMode( i );
+        if ( mode == MouseMode::None )
+            continue;
+        auto control = viewer.mouseController.findControlByMode( mode );
+        int key = control ? MouseController::mouseAndModToKey( *control ) : -1;
+        sceneControls[getMouseModeString( mode )] = key;
+    }
+    cfg.setJsonValue( cSceneControlParamKey, sceneControls );
+
+    cfg.setBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
+
+    Json::Value colorThemePreset;
+    colorThemePreset["TypeId"] = int( ColorTheme::getThemeType() );
+    colorThemePreset["Name"] = ColorTheme::getThemeName();
+
+    cfg.setJsonValue( cColorThemeParamKey, colorThemePreset );
+
+    if ( ribbonMenu )
+    {
+        auto& quickAccessList = ribbonMenu->getQuickAccessList();
+        Json::Value qaList = Json::arrayValue;
+        qaList.resize( int( quickAccessList.size() ) );
+        for ( int i = 0; i < quickAccessList.size(); ++i )
+            qaList[i]["Name"] = quickAccessList[i];
+        cfg.setJsonValue( cQuickAccesListKey, qaList );
+
+        cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );
+    }
+
+    Json::Value lastExtentions;
+    lastExtentions["Count"] = int( ObjType::Count );
+    auto& nums = lastExtentions["Nums"];
+    nums = Json::arrayValue;
+    for ( int i = 0; i < int( ObjType::Count) ; ++i )
+        nums[i] = lastExtentionNums_[i];
+    cfg.setJsonValue( lastExtextentionsParamKey, lastExtentions );
+
+    cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
+    cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
+    cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );
+
+    if ( ribbonMenu )
+    {
+        cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
+    }
+}
+
+int ViewerSettingsManager::getLastExtentionNum( ObjType objType )
+{
+    int objTypeInt = int( objType );
+    if ( objTypeInt < 0 || objTypeInt >= int( ObjType::Count ) )
+        return 0;
+    return lastExtentionNums_[objTypeInt];
+}
+
+void ViewerSettingsManager::setLastExtentionNum( ObjType objType, int num )
+{
+    int objTypeInt = int( objType );
+    if ( objTypeInt < 0 || objTypeInt >= int( ObjType::Count ) )
+        return;
+    lastExtentionNums_[objTypeInt] = num;
+}
+
+}

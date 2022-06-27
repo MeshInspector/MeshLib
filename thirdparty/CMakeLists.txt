@@ -13,10 +13,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pra
        -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
 # -Werror")
 
-IF(MR_EMSCRIPTEN)
+IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 ENDIF()
+
+#imgui build
+file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp")
+file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h")
+include_directories("../source/imgui/")
+add_compile_definitions(IMGUI_USER_CONFIG=\"MRCustomImGuiConfig.h\")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable -Wno-unused-variable")
+add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
 
 IF(APPLE OR MR_EMSCRIPTEN)
  add_subdirectory(./expected ./expected)
@@ -54,3 +62,5 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   add_subdirectory(./jsoncpp ./jsoncpp)
 ENDIF()
+
+add_subdirectory(./glad ./glad)

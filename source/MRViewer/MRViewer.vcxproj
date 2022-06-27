@@ -1,0 +1,278 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRAppendHistory.cpp" />
+    <ClCompile Include="MRAlphaSortGL.cpp" />
+    <ClCompile Include="ImGuiMenu.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_opengl3.cpp" />
+    <ClCompile Include="MRAsyncTimer.cpp" />
+    <ClCompile Include="MRColorTheme.cpp" />
+    <ClCompile Include="MRCommandLoop.cpp" />
+    <ClCompile Include="MRCreateShader.cpp" />
+    <ClCompile Include="MRMouseController.cpp" />
+    <ClCompile Include="MRObjectTransformWidget.cpp" />
+    <ClCompile Include="MRPickHoleBorderElement.cpp" />
+    <ClCompile Include="MRRenderHelpers.cpp" />
+    <ClCompile Include="MRRenderLabelObject.cpp" />
+    <ClCompile Include="MRRibbonButtonDrawer.cpp" />
+    <ClCompile Include="MRRibbonFontManager.cpp" />
+    <ClCompile Include="MRRibbonIcons.cpp" />
+    <ClCompile Include="MRRibbonMenu.cpp" />
+    <ClCompile Include="MRRibbonMenuItem.cpp" />
+    <ClCompile Include="MRRibbonSchema.cpp" />
+    <ClCompile Include="MRSaveOnClose.cpp" />
+    <ClCompile Include="MRSelectScreenLasso.cpp" />
+    <ClCompile Include="MRShortcutManager.cpp" />
+    <ClCompile Include="MRSplashWindow.cpp" />
+    <ClCompile Include="MRStatePlugin.cpp" />
+    <ClCompile Include="MRDemoPlugin.cpp" />
+    <ClCompile Include="MRImmediateGL.cpp" />
+    <ClCompile Include="MRStatePluginAutoClose.cpp" />
+    <ClCompile Include="MRSurfacePointPicker.cpp" />
+    <ClCompile Include="MRViewerInstance.cpp" />
+    <ClCompile Include="MRViewportCamera.cpp" />
+    <ClCompile Include="MRRecentFilesStore.cpp" />
+    <ClCompile Include="MRRenderLinesObject.cpp" />
+    <ClCompile Include="MRRenderMeshObject.cpp" />
+    <ClCompile Include="MRRenderPointsObject.cpp" />
+    <ClCompile Include="MRImGuiImage.cpp" />
+    <ClCompile Include="MRPalette.cpp" />
+    <ClCompile Include="MRShadersHolder.cpp" />
+    <ClCompile Include="MRMenu.cpp" />
+    <ClCompile Include="MRMeshModifier.cpp" />
+    <ClCompile Include="MRViewer.cpp" />
+    <ClCompile Include="MRViewport.cpp" />
+    <ClCompile Include="MRFileDialog.cpp" />
+    <ClCompile Include="MROpen.cpp" />
+    <ClCompile Include="MRProgressBar.cpp" />
+    <ClCompile Include="MRSave.cpp" />
+    <ClCompile Include="MRSetupViewer.cpp" />
+    <ClCompile Include="MRViewerEventsListener.cpp" />
+    <ClCompile Include="MRViewerSettingsManager.cpp" />
+    <ClCompile Include="MRViewportGL.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MRAlphaSortGL.h" />
+    <ClInclude Include="MRAppendHistory.h" />
+    <ClInclude Include="exports.h" />
+    <ClInclude Include="ImGuiHelpers.h" />
+    <ClInclude Include="ImGuiMenu.h" />
+    <ClInclude Include="ImGuiTraits.h" />
+    <ClInclude Include="imgui_fonts_droid_sans.h" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_opengl3.h" />
+    <ClInclude Include="MRAsyncTimer.h" />
+    <ClInclude Include="MRColorTheme.h" />
+    <ClInclude Include="MRCommandLoop.h" />
+    <ClInclude Include="MRCreateShader.h" />
+    <ClInclude Include="MRGladGlfw.h" />
+    <ClInclude Include="MRMouse.h" />
+    <ClInclude Include="MRMouseController.h" />
+    <ClInclude Include="MRObjectTransformWidget.h" />
+    <ClInclude Include="MRPickHoleBorderElement.h" />
+    <ClInclude Include="MRRenderHelpers.h" />
+    <ClInclude Include="MRRenderLabelObject.h" />
+    <ClInclude Include="MRRibbonButtonDrawer.h" />
+    <ClInclude Include="MRRibbonConstants.h" />
+    <ClInclude Include="MRRibbonFontManager.h" />
+    <ClInclude Include="MRRibbonIcons.h" />
+    <ClInclude Include="MRRibbonMenuItem.h" />
+    <ClInclude Include="MRRibbonMenu.h" />
+    <ClInclude Include="MRSaveOnClose.h" />
+    <ClInclude Include="MRRibbonSchema.h" />
+    <ClInclude Include="MRSceneStateCheck.h" />
+    <ClInclude Include="MRSelectScreenLasso.h" />
+    <ClInclude Include="MRShortcutManager.h" />
+    <ClInclude Include="MRSplashWindow.h" />
+    <ClInclude Include="MRStatePlugin.h" />
+    <ClInclude Include="MRDemoPlugin.h" />
+    <ClInclude Include="MRGLMacro.h" />
+    <ClInclude Include="MRImmediateGL.h" />
+    <ClInclude Include="MRMeshViewer.h" />
+    <ClInclude Include="MRMeshViewerPlugin.h" />
+    <ClInclude Include="MRMeshViewport.h" />
+    <ClInclude Include="MRPythonAppendCommand.h" />
+    <ClInclude Include="MRRecentFilesStore.h" />
+    <ClInclude Include="MRRenderGLHelpers.h" />
+    <ClInclude Include="MRRenderLinesObject.h" />
+    <ClInclude Include="MRRenderMeshObject.h" />
+    <ClInclude Include="MRRenderPointsObject.h" />
+    <ClInclude Include="MRImGuiImage.h" />
+    <ClInclude Include="MRPalette.h" />
+    <ClInclude Include="MRShadersHolder.h" />
+    <ClInclude Include="MRMenu.h" />
+    <ClInclude Include="MRMeshModifier.h" />
+    <ClInclude Include="MRStatePluginAutoClose.h" />
+    <ClInclude Include="MRSurfacePointPicker.h" />
+    <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRViewer.h" />
+    <ClInclude Include="MRViewerFwd.h" />
+    <ClInclude Include="MRViewerInstance.h" />
+    <ClInclude Include="MRViewport.h" />
+    <ClInclude Include="MRViewerPlugin.h" />
+    <ClInclude Include="MRFileDialog.h" />
+    <ClInclude Include="MROpen.h" />
+    <ClInclude Include="MRProgressBar.h" />
+    <ClInclude Include="MRSave.h" />
+    <ClInclude Include="MRSetupViewer.h" />
+    <ClInclude Include="MRViewerEventsListener.h" />
+    <ClInclude Include="MRViewerSettingsManager.h" />
+    <ClInclude Include="MRViewportGL.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <Content Include="resource\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\..\thirdparty\fontawesome-free\fa-solid-900.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Cousine-Regular.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\DroidSans.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Karla-Regular.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\ProggyClean.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\ProggyTiny.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Roboto-Medium.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resource\object_icons\X1\Object.png" />
+    <Image Include="resource\object_icons\X1\ObjectDistanceMap.png" />
+    <Image Include="resource\object_icons\X1\ObjectLines.png" />
+    <Image Include="resource\object_icons\X1\ObjectMesh.png" />
+    <Image Include="resource\object_icons\X1\ObjectPoints.png" />
+    <Image Include="resource\object_icons\X1\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X3\Object.png" />
+    <Image Include="resource\object_icons\X3\ObjectDistanceMap.png" />
+    <Image Include="resource\object_icons\X3\ObjectLines.png" />
+    <Image Include="resource\object_icons\X3\ObjectMesh.png" />
+    <Image Include="resource\object_icons\X3\ObjectPoints.png" />
+    <Image Include="resource\object_icons\X3\ObjectVoxels.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\imgui\imgui.vcxproj">
+      <Project>{766f017f-ba42-484a-abb7-b667e7fa924c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
+      <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{CECB9185-FF38-461F-BA20-654399EDC67E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MRViewer</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <Import Project="$(ProjectDir)\..\common.props" />
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>MRVIEWER_EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>MRVIEWER_EXPORT;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

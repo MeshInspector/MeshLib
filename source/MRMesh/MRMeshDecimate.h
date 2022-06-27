@@ -139,6 +139,9 @@ struct RemeshSettings
     float targetEdgeLen = 0.001f;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
+    /// This option in subdivision works best for natural surfaces, where all triangles are close to equilateral and have similar area,
+    /// and no sharp edges in between
+    bool useCurvature = false;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
     ///  whether to pack mesh at the end

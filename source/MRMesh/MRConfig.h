@@ -23,7 +23,7 @@ public:
 
     // looks up (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
     // creates directory if not presented
-    MRMESH_API void reset( const std::string& appName );
+    MRMESH_API void reset();
 
 private:
     Config();

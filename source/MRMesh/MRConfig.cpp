@@ -13,18 +13,14 @@ namespace MR
 Config::Config()
 {}
 
-void Config::reset( const std::string& appName )
+void Config::reset()
 {
     if ( !filePath_.empty() )
     {
         writeToFile();
     }
 
-    reset( getUserConfigFilePath( appName ) );
-
-    //TODO: remove this in next PR.
-    //Intermediate solution for (Registry -> ConfigJson) transfer
-    appName_ = appName;
+    reset( getUserConfigFilePath() );
 }
 
 void Config::writeToFile()

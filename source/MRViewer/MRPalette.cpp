@@ -591,7 +591,7 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
 
 std::filesystem::path PalettePresets::getPalettePresetsFolder()
 {
-    return getUserConfigDir( MR_PROJECT_NAME ) / "PalettePresets";
+    return getUserConfigDir() / "PalettePresets";
 }
 
 PalettePresets::PalettePresets()

@@ -350,7 +350,7 @@ const char* ColorTheme::getViewportColorTypeName( ViewportColorsType type )
 
 std::filesystem::path ColorTheme::getUserThemesDirectory()
 {
-    auto configDir = getUserConfigDir( MR_PROJECT_NAME );
+    auto configDir = getUserConfigDir();
     configDir /= "UserThemes";
     return configDir;
 }

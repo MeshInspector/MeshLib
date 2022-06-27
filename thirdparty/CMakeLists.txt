@@ -40,6 +40,8 @@ ELSE()
  IF( NOT ${distro} STREQUAL "Fedora Linux" )
   set(OPENVDB_ENABLE_UNINSTALL OFF)
   set(OPENVDB_ENABLE_INSTALL OFF)
+  set(OPENVDB_CORE_SHARED "ON")
+  set(OPENVDB_CORE_STATIC "OFF")
   add_subdirectory(./openvdb ./openvdb)
  ENDIF()
 

@@ -1,0 +1,301 @@
+{
+	"ImGuiPreset": "Light",
+	"BackFaces": {
+		"a": 255,
+		"b": 85,
+		"g": 145,
+		"r": 123
+	},
+	"Edges": {
+		"a": 255,
+		"b": 0,
+		"g": 0,
+		"r": 0
+	},
+	"Labels": {
+		"a": 255,
+		"b": 0,
+		"g": 0,
+		"r": 0
+	},
+	"Ribbon Colors": {
+		"Background": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"Borders": {
+			"a": 255,
+			"b": 217,
+			"g": 208,
+			"r": 200
+		},
+		"HeaderBackground": {
+			"a": 255,
+			"b": 0,
+			"g": 0,
+			"r": 0
+		},
+		"HeaderSeparator": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"RibbonButtonHovered": {
+			"a": 255,
+			"b": 244,
+			"g": 237,
+			"r": 236
+		},
+		"RibbonButtonClicked": {
+			"a": 255,
+			"b": 229,
+			"g": 221,
+			"r": 219
+		},
+		"RibbonButtonActive": {
+			"a": 255,
+			"b": 214,
+			"g": 119,
+			"r": 39
+		},
+		"RibbonButtonActiveHovered": {
+			"a": 255,
+			"b": 255,
+			"g": 155,
+			"r": 72
+		},
+		"RibbonButtonActiveClicked": {
+			"a": 255,
+			"b": 255,
+			"g": 116,
+			"r": 0
+		},
+		"TabActive": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"TabActiveHovered": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"TabActiveClicked": {
+			"a": 255,
+			"b": 229,
+			"g": 221,
+			"r": 219
+		},
+		"TabText": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"TabActiveText": {
+			"a": 255,
+			"b": 0,
+			"g": 0,
+			"r": 0
+		},
+		"TabHovered": {
+			"a": 255,
+			"b": 90,
+			"g": 84,
+			"r": 79
+		},
+		"TabClicked": {
+			"a": 255,
+			"b": 105,
+			"g": 99,
+			"r": 95
+		},
+		"ToolbarHovered": {
+			"a": 255,
+			"b": 244,
+			"g": 237,
+			"r": 236
+		},
+		"ToolbarClicked": {
+			"a": 255,
+			"b": 229,
+			"g": 221,
+			"r": 219
+		},
+		"Text": {
+			"a": 255,
+			"b": 41,
+			"g": 37,
+			"r": 34
+		},
+		"TextDisabled": {
+			"a": 77,
+			"b": 41,
+			"g": 37,
+			"r": 34
+		},
+		"TextEnabled": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"TextSelectedBg": {
+			"a": 255,
+			"b": 255,
+			"g": 164,
+			"r": 87
+		},
+		"TopPanelBackground": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"QuickAccessBackground": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"ThirdpartyBackground": {
+			"a": 255,
+			"b": 245,
+			"g": 240,
+			"r": 239
+		},
+		"FrameBackground": {
+			"a": 255,
+			"b": 249,
+			"g": 246,
+			"r": 245
+		},
+		"CollapseHeaderBackground": {
+			"a": 255,
+			"b": 249,
+			"g": 246,
+			"r": 245
+		},
+		"SelectedObjectText": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"SelectedObjectFrame": {
+			"a": 255,
+			"b": 255,
+			"g": 131,
+			"r": 27
+		},
+		"GradientStart": {
+			"a": 255,
+			"b": 255,
+			"g": 131,
+			"r": 27
+		},
+		"GradientEnd": {
+			"a": 255,
+			"b": 169,
+			"g": 77,
+			"r": 0
+		}
+	},
+	"Viewport Colors": {
+		"Background": {
+			"a": 255,
+			"b": 245,
+			"g": 240,
+			"r": 238
+		},
+		"Borders": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		}
+	},
+	"SelectedEdges": {
+		"a": 255,
+		"b": 178,
+		"g": 51,
+		"r": 178
+	},
+	"SelectedFaces": {
+		"a": 52,
+		"b": 52,
+		"g": 133,
+		"r": 204
+	},
+	"SelectedPoints": {
+		"a": 52,
+		"b": 52,
+		"g": 133,
+		"r": 204
+	},
+	"SelectedObjectMesh": {
+		"a": 255,
+		"b": 236,
+		"g": 78,
+		"r": 55
+	},
+	"UnselectedObjectMesh": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	},
+	"SelectedObjectPoints": {
+		"a": 255,
+		"b": 236,
+		"g": 78,
+		"r": 55
+	},
+	"UnselectedObjectPoints": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	},
+	"SelectedObjectLines": {
+		"a": 255,
+		"b": 236,
+		"g": 78,
+		"r": 55
+	},
+	"UnselectedObjectLines": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	},
+	"SelectedObjectVoxels": {
+		"a": 255,
+		"b": 236,
+		"g": 78,
+		"r": 55
+	},
+	"UnselectedObjectVoxels": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	},
+	"SelectedObjectDistanceMap": {
+		"a": 255,
+		"b": 236,
+		"g": 78,
+		"r": 55
+	},
+	"UnselectedObjectDistanceMap": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	}
+}

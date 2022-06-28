@@ -1047,10 +1047,7 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
 void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
 {
     if ( item->isActive() || available )
-    {
-        if ( item->action() )
-            updateItemStatus( item->name() );
-    }
+        item->action();
 }
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const

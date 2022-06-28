@@ -11,6 +11,7 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMenu.h"
 
 namespace MR
 {
@@ -99,14 +100,17 @@ bool Save::save_( const std::filesystem::path & filename )
         }
     }
 
-    if ( !error.empty() )
+    if ( error.empty() )
     {
-        spdlog::error( error );
-        return false;
+        viewer->recentFilesStore.storeFile( filename );
+        return true;
     }
 
-    viewer->recentFilesStore.storeFile( filename );
-    return true;
+    if ( auto menu = viewer->getMenuPluginAs<Menu>() )
+        menu->showErrorModal( error );
+
+    spdlog::error( error );
+    return false;
 }
 
 void Save::init( Viewer* _viewer )

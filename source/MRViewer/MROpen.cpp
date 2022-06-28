@@ -134,10 +134,9 @@ bool Open::load_( const std::filesystem::path & filename )
         return true;
     }
 
-    if ( auto menu = std::dynamic_pointer_cast<Menu>( viewer->getMenuPlugin() ) )
-    {
+    if ( auto menu = viewer->getMenuPluginAs<Menu>() )
         menu->showErrorModal( error );
-    }
+
     spdlog::error( error );
     return false;
 }

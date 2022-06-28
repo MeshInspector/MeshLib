@@ -21,3 +21,5 @@ libgdcm-dev
 libpodofo-dev
 libexpected-dev
 libfreetype-dev
+libgtkmm-3.0-dev
+libglfw3-dev

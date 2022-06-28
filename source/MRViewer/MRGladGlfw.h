@@ -1,0 +1,25 @@
+#pragma once
+
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#else
+#include <glad/glad.h>
+#endif
+#include <GLFW/glfw3.h>
+
+namespace MR {
+
+// Load OpenGL and its extensions
+inline int loadGL()
+{
+#ifndef __EMSCRIPTEN__
+#pragma warning(push)
+#pragma warning(disable: 4191) //'type cast': unsafe conversion from 'GLFWglproc (__cdecl *)(const char *)' to 'GLADloadproc'
+    return gladLoadGLLoader( (GLADloadproc)glfwGetProcAddress );
+#pragma warning(pop)
+#else
+return 1;
+#endif
+}
+
+} //namespace MR

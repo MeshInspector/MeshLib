@@ -3,6 +3,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
+#include "MRViewer/MRViewer.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
@@ -28,6 +29,7 @@ TEST(MRMesh, QuadraticForm)
 int main(int argc, char **argv)
 {
     MR::loadMeshDll();
+    MR::loadMRViewerDll();
 
 #ifndef __EMSCRIPTEN__
     MR::loadMRMeshPyModule();

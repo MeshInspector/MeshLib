@@ -26,10 +26,10 @@ MRMESH_API std::filesystem::path GetFontsDirectory();
 MRMESH_API std::filesystem::path GetLibsDirectory();
 
 // return path to the folder with user config file(s)
-MRMESH_API std::filesystem::path getUserConfigDir( const std::string& appName );
+MRMESH_API std::filesystem::path getUserConfigDir();
 
 // returns path of config file in APPDATA
-MRMESH_API std::filesystem::path getUserConfigFilePath( const std::string& appName );
+MRMESH_API std::filesystem::path getUserConfigFilePath();
 
 // returns temp directory
 MRMESH_API std::filesystem::path GetTempDirectory();

@@ -21,3 +21,5 @@ libpng
 libsigc++
 libzip
 zlib
+gtkmm3
+glfw

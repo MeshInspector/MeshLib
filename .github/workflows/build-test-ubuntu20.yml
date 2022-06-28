@@ -1,4 +1,4 @@
-name: Build and test Ubuntu-20
+name: Build and test Ubuntu20
 
 on:
   workflow_call:

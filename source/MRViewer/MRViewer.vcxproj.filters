@@ -1,0 +1,478 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Plugins">
+      <UniqueIdentifier>{489959f1-25ee-44e3-befd-784929190336}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CustomOpenDialog">
+      <UniqueIdentifier>{53a64b18-d7cd-4739-9654-e54b4f1d9663}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MeshModifier">
+      <UniqueIdentifier>{59cdb555-df19-4100-b99b-a01c2d3a5f1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render">
+      <UniqueIdentifier>{2f16cbd0-e849-461a-b531-d8992ff16602}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Shaders">
+      <UniqueIdentifier>{c6ec5b18-c1c9-46d1-83fd-798c401b6de1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Implementations">
+      <UniqueIdentifier>{b339e299-711f-49f8-8b96-59980e71e533}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python">
+      <UniqueIdentifier>{cbae3e9b-fb1a-41f3-a0df-066f4f428567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="StatePlugins">
+      <UniqueIdentifier>{b8cf2340-e29f-4d3b-882d-6074cd175c1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Viewer">
+      <UniqueIdentifier>{22a6c39d-b008-494b-926c-74b2d0499824}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RibbonMenu">
+      <UniqueIdentifier>{f9638715-bdf1-4434-b869-f158c4dbaed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fonts">
+      <UniqueIdentifier>{44ab7180-8a0d-45cc-a894-2c7fc5419bd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="History">
+      <UniqueIdentifier>{3070cea7-b1d9-4627-9d06-476b27257614}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ShortcutManager">
+      <UniqueIdentifier>{429a0a30-b790-4ca7-8292-82f8d34e9062}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Helpers">
+      <UniqueIdentifier>{d3956742-dbdd-4b13-8187-f0add3cc770a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource">
+      <UniqueIdentifier>{72152c67-f898-4643-a205-780f143a4c41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\object_icons">
+      <UniqueIdentifier>{ac15fe13-0173-4d93-a831-980626e49699}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\object_icons\X1">
+      <UniqueIdentifier>{c1248bbc-20fd-46a0-8f6c-7ba74d13b05f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\object_icons\X3">
+      <UniqueIdentifier>{65aa8698-acd3-4ead-9a9b-a1ba50ce1b69}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImGuiMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MROpen.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewer.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshModifier.cpp">
+      <Filter>MeshModifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSave.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewport.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSetupViewer.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRProgressBar.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFileDialog.cpp">
+      <Filter>CustomOpenDialog</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportCamera.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerSettingsManager.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRecentFilesStore.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRStatePlugin.cpp">
+      <Filter>StatePlugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerEventsListener.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderLinesObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderMeshObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderPointsObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCreateShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRShadersHolder.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAlphaSortGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImmediateGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonMenu.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSplashWindow.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRColorTheme.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSelectScreenLasso.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerInstance.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAppendHistory.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRShortcutManager.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonFontManager.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMouseController.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonButtonDrawer.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMenu.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDemoPlugin.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAsyncTimer.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSaveOnClose.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCommandLoop.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImGuiImage.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectTransformWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonSchema.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonMenuItem.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderHelpers.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGuiHelpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPickHoleBorderElement.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonIcons.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderLabelObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSurfacePointPicker.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPalette.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRStatePluginAutoClose.cpp">
+      <Filter>StatePlugins</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ImGuiHelpers.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiMenu.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiTraits.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMenu.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MROpen.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewer.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerPlugin.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_fonts_droid_sans.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshModifier.h">
+      <Filter>MeshModifier</Filter>
+    </ClInclude>
+    <ClInclude Include="exports.h" />
+    <ClInclude Include="MRSave.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewport.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRStatePlugin.h">
+      <Filter>StatePlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSetupViewer.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProgressBar.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDemoPlugin.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFileDialog.h">
+      <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerSettingsManager.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRecentFilesStore.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAppendHistory.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerEventsListener.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderGLHelpers.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderLinesObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderMeshObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderPointsObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCreateShader.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShadersHolder.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAlphaSortGL.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGLMacro.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImmediateGL.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewportGL.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshViewer.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshViewerPlugin.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshViewport.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPythonAppendCommand.h">
+      <Filter>Python</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneStateCheck.h">
+      <Filter>StatePlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonMenu.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonMenuItem.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSplashWindow.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRColorTheme.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSelectScreenLasso.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerFwd.h" />
+    <ClInclude Include="MRMouse.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerInstance.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGladGlfw.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShortcutManager.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonFontManager.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMouseController.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonButtonDrawer.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSwapRootAction.h">
+      <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAsyncTimer.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCommandLoop.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImGuiImage.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectTransformWidget.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSaveOnClose.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonSchema.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonConstants.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderHelpers.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPickHoleBorderElement.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonIcons.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderLabelObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSurfacePointPicker.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPalette.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRStatePluginAutoClose.h">
+      <Filter>StatePlugins</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\MeshLib\source\.editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Cousine-Regular.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\DroidSans.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\fontawesome-free\fa-solid-900.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Karla-Regular.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\ProggyClean.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\ProggyTiny.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Roboto-Medium.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resource\object_icons\X1\Object.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ObjectDistanceMap.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ObjectLines.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ObjectMesh.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ObjectPoints.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ObjectVoxels.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\Object.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectDistanceMap.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectLines.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectMesh.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectPoints.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ObjectVoxels.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

@@ -175,7 +175,7 @@ std::filesystem::path GetLibsDirectory()
 #endif
 }
 
-std::filesystem::path getUserConfigDir( const std::string& appName )
+std::filesystem::path getUserConfigDir()
 {
 #ifdef _WIN32
     std::filesystem::path filepath( _wgetenv( L"APPDATA" ) );
@@ -189,7 +189,7 @@ std::filesystem::path getUserConfigDir( const std::string& appName )
     filepath /= ".local";
     filepath /= "share";
 #endif
-    filepath /= appName;
+    filepath /= std::string( MR_PROJECT_NAME );
     std::error_code ec;
     if ( !std::filesystem::is_directory( filepath, ec ) )
     {
@@ -202,9 +202,9 @@ std::filesystem::path getUserConfigDir( const std::string& appName )
     return filepath;
 }
 
-std::filesystem::path getUserConfigFilePath( const std::string& appName )
+std::filesystem::path getUserConfigFilePath()
 {
-    std::filesystem::path filepath = getUserConfigDir( appName );
+    std::filesystem::path filepath = getUserConfigDir();
     filepath /= "config.json";
     return filepath;
 }

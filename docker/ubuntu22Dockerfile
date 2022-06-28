@@ -18,6 +18,7 @@ WORKDIR "/home/MeshLib"
 COPY .git .git
 COPY thirdparty thirdparty
 COPY scripts scripts
+COPY source source
 COPY requirements requirements
 
 # build and install thirdparty

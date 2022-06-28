@@ -11,6 +11,7 @@ WORKDIR "/home/MeshLib"
 COPY .git .git
 COPY thirdparty thirdparty
 COPY scripts scripts
+COPY source source
 COPY requirements requirements
 
 ENV MR_STATE=DOCKER_BUILD

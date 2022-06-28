@@ -21,3 +21,6 @@ python3
 spdlog
 tiff
 tl-expected
+glad
+glfw3
+tinyxml2

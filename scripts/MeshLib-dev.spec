@@ -86,6 +86,7 @@ if [ -d /usr/lib/python3.9 ]; then
  fi
  sudo ln -sf /usr/local/lib/MeshLib/mrmeshpy.so /usr/lib/python3.9/site-packages/mrmeshpy.so
  sudo ln -sf /usr/local/lib/MeshLib/mrmeshnumpy.so /usr/lib/python3.9/site-packages/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/mrviewerpy.so /usr/lib/python3.9/site-packages/mrviewerpy.so
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/mr<lib_name>py.so' for custom python installations\n"
 fi
 

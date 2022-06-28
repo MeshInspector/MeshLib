@@ -1124,7 +1124,8 @@ void Viewer::initGlobalBasisAxesObject_()
 void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner
-    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>(makeBasisAxes());
+    const float size = 0.8f;
+    std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size ) );
     basisAxes = std::make_unique<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
@@ -1143,7 +1144,8 @@ void Viewer::initBasisAxesObject_()
         colorMap[FaceId( i + arrowSize )] = colorY;
         colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
     }
-    basisAxes->setLabels( { {"X",1.1f * Vector3f::plusX()},{"Y",1.1f * Vector3f::plusY()},{"Z",1.1f * Vector3f::plusZ()} } );
+    const float labelPos = size + 0.2f;
+    basisAxes->setLabels( { { "X", labelPos * Vector3f::plusX() }, { "Y", labelPos * Vector3f::plusY() }, { "Z", labelPos * Vector3f::plusZ() } } );
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );

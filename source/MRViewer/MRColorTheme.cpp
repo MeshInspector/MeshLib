@@ -308,6 +308,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "Text",
         "TextEnabled",
         "TextDisabled",
+        "TextSelectedBg",
 
         "RibbonButtonHovered",
         "RibbonButtonClicked",
@@ -378,12 +379,14 @@ void ColorTheme::resetImGuiStyle()
     Vector4f border = Vector4f( getRibbonColor( RibbonColorsType::Borders ) );
     Vector4f frameBg = Vector4f( getRibbonColor( RibbonColorsType::FrameBackground ) );
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
+    Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
 
     style.Colors[ImGuiCol_WindowBg] = ImVec4( bg.x, bg.y, bg.z, bg.w );
     style.Colors[ImGuiCol_Text] = ImVec4( text.x, text.y, text.z, text.w );
     style.Colors[ImGuiCol_Border] = ImVec4( border.x, border.y, border.z, border.w );
     style.Colors[ImGuiCol_FrameBg] = ImVec4( frameBg.x, frameBg.y, frameBg.z, frameBg.w );
     style.Colors[ImGuiCol_Header] = ImVec4( headerBg.x, headerBg.y, headerBg.z, headerBg.w );
+    style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
 
     style.FrameRounding = 5.0f;
     style.FramePadding.y = 5.0f;

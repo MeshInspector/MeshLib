@@ -89,6 +89,7 @@ public:
         Text,
         TextEnabled,
         TextDisabled,
+        TextSelectedBg,
 
         RibbonButtonHovered,
         RibbonButtonClicked,

@@ -190,8 +190,8 @@ jobs:
       - name: Rename Distributives
         run: |
           mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
-          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb
-          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb
+          mv meshlib-Ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb
+          mv meshlib-Ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
       - name: Upload Distributives

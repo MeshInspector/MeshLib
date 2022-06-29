@@ -46,8 +46,10 @@ void ProgressBar::setup( float scaling )
         }
 
         snprintf( buf, bufSize, "%d%%", ( int )( instance.progress_ * 100 ) );
-        ImGui::ProgressBar( instance.progress_, ImVec2( 250.0f * scaling, 0.0f ), buf );
-
+        auto progress = instance.progress_;
+        ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
+        if ( progress >= 1.0f )
+            getViewerInstance().incrementForceRedrawFrames( 3, true );
         ImGui::Separator();
 
         if ( instance.allowCancel_ )

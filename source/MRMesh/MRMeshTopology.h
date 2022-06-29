@@ -20,6 +20,8 @@ public:
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
     /// returns last not lone edge id, or invalid id if no such edge exists
     [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
+    /// remove all lone edges from given set
+    MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
     /// returns the number of undirected edges (pairs of half-edges) including lone ones

@@ -53,6 +53,14 @@ EdgeId MeshTopology::lastNotLoneEdge() const
     return {};
 }
 
+void MeshTopology::excludeLoneEdges( UndirectedEdgeBitSet & edges ) const
+{
+    MR_TIMER
+    for ( auto ue : edges )
+        if ( isLoneEdge( ue ) )
+            edges.reset( ue );
+}
+
 size_t MeshTopology::computeNotLoneUndirectedEdges() const
 {
     MR_TIMER;

@@ -15,7 +15,7 @@ if [ "$UBUNTU_MAJOR_VERSION" == "22" ]; then
 fi
 
 #TODO: handle 'home' python installations (conda, ...)
-if [ -d /usr/lib/${PYTHON} ]; then
+if [ -d /usr/lib/${PYTHON_VERSION} ]; then
  printf "\r${PYTHON_VERSION} was found                       \n"
  if [ "$EUID" -ne 0 ]; then
   printf "Root access required!\n"

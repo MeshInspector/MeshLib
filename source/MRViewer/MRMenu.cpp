@@ -880,6 +880,8 @@ void Menu::showErrorModal( const std::string& error )
     show_rename_modal_ = false;
     ImGui::CloseCurrentPopup();
     storedError_ = error;
+    // this is needed to correctly resize error window
+    getViewerInstance().incrementForceRedrawFrames( 2, true );
 }
 
 void Menu::draw_selection_properties( std::vector<std::shared_ptr<Object>>& selectedObjs )

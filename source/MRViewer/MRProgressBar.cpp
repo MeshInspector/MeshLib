@@ -48,8 +48,9 @@ void ProgressBar::setup( float scaling )
         snprintf( buf, bufSize, "%d%%", ( int )( instance.progress_ * 100 ) );
         auto progress = instance.progress_;
         ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
+        // this is needed to prevent events race and redraw after progress bar is finished
         if ( progress >= 1.0f )
-            getViewerInstance().incrementForceRedrawFrames( 3, true );
+            getViewerInstance().incrementForceRedrawFrames();
         ImGui::Separator();
 
         if ( instance.allowCancel_ )

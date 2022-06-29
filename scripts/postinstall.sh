@@ -6,17 +6,27 @@
 # exit if any command failed
 set -eo pipefail
 
+. /etc/lsb-release
+UBUNTU_MAJOR_VERSION=${DISTRIB_RELEASE%.*}
+
+PYTHON_VERSION="python3.9"
+if [ "$UBUNTU_MAJOR_VERSION" == "22" ]; then
+  PYTHON_VERSION="python3.10"
+fi
+
 #TODO: handle 'home' python installations (conda, ...)
-if [ -d /usr/lib/python3.9 ]; then
- printf "\rPython3 was found                       \n"
+if [ -d /usr/lib/${PYTHON} ]; then
+ printf "\r${PYTHON_VERSION} was found                       \n"
  if [ "$EUID" -ne 0 ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshpy.so /usr/local/lib/python3.9/dist-packages/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshnumpy.so /usr/local/lib/python3.9/dist-packages/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrviewerpy.so /usr/local/lib/python3.9/dist-packages/mrviewerpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/mrmeshpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrmeshpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/mrmeshnumpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/mrviewerpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrviewerpy.so
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/dist-packages/mr<lib_name>py.so' for custom python installations\n"
+else
+ printf "\r${PYTHON_VERSION} was not found!                  \n"
 fi
 
 printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"

@@ -63,7 +63,13 @@ jobs:
                 <tr>
                   <td align="center">Ubuntu 20 LTS x64</td>
                   <td align="center">
-                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}-dev.deb">deb</a>
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}_ubuntu20-dev.deb">deb</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">Ubuntu 22 LTS x64</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}_ubuntu22-dev.deb">deb</a>
                   </td>
                 </tr>
                   <tr>

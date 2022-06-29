@@ -35,11 +35,11 @@ jobs:
         run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        #if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' }}
         run: tar -a -c -f MREDist_${{ matrix.config }}.zip ./source/x64/${{matrix.config}}
 
       - name: Upload Windows Binaries Archive
-        #if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v2
         with:
           name: WindowsArchive

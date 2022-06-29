@@ -52,11 +52,11 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ matrix.compiler == 'Сlang 14' && matrix.config == 'Release'}}
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'Сlang 14' && matrix.config == 'Release'}}
         run: tar -cvf Ubuntu22${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
 
       - name: Upload Ubuntu Binaries Archive
-        if: ${{ matrix.compiler == 'Сlang 14' && matrix.config == 'Release'}}
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'Сlang 14' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu22${{matrix.config}}BinArchive

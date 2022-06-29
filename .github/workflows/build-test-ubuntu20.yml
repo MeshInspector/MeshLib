@@ -52,11 +52,11 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
-        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         run: tar -cvf Ubuntu20${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
 
       - name: Upload Ubuntu Binaries Archive
-        if: ${{ matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        if: ${{ github.event_name == 'push' && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Ubuntu20${{matrix.config}}BinArchive

@@ -95,6 +95,7 @@ public:
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 
 protected:
+    bool cupturedMouse_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

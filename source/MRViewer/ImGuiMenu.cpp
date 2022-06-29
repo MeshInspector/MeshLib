@@ -157,13 +157,13 @@ void ImGuiMenu::rescaleStyle_()
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
-    cupturedMouse_ = ImGui::GetIO().WantCaptureMouse;
+    capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
     return ImGui::GetIO().WantCaptureMouse;
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton, int )
 {
-    return cupturedMouse_;
+    return capturedMouse_;
 }
 
 bool ImGuiMenu::onMouseMove_(int /*mouse_x*/, int /*mouse_y*/)

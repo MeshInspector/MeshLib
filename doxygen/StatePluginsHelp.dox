@@ -1,0 +1,103 @@
+namespace MR {
+
+/** \page StatePluginsHelp State Plugins overview
+
+\section BaseFunctions Base Functions
+
+\b State \b plugins is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref RibbonMenuItem
+
+It has base functions:
+
+\b Available \b function - \ref ISceneStateCheck interface function that block plugin in UI
+
+\parblock
+\note This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
+\endparblock
+
+\code
+    // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return ""; }
+\endcode
+\b On \b Enable \b function - will be called if user enables plugin (only possible if `isAvailable` has returned true), if \c onEnable_ function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame \c available function)
+\code
+    MRVIEWER_API virtual bool onEnable_();
+\endcode
+\b On \b Disable \b function - will be called if user disable plugin, it is necessary to clear all plugin data
+\code
+    MRVIEWER_API virtual bool onDisable_();
+\endcode
+\b Draw \b Dialog \b function - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI. 
+\code
+    MRVIEWER_API virtual void drawDialog( float menuScaling, ImGuiContext* ctx );
+\endcode
+
+\section PluginCreation How to make your first plugin
+To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)\n
+Example:
+\code
+class MyOwnPlugin : public MR::StatePlugin
+{
+public:
+	MyOwnPlugin():MR::StatePlugin("My Plugin Name"){}
+	virtual std::string isAvailable(const std::vector<std::shared_ptr<const MR::Object>>& selectedObjects) const override
+	{
+		if ( selectedObjects.size() == 1 )
+		    return "";
+		return "Exactly one object should be selected";
+	}
+	virtual void drawDialog( float menuScaling, ImGuiContext* ctx) override
+	{
+		auto windowSize = viewer->viewport().getViewportRect();
+    	auto menuWidth = 280.0f * menuScaling;
+
+    	ImGui::SetCurrentContext( ctx );
+    	ImGui::SetNextWindowPos( ImVec2( windowSize.width - menuWidth, 0 ), ImGuiCond_FirstUseEver );
+    	ImGui::SetNextWindowSize( ImVec2( menuWidth, 0 ), ImGuiCond_FirstUseEver );
+    	ImGui::SetNextWindowSizeConstraints( ImVec2( menuWidth, -1.0f ), ImVec2( menuWidth, -1.0f ) );
+    	ImGui::Begin( plugin_name.c_str(), &dialogIsOpen_, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
+
+    	if (ImGui::Button("Some action"))
+    		someAction_();
+
+    	ImGui::End();
+	}
+
+private:
+	std::shared_ptr<MR::Object> obj_;
+
+	// some action of this plugin
+	void someAction_();
+
+	virtual bool onEnable_() override
+	{
+		obj_ = MR::getAllObjectsInTree<MR::Object>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected )[0];
+		return true;
+	}
+	virtual bool onDisable_() override
+	{
+		obj_.reset();
+		return true;
+	}
+}
+\endcode
+
+Register your plugin with
+\code
+MR_REGISTER_RIBBON_ITEM( MyOwnPlugin )
+\endcode
+To show this item on Ribbon menu, it should be present in MenuSchema.ui.json file (special page about these files are coming soon)
+\n
+\ref StateListenerPlugin is more simple way to make plugin listen to some events:
+\code
+// This plugin will listen to mouse move and mouse down, also isAvailable function will be imlemented with SceneStateExactCheck
+class MyListenerPlugin : public StateListenerPlugin<MouseMoveListener,MouseDownListener>, public SceneStateExactCheck<1, ObjectMesh>
+\endcode
+
+Find more:
+\ref RibbonMenuItem
+\ref StateBasePlugin
+\ref StateListenerPlugin
+
+*/
+
+}

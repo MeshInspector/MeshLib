@@ -133,6 +133,8 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ../MeshLib/thirdparty/install.bat
     cd ..
     ```
+4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
+
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
 

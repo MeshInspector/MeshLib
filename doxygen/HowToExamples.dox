@@ -6,6 +6,41 @@ namespace MR {
 
 This page contains some examples of using MeshLib
 
+\section MRBasedMainFunc Basing your application on MeshLib
+
+First of all you should make `main` function like this
+\code
+namespace
+{
+const std::string cAppName = "Your app name";
+}
+
+int main( int argc, char** argv )
+{
+    MR::setupLoggerByDefault();
+
+    // Init the viewer
+
+    auto launchParams = MR::Viewer::parseLaunchParams( argc, argv );
+    launchParams.name = cAppName;
+
+    MR::Viewer viewer;
+    MR::ViewerSetup viewerSetup;
+
+    viewerSetup.setupBasePlugins( &viewer );
+    viewerSetup.setupCommonModifiers( &viewer );
+    viewerSetup.setupCommonPlugins( &viewer );
+    viewerSetup.setupSettingsManager( &viewer, cAppName );
+    viewerSetup.setupConfiguration( &viewer );
+
+    viewer.launch( launchParams );
+
+    return 0;
+}
+\endcode
+
+Then you should make your plugins, to find how have a look at \ref StatePluginsHelp page
+
 \section CCodeExamples C++ Basic Examples
 
 You can find example project in `MeshLib/source/meshconv`

@@ -32,6 +32,8 @@ struct DecimateParallelSettings
     bool optimizeVertexPos = true;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Whether to allow collapsing edges having at least one vertex on (region) boundary
+    bool touchBdVertices = true;
     /// Subdivides mesh on given number of parts to process them in parallel
     int subdivideParts = 32;
     /**

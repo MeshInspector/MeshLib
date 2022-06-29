@@ -141,8 +141,10 @@ void RibbonFontManager::loadDefaultFont_( float fontSize, float yOffset )
 {
     ImFontConfig config;
     config.GlyphOffset = ImVec2( 0, yOffset );
+#ifndef __EMSCRIPTEN__
     config.OversampleH = 7;
     config.OversampleV = 7;
+#endif
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
                                                           droid_sans_compressed_size, fontSize,
                                                           &config);

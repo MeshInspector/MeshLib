@@ -4,6 +4,7 @@
 #include "MRProgressBar.h"
 #include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRSerializer.h>
+#include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 
@@ -33,7 +34,7 @@ void SaveOnClosePlugin::preDraw_()
 
     ImGui::OpenPopup( "Application close" );
     ImGui::SetNextWindowSize( ImVec2( 300 * menuInstance->menu_scaling(), -1 ), ImGuiCond_Always );
-    ImGui::BeginPopupModal( "Application close", nullptr, ImGuiWindowFlags_NoResize );
+    ImGui::BeginModalNoAnimation( "Application close", nullptr, ImGuiWindowFlags_NoResize );
 
     ImGui::Text( "Save your changes?" );
 

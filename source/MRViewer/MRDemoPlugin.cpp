@@ -3,6 +3,7 @@
 #include "MRMesh/MRUVSphere.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
+#include "ImGuiHelpers.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -34,7 +35,7 @@ void DemoPlugin::preDraw_()
     {
         ImGui::OpenPopup( "Close##sureClose" );
         ImGui::SetNextWindowSize( ImVec2( 200 * menuInstance->menu_scaling(), -1 ), ImGuiCond_Always );
-        ImGui::BeginPopupModal( "Close##sureClose", nullptr, ImGuiWindowFlags_NoResize );
+        ImGui::BeginModalNoAnimation( "Close##sureClose", nullptr, ImGuiWindowFlags_NoResize );
 
         ImGui::Text( "Are you sure?" );
 

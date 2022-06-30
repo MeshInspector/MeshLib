@@ -1,6 +1,7 @@
 #include "MRProgressBar.h"
 #include "MRViewer.h"
 #include <MRMesh/MRSystem.h>
+#include "ImGuiHelpers.h"
 #include <GLFW/glfw3.h>
 
 #ifdef __EMSCRIPTEN__
@@ -37,7 +38,7 @@ void ProgressBar::setup( float scaling )
 
     snprintf( buf, bufSize, "%s###GlobalProgressBarPopup", instance.title_.c_str() );
     instance.setupId_ = ImGui::GetID( buf );
-    if ( ImGui::BeginPopupModal( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+    if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
     {
         if ( instance.taskCount_ > 1 )
         {

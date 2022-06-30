@@ -795,7 +795,7 @@ void Menu::draw_helpers()
     if ( show_rename_modal_ )
     {
         ImGui::OpenPopup( "Rename object" );
-        ImGui::BeginPopupModal( "Rename object", nullptr,
+        ImGui::BeginModalNoAnimation( "Rename object", nullptr,
                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 
         auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
@@ -829,7 +829,7 @@ void Menu::draw_helpers()
         auto bgBackUp = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
         ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1, 0.125f, 0.125f, bgBackUp.w );
         ImGui::OpenPopup( " Error##modal" );
-        ImGui::BeginPopupModal( " Error##modal", nullptr,
+        ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 
         ImGui::Text( "%s", storedError_.c_str() );

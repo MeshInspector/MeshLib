@@ -134,6 +134,8 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
+/// starts modal window with no animation for background
+MRVIEWER_API bool BeginModalNoAnimation( const char* label, bool* open = nullptr, ImGuiWindowFlags flags = 0 );
 
 /// draw a button, which can be disabled (valid = false)
 MRVIEWER_API bool ButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2(0, 0) );

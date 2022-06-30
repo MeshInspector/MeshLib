@@ -313,6 +313,14 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
+bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
+{
+    bool started = BeginPopupModal( label, open, flags );
+    if ( started )
+        GetCurrentContext()->DimBgRatio = 1.0f;
+    return started;
+}
+
 bool ButtonValid( const char* label, bool valid, const ImVec2& size )
 {
     if ( !valid )
@@ -622,7 +630,7 @@ PaletteChanges Palette(
     ImVec2 windowSize( 2 * width, 0 );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( !ImGui::BeginPopupModal( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
         return PaletteChanges( changes );
 
     static std::string curentPaletteName;
@@ -644,7 +652,7 @@ PaletteChanges Palette(
     }
 
     bool closeTopPopup = false;
-    if ( ImGui::BeginPopupModal( "Palette already exists##PaletteHelper", nullptr,
+    if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
                                  ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
         ImGui::Text( "Palette preset with this name already exists, override?" );

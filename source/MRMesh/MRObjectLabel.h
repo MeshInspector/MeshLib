@@ -50,11 +50,14 @@ public:
     MRMESH_API void setFontPath( const std::filesystem::path& pathToFont );
     const std::filesystem::path& getFontPath() const { return pathToFont_; }
 
-    /// set pivot point [0, 0] - [1, 1]
+    /// set pivot point. [0, 0] - left-down corner, [1, 1] - right-up corner
     MRMESH_API void setPivotPoint( const Vector2f& pivotPoint );
 
+    /// get pivot point
+    const Vector2f& getPivotPoint() const { return pivotPoint_; }
+
     /// get pivot shift (pivot point * text diagonal)
-    Vector2f getPivotShift() const { return pivotShift_; }
+    const Vector2f& getPivotShift() const { return pivotShift_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )

@@ -40,9 +40,6 @@ void ObjectLabel::setPivotPoint( const Vector2f& pivotPoint )
         return;
 
     pivotPoint_ = pivotPoint;
-    pivotPoint_.x = std::clamp( pivotPoint_.x, 0.f, 1.f );
-    pivotPoint_.y = std::clamp( pivotPoint_.y, 0.f, 1.f );
-
     updatePivotShift_();
 }
 

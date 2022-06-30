@@ -840,6 +840,9 @@
     <ClInclude Include="MRPolylineSubdivide.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangePolylineAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

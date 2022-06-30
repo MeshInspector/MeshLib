@@ -297,8 +297,16 @@ MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, f
 
 bool BeginStatePlugin( const char* label, bool* open, float width )
 {
-    SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, 0 ), ImGuiCond_FirstUseEver );
-    SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
+    ImGuiWindow* window = FindWindowByName( label );
+    if ( !window )
+    {
+        float yPos = 0.0f;
+        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+        if ( menu )
+            yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
+        SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
+    }
     SetNextWindowSizeConstraints( ImVec2( width, -1.0f ), ImVec2( width, -1.0f ) );
     auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;

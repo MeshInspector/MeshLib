@@ -941,13 +941,14 @@ void ShadersHolder::createShader_( ShaderType type )
   uniform mat4 proj;
   uniform vec3 basePos;
   uniform vec2 modifier;
+  uniform vec2 shift;
 
   in vec3 position;       // (in from base) vert position
 
   void main()
   {
     vec4 projBasePos = proj * ( view * model * vec4( basePos, 1.0 ) );
-    vec4 coord = projBasePos + projBasePos.w * vec4( modifier.x*position.x, modifier.y*position.y, 0.0, 0.0);
+    vec4 coord = projBasePos + projBasePos.w * vec4( modifier.x * (position.x - shift.x), modifier.y * (position.y - shift.y), 0.0, 0.0);
     gl_Position = coord / coord.w;
   }
 )";

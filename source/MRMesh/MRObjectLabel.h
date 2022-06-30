@@ -7,6 +7,7 @@ namespace MR
 
 
 /// This object type renders label in scene
+/// \details default pivot point = (0, 0)
 /// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectLabel : public VisualObject
 {
@@ -50,6 +51,19 @@ public:
     MRMESH_API void setFontPath( const std::filesystem::path& pathToFont );
     const std::filesystem::path& getFontPath() const { return pathToFont_; }
 
+    /// set pivot point
+    /// \param pivotPoint - text location parameter of  relative to text position point
+    /// [0, 0] - text position point is left-down corner of text
+    /// [1, 1] - text position point is right-up corner
+    /// can be outside range [0, 0] - [1, 1]
+    MRMESH_API void setPivotPoint( const Vector2f& pivotPoint );
+
+    /// get pivot point
+    const Vector2f& getPivotPoint() const { return pivotPoint_; }
+
+    /// get pivot shift (pivot point * text diagonal)
+    const Vector2f& getPivotShift() const { return pivotShift_; }
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
     {}
@@ -66,7 +80,8 @@ public:
 protected:
     PositionedText label_;
     std::filesystem::path pathToFont_;
-
+    Vector2f pivotPoint_;
+    Vector2f pivotShift_;
     std::shared_ptr<Mesh> mesh_;
 
     /// size of label font on screen in pixels
@@ -95,6 +110,8 @@ private:
     void setDefaultColors_();
 
     void buildMesh_();
+
+    void updatePivotShift_();
 };
 
 }

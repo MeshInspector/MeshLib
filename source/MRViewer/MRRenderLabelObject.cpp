@@ -78,6 +78,9 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
 
     GL_EXEC( glUniform2f( glGetUniformLocation( shader, "modifier" ), modifier.x, modifier.y ) );
 
+    Vector2f shift = objLabel_->getPivotShift();
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
+
     const auto& pos = objLabel_->getLabel().position;
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
 

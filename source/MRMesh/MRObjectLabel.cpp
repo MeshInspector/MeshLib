@@ -34,6 +34,15 @@ void ObjectLabel::setFontPath( const std::filesystem::path& pathToFont )
         buildMesh_();
 }
 
+void ObjectLabel::setPivotPoint( const Vector2f& pivotPoint )
+{
+    if ( pivotPoint == pivotPoint_ )
+        return;
+
+    pivotPoint_ = pivotPoint;
+    updatePivotShift_();
+}
+
 ObjectLabel::ObjectLabel()
 {
     setDefaultColors_();
@@ -152,6 +161,19 @@ void ObjectLabel::buildMesh_()
         mesh_->addPart( mesh );
     }
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
+
+    updatePivotShift_();
+}
+
+void ObjectLabel::updatePivotShift_()
+{
+    const Box3f box = mesh_->computeBoundingBox();
+    if ( box.valid() )
+    {
+        Vector3f  diagonal = box.max + box.min; // (box.max - box.min) + box.min * 2 - because box.min != 0
+        pivotShift_.x = pivotPoint_.x * diagonal.x;
+        pivotShift_.y = pivotPoint_.y * diagonal.y;
+    }
 }
 
 Box3f ObjectLabel::getWorldBox() const

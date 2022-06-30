@@ -61,13 +61,13 @@ private:
 };
 
 /// Undo action for ObjectLines points only (not topology) change
-class ChangeLinesPointsAction : public HistoryAction
+class ChangePolylinePointsAction : public HistoryAction
 {
 public:
     using Obj = ObjectLines;
 
     /// use this constructor to remember object's lines points before making any changes in it
-    ChangeLinesPointsAction( std::string name, const std::shared_ptr<ObjectLines>& obj ) :
+    ChangePolylinePointsAction( std::string name, const std::shared_ptr<ObjectLines>& obj ) :
         objLines_{ obj },
         name_{ std::move( name ) }
     {
@@ -113,13 +113,13 @@ private:
 };
 
 /// Undo action for ObjectLines topology only (not points) change
-class ChangeLineTopologyAction : public HistoryAction
+class ChangePolylineTopologyAction : public HistoryAction
 {
 public:
     using Obj = ObjectLines;
 
     /// use this constructor to remember object's lines points before making any changes in it
-    ChangeLineTopologyAction( std::string name, const std::shared_ptr<ObjectLines>& obj ) :
+    ChangePolylineTopologyAction( std::string name, const std::shared_ptr<ObjectLines>& obj ) :
         objLines_{ obj },
         name_{ std::move( name ) }
     {

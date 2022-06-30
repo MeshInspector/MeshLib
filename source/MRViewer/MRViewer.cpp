@@ -32,6 +32,7 @@
 #include "MRGladGlfw.h"
 #include "ImGuiMenu.h"
 #include "MRMesh/MRGTest.h"
+#include "MRMesh/MRObjectLabel.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -1145,7 +1146,19 @@ void Viewer::initBasisAxesObject_()
         colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
     }
     const float labelPos = size + 0.2f;
-    basisAxes->setLabels( { { "X", labelPos * Vector3f::plusX() }, { "Y", labelPos * Vector3f::plusY() }, { "Z", labelPos * Vector3f::plusZ() } } );
+    auto addLabel = [&] ( const std::string& str, const Vector3f& pos )
+    {
+        std::shared_ptr<ObjectLabel> label = std::make_shared<ObjectLabel>();
+        label->setFrontColor( Color::white(), false );
+        label->setLabel( { str, pos } );
+        label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
+        label->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+        basisAxes->addChild( label );
+    };
+    addLabel( "X", labelPos * Vector3f::plusX() );
+    addLabel( "Y", labelPos * Vector3f::plusY() );
+    addLabel( "Z", labelPos * Vector3f::plusZ() );
+    
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );

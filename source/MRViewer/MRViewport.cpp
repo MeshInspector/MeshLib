@@ -459,6 +459,11 @@ void Viewport::draw_axes() const
         std::swap( staticProj, projM );
         draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf, true );
         draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf );
+        for ( const auto& child : Viewer::constInstance()->basisAxes->children() )
+        {
+            if ( auto visualChild = std::dynamic_pointer_cast< VisualObject >( child ) )
+                draw( *visualChild, params_.basisAxesXf );
+        }
         std::swap( staticProj, projM );
     }
 }

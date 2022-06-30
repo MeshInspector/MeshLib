@@ -227,15 +227,15 @@
 		"r": 178
 	},
 	"SelectedFaces": {
-		"a": 52,
+		"a": 255,
 		"b": 52,
-		"g": 133,
+		"g": 52,
 		"r": 204
 	},
 	"SelectedPoints": {
-		"a": 52,
+		"a": 255,
 		"b": 52,
-		"g": 133,
+		"g": 52,
 		"r": 204
 	},
 	"SelectedObjectMesh": {

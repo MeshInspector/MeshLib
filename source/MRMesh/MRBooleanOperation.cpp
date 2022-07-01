@@ -7,13 +7,6 @@
 #include "MRMeshCollide.h"
 #include "MRAffineXf3.h"
 
-#pragma warning(disable: 4996) //deprecated function call
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 namespace MR
 {
 

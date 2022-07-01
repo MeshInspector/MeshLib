@@ -115,7 +115,7 @@ cd ..
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 
 ### Vcpkg
-1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English laguage pack installed in Visual Studio):
+1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg

@@ -9,7 +9,7 @@ There are two general options of integrating MeshLib into your project: \n
 2. Distribution
 
 \b Common \b for \b both \b options: \n
-Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English laguage pack installed in Visual Studio):
+Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
 \code
 $ git clone https://github.com/Microsoft/vcpkg.git
 $ cd vcpkg

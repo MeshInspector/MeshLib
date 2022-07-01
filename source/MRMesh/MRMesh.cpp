@@ -335,11 +335,6 @@ float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, cons
         return -d;
 }
 
-float Mesh::signedDistance( const Vector3f & pt, const PointOnFace & proj, const FaceBitSet * region ) const
-{
-    return signedDistance( pt, toTriPoint( proj ), region ); 
-}
-
 float Mesh::signedDistance( const Vector3f & pt ) const
 {
     auto res = signedDistance( pt, FLT_MAX );
@@ -654,26 +649,9 @@ void Mesh::addPart( const Mesh & from,
     invalidateCaches();
 }
 
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces,
-    FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap )
-{
-    HashToVectorMappingConverter m( from.topology, outFmap, outVmap, outEmap );
-    addPartByMask( from, fromFaces, false, {}, {}, m.getPartMapping() );
-}
-
 void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map )
 {
     addPartByMask( from, fromFaces, false, {}, {}, map );
-}
-
-void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
-    FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap )
-{
-    MR_TIMER
-    HashToVectorMappingConverter m( from.topology, outFmap, outVmap, outEmap );
-    addPartByMask( from, fromFaces, flipOrientation, thisContours, fromContours, m.getPartMapping() );
 }
 
 void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,

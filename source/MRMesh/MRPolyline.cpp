@@ -100,28 +100,21 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
     MR_TIMER;
 
     VertMap vmap;
-    topology.addPartByMask( from.topology, mask, &vmap, outEmap );
-    if ( !vmap.empty() )
-    {
-        VertId maxValidPoint;
-        for ( VertId fromv{ 0 }; fromv < vmap.size(); ++fromv )
-        {
-            VertId v = vmap[fromv];
-            if ( v.valid() && v > maxValidPoint )
-                maxValidPoint = v;
-        }
-        points.resize( maxValidPoint + 1 );
-    }
+    VertMap* vmapPtr = outVmap ? outVmap : &vmap;
+    topology.addPartByMask( from.topology, mask, vmapPtr, outEmap );
+    const VertMap& vmapRef = *vmapPtr;
 
-    for ( VertId fromv{ 0 }; fromv < vmap.size(); ++fromv )
+    VertId lastPointId = topology.lastValidVert();
+    if ( points.size() < lastPointId + 1 )
+        points.resize( lastPointId + 1 );
+
+    for ( VertId fromv{ 0 }; fromv < vmapRef.size(); ++fromv )
     {
-        VertId v = vmap[fromv];
+        VertId v = vmapRef[fromv];
         if ( v.valid() )
             points[v] = from.points[fromv];
     }
 
-    if ( outVmap )
-        *outVmap = std::move( vmap );
     invalidateCaches();
 }
 

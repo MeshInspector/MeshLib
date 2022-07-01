@@ -28,13 +28,11 @@ public:
     /// \details if closed argument is true then the last and the first points will be additionally connected
     /// \return the edge from first new to second new vertex    
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num, bool closed );
-    [[deprecated]] EdgeId makePolyline( const V * vs, size_t num, bool closed ) { return addFromPoints( vs, num, closed ); }
 
     /// adds connected line in this, passing progressively via points *[vs, vs+num)
     /// \details if vs[0] == vs[num-1] then a closed line is created
     /// \return the edge from first new to second new vertex
     MRMESH_API EdgeId addFromPoints( const V * vs, size_t num );
-    [[deprecated]] EdgeId makePolyline( const V * vs, size_t num ) { return addFromPoints( vs, num ); }
 
     /// appends polyline (from) in addition to this polyline: creates new edges, faces, verts and points
     MRMESH_API void addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,

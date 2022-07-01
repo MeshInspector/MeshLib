@@ -7,13 +7,6 @@
 #include "MRMeshCollide.h"
 #include "MRAffineXf3.h"
 
-#pragma warning(disable: 4996) //deprecated function call
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 namespace MR
 {
 
@@ -105,8 +98,8 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     auto comps = MeshComponents::getAllComponents( origin, MeshComponents::FaceIncidence::PerVertex );
     leftPart = preparePart( origin, comps, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A );
 
-
-    outMesh.addPartByMask( origin, leftPart, needFlip, {}, {}, fMapPtr, vMapPtr, eMapPtr );
+    outMesh.addPartByMask( origin, leftPart, needFlip, {}, {}, 
+        HashToVectorMappingConverter( origin.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
 
     for ( auto& path : cutPaths )
         for ( auto& e : path )
@@ -139,9 +132,11 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
     else
     {
         if ( !pathsHaveLeftHole )
-            partA.addPartByMask( partB, partB.topology.getValidFaces(), false, pathsA, pathsB, fMapNewPtr, vMapNewPtr, eMapNewPtr );
+            partA.addPartByMask( partB, partB.topology.getValidFaces(), false, pathsA, pathsB, 
+                HashToVectorMappingConverter( partB.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
         else
-            partB.addPartByMask( partA, partA.topology.getValidFaces(), false, pathsB, pathsA, fMapNewPtr, vMapNewPtr, eMapNewPtr );
+            partB.addPartByMask( partA, partA.topology.getValidFaces(), false, pathsB, pathsA,
+                HashToVectorMappingConverter( partA.topology, fMapNewPtr, vMapNewPtr, eMapNewPtr ).getPartMapping() );
     }
 
     if ( mapper )
@@ -190,7 +185,7 @@ Mesh doTrivialBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut, Bool
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newVerts : nullptr;
 
         aPart.addPartByMask( meshACut, aPartFbs, operation == BooleanOperation::DifferenceBA,
-                             {}, {}, fMapPtr, vMapPtr, eMapPtr );
+                             {}, {}, HashToVectorMappingConverter( meshACut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 
     if ( bPartFbs.count() != 0 )
@@ -200,8 +195,7 @@ Mesh doTrivialBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut, Bool
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newVerts : nullptr;
 
         bPart.addPartByMask( meshBCut, bPartFbs, operation == BooleanOperation::DifferenceAB,
-                             {}, {}, fMapPtr, vMapPtr, eMapPtr );
-
+                             {}, {}, HashToVectorMappingConverter( meshBCut.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
     }
 
     connectPreparedParts( aPart, bPart, false, {}, {}, rigidB2A, mapper );

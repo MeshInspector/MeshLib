@@ -216,10 +216,6 @@ public:
 
     /// the same but copies only portion of (from) specified by fromFaces,
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
-    [[deprecated]]
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces,
-        /// optionally returns mappings: from.id -> this.id
-        FaceMap * outFmap, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr );
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
@@ -227,13 +223,6 @@ public:
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
         const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
         const PartMapping & map = {} );
-    /// \param thisContours contours on this mesh (no left face) that have to be stitched with
-    /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
-    /// \param outFmap,outVmap,outEmap (optionally) returns mappings: from.id -> this.id
-    [[deprecated]]
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
-        FaceMap * outFmap, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr );
 
     /// tightly packs all arrays eliminating lone edges and invalid face and verts
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;

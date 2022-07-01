@@ -1024,26 +1024,9 @@ void MeshTopology::computeAllFromEdges_()
     }
 }
 
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, 
-    FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap )
-{
-    HashToVectorMappingConverter m( from, outFmap, outVmap, outEmap );
-    addPartByMask( from, fromFaces, false, {}, {}, m.getPartMapping() );
-}
-
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map )
 {
     addPartByMask( from, fromFaces, false, {}, {}, map );
-}
-
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
-    const std::vector<std::vector<EdgeId>> & thisContours,
-    const std::vector<std::vector<EdgeId>> & fromContours,
-    FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap )
-{
-    MR_TIMER
-    HashToVectorMappingConverter m( from, outFmap, outVmap, outEmap );
-    addPartByMask( from, fromFaces, flipOrientation, thisContours, fromContours, m.getPartMapping() );
 }
 
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,

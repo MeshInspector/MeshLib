@@ -101,8 +101,17 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
 
     VertMap vmap;
     topology.addPartByMask( from.topology, mask, &vmap, outEmap );
-    if ( !vmap.empty() && vmap.back() >= points.size() )
-        points.resize( vmap.back() + 1 );
+    if ( !vmap.empty() )
+    {
+        VertId maxValidPoint;
+        for ( VertId fromv{ 0 }; fromv < vmap.size(); ++fromv )
+        {
+            VertId v = vmap[fromv];
+            if ( v.valid() && v > maxValidPoint )
+                maxValidPoint = v;
+        }
+        points.resize( maxValidPoint + 1 );
+    }
 
     for ( VertId fromv{ 0 }; fromv < vmap.size(); ++fromv )
     {

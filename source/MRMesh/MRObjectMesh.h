@@ -26,7 +26,7 @@ public:
     MRMESH_API virtual void setMesh( std::shared_ptr< Mesh > mesh );
     /// sets given mesh to this, and returns back previous mesh of this;
     /// does not touch selection or creases
-    MRMESH_API virtual void swapMesh( std::shared_ptr< Mesh > & mesh );
+    MRMESH_API virtual std::shared_ptr< Mesh > updateMesh( std::shared_ptr< Mesh > mesh );
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 

@@ -23,7 +23,7 @@ public:
 
     MRMESH_API virtual void setPolyline( const std::shared_ptr<Polyline3>& polyline );
     /// sets given polyline to this, and returns back previous polyline of this;
-    MRMESH_API virtual void swapPolyline( std::shared_ptr< Polyline3 >& polyline );
+    MRMESH_API virtual std::shared_ptr< Polyline3 > updatePolyline( std::shared_ptr< Polyline3 > polyline );
 
     virtual const std::shared_ptr<Polyline3>& varPolyline() { return polyline_; }
 

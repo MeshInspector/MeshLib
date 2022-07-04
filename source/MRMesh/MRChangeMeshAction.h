@@ -39,7 +39,7 @@ public:
         if ( !objMesh_ )
             return;
 
-        objMesh_->swapMesh( cloneMesh_);
+        cloneMesh_ = objMesh_->updateMesh( cloneMesh_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )

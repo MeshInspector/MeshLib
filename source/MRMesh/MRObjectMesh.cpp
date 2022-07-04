@@ -40,12 +40,14 @@ void ObjectMesh::setMesh( std::shared_ptr< Mesh > mesh )
     setDirtyFlags( DIRTY_ALL );
 }
 
-void ObjectMesh::swapMesh( std::shared_ptr< Mesh > & mesh )
+std::shared_ptr< Mesh > ObjectMesh::updateMesh( std::shared_ptr< Mesh > mesh )
 {
-    if ( mesh == mesh_ )
-        return;
-    mesh_.swap( mesh );
-    setDirtyFlags( DIRTY_ALL );
+    if ( mesh != mesh_ )
+    {
+        mesh_.swap( mesh );
+        setDirtyFlags( DIRTY_ALL );
+    }
+    return mesh;
 }
 
 std::vector<std::string> ObjectMesh::getInfoLines() const

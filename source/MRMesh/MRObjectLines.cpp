@@ -31,12 +31,14 @@ void ObjectLines::setPolyline( const std::shared_ptr<Polyline3>& polyline )
     setDirtyFlags( DIRTY_ALL );
 }
 
-void ObjectLines::swapPolyline( std::shared_ptr< Polyline3 >& polyline )
+std::shared_ptr< Polyline3 > ObjectLines::updatePolyline( std::shared_ptr< Polyline3 > polyline )
 {
-    if ( polyline == polyline_ )
-        return;
-    polyline_.swap( polyline );
-    setDirtyFlags( DIRTY_ALL );
+    if ( polyline != polyline_ )
+    {
+        polyline_.swap( polyline );
+        setDirtyFlags( DIRTY_ALL );
+    }
+    return polyline;
 }
 
 void ObjectLines::setDirtyFlags( uint32_t mask )

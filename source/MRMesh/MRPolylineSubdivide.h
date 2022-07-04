@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 #include <functional>
 
 namespace MR
@@ -23,6 +24,8 @@ struct PolylineSubdivideSettings
     VertBitSet * newVerts = nullptr;
     /// this function is called each time a new vertex has been created
     std::function<void(VertId)> onVertCreated;
+    /// callback to report algorithm progress and cancel it by user request
+    ProgressCallback progressCallback = {};
 };
 
 /// Split edges in polyline according to the settings;\n

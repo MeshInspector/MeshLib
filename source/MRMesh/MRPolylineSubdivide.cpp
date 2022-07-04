@@ -30,7 +30,6 @@ template<typename V>
 int subdividePolylineT( Polyline<V> & polyline, const PolylineSubdivideSettings & settings )
 {
     MR_TIMER;
-    MR_WRITER( polyline );
 
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
     std::priority_queue<EdgeLength> queue;
@@ -58,9 +57,21 @@ int subdividePolylineT( Polyline<V> & polyline, const PolylineSubdivideSettings 
         addInQueue( e );
     }
 
+    if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
+        return 0;
+
+    MR_WRITER( polyline );
+
     int splitsDone = 0;
+    int lastProgressSplitsDone = 0;
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
+        if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
+        {
+            if ( !settings.progressCallback( 0.25f + 0.75f * splitsDone / settings.maxEdgeSplits ) )
+                return splitsDone;
+            lastProgressSplitsDone = splitsDone;
+        }
         auto el = queue.top();
         queue.pop();
         if ( el.lenSq != polyline.edgeLengthSq( el.edge ) )

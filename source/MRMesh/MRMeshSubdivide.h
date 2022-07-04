@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 #include <functional>
 
 namespace MR
@@ -35,6 +36,8 @@ struct SubdivideSettings
     bool useCurvature = false;
     /// this function is called each time a new vertex has been created, but before the ring is made Delone
     std::function<void(VertId)> onVertCreated;
+    /// callback to report algorithm progress and cancel it by user request
+    ProgressCallback progressCallback = {};
 };
 
 /// Split edges in mesh region according to the settings;\n

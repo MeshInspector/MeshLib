@@ -32,7 +32,6 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
     MR_TIMER;
-    MR_WRITER( mesh );
 
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
     std::priority_queue<EdgeLength> queue;
@@ -79,9 +78,22 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         addInQueue( e );
     }
 
+    if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
+        return 0;
+
+    MR_WRITER( mesh );
+
     int splitsDone = 0;
+    int lastProgressSplitsDone = 0;
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
+        if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
+        {
+            if ( !settings.progressCallback( 0.25f + 0.75f * splitsDone / settings.maxEdgeSplits ) )
+                return splitsDone;
+            lastProgressSplitsDone = splitsDone;
+        }
+
         const auto el = queue.top();
         const EdgeId e = el.edge;
         queue.pop();

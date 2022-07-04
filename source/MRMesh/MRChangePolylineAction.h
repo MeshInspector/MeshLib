@@ -39,7 +39,7 @@ public:
         if ( !objLines_ )
             return;
 
-        objLines_->swapPolyline( clonePolyline_ );
+        clonePolyline_ = objLines_->updatePolyline( clonePolyline_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectLines>& obj )

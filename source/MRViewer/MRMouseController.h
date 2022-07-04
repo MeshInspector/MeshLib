@@ -53,7 +53,7 @@ public:
 private:
 
 #ifdef __EMSCRIPTEN__
-    // this is needed to reset preveous modes on multitouch events
+    // this is needed to reset previous modes of multitouch events
     void resetAll_();
 #endif
 

@@ -2,11 +2,8 @@
 #include "MRViewer.h"
 #include <MRMesh/MRSystem.h>
 #include "ImGuiHelpers.h"
+#include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#endif
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace

@@ -6,10 +6,7 @@
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRSpdlog.h"
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#endif
+#include "MRPch/MRWasm.h"
 
 namespace MR
 {
@@ -97,7 +94,7 @@ bool MouseController::preMouseDown_( MouseButton btn, int )
 {
 #ifdef __EMSCRIPTEN__
     resetAll_();
-    // this is needed in case of touch disappears and than appears in other place, 
+    // this is needed in case of touch disappears and then appears in other place, 
     // not to mix up current pos, that is updated only on passive move events by default
     double x, y;
     glfwGetCursorPos( getViewerInstance().window, &x, &y );
@@ -216,7 +213,7 @@ bool MouseController::mouseScroll_( float delta )
 {
 #ifdef __EMSCRIPTEN__
     resetAll_();
-    // this is needed in case of touch disappears and than appears in other place, 
+    // this is needed in case of touch disappears and then appears in other place, 
     // not to mix up current pos, that is updated only on passive move events by default
     double x, y;
     glfwGetCursorPos( getViewerInstance().window, &x, &y );

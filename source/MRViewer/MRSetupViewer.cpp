@@ -6,15 +6,13 @@
 #include "MRViewerSettingsManager.h"
 #include "MRMesh/MRHistoryStore.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 #if _WIN32
 #include <Windows.h>
 #else
 #include <dlfcn.h>
 #endif
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#endif
 namespace MR
 {
 

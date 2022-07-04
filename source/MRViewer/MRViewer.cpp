@@ -33,10 +33,9 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
+#include "MRPch/MRWasm.h"
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#include <emscripten/html5.h>
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -57,7 +56,6 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     float newWidth = width * pixelRatio;
     float newHeight = height * pixelRatio;
     glfwSetWindowSize( MR::getViewerInstance().window, int( newWidth ), int( newHeight ) );
-    emscripten_set_element_css_size( "canvas", width, height );
     return 1;
 }
 

@@ -20,9 +20,7 @@
 #include <GLFW/glfw3.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#endif
+#include "MRPch/MRWasm.h"
 
 namespace MR
 {

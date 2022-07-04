@@ -11,12 +11,12 @@
 #include "MRViewport.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 #include <imgui.h>
 #include <assert.h>
 #include <fstream>
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
 
 extern "C" 
 {

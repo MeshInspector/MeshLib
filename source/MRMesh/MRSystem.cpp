@@ -16,9 +16,8 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #else
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#else
+#include "MRPch/MRWasm.h"
+#ifndef __EMSCRIPTEN__
 #include <cpuid.h>
 #endif
 #endif

@@ -6,6 +6,7 @@
 #include "MRViewerSettingsManager.h"
 #include "MRMesh/MRHistoryStore.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 #if _WIN32
 #include <Windows.h>
 #else
@@ -37,15 +38,21 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 {
     assert( viewer );
 
-    viewer->mouseController.setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
-    viewer->mouseController.setMouseControl( { MouseButton::Middle,0 }, MouseMode::Rotation );
-
     viewer->defaultLabelsBasisAxes = true;
     viewer->enableGlobalHistory( true );
+
+    viewer->mouseController.setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
+
 #ifndef __EMSCRIPTEN__
+    viewer->mouseController.setMouseControl( { MouseButton::Middle,0 }, MouseMode::Rotation );
     // 2 GB for desktop version
     viewer->getGlobalHistoryStore()->setMemoryLimit( size_t( 2 ) * 1024 * 1024 * 1024 );
 #else
+    bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
+    if ( hasMouse )
+        viewer->mouseController.setMouseControl( { MouseButton::Middle,0 }, MouseMode::Rotation );
+    else
+        viewer->mouseController.setMouseControl( { MouseButton::Left,0 }, MouseMode::Rotation );
     // 1 GB for WASM version
     viewer->getGlobalHistoryStore()->setMemoryLimit( size_t( 1024 ) * 1024 * 1024 );
     viewer->scrollForce = 0.7f;

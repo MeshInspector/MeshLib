@@ -57,7 +57,6 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     float newWidth = width * pixelRatio;
     float newHeight = height * pixelRatio;
     glfwSetWindowSize( MR::getViewerInstance().window, int( newWidth ), int( newHeight ) );
-    emscripten_set_element_css_size( "canvas", width, height );
     return 1;
 }
 

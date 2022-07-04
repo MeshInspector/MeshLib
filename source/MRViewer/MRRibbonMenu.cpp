@@ -227,7 +227,7 @@ void RibbonMenu::drawSearchButton_()
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
     font->Scale = 0.7f;
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
@@ -336,12 +336,13 @@ void RibbonMenu::drawSearchButton_()
 
 void RibbonMenu::drawCollapseButton_()
 {
+    const auto scaling = menu_scaling();
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
     font->Scale = 0.7f;
 
-    float btnSize = menu_scaling() * cTopPanelAditionalButtonSize;
+    float btnSize = scaling * cTopPanelAditionalButtonSize;
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrab ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
@@ -447,7 +448,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, ImVec2( itemSize,itemSize ), iconSize,DrawButtonParams::RootType::Header };
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * menuScaling );
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
@@ -472,10 +473,10 @@ void RibbonMenu::drawHeaderQuickAccess_()
 
 void RibbonMenu::drawHeaderPannel_()
 {
-    ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding );
+    const float menuScaling = menu_scaling();
+    ImGui::PushStyleVar( ImGuiStyleVar_TabRounding, cTabFrameRounding * menuScaling );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
 
-    const float menuScaling = menu_scaling();
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddRectFilled(
         ImVec2( 0, 0 ),
         ImVec2( float( getViewerInstance().window_width ), ( cTabHeight + cTabYOffset ) * menuScaling ),

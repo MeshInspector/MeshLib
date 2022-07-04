@@ -52,6 +52,11 @@ public:
     MRVIEWER_API static MouseControlKey keyToMouseAndMod( int key );
 private:
 
+#ifdef __EMSCRIPTEN__
+    // this is needed to reset preveous modes on multitouch events
+    void resetAll_();
+#endif
+
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
     bool preMouseUp_( MouseButton button, int modifier );

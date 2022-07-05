@@ -83,7 +83,7 @@ struct Color
 
     constexpr Color scaleAplha( float m )
     {
-        return Color( r, g, b, uint8_t( std::min( std::max( m * a + 0.5f, 0.0f ), 255.0f) ) );
+        return Color( r, g, b, uint8_t( std::min( std::max( m * a + 0.5f, 0.0f ), 255.0f ) ) );
     }
 };
 

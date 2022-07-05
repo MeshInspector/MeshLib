@@ -10,11 +10,16 @@ constexpr int NoAngleChangeLimit = 10;
 
 struct DeloneSettings
 {
-    int numIters = 0;
-    float maxDeviationAfterFlip = 0.0f;
+    /// Maximal iteration count
+    int numIters = 1;
+    /// Maximal allowed surface deviation during every individual flip
+    float maxDeviationAfterFlip = 0.0f;   
+    /// Maximal allowed angle change    
     float maxAngleChange = NoAngleChangeLimit;
+    /// Region on mesh to be processed, it is updated during the operation
     const FaceBitSet* region = nullptr;
-    ProgressCallback progressCallback = {};
+    /// Callback to report algorithm progress and cancel it by user request
+    ProgressCallback progressCallback;
 };
 
 /// \defgroup MeshDeloneGroup Mesh Delone

@@ -16,7 +16,7 @@ struct DeloneSettings
     float maxDeviationAfterFlip = 0.0f;   
     /// Maximal allowed angle change    
     float maxAngleChange = NoAngleChangeLimit;
-    /// Region on mesh to be processed, it is updated during the operation
+    /// Region on mesh to be processed, it is constant and not updated,
     const FaceBitSet* region = nullptr;
     /// Callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback;

@@ -81,9 +81,9 @@ struct Color
     Color& operator *= ( float m ) { *this = Color( m * Vector4f( *this ) ); return *this; }
     Color& operator /= ( float m ) { return *this *= 1.0f / m; }
 
-    constexpr Color scaleAplha( float m )
+    constexpr Color scaledAlpha( float m ) const noexcept
     {
-        return Color( r, g, b, uint8_t( std::min( std::max( m * a + 0.5f, 0.0f ), 255.0f ) ) );
+        return Color( r, g, b, uint8_t( std::clamp( m * a + 0.5f, 0.0f , 255.0f ) ) );
     }
 };
 

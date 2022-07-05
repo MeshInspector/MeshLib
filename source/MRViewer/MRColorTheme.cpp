@@ -5,6 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRObjectLabel.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
@@ -195,11 +196,21 @@ void ColorTheme::apply()
             vp.setParameters( params );
         }
 
-        if ( viewer.globalBasisAxes )
-            viewer.globalBasisAxes->setLabelsColor( SceneColors::get( SceneColors::Type::Labels ) );
-
-        if ( viewer.basisAxes )
-            viewer.basisAxes->setLabelsColor( SceneColors::get( SceneColors::Type::Labels ) );
+        auto updateLabelColors = [] ( const std::unique_ptr<ObjectMesh>& obj )
+        {
+            if ( !obj )
+                return;
+            const Color& color = SceneColors::get( SceneColors::Type::Labels );
+            obj->setLabelsColor( color );
+            auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
+            for ( auto label : labels )
+            {
+                label->setFrontColor( color );
+                label->setFrontColor( color, false );
+            }
+        };
+        updateLabelColors( viewer.globalBasisAxes );
+        updateLabelColors( viewer.basisAxes );
     } );
 }
 

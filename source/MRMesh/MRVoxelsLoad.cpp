@@ -240,8 +240,23 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         {
             if ( dimsNum == 3 )
             {
-                needInvertZ = spacing[2] < 0.0f;
-                data.voxelSize.z = float( std::abs( spacing[2] ) / 1000 );
+                float spacingZ = 0.0f;
+                if ( ds.FindDataElement( gdcm::Keywords::SpacingBetweenSlices::GetTag() ) )
+                {
+                    const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::SpacingBetweenSlices::GetTag() );
+                    gdcm::Keywords::SpacingBetweenSlices desc;
+                    desc.SetFromDataElement( de );
+                    spacingZ = float( desc.GetValue() );
+                    // looks like if this tag is set image stored inverted by Z
+                    // no other tags was found to determine orientation (compared with cases without this tag)
+                    needInvertZ = spacingZ > 0.0f;
+                }
+                else
+                {
+                    spacingZ = float( spacing[2] );
+                    needInvertZ = spacingZ < 0.0f;
+                }
+                data.voxelSize.z = std::abs( spacingZ ) * 1e-3f;
             }
             else
                 data.voxelSize.z = data.voxelSize.x;

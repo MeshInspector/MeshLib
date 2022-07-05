@@ -112,7 +112,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     controlsRoot_ = std::make_shared<Object>();
     controlsRoot_->setAncillary( true );
     
-    makeControlls_();
+    makeControls_();
 
     activeLine_ = std::make_shared<ObjectLines>();
     activeLine_->setVisible( false );
@@ -211,7 +211,7 @@ void ObjectTransformWidget::setWidth( float width )
         return;
     width_ = width;
     if ( radius_ > 0.0f )
-        makeControlls_();
+        makeControls_();
 }
 
 void ObjectTransformWidget::setRadius( float radius )
@@ -220,7 +220,7 @@ void ObjectTransformWidget::setRadius( float radius )
         return;
     radius_ = radius;
     if ( width_ > 0.0f )
-        makeControlls_();
+        makeControls_();
 }
 
 void ObjectTransformWidget::setTransformMode( uint8_t mask )
@@ -375,7 +375,7 @@ int ObjectTransformWidget::findCurrentObjIndex_() const
     return currnetIndex;
 }
 
-void ObjectTransformWidget::makeControlls_()
+void ObjectTransformWidget::makeControls_()
 {
     if ( !controlsRoot_ )
         return;

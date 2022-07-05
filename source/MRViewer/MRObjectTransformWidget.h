@@ -33,10 +33,10 @@ public:
     MRVIEWER_API void reset();
 
     // get current width of widget controls
-    // -1 means that controls are not setup
+    // negative value means that controls are not setup
     float getWidth() const { return width_; }
     // get current radius of widget controls
-    // -1 means that controls are not setup
+    // negative value means that controls are not setup
     float getRadius() const { return radius_; }
 
     // set width for this widget
@@ -101,7 +101,7 @@ private:
 
     int findCurrentObjIndex_() const;
 
-    void makeControlls_();
+    void makeControls_();
 
     float radius_{ -1.0f };
     float width_{ -1.0f };

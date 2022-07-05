@@ -80,6 +80,11 @@ struct Color
     Color& operator -= ( const Color& other ) { *this = Color( Vector4i( *this ) - Vector4i( other ) ); return *this; }
     Color& operator *= ( float m ) { *this = Color( m * Vector4f( *this ) ); return *this; }
     Color& operator /= ( float m ) { return *this *= 1.0f / m; }
+
+    constexpr Color scaleAplha( float m )
+    {
+        return Color( r, g, b, uint8_t( std::min( std::max( m * a + 0.5f, 0.0f ), 255.0f) ) );
+    }
 };
 
 inline bool operator ==( const Color& a, const Color& b )

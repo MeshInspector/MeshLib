@@ -8,6 +8,7 @@ path_to_includes = os.path.join(path_to_install_folder,'include')
 path_to_libs = os.path.join(path_to_install_folder,'lib')
 path_to_app = os.path.join(path_to_install_folder,'app')
 path_to_sources = os.path.join(base_path,'source')
+path_to_imgui = os.path.join(os.path.join(base_path,'thirdparty'),'imgui')
 path_to_phmap = os.path.join(os.path.join(base_path,'thirdparty'),'parallel-hashmap')
 path_to_pybind11 = os.path.join(os.path.join(os.path.join(base_path,'thirdparty'),'pybind11'),'include')
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
@@ -61,6 +62,7 @@ def prepare_includes_list():
 	append_incudes_list(path_to_sources)
 	append_incudes_list(path_to_phmap, True,'parallel_hashmap')
 	append_incudes_list(path_to_pybind11, True)
+	append_incudes_list(path_to_imgui, True)
 
 def inject_copyright():
 	copyright_header = open(path_to_copyright_header,'r').read()

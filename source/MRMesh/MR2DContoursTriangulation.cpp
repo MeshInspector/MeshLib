@@ -135,7 +135,7 @@ std::optional<Mesh> PlanarTriangulator::run()
         params.metric = std::make_unique<PlaneFillMetric>( mesh_, dirE );
         fillHole( mesh_, dirE, params );
     }
-    makeDeloneEdgeFlips( mesh_, 100, std::numeric_limits<float>::epsilon() );
+    makeDeloneEdgeFlips( mesh_, { 100, std::numeric_limits<float>::epsilon() } );
 
     return std::move( mesh_ ); // move here to avoid copy of class member
 }

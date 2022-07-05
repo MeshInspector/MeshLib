@@ -185,7 +185,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation 
     bool meshChanged = false;
     for( int i = 0; i < maxIters; ++i )
     {
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, 5, maxDeviation ) > 0;
+        bool changedThisIter = makeDeloneEdgeFlips( mesh, { 5, maxDeviation } ) > 0;
 
         DecimateSettings settings;
         settings.maxError = maxDeviation;

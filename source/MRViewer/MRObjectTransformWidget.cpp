@@ -104,56 +104,16 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
         reset();
 
     center_ = box.center();
-    auto radius = box.diagonal() * 0.5f;
-    auto width = radius / 40.0f;
+    if ( radius_ < 0.0f )
+        radius_ = box.diagonal() * 0.5f;
+    if ( width_ < 0.0f )
+        width_ = radius_ / 40.0f;
     // make x - arrow
     controlsRoot_ = std::make_shared<Object>();
     controlsRoot_->setAncillary( true );
-    for ( int i = Axis::X; i < Axis::Count; ++i )
-    {
-        translateControls_[i] = std::make_shared<ObjectMesh>();
-        translateLines_[i] = std::make_shared<ObjectLines>();
-        auto transPolyline = std::make_shared<Polyline3>();
-        std::vector<Vector3f> translationPoints = { center_ - radius * 1.15f * baseAxis[i],center_ + radius * 1.3f * baseAxis[i] };
-        transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
-        translateLines_[i]->setPolyline( transPolyline );
-        translateLines_[i]->setAncillary( true );
-        translateLines_[i]->setFrontColor( Color::black(), false );
-        translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+    
+    makeControlls_();
 
-        translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], width, 1.35f * width, 2.2f * width ) ) );
-        translateControls_[i]->setAncillary( true );
-        translateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
-        translateControls_[i]->setFlatShading( true );
-        controlsRoot_->addChild( translateControls_[i] );
-        translateControls_[i]->addChild( translateLines_[i] );
-
-
-        auto xf = AffineXf3f::translation( center_ ) *
-            AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
-
-        rotateLines_[i] = std::make_shared<ObjectLines>();
-        auto rotPolyline = std::make_shared<Polyline3>();
-        std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( radius, width, 128, 32, &rotatePoints );
-        for ( auto& p : rotatePoints )
-            p = xf( p );
-        rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
-        rotateLines_[i]->setPolyline( rotPolyline );
-        rotateLines_[i]->setAncillary( true );
-        rotateLines_[i]->setFrontColor( Color::black(), false );
-        rotateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
-
-        rotMesh.transform( xf );
-        rotateControls_[i] = std::make_shared<ObjectMesh>();
-        rotateControls_[i]->setMesh( std::make_shared<Mesh>( std::move( rotMesh ) ) );
-        rotateControls_[i]->setAncillary( true );
-        rotateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
-        rotateControls_[i]->setFlatShading( true );
-        controlsRoot_->addChild( rotateControls_[i] );
-        rotateControls_[i]->addChild( rotateLines_[i] );
-    }
     activeLine_ = std::make_shared<ObjectLines>();
     activeLine_->setVisible( false );
     activeLine_->setAncillary( true );
@@ -240,6 +200,27 @@ void ObjectTransformWidget::reset()
     }
 
     visibilityParent_.reset();
+
+    width_ = -1.0f;
+    radius_ = -1.0f;
+}
+
+void ObjectTransformWidget::setWidth( float width )
+{
+    if ( width_ == width )
+        return;
+    width_ = width;
+    if ( radius_ > 0.0f )
+        makeControlls_();
+}
+
+void ObjectTransformWidget::setRadius( float radius )
+{
+    if ( radius == radius_ )
+        return;
+    radius_ = radius;
+    if ( width_ > 0.0f )
+        makeControlls_();
 }
 
 void ObjectTransformWidget::setTransformMode( uint8_t mask )
@@ -392,6 +373,69 @@ int ObjectTransformWidget::findCurrentObjIndex_() const
     assert( currnetIndex >= 0 && currnetIndex < 6 );
 
     return currnetIndex;
+}
+
+void ObjectTransformWidget::makeControlls_()
+{
+    if ( !controlsRoot_ )
+        return;
+
+    for ( int i = Axis::X; i < Axis::Count; ++i )
+    {
+        if ( !translateControls_[i] )
+        {
+            translateControls_[i] = std::make_shared<ObjectMesh>();
+            translateControls_[i]->setAncillary( true );
+            translateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            translateControls_[i]->setFlatShading( true );
+            controlsRoot_->addChild( translateControls_[i] );
+        }
+        if ( !translateLines_[i] )
+        {
+            translateLines_[i] = std::make_shared<ObjectLines>();
+            translateLines_[i]->setAncillary( true );
+            translateLines_[i]->setFrontColor( Color::black(), false );
+            translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+            translateControls_[i]->addChild( translateLines_[i] );
+        }
+        auto transPolyline = std::make_shared<Polyline3>();
+        std::vector<Vector3f> translationPoints = { center_ - radius_ * 1.15f * baseAxis[i],center_ + radius_ * 1.3f * baseAxis[i] };
+        transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
+        translateLines_[i]->setPolyline( transPolyline );
+
+        translateControls_[i]->setMesh( std::make_shared<Mesh>(
+            makeArrow( translationPoints[0], translationPoints[1], width_, 1.35f * width_, 2.2f * width_ ) ) );
+
+        auto xf = AffineXf3f::translation( center_ ) *
+            AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
+
+        if ( !rotateControls_[i] )
+        {
+            rotateControls_[i] = std::make_shared<ObjectMesh>();
+            rotateControls_[i]->setAncillary( true );
+            rotateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            rotateControls_[i]->setFlatShading( true );
+            controlsRoot_->addChild( rotateControls_[i] );
+        }
+        if ( !rotateLines_[i] )
+        {
+            rotateLines_[i] = std::make_shared<ObjectLines>();
+            rotateLines_[i]->setAncillary( true );
+            rotateLines_[i]->setFrontColor( Color::black(), false );
+            rotateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+            rotateControls_[i]->addChild( rotateLines_[i] );
+        }
+        auto rotPolyline = std::make_shared<Polyline3>();
+        std::vector<Vector3f> rotatePoints;
+        auto rotMesh = makeTorus( radius_, width_, 128, 32, &rotatePoints );
+        for ( auto& p : rotatePoints )
+            p = xf( p );
+        rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );
+        rotateLines_[i]->setPolyline( rotPolyline );
+
+        rotMesh.transform( xf );
+        rotateControls_[i]->setMesh( std::make_shared<Mesh>( std::move( rotMesh ) ) );
+    }
 }
 
 void ObjectTransformWidget::passiveMove_()

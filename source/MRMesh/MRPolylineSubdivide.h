@@ -22,6 +22,9 @@ struct PolylineSubdivideSettings
     VertBitSet * region = nullptr;
     /// New vertices appeared during subdivision will be added here
     VertBitSet * newVerts = nullptr;
+    /// This option works best for natural lines, where all segments have similar size,
+    /// and no sharp angles in between
+    bool useCurvature = false;
     /// this function is called each time a new vertex has been created
     std::function<void(VertId)> onVertCreated;
     /// callback to report algorithm progress and cancel it by user request

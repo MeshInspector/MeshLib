@@ -32,6 +32,18 @@ public:
     // unsubscribes from viewer events
     MRVIEWER_API void reset();
 
+    // get current width of widget controls
+    // negative value means that controls are not setup
+    float getWidth() const { return width_; }
+    // get current radius of widget controls
+    // negative value means that controls are not setup
+    float getRadius() const { return radius_; }
+
+    // set width for this widget
+    MRVIEWER_API void setWidth( float width );
+    // set radius for this widget
+    MRVIEWER_API void setRadius( float radius );
+
     // Returns current transform mode mask
     uint8_t getTransformModeMask() const { return transformModeMask_; }
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
@@ -88,6 +100,11 @@ private:
     void stopModify_();
 
     int findCurrentObjIndex_() const;
+
+    void makeControls_();
+
+    float radius_{ -1.0f };
+    float width_{ -1.0f };
 
     // main object that holds all other controls
     std::shared_ptr<Object> controlsRoot_;

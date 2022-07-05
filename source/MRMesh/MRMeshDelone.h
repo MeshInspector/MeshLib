@@ -1,9 +1,26 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
+
+constexpr int NoAngleChangeLimit = 10;
+
+struct DeloneSettings
+{
+    /// Maximal iteration count
+    int numIters = 1;
+    /// Maximal allowed surface deviation during every individual flip
+    float maxDeviationAfterFlip = 0.0f;   
+    /// Maximal allowed angle change    
+    float maxAngleChange = NoAngleChangeLimit;
+    /// Region on mesh to be processed, it is constant and not updated,
+    const FaceBitSet* region = nullptr;
+    /// Callback to report algorithm progress and cancel it by user request
+    ProgressCallback progressCallback;
+};
 
 /// \defgroup MeshDeloneGroup Mesh Delone
 /// \details https:///en.wikipedia.org/wiki/Boris_Delaunay
@@ -13,8 +30,6 @@ namespace MR
 /// computes the diameter of the triangle's ABC circumcircle
 template <typename T>
 T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c );
-
-constexpr int NoAngleChangeLimit = 10;
 
 /// given quadrangle ABCD, checks whether its edge AC satisfies Delone's condition;
 /// if dihedral angles
@@ -33,8 +48,7 @@ MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, flo
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,
 /// \return the number of flips done
-MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip, float maxAngleChange = NoAngleChangeLimit,
-    const FaceBitSet * region = nullptr );
+MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings );
 
 /// improves mesh triangulation in a ring of vertices with common origin and represented by edge e
 MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, float maxAngleChange = NoAngleChangeLimit,

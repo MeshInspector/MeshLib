@@ -105,20 +105,23 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDevia
     return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
 }
 
-int makeDeloneEdgeFlips( Mesh & mesh, int numIters, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
+int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings )
 {
-    if ( numIters <= 0 )
+    if ( settings.numIters <= 0 )
         return 0;
     MR_TIMER;
     MR_WRITER( mesh );
 
     int flipsDone = 0;
-    for ( int iter = 0; iter < numIters; ++iter )
+    for ( int iter = 0; iter < settings.numIters; ++iter )
     {
+        if ( settings.progressCallback && !settings.progressCallback( float( iter ) / settings.numIters ) )
+            return flipsDone;
+
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( checkDeloneQuadrangleInMesh( mesh, e, maxDeviationAfterFlip, maxAngleChange, region ) )
+            if ( checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
                 continue;
 
             mesh.topology.flipEdge( e );

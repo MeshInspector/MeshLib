@@ -167,6 +167,8 @@ void ObjectLabel::buildMesh_()
 
 void ObjectLabel::updatePivotShift_()
 {
+    if ( !mesh_ )
+        return;
     const Box3f box = mesh_->computeBoundingBox();
     if ( box.valid() )
     {

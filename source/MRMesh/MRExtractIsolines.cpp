@@ -12,14 +12,15 @@
 namespace MR
 {
 
-using ValueInVertex = std::function<float(VertId)>;
+using ValueInVertex = std::function<float( VertId )>;
 using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 
 class Isoliner
 {
 public:
-    Isoliner( const MeshTopology & topology, ValueInVertex valueInVertex, const FaceBitSet * region )
-        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex ) { }
+    Isoliner( const MeshTopology& topology, ValueInVertex valueInVertex, const FaceBitSet* region )
+        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
+    {}
 
     IsoLines extract();
 
@@ -33,9 +34,9 @@ private:
     std::optional<MeshEdgePoint> findNextEdgePoint_( EdgeId e ) const;
 
 private:
-    
-    const MeshTopology & topology_;
-    const FaceBitSet * region_ = nullptr;
+
+    const MeshTopology& topology_;
+    const FaceBitSet* region_ = nullptr;
     ValueInVertex valueInVertex_;
     UndirectedEdgeBitSet seenEdges_;
 };
@@ -133,7 +134,7 @@ std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
         return toEdgePoint_( topology_.next( e ), vo, vx );
 }
 
-IsoLine Isoliner::extractOneLine_( const MeshEdgePoint & first, ContinueTrack continueTrack )
+IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack )
 {
     std::vector<MeshEdgePoint> res;
     res.push_back( first );
@@ -174,7 +175,7 @@ IsoLine Isoliner::extractOneLine_( const MeshEdgePoint & first, ContinueTrack co
         }
         std::reverse( back.begin(), back.end() );
         back.pop_back(); // remove extra copy of firstSym
-        for ( auto & i : back )
+        for ( auto& i : back )
             i = i.sym(); // make consistent edge orientations of forward and backward passes
         res.insert( res.begin(), back.begin(), back.end() );
     }
@@ -182,34 +183,40 @@ IsoLine Isoliner::extractOneLine_( const MeshEdgePoint & first, ContinueTrack co
     return res;
 }
 
-IsoLines extractIsolines( const MeshTopology & topology, 
-    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+IsoLines extractIsolines( const MeshTopology& topology,
+    const Vector<float, VertId>& vertValues, float isoValue, const FaceBitSet* region )
 {
     MR_TIMER;
 
-    Isoliner s( topology, [&]( VertId v ) { return vertValues[v] - isoValue; }, region );
+    Isoliner s( topology, [&] ( VertId v )
+    {
+        return vertValues[v] - isoValue;
+    }, region );
     return s.extract();
 }
 
-PlaneSections extractPlaneSections( const MeshPart & mp, const Plane3f & plane )
+PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane )
 {
     MR_TIMER;
 
-    Isoliner s( mp.mesh.topology, [&]( VertId v ) { return plane.distance( mp.mesh.points[v] ); }, mp.region );
+    Isoliner s( mp.mesh.topology, [&] ( VertId v )
+    {
+        return plane.distance( mp.mesh.points[v] );
+    }, mp.region );
     return s.extract();
 }
 
-PlaneSection trackSection( const MeshPart& mp, 
-    const MeshTriPoint& start, MeshTriPoint& end, const Vector3f& direction, float distnace )
+PlaneSection trackSection( const MeshPart& mp,
+    const MeshTriPoint& start, MeshTriPoint& end, const Vector3f& direction, float distance )
 {
     MR_TIMER;
-    if ( distnace == 0.0f )
+    if ( distance == 0.0f )
     {
         end = start;
         return {};
     }
-    const auto dir = distnace > 0.0f ? direction : -direction;
-    distnace = std::abs( distnace );
+    const auto dir = distance > 0.0f ? direction : -direction;
+    distance = std::abs( distance );
     auto startPoint = mp.mesh.triPoint( start );
     auto prevPoint = startPoint;
     auto plane = Plane3f::fromDirAndPt( cross( dir, mp.mesh.pseudonormal( start ) ), prevPoint );
@@ -221,8 +228,8 @@ PlaneSection trackSection( const MeshPart& mp,
     {
         auto point = mp.mesh.edgePoint( next );
         auto dist = ( point - prevPoint ).length();
-        distnace -= dist;
-        if ( distnace < 0.0f )
+        distance -= dist;
+        if ( distance < 0.0f )
             return false;
         prevPoint = point;
         return true;
@@ -236,20 +243,20 @@ PlaneSection trackSection( const MeshPart& mp,
         return {};
     }
     bool closed = res.size() != 1 && res.front() == res.back();
-    if ( distnace > 0.0f )
+    if ( distance > 0.0f )
     {
         end = res.back();
-        res.resize( int( res.size() ) - 1 );
+        res.pop_back();
         if ( closed )
             end = start;
         return res;
     }
-    
+
     auto lastEdgePoint = res.back();
     auto lastPoint = mp.mesh.edgePoint( lastEdgePoint );
-    res.resize( int( res.size() ) - 1 );
+    res.pop_back();
     auto lastSegmentLength = ( lastPoint - prevPoint ).length();
-    float ratio = ( lastSegmentLength + distnace ) / lastSegmentLength;
+    float ratio = ( lastSegmentLength + distance ) / lastSegmentLength;
     auto endPoint = ( 1.0f - ratio ) * prevPoint + ratio * lastPoint;
     end = mp.mesh.toTriPoint( mp.mesh.topology.right( lastEdgePoint.e ), endPoint );
     if ( closed &&
@@ -258,12 +265,12 @@ PlaneSection trackSection( const MeshPart& mp,
     return res;
 }
 
-Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & section, const AffineXf3f & meshToPlane )
+Contour2f planeSectionToContour2f( const Mesh& mesh, const PlaneSection& section, const AffineXf3f& meshToPlane )
 {
     MR_TIMER;
     Contour2f res;
     res.reserve( section.size() );
-    for ( const auto & s : section )
+    for ( const auto& s : section )
     {
         auto p = meshToPlane( mesh.edgePoint( s ) );
         res.emplace_back( p.x, p.y );
@@ -272,12 +279,12 @@ Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & secti
     return res;
 }
 
-Contours2f planeSectionsToContours2f( const Mesh & mesh, const PlaneSections & sections, const AffineXf3f & meshToPlane )
+Contours2f planeSectionsToContours2f( const Mesh& mesh, const PlaneSections& sections, const AffineXf3f& meshToPlane )
 {
     MR_TIMER;
     Contours2f res;
     res.reserve( sections.size() );
-    for ( const auto & s : sections )
+    for ( const auto& s : sections )
         res.push_back( planeSectionToContour2f( mesh, s, meshToPlane ) );
     return res;
 }

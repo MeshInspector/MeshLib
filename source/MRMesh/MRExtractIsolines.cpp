@@ -79,20 +79,31 @@ IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack 
     if ( auto v = start.inVertex( topology_ ) )
     {
         for ( auto e : orgRing( topology_, v ) )
-            if ( startEdgePoint = testEdge( e ) )
+        {
+            if ( auto edgePoint = testEdge( e ) )
+            {
+                startEdgePoint = edgePoint;
                 break;
+            }
+        }
     }
     else if ( auto eOp = start.onEdge( topology_ ) )
     {
-        if ( !( startEdgePoint = testEdge( eOp->e ) ) )
+        startEdgePoint = testEdge( eOp->e );
+        if ( !startEdgePoint )
             startEdgePoint = eOp->sym();
         startEdgePoint = findNextEdgePoint_( startEdgePoint->e ); // `start` is first
     }
     else
     {
         for ( auto e : leftRing( topology_, start.e ) )
-            if ( startEdgePoint = testEdge( e ) )
+        {
+            if ( auto edgePoint = testEdge( e ) )
+            {
+                startEdgePoint = edgePoint;
                 break;
+            }
+        }
     }
     if ( !startEdgePoint )
         return {};
@@ -225,12 +236,15 @@ PlaneSection trackSection( const MeshPart& mp,
         return {};
     }
     bool closed = res.size() != 1 && res.front() == res.back();
-    if ( closed && distnace > 0.0f )
+    if ( distnace > 0.0f )
     {
+        end = res.back();
         res.resize( int( res.size() ) - 1 );
-        end = start;
+        if ( closed )
+            end = start;
         return res;
     }
+    
     auto lastEdgePoint = res.back();
     auto lastPoint = mp.mesh.edgePoint( lastEdgePoint );
     res.resize( int( res.size() ) - 1 );

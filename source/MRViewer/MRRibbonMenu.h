@@ -5,6 +5,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
+#include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
 
@@ -70,6 +71,13 @@ public:
 
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
+
+    /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
+    int getActiveTabIndex() const { return activeTabIndex_; }
+
+    using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
+    /// this signal is called when active tab changes
+    TabChangedSignal tabChangedSignal;
 protected:
 
     // draw single item
@@ -137,6 +145,8 @@ protected:
 
     std::vector<std::shared_ptr<const Object>> selectedObjectsCache_;
 private:
+    void changeTab_( int newTab );
+
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
     // draw scene list buttons

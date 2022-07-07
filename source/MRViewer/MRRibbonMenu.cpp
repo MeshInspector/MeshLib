@@ -305,7 +305,7 @@ void RibbonMenu::drawSearchButton_()
                 auto labelSize = ImGui::CalcTextSize( tabName.c_str() );
                 if ( ImGui::Button( label.c_str(), ImVec2( labelSize.x + 2 * cRibbonButtonWindowPaddingX * scaling, ySize ) ) )
                 {
-                    activeTabIndex_ = foundItem.tabIndex;
+                    changeTab_( foundItem.tabIndex );
                     ImGui::CloseCurrentPopup();
                 }
                 ImVec2 textPos = pos;
@@ -568,12 +568,7 @@ void RibbonMenu::drawHeaderPannel_()
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
         if ( pressed )
-        {
-            // mb move to separate function like `tabPressed`
-            activeTabIndex_ = i;
-            if ( collapseState_ == CollapseState::Closed )
-                collapseState_ = CollapseState::Opened;
-        }
+            changeTab_( i );
 
         if ( activeTabIndex_ == i || hovered || pressed )
         {
@@ -1049,6 +1044,18 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
 {
     if ( item->isActive() || available )
         item->action();
+}
+
+void RibbonMenu::changeTab_( int newTab )
+{
+    int oldTab = activeTabIndex_;
+    if ( oldTab != newTab )
+    {
+        activeTabIndex_ = newTab;
+        tabChangedSignal( oldTab, newTab );
+    }
+    if ( collapseState_ == CollapseState::Closed )
+        collapseState_ = CollapseState::Opened;
 }
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const

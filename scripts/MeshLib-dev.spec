@@ -21,6 +21,8 @@ cd ../..
 echo $PWD
 
 MR_LIB_DIR="lib/"
+MR_BIN_DIR="build/Release/bin/"
+MR_INSTALL_BIN_DIR="$RPM_BUILD_ROOT/usr/local/bin/"
 MR_INSTALL_LIB_DIR="$RPM_BUILD_ROOT/usr/local/lib/MeshLib/"
 MR_INSTALL_RES_DIR="$RPM_BUILD_ROOT/usr/local/etc/MeshLib/"
 MR_INSTALL_FONTS_DIR="$RPM_BUILD_ROOT/usr/local/share/fonts/"
@@ -29,6 +31,7 @@ MR_INSTALL_INCLUDE_DIR="$RPM_BUILD_ROOT/usr/local/include/MeshLib/"
 PYTHON_DIR="$RPM_BUILD_ROOT/usr/lib/python3"
 
 #mkdirs
+mkdir -p "${MR_INSTALL_BIN_DIR}"
 mkdir -p "${MR_INSTALL_LIB_DIR}"
 mkdir -p "${MR_INSTALL_RES_DIR}"
 mkdir -p "${MR_INSTALL_FONTS_DIR}"
@@ -40,6 +43,10 @@ cd "${MR_LIB_DIR}"
 find . -name '*.so*' -type f,l -exec cp -fP \{\} "${MR_INSTALL_LIB_DIR}" \;
 cd -
 printf "lib copy done\n"
+
+#copy application
+cp -r build/Release/bin/meshconv "${MR_INSTALL_BIN_DIR}"
+printf "app copy done\n"
 
 #copy libs
 cp -r build/Release/bin/*.so "${MR_INSTALL_LIB_DIR}"

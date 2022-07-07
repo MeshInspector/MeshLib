@@ -26,6 +26,7 @@ fi
 
 MR_LIB_DIR="lib/"
 MR_BIN_DIR="build/Release/bin/"
+MR_INSTALL_BIN_DIR="/usr/local/bin/"
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib/"
 MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib/"
 MR_INSTALL_THIRDPARTY_INCLUDE_DIR="/usr/local/include/"
@@ -33,6 +34,7 @@ MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib/"
 PYTHON_DIR="/usr/lib/python3"
 
 mkdir -p distr/meshlib-dev/DEBIAN
+mkdir -p "distr/meshlib-dev${MR_INSTALL_BIN_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
@@ -89,6 +91,10 @@ cd "${MR_LIB_DIR}"
 find . -name '*.so*' -type f,l -exec cp -fP \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}" \;
 cd -
 printf "Thirdparty libs copy done\n"
+
+#copy application
+cp -r build/Release/bin/meshconv "distr/meshlib-dev${MR_INSTALL_BIN_DIR}"
+printf "app copy done\n"
 
 #copy libs
 cp -r build/Release/bin/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"

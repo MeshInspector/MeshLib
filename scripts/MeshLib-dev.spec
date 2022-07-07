@@ -72,6 +72,7 @@ cd "${RPM_BUILD_ROOT}"
 exit
 
 %files
+/usr/local/bin/
 /usr/local/include/
 /usr/local/lib/MeshLib/
 /usr/local/etc/MeshLib/

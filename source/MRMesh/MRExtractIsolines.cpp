@@ -6,34 +6,42 @@
 #include "MRMesh.h"
 #include "MRAffineXf3.h"
 #include "MRVector2.h"
+#include "MRRingIterator.h"
 #include "MRTimer.h"
 
 namespace MR
 {
 
-using ValueInVertex = std::function<float(VertId)>;
+using ValueInVertex = std::function<float( VertId )>;
+using ContinueTrack = std::function<bool( const MeshEdgePoint& )>;
 
 class Isoliner
 {
 public:
-    Isoliner( const MeshTopology & topology, ValueInVertex valueInVertex, const FaceBitSet * region )
-        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex ) { }
+    Isoliner( const MeshTopology& topology, ValueInVertex valueInVertex, const FaceBitSet* region )
+        : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
+    {}
 
-    std::vector<std::vector<MeshEdgePoint>> extract();
+    IsoLines extract();
+
+    IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
 
 private:
-    std::vector<MeshEdgePoint> extractOneLine_( const MeshEdgePoint & first );
+    // if continueTrack is not set extract all
+    // if continueTrack is set - extract until reach it or closed, or border faced
+    IsoLine extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack = {} );
     MeshEdgePoint toEdgePoint_( EdgeId e, float vo, float vd ) const;
     std::optional<MeshEdgePoint> findNextEdgePoint_( EdgeId e ) const;
 
 private:
-    const MeshTopology & topology_;
-    const FaceBitSet * region_ = nullptr;
+
+    const MeshTopology& topology_;
+    const FaceBitSet* region_ = nullptr;
     ValueInVertex valueInVertex_;
     UndirectedEdgeBitSet seenEdges_;
 };
 
-std::vector<std::vector<MeshEdgePoint>> Isoliner::extract()
+IsoLines Isoliner::extract()
 {
     std::vector<std::vector<MeshEdgePoint>> res;
     for ( auto ue : undirectedEdges( topology_ ) )
@@ -53,6 +61,54 @@ std::vector<std::vector<MeshEdgePoint>> Isoliner::extract()
             res.push_back( extractOneLine_( toEdgePoint_( e.sym(), vd, vo ) ) );
     }
     return res;
+}
+
+IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack )
+{
+    auto testEdge = [&] ( EdgeId e )->std::optional<MeshEdgePoint>
+    {
+        VertId o = topology_.org( e );
+        VertId d = topology_.dest( e );
+        float vo = valueInVertex_( o );
+        float vd = valueInVertex_( d );
+        if ( vd < 0 && 0 <= vo )
+            return  toEdgePoint_( e.sym(), vd, vo );
+        return {};
+    };
+
+    std::optional<MeshEdgePoint> startEdgePoint;
+    if ( auto v = start.inVertex( topology_ ) )
+    {
+        for ( auto e : orgRing( topology_, v ) )
+        {
+            if ( auto edgePoint = testEdge( e ) )
+            {
+                startEdgePoint = edgePoint;
+                break;
+            }
+        }
+    }
+    else if ( auto eOp = start.onEdge( topology_ ) )
+    {
+        startEdgePoint = testEdge( eOp->e );
+        if ( !startEdgePoint )
+            startEdgePoint = eOp->sym();
+        startEdgePoint = findNextEdgePoint_( startEdgePoint->e ); // `start` is first
+    }
+    else
+    {
+        for ( auto e : leftRing( topology_, start.e ) )
+        {
+            if ( auto edgePoint = testEdge( e ) )
+            {
+                startEdgePoint = edgePoint;
+                break;
+            }
+        }
+    }
+    if ( !startEdgePoint )
+        return {};
+    return extractOneLine_( *startEdgePoint, continueTrack );
 }
 
 inline MeshEdgePoint Isoliner::toEdgePoint_( EdgeId e, float vo, float vd ) const
@@ -78,10 +134,12 @@ std::optional<MeshEdgePoint> Isoliner::findNextEdgePoint_( EdgeId e ) const
         return toEdgePoint_( topology_.next( e ), vo, vx );
 }
 
-std::vector<MeshEdgePoint> Isoliner::extractOneLine_( const MeshEdgePoint & first )
+IsoLine Isoliner::extractOneLine_( const MeshEdgePoint& first, ContinueTrack continueTrack )
 {
     std::vector<MeshEdgePoint> res;
     res.push_back( first );
+    if ( continueTrack && !continueTrack( first ) )
+        return res;
     seenEdges_.autoResizeSet( first.e.undirected() );
 
     bool closed = false;
@@ -90,12 +148,19 @@ std::vector<MeshEdgePoint> Isoliner::extractOneLine_( const MeshEdgePoint & firs
         if ( first.e == next->e )
         {
             res.push_back( first );
+            if ( continueTrack )
+                continueTrack( first );
             closed = true;
             break;
         }
         res.push_back( *next );
+        if ( continueTrack && !continueTrack( *next ) )
+            return res;
         seenEdges_.autoResizeSet( next->e.undirected() );
     }
+
+    if ( continueTrack )
+        return res;
 
     if ( !closed )
     {
@@ -110,7 +175,7 @@ std::vector<MeshEdgePoint> Isoliner::extractOneLine_( const MeshEdgePoint & firs
         }
         std::reverse( back.begin(), back.end() );
         back.pop_back(); // remove extra copy of firstSym
-        for ( auto & i : back )
+        for ( auto& i : back )
             i = i.sym(); // make consistent edge orientations of forward and backward passes
         res.insert( res.begin(), back.begin(), back.end() );
     }
@@ -118,29 +183,94 @@ std::vector<MeshEdgePoint> Isoliner::extractOneLine_( const MeshEdgePoint & firs
     return res;
 }
 
-std::vector<std::vector<MeshEdgePoint>> extractIsolines( const MeshTopology & topology, 
-    const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region )
+IsoLines extractIsolines( const MeshTopology& topology,
+    const Vector<float, VertId>& vertValues, float isoValue, const FaceBitSet* region )
 {
     MR_TIMER;
 
-    Isoliner s( topology, [&]( VertId v ) { return vertValues[v] - isoValue; }, region );
+    Isoliner s( topology, [&] ( VertId v )
+    {
+        return vertValues[v] - isoValue;
+    }, region );
     return s.extract();
 }
 
-std::vector<std::vector<MeshEdgePoint>> extractPlaneSections( const MeshPart & mp, const Plane3f & plane )
+PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane )
 {
     MR_TIMER;
 
-    Isoliner s( mp.mesh.topology, [&]( VertId v ) { return plane.distance( mp.mesh.points[v] ); }, mp.region );
+    Isoliner s( mp.mesh.topology, [&] ( VertId v )
+    {
+        return plane.distance( mp.mesh.points[v] );
+    }, mp.region );
     return s.extract();
 }
 
-Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & section, const AffineXf3f & meshToPlane )
+PlaneSection trackSection( const MeshPart& mp,
+    const MeshTriPoint& start, MeshTriPoint& end, const Vector3f& direction, float distance )
+{
+    MR_TIMER;
+    if ( distance == 0.0f )
+    {
+        end = start;
+        return {};
+    }
+    const auto dir = distance > 0.0f ? direction : -direction;
+    distance = std::abs( distance );
+    auto startPoint = mp.mesh.triPoint( start );
+    auto prevPoint = startPoint;
+    auto plane = Plane3f::fromDirAndPt( cross( dir, mp.mesh.pseudonormal( start ) ), prevPoint );
+    ValueInVertex valueInVertex = [&] ( VertId v )
+    {
+        return plane.distance( mp.mesh.points[v] );
+    };
+    ContinueTrack continueTrack = [&] ( const MeshEdgePoint& next ) mutable->bool
+    {
+        auto point = mp.mesh.edgePoint( next );
+        auto dist = ( point - prevPoint ).length();
+        distance -= dist;
+        if ( distance < 0.0f )
+            return false;
+        prevPoint = point;
+        return true;
+    };
+
+    Isoliner s( mp.mesh.topology, valueInVertex, mp.region );
+    auto res = s.track( start, continueTrack );
+    if ( res.empty() )
+    {
+        end = start;
+        return {};
+    }
+    bool closed = res.size() != 1 && res.front() == res.back();
+    if ( distance > 0.0f )
+    {
+        end = res.back();
+        res.pop_back();
+        if ( closed )
+            end = start;
+        return res;
+    }
+
+    auto lastEdgePoint = res.back();
+    auto lastPoint = mp.mesh.edgePoint( lastEdgePoint );
+    res.pop_back();
+    auto lastSegmentLength = ( lastPoint - prevPoint ).length();
+    float ratio = ( lastSegmentLength + distance ) / lastSegmentLength;
+    auto endPoint = ( 1.0f - ratio ) * prevPoint + ratio * lastPoint;
+    end = mp.mesh.toTriPoint( mp.mesh.topology.right( lastEdgePoint.e ), endPoint );
+    if ( closed &&
+        dot( endPoint - prevPoint, lastPoint - prevPoint ) > dot( startPoint - prevPoint, lastPoint - prevPoint ) )
+        end = start;
+    return res;
+}
+
+Contour2f planeSectionToContour2f( const Mesh& mesh, const PlaneSection& section, const AffineXf3f& meshToPlane )
 {
     MR_TIMER;
     Contour2f res;
     res.reserve( section.size() );
-    for ( const auto & s : section )
+    for ( const auto& s : section )
     {
         auto p = meshToPlane( mesh.edgePoint( s ) );
         res.emplace_back( p.x, p.y );
@@ -149,12 +279,12 @@ Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & secti
     return res;
 }
 
-Contours2f planeSectionsToContours2f( const Mesh & mesh, const PlaneSections & sections, const AffineXf3f & meshToPlane )
+Contours2f planeSectionsToContours2f( const Mesh& mesh, const PlaneSections& sections, const AffineXf3f& meshToPlane )
 {
     MR_TIMER;
     Contours2f res;
     res.reserve( sections.size() );
-    for ( const auto & s : sections )
+    for ( const auto& s : sections )
         res.push_back( planeSectionToContour2f( mesh, s, meshToPlane ) );
     return res;
 }

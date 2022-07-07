@@ -1,6 +1,7 @@
 #include "MRObjectMeshHolder.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
+#include "MRMeshComponents.h"
 #include "MRMeshSave.h"
 #include "MRSerializer.h"
 #include "MRMeshLoad.h"
@@ -194,6 +195,18 @@ void ObjectMeshHolder::setupRenderObject_() const
         renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
 }
 
+void ObjectMeshHolder::updateMeshStat_() const
+{
+    if ( !meshStat_ )
+    {
+        MeshStat ms;
+        ms.numComponents = MeshComponents::getNumComponents( *mesh_ );
+        ms.numUndirectedEdges = mesh_->topology.computeNotLoneUndirectedEdges();
+        ms.numHoles = mesh_->topology.findHoleRepresentiveEdges().size();
+        meshStat_ = ms;
+    }
+}
+
 void ObjectMeshHolder::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
@@ -380,6 +393,12 @@ size_t ObjectMeshHolder::heapBytes() const
         + facesNormalsCache_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
+}
+
+size_t ObjectMeshHolder::numHoles() const
+{
+    updateMeshStat_();
+    return meshStat_->numHoles;
 }
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )

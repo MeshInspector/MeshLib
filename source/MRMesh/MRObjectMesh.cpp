@@ -57,14 +57,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
     res.push_back( "type: Mesh" );
     if ( mesh_ )
     {
-        if ( !meshStat_ )
-        {
-            MeshStat ms;
-            ms.numComponents = MeshComponents::getNumComponents( *mesh_ );
-            ms.numUndirectedEdges = mesh_->topology.computeNotLoneUndirectedEdges();
-            ms.numHoles = mesh_->topology.findHoleRepresentiveEdges().size();
-            meshStat_ = ms;
-        }
+        updateMeshStat_();
 
         res.push_back( "components: " + std::to_string( meshStat_->numComponents ) );
         res.push_back( "vertices: " + std::to_string( mesh_->topology.numValidVerts() ) );

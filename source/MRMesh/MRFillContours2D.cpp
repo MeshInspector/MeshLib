@@ -9,11 +9,6 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRTimer.h"
 
-namespace
-{
-const float maxError = std::numeric_limits<float>::epsilon() * 20.f;
-}
-
 namespace MR
 {
 
@@ -70,7 +65,6 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
 
     // make contours2D (on plane) from border rings (in world)
     Contours2f contours2f;
-    float maxZ = 0.f;
     for ( const auto& path : paths )
     {
         Contour2f contour;
@@ -78,15 +72,9 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
         {
             const auto localPoint = planeXfInv( mesh.orgPnt( edge ) );
             contour.push_back( Vector2f( localPoint.x, localPoint.y ) );
-            if ( std::fabs( localPoint.z ) > maxZ ) maxZ = std::fabs( localPoint.z );
         }
         contour.push_back( contour[0] );
         contours2f.push_back( contour );
-    }
-    if ( maxZ > maxError )
-    {
-        spdlog::warn("fillContours2D: Edges aren't in the same plane. Max Z = {}", maxZ );
-        return false;
     }
 
     // make patch surface

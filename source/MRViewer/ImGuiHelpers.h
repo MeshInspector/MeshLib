@@ -16,6 +16,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include "MRImGuiImage.h"
 
 namespace MR
 {
@@ -185,5 +186,10 @@ MRVIEWER_API PaletteChanges Palette(
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),
     const char* format = "%.3f" );
+
+
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor = MR::Color::white() );
+
+MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size );
 
 } // namespace ImGui

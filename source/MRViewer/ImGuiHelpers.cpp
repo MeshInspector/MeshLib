@@ -688,7 +688,7 @@ PaletteChanges Palette(
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )
 {
-    MR::Vector4 tintColor = ( MR::Vector4f ) multColor;
+    MR::Vector4f tintColor { multColor };
     Image( image, size, ImVec4( tintColor.x, tintColor.y, tintColor.z, tintColor.w ) );
 }
 

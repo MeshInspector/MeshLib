@@ -189,11 +189,11 @@ MRVIEWER_API PaletteChanges Palette(
     const char* format = "%.3f" );
 
 
-/// draw image reversed (corrects its orientation)
+/// draw image with Y-direction inversed up-down
 MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor );
 MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor = { 1, 1, 1, 1 } );
 
-/// get reversed (corrected) image coordinates under cursor
+/// get image coordinates under cursor considering Y-direction flipping
 MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
 
 } // namespace ImGui

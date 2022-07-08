@@ -16,11 +16,12 @@
 #include <limits>
 #include <string>
 #include <vector>
-#include "MRImGuiImage.h"
 
 namespace MR
 {
 class Palette;
+class ImGuiImage;
+struct Color;
 }
 
 // Extend ImGui by populating its namespace directly
@@ -189,10 +190,10 @@ MRVIEWER_API PaletteChanges Palette(
 
 
 /// draw image reversed (corrects its orientation)
-MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor = MR::Color::white() );
-MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor );
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor );
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor = { 1, 1, 1, 1 } );
 
 /// get reversed (corrected) image coordinates under cursor
-MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size );
+MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
 
 } // namespace ImGui

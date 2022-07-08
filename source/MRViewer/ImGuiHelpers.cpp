@@ -7,6 +7,7 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRImGuiImage.h"
 
 namespace ImGui
 {
@@ -696,11 +697,10 @@ void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multC
     Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
 }
 
-MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size)
+MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos )
 {
-    auto pos = ImGui::GetCursorScreenPos();
     const auto& io = ImGui::GetIO();
-    return  { int( ( io.MousePos.x - pos.x ) / size.x * image.getImageWidth() ), int( ( -io.MousePos.y + pos.y - ImGui::GetStyle().WindowPadding.y ) / size.y * image.getImageHeight() ) };
+    return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
 }
 
 } // namespace ImGui

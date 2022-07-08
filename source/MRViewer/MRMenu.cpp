@@ -1072,6 +1072,13 @@ float Menu::drawSelectionInformation_()
                 totalVerts += mesh->topology.numValidVerts();
             }
         }
+        for ( auto pObj : getAllObjectsInTree<ObjectLines>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        {
+            if ( auto polyline = pObj->polyline() )
+            {
+                totalVerts += polyline->topology.numValidVerts();
+            }
+        }
 
         size_t totalPoints = 0;
         size_t totalSelectedPoints = 0;

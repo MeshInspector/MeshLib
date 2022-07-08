@@ -695,7 +695,7 @@ MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& si
 {
     auto pos = ImGui::GetCursorScreenPos();
     const auto& io = ImGui::GetIO();
-    return  { int( ( io.MousePos.x - pos.x ) / size.x * image.getImageWidth() ), int( ( -io.MousePos.y + pos.y ) / size.y * image.getImageHeight() ) };
+    return  { int( ( io.MousePos.x - pos.x ) / size.x * image.getImageWidth() ), int( ( -io.MousePos.y + pos.y - ImGui::GetStyle().WindowPadding.y ) / size.y * image.getImageHeight() ) };
 }
 
 } // namespace ImGui

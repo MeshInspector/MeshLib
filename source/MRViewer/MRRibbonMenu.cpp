@@ -16,6 +16,7 @@
 #include "ImGuiHelpers.h"
 #include "MRMesh/MRString.h"
 #include "MRImGuiImage.h"
+#include "ImGuiHelpers.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 
@@ -1484,7 +1485,7 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
     else
     {
         auto multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        ImGui::Image( imageIcon->getImTextureId(), ImVec2( imageSize, imageSize ), ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
+        ImGui::Image( *imageIcon, ImVec2( imageSize, imageSize ), multColor );
     }
     ImGui::SameLine();
 }

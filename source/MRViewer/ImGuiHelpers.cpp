@@ -688,7 +688,12 @@ PaletteChanges Palette(
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )
 {
     MR::Vector4 tintColor = ( MR::Vector4f ) multColor;
-    ImGui::Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), ImVec4( tintColor.x, tintColor.y, tintColor.z, tintColor.w ) );
+    Image( image, size, ImVec4( tintColor.x, tintColor.y, tintColor.z, tintColor.w ) );
+}
+
+void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor )
+{
+    Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
 }
 
 MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size)

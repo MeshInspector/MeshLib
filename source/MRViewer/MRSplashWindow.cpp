@@ -11,6 +11,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_fonts_droid_sans.h"
 #include "MRGladGlfw.h"
+#include "ImGuiHelpers.h"
 
 namespace MR
 {
@@ -224,7 +225,7 @@ bool DefaultSplashWindow::frame_( float /*scaling*/ )
     ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
     ImGui::Begin( "Splash window", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove );
     auto availableSize = ImGui::GetContentRegionAvail();
-    ImGui::Image( splashImage_->getImTextureId(), availableSize, ImVec2( 0, 1 ), ImVec2( 1, 0 ) );
+    ImGui::Image( *splashImage_, availableSize );
     ImGui::SetCursorPos( ImVec2( ImGui::GetFrameHeight() * 3, availableSize.y - ImGui::GetFrameHeight() * 2 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, Color( 90, 97, 105 ).getUInt32() );
     ImGui::Text( "Copyright 2022, Mesh Inspector" );

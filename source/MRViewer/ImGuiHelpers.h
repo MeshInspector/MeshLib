@@ -188,8 +188,11 @@ MRVIEWER_API PaletteChanges Palette(
     const char* format = "%.3f" );
 
 
+/// draw image reversed (corrects its orientation)
 MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor = MR::Color::white() );
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor );
 
+/// get reversed (corrected) image coordinates under cursor
 MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size );
 
 } // namespace ImGui

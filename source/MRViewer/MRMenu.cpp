@@ -1072,6 +1072,13 @@ float Menu::drawSelectionInformation_()
                 totalVerts += mesh->topology.numValidVerts();
             }
         }
+        for ( auto pObj : getAllObjectsInTree<ObjectLines>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        {
+            if ( auto polyline = pObj->polyline() )
+            {
+                totalVerts += polyline->topology.numValidVerts();
+            }
+        }
 
         size_t totalPoints = 0;
         size_t totalSelectedPoints = 0;
@@ -1081,7 +1088,35 @@ float Menu::drawSelectionInformation_()
             totalSelectedPoints += pObj->numSelectedPoints();
         }
 
-        if ( auto pObj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        auto drawPrimitivesInfo = [&style]( std::string title, size_t value, size_t selected = 0 )
+        {
+            if ( value )
+            {
+                ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
+                std::string valueStr;
+                std::string labelStr;
+                const float width = ( ImGui::CalcItemWidth() - style.ItemInnerSpacing.x * 2.f ) / 3.f;
+                if ( selected )
+                {
+                    valueStr = std::to_string( selected ) + " / ";
+                    labelStr = "Selected / ";
+                }
+                valueStr += std::to_string( value );
+                labelStr += title;
+
+                ImGui::SetNextItemWidth( width * 2 + style.ItemInnerSpacing.x );
+                ImGui::InputText( ( "##" + labelStr ).c_str(), valueStr, ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+                ImGui::PopStyleColor();
+                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                ImGui::Text( "%s", labelStr.c_str() );
+            }
+        };
+
+        if ( selectedVisualObjs.size() > 1 )
+        {
+            drawPrimitivesInfo( "Objects", selectedVisualObjs.size() );
+        }
+        else if ( auto pObj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
         {
             auto lastRenameObj = lastRenameObj_.lock();
             if ( lastRenameObj != pObj )
@@ -1107,31 +1142,6 @@ float Menu::drawSelectionInformation_()
         }
         else
             lastRenameObj_.reset();
-
-        
-        auto drawPrimitivesInfo = [&style]( std::string title, size_t value, size_t selected = 0 )
-        {
-            if ( value )
-            {
-                ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-                std::string valueStr;
-                std::string labelStr;
-                const float width = ( ImGui::CalcItemWidth() - style.ItemInnerSpacing.x * 2.f ) / 3.f;
-                if ( selected )
-                {
-                    valueStr = std::to_string( selected ) + " / ";
-                    labelStr = "Selected / ";
-                }
-                valueStr += std::to_string( value );
-                labelStr += title;
-                
-                ImGui::SetNextItemWidth( width * 2 + style.ItemInnerSpacing.x );
-                ImGui::InputText( ( "##" + labelStr ).c_str(), valueStr, ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
-                ImGui::PopStyleColor();
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::Text( "%s", labelStr.c_str() );
-            }
-        };
 
         const float itemSpacingY = style.ItemSpacing.y;
         style.ItemSpacing.y = 2.f;

@@ -63,7 +63,7 @@ void MeshTopology::excludeLoneEdges( UndirectedEdgeBitSet & edges ) const
 
 size_t MeshTopology::computeNotLoneUndirectedEdges() const
 {
-    MR_TIMER;
+    MR_TIMER
     size_t res = 0;
     for ( [[maybe_unused]] auto ue : undirectedEdges( *this ) )
     {
@@ -323,7 +323,7 @@ EdgeId MeshTopology::findEdge( VertId o, VertId d ) const
 
 bool MeshTopology::isClosed() const
 {
-    MR_TIMER;
+    MR_TIMER
     for ( EdgeId e(0); e < edges_.size(); ++e )
     {
         if ( !edges_[e].org.valid() )
@@ -339,7 +339,7 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
     if ( !region )
         return isClosed();
 
-    MR_TIMER;
+    MR_TIMER
     for ( FaceId f : *region )
     {
         for ( EdgeId e : leftRing( *this, f ) )
@@ -407,9 +407,37 @@ std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
     return res;
 }
 
+EdgeLoop MeshTopology::getLeftRing( EdgeId e ) const
+{
+    EdgeLoop res;
+    for ( auto edge : leftRing( *this, e ) )
+        res.push_back( edge );
+    return res;
+}
+
+std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es ) const
+{
+    MR_TIMER
+    std::vector<EdgeLoop> res;
+    EdgeBitSet inRes;
+    for ( auto e : es )
+    {
+        if ( inRes.test( e ) )
+            continue;
+        EdgeLoop loop;
+        for ( auto edge : leftRing( *this, e ) )
+        {
+            loop.push_back( edge );
+            inRes.autoResizeSet( edge );
+        }
+        res.push_back( std::move( loop ) );
+    }
+    return res;
+}
+
 EdgeBitSet MeshTopology::findBoundaryEdges() const
 {
-    MR_TIMER;
+    MR_TIMER
     EdgeBitSet res;
     const EdgeId elast = lastNotLoneEdge();
     for ( EdgeId e{0}; e <= elast; ++e )
@@ -422,7 +450,7 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
 
 FaceBitSet MeshTopology::findBoundaryFaces() const
 {
-    MR_TIMER;
+    MR_TIMER
     FaceBitSet res;
     const EdgeId elast = lastNotLoneEdge();
     for ( EdgeId e{0}; e <= elast; ++e )
@@ -436,7 +464,7 @@ FaceBitSet MeshTopology::findBoundaryFaces() const
 
 VertBitSet MeshTopology::findBoundaryVerts() const
 {
-    MR_TIMER;
+    MR_TIMER
     VertBitSet res;
     const EdgeId elast = lastNotLoneEdge();
     for ( EdgeId e{0}; e <= elast; ++e )

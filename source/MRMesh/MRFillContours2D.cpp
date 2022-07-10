@@ -42,13 +42,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     }
 
     // make border rings
-    std::vector<EdgePath> paths( holeRepresentativeEdges.size() );
-    for ( int i = 0; i < paths.size(); ++i )
-    {
-        auto& path = paths[i];
-        for ( const auto& edge : leftRing( meshTopology, holeRepresentativeEdges[i] ) )
-            path.push_back( edge );
-    }
+    const auto paths = meshTopology.getLeftRings( holeRepresentativeEdges );
 
     // calculate plane normal
     Vector3f planeNormal;
@@ -95,14 +89,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     // make 
     std::vector<EdgePath> newPaths( holes.size() );
     for ( int i = 0; i < newPaths.size(); ++i )
-    {
-        EdgePath newPath;
-        EdgeId edge = holes[i];
-        auto ring = leftRing( patchMesh.topology, edge );
-        for ( const auto& e : ring )
-            newPath.push_back( e );
-        newPaths[i] = newPath;
-    }
+        newPaths[i] = patchMesh.topology.getLeftRing( holes[i] );
 
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )

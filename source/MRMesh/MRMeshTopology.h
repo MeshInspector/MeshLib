@@ -175,6 +175,11 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns full edge-loop of left face from (e) starting from (e) itself
+    [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
+    /// returns full edge-loops of left faces from every edge in (es);
+    /// each edge-loop will be returned only once even if some faces are represented by more than one edge in (es)
+    [[nodiscard]] MRMESH_API std::vector<EdgeLoop> getLeftRings( const std::vector<EdgeId> & es ) const;
     /// returns all boundary edges, where each edge does not have valid left face
     [[nodiscard]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
     /// returns all boundary faces, having at least one boundary edge

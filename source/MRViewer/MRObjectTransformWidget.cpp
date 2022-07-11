@@ -440,26 +440,6 @@ void ObjectTransformWidget::makeControls_()
 
 void ObjectTransformWidget::passiveMove_()
 {
-    std::vector<VisualObject*> objsToPick_;
-    objsToPick_.reserve( 6 );
-    auto hoveredViewportId = getViewerInstance().get_hovered_viewport_id();
-    if ( !hoveredViewportId )
-        return;
-
-    if ( pickThrough_ )
-    {
-        for ( auto obj : translateControls_ )
-        {
-            if ( obj->isVisible( hoveredViewportId ) )
-                objsToPick_.push_back( obj.get() );
-        }
-        for ( auto obj : rotateControls_ )
-        {
-            if ( obj->isVisible( hoveredViewportId ) )
-                objsToPick_.push_back( obj.get() );
-        }
-    }
-
     int currentIndex = findCurrentObjIndex_();
     auto& linesArray = currentIndex < 3 ? translateLines_ : rotateLines_;
     if ( currentIndex > 2 )
@@ -478,6 +458,31 @@ void ObjectTransformWidget::passiveMove_()
         currentObj_.reset();
         currentIndex = -1;
     };
+
+    std::vector<VisualObject*> objsToPick_;
+    objsToPick_.reserve( 6 );
+    auto hoveredViewportId = getViewerInstance().get_hovered_viewport_id();
+    if ( !hoveredViewportId )
+    {
+        dropCurrentObj();
+        return;
+    }
+
+    if ( pickThrough_ )
+    {
+        for ( auto obj : translateControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+        for ( auto obj : rotateControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+    }
+
+    
 
     const auto& vp = getViewerInstance().viewport( hoveredViewportId );
 

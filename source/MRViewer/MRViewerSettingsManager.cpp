@@ -82,15 +82,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
     }
 
-    if ( ribbonMenu )
-    {
-        if ( cfg.hasJsonValue( cQuickAccesListKey ) )
-            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
-
-        if ( cfg.hasJsonValue( cRibbonLeftWindowSize ) )
-            ribbonMenu->setSceneSize( cfg.getVector2i( cRibbonLeftWindowSize ) );
-    }
-
     if ( cfg.hasVector2i( cMainWindowSize ) )
     {
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
@@ -125,6 +116,23 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             else
                 glfwRestoreWindow( viewer.window );
         } );
+    }
+
+    if ( ribbonMenu )
+    {
+        if ( cfg.hasJsonValue( cQuickAccesListKey ) )
+            ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
+
+        if ( cfg.hasJsonValue( cRibbonLeftWindowSize ) )
+        {
+            auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize );
+            // it is important to be called after `cMainWindowMaximized` block
+            // as far as scene size is clamped by window size in each frame
+            CommandLoop::appendCommand( [ribbonMenu, sceneSize]
+            {
+                ribbonMenu->setSceneSize( sceneSize );
+            } );
+        }
     }
 
     if ( ribbonMenu )

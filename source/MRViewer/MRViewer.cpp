@@ -1325,7 +1325,7 @@ int Viewer::viewport_index( const ViewportId id ) const
     return -1;
 }
 
-void Viewer::select_hovered_viewport()
+ViewportId Viewer::get_hovered_viewport_id() const
 {
     const auto& currentPos = mouseController.getMousePos();
     for ( int i = 0; i < viewport_list.size(); i++ )
@@ -1340,10 +1340,16 @@ void Viewer::select_hovered_viewport()
              ( ( window_height - currentPos.y ) > rect.y ) &&
              ( ( window_height - currentPos.y ) < rect.y + height( rect ) ) )
         {
-            selected_viewport_index = i;
-            break;
+            return viewport_list[i].id;
         }
     }
+
+    return  ViewportId( 0 );
+}
+
+void Viewer::select_hovered_viewport()
+{
+    selected_viewport_index = viewport_index( get_hovered_viewport_id() );
 }
 
 void Viewer::fitDataViewport( MR::ViewportMask vpList, float fill, bool snapView )

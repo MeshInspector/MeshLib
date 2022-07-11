@@ -189,6 +189,10 @@ public:
     // Returns -1 if not found
     MRVIEWER_API int viewport_index( ViewportId viewport_id ) const;
 
+    // Get unique id of the vieport containing the mouse
+    // (current_mouse_x, current_mouse_y)
+    MRVIEWER_API ViewportId get_hovered_viewport_id() const;
+
     // Change selected_core_index to the viewport containing the mouse
     // (current_mouse_x, current_mouse_y)
     MRVIEWER_API void select_hovered_viewport();

@@ -43,7 +43,7 @@ jobs:
         id: set-vars
         run: |
           echo "::set-output name=file_name::meshlib_${{steps.get_release.outputs.tag_name }}${{matrix.file-path-end}}"
-          echo "::set-output name=file_url::https://github.com/MeshInspector/MeshLib/releases/download/${{ steps.get_release.outputs.tag_name }}/${{steps.set-vars.outputs.file_name}}"
+          echo "::set-output name=file_url::https://github.com/MeshInspector/MeshLib/releases/download/${{steps.get_release.outputs.tag_name}}"
 
       - name: Build and push
         uses: docker/build-push-action@v3
@@ -52,5 +52,5 @@ jobs:
           push: true
           tags: meshrus/meshlib-app-test:${{ matrix.image-tag }}
           build-args: |
-            file_name=${{steps.set-vars.outputs.file_name}}
-            file_url=${{steps.set-vars.outputs.file_url}}
+            FILE_NAME=${{steps.set-vars.outputs.file_name}}
+            FILE_URL=${{steps.set-vars.outputs.file_url}}/${{steps.set-vars.outputs.file_name}}

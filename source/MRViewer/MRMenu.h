@@ -144,8 +144,6 @@ private:
     bool show_rename_modal_{false};
     std::string storedError_;
 
-    bool enter_pressed_{false};
-    bool esc_pressed_{false};
     ImVec2 mainWindowPos_;
     ImVec2 mainWindowSize_;
     ImVec2 sceneWindowPos_;

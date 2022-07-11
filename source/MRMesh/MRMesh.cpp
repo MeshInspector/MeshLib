@@ -669,7 +669,7 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
 
-    for ( const auto [ fromVert, thisVert ] : *map.src2tgtVerts )
+    for ( const auto & [ fromVert, thisVert ] : *map.src2tgtVerts )
         points[thisVert] = from.points[fromVert];
 
     invalidateCaches();

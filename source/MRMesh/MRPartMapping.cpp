@@ -31,17 +31,17 @@ HashToVectorMappingConverter::~HashToVectorMappingConverter()
 {
     if ( outFmap_ )
     {
-        for ( const auto [ fromFace, thisFace ] : src2tgtFaces_ )
+        for ( const auto & [ fromFace, thisFace ] : src2tgtFaces_ )
             (*outFmap_)[fromFace] = thisFace;
     }
     if ( outVmap_ )
     {
-        for ( const auto [ fromVert, thisVert ] : src2tgtVerts_ )
+        for ( const auto & [ fromVert, thisVert ] : src2tgtVerts_ )
             (*outVmap_)[fromVert] = thisVert;
     }
     if ( outEmap_ )
     {
-        for ( const auto [ fromEdge, thisEdge ] : src2tgtEdges_ )
+        for ( const auto & [ fromEdge, thisEdge ] : src2tgtEdges_ )
             (*outEmap_)[fromEdge] = thisEdge;
     }
 }

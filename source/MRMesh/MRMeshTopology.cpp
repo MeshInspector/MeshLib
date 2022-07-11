@@ -1242,7 +1242,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     }
 
     // second pass: translate edge records
-    for ( const auto [ fromEdge, thisEdge ] : emap )
+    for ( const auto & [ fromEdge, thisEdge ] : emap )
     {
         assert( fromEdge );
         assert( thisEdge );

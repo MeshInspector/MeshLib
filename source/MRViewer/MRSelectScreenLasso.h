@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRViewerFwd.h"
-#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {

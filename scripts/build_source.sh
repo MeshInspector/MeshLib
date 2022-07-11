@@ -19,10 +19,10 @@ if [[ $OSTYPE != 'darwin'* ]]; then
    fi
   elif [ "${NAME}" == "Ubuntu" ] && [ "${VERSION_ID}" != "20.04" ]; then
     if [ "${CMAKE_C_COMPILER}" = "" ]; then
-        CMAKE_C_COMPILER=/usr/bin/gcc
+        CMAKE_C_COMPILER=/usr/bin/gcc-12
     fi
     if [ "${CMAKE_CXX_COMPILER}" = "" ]; then
-      CMAKE_CXX_COMPILER=/usr/bin/g++
+      CMAKE_CXX_COMPILER=/usr/bin/g++-12
     fi
   else
    if [ "${CMAKE_C_COMPILER}" = "" ]; then

@@ -17,14 +17,14 @@ jobs:
     strategy:
       matrix:
         config: [ Debug, Release ]
-        compiler: [ Сlang 14, GCC 11 ]
+        compiler: [ Сlang 14, GCC 12 ]
         include:
           - compiler: Сlang 14
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
-          - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++-11
-            c-compiler: /usr/bin/gcc-11
+          - compiler: GCC 12
+            cxx-compiler: /usr/bin/g++-12
+            c-compiler: /usr/bin/gcc-12
 
     steps:
       - name: Checkout

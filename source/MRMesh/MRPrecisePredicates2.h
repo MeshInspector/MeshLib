@@ -3,6 +3,7 @@
 #include "MRVector2.h"
 #include "MRId.h"
 #include <array>
+#include <functional>
 
 namespace MR
 {

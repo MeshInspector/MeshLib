@@ -70,7 +70,10 @@ std::string ShortcutManager::getKeyString( const ShortcutKey& key )
     if ( key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
         res += char( key.key );
     else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
-        res += ( "F" + std::to_string( key.key - GLFW_KEY_F1 + 1 ) );
+    {
+        res += "F";
+        res += std::to_string( key.key - GLFW_KEY_F1 + 1 );
+    }
     else
     {
         switch ( key.key )

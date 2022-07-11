@@ -792,8 +792,11 @@ void Menu::draw_helpers()
         ImGui::End();
     }
 
-    if ( show_rename_modal_  && !ImGui::IsPopupOpen( "Rename object" ) )
+    if ( show_rename_modal_ )
+    {
+        show_rename_modal_ = false;
         ImGui::OpenPopup( "Rename object" );
+    }
 
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
@@ -801,7 +804,6 @@ void Menu::draw_helpers()
         auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
         if ( !obj )
         {
-            show_rename_modal_ = false;
             ImGui::CloseCurrentPopup();
         }
         if ( ImGui::IsWindowAppearing() )
@@ -810,23 +812,20 @@ void Menu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || enter_pressed_ )
+        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( renameBuffer );
-            show_rename_modal_ = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || esc_pressed_ )
+        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ESCAPE] == 0.0f )
         {
-            show_rename_modal_ = false;
             ImGui::CloseCurrentPopup();
         }
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
         {
-            show_rename_modal_ = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -848,7 +847,7 @@ void Menu::draw_helpers()
         
         ImGui::Spacing();
         ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || enter_pressed_ ||
+        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();
@@ -859,8 +858,6 @@ void Menu::draw_helpers()
         ImGui::EndPopup();        
     }
 
-    enter_pressed_ = false;
-    esc_pressed_ = false;
 }
 
 void Menu::setObjectTreeState( const Object* obj, bool open )
@@ -985,12 +982,10 @@ bool Menu::onKeyDown_( int key, int modifiers )
         show_hotkeys_list_ = true;
         return true;
     case GLFW_KEY_ENTER:
-        enter_pressed_ = true;
         if ( show_rename_modal_ )
             return true;
         break;
     case GLFW_KEY_ESCAPE:
-        esc_pressed_ = true;
         if ( show_rename_modal_ )
             return true;
         break;

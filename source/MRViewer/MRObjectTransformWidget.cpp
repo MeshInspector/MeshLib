@@ -445,9 +445,15 @@ void ObjectTransformWidget::passiveMove_()
     if ( pickThrough_ )
     {
         for ( auto obj : translateControls_ )
-            objsToPick_.push_back( obj.get() );
+        {
+            if ( obj->isVisible() )
+                objsToPick_.push_back( obj.get() );
+        }
         for ( auto obj : rotateControls_ )
-            objsToPick_.push_back( obj.get() );
+        {
+            if ( obj->isVisible() )
+                objsToPick_.push_back( obj.get() );
+        }
     }
 
     int currentIndex = findCurrentObjIndex_();

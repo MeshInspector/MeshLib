@@ -34,6 +34,7 @@
 #pragma warning(disable:4068)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wmissing-template-keyword"
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/Composite.h>
 #include <openvdb/tools/GridTransformer.h>

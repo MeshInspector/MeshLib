@@ -50,7 +50,7 @@ jobs:
         with:
           file: ./docker/app/${{matrix.image-tag}}Dockerfile
           push: true
-          tags: meshrus/meshlib-app-test:${{ matrix.image-tag }}-${{steps.get_release.outputs.tag_name }}, meshrus/meshlib-app-test:${{ matrix.image-tag }}
+          tags: meshrus/meshlib-app:${{ matrix.image-tag }}-${{steps.get_release.outputs.tag_name }}, meshrus/meshlib-app:${{ matrix.image-tag }}
           build-args: |
             FILE_NAME=${{steps.set-vars.outputs.file_name}}
             FILE_URL=${{steps.set-vars.outputs.file_url}}/${{steps.set-vars.outputs.file_name}}

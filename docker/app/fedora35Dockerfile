@@ -4,9 +4,8 @@ ARG FILE_NAME
 ARG FILE_URL
 
 RUN dnf -y update && \
-    dnf -y install sudo python3-pip wget && \
-    dnf clean all
-
-RUN wget -O /tmp/${FILE_NAME} ${FILE_URL} && \
+    dnf -y install sudo python3-pip wget boost-devel && \
+    wget -O /tmp/${FILE_NAME} ${FILE_URL} && \
     rpm -ivh /tmp/${FILE_NAME} && \
-    rm /tmp/${FILE_NAME}
+    rm /tmp/${FILE_NAME} && \
+    dnf clean all

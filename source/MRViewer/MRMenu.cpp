@@ -792,7 +792,7 @@ void Menu::draw_helpers()
         ImGui::End();
     }
 
-    if ( show_rename_modal_  && !ImGui::IsPopupOpen( "Rename object") )
+    if ( show_rename_modal_  && !ImGui::IsPopupOpen( "Rename object" ) )
         ImGui::OpenPopup( "Rename object" );
 
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,

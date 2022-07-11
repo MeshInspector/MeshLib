@@ -440,16 +440,6 @@ void ObjectTransformWidget::makeControls_()
 
 void ObjectTransformWidget::passiveMove_()
 {
-    std::vector<VisualObject*> objsToPick_;
-    objsToPick_.reserve( 6 );
-    if ( pickThrough_ )
-    {
-        for ( auto obj : translateControls_ )
-            objsToPick_.push_back( obj.get() );
-        for ( auto obj : rotateControls_ )
-            objsToPick_.push_back( obj.get() );
-    }
-
     int currentIndex = findCurrentObjIndex_();
     auto& linesArray = currentIndex < 3 ? translateLines_ : rotateLines_;
     if ( currentIndex > 2 )
@@ -469,52 +459,75 @@ void ObjectTransformWidget::passiveMove_()
         currentIndex = -1;
     };
 
-    for ( const auto& vp : getViewerInstance().viewport_list )
+    std::vector<VisualObject*> objsToPick_;
+    objsToPick_.reserve( 6 );
+    auto hoveredViewportId = getViewerInstance().get_hovered_viewport_id();
+    if ( !hoveredViewportId )
     {
-        auto [obj, pick] = pickThrough_ ? vp.pick_render_object( objsToPick_ ) : vp.pick_render_object();
-        if ( !obj )
-        {
-            dropCurrentObj();
-            continue;
-        }
-        auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj );
-        if ( !meshObj )
-        {
-            dropCurrentObj();
-            continue;
-        }
-        bool isControl = meshObj->parent() == controlsRoot_.get();
-        if ( !isControl )
-        {
-            dropCurrentObj();
-            continue;
-        }
-
-        // here we picked one of controls for sure
-        if ( currentObj_ != meshObj )
-        {
-            dropCurrentObj();
-
-            currentObj_ = meshObj;
-            auto color = currentObj_->getFrontColor( false );
-            currentObj_->setFrontColor( color, true ); // save color in selected color holder
-            color = 0.5f * color;
-            color.a = 255;
-            currentObj_->setFrontColor( color, false );
-
-            if ( pickThrough_ )
-            {
-                currentIndex = findCurrentObjIndex_();
-                assert( currentIndex >= 0 );
-                auto& newPickLinesArray = currentIndex < 3 ? translateLines_ : rotateLines_;
-                if ( currentIndex > 2 )
-                    currentIndex -= 3;
-                newPickLinesArray[currentIndex]->setFrontColor( currentObj_->getFrontColor( true ), false );
-                newPickLinesArray[currentIndex]->setLineWidth( 3.0f );
-            }
-        }
+        dropCurrentObj();
         return;
     }
+
+    if ( pickThrough_ )
+    {
+        for ( auto obj : translateControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+        for ( auto obj : rotateControls_ )
+        {
+            if ( obj->isVisible( hoveredViewportId ) )
+                objsToPick_.push_back( obj.get() );
+        }
+    }
+
+    
+
+    const auto& vp = getViewerInstance().viewport( hoveredViewportId );
+
+    auto [obj, pick] = pickThrough_ ? vp.pick_render_object( objsToPick_ ) : vp.pick_render_object();
+    if ( !obj )
+    {
+        dropCurrentObj();
+        return;
+    }
+    auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj );
+    if ( !meshObj )
+    {
+        dropCurrentObj();
+        return;
+    }
+    bool isControl = meshObj->parent() == controlsRoot_.get();
+    if ( !isControl )
+    {
+        dropCurrentObj();
+        return;
+    }
+
+    // here we picked one of controls for sure
+    if ( currentObj_ != meshObj )
+    {
+        dropCurrentObj();
+
+        currentObj_ = meshObj;
+        auto color = currentObj_->getFrontColor( false );
+        currentObj_->setFrontColor( color, true ); // save color in selected color holder
+        color = 0.5f * color;
+        color.a = 255;
+        currentObj_->setFrontColor( color, false );
+
+        if ( pickThrough_ )
+        {
+            currentIndex = findCurrentObjIndex_();
+            assert( currentIndex >= 0 );
+            auto& newPickLinesArray = currentIndex < 3 ? translateLines_ : rotateLines_;
+            if ( currentIndex > 2 )
+                currentIndex -= 3;
+            newPickLinesArray[currentIndex]->setFrontColor( currentObj_->getFrontColor( true ), false );
+            newPickLinesArray[currentIndex]->setLineWidth( 3.0f );
+        }
+    }    
 }
 
 void ObjectTransformWidget::activeMove_( bool press )

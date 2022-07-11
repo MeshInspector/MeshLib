@@ -981,14 +981,6 @@ bool Menu::onKeyDown_( int key, int modifiers )
     case GLFW_KEY_F1:
         show_hotkeys_list_ = true;
         return true;
-    case GLFW_KEY_ENTER:
-        if ( show_rename_modal_ )
-            return true;
-        break;
-    case GLFW_KEY_ESCAPE:
-        if ( show_rename_modal_ )
-            return true;
-        break;
     default:
         break;
     }

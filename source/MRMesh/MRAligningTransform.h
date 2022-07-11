@@ -12,6 +12,9 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#if __GNUC__ == 12
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 #endif
 
 #include <Eigen/Core>

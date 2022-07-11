@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@ubuntu22-gcc12
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -34,7 +34,7 @@ jobs:
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@ubuntu22-gcc12
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 

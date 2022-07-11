@@ -32,8 +32,14 @@
 
 // unknown pragmas
 #pragma warning(disable:4068)
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if __GNUC__ == 12
+#pragma GCC diagnostic ignored "-Wmissing-template-keyword"
+#endif
+#endif
+
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/Composite.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -41,7 +47,9 @@
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
 
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
+#endif
 #pragma warning(pop)
 
 #ifdef _WIN32

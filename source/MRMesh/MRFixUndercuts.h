@@ -4,6 +4,7 @@
 #include "MRVector3.h"
 #include "MRVector2.h"
 #include "MRConstants.h"
+#include <functional>
 
 namespace MR
 {

@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
 #include "MRVector4.h"
+#include <functional>
 #include <typeindex>
 #include <memory>
 

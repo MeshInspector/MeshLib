@@ -623,6 +623,9 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
 tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )
 {
+    if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 ||
+        params.voxelSize.x == 0.0f || params.voxelSize.y == 0.0f || params.voxelSize.z == 0.0f )
+        return tl::make_unexpected( "Bad parameters for reading " + utf8string( path.filename() ) );
     SimpleVolume outVolume;
     outVolume.dims = params.dimensions;
     outVolume.voxelSize = params.voxelSize;

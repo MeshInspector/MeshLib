@@ -7,6 +7,7 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRImGuiImage.h"
 
 namespace ImGui
 {
@@ -683,6 +684,23 @@ PaletteChanges Palette(
     ImGui::EndPopup();
 
     return PaletteChanges( changes );
+}
+
+void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )
+{
+    MR::Vector4f tintColor { multColor };
+    Image( image, size, ImVec4( tintColor.x, tintColor.y, tintColor.z, tintColor.w ) );
+}
+
+void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor )
+{
+    Image( image.getImTextureId(), size, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
+}
+
+MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos )
+{
+    const auto& io = ImGui::GetIO();
+    return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
 }
 
 } // namespace ImGui

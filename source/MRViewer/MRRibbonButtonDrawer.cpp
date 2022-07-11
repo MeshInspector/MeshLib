@@ -3,6 +3,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
 #include "MRImGuiImage.h"
+#include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
 #include "imgui_internal.h"
 
@@ -238,7 +239,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
         ImVec4 multColor = ImVec4( 1, 1, 1, 1 );
         if ( needWhiteIcon )
             multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        ImGui::Image( imageIcon->getImTextureId(), iconRealSize, ImVec2( 0, 1 ), ImVec2( 1, 0 ), multColor );
+        ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
     if ( fontManager_ )

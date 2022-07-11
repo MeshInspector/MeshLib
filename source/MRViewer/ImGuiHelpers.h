@@ -20,6 +20,8 @@
 namespace MR
 {
 class Palette;
+class ImGuiImage;
+struct Color;
 }
 
 // Extend ImGui by populating its namespace directly
@@ -185,5 +187,13 @@ MRVIEWER_API PaletteChanges Palette(
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),
     const char* format = "%.3f" );
+
+
+/// draw image with Y-direction inversed up-down
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor );
+MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multColor = { 1, 1, 1, 1 } );
+
+/// get image coordinates under cursor considering Y-direction flipping
+MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
 
 } // namespace ImGui

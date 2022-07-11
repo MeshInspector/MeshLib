@@ -126,6 +126,9 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// returns cached information about the number of holes in the mesh
+    MRMESH_API size_t numHoles() const;
+
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
@@ -167,6 +170,8 @@ protected:
     MRMESH_API virtual Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
+    MRMESH_API virtual void updateMeshStat_() const;
 
     ViewportMask showFaces_ = ViewportMask::all();
     ViewportMask showEdges_;

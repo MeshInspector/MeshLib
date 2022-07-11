@@ -1,6 +1,16 @@
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #include <Eigen/Dense>
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic pop
+#endif
 
 namespace MR
 {

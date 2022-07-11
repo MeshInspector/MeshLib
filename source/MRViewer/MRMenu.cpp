@@ -38,6 +38,7 @@
 #include "MRCommandLoop.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRColorTheme.h"
+#include "MRMesh/MRObjectLabel.h"
 #include <GLFW/glfw3.h>
 
 #ifndef __EMSCRIPTEN__
@@ -1754,9 +1755,14 @@ bool Menu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualO
         return obj && obj->asType<ObjectLinesHolder>();
     } );
     bool allIsObjPoints = !selectedVisualObjs.empty() &&
-        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), []( const std::shared_ptr<VisualObject>& obj )
+        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
     {
         return obj && obj->asType<ObjectPointsHolder>();
+    } );
+    bool allIsObjLabels = !selectedVisualObjs.empty() &&
+        std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
+    {
+        return obj && obj->asType<ObjectLabel>();
     } );
 
     const auto& viewportid = viewer->viewport().id;
@@ -1794,6 +1800,8 @@ bool Menu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualO
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
     }
+    if ( allIsObjLabels )
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );

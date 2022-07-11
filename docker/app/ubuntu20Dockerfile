@@ -17,3 +17,4 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
 RUN wget -O /tmp/${FILE_NAME} ${FILE_URL} && \
     dpkg -i /tmp/${FILE_NAME} && \
     rm /tmp/${FILE_NAME}
+

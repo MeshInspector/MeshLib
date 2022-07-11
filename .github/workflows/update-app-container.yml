@@ -1,0 +1,56 @@
+name: Update MeshLib app containers
+
+on:
+  release:
+    types: [ published ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-app-container:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ Ubuntu-20, Ubuntu-22, Fedora-35 ]
+        include:
+          - os: Ubuntu-20
+            image-tag: ubuntu20
+            file-path-end: _ubuntu20-dev.deb
+          - os: Ubuntu-22
+            image-tag: ubuntu22
+            file-path-end: _ubuntu22-dev.deb
+          - os: Fedora-35
+            image-tag: fedora35
+            file-path-end: -dev.rpm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get latests release
+        id: get_release
+        uses: kaliber5/action-get-release@v1
+        with:
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          latest: true
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: meshrus
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set variables
+        id: set-vars
+        run: |
+          echo "::set-output name=file_name::meshlib_${{steps.get_release.outputs.tag_name }}${{matrix.file-path-end}}"
+          echo "::set-output name=file_url::https://github.com/MeshInspector/MeshLib/releases/download/${{ steps.get_release.outputs.tag_name }}/${{steps.set-vars.outputs.file_name}}"
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          file: ./docker/app/${{matrix.image-tag}}Dockerfile
+          push: true
+          tags: meshrus/meshlib-app-test:${{ matrix.image-tag }}
+          build-args: |
+            file_name=${{steps.set-vars.outputs.file_name}}
+            file_url=${{steps.set-vars.outputs.file_url}}

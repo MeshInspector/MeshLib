@@ -1,0 +1,12 @@
+ARG file_name
+ARG file_url
+
+FROM fedora:35 AS build
+
+RUN dnf -y update && \
+    dnf -y install sudo python3-pip wget && \
+    dnf clean all
+
+RUN wget -O /tmp/${file_name} ${file_url} && \
+    rpm -ivh /tmp/${file_name} && \
+    rm /tmp/${file_name}

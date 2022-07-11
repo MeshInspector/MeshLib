@@ -3,8 +3,18 @@
 #include "MRAffineXf3.h"
 #include "MRQuaternion.h"
 #include "MRToFromEigen.h"
-#include <Eigen/Eigenvalues>
 #include "MRGTest.h"
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
+#include <Eigen/Eigenvalues>
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic pop
+#endif
 
 namespace MR
 {

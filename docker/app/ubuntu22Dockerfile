@@ -1,0 +1,19 @@
+ARG file_name
+ARG file_url
+
+FROM ubuntu:22.04
+
+# update and install req
+RUN export DEBIAN_FRONTEND=noninteractive; \
+    export DEBCONF_NONINTERACTIVE_SEEN=true; \
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends \
+        tzdata sudo python3-pip wget\
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN wget -O /tmp/{file_name} ${file_url} && \
+    dpkg -i /tmp/{file_name} && \
+    rm /tmp/{file_name}

@@ -58,28 +58,6 @@
 namespace
 {
 
-constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cEventCounterNames =
-{
-    "Mouse Down",
-    "Mouse Up",
-    "Mouse Move",
-    "Mouse Scroll",
-    "Key Down",
-    "Key Up",
-    "Key Repeat",
-    "Char Pressed"
-};
-
-constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cGLPrimitivesCounterNames =
-{
-    "Point Array Size",
-    "Line Array Size",
-    "Triangle Array Size",
-    "Point Elements Number",
-    "Line Elements Number",
-    "Triangle Elements Number"
-};
-
 const ImVec4 undefined = ImVec4(0.5f,0.5f,0.5f,0.5f);
 
 bool objectHasRealChildren( const MR::Object& object )

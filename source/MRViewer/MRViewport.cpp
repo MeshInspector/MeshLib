@@ -69,7 +69,7 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBu
     RenderParams params
     {
         {viewM.data(), modelTemp.data(), projM.data(), normM.data(),
-        id, params_.clippingPlane,Vector4i( viewportRect_ )},
+        id, params_.clippingPlane, toVec4<int>( viewportRect_ )},
         params_.lightPosition, forceZBuffer, alphaSort
     };
     obj.render( params );
@@ -77,7 +77,7 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBu
 
 void Viewport::clear_framebuffers() const
 {
-    viewportGL_.fillViewport( Vector4i( viewportRect_ ), params_.backgroundColor );
+    viewportGL_.fillViewport( toVec4<int>( viewportRect_ ), params_.backgroundColor );
 }
 
 ObjAndPick Viewport::pick_render_object() const
@@ -116,7 +116,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),Vector4i( viewportRect_ )},
+        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id};
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
@@ -201,7 +201,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
 
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),Vector4i( viewportRect_ )},
+        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
@@ -306,10 +306,7 @@ void Viewport::updateSceneBox_()
 
 void Viewport::setViewportRect( const Viewport::ViewportRectangle& rect )
 {
-    if ( rect.x == viewportRect_.x &&
-         rect.y == viewportRect_.y &&
-         width( rect ) == width( viewportRect_ ) &&
-         height( rect ) == height( viewportRect_ ) )
+    if ( rect == viewportRect_ )
         return;
     needRedraw_ = true;
     viewportRect_ = rect;

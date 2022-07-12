@@ -1652,10 +1652,10 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
 
         const float sceneWidth = sceneSize_.x;
 
-        rect.x = ( rect.x - viewportsBounds.min.x ) / minMaxDiff.x * ( width - sceneWidth ) + sceneWidth;
-        rect.y = ( rect.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
-        setWidth( rect, MR::width( rect ) / minMaxDiff.x * ( width - sceneWidth ) );
-        setHeight( rect, MR::height( rect ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ) ); // -1 - buffer pixel
+        rect.min.x = ( rect.min.x - viewportsBounds.min.x ) / minMaxDiff.x * ( width - sceneWidth ) + sceneWidth;
+        rect.min.y = ( rect.min.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
+        rect.max.x = rect.min.x + MR::width( rect ) / minMaxDiff.x * ( width - sceneWidth );
+        rect.max.y = rect.min.y + MR::height( rect ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
         if ( MR::width( rect ) <= 0 || MR::height( rect ) <= 0 )
             continue;
         vp.setViewportRect( rect );

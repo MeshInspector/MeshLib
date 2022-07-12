@@ -5,6 +5,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
+#include "MRShortcutManager.h"
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>

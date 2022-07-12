@@ -39,6 +39,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRObjectLabel.h"
+#include "MRShortcutManager.h"
 #include <GLFW/glfw3.h>
 
 #ifndef __EMSCRIPTEN__
@@ -57,27 +58,6 @@
 namespace
 {
 
-constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cEventCounterNames =
-{
-    "Mouse Down",
-    "Mouse Up",
-    "Mouse Move",
-    "Mouse Scroll",
-    "Key Down",
-    "Key Up",
-    "Key Repeat",
-    "Char Pressed"
-};
-
-constexpr std::array<const char*, size_t( MR::Viewer::EventType::Count )> cGLPrimitivesCounterNames =
-{
-    "Point Array Size",
-    "Line Array Size",
-    "Triangle Array Size",
-    "Point Elements Number",
-    "Line Elements Number",
-    "Triangle Elements Number"
-};
 
 const ImVec4 undefined = ImVec4(0.5f,0.5f,0.5f,0.5f);
 
@@ -726,151 +706,7 @@ void Menu::draw_custom_plugins()
     }
 }
 
-void Menu::draw_helpers()
-{
-    if ( ImGui::GetIO().KeysDown[GLFW_KEY_F1] )
-    {
-        const auto& style = ImGui::GetStyle();
-        const float hotkeysWindowWidth = 300 * menu_scaling();
-        size_t numLines = 3;
-        if ( shortcutManager_ )
-            numLines += shortcutManager_->getShortcutList().size();
-        
-        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
 
-        ImVec2 windowPos = ImGui::GetMousePos();
-        windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
-        windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
-
-        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-        ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
-        ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-
-        ImFont font = *ImGui::GetFont();
-        font.Scale = 1.2f;
-        ImGui::PushFont( &font );
-        ImGui::Text( "Hot Key List" );
-        ImGui::PopFont();
-        ImGui::Text( "" );
-        ImGui::Text( "F1 - Show this help with hot keys" );
-        if ( shortcutManager_ )
-        {
-            const auto& shortcutsList = shortcutManager_->getShortcutList();
-            for ( const auto& [key, name] : shortcutsList )
-                ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
-        }
-        ImGui::End();
-    }
-
-    if ( showStatistics_ )
-    {
-        const auto style = ImGui::GetStyle();
-        const float fpsWindowWidth = 300 * menu_scaling();
-        int numLines = 4 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 4 - for: prev frame time, swapped frames, total frames, fps;
-        // TextHeight +1 for button, ItemSpacing +2 for separators
-        const float fpsWindowHeight = ( style.WindowPadding.y * 2 + 
-                                        ImGui::GetTextLineHeight() * ( numLines + 2 ) + 
-                                        style.ItemSpacing.y * ( numLines + 3 ) +
-                                        style.FramePadding.y * 4 );
-        const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
-        const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
-        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
-        ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
-        ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
-                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-        for ( int i = 0; i<int( Viewer::GLPrimitivesType::Count ); ++i )
-            ImGui::Text( "%s: %zu", cGLPrimitivesCounterNames[i], viewer->getLastFrameGLPrimitivesCount( Viewer::GLPrimitivesType( i ) ) );
-        ImGui::Separator();
-        for ( int i = 0; i<int( Viewer::EventType::Count ); ++i )
-            ImGui::Text( "%s: %zu", cEventCounterNames[i], viewer->getEventsCount( Viewer::EventType( i ) ) );
-        ImGui::Separator();
-        auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
-        if ( prevFrameTime > frameTimeMillisecThreshold_ )
-            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
-        else
-            ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
-        ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
-        ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
-        ImGui::Text( "FPS: %zu", viewer->getFPS() );
-
-        if ( ImGui::Button( "Reset", ImVec2( -1, 0 ) ) )
-        {
-            viewer->resetAllCounters();
-        }
-        if ( ImGui::Button( "Print time to console", ImVec2( -1, 0 ) ) )
-        {
-            printTimingTreeAndStop();
-        }
-        ImGui::End();
-    }
-
-    if ( show_rename_modal_ )
-    {
-        show_rename_modal_ = false;
-        ImGui::OpenPopup( "Rename object" );
-    }
-
-    if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
-        if ( !obj )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-        if ( ImGui::IsWindowAppearing() )
-            ImGui::SetKeyboardFocusHere();
-        ImGui::InputText( "Name", renameBuffer, ImGuiInputTextFlags_AutoSelectAll );
-
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f )
-        {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
-            obj->setName( renameBuffer );
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ESCAPE] == 0.0f )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::EndPopup();
-    }
-
-    auto bgBackUp = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
-
-    if ( !storedError_.empty() && !ImGui::IsPopupOpen( " Error##modal" ) )
-    {        
-        ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1, 0.125f, 0.125f, bgBackUp.w );
-        ImGui::OpenPopup( " Error##modal" );
-    }
-
-    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
-                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        ImGui::Text( "%s", storedError_.c_str() );
-        
-        ImGui::Spacing();
-        ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f ||
-           ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
-        {
-            storedError_.clear();
-            ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = bgBackUp;
-            ImGui::CloseCurrentPopup();
-        }        
-
-        ImGui::EndPopup();        
-    }
-
-}
 
 void Menu::setObjectTreeState( const Object* obj, bool open )
 {
@@ -883,7 +719,7 @@ void Menu::tryRenameSelectedObject()
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( selected.size() != 1 )
         return;
-    renameBuffer = selected[0]->name();
+    renameBuffer_ = selected[0]->name();
     show_rename_modal_ = true;
 }
 
@@ -972,33 +808,6 @@ void Menu::add_modifier( std::shared_ptr<MeshModifier> modifier )
 {
     if ( modifier )
         modifiers_.push_back( modifier );
-}
-
-bool Menu::onCharPressed_( unsigned int unicode_key, int modifiers )
-{
-    if ( MR::ImGuiMenu::onCharPressed_( unicode_key, modifiers ) )
-        return true;
-    return false;
-}
-
-bool Menu::onKeyDown_( int key, int modifiers )
-{  
-    if ( ImGuiMenu::onKeyDown_( key, modifiers ) )
-        return true;  
-      
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key,modifiers } );
-
-    return false;
-}
-
-bool Menu::onKeyRepeat_( int key, int modifiers )
-{
-    if ( ImGuiMenu::onKeyRepeat_( key, modifiers ) )
-        return true;
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key, modifiers } );
-    return false;
 }
 
 std::filesystem::path Menu::getMenuFontPath() const
@@ -1980,11 +1789,6 @@ void Menu::setupShortcuts_()
     {
         changeSelection( false,GLFW_MOD_SHIFT );
     } } );
-}
-
-void Menu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
-{
-    frameTimeMillisecThreshold_ = maxGoodTimeMillisec;
 }
 
 void Menu::reorderSceneIfNeeded_()

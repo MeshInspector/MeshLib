@@ -1,7 +1,7 @@
 #pragma once
 #include "ImGuiMenu.h"
 #include "MRStatePlugin.h"
-#include "MRShortcutManager.h"
+
 #include "imgui.h"
 #include "exports.h"
 #include <unordered_map>
@@ -26,8 +26,6 @@ public:
     MRVIEWER_API void draw_scene_list_content( const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     MRVIEWER_API void draw_custom_plugins();
-
-    MRVIEWER_API void draw_helpers();
 
     // change object tree node to open/closed on next frame
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
@@ -63,8 +61,6 @@ public:
     // should return path of font that will be used in menu
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
 
-    // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
-    MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
 
     std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
     
@@ -75,9 +71,6 @@ public:
 
 protected:
     // Keyboard IO
-    MRVIEWER_API virtual bool onCharPressed_( unsigned key, int modifiers ) override;
-    MRVIEWER_API virtual bool onKeyDown_( int key, int modifiers ) override;
-    MRVIEWER_API virtual bool onKeyRepeat_( int key, int modifiers ) override;
     // add ranges (that will be used in menu) to builder 
     MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
 
@@ -106,7 +99,7 @@ protected:
     MRVIEWER_API virtual void setupShortcuts_();
 protected:
 
-    std::shared_ptr<ShortcutManager> shortcutManager_;
+    
 
     std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
 
@@ -134,13 +127,7 @@ private:
                      std::function<void( ObjectLinesHolder*, const float& )> setter );
 
 
-    std::string searchPluginsString_;
-
-    bool showStatistics_{false};
-
-    std::string renameBuffer;
-    bool show_rename_modal_{false};
-    std::string storedError_;
+    std::string searchPluginsString_;    
 
     ImVec2 mainWindowPos_;
     ImVec2 mainWindowSize_;
@@ -152,7 +139,7 @@ private:
     Box3f selectionBbox_; // updated in drawSelectionInformation_
 
     std::weak_ptr<Object> lastRenameObj_;
-    std::string renameBuffer_;
+    
 
     bool uniformScale_{true};
 
@@ -163,7 +150,7 @@ private:
     Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
 
     // maximum good time for frame rendering milliseconds (25 ms ~ 40 FPS)
-    long long frameTimeMillisecThreshold_{ 25 };
+    
 
     enum ViewportConfigurations
     {

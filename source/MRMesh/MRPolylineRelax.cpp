@@ -5,22 +5,6 @@
 #include "MRVector2.h"
 #include "MRWriter.h"
 
-namespace
-{
-
-template<typename, typename>
-struct SubstType
-{
-};
-
-template<typename A, template<typename> typename C, typename B>
-struct SubstType<A, C<B>>
-{
-    using type = C<A>;
-};
-
-}
-
 namespace MR
 {
 
@@ -57,13 +41,10 @@ bool relaxImpl( Polyline<V> &polyline, const RelaxParams &params, ProgressCallba
             if ( e0 == e1 )
                 return;
 
-            using VectorD = typename SubstType<double, V>::type;
-            VectorD sum;
-            sum += VectorD( polyline.destPnt( e0 ) );
-            sum += VectorD( polyline.destPnt( e1 ) );
+            auto mp = ( polyline.destPnt( e0 ) + polyline.destPnt( e1 ) ) / 2.f;
 
             auto& np = newPoints[v];
-            auto pushForce = params.force * ( V( sum / 2. ) - np );
+            auto pushForce = params.force * ( mp - np );
             np += pushForce;
         }, internalCb );
         polyline.points.swap( newPoints );
@@ -110,12 +91,9 @@ bool relaxKeepAreaImpl( Polyline<V> &polyline, const RelaxParams &params, Progre
             if ( e0 == e1 )
                 return;
 
-            using VectorD = typename SubstType<double, V>::type;
-            VectorD sum;
-            sum += VectorD( polyline.destPnt( e0 ) );
-            sum += VectorD( polyline.destPnt( e1 ) );
+            auto mp = ( polyline.destPnt( e0 ) + polyline.destPnt( e1 ) ) / 2.f;
 
-            vertPushForces[v] = params.force * ( V( sum / 2. ) - polyline.points[v] );
+            vertPushForces[v] = params.force * ( mp - polyline.points[v] );
         }, internalCb1 );
         if ( !keepGoing )
             break;

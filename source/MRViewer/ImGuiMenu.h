@@ -48,6 +48,7 @@ protected:
   // if true, then pre_draw will start from polling glfw events
   bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
 
+  bool showShortcuts_{ false };
   bool showStatistics_{ false };
   long long frameTimeMillisecThreshold_{ 25 };
   bool showRenameModal_{ false };

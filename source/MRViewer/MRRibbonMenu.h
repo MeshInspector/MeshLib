@@ -79,6 +79,8 @@ public:
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
+
+    MRVIEWER_API virtual bool onKeyUp_( int key, int modifiers ) override;
 protected:
 
     // draw single item

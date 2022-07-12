@@ -425,7 +425,7 @@ ImGuiContext* ImGuiMenu::getCurrentContext() const
 
 void ImGuiMenu::draw_helpers()
 {
-    if ( ImGui::GetIO().KeysDown[GLFW_KEY_F1] )
+    if ( showShortcuts_ )
     {
         const auto& style = ImGui::GetStyle();
         const float hotkeysWindowWidth = 300 * menu_scaling();

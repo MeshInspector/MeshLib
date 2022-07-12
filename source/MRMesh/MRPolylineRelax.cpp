@@ -9,7 +9,7 @@ namespace MR
 {
 
 template<typename V>
-bool relaxImpl( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback cb )
+bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -55,7 +55,7 @@ bool relaxImpl( Polyline<V> &polyline, const RelaxParams &params, ProgressCallba
 }
 
 template<typename V>
-bool relaxKeepAreaImpl( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback cb )
+bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -121,24 +121,10 @@ bool relaxKeepAreaImpl( Polyline<V> &polyline, const RelaxParams &params, Progre
     return keepGoing;
 }
 
-bool relax( Polyline2 &polyline, const RelaxParams &params, ProgressCallback cb )
-{
-    return relaxImpl( polyline, params, std::move(cb) );
-}
+template bool relax<>( Polyline2& polyline, const RelaxParams& params, ProgressCallback cb );
+template bool relax<>( Polyline3& polyline, const RelaxParams& params, ProgressCallback cb );
 
-bool relax( Polyline3 &polyline, const RelaxParams &params, ProgressCallback cb )
-{
-    return relaxImpl( polyline, params, std::move(cb) );
-}
-
-bool relaxKeepArea( Polyline2 &polyline, const RelaxParams &params, ProgressCallback cb )
-{
-    return relaxKeepAreaImpl( polyline, params, std::move(cb) );
-}
-
-bool relaxKeepArea( Polyline3 &polyline, const RelaxParams &params, ProgressCallback cb )
-{
-    return relaxKeepAreaImpl( polyline, params, std::move(cb) );
-}
+template bool relaxKeepArea<>( Polyline2 &polyline, const RelaxParams &params, ProgressCallback cb );
+template bool relaxKeepArea<>( Polyline3 &polyline, const RelaxParams &params, ProgressCallback cb );
 
 } // namespace MR

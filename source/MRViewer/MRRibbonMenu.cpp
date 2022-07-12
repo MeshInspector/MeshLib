@@ -1388,11 +1388,11 @@ void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::Value root;
         root["Name"] = "MeshLib Transform";
         serializeToJson( selected->xf(), root["XF"] );
-        SetClipboardData( root.toStyledString() );
+        SetClipboardText( root.toStyledString() );
         ImGui::CloseCurrentPopup();
     }
 #endif
-    auto clipboardText = GetClipboardData();
+    auto clipboardText = GetClipboardText();
 
     if ( !clipboardText.empty() )
     {

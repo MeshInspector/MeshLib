@@ -227,7 +227,7 @@ std::filesystem::path GetTempDirectory()
     return res;
 }
 
-std::string GetClipboardData()
+std::string GetClipboardText()
 {
 #ifndef _WIN32
     return "";
@@ -240,7 +240,7 @@ std::string GetClipboardData()
     }
 
     // Get handle of clipboard object for ANSI text
-    HANDLE hData = ::GetClipboardData( CF_TEXT );
+    HANDLE hData = GetClipboardData( CF_TEXT );
     if ( !hData )
     {
         spdlog::error( "Could not open clipboard" );
@@ -269,9 +269,10 @@ std::string GetClipboardData()
 #endif
 }
 
-void SetClipboardData( [[maybe_unused]] const std::string& text )
+void SetClipboardText( const std::string& text )
 {
 #ifndef _WIN32
+    ( void )text;
     return;
 #else
     HGLOBAL hMem = GlobalAlloc( GMEM_MOVEABLE, text.size() + 1 );
@@ -279,7 +280,7 @@ void SetClipboardData( [[maybe_unused]] const std::string& text )
     GlobalUnlock( hMem );
     OpenClipboard( 0 );
     EmptyClipboard();
-    ::SetClipboardData( CF_TEXT, hMem );
+    SetClipboardData( CF_TEXT, hMem );
     CloseClipboard();
 #endif
 }

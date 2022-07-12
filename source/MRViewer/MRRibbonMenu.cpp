@@ -17,6 +17,7 @@
 #include "MRMesh/MRString.h"
 #include "MRImGuiImage.h"
 #include "ImGuiHelpers.h"
+#include "MRMesh/MRChangeXfAction.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 
@@ -1372,6 +1373,59 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+}
+
+void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
+{
+    if ( !ImGui::BeginPopupContextItem() )
+        return;
+
+    auto buttonSize = 100.0f * menu_scaling();
+
+#ifdef _WIN32
+    if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
+    {
+        Json::Value root;
+        root["Name"] = "MeshLib Transform";
+        serializeToJson( selected->xf(), root["XF"] );
+        SetClipboardData( root.toStyledString() );
+        ImGui::CloseCurrentPopup();
+    }
+#endif
+    auto clipboardText = GetClipboardData();
+
+    if ( !clipboardText.empty() )
+    {
+        Json::Value root;
+        Json::CharReaderBuilder readerBuilder;
+        std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
+        std::string error;
+        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) )
+        {
+            if ( root["Name"].isString() && root["Name"].asString() == "MeshLib Transform" )
+            {
+                if ( RibbonButtonDrawer::GradientButton( "Paste", ImVec2( buttonSize, 0 ) ) )
+                {
+                    AffineXf3f xf;
+                    deserializeFromJson( root["XF"], xf );
+                    AppendHistory<ChangeXfAction>( "Change XF", selected );
+                    selected->setXf( xf );
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+        }
+    }
+
+    auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
+    if ( item != RibbonSchemaHolder::schema().items.end() && 
+        item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
+        RibbonButtonDrawer::GradientButton( "Apply", ImVec2( buttonSize, 0 ) ) )
+    {
+        item->second.item->action();
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName ) const

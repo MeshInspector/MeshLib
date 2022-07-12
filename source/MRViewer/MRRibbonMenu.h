@@ -130,6 +130,7 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
+    MRVIEWER_API virtual void drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
     MRVIEWER_API virtual void drawQuickAccessMenu_();
 

@@ -1215,8 +1215,8 @@ float Menu::drawTransform_()
             resultHeight_ += transformHeight + style.ItemSpacing.y;
             ImGui::BeginChild( "SceneTransform", ImVec2( 0, transformHeight ) );
             auto& data = *selected.front();
-            auto xf = data.xf();
 
+            auto xf = data.xf();
             Matrix3f q, r;
             decomposePositiveQR( xf.A, q, r );
 
@@ -1290,6 +1290,7 @@ float Menu::drawTransform_()
             }
             data.setXf( xf );
             ImGui::EndChild();
+            drawTransformContextMenu_( selected[0] );
         }
     }
 

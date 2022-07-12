@@ -34,6 +34,12 @@ MRMESH_API std::filesystem::path getUserConfigFilePath();
 // returns temp directory
 MRMESH_API std::filesystem::path GetTempDirectory();
 
+// returns data in clipboard
+MRMESH_API std::string GetClipboardData();
+
+// sets data in clipboard
+MRMESH_API void SetClipboardData( const std::string& text );
+
 #ifdef _WIN32
 // returns the folder where Windows installed, typically "C:\Windows"
 MRMESH_API std::filesystem::path GetWindowsInstallDirectory();

@@ -730,7 +730,7 @@ void Menu::draw_helpers()
 {
     if ( ImGui::GetIO().KeysDown[GLFW_KEY_F1] )
     {
-        const auto style = ImGui::GetStyle();
+        const auto& style = ImGui::GetStyle();
         const float hotkeysWindowWidth = 300 * menu_scaling();
         size_t numLines = 3;
         if ( shortcutManager_ )
@@ -742,7 +742,7 @@ void Menu::draw_helpers()
         windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
         windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
 
-        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always );
+        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
         ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
         ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
 

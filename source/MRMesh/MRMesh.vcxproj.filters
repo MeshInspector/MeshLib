@@ -603,9 +603,6 @@
     <ClInclude Include="MRAABBTreePolyline.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRPointCloudRelax.h">
-      <Filter>Source Files\Relax</Filter>
-    </ClInclude>
     <ClInclude Include="MRBestFitQuadric.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -732,9 +729,6 @@
     <ClInclude Include="MRMeshTriPoint.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshRelax.h">
-      <Filter>Source Files\Relax</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshToPointCloud.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -844,10 +838,16 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineRelax.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshRelax.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudRelax.h">
+      <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRRelaxParams.h">
-      <Filter>Source Files\Relax</Filter>
+      <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

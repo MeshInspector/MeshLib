@@ -80,7 +80,6 @@ public:
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
 
-    MRVIEWER_API virtual bool onKeyUp_( int key, int modifiers ) override;
 protected:
 
     // draw single item

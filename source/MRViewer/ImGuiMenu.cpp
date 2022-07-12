@@ -429,7 +429,7 @@ void ImGuiMenu::draw_helpers()
     {
         const auto& style = ImGui::GetStyle();
         const float hotkeysWindowWidth = 300 * menu_scaling();
-        size_t numLines = 3;
+        size_t numLines = 2;
         if ( shortcutManager_ )
             numLines += shortcutManager_->getShortcutList().size();
 
@@ -449,7 +449,6 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "Hot Key List" );
         ImGui::PopFont();
         ImGui::Text( "" );
-        ImGui::Text( "F1 - Show this help with hot keys" );
         if ( shortcutManager_ )
         {
             const auto& shortcutsList = shortcutManager_->getShortcutList();
@@ -541,14 +540,13 @@ void ImGuiMenu::draw_helpers()
         ImGui::EndPopup();
     }
 
-    auto bgBackUp = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
+    ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 
     if ( !storedError_.empty() && !ImGui::IsPopupOpen( " Error##modal" ) )
-    {
-        ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1, 0.125f, 0.125f, bgBackUp.w );
+    {        
         ImGui::OpenPopup( " Error##modal" );
     }
-
+    
     if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
     {
@@ -559,14 +557,13 @@ void ImGuiMenu::draw_helpers()
         if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
-            storedError_.clear();
-            ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = bgBackUp;
+            storedError_.clear();            
             ImGui::CloseCurrentPopup();
         }
-
+        
         ImGui::EndPopup();
     }
-
+    ImGui::PopStyleColor();
 }
 
 void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )

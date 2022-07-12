@@ -849,12 +849,6 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
     return someChanges;
 }
 
-bool RibbonMenu::onKeyUp_( int key, int modifiers )
-{
-    showShortcuts_ = false;
-    return ImGuiMenu::onKeyUp_( key, modifiers );
-}
-
 void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
 {
     auto width = buttonDrawer_.calcItemWidth( item, DrawButtonParams::SizeType::Big );
@@ -1573,9 +1567,9 @@ void RibbonMenu::setupShortcuts_()
             if ( data )
                 data->setVisible( !atLeastOne, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F1,0 }, { "Show this help",[this] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_F1,0 }, { "Show this help with hot keys",[this] ()
    {
-       showShortcuts_ = true;
+       showShortcuts_ = !showShortcuts_;
    } } );
     shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { "Toggle statistics window",[this] ()
     {

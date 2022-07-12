@@ -58,8 +58,8 @@ bool relaxImpl( Polyline<V> &polyline, const PolylineRelaxParams &params, Progre
 
             using VectorD = typename SubstType<double, V>::type;
             VectorD sum;
-            sum += VectorD( polyline.points[polyline.topology.dest( e0 )] );
-            sum += VectorD( polyline.points[polyline.topology.dest( e1 )] );
+            sum += VectorD( polyline.destPnt( e0 ) );
+            sum += VectorD( polyline.destPnt( e1 ) );
 
             auto& np = newPoints[v];
             auto pushForce = params.force * ( V( sum / 2. ) - np );
@@ -110,8 +110,8 @@ bool relaxKeepAreaImpl( Polyline<V> &polyline, const PolylineRelaxParams &params
 
             using VectorD = typename SubstType<double, V>::type;
             VectorD sum;
-            sum += VectorD( polyline.points[polyline.topology.dest( e0 )] );
-            sum += VectorD( polyline.points[polyline.topology.dest( e1 )] );
+            sum += VectorD( polyline.destPnt( e0 ) );
+            sum += VectorD( polyline.destPnt( e1 ) );
 
             vertPushForces[v] = params.force * ( V( sum / 2. ) - polyline.points[v] );
         }, internalCb1 );

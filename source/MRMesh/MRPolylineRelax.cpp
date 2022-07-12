@@ -2,12 +2,30 @@
 #include "MRPolyline.h"
 #include "MRPolylineRelax.h"
 #include "MRTimer.h"
+#include "MRVector2.h"
 #include "MRWriter.h"
+
+namespace
+{
+
+template<typename, typename>
+struct SubstType
+{
+};
+
+template<typename A, template<typename> typename C, typename B>
+struct SubstType<A, C<B>>
+{
+    using type = C<A>;
+};
+
+}
 
 namespace MR
 {
 
-bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+template<typename V>
+bool relaxImpl( Polyline<V> &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -15,7 +33,7 @@ bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCall
     MR_TIMER
     MR_WRITER(polyline)
 
-    VertCoords newPoints;
+    Vector<V, VertId> newPoints;
     const auto& zone = polyline.topology.getVertIds( params.region );
 
     bool keepGoing = true;
@@ -38,12 +56,13 @@ bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCall
             if ( !e0.valid() || !e1.valid() )
                 return;
 
-            Vector3d sum;
-            sum += Vector3d( polyline.points[polyline.topology.dest( e0 )] );
-            sum += Vector3d( polyline.points[polyline.topology.dest( e1 )] );
+            using VectorD = typename SubstType<double, V>::type;
+            VectorD sum;
+            sum += VectorD( polyline.points[polyline.topology.dest( e0 )] );
+            sum += VectorD( polyline.points[polyline.topology.dest( e1 )] );
 
             auto& np = newPoints[v];
-            auto pushForce = params.force * ( Vector3f{sum / 2.} - np );
+            auto pushForce = params.force * ( V( sum / 2. ) - np );
             np += pushForce;
         }, internalCb );
         polyline.points.swap( newPoints );
@@ -53,7 +72,8 @@ bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCall
     return keepGoing;
 }
 
-bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+template<typename V>
+bool relaxKeepAreaImpl( Polyline<V> &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
         return true;
@@ -61,9 +81,9 @@ bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, Prog
     MR_TIMER
     MR_WRITER(polyline)
 
-    VertCoords newPoints;
+    Vector<V, VertId> newPoints;
     const auto& zone = polyline.topology.getVertIds( params.region );
-    std::vector<Vector3f> vertPushForces( zone.size() );
+    std::vector<V> vertPushForces( zone.size() );
 
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
@@ -88,11 +108,12 @@ bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, Prog
             if ( !e0.valid() || !e1.valid() )
                 return;
 
-            Vector3d sum;
-            sum += Vector3d( polyline.points[polyline.topology.dest( e0 )] );
-            sum += Vector3d( polyline.points[polyline.topology.dest( e1 )] );
+            using VectorD = typename SubstType<double, V>::type;
+            VectorD sum;
+            sum += VectorD( polyline.points[polyline.topology.dest( e0 )] );
+            sum += VectorD( polyline.points[polyline.topology.dest( e1 )] );
 
-            vertPushForces[v] = params.force * ( Vector3f{sum / 2.} - polyline.points[v] );
+            vertPushForces[v] = params.force * ( V( sum / 2. ) - polyline.points[v] );
         }, internalCb1 );
         if ( !keepGoing )
             break;
@@ -117,6 +138,26 @@ bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, Prog
     }
 
     return keepGoing;
+}
+
+bool relax( Polyline2 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+{
+    return relaxImpl( polyline, params, std::move(cb) );
+}
+
+bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+{
+    return relaxImpl( polyline, params, std::move(cb) );
+}
+
+bool relaxKeepArea( Polyline2 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+{
+    return relaxKeepAreaImpl( polyline, params, std::move(cb) );
+}
+
+bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCallback cb )
+{
+    return relaxKeepAreaImpl( polyline, params, std::move(cb) );
 }
 
 } // namespace MR

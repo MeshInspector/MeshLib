@@ -728,13 +728,24 @@ void Menu::draw_custom_plugins()
 
 void Menu::draw_helpers()
 {
-    if ( show_hotkeys_list_ )
+    if ( ImGui::GetIO().KeysDown[GLFW_KEY_F1] )
     {
-        ImGui::OpenPopup( "HotKeys" );
-        ImGui::BeginPopup( "HotKeys",
-                           ImGuiWindowFlags_AlwaysAutoResize | 
-                           ImGuiWindowFlags_NoResize
-        );
+        const auto& style = ImGui::GetStyle();
+        const float hotkeysWindowWidth = 300 * menu_scaling();
+        size_t numLines = 3;
+        if ( shortcutManager_ )
+            numLines += shortcutManager_->getShortcutList().size();
+        
+        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
+
+        ImVec2 windowPos = ImGui::GetMousePos();
+        windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
+        windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
+
+        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
+        ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
+        ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
+
         ImFont font = *ImGui::GetFont();
         font.Scale = 1.2f;
         ImGui::PushFont( &font );
@@ -748,7 +759,7 @@ void Menu::draw_helpers()
             for ( const auto& [key, name] : shortcutsList )
                 ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
         }
-        ImGui::EndPopup();
+        ImGui::End();
     }
 
     if ( showStatistics_ )
@@ -971,25 +982,13 @@ bool Menu::onCharPressed_( unsigned int unicode_key, int modifiers )
 }
 
 bool Menu::onKeyDown_( int key, int modifiers )
-{
-    bool checkImGuiFirst = !show_rename_modal_ && storedError_.empty();
-    if ( checkImGuiFirst )
-        if ( ImGuiMenu::onKeyDown_( key, modifiers ) )
-            return true;
-
-    switch ( key )
-    {
-    case GLFW_KEY_F1:
-        show_hotkeys_list_ = true;
-        return true;
-    default:
-        break;
-    }
-    if ( !checkImGuiFirst )
-        if ( ImGuiMenu::onKeyDown_( key, modifiers ) )
-            return true;
+{  
+    if ( ImGuiMenu::onKeyDown_( key, modifiers ) )
+        return true;  
+      
     if ( shortcutManager_ )
         return shortcutManager_->processShortcut( { key,modifiers } );
+
     return false;
 }
 
@@ -999,25 +998,6 @@ bool Menu::onKeyRepeat_( int key, int modifiers )
         return true;
     if ( shortcutManager_ )
         return shortcutManager_->processShortcut( { key, modifiers } );
-    return false;
-}
-
-bool Menu::onKeyUp_( int key, int modifiers )
-{
-    if ( ImGuiMenu::onKeyUp_( key, modifiers ) )
-        return true;
-    switch ( key )
-    {
-    case GLFW_KEY_F1:
-        show_hotkeys_list_ = false;
-        return true;
-    case GLFW_KEY_ENTER:
-        if ( show_rename_modal_ )
-            return true;
-        break;
-    default:
-        break;
-    }
     return false;
 }
 

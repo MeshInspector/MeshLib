@@ -78,7 +78,6 @@ protected:
     MRVIEWER_API virtual bool onCharPressed_( unsigned key, int modifiers ) override;
     MRVIEWER_API virtual bool onKeyDown_( int key, int modifiers ) override;
     MRVIEWER_API virtual bool onKeyRepeat_( int key, int modifiers ) override;
-    MRVIEWER_API virtual bool onKeyUp_( int key, int modifiers ) override;
     // add ranges (that will be used in menu) to builder 
     MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
 
@@ -137,7 +136,6 @@ private:
 
     std::string searchPluginsString_;
 
-    bool show_hotkeys_list_{false};
     bool showStatistics_{false};
 
     std::string renameBuffer;

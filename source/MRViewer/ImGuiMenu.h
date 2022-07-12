@@ -16,8 +16,11 @@
 // Forward declarations
 struct ImGuiContext;
 
+
 namespace MR
 {
+
+class ShortcutManager;
 
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
     public MultiListener<
@@ -45,6 +48,12 @@ protected:
   // if true, then pre_draw will start from polling glfw events
   bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
 
+  bool showStatistics_{ false };
+  long long frameTimeMillisecThreshold_{ 25 };
+  bool show_rename_modal_{ false };
+  std::string renameBuffer_;
+  std::string storedError_;
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
@@ -58,6 +67,8 @@ public:
 
   // Draw menu
   MRVIEWER_API virtual void draw_menu();
+
+  MRVIEWER_API void draw_helpers();
 
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
@@ -95,6 +106,8 @@ public:
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 
 protected:
+    
+    std::shared_ptr<ShortcutManager> shortcutManager_;
     bool capturedMouse_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -116,6 +129,9 @@ protected:
     // This function reset ImGui style to current theme and scale it by menu_scaling
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
+
+    // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
+    MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
 };
 
 } // end namespace

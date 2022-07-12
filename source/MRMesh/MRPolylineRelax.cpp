@@ -1,6 +1,6 @@
+#include "MRPolylineRelax.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPolyline.h"
-#include "MRPolylineRelax.h"
 #include "MRTimer.h"
 #include "MRVector2.h"
 #include "MRWriter.h"

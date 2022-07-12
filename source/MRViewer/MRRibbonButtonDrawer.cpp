@@ -3,6 +3,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
 #include "MRImGuiImage.h"
+#include "MRShortcutManager.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
 #include "imgui_internal.h"

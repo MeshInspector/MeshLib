@@ -5,6 +5,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
+#include "MRShortcutManager.h"
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
@@ -78,6 +79,7 @@ public:
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
+
 protected:
 
     // draw single item

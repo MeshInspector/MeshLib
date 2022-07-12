@@ -1,7 +1,6 @@
 #pragma once
 #include "ImGuiMenu.h"
 #include "MRStatePlugin.h"
-#include "MRShortcutManager.h"
 #include "imgui.h"
 #include "exports.h"
 #include <unordered_map>
@@ -27,8 +26,6 @@ public:
 
     MRVIEWER_API void draw_custom_plugins();
 
-    MRVIEWER_API void draw_helpers();
-
     // change object tree node to open/closed on next frame
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
@@ -44,8 +41,7 @@ public:
     // allow or forbid scene reordering
     MRVIEWER_API void allowSceneReorder( bool allow );
 
-    // opens error modal window with error text
-    MRVIEWER_API void showErrorModal( const std::string& error );
+
 
     // override this to have custom "Selection Properties" window
     // draw window with content
@@ -103,10 +99,7 @@ protected:
     MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 
-    MRVIEWER_API virtual void setupShortcuts_();
 protected:
-
-    std::shared_ptr<ShortcutManager> shortcutManager_;
 
     std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
 
@@ -136,12 +129,6 @@ private:
 
     std::string searchPluginsString_;
 
-    bool showStatistics_{false};
-
-    std::string renameBuffer;
-    bool show_rename_modal_{false};
-    std::string storedError_;
-
     ImVec2 mainWindowPos_;
     ImVec2 mainWindowSize_;
     ImVec2 sceneWindowPos_;
@@ -152,7 +139,6 @@ private:
     Box3f selectionBbox_; // updated in drawSelectionInformation_
 
     std::weak_ptr<Object> lastRenameObj_;
-    std::string renameBuffer_;
 
     bool uniformScale_{true};
 

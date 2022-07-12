@@ -257,6 +257,7 @@
     <ClInclude Include="MRVoxelsVolume.h" />
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
+    <ClInclude Include="MRPolylineRelax.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -459,6 +460,7 @@
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRObjectDistanceMap.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
+    <ClCompile Include="MRPolylineRelax.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

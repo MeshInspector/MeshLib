@@ -843,6 +843,9 @@
     <ClInclude Include="MRChangePolylineAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRPolylineRelax.h">
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1425,6 +1428,9 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineSubdivide.cpp">
+      <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineRelax.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
   </ItemGroup>

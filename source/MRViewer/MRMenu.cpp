@@ -39,6 +39,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRObjectLabel.h"
+#include "MRShortcutManager.h"
 #include <GLFW/glfw3.h>
 
 #ifndef __EMSCRIPTEN__
@@ -115,60 +116,7 @@ std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::Visual
 }
 
 // goes up and down on scene tree, selecting objects with different modifiers
-void changeSelection( bool selectNext, int mod )
-{
-    using namespace MR;
-    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selectNext )
-    {
-        auto nextIt = std::find_if( selectable.rbegin(), selectable.rend(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
 
-        Object* next{ nullptr };
-        if ( nextIt != selectable.rend() )
-        {
-            auto dist = int( std::distance( nextIt, selectable.rend() ) );
-            if ( dist >= 0 && dist < selectable.size() )
-                next = selectable[dist].get();
-            if ( dist == selectable.size() )
-                next = selectable.back().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != next )
-                    data->select( false );
-        if ( next )
-            next->select( true );
-    }
-    else
-    {
-        auto prevIt = std::find_if( selectable.begin(), selectable.end(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
-
-        Object* prev{ nullptr };
-        if ( prevIt != selectable.end() )
-        {
-            auto dist = int( std::distance( selectable.begin(), prevIt ) ) - 1;
-            if ( dist >= 0 && dist < selectable.size() )
-                prev = selectable[dist].get();
-            if ( dist == -1 )
-                prev = selectable.front().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != prev )
-                    data->select( false );
-        if ( prev )
-            prev->select( true );
-    }
-}
 
 }
 
@@ -726,152 +674,6 @@ void Menu::draw_custom_plugins()
     }
 }
 
-void Menu::draw_helpers()
-{
-    if ( ImGui::GetIO().KeysDown[GLFW_KEY_F1] )
-    {
-        const auto& style = ImGui::GetStyle();
-        const float hotkeysWindowWidth = 300 * menu_scaling();
-        size_t numLines = 3;
-        if ( shortcutManager_ )
-            numLines += shortcutManager_->getShortcutList().size();
-        
-        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
-
-        ImVec2 windowPos = ImGui::GetMousePos();
-        windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
-        windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
-
-        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-        ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
-        ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-
-        ImFont font = *ImGui::GetFont();
-        font.Scale = 1.2f;
-        ImGui::PushFont( &font );
-        ImGui::Text( "Hot Key List" );
-        ImGui::PopFont();
-        ImGui::Text( "" );
-        ImGui::Text( "F1 - Show this help with hot keys" );
-        if ( shortcutManager_ )
-        {
-            const auto& shortcutsList = shortcutManager_->getShortcutList();
-            for ( const auto& [key, name] : shortcutsList )
-                ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
-        }
-        ImGui::End();
-    }
-
-    if ( showStatistics_ )
-    {
-        const auto style = ImGui::GetStyle();
-        const float fpsWindowWidth = 300 * menu_scaling();
-        int numLines = 4 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 4 - for: prev frame time, swapped frames, total frames, fps;
-        // TextHeight +1 for button, ItemSpacing +2 for separators
-        const float fpsWindowHeight = ( style.WindowPadding.y * 2 + 
-                                        ImGui::GetTextLineHeight() * ( numLines + 2 ) + 
-                                        style.ItemSpacing.y * ( numLines + 3 ) +
-                                        style.FramePadding.y * 4 );
-        const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
-        const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
-        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
-        ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
-        ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
-                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-        for ( int i = 0; i<int( Viewer::GLPrimitivesType::Count ); ++i )
-            ImGui::Text( "%s: %zu", cGLPrimitivesCounterNames[i], viewer->getLastFrameGLPrimitivesCount( Viewer::GLPrimitivesType( i ) ) );
-        ImGui::Separator();
-        for ( int i = 0; i<int( Viewer::EventType::Count ); ++i )
-            ImGui::Text( "%s: %zu", cEventCounterNames[i], viewer->getEventsCount( Viewer::EventType( i ) ) );
-        ImGui::Separator();
-        auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
-        if ( prevFrameTime > frameTimeMillisecThreshold_ )
-            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
-        else
-            ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
-        ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
-        ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
-        ImGui::Text( "FPS: %zu", viewer->getFPS() );
-
-        if ( ImGui::Button( "Reset", ImVec2( -1, 0 ) ) )
-        {
-            viewer->resetAllCounters();
-        }
-        if ( ImGui::Button( "Print time to console", ImVec2( -1, 0 ) ) )
-        {
-            printTimingTreeAndStop();
-        }
-        ImGui::End();
-    }
-
-    if ( show_rename_modal_ )
-    {
-        show_rename_modal_ = false;
-        ImGui::OpenPopup( "Rename object" );
-    }
-
-    if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
-        if ( !obj )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-        if ( ImGui::IsWindowAppearing() )
-            ImGui::SetKeyboardFocusHere();
-        ImGui::InputText( "Name", renameBuffer, ImGuiInputTextFlags_AutoSelectAll );
-
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f )
-        {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
-            obj->setName( renameBuffer );
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ESCAPE] == 0.0f )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::EndPopup();
-    }
-
-    auto bgBackUp = ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg];
-
-    if ( !storedError_.empty() && !ImGui::IsPopupOpen( " Error##modal" ) )
-    {        
-        ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1, 0.125f, 0.125f, bgBackUp.w );
-        ImGui::OpenPopup( " Error##modal" );
-    }
-
-    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
-                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        ImGui::Text( "%s", storedError_.c_str() );
-        
-        ImGui::Spacing();
-        ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f ||
-           ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
-        {
-            storedError_.clear();
-            ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg] = bgBackUp;
-            ImGui::CloseCurrentPopup();
-        }        
-
-        ImGui::EndPopup();        
-    }
-
-}
-
 void Menu::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )
@@ -883,8 +685,8 @@ void Menu::tryRenameSelectedObject()
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( selected.size() != 1 )
         return;
-    renameBuffer = selected[0]->name();
-    show_rename_modal_ = true;
+    renameBuffer_ = selected[0]->name();
+    showRenameModal_ = true;
 }
 
 void Menu::allowObjectsRemoval( bool allow )
@@ -895,15 +697,6 @@ void Menu::allowObjectsRemoval( bool allow )
 void Menu::allowSceneReorder( bool allow )
 {
     allowSceneReorder_ = allow;
-}
-
-void Menu::showErrorModal( const std::string& error )
-{
-    show_rename_modal_ = false;
-    ImGui::CloseCurrentPopup();
-    storedError_ = error;
-    // this is needed to correctly resize error window
-    getViewerInstance().incrementForceRedrawFrames( 2, true );
 }
 
 void Menu::draw_selection_properties( std::vector<std::shared_ptr<Object>>& selectedObjs )
@@ -1901,86 +1694,7 @@ bool Menu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& sele
     return someChanges;
 }
 
-void Menu::setupShortcuts_()
-{
-    if ( !shortcutManager_ )
-        shortcutManager_ = std::make_shared<ShortcutManager>();
 
-    shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { "Toggle selected objects visibility",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-        bool atLeastOne = false;
-        for ( const auto& data : selected )
-            if ( data )
-                if ( data->isVisible( viewportid ) )
-                {
-                    atLeastOne = true;
-                    break;
-                }
-        for ( const auto& data : selected )
-            if ( data )
-                data->setVisible( !atLeastOne, viewportid );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { "Toggle statistics window",[this] ()
-    {
-        showStatistics_ = !showStatistics_;
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F,0 }, { "Toggle shading of selected objects",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-        for ( const auto& sel : selected )
-            sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { "Invert normals of selected objects",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-        for ( const auto& sel : selected )
-            sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_L,0 }, { "Toggle edges on selected meshes",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-        for ( const auto& sel : selected )
-                sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_O,0 }, { "Toggle orthographic in current viewport",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        viewport.setOrthographic( !viewport.getParameters().orthographic );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_T,0 }, { "Toggle faces on selected meshes",[] ()
-    {
-        auto& viewport = getViewerInstance().viewport();
-        const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-        for ( const auto& sel : selected )
-            sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { "Select next object",[] ()
-    {
-        changeSelection( true,0 );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { "Add next object to selection",[] ()
-    {
-        changeSelection( true,GLFW_MOD_SHIFT );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { "Select previous object",[] ()
-    {
-        changeSelection( false,0 );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { "Add previous object to selection",[] ()
-    {
-        changeSelection( false,GLFW_MOD_SHIFT );
-    } } );
-}
 
 void Menu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
 {

@@ -35,6 +35,61 @@
 namespace MR
 {
 
+void changeSelection( bool selectNext, int mod )
+{
+    using namespace MR;
+    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
+    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    if ( selectNext )
+    {
+        auto nextIt = std::find_if( selectable.rbegin(), selectable.rend(), [] ( const std::shared_ptr<Object>& obj )
+        {
+            return obj->isSelected();
+        } );
+
+        Object* next{ nullptr };
+        if ( nextIt != selectable.rend() )
+        {
+            auto dist = int( std::distance( nextIt, selectable.rend() ) );
+            if ( dist >= 0 && dist < selectable.size() )
+                next = selectable[dist].get();
+            if ( dist == selectable.size() )
+                next = selectable.back().get();
+        }
+
+        if ( mod == 0 ) // uncomment if want multy select holding shift
+            for ( const auto& data : selected )
+                if ( data && data.get() != next )
+                    data->select( false );
+        if ( next )
+            next->select( true );
+    }
+    else
+    {
+        auto prevIt = std::find_if( selectable.begin(), selectable.end(), [] ( const std::shared_ptr<Object>& obj )
+        {
+            return obj->isSelected();
+        } );
+
+        Object* prev{ nullptr };
+        if ( prevIt != selectable.end() )
+        {
+            auto dist = int( std::distance( selectable.begin(), prevIt ) ) - 1;
+            if ( dist >= 0 && dist < selectable.size() )
+                prev = selectable[dist].get();
+            if ( dist == -1 )
+                prev = selectable.front().get();
+        }
+
+        if ( mod == 0 ) // uncomment if want multy select holding shift
+            for ( const auto& data : selected )
+                if ( data && data.get() != prev )
+                    data->select( false );
+        if ( prev )
+            prev->select( true );
+    }
+}
+
 RibbonMenu::RibbonMenu()
 {
 #ifndef __EMSCRIPTEN__
@@ -1492,8 +1547,83 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
 
 void RibbonMenu::setupShortcuts_()
 {
-    Menu::setupShortcuts_();
-    assert( shortcutManager_ );
+    if ( !shortcutManager_ )
+        shortcutManager_ = std::make_shared<ShortcutManager>();
+
+    shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { "Toggle selected objects visibility",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        const auto& viewportid = viewport.id;
+        const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        bool atLeastOne = false;
+        for ( const auto& data : selected )
+            if ( data )
+                if ( data->isVisible( viewportid ) )
+                {
+                    atLeastOne = true;
+                    break;
+                }
+        for ( const auto& data : selected )
+            if ( data )
+                data->setVisible( !atLeastOne, viewportid );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { "Toggle statistics window",[this] ()
+    {
+        showStatistics_ = !showStatistics_;
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_F,0 }, { "Toggle shading of selected objects",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        const auto& viewportid = viewport.id;
+        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        for ( const auto& sel : selected )
+            sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_I,0 }, { "Invert normals of selected objects",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        const auto& viewportid = viewport.id;
+        const auto selected = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        for ( const auto& sel : selected )
+            sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_L,0 }, { "Toggle edges on selected meshes",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        const auto& viewportid = viewport.id;
+        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        for ( const auto& sel : selected )
+                sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_O,0 }, { "Toggle orthographic in current viewport",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        viewport.setOrthographic( !viewport.getParameters().orthographic );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_T,0 }, { "Toggle faces on selected meshes",[] ()
+    {
+        auto& viewport = getViewerInstance().viewport();
+        const auto& viewportid = viewport.id;
+        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        for ( const auto& sel : selected )
+            sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { "Select next object",[] ()
+    {
+        changeSelection( true,0 );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { "Add next object to selection",[] ()
+    {
+        changeSelection( true,GLFW_MOD_SHIFT );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { "Select previous object",[] ()
+    {
+        changeSelection( false,0 );
+    } } );
+    shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { "Add previous object to selection",[] ()
+    {
+        changeSelection( false,GLFW_MOD_SHIFT );
+    } } );
 
     auto addShortcut = [this] ( std::string pluginName, const ShortcutManager::ShortcutKey& key )
     {

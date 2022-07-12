@@ -501,9 +501,9 @@ void ImGuiMenu::draw_helpers()
         ImGui::End();
     }
 
-    if ( show_rename_modal_ )
+    if ( showRenameModal_ )
     {
-        show_rename_modal_ = false;
+        showRenameModal_ = false;
         ImGui::OpenPopup( "Rename object" );
     }
 
@@ -572,6 +572,19 @@ void ImGuiMenu::draw_helpers()
 void ImGuiMenu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
 {
     frameTimeMillisecThreshold_ = maxGoodTimeMillisec;
+}
+
+void ImGuiMenu::showErrorModal( const std::string& error )
+{
+    showRenameModal_ = false;
+    ImGui::CloseCurrentPopup();
+    storedError_ = error;
+    // this is needed to correctly resize error window
+    getViewerInstance().incrementForceRedrawFrames( 2, true );
+}
+
+void ImGuiMenu::setupShortcuts_()
+{
 }
 
 } // end namespace

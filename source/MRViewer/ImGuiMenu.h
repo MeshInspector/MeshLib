@@ -50,9 +50,12 @@ protected:
 
   bool showStatistics_{ false };
   long long frameTimeMillisecThreshold_{ 25 };
-  bool show_rename_modal_{ false };
+  bool showRenameModal_{ false };
   std::string renameBuffer_;
   std::string storedError_;
+  std::shared_ptr<ShortcutManager> shortcutManager_;
+
+  MRVIEWER_API virtual void setupShortcuts_();
 
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
@@ -105,9 +108,11 @@ public:
 
   MRVIEWER_API ImGuiContext* getCurrentContext() const;
 
+  // opens error modal window with error text
+  MRVIEWER_API void showErrorModal( const std::string& error );
+
 protected:
     
-    std::shared_ptr<ShortcutManager> shortcutManager_;
     bool capturedMouse_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

@@ -20,72 +20,11 @@ namespace MR
 {
 
 // Viewport size
-struct ViewportRectangle
-{
-    ViewportRectangle();
-    ViewportRectangle( const ViewportRectangle& other );
-    ViewportRectangle( ViewportRectangle&& other ) noexcept;
-
-    float x{ 0.0f };
-    float y{ 0.0f };
-
-#ifndef __GNUC__
-    // please use MR::width( rect ) to read this value
-    // please use MR::setWidth( rect, width ) to write this value
-    [[deprecated]] float width{ 0.0f };
-    // please use MR::height( rect ) to read this value
-    // please use MR::setHeight( rect, width ) to write this value
-    [[deprecated]] float height{ 0.0f };
-#else
-    float width{ 0.0f };
-    float height{ 0.0f };
-#endif
-
-    bool operator==( const ViewportRectangle& ) const;
-
-    ViewportRectangle& operator=( const ViewportRectangle& other ) noexcept;
-    ViewportRectangle& operator=( ViewportRectangle&& other ) noexcept;
-
-    // Conversion to Vector4 type, where:
-    // x, y: stay as is 
-    // z, w: width and height
-    template<typename T>
-    operator Vector4<T>() const;
-};
-
-#pragma warning(push)
-#pragma warning(disable: 4996) //deprecated function call
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-inline float width( const ViewportRectangle& rect )
-{
-    return rect.width;
-}
-
-inline float height( const ViewportRectangle& rect )
-{
-    return rect.height;
-}
-
-inline void setWidth( ViewportRectangle& rect, float width )
-{
-    rect.width = width;
-}
-
-inline void setHeight( ViewportRectangle& rect, float height )
-{
-    rect.height = height;
-}
-#pragma warning(pop)
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+using ViewportRectangle = Box2f;
 
 inline ImVec2 position( const ViewportRectangle& rect )
 {
-    return { rect.x, rect.y };
+    return { rect.min.x, rect.min.y };
 }
 
 inline ImVec2 size( const ViewportRectangle& rect )
@@ -93,59 +32,13 @@ inline ImVec2 size( const ViewportRectangle& rect )
     return { width( rect ), height( rect ) };
 }
 
+// Conversion to Vector4 type, where:
+// x, y: min.x and min.y
+// z, w: width and height
 template<typename T>
-ViewportRectangle::operator Vector4<T>() const
+inline Vector4<T> toVec4( const ViewportRectangle& rect )
 {
-    return Vector4<T>{T( x ), T( y ), T( MR::width( *this ) ), T( MR::height( *this ) )};
-}
-
-inline ViewportRectangle::ViewportRectangle( const ViewportRectangle& other ):
-    x{ other.x },
-    y{ other.y }
-{
-    setWidth( *this, MR::width( other ) );
-    setHeight( *this, MR::height( other ) );
-}
-
-inline ViewportRectangle::ViewportRectangle( ViewportRectangle&& other ) noexcept :
-    x{ other.x },
-    y{ other.y }
-{
-    setWidth( *this, MR::width( other ) );
-    setHeight( *this, MR::height( other ) );
-}
-
-inline ViewportRectangle::ViewportRectangle() :
-    x{ 0.0f },
-    y{ 0.0f }
-{
-    setWidth( *this, 0.0f );
-    setHeight( *this, 0.0f );
-}
-
-inline ViewportRectangle& ViewportRectangle::operator=( const ViewportRectangle& other ) noexcept
-{
-    this->x = other.x;
-    this->y = other.y;
-    setWidth( *this, MR::width( other ) );
-    setHeight( *this, MR::height( other ) );
-    return *this;
-}
-
-inline ViewportRectangle& ViewportRectangle::operator=( ViewportRectangle&& other ) noexcept
-{
-    this->x = other.x;
-    this->y = other.y;
-    setWidth( *this, MR::width( other ) );
-    setHeight( *this, MR::height( other ) );
-    return *this;
-}
-
-inline bool ViewportRectangle::operator==( const ViewportRectangle& other ) const
-{
-    return x == other.x && y == other.y &&
-        MR::width( *this ) == MR::width( other ) &&
-        MR::height( *this ) == MR::height( other );
+    return Vector4<T>{T( rect.min.x ), T( rect.min.y ), T( MR::width( rect ) ), T( MR::height( rect ) )};
 }
 
 // Viewport is a rectangular area, in which the objects of interest are going to be rendered.
@@ -292,7 +185,7 @@ public:
     MRVIEWER_API void transform_view( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM.data(),projM.data(),viewportRect_ }; }
+    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }

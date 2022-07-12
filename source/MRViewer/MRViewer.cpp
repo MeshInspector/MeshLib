@@ -1004,11 +1004,7 @@ void Viewer::post_resize( int w, int h )
         return;
     if ( viewport_list.size() == 1 )
     {
-        ViewportRectangle rect;
-        rect.x = 0.0f;
-        rect.y = 0.0f;
-        setWidth( rect, float( w ) );
-        setHeight( rect, float( h ) );
+        ViewportRectangle rect( { 0.f, 0.f }, { float( w ), float( h ) } );
         viewport().setViewportRect( rect );
     }
     else
@@ -1019,10 +1015,10 @@ void Viewer::post_resize( int w, int h )
             for ( auto& viewport : viewport_list )
             {
                 auto rect = viewport.getViewportRect();
-                rect.x = float( rect.x / window_width ) * w;
-                rect.y = float( rect.y / window_height ) * h;
-                setWidth( rect, float( width( rect ) / window_width ) * w );
-                setHeight( rect, float( height( rect ) / window_height ) * h );
+                rect.min.x = float( rect.min.x / window_width ) * w;
+                rect.min.y = float( rect.min.y / window_height ) * h;
+                rect.max.x = rect.min.x + float( width( rect ) / window_width ) * w;
+                rect.max.y = rect.min.y + float( height( rect ) / window_height ) * h;
                 viewport.setViewportRect( rect );
             }
     }
@@ -1284,7 +1280,7 @@ Box2f Viewer::getViewportsBounds() const
     for ( const auto& vp : viewport_list )
     {
         const auto& rect = vp.getViewportRect();
-        box.include( Box2f::fromMinAndSize( { rect.x,rect.y }, { width( rect ),height( rect ) } ) );
+        box.include( Box2f::fromMinAndSize( { rect.min.x,rect.min.y }, { width( rect ),height( rect ) } ) );
     }
     return box;
 }
@@ -1335,10 +1331,10 @@ ViewportId Viewer::get_hovered_viewport_id() const
 
         const auto& rect = viewport_list[i].getViewportRect();
 
-        if ( ( currentPos.x > rect.x ) &&
-             ( currentPos.x < rect.x + width( rect ) ) &&
-             ( ( window_height - currentPos.y ) > rect.y ) &&
-             ( ( window_height - currentPos.y ) < rect.y + height( rect ) ) )
+        if ( ( currentPos.x > rect.min.x ) &&
+             ( currentPos.x < rect.min.x + width( rect ) ) &&
+             ( ( window_height - currentPos.y ) > rect.min.y ) &&
+             ( ( window_height - currentPos.y ) < rect.min.y + height( rect ) ) )
         {
             return viewport_list[i].id;
         }
@@ -1538,7 +1534,7 @@ Vector3f Viewer::screenToViewport( const Vector3f& screenPoint, ViewportId id ) 
         return { 0.f, 0.f, 0.f };
 
     const auto& rect = viewport( id ).getViewportRect();
-    return { screenPoint.x - rect.x, screenPoint.y + rect.y + height( rect ) - window_height, screenPoint.z };
+    return { screenPoint.x - rect.min.x, screenPoint.y + rect.min.y + height( rect ) - window_height, screenPoint.z };
 }
 
 Vector3f Viewer::viewportToScreen( const Vector3f& viewportPoint, ViewportId id ) const
@@ -1547,7 +1543,7 @@ Vector3f Viewer::viewportToScreen( const Vector3f& viewportPoint, ViewportId id 
         return { 0.f, 0.f, 0.f };
 
     const auto& rect = viewport( id ).getViewportRect();
-    return { viewportPoint.x + rect.x, viewportPoint.y - rect.y - height( rect ) + window_height, viewportPoint.z };
+    return { viewportPoint.x + rect.min.x, viewportPoint.y - rect.min.y - height( rect ) + window_height, viewportPoint.z };
 }
 
 std::vector<std::reference_wrapper<Viewport>> Viewer::getViewports( ViewportMask mask )

@@ -325,10 +325,10 @@ void ImGuiMenu::draw_text(
 
   // Draw text labels slightly bigger than normal text
   ImDrawList* drawList = ImGui::GetWindowDrawList();
-  ImVec4 clipRect( viewportRect.x, 
-                   viewer->window_height - ( viewportRect.y + height( viewportRect ) ),
-                   viewportRect.x + width( viewportRect ),
-                   viewer->window_height - viewportRect.y );
+  ImVec4 clipRect( viewportRect.min.x, 
+                   viewer->window_height - ( viewportRect.min.y + height( viewportRect ) ),
+                   viewportRect.min.x + width( viewportRect ),
+                   viewer->window_height - viewportRect.min.y );
   drawList->AddText( ImGui::GetFont(), ImGui::GetFontSize() * 1.2f,
                      ImVec2( viewerCoord.x / pixel_ratio_, viewerCoord.y / pixel_ratio_ ),
                      color.getUInt32(),

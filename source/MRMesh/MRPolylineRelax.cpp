@@ -52,9 +52,9 @@ bool relaxImpl( Polyline<V> &polyline, const RelaxParams &params, ProgressCallba
         keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = polyline.topology.edgeWithOrg( v );
-            auto e1 = polyline.topology.next( e0 );
-            if ( !e0.valid() || !e1.valid() )
+            if ( polyline.topology.isLoneEdge( e0 ) )
                 return;
+            auto e1 = polyline.topology.next( e0 );
 
             using VectorD = typename SubstType<double, V>::type;
             VectorD sum;
@@ -104,9 +104,9 @@ bool relaxKeepAreaImpl( Polyline<V> &polyline, const RelaxParams &params, Progre
         keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = polyline.topology.edgeWithOrg( v );
-            auto e1 = polyline.topology.next( e0 );
-            if ( !e0.valid() || !e1.valid() )
+            if ( polyline.topology.isLoneEdge( e0 ) )
                 return;
+            auto e1 = polyline.topology.next( e0 );
 
             using VectorD = typename SubstType<double, V>::type;
             VectorD sum;
@@ -122,9 +122,9 @@ bool relaxKeepAreaImpl( Polyline<V> &polyline, const RelaxParams &params, Progre
         keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
             auto e0 = polyline.topology.edgeWithOrg( v );
-            auto e1 = polyline.topology.next( e0 );
-            if ( !e0.valid() || !e1.valid() )
+            if ( polyline.topology.isLoneEdge( e0 ) )
                 return;
+            auto e1 = polyline.topology.next( e0 );
 
             auto& np = newPoints[v];
             np += vertPushForces[v];

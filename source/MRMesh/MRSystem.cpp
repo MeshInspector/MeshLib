@@ -1,5 +1,6 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
+#include "MRPch/MRSpdlog.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -224,6 +225,64 @@ std::filesystem::path GetTempDirectory()
     }
 
     return res;
+}
+
+std::string GetClipboardText()
+{
+#ifndef _WIN32
+    return "";
+#else
+    // Try opening the clipboard
+    if ( !OpenClipboard( nullptr ) )
+    {
+        spdlog::error( "Could not open clipboard" );
+        return "";
+    }
+
+    // Get handle of clipboard object for ANSI text
+    HANDLE hData = GetClipboardData( CF_TEXT );
+    if ( !hData )
+    {
+        spdlog::error( "Could not open clipboard" );
+        CloseClipboard();
+        return "";
+    }
+
+    // Lock the handle to get the actual text pointer
+    char* pszText = static_cast< char* >( GlobalLock( hData ) );
+    if ( !pszText )
+    {
+        spdlog::error( "Could not open clipboard" );
+        CloseClipboard();
+        return "";
+    }
+    // Save text in a string class instance
+    std::string text( pszText );
+
+    // Release the lock
+    GlobalUnlock( hData );
+
+    // Release the clipboard
+    CloseClipboard();
+
+    return text;
+#endif
+}
+
+void SetClipboardText( const std::string& text )
+{
+#ifndef _WIN32
+    ( void )text;
+    return;
+#else
+    HGLOBAL hMem = GlobalAlloc( GMEM_MOVEABLE, text.size() + 1 );
+    memcpy( GlobalLock( hMem ), text.c_str(), text.size() + 1 );
+    GlobalUnlock( hMem );
+    OpenClipboard( 0 );
+    EmptyClipboard();
+    SetClipboardData( CF_TEXT, hMem );
+    CloseClipboard();
+#endif
 }
 
 std::string GetMRVersionString()

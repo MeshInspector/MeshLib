@@ -25,12 +25,6 @@ MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressC
 /// \return true if was finished successfully, false if was interrupted by progress callback
 MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
 
-enum class RelaxApproxType 
-{
-    Planar,
-    Quadric
-};
-
 struct MeshApproxRelaxParams : MeshRelaxParams
 {
     /// radius to find neighbors by surface

@@ -14,4 +14,10 @@ struct RelaxParams
     float force{0.5f};
 };
 
+enum class RelaxApproxType
+{
+    Planar,
+    Quadric,
+};
+
 } // namespace MR

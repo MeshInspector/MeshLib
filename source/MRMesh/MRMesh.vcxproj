@@ -258,6 +258,7 @@
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
     <ClInclude Include="MRPolylineRelax.h" />
+    <ClInclude Include="MRRelaxParams.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

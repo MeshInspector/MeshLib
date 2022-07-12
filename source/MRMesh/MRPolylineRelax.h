@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRMeshRelax.h"
+#include "MRProgressCallback.h"
+#include "MRRelaxParams.h"
 
 namespace MR
 {

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include "MRRelaxParams.h"
 
 namespace MR
 {
@@ -8,16 +9,6 @@ namespace MR
 /// \defgroup MeshRelaxGroup Mesh Relax
 /// \ingroup MeshAlgorithmGroup
 /// \{
-
-struct RelaxParams
-{
-    /// number of iterations
-    int iterations{ 1 };
-    /// region to relax
-    const VertBitSet* region{ nullptr };
-    /// speed of relaxing, typical values (0.0, 0.5]
-    float force{ 0.5f };
-};
 
 struct MeshRelaxParams : RelaxParams
 {

@@ -10,7 +10,6 @@ namespace MR
 
 struct PolylineRelaxParams : RelaxParams
 {
-    //
 };
 
 /// applies given number of relaxation iterations to the whole polyline ( or some region if it is specified )

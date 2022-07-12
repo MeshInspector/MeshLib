@@ -16,7 +16,7 @@ bool relax( Polyline3 &polyline, const PolylineRelaxParams &params, ProgressCall
     MR_WRITER(polyline)
 
     VertCoords newPoints;
-    const auto& zone = polyline.topology.getValidVerts();
+    const auto& zone = polyline.topology.getVertIds( params.region );
 
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
@@ -62,7 +62,7 @@ bool relaxKeepArea( Polyline3 &polyline, const PolylineRelaxParams &params, Prog
     MR_WRITER(polyline)
 
     VertCoords newPoints;
-    const auto& zone = polyline.topology.getValidVerts();
+    const auto& zone = polyline.topology.getVertIds( params.region );
     std::vector<Vector3f> vertPushForces( zone.size() );
 
     bool keepGoing = true;

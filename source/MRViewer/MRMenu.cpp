@@ -736,7 +736,7 @@ void Menu::draw_helpers()
         if ( shortcutManager_ )
             numLines += shortcutManager_->getShortcutList().size();
         
-        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * (ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
+        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
 
         ImVec2 windowPos = ImGui::GetMousePos();
         windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );

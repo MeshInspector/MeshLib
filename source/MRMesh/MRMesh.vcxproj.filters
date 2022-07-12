@@ -100,6 +100,9 @@
     <Filter Include="Source Files\Polyline">
       <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Relax">
+      <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -603,9 +606,6 @@
     <ClInclude Include="MRAABBTreePolyline.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRPointCloudRelax.h">
-      <Filter>Source Files\Relax</Filter>
-    </ClInclude>
     <ClInclude Include="MRBestFitQuadric.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -732,9 +732,6 @@
     <ClInclude Include="MRMeshTriPoint.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshRelax.h">
-      <Filter>Source Files\Relax</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshToPointCloud.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -843,10 +840,16 @@
     <ClInclude Include="MRChangePolylineAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
-    <ClInclude Include="MRPolylineRelax.h">
+    <ClInclude Include="MRRelaxParams.h">
       <Filter>Source Files\Relax</Filter>
     </ClInclude>
-    <ClInclude Include="MRRelaxParams.h">
+    <ClInclude Include="MRMeshRelax.h">
+      <Filter>Source Files\Relax</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloudRelax.h">
+      <Filter>Source Files\Relax</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolylineRelax.h">
       <Filter>Source Files\Relax</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1214,9 +1217,6 @@
     <ClCompile Include="MRAABBTreePolyline.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRPointCloudRelax.cpp">
-      <Filter>Source Files\PointCloud</Filter>
-    </ClCompile>
     <ClCompile Include="MRBestFitQuadric.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
@@ -1331,9 +1331,6 @@
     <ClCompile Include="MRMeshTriPoint.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshRelax.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshToPointCloud.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
@@ -1433,8 +1430,14 @@
     <ClCompile Include="MRPolylineSubdivide.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshRelax.cpp">
+      <Filter>Source Files\Relax</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudRelax.cpp">
+      <Filter>Source Files\Relax</Filter>
+    </ClCompile>
     <ClCompile Include="MRPolylineRelax.cpp">
-      <Filter>Source Files\Polyline</Filter>
+      <Filter>Source Files\Relax</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

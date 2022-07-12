@@ -121,10 +121,10 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
     return keepGoing;
 }
 
-template bool relax<>( Polyline2& polyline, const RelaxParams& params, ProgressCallback cb );
-template bool relax<>( Polyline3& polyline, const RelaxParams& params, ProgressCallback cb );
+template MRMESH_API bool relax<Vector2f>( Polyline2& polyline, const RelaxParams& params, ProgressCallback cb );
+template MRMESH_API bool relax<Vector3f>( Polyline3& polyline, const RelaxParams& params, ProgressCallback cb );
 
-template bool relaxKeepArea<>( Polyline2 &polyline, const RelaxParams &params, ProgressCallback cb );
-template bool relaxKeepArea<>( Polyline3 &polyline, const RelaxParams &params, ProgressCallback cb );
+template MRMESH_API bool relaxKeepArea<Vector2f>( Polyline2 &polyline, const RelaxParams &params, ProgressCallback cb );
+template MRMESH_API bool relaxKeepArea<Vector3f>( Polyline3 &polyline, const RelaxParams &params, ProgressCallback cb );
 
 } // namespace MR

@@ -446,62 +446,62 @@ void Menu::draw_mr_menu()
             switch ( viewportConfig_ )
             {
                 case Vertical:
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height;
                     viewer->viewport().setViewportRect( rect );
 
-                    rect.x = bounds.min.x + width * 0.5f;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height );
+                    rect.min.x = bounds.min.x + width * 0.5f;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height;
                     viewer->append_viewport( rect );
                     break;
                 case Horizontal:
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->viewport().setViewportRect( rect );
 
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y + height * 0.5f;
-                    setWidth( rect, width );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y + height * 0.5f;
+                    rect.max.x = rect.min.x + width;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->append_viewport( rect );
                     break;
                 case Quad:
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->viewport().setViewportRect( rect );
 
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y + height * 0.5f;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y + height * 0.5f;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->append_viewport( rect );
 
-                    rect.x = bounds.min.x + width * 0.5f;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x + width * 0.5f;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->append_viewport( rect );
 
-                    rect.x = bounds.min.x + width * 0.5f;
-                    rect.y = bounds.min.y + height * 0.5f;
-                    setWidth( rect, width * 0.5f );
-                    setHeight( rect, height * 0.5f );
+                    rect.min.x = bounds.min.x + width * 0.5f;
+                    rect.min.y = bounds.min.y + height * 0.5f;
+                    rect.max.x = rect.min.x + width * 0.5f;
+                    rect.max.y = rect.min.y + height * 0.5f;
                     viewer->append_viewport( rect );
                     break;
                 case Single:
                 default:
-                    rect.x = bounds.min.x;
-                    rect.y = bounds.min.y;
-                    setWidth( rect, width );
-                    setHeight( rect, height );
+                    rect.min.x = bounds.min.x;
+                    rect.min.y = bounds.min.y;
+                    rect.max.x = rect.min.x + width;
+                    rect.max.y = rect.min.y + height;
                     viewer->viewport().setViewportRect( rect );
                     break;
             }

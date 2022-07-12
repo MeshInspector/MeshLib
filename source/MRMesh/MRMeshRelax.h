@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include "MRRelaxParams.h"
 
 namespace MR
 {
@@ -8,16 +9,6 @@ namespace MR
 /// \defgroup MeshRelaxGroup Mesh Relax
 /// \ingroup MeshAlgorithmGroup
 /// \{
-
-struct RelaxParams
-{
-    /// number of iterations
-    int iterations{ 1 };
-    /// region to relax
-    const VertBitSet* region{ nullptr };
-    /// speed of relaxing, typical values (0.0, 0.5]
-    float force{ 0.5f };
-};
 
 struct MeshRelaxParams : RelaxParams
 {
@@ -33,12 +24,6 @@ MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressC
 /// do not really keeps volume but tries hard
 /// \return true if was finished successfully, false if was interrupted by progress callback
 MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
-
-enum class RelaxApproxType 
-{
-    Planar,
-    Quadric
-};
 
 struct MeshApproxRelaxParams : MeshRelaxParams
 {

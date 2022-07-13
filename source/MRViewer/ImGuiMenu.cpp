@@ -2349,4 +2349,80 @@ void ImGuiMenu::draw_open_recent_button_()
     }
 }
 
+void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )
+{
+    if ( modifier )
+        modifiers_.push_back( modifier );
+}
+
+void ImGuiMenu::allowSceneReorder( bool allow )
+{
+    allowSceneReorder_ = allow;
+}
+
+void ImGuiMenu::allowObjectsRemoval( bool allow )
+{
+    allowRemoval_ = allow;
+}
+
+void ImGuiMenu::tryRenameSelectedObject()
+{
+    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    if ( selected.size() != 1 )
+        return;
+    renameBuffer_ = selected[0]->name();
+    showRenameModal_ = true;
+}
+
+void ImGuiMenu::setObjectTreeState( const Object* obj, bool open )
+{
+    if ( obj )
+        sceneOpenCommands_[obj] = open;
+}
+
+
+
+void ImGuiMenu::PluginsCache::validate( const std::vector<ViewerPlugin*>& viewerPlugins )
+{
+    // if same then cache is valid
+    if ( viewerPlugins == allPlugins_ )
+        return;
+
+    allPlugins_ = viewerPlugins;
+
+    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
+        sortedCustomPlufins_[t] = {};
+    for ( const auto& plugin : allPlugins_ )
+    {
+        StateBasePlugin* customPlugin = dynamic_cast< StateBasePlugin* >( plugin );
+        if ( customPlugin )
+            sortedCustomPlufins_[int( customPlugin->getTab() )].push_back( customPlugin );
+    }
+    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
+    {
+        auto& tabPlugins = sortedCustomPlufins_[t];
+        std::sort( tabPlugins.begin(), tabPlugins.end(), [] ( const auto& a, const auto& b )
+        {
+            return a->sortString() < b->sortString();
+        } );
+    }
+}
+
+StateBasePlugin* ImGuiMenu::PluginsCache::findEnabled() const
+{
+    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
+    {
+        const auto& tabPlugins = sortedCustomPlufins_[t];
+        for ( auto plug : tabPlugins )
+            if ( plug->isEnabled() )
+                return plug;
+    }
+    return nullptr;
+}
+
+const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
+{
+    return sortedCustomPlufins_[int( tab )];
+}
+
 } // end namespace

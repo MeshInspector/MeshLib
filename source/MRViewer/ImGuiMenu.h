@@ -207,6 +207,22 @@ public:
 
   MRVIEWER_API void draw_custom_plugins();
 
+  void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
+  // get show selected objects state (enable / disable)
+  bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
+  std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
+
+  MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );
+
+  MRVIEWER_API void allowSceneReorder( bool allow );
+  bool checkPossibilityObjectRemoval() { return allowRemoval_; };
+
+  MRVIEWER_API void allowObjectsRemoval( bool allow );
+
+  MRVIEWER_API void tryRenameSelectedObject();
+
+  MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
+
 protected:
     
     bool capturedMouse_{ false };
@@ -267,6 +283,8 @@ protected:
     void draw_history_block_();
 
     void draw_open_recent_button_();
+
+    
 };
 
 } // end namespace

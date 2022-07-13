@@ -45,15 +45,6 @@
 #endif
 
 
-namespace
-{
-
-
-// goes up and down on scene tree, selecting objects with different modifiers
-
-
-}
-
 namespace MR
 {
 
@@ -76,107 +67,6 @@ void Menu::init( MR::Viewer *_viewer )
     };
 
     setupShortcuts_();
-}
-
-
-
-
-
-
-
-
-
-void Menu::setObjectTreeState( const Object* obj, bool open )
-{
-    if ( obj )
-        sceneOpenCommands_[obj] = open;
-}
-
-void Menu::tryRenameSelectedObject()
-{
-    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selected.size() != 1 )
-        return;
-    renameBuffer_ = selected[0]->name();
-    showRenameModal_ = true;
-}
-
-void Menu::allowObjectsRemoval( bool allow )
-{
-    allowRemoval_ = allow;
-}
-
-void Menu::allowSceneReorder( bool allow )
-{
-    allowSceneReorder_ = allow;
-}
-
-
-
-
-
-
-
-void Menu::add_modifier( std::shared_ptr<MeshModifier> modifier )
-{
-    if ( modifier )
-        modifiers_.push_back( modifier );
-}
-
-      
-
-
-
-void Menu::setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec )
-{
-    frameTimeMillisecThreshold_ = maxGoodTimeMillisec;
-}
-
-
-
-
-
-void Menu::PluginsCache::validate( const std::vector<ViewerPlugin*>& viewerPlugins )
-{
-    // if same then cache is valid
-    if ( viewerPlugins == allPlugins_ )
-        return;
-
-    allPlugins_ = viewerPlugins;
-
-    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
-        sortedCustomPlufins_[t] = {};
-    for ( const auto& plugin : allPlugins_ )
-    {
-        StateBasePlugin * customPlugin = dynamic_cast< StateBasePlugin* >( plugin );
-        if ( customPlugin )
-            sortedCustomPlufins_[int( customPlugin->getTab() )].push_back( customPlugin );
-    }
-    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
-    {
-        auto& tabPlugins = sortedCustomPlufins_[t];
-        std::sort( tabPlugins.begin(), tabPlugins.end(), [] ( const auto& a, const auto& b )
-        {
-            return a->sortString() < b->sortString();
-        } );
-    }
-}
-
-StateBasePlugin* Menu::PluginsCache::findEnabled() const
-{
-    for ( int t = 0; t < int( StatePluginTabs::Count ); ++t )
-    {
-        const auto& tabPlugins = sortedCustomPlufins_[t];
-        for ( auto plug : tabPlugins )
-            if ( plug->isEnabled() )
-                return plug;
-    }
-    return nullptr;
-}
-
-const std::vector<StateBasePlugin*>& Menu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
-{
-    return sortedCustomPlufins_[int( tab )];
 }
 
 }

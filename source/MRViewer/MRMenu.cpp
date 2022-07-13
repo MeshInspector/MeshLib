@@ -582,33 +582,6 @@ void Menu::add_modifier( std::shared_ptr<MeshModifier> modifier )
         modifiers_.push_back( modifier );
 }
 
-bool Menu::onCharPressed_( unsigned int unicode_key, int modifiers )
-{
-    if ( MR::ImGuiMenu::onCharPressed_( unicode_key, modifiers ) )
-        return true;
-    return false;
-}
-
-bool Menu::onKeyDown_( int key, int modifiers )
-{  
-    if ( ImGuiMenu::onKeyDown_( key, modifiers ) )
-        return true;  
-      
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key,modifiers } );
-
-    return false;
-}
-
-bool Menu::onKeyRepeat_( int key, int modifiers )
-{
-    if ( ImGuiMenu::onKeyRepeat_( key, modifiers ) )
-        return true;
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key, modifiers } );
-    return false;
-}
-
 void Menu::draw_open_recent_button_()
 {
     if ( ImGui::BeginCombo( "##Recently Loaded", "##Recently Loaded", ImGuiComboFlags_NoPreview ) )

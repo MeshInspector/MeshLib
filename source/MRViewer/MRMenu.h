@@ -55,22 +55,8 @@ public:
     bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
 
 protected:
-    // Keyboard IO
-    MRVIEWER_API virtual bool onCharPressed_( unsigned key, int modifiers ) override;
-    MRVIEWER_API virtual bool onKeyDown_( int key, int modifiers ) override;
-    MRVIEWER_API virtual bool onKeyRepeat_( int key, int modifiers ) override;
-    // add ranges (that will be used in menu) to builder 
+
     
-
-
-
-
-    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
-
-
-
-protected:
-
     std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
 
 

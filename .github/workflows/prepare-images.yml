@@ -134,3 +134,6 @@ jobs:
 
       - name: Push image
         run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+        
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes

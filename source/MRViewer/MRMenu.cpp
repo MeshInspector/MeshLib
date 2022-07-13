@@ -76,7 +76,6 @@ void Menu::init( MR::Viewer *_viewer )
     };
 
     setupShortcuts_();
-    spdlog::info( "Press F1 to get see shortcut list." );
 }
 
 

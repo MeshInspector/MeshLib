@@ -1,13 +1,13 @@
 #pragma once
 #include "ImGuiMenu.h"
-#include "MRStatePlugin.h"
+
 #include "imgui.h"
 #include "exports.h"
-#include <unordered_map>
+
 
 namespace MR
 {
-class MeshModifier;
+
 
 class MRVIEWER_CLASS Menu : public MR::ImGuiMenu
 {
@@ -16,10 +16,10 @@ public:
 
     // this fuction will be called for resizing or updating fonts
     // if you need to customize the whole fonts reloading process - override reload_font function
-    MRVIEWER_API void draw_mr_menu();
+    
     
 
-    MRVIEWER_API void draw_custom_plugins();
+    
 
     // change object tree node to open/closed on next frame
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
@@ -57,22 +57,21 @@ public:
 protected:
 
     
-    std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
+
 
 
 private:
-    void draw_open_recent_button_();
 
-    void draw_history_block_();
+
+
 
 
     // TODO move to independent namespace (ImGui_utils)
 
 
-    std::string searchPluginsString_;
+    
 
-    ImVec2 mainWindowPos_;
-    ImVec2 mainWindowSize_;
+
 
 
 
@@ -82,29 +81,13 @@ private:
     // maximum good time for frame rendering milliseconds (25 ms ~ 40 FPS)
     long long frameTimeMillisecThreshold_{ 25 };
 
-    enum ViewportConfigurations
-    {
-        Single,
-        Horizontal, // left viewport, right viewport
-        Vertical, // lower viewport, upper viewport
-        Quad // left lower vp, left upper vp, right lower vp, right upper vp
-    } viewportConfig_{Single};
+
 
 
     // struct to specify scene reorder params
 
     // Used not to accumulate plugins each frame (also sorts tab plugins by special string)
-    mutable struct PluginsCache
-    {
-        // if cache is valid do nothing, otherwise accumulate all custom plugins in tab sections and sort them by special string
-        void validate( const std::vector<ViewerPlugin*>& viewerPlugins );
-        // finds enabled custom plugin, nullptr if none is
-        StateBasePlugin* findEnabled() const;
-        const std::vector<StateBasePlugin*>& getTabPlugins( StatePluginTabs tab ) const;
-    private:
-        std::array<std::vector<StateBasePlugin*>, size_t( StatePluginTabs::Count )> sortedCustomPlufins_;
-        std::vector<ViewerPlugin*> allPlugins_; // to validate
-    } pluginsCache_;
+   
 
     bool showNewSelectedObjects_{ true };
 };

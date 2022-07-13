@@ -107,6 +107,7 @@ protected:
 
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 
+    bool uniformScale_{ true };
 private:
     void draw_open_recent_button_();
 
@@ -141,8 +142,6 @@ private:
     Box3f selectionBbox_; // updated in drawSelectionInformation_
 
     std::weak_ptr<Object> lastRenameObj_;
-
-    bool uniformScale_{true};
 
     bool allowRemoval_{ true };
     bool allowSceneReorder_{ true };

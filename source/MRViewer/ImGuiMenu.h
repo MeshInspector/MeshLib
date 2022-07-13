@@ -112,6 +112,11 @@ public:
   // opens error modal window with error text
   MRVIEWER_API void showErrorModal( const std::string& error );
 
+  MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
+
+  // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
+  MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
+
 protected:
     
     bool capturedMouse_{ false };
@@ -136,8 +141,7 @@ protected:
     // called in ImGuiMenu::postRescale_()
     MRVIEWER_API virtual void rescaleStyle_();
 
-    // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
-    MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
+    MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
 };
 
 } // end namespace

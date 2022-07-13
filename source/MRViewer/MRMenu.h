@@ -16,8 +16,6 @@ public:
 
     // this fuction will be called for resizing or updating fonts
     // if you need to customize the whole fonts reloading process - override reload_font function
-    MRVIEWER_API virtual void load_font(int font_size = 13 ) override;
-
     MRVIEWER_API void draw_mr_menu();
     // Draw scene list window with content
     MRVIEWER_API void draw_scene_list();
@@ -57,7 +55,7 @@ public:
     MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );
 
     // should return path of font that will be used in menu
-    MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
+    
 
     // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
     MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
@@ -75,7 +73,7 @@ protected:
     MRVIEWER_API virtual bool onKeyDown_( int key, int modifiers ) override;
     MRVIEWER_API virtual bool onKeyRepeat_( int key, int modifiers ) override;
     // add ranges (that will be used in menu) to builder 
-    MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
+    
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API float drawTransform_();

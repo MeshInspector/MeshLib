@@ -25,6 +25,7 @@
 #include "MRMesh/MRChangeNameAction.h"
 ////////////////////////////////////////////////////////////////////////////////
 #include "MRPch/MRWasm.h"
+#include "MRMesh/MRStringConvert.h"
 
 namespace MR
 {
@@ -89,10 +90,57 @@ void ImGuiMenu::initBackend()
     ImGui_ImplOpenGL3_Init( glsl_version );
 }
 
+std::filesystem::path ImGuiMenu::getMenuFontPath() const
+{
+#ifdef _WIN32
+    // get windows font
+    wchar_t winDir[MAX_PATH];
+    GetWindowsDirectoryW( winDir, MAX_PATH );
+    std::filesystem::path winDirPath( winDir );
+    winDirPath /= "Fonts";
+    winDirPath /= "Consola.ttf";
+    return winDirPath;
+#else
+    return {};
+#endif
+}
+
+void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
+{
+    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
+}
+
 void ImGuiMenu::load_font(int font_size)
 {
-    ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(droid_sans_compressed_data,
-        droid_sans_compressed_size, font_size * hidpi_scaling_);
+#ifdef _WIN32
+    if ( viewer->isGLInitialized() )
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        auto fontPath = getMenuFontPath();
+
+        ImVector<ImWchar> ranges;
+        ImFontGlyphRangesBuilder builder;
+        addMenuFontRanges_( builder );
+        builder.BuildRanges( &ranges );
+
+        io.Fonts->AddFontFromFileTTF(
+            utf8string( fontPath ).c_str(), font_size * menu_scaling(),
+            nullptr, ranges.Data );
+        io.Fonts->Build();
+    }
+    else
+    {
+        ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+      droid_sans_compressed_size, font_size * hidpi_scaling_ );
+        ImGui::GetIO().Fonts[0].Build();
+    }
+#else
+    ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+      droid_sans_compressed_size, font_size * hidpi_scaling_);
+    //TODO: expand for non-Windows systems
+#endif
+  
 }
 
 void ImGuiMenu::reload_font(int font_size)

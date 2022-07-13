@@ -1,5 +1,6 @@
 #include "MRChangeSceneAction.h"
 #include "MRHeapBytes.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -27,7 +28,14 @@ void ChangeSceneAction::action( HistoryAction::Type actionType )
         if ( !parent_ )
             return;
         if ( nextObj_ )
-            parent_->addChildBefore( obj_, nextObj_ );
+        {
+            if ( !parent_->addChildBefore( obj_, nextObj_ ) )
+            {
+                spdlog::warn( "ChangeSceneAction: could not find next object \"{}\" in scene to add \"{}\"", 
+                    nextObj_->name(), obj_->name() );
+                parent_->addChild( obj_ );
+            }
+        }
         else
             parent_->addChild( obj_ );
     }
@@ -48,6 +56,8 @@ void ChangeSceneAction::updateParent_()
     bool foundNext = false;
     for ( const auto& child : parent_->children() )
     {
+        if ( child->isAncillary() )
+            continue;
         if ( foundNext )
         {
             nextObj_ = child;

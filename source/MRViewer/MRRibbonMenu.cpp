@@ -1404,7 +1404,7 @@ void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object
 void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem() )
+    if ( ImGui::BeginPopupContextItem("SelectedObjectContextWindow") )
     {
         bool wasChanged = false;
         if ( selectedVisualObjs.empty() )
@@ -1432,18 +1432,20 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
 
 void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
 {
-    if ( !ImGui::BeginPopupContextItem() )
+    if ( !ImGui::BeginPopupContextItem( "TransfromContextWindow" ) )
         return;
 
     auto buttonSize = 100.0f * menu_scaling();
 
+    const auto& startXf = selected->xf();
 #ifdef _WIN32
     if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
     {
         Json::Value root;
         root["Name"] = "MeshLib Transform";
-        serializeToJson( selected->xf(), root["XF"] );
+        serializeToJson( startXf, root["XF"] );
         SetClipboardText( root.toStyledString() );
+        root["UniformScale"] = uniformScale_;
         ImGui::CloseCurrentPopup();
     }
 #endif
@@ -1465,21 +1467,35 @@ void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                     deserializeFromJson( root["XF"], xf );
                     AppendHistory<ChangeXfAction>( "Change XF", selected );
                     selected->setXf( xf );
+                    uniformScale_ = root["UniformScale"].asBool();
                     ImGui::CloseCurrentPopup();
                 }
             }
         }
     }
 
-    auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-    if ( item != RibbonSchemaHolder::schema().items.end() && 
-        item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
-        RibbonButtonDrawer::GradientButton( "Apply", ImVec2( buttonSize, 0 ) ) )
+    if ( startXf != AffineXf3f() )
     {
-        item->second.item->action();
-        ImGui::CloseCurrentPopup();
-    }
+        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
+        if ( item != RibbonSchemaHolder::schema().items.end() &&
+            item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
+            RibbonButtonDrawer::GradientButton( "Apply", ImVec2( buttonSize, 0 ) ) )
+        {
+            item->second.item->action();
+            ImGui::CloseCurrentPopup();
+        }
+        if ( ImGui::IsItemHovered() )
+            ImGui::SetTooltip( "Transforms object and resets transform value to identity." );
 
+        if ( RibbonButtonDrawer::GradientButton( "Reset", ImVec2( buttonSize, 0 ) ) )
+        {
+            AppendHistory<ChangeXfAction>( "Reset XF", selected );
+            selected->setXf( AffineXf3f() );
+            ImGui::CloseCurrentPopup();
+        }
+        if ( ImGui::IsItemHovered() )
+            ImGui::SetTooltip( "Resets transform value to identity." );
+    }
     ImGui::EndPopup();
 }
 

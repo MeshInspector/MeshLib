@@ -21,7 +21,7 @@ on:
 jobs:
   image-select:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       image_tag: ${{ steps.select-tag.outputs.image_tag}}
       windows_image_tag: ${{ steps.select-tag.outputs.windows_image_tag}}
@@ -101,7 +101,7 @@ jobs:
         run: |
           echo ${{github.repository}}
           if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-build\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"build\"},{\"distribution\":\"ubuntu22\", \"os\":\"build\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           else

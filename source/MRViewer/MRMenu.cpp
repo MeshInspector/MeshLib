@@ -123,36 +123,6 @@ void Menu::init( MR::Viewer *_viewer )
     spdlog::info( "Press F1 to get see shortcut list." );
 }
 
-void Menu::load_font(int font_size)
-{
-#ifdef _WIN32
-    if ( viewer->isGLInitialized() )
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        auto fontPath = getMenuFontPath();
-
-        ImVector<ImWchar> ranges;
-        ImFontGlyphRangesBuilder builder;
-        addMenuFontRanges_( builder );
-        builder.BuildRanges( &ranges );
-
-        io.Fonts->AddFontFromFileTTF(
-            utf8string( fontPath ).c_str(), font_size * menu_scaling(),
-            nullptr, ranges.Data );
-        io.Fonts->Build();
-    }
-    else
-    {
-        ImGuiMenu::load_font( font_size );
-        ImGui::GetIO().Fonts[0].Build();
-    }
-#else
-    ImGuiMenu::load_font( font_size );
-    //TODO: expand for non-Windows systems
-#endif
-}
-
 void selectRecursive( Object& obj )
 {
     obj.select( true );
@@ -772,25 +742,9 @@ bool Menu::onKeyRepeat_( int key, int modifiers )
     return false;
 }
 
-std::filesystem::path Menu::getMenuFontPath() const
-{
-#ifdef _WIN32
-    // get windows font
-    wchar_t winDir[MAX_PATH];
-    GetWindowsDirectoryW( winDir, MAX_PATH );
-    std::filesystem::path winDirPath( winDir );
-    winDirPath /= "Fonts";
-    winDirPath /= "Consola.ttf";
-    return winDirPath;
-#else
-    return {};
-#endif
-}
 
-void Menu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
-{
-    builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
-}
+
+
 
 float Menu::drawSelectionInformation_()
 {

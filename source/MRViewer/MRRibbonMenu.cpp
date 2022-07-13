@@ -1432,7 +1432,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
 
 bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
 {
-    if ( !ImGui::BeginPopupContextItem( "TransfromContextWindow" ) )
+    if ( !ImGui::BeginPopupContextItem( "TransformContextWindow" ) )
         return false;
 
     auto buttonSize = 100.0f * menu_scaling();

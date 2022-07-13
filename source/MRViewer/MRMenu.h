@@ -119,9 +119,6 @@ private:
         std::vector<ViewerPlugin*> allPlugins_; // to validate
     } pluginsCache_;
 
-    bool dragTrigger_ = false;
-    bool clickTrigger_ = false;
-
     bool showNewSelectedObjects_{ true };
 };
 

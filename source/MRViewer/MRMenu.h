@@ -91,7 +91,8 @@ protected:
     MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, int& counter );
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ ) {}
 
-    MRVIEWER_API virtual void drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) {}
+    // returns true if context is opened
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
 
     // override this to customize prefix for objects in scene
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& ) {}

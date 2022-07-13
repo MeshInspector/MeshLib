@@ -91,6 +91,10 @@
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 
+#ifndef __EMSCRIPTEN__
+#include <fmt/chrono.h>
+#endif
+
 namespace MR
 {
 

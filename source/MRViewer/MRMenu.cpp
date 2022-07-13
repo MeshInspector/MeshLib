@@ -609,17 +609,6 @@ bool Menu::onKeyRepeat_( int key, int modifiers )
     return false;
 }
 
-
-
-
-
-
-
-// m = q*r
-
-
-
-
 void Menu::draw_open_recent_button_()
 {
     if ( ImGui::BeginCombo( "##Recently Loaded", "##Recently Loaded", ImGuiComboFlags_NoPreview ) )

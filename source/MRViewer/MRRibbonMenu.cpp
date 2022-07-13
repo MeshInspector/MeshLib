@@ -1430,10 +1430,10 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     }
 }
 
-void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
+bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
 {
     if ( !ImGui::BeginPopupContextItem( "TransformContextWindow" ) )
-        return;
+        return false;
 
     auto buttonSize = 100.0f * menu_scaling();
 
@@ -1444,8 +1444,8 @@ void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::Value root;
         root["Name"] = "MeshLib Transform";
         serializeToJson( startXf, root["XF"] );
-        SetClipboardText( root.toStyledString() );
         root["UniformScale"] = uniformScale_;
+        SetClipboardText( root.toStyledString() );
         ImGui::CloseCurrentPopup();
     }
 #endif
@@ -1497,6 +1497,7 @@ void RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             ImGui::SetTooltip( "Resets transform value to identity." );
     }
     ImGui::EndPopup();
+    return true;
 }
 
 const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName ) const

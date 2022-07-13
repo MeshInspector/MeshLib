@@ -65,6 +65,7 @@ protected:
 
 
 
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
 
 
 

@@ -229,8 +229,7 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
     {}
 
-    MRVIEWER_API virtual void drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ )
-    {}
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
 
 
 };

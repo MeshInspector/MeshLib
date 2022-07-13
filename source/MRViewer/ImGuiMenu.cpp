@@ -1394,8 +1394,10 @@ float ImGuiMenu::drawTransform_()
     if ( selected.size() == 1 && !selected[0]->isLocked() )
     {
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
+        bool openedContext = false;
         if ( ImGui::CollapsingHeader( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
+            openedContext = drawTransformContextMenu_( selected[0] );
             const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
             resultHeight_ += transformHeight + style.ItemSpacing.y;
             ImGui::BeginChild( "SceneTransform", ImVec2( 0, transformHeight ) );
@@ -1475,8 +1477,11 @@ float ImGuiMenu::drawTransform_()
             }
             data.setXf( xf );
             ImGui::EndChild();
-            drawTransformContextMenu_( selected[0] );
+            if ( !openedContext )
+                openedContext = drawTransformContextMenu_( selected[0] );
         }
+        if ( !openedContext )
+            drawTransformContextMenu_( selected[0] );        
     }
 
     return resultHeight_;

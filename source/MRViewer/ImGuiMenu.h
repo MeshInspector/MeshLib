@@ -11,6 +11,7 @@
 #include "MRMeshViewer.h"
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
+#include "MRStatePlugin.h"
 #include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -22,6 +23,7 @@ namespace MR
 {
 
 class ShortcutManager;
+class MeshModifier;
 
 class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
     public MultiListener<
@@ -59,6 +61,8 @@ protected:
 
   ImVec2 sceneWindowPos_;
   ImVec2 sceneWindowSize_;
+  ImVec2 mainWindowPos_;
+  ImVec2 mainWindowSize_;
 
   std::unordered_map<const Object*, bool> sceneOpenCommands_;
 
@@ -86,6 +90,30 @@ protected:
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
 
+  mutable struct PluginsCache
+  {
+      // if cache is valid do nothing, otherwise accumulate all custom plugins in tab sections and sort them by special string
+      void validate( const std::vector<ViewerPlugin*>& viewerPlugins );
+      // finds enabled custom plugin, nullptr if none is
+      StateBasePlugin* findEnabled() const;
+      const std::vector<StateBasePlugin*>& getTabPlugins( StatePluginTabs tab ) const;
+  private:
+      std::array<std::vector<StateBasePlugin*>, size_t( StatePluginTabs::Count )> sortedCustomPlufins_;
+      std::vector<ViewerPlugin*> allPlugins_; // to validate
+  } pluginsCache_;
+
+  std::string searchPluginsString_;
+
+  std::vector<std::shared_ptr<MR::MeshModifier>> modifiers_;
+
+  enum ViewportConfigurations
+  {
+      Single,
+      Horizontal, // left viewport, right viewport
+      Vertical, // lower viewport, upper viewport
+      Quad // left lower vp, left upper vp, right lower vp, right upper vp
+  } viewportConfig_{ Single };
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
@@ -104,6 +132,8 @@ public:
 
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
+
+  MRVIEWER_API void draw_mr_menu();
 
   // Can be overwritten by `callback_draw_viewer_menu`
   //virtual void draw_viewer_menu();
@@ -175,6 +205,8 @@ public:
                    std::function<float( const ObjectLinesHolder* )> getter,
                    std::function<void( ObjectLinesHolder*, const float& )> setter );
 
+  MRVIEWER_API void draw_custom_plugins();
+
 protected:
     
     bool capturedMouse_{ false };
@@ -232,7 +264,9 @@ protected:
 
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
 
+    void draw_history_block_();
 
+    void draw_open_recent_button_();
 };
 
 } // end namespace

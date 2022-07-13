@@ -11,6 +11,7 @@
 #include "MRMeshViewer.h"
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
+#include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
 // Forward declarations

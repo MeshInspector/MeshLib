@@ -11,6 +11,7 @@
 #include "MRMeshViewer.h"
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
+#include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
 // Forward declarations
@@ -56,7 +57,34 @@ protected:
   std::string storedError_;
   std::shared_ptr<ShortcutManager> shortcutManager_;
 
+  ImVec2 sceneWindowPos_;
+  ImVec2 sceneWindowSize_;
+
+  std::unordered_map<const Object*, bool> sceneOpenCommands_;
+
   MRVIEWER_API virtual void setupShortcuts_();
+
+  bool allowSceneReorder_{ true };
+  bool dragTrigger_ = false;
+  bool clickTrigger_ = false;
+  bool showNewSelectedObjects_{ true };
+
+  struct SceneReorder
+  {
+      std::vector<Object*> who; // object that will be moved
+      Object* to{ nullptr }; // address object
+      bool before{ false }; // if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
+  } sceneReorderCommand_;
+  
+  std::weak_ptr<Object> lastRenameObj_;
+  Box3f selectionBbox_; // updated in drawSelectionInformation_
+
+  bool allowRemoval_{ true };
+  bool uniformScale_{ true };
+  bool xfHistUpdated_{ false };
+
+  std::optional<std::pair<std::string, Vector4f>> storedColor_;
+  Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
 
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
@@ -117,6 +145,36 @@ public:
   // setup maximum good time for frame rendering (if rendering is slower it will become red in statistics window)
   MRVIEWER_API void setDrawTimeMillisecThreshold( long long maxGoodTimeMillisec );
 
+  // Draw scene list window with content
+  MRVIEWER_API void draw_scene_list();
+  // Draw scene list content only
+  MRVIEWER_API void draw_scene_list_content( const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
+
+  // override this to have custom "Selection Properties" window
+  // draw window with content
+  MRVIEWER_API virtual void draw_selection_properties( std::vector<std::shared_ptr<Object>>& selected );
+  // override this to have custom "Selection Properties" content
+  // draw content only
+  MRVIEWER_API virtual void draw_selection_properties_content( std::vector<std::shared_ptr<Object>>& selected );
+  // override this to have custom UI in "Selection Properties" window (under "Draw Options")
+
+  // override this to customize prefix for objects in scene
+  MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
+  {}
+
+  // override this to have custom UI in "Scene" window (under opened(expanded) object line)
+  MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
+
+  bool make_checkbox( const char* label, bool& checked, bool mixed );
+  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid );
+  template<typename ObjectT>
+  void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
+                            std::function<Vector4f( const ObjectT* )> getter,
+                            std::function<void( ObjectT*, const Vector4f& )> setter );
+  void make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+                   std::function<float( const ObjectLinesHolder* )> getter,
+                   std::function<void( ObjectLinesHolder*, const float& )> setter );
+
 protected:
     
     bool capturedMouse_{ false };
@@ -142,6 +200,39 @@ protected:
     MRVIEWER_API virtual void rescaleStyle_();
 
     MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
+
+    // payload object will be moved
+    MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+    // "target" and "before" are "to" and "before" of SceneReorder struct
+    // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
+    // counter - unique number of object in tree (needed for ImGui to differ new lines)
+    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, int counter );
+    MRVIEWER_API void reorderSceneIfNeeded_();
+
+    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, int& counter );
+
+    MRVIEWER_API float drawSelectionInformation_();
+    MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+
+    MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+
+    MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
+
+    MRVIEWER_API float drawTransform_();
+
+    std::vector<Object*> getPreSelection_( Object* meshclicked,
+                                           bool isShift, bool isCtrl,
+                                           const std::vector<std::shared_ptr<Object>>& selected,
+                                           const std::vector<std::shared_ptr<Object>>& all );
+
+    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
+    {}
+
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
+
+
 };
 
 } // end namespace

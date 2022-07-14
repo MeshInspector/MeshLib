@@ -6,8 +6,21 @@
 
 namespace MR
 {
-    Mesh makePrism( const std::array<MR::Vector2f, 3>& points, float height )
+    Mesh makePrism( float c, float alp, float bet, float height )
     {
+		const float gam = PI_F - alp - bet;
+		const float b = c * sin( bet ) / sin( gam );
+		const float a = c * sin( alp ) / sin( gam );
+
+		const float ah = ( b * b - a * a + c * c ) / ( 2 * c );
+		const float ch = sqrt( b * b - ah * ah );
+
+		Vector2f points[3] =
+		{
+			{ -c / 2 , 0 },
+			{ ah - c / 2, ch },
+			{ c / 2, 0}
+		};
 		// all triangles (8)
 		std::vector<VertId> v
 		{

@@ -20,16 +20,6 @@ void ViewerSetup::setupBasePlugins( Viewer* viewer ) const
 {
     assert( viewer );
     auto menu = std::make_shared<RibbonMenu>();
-    /*menu->callback_draw_viewer_menu = [menu] ()
-    {
-        menu->draw_mr_menu();
-    };
-    menu->callback_draw_custom_window = [menu] ()
-    {
-        menu->draw_scene_list();
-        menu->draw_helpers();
-        menu->draw_custom_plugins();
-    };*/
     viewer->setMenuPlugin( menu );
 }
 

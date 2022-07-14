@@ -134,7 +134,7 @@ bool Open::load_( const std::filesystem::path & filename )
         return true;
     }
 
-    if ( auto menu = viewer->getMenuPluginAs<Menu>() )
+    if ( auto menu = viewer->getMenuPluginAs<ImGuiMenu>() )
         menu->showErrorModal( error );
 
     spdlog::error( error );

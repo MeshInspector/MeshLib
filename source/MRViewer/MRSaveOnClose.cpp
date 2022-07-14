@@ -24,7 +24,7 @@ void SaveOnClosePlugin::preDraw_()
         return;
     }
 
-    auto menuInstance = viewerRef.getMenuPluginAs<MR::Menu>();
+    auto menuInstance = viewerRef.getMenuPluginAs<MR::ImGuiMenu>();
     if ( !menuInstance )
         return;
     auto* context = menuInstance->getCurrentContext();

@@ -9,11 +9,6 @@
 namespace MR
 {
 
-Vector2f closestPointOnLine( const Vector2f& pt, const Vector2f& a, const Vector2f& b )
-{
-    return closestPointOnLineSegm( pt, { a, b } );
-}
-
 Polyline2ProjectionResult findProjectionOnPolyline2( const Vector2f& pt, const Polyline2& polyline, float upDistLimitSq, AffineXf2f* xf )
 {
     const AABBTreePolyline2& tree = polyline.getAABBTree();

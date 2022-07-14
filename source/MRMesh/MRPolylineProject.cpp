@@ -9,11 +9,6 @@
 namespace MR
 {
 
-Vector3f closestPointOnLine( const Vector3f& pt, const Vector3f& a, const Vector3f& b )
-{
-    return closestPointOnLineSegm( pt, { a, b } );
-}
-
 template<typename F>
 PolylineProjectionResult findProjectionCore( const Vector3f& pt, const AABBTreePolyline3 & tree, float upDistLimitSq, AffineXf3f* xf, F && edgeToEndPoints )
 {

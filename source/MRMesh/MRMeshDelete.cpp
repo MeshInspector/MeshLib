@@ -10,16 +10,6 @@
 namespace MR
 {
 
-void deleteFace( MeshTopology & topology, FaceId f )
-{
-    topology.deleteFace( f );
-}
-
-void deleteFaces( MeshTopology & topology, const FaceBitSet & fs )
-{
-    topology.deleteFaces( fs );
-}
-
 void deleteTargetFaces( Mesh& obj, const Vector3f& targetCenter )
 {
     MR_TIMER;

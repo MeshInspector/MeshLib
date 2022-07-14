@@ -9,9 +9,6 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-/// return closest point on ab segment, use closestPointOnLineSegm( const Vector3<T>& pt, const LineSegm3<T> & l ) instead
-[[deprecated]] MRMESH_API Vector3f closestPointOnLine( const Vector3f& pt, const Vector3f& a, const Vector3f& b );
-
 struct PolylineProjectionResult
 {
     /// closest line id on polyline

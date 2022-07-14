@@ -22,6 +22,7 @@ namespace MR
 MR_ADD_CLASS_FACTORY( ObjectVoxels )
 
 constexpr size_t cVoxelsHistogramBinsNumber = 256;
+constexpr int cMaxIsoSurfaceFaces = 30000000;
 
 void ObjectVoxels::construct( const SimpleVolume& volume, const ProgressCallback& cb )
 {
@@ -83,7 +84,13 @@ bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
         return false; // current iso surface represents required iso value
 
     isoValue_ = iso;
-    mesh_ = std::make_shared<Mesh>( gridToMesh( grid_, voxelSize_, isoValue_, 0.0f, cb ) );
+    auto meshRes = gridToMesh( grid_, voxelSize_, isoValue_, 0.0f, cMaxIsoSurfaceFaces, cb );
+    while ( !meshRes.has_value() )
+    {
+        auto downsampledGrid = resampled( grid_, 2.0f );
+        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, isoValue_, 0.0f, cMaxIsoSurfaceFaces, cb );
+    }
+    mesh_ = std::make_shared<Mesh>( std::move( meshRes.value() ) );
     setDirtyFlags( DIRTY_ALL );
 
     ancillary_ = false;
@@ -114,8 +121,8 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
         insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
     }
-    mesh_ = std::make_shared<Mesh>( gridToMesh( grid_, voxelSize_, isoValue_, 0.0f ) );
-    setDirtyFlags( DIRTY_ALL );
+    mesh_.reset();
+    setIsoValue( isoValue_ );
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const

@@ -56,12 +56,12 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
     } : ProgressCallback{} );
 
     // Make offset mesh
-    auto newMesh = gridToMesh( grid, voxelSizeVector, offsetInVoxels, params.adaptivity, params.callBack ?
+    auto newMesh = gridToMesh( grid, voxelSizeVector, offsetInVoxels, params.adaptivity, INT_MAX, params.callBack ?
                              [params]( float p )
     {
         params.callBack( 0.5f + p * 0.5f );
         return true;
-    } : ProgressCallback{} );
+    } : ProgressCallback{} ).value();
 
     // For not closed meshes orientation is flipped on back conversion
     if ( !isClosed )

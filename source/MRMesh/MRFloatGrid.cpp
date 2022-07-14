@@ -32,6 +32,11 @@ FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale )
     return MakeFloatGrid( std::move( dest ) );
 }
 
+FloatGrid resampled( const FloatGrid& grid, float voxelScale )
+{
+    return resampled( grid, Vector3f::diagonal( voxelScale ) );
+}
+
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 {
     if ( !grid )

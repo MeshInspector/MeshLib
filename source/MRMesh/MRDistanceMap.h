@@ -266,41 +266,6 @@ MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMap
 /// close: 1.0 (white)
 MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename );
 
-
-/// !!! DEPRECATED !!!
-
-/// Deprecated, use \ref distanceMapFromContours( const Polyline2& contours, const ContourToDistanceMapParams& params )
-[[deprecated]] MRMESH_API DistanceMap distanceMapFromContours( const Contours2f& contours, const ContourToDistanceMapParams& params );
-
-/// Deprecated, use \ref edgePointsFromContours( const Polyline2& contour, float pixelSize, float threshold )
-[[deprecated]] MRMESH_API std::vector<Vector3f> edgePointsFromContours( const Contours2f& contour, float pixelSize, float threshold );
-
-/// Deprecated, use \ref distanceMapTo2DIsoPolyline
-[[deprecated]] MRMESH_API Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap, float isoValue );
-
-/// Deprecated, use \ref distanceMapTo2DIsoPolyline
-[[deprecated]] MRMESH_API Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap,
-    const ContourToDistanceMapParams& params, float isoValue );
-
-/// Deprecated, use \ref distanceMapTo2DIsoPolyline
-[[deprecated]] MRMESH_API std::pair<Contours2f, AffineXf3f> distanceMapTo2DIsoLine( const DistanceMap& distMap,
-    const DistanceMapToWorld& params, float isoValue, bool useDepth = false );
-
-/// Deprecated, use \ref distanceMapTo2DIsoPolyline
-[[deprecated]] MRMESH_API Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap, float pixelSize, float isoValue );
-
-/// Deprecated, use \ref contourUnion
-[[deprecated]] MRMESH_API Contours2f contourUnion( const Contours2f& contoursA, const Contours2f& contoursB,
-    const ContourToDistanceMapParams& params, float offsetInside = 0 );
-
-/// Deprecated, use \ref contourIntersection
-[[deprecated]] MRMESH_API Contours2f contourIntersection( const Contours2f& contoursA, const Contours2f& contoursB,
-    const ContourToDistanceMapParams& params, float offsetInside = 0.f );
-
-/// Deprecated, use \ref contourSubtract
-[[deprecated]] MRMESH_API Contours2f contourSubtract( const Contours2f& contoursA, const Contours2f& contoursB,
-    const ContourToDistanceMapParams& params, float offsetInside = 0.f );
-
 /// \}
 
 } // namespace MR

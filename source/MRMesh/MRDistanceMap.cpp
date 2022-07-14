@@ -441,11 +441,6 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     return distMap;
 }
 
-DistanceMap distanceMapFromContours( const Contours2f& contours, const ContourToDistanceMapParams& params )
-{
-    return distanceMapFromContours( Polyline2( contours ), params );
-}
-
 std::vector<Vector3f> edgePointsFromContours( const Polyline2& polyline, float pixelSize, float threshold )
 {
     assert( polyline.topology.isConsistentlyOriented() );
@@ -488,11 +483,6 @@ std::vector<Vector3f> edgePointsFromContours( const Polyline2& polyline, float p
         }
     }
     return edgePoints;
-}
-
-std::vector<MR::Vector3f> edgePointsFromContours( const Contours2f& contour, float pixelSize, float threshold )
-{
-    return edgePointsFromContours( Polyline2( contour ), pixelSize, threshold );
 }
 
 Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue )
@@ -1182,27 +1172,6 @@ std::pair<size_t, size_t> DistanceMap::getMaxIndex() const
     return { max.second / resY(), max.second % resY() };
 }
 
-Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap, float isoValue )
-{
-    return distanceMapTo2DIsoPolyline( distMap, isoValue ).contours();
-}
-
-Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap, const ContourToDistanceMapParams& params, float isoValue )
-{
-    return distanceMapTo2DIsoPolyline( distMap, params, isoValue ).contours();
-}
-
-std::pair<Contours2f, AffineXf3f> distanceMapTo2DIsoLine( const DistanceMap& distMap, const DistanceMapToWorld& params, float isoValue, bool useDepth /*= false */ )
-{
-    auto res = distanceMapTo2DIsoPolyline( distMap, params, isoValue, useDepth );
-    return { res.first.contours(),res.second };
-}
-
-Contours2f distanceMapTo2DIsoLine( const DistanceMap& distMap, float pixelSize, float isoValue )
-{
-    return distanceMapTo2DIsoPolyline( distMap, pixelSize, isoValue ).contours();
-}
-
 Polyline2 contourUnion( const Polyline2& contoursA, const Polyline2& contoursB,
     const ContourToDistanceMapParams& params, float offsetInside )
 {
@@ -1213,11 +1182,6 @@ Polyline2 contourUnion( const Polyline2& contoursA, const Polyline2& contoursB,
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 
-Contours2f contourUnion( const Contours2f& contoursA, const Contours2f& contoursB, const ContourToDistanceMapParams& params, float offsetInside /*= 0 */ )
-{
-    return contourUnion( Polyline2( contoursA ), Polyline2( contoursB ), params, offsetInside ).contours();
-}
-
 Polyline2 contourIntersection( const Polyline2& contoursA, const Polyline2& contoursB,
     const ContourToDistanceMapParams& params, float offsetInside )
 {
@@ -1226,11 +1190,6 @@ Polyline2 contourIntersection( const Polyline2& contoursA, const Polyline2& cont
     auto mapB = distanceMapFromContours( contoursB, params );
     mapA.mergeMin( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
-}
-
-Contours2f contourIntersection( const Contours2f& contoursA, const Contours2f& contoursB, const ContourToDistanceMapParams& params, float offsetInside /*= 0.f */ )
-{
-    return contourIntersection( Polyline2( contoursA ), Polyline2( contoursB ), params, offsetInside ).contours();
 }
 
 Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contoursB,
@@ -1244,9 +1203,4 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 
-Contours2f contourSubtract( const Contours2f& contoursA, const Contours2f& contoursB, const ContourToDistanceMapParams& params, float offsetInside /*= 0.f */ )
-{
-    return contourSubtract( Polyline2( contoursA ), Polyline2( contoursB ), params, offsetInside ).contours();
-}
-
-}
+} //namespace MR

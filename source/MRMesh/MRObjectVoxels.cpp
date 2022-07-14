@@ -22,7 +22,6 @@ namespace MR
 MR_ADD_CLASS_FACTORY( ObjectVoxels )
 
 constexpr size_t cVoxelsHistogramBinsNumber = 256;
-constexpr int cMaxIsoSurfaceFaces = 30000000;
 
 void ObjectVoxels::construct( const SimpleVolume& volume, const ProgressCallback& cb )
 {
@@ -84,11 +83,13 @@ bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
         return false; // current iso surface represents required iso value
 
     isoValue_ = iso;
-    auto meshRes = gridToMesh( grid_, voxelSize_, isoValue_, 0.0f, cMaxIsoSurfaceFaces, cb );
+    auto meshRes = gridToMesh( grid_, voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
+    
+    FloatGrid downsampledGrid = grid_;
     while ( !meshRes.has_value() )
     {
-        auto downsampledGrid = resampled( grid_, 2.0f );
-        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, isoValue_, 0.0f, cMaxIsoSurfaceFaces, cb );
+        downsampledGrid = resampled( downsampledGrid, 2.0f );
+        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
     }
     mesh_ = std::make_shared<Mesh>( std::move( meshRes.value() ) );
     setDirtyFlags( DIRTY_ALL );
@@ -138,6 +139,17 @@ VoxelId ObjectVoxels::getVoxelIdByPoint( const Vector3f& point ) const
 Vector3i ObjectVoxels::getCoordinateByVoxelId( VoxelId id ) const
 {
     return indexer_.toPos( id );
+}
+
+void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
+{
+    if ( maxFaces == maxSurfaceTriangles_ )
+        return;
+    maxSurfaceTriangles_ = maxFaces;
+    if ( !mesh_ || mesh_->topology.numValidFaces() <= maxSurfaceTriangles_ )
+        return;
+    mesh_.reset();
+    setIsoValue( isoValue_ );
 }
 
 std::shared_ptr<Object> ObjectVoxels::clone() const

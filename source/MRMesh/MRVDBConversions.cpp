@@ -123,8 +123,9 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
     return MakeFloatGrid( std::move( grid ) );
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    float offsetVoxels, float adaptivity, int maxFaces,
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+    int maxFaces,
+    float offsetVoxels, float adaptivity,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -203,7 +204,13 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     if ( cb )
         cb( 1.0f );
 
-    return std::move( res );
+    return res;
+}
+
+Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, const ProgressCallback& cb /*= {} */ )
+{
+    return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb ).value();
 }
 
 } //namespace MR

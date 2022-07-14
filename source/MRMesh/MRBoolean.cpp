@@ -17,7 +17,7 @@ FloatGrid MeshVoxelsConverter::operator() ( const ObjectMesh & obj ) const
 
 Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
 { 
-    return gridToMesh( grid, Vector3f::diagonal( voxelSize ), offsetVoxels, adaptivity, INT_MAX, callBack ).value();
+    return gridToMesh( grid, Vector3f::diagonal( voxelSize ), offsetVoxels, adaptivity, callBack );
 }
 
 FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )

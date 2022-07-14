@@ -19,7 +19,7 @@ class Object;
 // Class to control and render ribbon-style menu
 // stores menu items,
 // menu structure is provided by `menuItemsStructure.json` file (parsed on init)
-class MRVIEWER_CLASS RibbonMenu : public Menu
+class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
 public:
     MRVIEWER_API RibbonMenu();

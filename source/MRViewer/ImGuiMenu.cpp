@@ -187,6 +187,8 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
 
         connect( _viewer, 0, boost::signals2::connect_position::at_front );
     }
+
+    setupShortcuts_();
 }
 
 void ImGuiMenu::initBackend()

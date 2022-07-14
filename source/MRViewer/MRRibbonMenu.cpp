@@ -118,7 +118,7 @@ RibbonMenu::~RibbonMenu()
 
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
-    Menu::init( _viewer );
+    ImGuiMenu::init( _viewer );
     readMenuItemsStructure_();
 
     RibbonIcons::load();
@@ -163,7 +163,7 @@ void RibbonMenu::shutdown()
         if ( item.second.item && item.second.item->isActive() )
             item.second.item->action();
     }
-    Menu::shutdown();
+    ImGuiMenu::shutdown();
     RibbonIcons::free();
 }
 
@@ -1259,13 +1259,13 @@ void RibbonMenu::readMenuItemsStructure_()
 
 void RibbonMenu::postResize_( int width, int height )
 {
-    Menu::postResize_( width, height );
+    ImGuiMenu::postResize_( width, height );
     fixViewportsSize_( width, height );
 }
 
 void RibbonMenu::postRescale_( float x, float y )
 {
-    Menu::postRescale_( x, y );
+    ImGuiMenu::postRescale_( x, y );
     buttonDrawer_.setScaling( menu_scaling() );
     fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
 

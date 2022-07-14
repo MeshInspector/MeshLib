@@ -66,7 +66,6 @@ void Menu::init( MR::Viewer *_viewer )
         draw_custom_plugins();
     };
 
-    setupShortcuts_();
 }
 
 }

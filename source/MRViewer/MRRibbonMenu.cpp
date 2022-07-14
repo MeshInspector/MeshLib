@@ -1404,7 +1404,7 @@ void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object
 void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem("SelectedObjectContextWindow") )
+    if ( ImGui::BeginPopupContextItem() )
     {
         bool wasChanged = false;
         if ( selectedVisualObjs.empty() )
@@ -1457,7 +1457,8 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::CharReaderBuilder readerBuilder;
         std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
         std::string error;
-        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) )
+        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) &&
+            root.isObject() )
         {
             if ( root["Name"].isString() && root["Name"].asString() == "MeshLib Transform" )
             {

@@ -75,6 +75,9 @@ public:
     /// Returns indexer with more options
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
+    MRMESH_API void setMaxSurfaceTriangles( int maxFaces );
+    int getMaxSurfaceTriangles() const { return maxSurfaceTriangles_; }
+
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
@@ -91,6 +94,7 @@ public:
     IsoChangedSignal isoChangedSignal;
 
 private:
+    int maxSurfaceTriangles_{ 10000000 };
     FloatGrid grid_;
     Vector3i dimensions_;
     float isoValue_{0.0f};

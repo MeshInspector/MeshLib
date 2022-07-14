@@ -4,6 +4,8 @@
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
+#include <tl/expected.hpp>
+#include <string>
 
 namespace MR
 {
@@ -33,6 +35,15 @@ MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
 MRMESH_API Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
                             float isoValue = 0.0f, float adaptivity = 0.0f,
                             const ProgressCallback& cb = {} );
+
+// isoValue - layer of grid with this value would be converted in mesh
+// isoValue can be negative only in level set grids
+// adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
+//                       (curvature can be lost on high values)
+// maxFaces if mesh faces exceed this value error returns
+MRMESH_API tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
+    int maxFaces,
+    float isoValue = 0.0f, float adaptivity = 0.0f, const ProgressCallback& cb = {} );
 
 }
 #endif

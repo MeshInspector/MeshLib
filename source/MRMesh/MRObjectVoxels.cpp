@@ -83,7 +83,15 @@ bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
         return false; // current iso surface represents required iso value
 
     isoValue_ = iso;
-    mesh_ = std::make_shared<Mesh>( gridToMesh( grid_, voxelSize_, isoValue_, 0.0f, cb ) );
+    auto meshRes = gridToMesh( grid_, voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
+    
+    FloatGrid downsampledGrid = grid_;
+    while ( !meshRes.has_value() )
+    {
+        downsampledGrid = resampled( downsampledGrid, 2.0f );
+        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
+    }
+    mesh_ = std::make_shared<Mesh>( std::move( meshRes.value() ) );
     setDirtyFlags( DIRTY_ALL );
 
     ancillary_ = false;
@@ -114,8 +122,8 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
         insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
     }
-    mesh_ = std::make_shared<Mesh>( gridToMesh( grid_, voxelSize_, isoValue_, 0.0f ) );
-    setDirtyFlags( DIRTY_ALL );
+    mesh_.reset();
+    setIsoValue( isoValue_ );
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const
@@ -131,6 +139,17 @@ VoxelId ObjectVoxels::getVoxelIdByPoint( const Vector3f& point ) const
 Vector3i ObjectVoxels::getCoordinateByVoxelId( VoxelId id ) const
 {
     return indexer_.toPos( id );
+}
+
+void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
+{
+    if ( maxFaces == maxSurfaceTriangles_ )
+        return;
+    maxSurfaceTriangles_ = maxFaces;
+    if ( !mesh_ || mesh_->topology.numValidFaces() <= maxSurfaceTriangles_ )
+        return;
+    mesh_.reset();
+    setIsoValue( isoValue_ );
 }
 
 std::shared_ptr<Object> ObjectVoxels::clone() const

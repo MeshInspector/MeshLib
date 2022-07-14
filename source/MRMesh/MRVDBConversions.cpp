@@ -123,9 +123,10 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
     return MakeFloatGrid( std::move( grid ) );
 }
 
-Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-                 float offsetVoxels, float adaptivity,
-                 const ProgressCallback& cb )
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+    int maxFaces,
+    float offsetVoxels, float adaptivity,
+    const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( cb )
@@ -135,6 +136,9 @@ Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     std::vector<openvdb::Vec4I> quadRes;
     openvdb::tools::volumeToMesh( *grid, pointsRes, trisRes, quadRes,
                                   offsetVoxels, adaptivity );
+
+    if ( trisRes.size() + 2 * quadRes.size() > maxFaces )
+        return tl::make_unexpected( "Triangles number limit exceeded." );
     if ( cb )
         cb( 0.2f );
     std::vector<Vector3f> points( pointsRes.size() );
@@ -201,6 +205,12 @@ Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
         cb( 1.0f );
 
     return res;
+}
+
+Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, const ProgressCallback& cb /*= {} */ )
+{
+    return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb ).value();
 }
 
 } //namespace MR

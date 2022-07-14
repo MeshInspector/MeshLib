@@ -852,6 +852,9 @@
     <ClInclude Include="MRPolylineRelax.h">
       <Filter>Source Files\Relax</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrism.h">
+      <Filter>Source Files\Primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1438,6 +1441,9 @@
     </ClCompile>
     <ClCompile Include="MRPolylineRelax.cpp">
       <Filter>Source Files\Relax</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPrism.cpp">
+      <Filter>Source Files\Primitives</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

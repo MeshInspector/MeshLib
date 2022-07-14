@@ -23,7 +23,7 @@ GLint bindVertexAttribArray(
     if ( refresh )
     {
         GLint64 bufSize = sizeof( T ) * V.size();
-        const auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
+        auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
         if ( bufSize <= maxUploadSize )
         {
             // buffers less than 4Gb are ok to load immediately

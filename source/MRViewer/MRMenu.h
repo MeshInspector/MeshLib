@@ -9,7 +9,7 @@ namespace MR
 {
 
 
-class [[deprecated]] MRVIEWER_CLASS Menu : public MR::ImGuiMenu
+class MRVIEWER_CLASS [[deprecated]] Menu : public MR::ImGuiMenu
 {
 public:
     MRVIEWER_API virtual void init( MR::Viewer *_viewer ) override;

@@ -22,7 +22,25 @@ GLint bindVertexAttribArray(
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, bufferID ) );
     if ( refresh )
     {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( T ) * V.size(), V.data(), GL_DYNAMIC_DRAW ) );
+        GLint64 bufSize = sizeof( T ) * V.size();
+        const auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
+        if ( bufSize <= maxUploadSize )
+        {
+            // buffers less than 4Gb are ok to load immediately
+            GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, V.data(), GL_DYNAMIC_DRAW ) );
+        }
+        else
+        {
+            // buffers more than 4Gb are better to split on chunks to avoid strange errors from GL or drivers
+            GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, nullptr, GL_DYNAMIC_DRAW ) );
+            GLint64 remStart = 0;
+            auto remSize = bufSize;
+            for ( ; remSize > maxUploadSize; remSize -= maxUploadSize, remStart += maxUploadSize )
+            {
+                GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, maxUploadSize, (const char *)V.data() + remStart ) );
+            }
+            GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, remSize, (const char *)V.data() + remStart ) );
+        }
     }
 
     // GL_FLOAT is left here consciously 

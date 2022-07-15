@@ -6,6 +6,7 @@
 #include "MRTimer.h"
 #include "MRPolyline.h"
 #include "MRMeshFillHole.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {
@@ -17,7 +18,7 @@ namespace MR
 
 Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     float voxelSize = params.voxelSize;
     // Compute voxel size if needed
@@ -28,16 +29,21 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
         voxelSize = std::cbrt( vol / autoVoxelNumber );
     }
 
-    bool isClosed = mp.mesh.topology.isClosed( mp.region );
+    bool useShell = params.type == OffsetParameters::Type::Shell;
+    if ( !mp.mesh.topology.isClosed( mp.region ) && !useShell )
+    {
+        spdlog::warn( "Cannot use offset for non-closed meshes, using shell instead." );
+        useShell = true;
+    }
 
-    if ( !isClosed )
+    if ( useShell )
         offset = std::abs( offset );
 
     auto offsetInVoxels = offset / voxelSize;
 
     auto voxelSizeVector = Vector3f::diagonal( voxelSize );
     // Make grid
-    auto grid = isClosed ?
+    auto grid = ( !useShell ) ?
         // Make level set grid if it is closed
         meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 1,
                         params.callBack ?
@@ -64,10 +70,25 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
     } : ProgressCallback{} );
 
     // For not closed meshes orientation is flipped on back conversion
-    if ( !isClosed )
+    if ( useShell )
         newMesh.topology.flipOrientation();
 
     return newMesh;
+}
+
+Mesh doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
+{
+    MR_TIMER
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+    {
+        spdlog::error( "Only closed meshes allowed for double offset." );
+        return {};
+    }
+    if ( params.type == OffsetParameters::Type::Shell )
+    {
+        spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
+    }
+    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
 }
 
 Mesh offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )

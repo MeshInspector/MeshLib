@@ -344,7 +344,7 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
     {
         for ( EdgeId e : leftRing( *this, f ) )
         {
-            if ( !right( e ) )
+            if ( isBdEdge( e, region ) )
                 return false;
         }
     }

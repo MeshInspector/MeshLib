@@ -45,5 +45,13 @@ MRMESH_API tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, co
     int maxFaces,
     float isoValue = 0.0f, float adaptivity = 0.0f, const ProgressCallback& cb = {} );
 
+// performs convention from mesh to levelSet and back with offsetA, and than same with offsetB
+// allowed only for closed meshes
+// adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
+//                       (curvature can be lost on high values)
+MRMESH_API Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
+    float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f,
+    const ProgressCallback& cb = {} );
+
 }
 #endif

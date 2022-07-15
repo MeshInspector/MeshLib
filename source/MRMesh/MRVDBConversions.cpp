@@ -62,6 +62,80 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
     }
 }
 
+Mesh convertFromVDMMesh( const Vector3f& voxelSize,
+    const std::vector<openvdb::Vec3s>& pointsRes, 
+    const std::vector<openvdb::Vec3I>& trisRes,
+    const std::vector<openvdb::Vec4I>& quadRes,
+    ProgressCallback cb )
+{
+    if ( cb )
+        cb( 0.0f );
+    std::vector<Vector3f> points( pointsRes.size() );
+    std::vector<MeshBuilder::Triangle> tris;
+    tris.reserve( trisRes.size() + 2 * quadRes.size() );
+    for ( int i = 0; i < points.size(); ++i )
+    {
+        points[i][0] = pointsRes[i][0] * voxelSize[0];
+        points[i][1] = pointsRes[i][1] * voxelSize[1];
+        points[i][2] = pointsRes[i][2] * voxelSize[2];
+
+        if ( cb )
+            cb( 0.5f * ( float( i ) / float( points.size() ) ) );
+    }
+    int t = 0;
+    for ( const auto& tri : trisRes )
+    {
+        MeshBuilder::Triangle newTri
+        {
+            VertId( ( int )tri[2] ),
+            VertId( ( int )tri[1] ),
+            VertId( ( int )tri[0] ),
+            FaceId( t )
+        };
+        tris.push_back( newTri );
+        ++t;
+
+        if ( cb )
+            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+    }
+    for ( const auto& quad : quadRes )
+    {
+        MeshBuilder::Triangle newTri
+        {
+            VertId( ( int )quad[2] ),
+            VertId( ( int )quad[1] ),
+            VertId( ( int )quad[0] ),
+            FaceId( t )
+        };
+        tris.push_back( newTri );
+        ++t;
+
+        if ( cb )
+            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+        newTri =
+        {
+            VertId( ( int )quad[0] ),
+            VertId( ( int )quad[3] ),
+            VertId( ( int )quad[2] ),
+            FaceId( t )
+        };
+        tris.push_back( newTri );
+        ++t;
+
+        if ( cb )
+            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+    }
+
+    Mesh res;
+    res.topology = MeshBuilder::fromTriangles( tris );
+    res.points.vec_ = std::move( points );
+
+    if ( cb )
+        cb( 1.0f );
+
+    return res;
+}
+
 FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
                           const Vector3f& voxelSize, float surfaceOffset,
                           const ProgressCallback& cb )
@@ -139,78 +213,85 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
 
     if ( trisRes.size() + 2 * quadRes.size() > maxFaces )
         return tl::make_unexpected( "Triangles number limit exceeded." );
+    
+    ProgressCallback passCallback;
     if ( cb )
+    {
         cb( 0.2f );
-    std::vector<Vector3f> points( pointsRes.size() );
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( trisRes.size() + 2 * quadRes.size() );
-    for ( int i = 0; i < points.size(); ++i )
-    {
-        points[i][0] = pointsRes[i][0] * voxelSize[0];
-        points[i][1] = pointsRes[i][1] * voxelSize[1];
-        points[i][2] = pointsRes[i][2] * voxelSize[2];
-
-        if ( cb )
-            cb( 0.2f + 0.4f * ( float( i ) / float( points.size() ) ) );
-    }
-    int t = 0;
-    for ( const auto& tri : trisRes )
-    {
-        MeshBuilder::Triangle newTri
+        passCallback = [cb] ( float p )
         {
-            VertId( ( int )tri[2] ),
-            VertId( ( int )tri[1] ),
-            VertId( ( int )tri[0] ),
-            FaceId( t )
+            return cb( 0.2f + 0.8f * p );
         };
-        tris.push_back( newTri );
-        ++t;
-
-        if ( cb )
-            cb( 0.6f + 0.4f * ( float( t ) / float( tris.capacity() ) ) );
     }
-    for ( const auto& quad : quadRes )
-    {
-        MeshBuilder::Triangle newTri
-        {
-            VertId( ( int )quad[2] ),
-            VertId( ( int )quad[1] ),
-            VertId( ( int )quad[0] ),
-            FaceId( t )
-        };
-        tris.push_back( newTri );
-        ++t;
-
-        if ( cb )
-            cb( 0.6f + 0.4f * ( float( t ) / float( tris.capacity() ) ) );
-        newTri =
-        {
-            VertId( ( int )quad[0] ),
-            VertId( ( int )quad[3] ),
-            VertId( ( int )quad[2] ),
-            FaceId( t )
-        };
-        tris.push_back( newTri );
-        ++t;
-
-        if ( cb )
-            cb( 0.6f + 0.4f * ( float( t ) / float( tris.capacity() ) ) );
-    }
-
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-
-    if ( cb )
-        cb( 1.0f );
-
-    return res;
+    return convertFromVDMMesh( voxelSize, pointsRes, trisRes, quadRes, passCallback );
 }
 
 Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, const ProgressCallback& cb /*= {} */ )
 {
     return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb ).value();
+}
+
+Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize, 
+    float offsetA, float offsetB, float adaptivity, const ProgressCallback& cb /*= {} */ )
+{
+    MR_TIMER
+
+    auto offsetInVoxelsA = offsetA / voxelSize;
+    auto offsetInVoxelsB = offsetB / voxelSize;
+
+    if ( cb )
+        cb( 0.0f );
+
+    std::vector<openvdb::Vec3s> points;
+    std::vector<openvdb::Vec3I> tris;
+    std::vector<openvdb::Vec4I> quads;
+    convertToVDMMesh( mp, xf, Vector3f::diagonal( voxelSize ), points, tris );
+
+    if ( cb )
+        cb( 0.1f );
+
+    ProgressCallback passCb;
+    if ( cb )
+    {
+        passCb = [cb] ( float p )
+        {
+            return cb( 0.1f + 0.2f * p );
+        };
+    }
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    Interrupter interrupter1( passCb );
+    auto grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+        ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
+
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
+
+    if ( cb )
+    {
+        cb( 0.5f );
+        passCb = [cb] ( float p )
+        {
+            return cb( 0.5f + 0.2f * p );
+        };
+    }
+
+    Interrupter interrupter2( passCb );
+    grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+        ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
+
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads,
+                                  offsetInVoxelsB, adaptivity );
+
+    if ( cb )
+    {
+        cb( 0.9f );
+        passCb = [cb] ( float p )
+        {
+            return cb( 0.9f + 0.1f * p );
+        };
+    }
+
+    return convertFromVDMMesh( Vector3f::diagonal( voxelSize ), points, tris, quads, passCb );
 }
 
 } //namespace MR

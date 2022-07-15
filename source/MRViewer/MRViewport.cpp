@@ -265,7 +265,9 @@ void Viewport::setPointsWithColors( const ViewportPointsWithColors& pointsWithCo
 void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColors )
 {
     if ( beforeSetLinesWithColors )
+    {
         SUPPRESS_DEPRECATION_WARNING( beforeSetLinesWithColors( getLinesWithColors(), linesWithColors ); )
+    }
     viewportGL_.setLinesWithColors( linesWithColors );
 }
 

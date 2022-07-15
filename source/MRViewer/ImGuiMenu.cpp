@@ -1203,7 +1203,9 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( selectionWorldBox.valid() )
             {
                 auto wbsize = selectionWorldBox.size();
-                if ( bsize != wbsize )
+                const std::string bsizeStr = fmt::format( "{:.3f} {:.3f} {:.3f}", bsize.x, bsize.y, bsize.z);
+                const std::string wbsizeStr = fmt::format( "{:.3f} {:.3f} {:.3f}", wbsize.x, wbsize.y, wbsize.z );
+                if ( bsizeStr != wbsizeStr )
                     drawVec3( "World box size", wbsize );
             }
         }

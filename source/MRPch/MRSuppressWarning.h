@@ -12,8 +12,8 @@ _Pragma( "GCC diagnostic push ")       \
 _Pragma( STR(GCC diagnostic ignored x) )
 #elif defined( _MSC_VER )
 #define SUPPRESS_WARNING_PUSH( x, y ) \
-_pragma( warning( push ) )            \
-_pragma( warning( disable: y ) )
+__pragma( warning( push ) )           \
+__pragma( warning( disable: y ) )
 #else
 #define SUPPRESS_WARNING_PUSH( x, y )
 #endif
@@ -26,7 +26,7 @@ _Pragma( "clang diagnostic pop" )
 _Pragma( "GCC diagnostic pop" )
 #elif defined( _MSC_VER )
 #define SUPPRESS_WARNING_POP \
-_pragma( warning( pop ) )
+__pragma( warning( pop ) )
 #else
 #define SUPPRESS_WARNING_POP
 #endif

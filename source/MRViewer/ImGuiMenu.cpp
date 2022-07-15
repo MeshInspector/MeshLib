@@ -1166,22 +1166,22 @@ float ImGuiMenu::drawSelectionInformation_()
 
             if ( auto pObjLabel = std::dynamic_pointer_cast<ObjectLabel>( pObj ) )
             {
-                if ( pObjLabel != oldLabelName_.obj )
+                if ( pObjLabel != oldLabelParams_.obj )
                 {
-                    oldLabelName_.obj = pObjLabel;
-                    const auto positionedText = pObjLabel->getLabel();
-                    oldLabelName_.lastLabel = positionedText.text;
-                    oldLabelName_.labelBuffer = oldLabelName_.lastLabel;
+                    oldLabelParams_.obj = pObjLabel;
+                    const auto& positionedText = pObjLabel->getLabel();
+                    oldLabelParams_.lastLabel = positionedText.text;
+                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
                 }
 
-                if ( ImGui::InputText( "Label", oldLabelName_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
-                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, pObjLabel->getLabel().position } );
+                if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
                 
-                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelName_.labelBuffer != oldLabelName_.lastLabel )
+                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
                 {
-                    pObjLabel->setLabel( { oldLabelName_.lastLabel, pObjLabel->getLabel().position } );
+                    pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
                     AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
-                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, pObjLabel->getLabel().position } );
+                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
                 }
             }
         }

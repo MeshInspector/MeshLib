@@ -111,6 +111,7 @@
     <ClInclude Include="MRPolylineTopology.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
+    <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -376,6 +377,7 @@
     <ClCompile Include="MRLaplacian.cpp" />
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
+    <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />

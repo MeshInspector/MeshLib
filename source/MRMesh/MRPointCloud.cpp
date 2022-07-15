@@ -49,6 +49,21 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     invalidateCaches();
 }
 
+void PointCloud::addPoint(const Vector3f& point)
+{
+    VertId id(points.size());
+    points.push_back(point);
+    validPoints.autoResizeSet(id);
+}
+
+void PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
+{
+    VertId id(points.size());
+    points.push_back(point);
+    validPoints.autoResizeSet(id);
+    normals.push_back(normal);
+}
+
 const AABBTreePoints& PointCloud::getAABBTree() const
 {
     return AABBTreeOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );

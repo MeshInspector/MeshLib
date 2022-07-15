@@ -31,6 +31,10 @@ public:
     //// if this obj have normals and from obj has not it then don't do anything
     MRMESH_API void addPartByMask( const PointCloud& from, const VertBitSet& fromVerts, VertMap* oldToNewMap = nullptr );
 
+    MRMESH_API void addPoint( const Vector3f& point );
+
+    MRMESH_API void addPoint( const Vector3f& point, const Vector3f& normal );
+
     /// Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }
 

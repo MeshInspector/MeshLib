@@ -32,6 +32,7 @@
 #include "MROpenvdb.h"
 #include "MRJson.h"
 #include "MRSpdlog.h"
+#include "MRSuppressWarning.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

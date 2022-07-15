@@ -264,7 +264,7 @@ void Viewport::setPointsWithColors( const ViewportPointsWithColors& pointsWithCo
 
 void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColors )
 {
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4998 )
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     if ( beforeSetLinesWithColors )
         beforeSetLinesWithColors( getLinesWithColors(), linesWithColors );
     MR_SUPPRESS_WARNING_POP
@@ -518,7 +518,7 @@ void  Viewport::add_line( const Vector3f& start_pos, const Vector3f& fin_pos,
     auto [newLines, newColors] = viewportGL_.getLinesWithColors();
     newLines.push_back( { start_pos, fin_pos } );
     newColors.push_back( { Vector4f( color_start ),Vector4f( color_fin ) } );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4998 )
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLinesWithColors( { newLines,newColors } );
     MR_SUPPRESS_WARNING_POP
     needRedraw_ = viewportGL_.lines_dirty;
@@ -548,7 +548,7 @@ void Viewport::add_lines( const std::vector<Vector3f>& points, const std::vector
             newColors[ind] = { Vector4f( colorsArg[i] ),Vector4f( colorsArg[i + 1] ) };
         }
     } );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4998 )
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLinesWithColors( { newLines,newColors } );
     MR_SUPPRESS_WARNING_POP
     needRedraw_ = viewportGL_.lines_dirty;
@@ -557,14 +557,14 @@ void Viewport::add_lines( const std::vector<Vector3f>& points, const std::vector
 void Viewport::add_lines( const std::vector<Vector3f>& points, const Color& color )
 {
     std::vector<Color> colors( points.size(), color );
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4998 )
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     add_lines( points, colors );
     MR_SUPPRESS_WARNING_POP
 }
 
 void  Viewport::remove_lines(  )
 {
-    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4998 )
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLinesWithColors( { {},{} } );
     MR_SUPPRESS_WARNING_POP
     needRedraw_ = viewportGL_.lines_dirty;

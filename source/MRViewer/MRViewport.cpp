@@ -13,30 +13,9 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolylineProject.h"
+#include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
-
-#if defined( __clang__ )
-#define IGNORE_DEPRECATION_WARNING( a ) \
-_Pragma( "clang diagnostic push" )      \
-_Pragma( "clang diagnostic ignored \"-Wdeprecated-declarations\"" ) \
-{ a }                                   \
-_Pragma( "clang diagnostic pop" )
-#elif defined( __GNUC__ )
-#define IGNORE_DEPRECATION_WARNING( a ) \
-_Pragma( "GCC diagnostic push" )        \
-_Pragma( "GCC diagnostic ignored \"-Wdeprecated-declarations\"" ) \
-{ a }                                   \
-_Pragma( "GCC diagnostic pop" )
-#elif defined( _MSC_VER )
-#define IGNORE_DEPRECATION_WARNING( a ) \
-_pragma( warning( push ) )              \
-_pragma( warning( disable: 4996 ) )     \
-{ a }                                   \
-_pragma( warning( pop ) )
-#else
-#define IGNORE_DEPRECATION_WARNING( a ) { a }
-#endif
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace
@@ -286,7 +265,7 @@ void Viewport::setPointsWithColors( const ViewportPointsWithColors& pointsWithCo
 void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColors )
 {
     if ( beforeSetLinesWithColors )
-        IGNORE_DEPRECATION_WARNING( beforeSetLinesWithColors( getLinesWithColors(), linesWithColors ); )
+        SUPPRESS_DEPRECATION_WARNING( beforeSetLinesWithColors( getLinesWithColors(), linesWithColors ); )
     viewportGL_.setLinesWithColors( linesWithColors );
 }
 
@@ -537,7 +516,7 @@ void  Viewport::add_line( const Vector3f& start_pos, const Vector3f& fin_pos,
     auto [newLines, newColors] = viewportGL_.getLinesWithColors();
     newLines.push_back( { start_pos, fin_pos } );
     newColors.push_back( { Vector4f( color_start ),Vector4f( color_fin ) } );
-    IGNORE_DEPRECATION_WARNING( setLinesWithColors( { newLines,newColors } ); )
+    SUPPRESS_DEPRECATION_WARNING( setLinesWithColors( { newLines,newColors } ); )
     needRedraw_ = viewportGL_.lines_dirty;
 }
 
@@ -565,19 +544,19 @@ void Viewport::add_lines( const std::vector<Vector3f>& points, const std::vector
             newColors[ind] = { Vector4f( colorsArg[i] ),Vector4f( colorsArg[i + 1] ) };
         }
     } );
-    IGNORE_DEPRECATION_WARNING( setLinesWithColors( { newLines,newColors } ); )
+    SUPPRESS_DEPRECATION_WARNING( setLinesWithColors( { newLines,newColors } ); )
     needRedraw_ = viewportGL_.lines_dirty;
 }
 
 void Viewport::add_lines( const std::vector<Vector3f>& points, const Color& color )
 {
     std::vector<Color> colors( points.size(), color );
-    IGNORE_DEPRECATION_WARNING( add_lines( points, colors ); )
+    SUPPRESS_DEPRECATION_WARNING( add_lines( points, colors ); )
 }
 
 void  Viewport::remove_lines(  )
 {
-    IGNORE_DEPRECATION_WARNING( setLinesWithColors( { {},{} } ); )
+    SUPPRESS_DEPRECATION_WARNING( setLinesWithColors( { {},{} } ); )
     needRedraw_ = viewportGL_.lines_dirty;
 }
 

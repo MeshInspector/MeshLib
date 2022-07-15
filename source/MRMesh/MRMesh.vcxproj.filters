@@ -855,6 +855,9 @@
     <ClInclude Include="MRPrism.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeLabelAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

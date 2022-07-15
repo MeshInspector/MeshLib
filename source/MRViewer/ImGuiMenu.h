@@ -83,6 +83,15 @@ protected:
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionBbox_; // updated in drawSelectionInformation_
 
+  struct LabelNameMemory
+  {
+      std::string lastLabel;
+      std::string labelBuffer;
+      Vector3f textPos;
+      std::shared_ptr<ObjectLabel> obj{ nullptr };
+      bool changed{ false };
+  } oldLabelName_;
+
   bool allowRemoval_{ true };
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
@@ -284,7 +293,6 @@ protected:
 
     void draw_open_recent_button_();
 
-    
 };
 
 } // end namespace

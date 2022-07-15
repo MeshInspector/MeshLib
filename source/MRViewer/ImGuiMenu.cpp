@@ -94,6 +94,7 @@
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
+#include "MRMesh/MRChangeLabelAction.h"
 
 namespace MR
 {
@@ -1161,6 +1162,28 @@ float ImGuiMenu::drawSelectionInformation_()
                 AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
                 pObj->setName( renameBuffer_ );
                 lastRenameObj_.reset();
+            }
+
+            if ( auto pObjLabel = std::dynamic_pointer_cast<ObjectLabel>( pObj ) )
+            {
+                if ( pObjLabel != oldLabelName_.obj )
+                {
+                    oldLabelName_.obj = pObjLabel;
+                    const auto positionedText = pObjLabel->getLabel();
+                    oldLabelName_.textPos = positionedText.position;
+                    oldLabelName_.lastLabel = positionedText.text;
+                    oldLabelName_.labelBuffer = oldLabelName_.lastLabel;
+                }
+
+                if ( ImGui::InputText( "Label", oldLabelName_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, oldLabelName_.textPos } );
+                
+                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelName_.labelBuffer != oldLabelName_.lastLabel )
+                {
+                    pObjLabel->setLabel( { oldLabelName_.lastLabel, oldLabelName_.textPos } );
+                    AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
+                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, oldLabelName_.textPos } );
+                }
             }
         }
         else

@@ -250,11 +250,6 @@ Vector3f Viewport::projectToClipSpace( const Vector3f& worldPoint ) const
     return getFullViewportMatrix()(worldPoint);
 }
 
-Vector3f Viewport::projectStaticToClipSpace( const Vector3f& worldPoint ) const
-{
-    return ( staticProj * viewM )( worldPoint );
-}
-
 Vector3f Viewport::unprojectFromClipSpace( const Vector3f& clipPoint ) const
 {
     return getFullViewportInversedMatrix()(clipPoint);

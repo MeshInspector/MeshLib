@@ -156,8 +156,7 @@ public:
       const Vector3f& normal,
       const std::string& text,
       const Color& color,
-      bool clipByViewport,
-      bool useStaticMatrix = false ); // for basis axis
+      bool clipByViewport );
 
   MRVIEWER_API float pixel_ratio();
 

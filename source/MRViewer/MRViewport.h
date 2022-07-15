@@ -285,8 +285,6 @@ public:
     MRVIEWER_API std::vector<Vector3f> projectToClipSpace( const std::vector<Vector3f>& worldPoints ) const;
     MRVIEWER_API Vector3f unprojectFromClipSpace( const Vector3f& clipPoint ) const;
     MRVIEWER_API std::vector<Vector3f> unprojectFromClipSpace( const std::vector<Vector3f>& clipPoints ) const;
-    // projects point(s) to clip space, using static proj matrix (for basis axix)
-    MRVIEWER_API Vector3f projectStaticToClipSpace( const Vector3f& worldPoint ) const;
 
     // project point and convert coordinates to viewport space
     // viewport space: X [0,viewport_width], Y [0,viewport_height] - (0,0) is upper left of viewport

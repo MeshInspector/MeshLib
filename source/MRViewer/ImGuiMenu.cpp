@@ -79,6 +79,7 @@
 #include "MRMesh/MRToFromEigen.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRChangeLabelAction.h"
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -94,7 +95,6 @@
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
-#include "MRMesh/MRChangeLabelAction.h"
 
 namespace MR
 {
@@ -1170,19 +1170,18 @@ float ImGuiMenu::drawSelectionInformation_()
                 {
                     oldLabelName_.obj = pObjLabel;
                     const auto positionedText = pObjLabel->getLabel();
-                    oldLabelName_.textPos = positionedText.position;
                     oldLabelName_.lastLabel = positionedText.text;
                     oldLabelName_.labelBuffer = oldLabelName_.lastLabel;
                 }
 
                 if ( ImGui::InputText( "Label", oldLabelName_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
-                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, oldLabelName_.textPos } );
+                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, pObjLabel->getLabel().position } );
                 
                 if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelName_.labelBuffer != oldLabelName_.lastLabel )
                 {
-                    pObjLabel->setLabel( { oldLabelName_.lastLabel, oldLabelName_.textPos } );
+                    pObjLabel->setLabel( { oldLabelName_.lastLabel, pObjLabel->getLabel().position } );
                     AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
-                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, oldLabelName_.textPos } );
+                    pObjLabel->setLabel( { oldLabelName_.labelBuffer, pObjLabel->getLabel().position } );
                 }
             }
         }

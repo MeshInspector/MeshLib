@@ -87,9 +87,7 @@ protected:
   {
       std::string lastLabel;
       std::string labelBuffer;
-      Vector3f textPos;
       std::shared_ptr<ObjectLabel> obj{ nullptr };
-      bool changed{ false };
   } oldLabelName_;
 
   bool allowRemoval_{ true };

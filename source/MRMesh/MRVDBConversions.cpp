@@ -26,12 +26,17 @@ struct Interrupter
     {}
     bool wasInterrupted( int percent = -1 )
     {
+        wasInterrupted_ = false;
         if ( cb_ )
-            return !cb_( float( percent ) / 100.0f );
-        return false;
+            wasInterrupted_ = !cb_( float( percent ) / 100.0f );
+        return wasInterrupted_;
     }
-
+    bool getWasInterrupted() const
+    {
+        return wasInterrupted_;
+    }
 private:
+    bool wasInterrupted_{ false };
     ProgressCallback cb_;
 };
 
@@ -62,28 +67,30 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
     }
 }
 
-Mesh convertFromVDMMesh( const Vector3f& voxelSize,
-    const std::vector<openvdb::Vec3s>& pointsRes, 
-    const std::vector<openvdb::Vec3I>& trisRes,
-    const std::vector<openvdb::Vec4I>& quadRes,
+tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
+    const std::vector<openvdb::Vec3s>& pointsArg, 
+    const std::vector<openvdb::Vec3I>& trisArg,
+    const std::vector<openvdb::Vec4I>& quadArg,
     ProgressCallback cb )
 {
     if ( cb )
-        cb( 0.0f );
-    std::vector<Vector3f> points( pointsRes.size() );
+        if ( !cb( 0.0f ) )
+            return tl::make_unexpected( "Operation was canceled." );
+    std::vector<Vector3f> points( pointsArg.size() );
     std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( trisRes.size() + 2 * quadRes.size() );
+    tris.reserve( trisArg.size() + 2 * quadArg.size() );
     for ( int i = 0; i < points.size(); ++i )
     {
-        points[i][0] = pointsRes[i][0] * voxelSize[0];
-        points[i][1] = pointsRes[i][1] * voxelSize[1];
-        points[i][2] = pointsRes[i][2] * voxelSize[2];
+        points[i][0] = pointsArg[i][0] * voxelSize[0];
+        points[i][1] = pointsArg[i][1] * voxelSize[1];
+        points[i][2] = pointsArg[i][2] * voxelSize[2];
 
         if ( cb )
-            cb( 0.5f * ( float( i ) / float( points.size() ) ) );
+            if ( !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
+                return tl::make_unexpected( "Operation was canceled." );
     }
     int t = 0;
-    for ( const auto& tri : trisRes )
+    for ( const auto& tri : trisArg )
     {
         MeshBuilder::Triangle newTri
         {
@@ -96,9 +103,10 @@ Mesh convertFromVDMMesh( const Vector3f& voxelSize,
         ++t;
 
         if ( cb )
-            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+                return tl::make_unexpected( "Operation was canceled." );
     }
-    for ( const auto& quad : quadRes )
+    for ( const auto& quad : quadArg )
     {
         MeshBuilder::Triangle newTri
         {
@@ -111,7 +119,8 @@ Mesh convertFromVDMMesh( const Vector3f& voxelSize,
         ++t;
 
         if ( cb )
-            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+                return tl::make_unexpected( "Operation was canceled." );
         newTri =
         {
             VertId( ( int )quad[0] ),
@@ -123,7 +132,8 @@ Mesh convertFromVDMMesh( const Vector3f& voxelSize,
         ++t;
 
         if ( cb )
-            cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) );
+            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+                return tl::make_unexpected( "Operation was canceled." );
     }
 
     Mesh res;
@@ -131,7 +141,8 @@ Mesh convertFromVDMMesh( const Vector3f& voxelSize,
     res.points.vec_ = std::move( points );
 
     if ( cb )
-        cb( 1.0f );
+        if ( !cb( 1.0f ) )
+            return tl::make_unexpected( "Operation was canceled." );
 
     return res;
 }
@@ -153,8 +164,11 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
 
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     Interrupter interrupter( cb );
-    return MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter, *xform, points, tris, surfaceOffset ) );
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
 }
 
 FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
@@ -174,8 +188,13 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
 
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     Interrupter interrupter( cb );
-    return MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, Interrupter>
+
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, Interrupter>
         ( interrupter, *xform, points, tris, {}, surfaceOffset ) );
+
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
@@ -204,7 +223,8 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
 {
     MR_TIMER;
     if ( cb )
-        cb( 0.0f );
+        if ( !cb( 0.0f ) )
+            return tl::make_unexpected( "Operation was canceled." );
     std::vector<openvdb::Vec3s> pointsRes;
     std::vector<openvdb::Vec3I> trisRes;
     std::vector<openvdb::Vec4I> quadRes;
@@ -217,7 +237,8 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     ProgressCallback passCallback;
     if ( cb )
     {
-        cb( 0.2f );
+        if ( !cb( 0.2f ) )
+            return tl::make_unexpected( "Operation was canceled." );
         passCallback = [cb] ( float p )
         {
             return cb( 0.2f + 0.8f * p );
@@ -226,13 +247,13 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     return convertFromVDMMesh( voxelSize, pointsRes, trisRes, quadRes, passCallback );
 }
 
-Mesh gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, const ProgressCallback& cb /*= {} */ )
 {
-    return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb ).value();
+    return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb );
 }
 
-Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize, 
+tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
     float offsetA, float offsetB, float adaptivity, const ProgressCallback& cb /*= {} */ )
 {
     MR_TIMER
@@ -241,19 +262,19 @@ Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float v
     auto offsetInVoxelsB = offsetB / voxelSize;
 
     if ( cb )
-        cb( 0.0f );
+        if ( !cb( 0.0f ) )
+            return tl::make_unexpected( "Operation was canceled." );
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
     convertToVDMMesh( mp, xf, Vector3f::diagonal( voxelSize ), points, tris );
 
-    if ( cb )
-        cb( 0.1f );
-
     ProgressCallback passCb;
     if ( cb )
     {
+        if ( !cb( 0.1f ) )
+            return tl::make_unexpected( "Operation was canceled." );
         passCb = [cb] ( float p )
         {
             return cb( 0.1f + 0.2f * p );
@@ -264,11 +285,15 @@ Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float v
     auto grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
 
+    if ( interrupter1.getWasInterrupted() )
+        return tl::make_unexpected( "Operation was canceled." );
+
     openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
 
     if ( cb )
     {
-        cb( 0.5f );
+        if ( !cb( 0.5f ) )
+            return tl::make_unexpected( "Operation was canceled." );
         passCb = [cb] ( float p )
         {
             return cb( 0.5f + 0.2f * p );
@@ -279,12 +304,16 @@ Mesh levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float v
     grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
+    if ( interrupter2.getWasInterrupted() )
+        return tl::make_unexpected( "Operation was canceled." );
+
     openvdb::tools::volumeToMesh( *grid, points, tris, quads,
                                   offsetInVoxelsB, adaptivity );
 
     if ( cb )
     {
-        cb( 0.9f );
+        if ( !cb( 0.9f ) )
+            return tl::make_unexpected( "Operation was canceled." );
         passCb = [cb] ( float p )
         {
             return cb( 0.9f + 0.1f * p );

@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRMeshBoolean.h"
+#include "MRMesh/MRConvexHull.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
@@ -10,7 +11,12 @@
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
     namespace po = boost::program_options;
-    if ( option.string_key == "remesh" )
+    if ( option.string_key == "convex-hull" )
+    {
+        mesh = MR::makeConvexHull( mesh );
+        std::cout << "convex hull computed successfully" << std::endl;
+    }
+    else if ( option.string_key == "remesh" )
     {
         float targetEdgeLen{ 0.f };
         if ( !option.value.empty() )
@@ -78,6 +84,7 @@ static int mainInternal( int argc, char **argv )
         ( "unite", po::value<std::filesystem::path>(), "unite mesh from input file and given mesh" )
         ( "subtract", po::value<std::filesystem::path>(), "subtract given mesh from input file mesh given mesh" )
         ( "intersect", po::value<std::filesystem::path>(), "intersect mesh from input file and given mesh" )
+        ( "convex-hull", "construct convex hull of input mesh" )
         ;
 
     po::options_description allCommands( "Available options" );

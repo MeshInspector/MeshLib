@@ -703,11 +703,9 @@ MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& si
     return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
 }
 
-void SetTooltipIfHovered( const std::string& text, float scaling, bool inactiveOnly )
+void SetTooltipIfHovered( const std::string& text, float scaling )
 {
-    if ( !ImGui::IsItemHovered() )
-        return;
-    if ( inactiveOnly && ImGui::IsItemActive() )
+    if ( !ImGui::IsItemHovered() || ImGui::IsItemActive() )
         return;
     assert( scaling > 0.f );
 

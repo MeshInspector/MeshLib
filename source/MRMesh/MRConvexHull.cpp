@@ -200,13 +200,19 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         const auto myFace = queue.top().id;
         auto it = face2verts.find( myFace );
         if ( it == face2verts.end() )
+        {
+            queue.setSmallerValue( myFace, NoDist );
             continue;
+        }
         auto myverts = std::move( it->second );
         face2verts.erase( it );
         assert( !myverts.empty() );
 
         if ( myverts.empty() )
+        {
+            queue.setSmallerValue( myFace, NoDist );
             continue;
+        }
 
         VertId topmostVert;
         double maxDist = 0;

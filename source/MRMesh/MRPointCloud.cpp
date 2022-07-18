@@ -1,6 +1,7 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRComputeBoundingBox.h"
+#include "spdlog/spdlog.h"
 
 namespace MR
 {
@@ -49,19 +50,29 @@ void PointCloud::addPartByMask( const PointCloud& from, const VertBitSet& fromVe
     invalidateCaches();
 }
 
-void PointCloud::addPoint(const Vector3f& point)
+VertId PointCloud::addPoint(const Vector3f& point)
 {
     VertId id(points.size());
     points.push_back(point);
     validPoints.autoResizeSet(id);
+
+    if ( !normals.empty() )
+    {
+        spdlog::warn( "Trying to add point without normal to oriented point cloud, adding empty normal" );
+        normals.emplace_back();
+    }
+    return id;
 }
 
-void PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
+VertId PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
 {
+    assert( normals.size() == points.size() );
+
     VertId id(points.size());
     points.push_back(point);
     validPoints.autoResizeSet(id);
     normals.push_back(normal);
+    return id;
 }
 
 const AABBTreePoints& PointCloud::getAABBTree() const

@@ -39,6 +39,8 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
 
 	IF (NOT MR_EMSCRIPTEN)
+		find_library(COCOA_LIBRARY Cocoa ONLY)
+
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    OpenVDB
 		    OpenCTM
@@ -57,6 +59,8 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    png
 		    fmt
 		    tbb
+			clip
+			${COCOA_LIBRARY}
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -95,5 +99,6 @@ ELSE()
 		${PYTHON_LIB}
 		podofo
 		turbojpeg
+		clip
 		)
 ENDIF()

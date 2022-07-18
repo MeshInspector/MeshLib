@@ -1,7 +1,7 @@
 #include "MRPointCloud.h"
 #include "MRAABBTreePoints.h"
 #include "MRComputeBoundingBox.h"
-#include "spdlog/spdlog.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -60,6 +60,7 @@ VertId PointCloud::addPoint(const Vector3f& point)
     {
         spdlog::warn( "Trying to add point without normal to oriented point cloud, adding empty normal" );
         normals.emplace_back();
+        assert( normals.size() == points.size() );
     }
     return id;
 }

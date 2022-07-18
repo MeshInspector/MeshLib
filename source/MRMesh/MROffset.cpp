@@ -6,6 +6,8 @@
 #include "MRTimer.h"
 #include "MRPolyline.h"
 #include "MRMeshFillHole.h"
+#include "MRRegionBoundary.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {
@@ -15,9 +17,9 @@ constexpr float autoVoxelNumber = 5e6f;
 namespace MR
 {
 
-Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
+tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
-    MR_TIMER;
+    MR_TIMER
 
     float voxelSize = params.voxelSize;
     // Compute voxel size if needed
@@ -28,49 +30,72 @@ Mesh offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& para
         voxelSize = std::cbrt( vol / autoVoxelNumber );
     }
 
-    bool isClosed = mp.mesh.topology.isClosed( mp.region );
+    bool useShell = params.type == OffsetParameters::Type::Shell;
+    if ( !findRegionBoundary( mp.mesh.topology, mp.region ).empty() && !useShell )
+    {
+        spdlog::warn( "Cannot use offset for non-closed meshes, using shell instead." );
+        useShell = true;
+    }
 
-    if ( !isClosed )
+    if ( useShell )
         offset = std::abs( offset );
 
     auto offsetInVoxels = offset / voxelSize;
 
     auto voxelSizeVector = Vector3f::diagonal( voxelSize );
     // Make grid
-    auto grid = isClosed ?
+    auto grid = ( !useShell ) ?
         // Make level set grid if it is closed
         meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 1,
                         params.callBack ?
                         [params]( float p )
     {
-        params.callBack( p * 0.5f );
-        return true;
+        return params.callBack( p * 0.5f );
     } : ProgressCallback{} ) :
         // Make distance field grid if it is not closed
         meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 1,
                         params.callBack ?
                              [params]( float p )
     {
-        params.callBack( p * 0.5f );
-        return true;
+        return params.callBack( p * 0.5f );
     } : ProgressCallback{} );
+
+    if ( !grid )
+        return tl::make_unexpected( "Operation was canceled." );
 
     // Make offset mesh
     auto newMesh = gridToMesh( grid, voxelSizeVector, offsetInVoxels, params.adaptivity, params.callBack ?
                              [params]( float p )
     {
-        params.callBack( 0.5f + p * 0.5f );
-        return true;
+        return params.callBack( 0.5f + p * 0.5f );
     } : ProgressCallback{} );
 
+    if ( !newMesh.has_value() )
+        return tl::make_unexpected( "Operation was canceled." );
+
     // For not closed meshes orientation is flipped on back conversion
-    if ( !isClosed )
-        newMesh.topology.flipOrientation();
+    if ( useShell )
+        newMesh->topology.flipOrientation();
 
     return newMesh;
 }
 
-Mesh offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
+tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
+{
+    MR_TIMER
+    if ( !findRegionBoundary( mp.mesh.topology, mp.region ).empty() )
+    {
+        spdlog::error( "Only closed meshes allowed for double offset." );
+        return tl::make_unexpected( "Only closed meshes allowed for double offset." );
+    }
+    if ( params.type == OffsetParameters::Type::Shell )
+    {
+        spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
+    }
+    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
+}
+
+tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
 

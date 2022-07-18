@@ -3,6 +3,8 @@
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
+#include <tl/expected.hpp>
+#include <string>
 
 namespace MR
 {
@@ -16,19 +18,32 @@ struct OffsetParameters
     // Decimation ratio of result mesh [0..1], this is applied on conversion from voxels to mesh
     // note: it does not work good, better use common decimation after offsetting
     float adaptivity{0.0f};
+
+    // Type of offsetting
+    enum class Type
+    {
+        Offset, // can be positive or negative, input mesh should be closed
+        Shell // can be only positive, offset in both directions of surface
+    } type{ Type::Offset };
+
     // Progress callback 
     ProgressCallback callBack{};
 };
 
 // Offsets mesh by converting it to voxels and back
-// for non closed meshes do offset in both directions (normal and -normal)
+// use Shell type for non closed meshes
 // so result mesh is always closed
-[[nodiscard]] MRMESH_API Mesh offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
+
+// Offsets mesh by converting it to voxels and back two times
+// only closed meshes allowed (only Offset mode)
+// typically offsetA and offsetB have distinct signs
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
 // Offsets polyline by converting it to voxels and building iso-surface
 // do offset in all directions
 // so result mesh is always closed
-[[nodiscard]] MRMESH_API Mesh offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
 
 }
 #endif

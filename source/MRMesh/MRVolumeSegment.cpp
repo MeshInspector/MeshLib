@@ -114,7 +114,7 @@ tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation(
 
     auto voxelSize = volume_.voxelSize();
     auto grid = simpleVolumeToDenseGrid( segmentBlockCopy );
-    auto mesh = gridToMesh( grid, voxelSize, 0.5f );
+    auto mesh = gridToMesh( grid, voxelSize, 0.5f ).value(); // no callback so cannot b stopped
 
 
     for ( auto& p : mesh.points )

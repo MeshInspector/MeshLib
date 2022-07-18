@@ -7,10 +7,12 @@
 namespace MR
 {
 
-Mesh partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params /*= {} */ )
+tl::expected<Mesh, std::string> partialOffsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     auto offsetPart = offsetMesh( mp, offset, params );
-    auto res = boolean( mp.mesh, offsetPart, BooleanOperation::Union );
+    if ( !offsetPart.has_value() )
+        return offsetPart;
+    auto res = boolean( mp.mesh, *offsetPart, BooleanOperation::Union );
     if ( !res.valid() )
     {
         spdlog::warn( "Partial offset failed: {}", res.errorString );

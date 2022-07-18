@@ -83,6 +83,13 @@ protected:
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionBbox_; // updated in drawSelectionInformation_
 
+  struct LabelParams
+  {
+      std::string lastLabel;
+      std::string labelBuffer;
+      std::shared_ptr<ObjectLabel> obj{ nullptr };
+  } oldLabelParams_;
+
   bool allowRemoval_{ true };
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
@@ -156,8 +163,7 @@ public:
       const Vector3f& normal,
       const std::string& text,
       const Color& color,
-      bool clipByViewport,
-      bool useStaticMatrix = false ); // for basis axis
+      bool clipByViewport );
 
   MRVIEWER_API float pixel_ratio();
 
@@ -284,7 +290,6 @@ protected:
 
     void draw_open_recent_button_();
 
-    
 };
 
 } // end namespace

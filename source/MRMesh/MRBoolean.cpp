@@ -5,6 +5,7 @@
 #include "MRFloatGrid.h"
 #include "MRTimer.h"
 #include "MRPch/MROpenvdb.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
 
 namespace MR
@@ -17,7 +18,13 @@ FloatGrid MeshVoxelsConverter::operator() ( const ObjectMesh & obj ) const
 
 Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
 { 
-    return gridToMesh( grid, Vector3f::diagonal( voxelSize ), offsetVoxels, adaptivity, callBack );
+    auto res = gridToMesh( grid, Vector3f::diagonal( voxelSize ), offsetVoxels, adaptivity, callBack );
+    if ( !res.has_value() )
+    {
+        spdlog::error( res.error() );
+        return {};
+    }
+    return *res;
 }
 
 FloatGrid operator += ( FloatGrid & a, const FloatGrid & b )

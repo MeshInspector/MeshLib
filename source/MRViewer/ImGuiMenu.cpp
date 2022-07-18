@@ -79,6 +79,7 @@
 #include "MRMesh/MRToFromEigen.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRChangeLabelAction.h"
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -487,15 +488,6 @@ void ImGuiMenu::draw_labels_window()
       for ( const auto& label : viewer->globalBasisAxes->getLabels() )
           draw_text( viewport, viewport.getParameters().globalBasisAxesXf( label.position ), Vector3f(), label.text, viewer->globalBasisAxes->getLabelsColor(), true );
   }
-  for ( const auto& viewport : viewer->viewport_list )
-  {
-      if ( !viewer->basisAxes->isVisible( viewport.id ) )
-          continue;
-      if ( !viewer->basisAxes->getVisualizeProperty( VisualizeMaskType::Labels, viewport.id ) )
-          continue;
-      for ( const auto& label : viewer->basisAxes->getLabels() )
-          draw_text( viewport, viewport.getParameters().basisAxesXf( label.position ), Vector3f(), label.text, viewer->basisAxes->getLabelsColor(), true, true );
-  }
   ImGui::End();
   ImGui::PopStyleColor();
   ImGui::PopStyleVar();
@@ -537,13 +529,12 @@ void ImGuiMenu::draw_text(
     const Vector3f& normal,
     const std::string& text,
     const Color& color,
-    bool clipByViewport,
-    bool useStaticMatrix )
+    bool clipByViewport )
 {
   Vector3f pos = posOriginal;
   pos += normal * 0.005f * viewport.getParameters().objectScale;
   const auto& viewportRect = viewport.getViewportRect();
-  Vector3f coord = viewport.clipSpaceToViewportSpace( useStaticMatrix ? viewport.projectStaticToClipSpace( pos ) : viewport.projectToClipSpace( pos ) );
+  Vector3f coord = viewport.clipSpaceToViewportSpace( viewport.projectToClipSpace( pos ) );
   auto viewerCoord = viewer->viewportToScreen( coord, viewport.id );
 
   // Draw text labels slightly bigger than normal text
@@ -1161,6 +1152,27 @@ float ImGuiMenu::drawSelectionInformation_()
                 AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
                 pObj->setName( renameBuffer_ );
                 lastRenameObj_.reset();
+            }
+
+            if ( auto pObjLabel = std::dynamic_pointer_cast<ObjectLabel>( pObj ) )
+            {
+                if ( pObjLabel != oldLabelParams_.obj )
+                {
+                    oldLabelParams_.obj = pObjLabel;
+                    const auto& positionedText = pObjLabel->getLabel();
+                    oldLabelParams_.lastLabel = positionedText.text;
+                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
+                }
+
+                if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+                
+                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
+                {
+                    pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
+                    AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
+                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+                }
             }
         }
         else

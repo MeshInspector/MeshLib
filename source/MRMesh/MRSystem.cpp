@@ -16,6 +16,7 @@
 #include "MRPch/MRSpdlog.h"
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
+#include <clip/clip.h>
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__

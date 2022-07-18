@@ -1438,7 +1438,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     auto buttonSize = 100.0f * menu_scaling();
 
     const auto& startXf = selected->xf();
-#ifdef _WIN32
+#if !defined( __EMSCRIPTEN__ )
     if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
     {
         Json::Value root;

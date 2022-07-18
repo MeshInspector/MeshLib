@@ -57,6 +57,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    png
 		    fmt
 		    tbb
+			clip
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -95,5 +96,6 @@ ELSE()
 		${PYTHON_LIB}
 		podofo
 		turbojpeg
+		clip
 		)
 ENDIF()

@@ -20,6 +20,7 @@
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
 #include <cpuid.h>
+#include <clip/clip.h>
 #endif
 #endif
 #include <pthread.h>
@@ -229,9 +230,9 @@ std::filesystem::path GetTempDirectory()
 
 std::string GetClipboardText()
 {
-#ifndef _WIN32
+#if defined( __EMSCRIPTEN__ )
     return "";
-#else
+#elif defined( _WIN32 )
     // Try opening the clipboard
     if ( !OpenClipboard( nullptr ) )
     {
@@ -266,15 +267,23 @@ std::string GetClipboardText()
     CloseClipboard();
 
     return text;
+#else
+    std::string text;
+    if ( !clip::get_text( text ) )
+    {
+        spdlog::error( "Could not open clipboard" );
+        return "";
+    }
+    return text;
 #endif
 }
 
 void SetClipboardText( const std::string& text )
 {
-#ifndef _WIN32
+#if defined( __EMSCRIPTEN__ )
     ( void )text;
     return;
-#else
+#elif defined( _WIN32 )
     HGLOBAL hMem = GlobalAlloc( GMEM_MOVEABLE, text.size() + 1 );
     memcpy( GlobalLock( hMem ), text.c_str(), text.size() + 1 );
     GlobalUnlock( hMem );
@@ -282,6 +291,9 @@ void SetClipboardText( const std::string& text )
     EmptyClipboard();
     SetClipboardData( CF_TEXT, hMem );
     CloseClipboard();
+#else
+    if ( !clip::set_text( text ) )
+        spdlog::error( "Could not set clipboard" );
 #endif
 }
 

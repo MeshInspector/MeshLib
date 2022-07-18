@@ -13,14 +13,19 @@ namespace MR
 Config::Config()
 {}
 
-void Config::reset()
+void Config::reset( std::string appName )
 {
     if ( !filePath_.empty() )
     {
         writeToFile();
     }
-
+    appName_ = std::move( appName );
     reset( getUserConfigFilePath() );
+}
+
+const std::string& Config::getAppName() const
+{
+    return appName_;
 }
 
 void Config::writeToFile()

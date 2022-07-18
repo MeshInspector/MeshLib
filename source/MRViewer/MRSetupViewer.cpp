@@ -29,8 +29,8 @@ void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appNa
 
     auto& cfg = MR::Config::instance();
 
-    cfg.reset();
-    std::unique_ptr<ViewerSettingsManager> mng = std::make_unique<ViewerSettingsManager>( appName );
+    cfg.reset( appName );
+    std::unique_ptr<ViewerSettingsManager> mng = std::make_unique<ViewerSettingsManager>();
     viewer->setViewportSettingsManager( std::move( mng ) );
 }
 

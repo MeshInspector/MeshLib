@@ -1,6 +1,7 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRConfig.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -191,7 +192,7 @@ std::filesystem::path getUserConfigDir()
     filepath /= ".local";
     filepath /= "share";
 #endif
-    filepath /= std::string( MR_PROJECT_NAME );
+    filepath /= std::string( Config::instance().getAppName() );
     std::error_code ec;
     if ( !std::filesystem::is_directory( filepath, ec ) )
     {

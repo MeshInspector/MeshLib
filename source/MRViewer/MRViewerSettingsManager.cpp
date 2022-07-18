@@ -29,8 +29,7 @@ const std::string lastExtextentionsParamKey = "lastExtextentions";
 namespace MR
 {
 
-ViewerSettingsManager::ViewerSettingsManager( std::string appName ) :
-    appName_{ std::move( appName ) }
+ViewerSettingsManager::ViewerSettingsManager()
 {
     lastExtentionNums_.resize( int( ObjType::Count ), 0 );
 }

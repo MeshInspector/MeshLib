@@ -703,4 +703,27 @@ MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& si
     return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
 }
 
+void SetTooltipIfHovered( const std::string& text, float wrap_width, bool inactive_only )
+{
+    if ( !ImGui::IsItemHovered() )
+        return;
+    if ( inactive_only && ImGui::IsItemActive() )
+        return;
+
+    if ( wrap_width <= 0.f )
+    {
+        ImGui::SetTooltip( "%s", text.c_str() );
+    }
+    else
+    {
+        auto &style = ImGui::GetStyle();
+        auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, wrap_width - style.WindowPadding.x * 2 );
+        ImGui::SetNextWindowSize( ImVec2{ textSize.x + style.WindowPadding.x * 2, 0 } );
+
+        ImGui::BeginTooltip();
+        ImGui::TextWrapped( "%s", text.c_str() );
+        ImGui::EndTooltip();
+    }
+}
+
 } // namespace ImGui

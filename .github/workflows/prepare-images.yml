@@ -118,6 +118,9 @@ jobs:
     env:
       DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}
     steps:
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
       - name: Checkout
         uses: actions/checkout@v2
         with:

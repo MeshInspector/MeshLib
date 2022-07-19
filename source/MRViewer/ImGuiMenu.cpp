@@ -1546,7 +1546,8 @@ float ImGuiMenu::drawTransform_()
                 "Translation along Oy-axis",
                 "Translation along Oz-axis"
             };
-            const auto trSpeed = selectionBbox_.valid() ? 0.003f * selectionBbox_.diagonal() : 0.003f;
+            const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
+
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() );
             auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed,
                                                              std::numeric_limits<float>::lowest(),

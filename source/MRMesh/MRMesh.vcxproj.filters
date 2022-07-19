@@ -804,9 +804,6 @@
     <ClInclude Include="MRPolylineDecimate.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
-    <ClInclude Include="MRFillHoleMetrics.h">
-      <Filter>Source Files\Triangulation</Filter>
-    </ClInclude>
     <ClInclude Include="MRPointCloudTriangulation.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
@@ -1405,9 +1402,6 @@
     </ClCompile>
     <ClCompile Include="MRPolylineDecimate.cpp">
       <Filter>Source Files\Decimation</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFillHoleMetrics.cpp">
-      <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>

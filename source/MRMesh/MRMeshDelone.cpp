@@ -7,14 +7,6 @@
 namespace MR
 {
 
-static double dihedralAngle( const Vector3d & leftNorm, const Vector3d & rightNorm, const Vector3d & edgeVec )
-{
-    auto edgeDir = edgeVec.normalized();
-    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
-    auto cos = dot( leftNorm, rightNorm );
-    return std::atan2( sin, cos );
-}
-
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
     auto dir = []( const auto& p, const auto& q, const auto& r )

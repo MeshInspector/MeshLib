@@ -243,7 +243,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     for ( int bi = 0; bi < edges.size() / 2; ++bi )
     {
         StitchHolesParams stitchParams;
-        stitchParams.metric = std::make_unique<VerticalStitchMetric>( mesh, Vector3f::plusZ() );
+        stitchParams.metric = getVerticalStitchMetric( mesh, Vector3f::plusZ() );
         buildCylinderBetweenTwoHoles( mesh, edges[bi], edges[edges.size() / 2 + bi], stitchParams );
     }
 }

@@ -2,182 +2,96 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRMesh.h"
+#include <functional>
+
 
 namespace MR
 {
 /// \addtogroup FillHoleGroup
 /// \{
 
+using FillTriangleMetric = std::function<double( VertId, VertId, VertId )>;
+using FillEdgeMetric = std::function<double( VertId, VertId, VertId, VertId )>;
+using FillCombineMetric = std::function<double( double, double )>;
+
 /** \struct MR::FillHoleMetric
-  * \brief Provides interface for controlling fillHole and buildCylinderBetweenTwoHoles triangulation\n
+  * \brief Holds metrics for fillHole and buildCylinderBetweenTwoHoles triangulation\n
   * 
-  * This is abstract struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions\n
+  * This is struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions\n
   * 
-  * getTriangleMetric is called for each new triangle candidate and its two known neighbors\n
-  * getEdgeMetric is called only once when two part of triangulation are merging (edge between two last triangles)
-  * 
-  * \sa \ref CircumscribedFillMetric
-  * \sa \ref PlaneFillMetric
-  * \sa \ref EdgeLengthFillMetric
-  * \sa \ref ComplexStitchMetric
-  * \sa \ref CircumscribedStitchMetric
-  * \sa \ref EdgeLengthStitchMetric
+  * \sa \ref getCircumscribedFillMetric
+  * \sa \ref getPlaneFillMetric
+  * \sa \ref getEdgeLengthFillMetric
+  * \sa \ref getEdgeLengthStitchMetric
+  * \sa \ref getComplexStitchMetric
+  * \sa \ref getCircumscribedStitchMetric
   * \sa \ref fillHole
   * \sa \ref buildCylinderBetweenTwoHoles
   */
 struct FillHoleMetric
 {
-    FillHoleMetric() = default;
-    virtual ~FillHoleMetric() = default;
-    virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId& aOpposit, const VertId& cOpposit ) const = 0;
-    virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const = 0;
-    /// if metric's `getEdgeMetric` returns constant this flag should be false
-    bool hasEdgeMetric{ true };
+    /// is called for each triangle, if it is set
+    FillTriangleMetric triangleMetric;
+    /// is called for each edge, if it is set
+    FillEdgeMetric edgeMetric;
+    /// is called to combine metrics from different candidates, if it is not set it just summarizes input
+    FillCombineMetric combineMetric;
 };
 
-/** \struct MR::CircumscribedFillMetric
-  * Provides triangle metric as circumscribed circle diameter\n
-  * getEdgeMetric - always returns zero
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS CircumscribedFillMetric final : FillHoleMetric
-{
-    CircumscribedFillMetric( const Mesh& mesh ) : points{mesh.points} { hasEdgeMetric = false; }
-    const VertCoords& points;
-    /// circumscribed circle diameter
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
+/// Provides triangle metric as circumscribed circle diameter
+MRMESH_API FillHoleMetric getCircumscribedFillMetric( const Mesh& mesh );
 
-    /// 0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const override;
-};
+/// As far as hole is planar, only outside triangles should have penalty,\n
+/// this metric is good for planar holes
+/// 
+/// Provides triangle metric as area
+MRMESH_API FillHoleMetric getPlaneFillMetric( const Mesh& mesh, EdgeId e );
 
-/** \struct MR::PlaneFillMetric
-  * As far as hole is planar, only outside triangles should have penalty,\n
-  * this metric is good for planar holes 
-  * 
-  * Provides triangle metric as area 
-  * 'getEdgeMetric' - always returns zero
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS PlaneFillMetric final : FillHoleMetric
-{
-    /// e is edge with left hole, it is needed to find normal of hole plane
-    MRMESH_API PlaneFillMetric( const Mesh& mesh, EdgeId e );
-    const VertCoords& points;
-    Vector3d norm;
-    /// DBL_MAX if normal direction is different of hole plane norm, otherwise circumscribed circle diameter
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
+/// As far as hole is planar, only outside triangles should have penalty,\n
+/// this metric is good for planar holes
+/// 
+/// Provides triangle metric as area
+MRMESH_API FillHoleMetric getPlaneNormalizedFillMetric( const Mesh& mesh, EdgeId e );
 
-    /// 0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const override;
-};
+/// Forbids connecting vertices from the same hole \n
+/// Complex metric for non-trivial holes, forbids degenerate triangles\n
+/// 
+/// triangleMetric - grows with neighbors angles and triangle aspect ratio( R / 2r )\n
+/// edgeMetric - grows with angle
+MRMESH_API FillHoleMetric getComplexStitchMetric( const Mesh& mesh );
 
-/** \struct MR::PlaneNormalizedFillMetricPlaneNormalizedFillMetric
-  * As far as hole is planar, only outside triangles should have penalty,\n
-  * this metric is good for planar holes
-  *
-  * Provides triangle metric as area and triangle * aspect ratio
-  * 'getEdgeMetric' - always returns zero
-  * \sa \ref PlaneFillMetric
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS PlaneNormalizedFillMetric final : FillHoleMetric
-{
-    /// e is edge with left hole, it is needed to find normal of hole plane
-    MRMESH_API PlaneNormalizedFillMetric( const Mesh & mesh, EdgeId e );
-    const VertCoords& points;
-    Vector3d norm;
-    /// DBL_MAX if normal direction is different of hole plane norm, otherwise circumscribed circle diameter * aspect ratio
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
-    /// 0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const override;
-};
+/// Simple metric minimizing edge length
+MRMESH_API FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh );
 
-/** \struct MR::ComplexStitchMetric
-  * Forbids connecting vertices from different holes \n
-  * 
-  * Complex metric for non-trivial holes, forbids degenerate triangles\n
-  *
-  * getTriangleMetric - grows with neighbors angles and triangle aspect ratio (R/2r)\n
-  * getEdgeMetric - grows with angle
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS ComplexStitchMetric final : FillHoleMetric
-{
-    /// a,b are edges with left holes
-    MRMESH_API ComplexStitchMetric( const Mesh& mesh );
-    const VertCoords& points;
-    /// Sum of edge metric for abcc' bcaa' + circumcircleDiameter(a,b,c)
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId& aOpposit, const VertId& cOpposit ) const override;
-    /// Grows with ab angle
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId& left, const VertId& right ) const override;
-};
+/// Forbids connecting vertices from the same hole \n
+/// Simple metric minimizing edge length
+MRMESH_API FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh );
 
-/** \struct MR::EdgeLengthFillMetric
-  * Simple metric minimizing edge length
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS EdgeLengthFillMetric final : FillHoleMetric
-{
-    EdgeLengthFillMetric( const Mesh& mesh ) : points{ mesh.points }
-    {
-    };
-    const VertCoords& points;
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId&, const VertId& ) const override;
-};
+/// Forbids connecting vertices from the same hole \n
+/// Provides triangle metric as circumscribed circle diameter
+MRMESH_API FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh );
 
-/** \struct MR::EdgeLengthStitchMetric
-  * Forbids connecting vertices from different holes\n
-  *
-  * Simple metric minimizing edge length
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS EdgeLengthStitchMetric final : FillHoleMetric
-{
-    /// a,b are edges with left holes
-    MRMESH_API EdgeLengthStitchMetric( const Mesh& mesh );
-    const VertCoords& points;
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
-    ///  0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId& a, const VertId& b, const VertId&, const VertId& ) const override;
-};
+/// Forbids connecting vertices from the same hole \n
+/// All new faces should be parallel to given direction
+MRMESH_API FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
 
-/** \struct MR::CircumscribedStitchMetric
-  * Forbids connecting vertices from different holes\n
-  * 
-  * Provides triangle metric as circumscribed circle diameter\n
-  * getEdgeMetric - always returns zero
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS CircumscribedStitchMetric final : FillHoleMetric
-{
-    MRMESH_API CircumscribedStitchMetric( const Mesh& mesh );
-    const VertCoords& points;
-    /// Circumscribed circle diameter
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
-    /// 0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId&, const VertId&, const VertId&, const VertId& ) const override;
-};
+/// This struct provides complex metric which fines new triangles for: \n
+/// 1. Angle with neighbors : ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4\n
+/// 2. Triangle aspect ratio : Rabc / ( 2 rabc )\n
+/// 3. Triangle area( normalized by max loop edge length ^ 2 )\n
+///
+/// triangleMetric - grows with neighbors angles and triangle aspect ratio( R / 2r )\n
+/// edgeMetric - grows with angle
+MRMESH_API FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e );
 
-/** \struct MR::VerticalStitchMetric
-  * Forbids connecting vertices from different holes\n
-  *
-  * All new faces should be parallel to given direction\n
-  * getEdgeMetric - always returns zero
-  * \sa \ref FillHoleMetric
-  */
-struct MRMESH_CLASS VerticalStitchMetric final : FillHoleMetric
-{
-    MRMESH_API VerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
-    const VertCoords& points;
-    Vector3f upDirection;
+/// This metric minimizes summary projection of new edges to plane normal, (try do produce edges parallel to plane)
+/// 
+/// triangleMetric - ac projection to normal
+/// edgeMetric - -ab projection to normal( it is needed to count last edge only once, as far as edge metric is called only for edge that connects parts of triangulation )
+MRMESH_API FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e, const Plane3f* plane = nullptr );
 
-    /// Fines for non parallel to upDir
-    MRMESH_API virtual double getTriangleMetric( const VertId& a, const VertId& b, const VertId& c, const VertId&, const VertId& ) const override;
-    /// 0.0
-    MRMESH_API virtual double getEdgeMetric( const VertId&, const VertId&, const VertId&, const VertId& ) const override;
-};
+/// This metric minimizes maximum dihedral angle in triangulation
+MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
 
 /// \}
 

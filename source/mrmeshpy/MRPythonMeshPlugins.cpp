@@ -75,7 +75,7 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, boolean_intersect, &booleanIntersect, "stores 
 // Stitch two Holes
 void pythonSetStitchHolesEdgeLengthMetric( MR::StitchHolesParams& params, const Mesh& mesh )
 {
-    params.metric = std::make_unique<EdgeLengthStitchMetric>( mesh );
+    params.metric = getEdgeLengthStitchMetric( mesh );
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, StitchHolesParams, [] ( pybind11::module_& m )

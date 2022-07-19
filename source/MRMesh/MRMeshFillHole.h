@@ -24,10 +24,10 @@ namespace MR
 struct FillHoleParams
 {
     /** Specifies triangulation metric\n
-      * default for MR::fillHole: CircumscribedFillMetric\n
+      * default for MR::fillHole: getCircumscribedFillMetric\n
       * \sa \ref FillHoleMetric
       */
-    std::unique_ptr<FillHoleMetric> metric{};
+    FillHoleMetric metric;
     /// If not nullptr accumulate new faces
     FaceBitSet* outNewFaces{ nullptr };
     /** If Strong makes additional efforts to avoid creating multiple edges, 
@@ -60,10 +60,10 @@ struct FillHoleParams
 struct StitchHolesParams
 {
     /** Specifies triangulation metric\n
-      * default for MR::buildCylinderBetweenTwoHoles: ComplexStitchMetric
+      * default for MR::buildCylinderBetweenTwoHoles: getComplexStitchMetric
       * \sa \ref FillHoleMetric
       */
-    std::unique_ptr<FillHoleMetric> metric{};
+    FillHoleMetric metric;
     /// If not nullptr accumulate new faces
     FaceBitSet* outNewFaces{ nullptr };
 };

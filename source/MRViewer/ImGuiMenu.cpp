@@ -229,13 +229,15 @@ const ImVec4 undefined = ImVec4( 0.5f, 0.5f, 0.5f, 0.5f );
 // at least one of selected is true - first,
 // all selected are true - second
 std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
-                                    unsigned type, MR::ViewportMask viewportId )
+                                    unsigned type, MR::ViewportMask viewportId, bool inverseInput = false )
 {
     bool atLeastOneTrue = false;
     bool allTrue = true;
     for ( const auto& data : selected )
     {
         bool isThisTrue = data && data->getVisualizeProperty( type, viewportId );
+        if ( inverseInput )
+            isThisTrue = !isThisTrue;
         atLeastOneTrue = atLeastOneTrue || isThisTrue;
         allTrue = allTrue && isThisTrue;
     }
@@ -1166,13 +1168,22 @@ float ImGuiMenu::drawSelectionInformation_()
 
                 if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
                     pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
-                
                 if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
                 {
                     pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
                     AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
                     pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+                    oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
+                } else if ( !ImGui::IsItemActive() )
+                {
+                    const auto& positionedText = pObjLabel->getLabel();
+                    oldLabelParams_.lastLabel = positionedText.text;
+                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
                 }
+            }
+            else if ( oldLabelParams_.obj )
+            {
+                oldLabelParams_.obj.reset();
             }
         }
         else
@@ -1365,7 +1376,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
     }
     if ( allIsObjLabels )
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid, true );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
@@ -1619,15 +1630,19 @@ bool ImGuiMenu::make_checkbox( const char* label, bool& checked, bool mixed )
     return res;
 }
 
-bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid )
+bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
-    auto realRes = getRealValue( selectedVisualObjs, type, viewportid );
+    auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
     const bool res = make_checkbox( label, checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
+    {
+        if ( invert )
+            checked = !checked;
         for ( const auto& data : selectedVisualObjs )
             if ( data )
                 data->setVisualizeProperty( checked, type, viewportid );
+    }
 
     return res;
 }

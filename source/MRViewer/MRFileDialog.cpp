@@ -456,12 +456,12 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 #ifndef __EMSCRIPTEN__
     auto kit = Gtk::Application::create();
 
-    Gtk::FileChooserDialog dialog("Open File", Gtk::FILE_CHOOSER_ACTION_SAVE);
+    Gtk::FileChooserDialog dialog("Save File", Gtk::FILE_CHOOSER_ACTION_SAVE);
 
     dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
     dialog.add_button(Gtk::Stock::SAVE, Gtk::RESPONSE_OK);
 
-    for(const auto& filter: params.filters)
+    for ( const auto& filter: params.filters )
     {
         auto filter_text = Gtk::FileFilter::create();
         filter_text->set_name(filter.name);
@@ -475,32 +475,44 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     }
 
     std::string res;
-
-    #if defined(__APPLE__)
-    int responseId = dialog.run();
-    if(responseId == Gtk::RESPONSE_OK)
+    auto on_response = [&dialog, &params, &res]( int responseId )
     {
-        res = dialog.get_current_name();
-    }
-    else if(responseId != Gtk::RESPONSE_CANCEL)
-    {
-        spdlog::warn("GTK failed to get files! Nothing to open.");
-    }
-    #else // __APPLE__
-    dialog.signal_response().connect([&dialog, &res](int responseId)
-    {
-        if(responseId == Gtk::RESPONSE_OK)
+        if ( responseId == Gtk::RESPONSE_OK )
         {
-            res = dialog.get_current_name();
+            using std::filesystem::path;
+            auto res_path = path( dialog.get_current_folder() );
+            res_path /= path( dialog.get_current_name() );
+
+            if ( !res_path.has_extension() )
+            {
+                const std::string filter_name = dialog.get_filter()->get_name();
+                for ( const auto& filter: params.filters )
+                {
+                    if ( filter_name == filter.name )
+                    {
+                        res_path.replace_extension( filter.extension.substr( 1 ) );
+                        break;
+                    }
+                }
+            }
+
+            res = res_path.string();
         }
-        else if( responseId != Gtk::RESPONSE_CANCEL )
+        else if ( responseId != Gtk::RESPONSE_CANCEL )
         {
             spdlog::warn( "GTK failed to get files! Nothing to open." );
         }
+    };
+
+    #if defined( __APPLE__ )
+    on_response( dialog.run() );
+    #else // __APPLE__
+    dialog.signal_response().connect([&dialog, &on_response]( int responseId )
+    {
+        on_response( responseId );
         dialog.hide();
     });
-
-    kit->run(dialog);
+    kit->run( dialog );
     #endif // __APPLE__
     return res;
 #else

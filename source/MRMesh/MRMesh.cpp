@@ -17,6 +17,7 @@
 #include "MRComputeBoundingBox.h"
 #include "MRGTest.h"
 #include "MRCube.h"
+#include "MRTriMath.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -388,31 +389,21 @@ float Mesh::dihedralAngleSin( EdgeId e ) const
 {
     if ( topology.isBdEdge( e ) )
         return 0;
-    auto leftNorm = leftNormal( e );
-    auto rightNorm = leftNormal( e.sym() );
-    auto edgeDir = edgeVector( e ).normalized();
-    return dot( edgeDir, cross( leftNorm, rightNorm ) );
+    return MR::dihedralAngleSin( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
 }
 
 float Mesh::dihedralAngleCos( EdgeId e ) const
 {
     if ( topology.isBdEdge( e ) )
         return 1;
-    auto leftNorm = leftNormal( e );
-    auto rightNorm = leftNormal( e.sym() );
-    return dot( leftNorm, rightNorm );
+    return MR::dihedralAngleCos( leftNormal( e ), leftNormal( e.sym() ) );
 }
 
 float Mesh::dihedralAngle( EdgeId e ) const
 {
     if ( topology.isBdEdge( e ) )
         return 0;
-    auto leftNorm = leftNormal( e );
-    auto rightNorm = leftNormal( e.sym() );
-    auto edgeDir = edgeVector( e ).normalized();
-    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
-    auto cos = dot( leftNorm, rightNorm );
-    return std::atan2( sin, cos );
+    return MR::dihedralAngle( leftNormal( e ), leftNormal( e.sym() ), edgeVector( e ) );
 }
 
 float Mesh::discreteMeanCurvature( VertId v ) const

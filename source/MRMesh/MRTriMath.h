@@ -24,14 +24,40 @@ T triangleAspectRatio( const Vector3<T> & a, const Vector3<T> & b, const Vector3
     return bc * ca * ab / den;
 }
 
-/// Computes dihedral angle between leftNorm and rightNorm, with sign
+/// given an edge direction between two faces with given normals, computes sine of dihedral angle between the faces:
+/// 0 if both faces are in the same plane,
+/// positive if the faces form convex surface,
+/// negative if the faces form concave surface
+/// \ingroup MathGroup
+template <typename T>
+T dihedralAngleSin( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const Vector3<T>& edgeVec )
+{
+    auto edgeDir = edgeVec.normalized();
+    return dot( edgeDir, cross( leftNorm, rightNorm ) );
+}
+
+/// given two face normals, computes cosine of dihedral angle between the faces:
+/// 1 if both faces are in the same plane,
+/// 0 if the surface makes right angle turn at the edge,
+/// -1 if the faces overlap one another
+/// \ingroup MathGroup
+template <typename T>
+T dihedralAngleCos( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm )
+{
+    return dot( leftNorm, rightNorm );
+}
+
+/// given an edge direction between two faces with given normals, computes the dihedral angle between the faces:
+/// 0 if both faces are in the same plane,
+/// positive if the faces form convex surface,
+/// negative if the faces form concave surface;
+/// please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
 /// \ingroup MathGroup
 template <typename T>
 T dihedralAngle( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const Vector3<T>& edgeVec )
 {
-    auto edgeDir = edgeVec.normalized();
-    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
-    auto cos = dot( leftNorm, rightNorm );
+    auto sin = dihedralAngleSin( leftNorm, rightNorm, edgeVec );
+    auto cos = dihedralAngleCos( leftNorm, rightNorm );
     return std::atan2( sin, cos );
 }
 

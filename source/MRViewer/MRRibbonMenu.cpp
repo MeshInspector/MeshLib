@@ -416,12 +416,7 @@ void RibbonMenu::drawCollapseButton_()
             asyncTimer_.resetTime();
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Unpin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::SetTooltipIfHovered( "Unpin", menu_scaling() );
     }
     else
     {
@@ -432,12 +427,7 @@ void RibbonMenu::drawCollapseButton_()
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
         }
         ImGui::PopFont();
-        if ( ImGui::IsItemHovered() )
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text( "%s", "Pin" );
-            ImGui::EndTooltip();
-        }
+        ImGui::SetTooltipIfHovered( "Pin", menu_scaling() );
     }
     font->Scale = 1.0f;
 
@@ -1485,8 +1475,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        if ( ImGui::IsItemHovered() )
-            ImGui::SetTooltip( "Transforms object and resets transform value to identity." );
+        ImGui::SetTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
 
         if ( RibbonButtonDrawer::GradientButton( "Reset", ImVec2( buttonSize, 0 ) ) )
         {
@@ -1494,8 +1483,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        if ( ImGui::IsItemHovered() )
-            ImGui::SetTooltip( "Resets transform value to identity." );
+        ImGui::SetTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
     }
     ImGui::EndPopup();
     return true;

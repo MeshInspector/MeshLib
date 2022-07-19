@@ -21,7 +21,7 @@ public:
 class MRVIEWER_CLASS ViewerSettingsManager : public IViewerSettingsManager
 {
 public:
-    MRVIEWER_API ViewerSettingsManager( std::string appName );
+    MRVIEWER_API ViewerSettingsManager();
 
     MRVIEWER_API virtual void loadSettings( Viewer& viewer ) override;
     MRVIEWER_API virtual void saveSettings( const Viewer& viewer ) override;
@@ -37,7 +37,6 @@ public:
     MRVIEWER_API int getLastExtentionNum( ObjType objType );
     MRVIEWER_API void setLastExtentionNum( ObjType objType, int num );
 private:
-    std::string appName_;
     std::vector<int> lastExtentionNums_;
 };
 }

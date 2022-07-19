@@ -186,17 +186,17 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, MR::Mesh )
 
 void pythonSetFillHolePlaneMetric( MR::FillHoleParams& params, const Mesh& mesh, EdgeId e )
 {
-    params.metric = std::make_unique<PlaneFillMetric>( mesh, e );
+    params.metric = getPlaneFillMetric( mesh, e );
 }
 
 void pythonSetFillHoleEdgeLengthMetric( MR::FillHoleParams& params, const Mesh& mesh )
 {
-    params.metric = std::make_unique<EdgeLengthFillMetric>( mesh );
+    params.metric = getEdgeLengthFillMetric( mesh );
 }
 
 void pythonSetFillHoleCircumscribedMetric( MR::FillHoleParams& params, const Mesh& mesh )
 {
-    params.metric = std::make_unique<CircumscribedFillMetric>( mesh );
+    params.metric = getCircumscribedFillMetric( mesh );
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )

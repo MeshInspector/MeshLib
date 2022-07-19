@@ -132,7 +132,7 @@ std::optional<Mesh> PlanarTriangulator::run()
         if ( !windingInfo_[e].inside() )
             continue;
         FillHoleParams params;
-        params.metric = std::make_unique<PlaneFillMetric>( mesh_, dirE );
+        params.metric = getPlaneFillMetric( mesh_, dirE );
         fillHole( mesh_, dirE, params );
     }
     makeDeloneEdgeFlips( mesh_, { .numIters = 100, .maxDeviationAfterFlip = std::numeric_limits<float>::epsilon() } );

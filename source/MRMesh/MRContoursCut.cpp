@@ -1262,10 +1262,10 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
 {
     assert( oldFace.valid() );
     if ( !new2OldMap )
-        return fillHole( mesh, e, { std::make_unique<PlaneNormalizedFillMetric>( mesh,e ) } );
+        return fillHole( mesh, e, { getPlaneNormalizedFillMetric( mesh,e ) } );
 
     FaceBitSet newFaces;
-    fillHole( mesh, e, { std::make_unique<PlaneNormalizedFillMetric>( mesh,e ), &newFaces} );
+    fillHole( mesh, e, { getPlaneNormalizedFillMetric( mesh,e ), &newFaces} );
     for ( auto f : newFaces )
         new2OldMap->autoResizeAt( f ) = oldFace;
 }

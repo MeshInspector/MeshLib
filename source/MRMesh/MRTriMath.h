@@ -3,6 +3,7 @@
 
 #include "MRVector3.h"
 #include <limits>
+#include <cmath>
 
 namespace MR
 {
@@ -21,6 +22,17 @@ T triangleAspectRatio( const Vector3<T> & a, const Vector3<T> & b, const Vector3
         return std::numeric_limits<T>::max();
 
     return bc * ca * ab / den;
+}
+
+/// Computes dihedral angle between leftNorm and rightNorm, with sign
+/// \ingroup MathGroup
+template <typename T>
+T dihedralAngle( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const Vector3<T>& edgeVec )
+{
+    auto edgeDir = edgeVec.normalized();
+    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
+    auto cos = dot( leftNorm, rightNorm );
+    return std::atan2( sin, cos );
 }
 
 } // namespace MR

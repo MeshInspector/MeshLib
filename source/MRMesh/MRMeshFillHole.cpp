@@ -8,10 +8,10 @@
 #include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
 #include "MRHash.h"
-#include <parallel_hashmap/phmap.h>
 #include "MRPch/MRTBB.h"
-#include <queue>
 #include "MRGTest.h"
+#include <parallel_hashmap/phmap.h>
+#include <queue>
 #include <functional>
 
 namespace MR
@@ -110,7 +110,7 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 
 // finds best candidate among all given steps
 void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,
-    const FillHoleMetric& metricRef,
+    const FillHoleMetric& metrics,
     const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
     for ( unsigned s = 0; s < optimalStepsCache.size(); ++s )
@@ -118,7 +118,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         auto v = optimalStepsCache[s];
         const auto& abConn = map[processedConn.a][v];
         const auto& bcConn = map[v][processedConn.b];
-        double weight = abConn.weight + bcConn.weight;
+        double weight = metrics.combineMetric( abConn.weight, bcConn.weight );
         if ( weight > processedConn.weight )
             continue;
 
@@ -128,12 +128,27 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         if ( aVert == bVert )
             continue;
 
-        //weight += metricTriangle( mesh, aCur, edgeMap[v], cCur );
-        weight += metricRef.getTriangleMetric(
-            aVert, topology.org( loop[v] ), bVert,
-            !bcConn.hasPrev() ? topology.dest( topology.prev( loop[v] ) ) : topology.org( loop[bcConn.prevA] ),
-            !abConn.hasPrev() ? topology.dest( topology.prev( loop[processedConn.a] ) ) : topology.org( loop[abConn.prevA] )
-        );
+        if ( metrics.triangleMetric )
+        {
+            auto triMetric = metrics.triangleMetric( aVert, topology.org( loop[v] ), bVert );
+            weight = metrics.combineMetric( weight, triMetric );
+        }
+        if ( metrics.edgeMetric )
+        {
+            auto edgeACMetric = metrics.edgeMetric(
+                aVert, topology.org( loop[v] ),
+                !abConn.hasPrev() ? topology.dest( topology.prev( loop[processedConn.a] ) ) : topology.org( loop[abConn.prevA] ),
+                bVert );
+
+            auto  edgeCBMetric = metrics.edgeMetric(
+                topology.org( loop[v] ), bVert,
+                !bcConn.hasPrev() ? topology.dest( topology.prev( loop[v] ) ) : topology.org( loop[bcConn.prevA] ),
+                aVert );
+
+            weight = metrics.combineMetric( weight, edgeACMetric );
+            weight = metrics.combineMetric( weight, edgeCBMetric );
+        }
+
         if ( weight < processedConn.weight )
         {
             processedConn.weight = weight;
@@ -212,7 +227,7 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     std::priority_queue<WeightedConn>& queue, NewEdgesMap& map,
     const std::vector<EdgeId>& aEdgesMap,
     const std::vector<EdgeId>& bEdgesMap,
-    const FillHoleMetric& metric,
+    const FillHoleMetric& metrics,
     bool addALoop )
 {
     int nextA{ current.a };
@@ -256,8 +271,27 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     if ( ( nextA == aEdgesMapSize && nextB == 0 ) || ( nextB == bEdgesMapSize && nextA == 0 ) )
         return false;
 
-    // Metric is sum of length so we add new to previous one
-    double sumMetric = current.weight + metric.getTriangleMetric( aVert, bVert, cVert, aOp, cOp );
+    double sumMetric = current.weight;
+    if ( metrics.triangleMetric )
+    {
+        auto triMetric = metrics.triangleMetric( aVert, bVert, cVert );
+        sumMetric = metrics.combineMetric( sumMetric, triMetric );
+    }
+
+    if ( metrics.edgeMetric )
+    {
+        if ( cOp )
+        {
+            auto edgeACMetric = metrics.edgeMetric( aVert, bVert, cOp, cVert );
+            sumMetric = metrics.combineMetric( sumMetric, edgeACMetric );
+        }
+        if ( aOp )
+        {
+            auto edgeCBMetric = metrics.edgeMetric( bVert, cVert, aOp, aVert );
+            sumMetric = metrics.combineMetric( sumMetric, edgeCBMetric );
+        }
+    }
+
     if ( sumMetric >= nextConn.weight )
         return false;
     // push to queue only if new variant is better as other way to this conn
@@ -269,7 +303,7 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     // this means that we reached end
     if ( nextA == aEdgesMapSize && nextB == bEdgesMapSize )
     {
-        if ( !metric.hasEdgeMetric )
+        if ( !metrics.edgeMetric )
             return true;
         // we need to spin back candidate to find first edge to count edge metric of last edge
         WeightedConn currentSpin;
@@ -284,8 +318,10 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
             else
             {
                 assert( currentSpin.a == 1 || currentSpin.b == 1 );
-                nextConn.weight += metric.getEdgeMetric( mesh.topology.org( aEdgesMap.front() ), mesh.topology.org( bEdgesMap.front() ),
+                double lastEdgeMetric = metrics.edgeMetric( mesh.topology.org( aEdgesMap.front() ), mesh.topology.org( bEdgesMap.front() ),
                     cOp, currentSpin.a == 1 ? mesh.topology.org( aEdgesMap[1] ) : mesh.topology.org( bEdgesMap[1] ) );
+                
+                nextConn.weight = metrics.combineMetric( nextConn.weight, lastEdgeMetric );
                 break;
             }
 
@@ -356,9 +392,11 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
         b = mesh.topology.next( b ).sym();
     }
 
-
-    if ( !params.metric )
-        const_cast< StitchHolesParams& >( params ).metric = std::make_unique<ComplexStitchMetric>( mesh );
+    FillHoleMetric metrics = params.metric;
+    if ( !metrics.edgeMetric && !metrics.triangleMetric )
+        metrics = getComplexStitchMetric( mesh );
+    if ( !metrics.combineMetric )
+        metrics.combineMetric = [] ( double a, double b ) { return a + b; };
 
     // [0..aLoopEdgesCounter][0..bLoopEdgesCounter]
     // last one represents the same edge as first one, but reaching it means that algorithm has finished
@@ -374,8 +412,8 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
         current = queue.top(); // cannot use std::move unfortunately since top() returns const reference
         queue.pop();
         //add to queue next a variant and next b variant
-        if ( processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, *params.metric, true ) ||
-            processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, *params.metric, false ) )
+        if ( processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, true ) ||
+            processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, false ) )
             break;
     } while ( !queue.empty() );
 
@@ -463,10 +501,11 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
     NewEdgesMap newEdgesMap( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, {-1,-1,0.0} ) );
 
-    if ( !params.metric )
-        const_cast< FillHoleParams& >( params ).metric = std::make_unique<CircumscribedFillMetric>( mesh );
-
-    const FillHoleMetric& metricRef = *params.metric;
+    FillHoleMetric metrics = params.metric;
+    if ( !metrics.edgeMetric && !metrics.triangleMetric )
+        metrics = getCircumscribedFillMetric( mesh );
+    if ( !metrics.combineMetric )
+        metrics.combineMetric = [] ( double a, double b ) { return a + b; };
 
     //fill all table not queue
     constexpr unsigned stepStart = 2;
@@ -488,7 +527,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
                     sameEdgeExists( mesh.topology, aCur, cCur ) )
                     continue;
                 getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter );
-                getTriangulationWeights( mesh.topology, newEdgesMap, edgeMap, metricRef, optimalStepsCache, current ); // find better among steps
+                getTriangulationWeights( mesh.topology, newEdgesMap, edgeMap, metrics, optimalStepsCache, current ); // find better among steps
             }
         });
     }
@@ -497,16 +536,19 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     for ( unsigned i = 0; i < loopEdgesCounter; ++i )
     {
         const auto cIndex = ( i + stepStart ) % loopEdgesCounter;
-        double weight = newEdgesMap[i][cIndex].weight + newEdgesMap[cIndex][i].weight +
-            metricRef.getEdgeMetric( 
+        double weight = metrics.combineMetric( newEdgesMap[i][cIndex].weight, newEdgesMap[cIndex][i].weight );
+        if ( metrics.edgeMetric )
+        {
+            auto lastEdgeMetric = metrics.edgeMetric(
                 mesh.topology.org( edgeMap[i] ), mesh.topology.org( edgeMap[cIndex] ),
                 !newEdgesMap[i][cIndex].hasPrev() ? mesh.topology.dest( mesh.topology.prev( edgeMap[i] ) ) : mesh.topology.org( edgeMap[newEdgesMap[i][cIndex].prevA] ),
                 !newEdgesMap[cIndex][i].hasPrev() ? mesh.topology.dest( mesh.topology.prev( edgeMap[cIndex] ) ) : mesh.topology.org( edgeMap[newEdgesMap[cIndex][i].prevA] )
             );
-
+            weight = metrics.combineMetric( weight, lastEdgeMetric );
+        }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metricRef, newEdgesMap[cIndex][i] ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i] ) ) )
         {
             finConn = newEdgesMap[cIndex][i];
             finConn.weight = weight;

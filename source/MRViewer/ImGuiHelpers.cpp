@@ -709,7 +709,7 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
         return;
     assert( scaling > 0.f );
 
-    constexpr float cMaxWidth = 200.f;
+    constexpr float cMaxWidth = 400.f;
     const auto& style = ImGui::GetStyle();
     auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
     ImGui::SetNextWindowSize( ImVec2{ textSize.x + style.WindowPadding.x * 2, 0 } );

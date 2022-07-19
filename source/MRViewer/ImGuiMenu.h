@@ -202,7 +202,7 @@ public:
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
   bool make_checkbox( const char* label, bool& checked, bool mixed );
-  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid );
+  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,

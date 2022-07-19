@@ -100,7 +100,8 @@ MRVIEWER_API MultiDragRes DragFloatValid3( const char * label, float v[3], float
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),
     const char* format = "%.3f", ImGuiSliderFlags flags = 0,
-    const char* (*tooltips)[3] = nullptr );
+    const char* (*tooltips)[3] = nullptr,
+    const char* labelTooltip = nullptr );
 
 /// similar to ImGui::DragInt but
 /// 1) value on output is forced to be in [min,max] range;

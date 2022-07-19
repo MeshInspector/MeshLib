@@ -258,7 +258,7 @@ bool InputIntValid( const char* label, int* v, int v_min, int v_max,
     return res;
 }
 
-MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, float valueMin, float valueMax, const char* format, ImGuiSliderFlags flags, const char* (*tooltips)[3] )
+MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, float valueMin, float valueMax, const char* format, ImGuiSliderFlags flags, const char* (*tooltips)[3], const char* labelTooltip )
 {
     MultiDragRes res;
 
@@ -290,6 +290,8 @@ MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, f
     {
         SameLine(0, g.Style.ItemInnerSpacing.x);
         TextEx(label, label_end);
+        if ( labelTooltip && IsItemHovered() )
+            SetTooltip( "%s", labelTooltip );
     }
 
     EndGroup();

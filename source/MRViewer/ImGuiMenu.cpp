@@ -1520,11 +1520,11 @@ float ImGuiMenu::drawTransform_()
                 "Rotation around Oy-axis, degrees",
                 "Rotation around Oz-axis, degrees"
             };
+            const char* tooltipLabelRotation = "Sequential intrinsic rotations around Oz, Oy and Ox axes."; // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
-            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
+            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation, tooltipLabelRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
-            ImGui::SetTooltipIfHovered( "Sequential intrinsic rotations around Oz, Oy and Ox axes.", scaling ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
 
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );

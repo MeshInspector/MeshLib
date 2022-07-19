@@ -75,7 +75,7 @@ MRMESH_API FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh );
 /// All new faces should be parallel to given direction
 MRMESH_API FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
 
-/// This struct provides complex metric which fines new triangles for: \n
+/// This function provides complex metric which penalizes new triangles for: \n
 /// 1. Angle with neighbors : ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4\n
 /// 2. Triangle aspect ratio : Rabc / ( 2 rabc )\n
 /// 3. Triangle area( normalized by max loop edge length ^ 2 )\n

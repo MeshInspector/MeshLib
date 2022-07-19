@@ -229,13 +229,15 @@ const ImVec4 undefined = ImVec4( 0.5f, 0.5f, 0.5f, 0.5f );
 // at least one of selected is true - first,
 // all selected are true - second
 std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
-                                    unsigned type, MR::ViewportMask viewportId )
+                                    unsigned type, MR::ViewportMask viewportId, bool inverseInput = false )
 {
     bool atLeastOneTrue = false;
     bool allTrue = true;
     for ( const auto& data : selected )
     {
         bool isThisTrue = data && data->getVisualizeProperty( type, viewportId );
+        if ( inverseInput )
+            isThisTrue = !isThisTrue;
         atLeastOneTrue = atLeastOneTrue || isThisTrue;
         allTrue = allTrue && isThisTrue;
     }
@@ -1630,17 +1632,17 @@ bool ImGuiMenu::make_checkbox( const char* label, bool& checked, bool mixed )
 
 bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
-    auto realRes = getRealValue( selectedVisualObjs, type, viewportid );
+    auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
-    if ( invert )
-        checked = !checked;
     const bool res = make_checkbox( label, checked, !realRes.second && realRes.first );
-    if ( invert )
-        checked = !checked;
     if ( checked != realRes.first )
+    {
+        if ( invert )
+            checked = !checked;
         for ( const auto& data : selectedVisualObjs )
             if ( data )
                 data->setVisualizeProperty( checked, type, viewportid );
+    }
 
     return res;
 }

@@ -280,10 +280,16 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
 
     if ( metrics.edgeMetric )
     {
-        auto edgeACMetric = metrics.edgeMetric( aVert, bVert, cOp, cVert );
-        auto edgeCBMetric = metrics.edgeMetric( bVert, cVert, aOp, aVert );
-        sumMetric = metrics.combineMetric( sumMetric, edgeACMetric );
-        sumMetric = metrics.combineMetric( sumMetric, edgeCBMetric );
+        if ( cOp )
+        {
+            auto edgeACMetric = metrics.edgeMetric( aVert, bVert, cOp, cVert );
+            sumMetric = metrics.combineMetric( sumMetric, edgeACMetric );
+        }
+        if ( aOp )
+        {
+            auto edgeCBMetric = metrics.edgeMetric( bVert, cVert, aOp, aVert );
+            sumMetric = metrics.combineMetric( sumMetric, edgeCBMetric );
+        }
     }
 
     if ( sumMetric >= nextConn.weight )

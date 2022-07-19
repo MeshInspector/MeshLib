@@ -111,8 +111,10 @@ public:
     [[deprecated]]
     MRVIEWER_API void  remove_lines();
     // Add point to draw-list  as a  "pos" position. 
+    [[deprecated]]
     MRVIEWER_API void  add_point( const Vector3f& pos, const Color& color = Color::black() );
     // Remove all lines selected for draw
+    [[deprecated]]
     MRVIEWER_API void  remove_points();
     // Is there a need to use depth_test for preview lines. (default: false)
     [[deprecated]]

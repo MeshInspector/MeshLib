@@ -1511,8 +1511,7 @@ float ImGuiMenu::drawTransform_()
             }
             ImGui::SameLine();
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
-            if ( ImGui::IsItemHovered() )
-                ImGui::SetTooltip( "%s", "Selects between uniform scaling or separate scaling along each axis" );
+            ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", menu_scaling() );
             ImGui::PopItemWidth();
 
             const char* tooltipsRotation[3] = {
@@ -1524,8 +1523,7 @@ float ImGuiMenu::drawTransform_()
             auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
-            if ( ImGui::IsItemHovered() )
-                ImGui::SetTooltip( "%s", "Sequential intrinsic rotations around Oz, Oy and Ox axes." ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
+            ImGui::SetTooltipIfHovered( "Sequential intrinsic rotations around Oz, Oy and Ox axes.", menu_scaling() ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
 
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );

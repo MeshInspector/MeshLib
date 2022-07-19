@@ -1,6 +1,5 @@
 #pragma once
 #include <limits>
-#include <cmath>
 
 namespace MR
 {
@@ -22,15 +21,6 @@ T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector
     if ( f <= 0 )
         return std::numeric_limits<T>::max();
     return ab * ca * bc / f;
-}
-
-template <typename T>
-T dihedralAngle( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const Vector3<T>& edgeVec )
-{
-    auto edgeDir = edgeVec.normalized();
-    auto sin = dot( edgeDir, cross( leftNorm, rightNorm ) );
-    auto cos = dot( leftNorm, rightNorm );
-    return std::atan2( sin, cos );
 }
 
 }

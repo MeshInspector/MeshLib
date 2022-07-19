@@ -3,6 +3,7 @@
 #include "MREdgeIterator.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
+#include "MRTriMath.h"
 
 namespace MR
 {

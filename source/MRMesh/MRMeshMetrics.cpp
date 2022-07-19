@@ -43,7 +43,7 @@ FillHoleMetric getPlaneFillMetric( const Mesh& mesh, EdgeId e0 )
         Vector3d bP = Vector3d( mesh.points[b] );
         Vector3d cP = Vector3d( mesh.points[c] );
         if ( dot( norm, cross( bP - aP, cP - aP ) ) < 0.0 )
-            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to be allow some bad meshes
+            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
 
         return circumcircleDiameter( aP, bP, cP );
     };

@@ -31,10 +31,6 @@ struct DeloneSettings
 template <typename T>
 T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c );
 
-/// computes dihedral angle between leftNorm and rightNorm, with sign
-template <typename T>
-T dihedralAngle( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const Vector3<T>& edgeVec );
-
 /// given quadrangle ABCD, checks whether its edge AC satisfies Delone's condition;
 /// if dihedral angles
 ///   1) between triangles ABD and DBC and

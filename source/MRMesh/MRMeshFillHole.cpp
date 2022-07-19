@@ -76,7 +76,7 @@ bool holeHasDuplicateVerts( const MeshTopology& topology, EdgeId a )
     return false;
 }
 
-constexpr int maxStepsNum = 100;
+constexpr int maxStepsNum = 20;
 void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsigned steps, unsigned loopSize )
 {
     optimalSteps.resize(0);

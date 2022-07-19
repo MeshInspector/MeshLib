@@ -575,13 +575,17 @@ void  Viewport::add_point ( const Vector3f& pos, const Color& color )
     auto [newPoints, newColors] = viewportGL_.getPointsWithColors();
     newPoints.push_back( pos );
     newColors.push_back( Vector4f( color ) );
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 );
     setPointsWithColors( { newPoints,newColors } );
+    MR_SUPPRESS_WARNING_POP
     needRedraw_ = viewportGL_.points_dirty;
 } 
 
 void  Viewport::remove_points()
 {
+    MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setPointsWithColors( { {},{} } );
+    MR_SUPPRESS_WARNING_POP
     needRedraw_ = viewportGL_.points_dirty;
 }
 

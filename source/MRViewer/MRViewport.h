@@ -91,6 +91,7 @@ public:
 
     // Sets visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     // calls 'beforeSetPointsWithColors' lambda if it is present
+    [[deprecated]]
     MRVIEWER_API void setPointsWithColors( const ViewportPointsWithColors& pointsWithColors );
 
     // Sets visual lines segments with corresponding colors (pair<vector<LineSegm3f>,vector<SegmEndColors>>)
@@ -120,10 +121,12 @@ public:
     [[deprecated]]
     MRVIEWER_API void setPreviewLinesDepthTest( bool on );
     // Is there a need to use depth_test for preview points. (default: false)
+    [[deprecated]]
     MRVIEWER_API void setPreviewPointsDepthTest( bool on );
 
     [[deprecated]]
     bool getPreviewLinesDepthTest() const { return previewLinesDepthTest_; }
+    [[deprecated]]
     bool getPreviewPointsDepthTest() const { return previewPointsDepthTest_; }
 
     // Point size in pixels

@@ -1485,8 +1485,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        if ( ImGui::IsItemHovered() )
-            ImGui::SetTooltip( "Transforms object and resets transform value to identity." );
+        ImGui::SetTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
 
         if ( RibbonButtonDrawer::GradientButton( "Reset", ImVec2( buttonSize, 0 ) ) )
         {
@@ -1494,8 +1493,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        if ( ImGui::IsItemHovered() )
-            ImGui::SetTooltip( "Resets transform value to identity." );
+        ImGui::SetTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
     }
     ImGui::EndPopup();
     return true;

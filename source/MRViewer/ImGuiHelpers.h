@@ -196,4 +196,7 @@ MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const 
 /// get image coordinates under cursor considering Y-direction flipping
 MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
 
+/// draw tooltip only if current item is hovered
+MRVIEWER_API void SetTooltipIfHovered( const std::string& text, float scaling );
+
 } // namespace ImGui

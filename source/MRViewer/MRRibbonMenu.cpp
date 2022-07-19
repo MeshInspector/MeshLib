@@ -416,7 +416,7 @@ void RibbonMenu::drawCollapseButton_()
             asyncTimer_.resetTime();
         }
         ImGui::PopFont();
-        ImGui::SetTooltipIfHovered( "Unpin", menu_scaling() );
+        ImGui::SetTooltipIfHovered( "Unpin", scaling );
     }
     else
     {
@@ -427,7 +427,7 @@ void RibbonMenu::drawCollapseButton_()
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
         }
         ImGui::PopFont();
-        ImGui::SetTooltipIfHovered( "Pin", menu_scaling() );
+        ImGui::SetTooltipIfHovered( "Pin", scaling );
     }
     font->Scale = 1.0f;
 

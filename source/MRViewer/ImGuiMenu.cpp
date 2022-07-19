@@ -1464,6 +1464,7 @@ float ImGuiMenu::drawTransform_()
 {
     auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
+    const auto scaling = menu_scaling();
     auto& style = ImGui::GetStyle();
 
     float resultHeight_ = 0.f;
@@ -1489,7 +1490,7 @@ float ImGuiMenu::drawTransform_()
             bool inputDeactivated = false;
             bool inputChanged = false;
 
-            ImGui::PushItemWidth( ( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() - style.ItemInnerSpacing.x * 2 ) / 3.f );
+            ImGui::PushItemWidth( ( ImGui::GetContentRegionAvail().x - 85 * scaling - style.ItemInnerSpacing.x * 2 ) / 3.f );
             if ( uniformScale_ )
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
@@ -1511,7 +1512,7 @@ float ImGuiMenu::drawTransform_()
             }
             ImGui::SameLine();
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
-            ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", menu_scaling() );
+            ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
             const char* tooltipsRotation[3] = {
@@ -1519,11 +1520,11 @@ float ImGuiMenu::drawTransform_()
                 "Rotation around Oy-axis, degrees",
                 "Rotation around Oz-axis, degrees"
             };
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() );
+            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
             auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
-            ImGui::SetTooltipIfHovered( "Sequential intrinsic rotations around Oz, Oy and Ox axes.", menu_scaling() ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
+            ImGui::SetTooltipIfHovered( "Sequential intrinsic rotations around Oz, Oy and Ox axes.", scaling ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
 
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
@@ -1534,7 +1535,7 @@ float ImGuiMenu::drawTransform_()
                 "Translation along Oz-axis"
             };
             const auto trSpeed = selectionBbox_.valid() ? 0.003f * selectionBbox_.diagonal() : 0.003f;
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() );
+            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
             auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed,
                                                              std::numeric_limits<float>::lowest(),
                                                              std::numeric_limits<float>::max(),

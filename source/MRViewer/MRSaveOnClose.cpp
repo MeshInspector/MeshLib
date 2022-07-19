@@ -27,13 +27,15 @@ void SaveOnClosePlugin::preDraw_()
     auto menuInstance = viewerRef.getMenuPlugin();
     if ( !menuInstance )
         return;
+    const auto scaling = menuInstance->menu_scaling();
+
     auto* context = menuInstance->getCurrentContext();
     if ( !context )
         return;
     ImGui::SetCurrentContext( context );
 
     ImGui::OpenPopup( "Application close" );
-    ImGui::SetNextWindowSize( ImVec2( 300 * menuInstance->menu_scaling(), -1 ), ImGuiCond_Always );
+    ImGui::SetNextWindowSize( ImVec2( 300 * scaling, -1 ), ImGuiCond_Always );
     ImGui::BeginModalNoAnimation( "Application close", nullptr, ImGuiWindowFlags_NoResize );
 
     ImGui::Text( "Save your changes?" );
@@ -63,7 +65,7 @@ void SaveOnClosePlugin::preDraw_()
             };
         } );
     }
-    ImGui::SetTooltipIfHovered( "Save the current scene and close the application", menuInstance->menu_scaling() );
+    ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
 
     ImGui::SameLine( 0, p );
     if ( ImGui::Button( "Close", ImVec2( ( w - p ) / 3.f, 0 ) ) )
@@ -72,14 +74,14 @@ void SaveOnClosePlugin::preDraw_()
         shouldClose_ = true;
         showCloseModal_ = false;
     }
-    ImGui::SetTooltipIfHovered( "Close the application without saving", menuInstance->menu_scaling() );
+    ImGui::SetTooltipIfHovered( "Close the application without saving", scaling );
 
     ImGui::SameLine( 0, p );
     if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 3.f, 0 ) ) )
     {
         showCloseModal_ = false;
     }
-    ImGui::SetTooltipIfHovered( "Do not close the application", menuInstance->menu_scaling() );
+    ImGui::SetTooltipIfHovered( "Do not close the application", scaling );
 
     if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
         showCloseModal_ = false;

@@ -42,9 +42,6 @@ struct FillHoleMetric
 /// It is rather fast to calculate, and it results in typically good triangulations.
 MRMESH_API FillHoleMetric getCircumscribedMetric( const Mesh& mesh );
 
-inline [[deprecated]] FillHoleMetric getCircumscribedFillMetric( const Mesh& mesh ) { return getCircumscribedMetric( mesh ); }
-inline [[deprecated]] FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh ) { return getCircumscribedMetric( mesh ); }
-
 /// Same as getCircumscribedFillMetric, but with extra penalty for the triangles having
 /// normals looking in the opposite side of plane containing left of (e).
 MRMESH_API FillHoleMetric getPlaneFillMetric( const Mesh& mesh, EdgeId e );

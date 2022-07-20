@@ -108,6 +108,8 @@ FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh )
 FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;
+    // this can be implemented via edgeMetric as in getEdgeLengthFillMetric,
+    // but it is slower in stitchHoles than the implementation via triangleMetric
     metric.triangleMetric = [&] ( VertId a, VertId, VertId c )
     {
         return ( mesh.points[c] - mesh.points[a] ).length();

@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRPch/MRTBB.h"
+#include <span>
 
 // unknown pragmas
 #pragma warning(disable:4068)
@@ -25,12 +26,34 @@
 namespace
 {
 using namespace MR;
-Vector3f interpolateNPoints( const std::vector<Vector3f>& points, float coef )
+Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef )
 {
+    const float invCoef = 1 - coef;
     if ( points.size() == 2 )
-        return points[0] * ( 1 - coef ) + points[1] * coef;
+        return points[0] * invCoef + points[1] * coef;
 
-    auto pointsCopy = points;
+    const size_t N = points.size();
+    const size_t tempPointCount = N * ( N - 1 ) / 2 - 1;
+
+    std::array<Vector3f, 14> tempPoints;   
+
+    for ( size_t i = 0; i < N - 1; ++i )
+    {
+        tempPoints[i] = points[i] * invCoef + points[i + 1] * coef;
+    }
+
+    size_t offset = 0;
+
+    for ( size_t j = N - 1; j > 2; --j )
+    {
+        for ( size_t i = 0; i < j - 1; ++i )
+            tempPoints[offset + j + i] = tempPoints[offset + i] * invCoef + tempPoints[offset + i + 1] * coef;
+
+        offset += j;
+    }
+
+    return tempPoints[offset] * invCoef + tempPoints[offset + 1] * coef;
+ /*   auto pointsCopy = points;
     std::vector<Vector3f> nextStepPoints( points.size() - 1 );
     while ( !nextStepPoints.empty() )
     {
@@ -40,8 +63,7 @@ Vector3f interpolateNPoints( const std::vector<Vector3f>& points, float coef )
         pointsCopy = nextStepPoints;
         nextStepPoints.resize( pointsCopy.size() - 1 );
     }
-    assert( pointsCopy.size() == 1 );
-    return pointsCopy[0];
+    assert( pointsCopy.size() == 1 );*/
 }
 
 std::vector<Vector3f> makeOriginGrid( const Box3f& box, const Vector3i& resolution )
@@ -256,16 +278,12 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
         {
             auto index = y + z * resolution_.y;
             auto indexWithX = index * resolution_.x;
-            xPlaneCache[index] = interpolateNPoints(
-                std::vector<Vector3f>( refPointsGrid_.begin() + indexWithX, refPointsGrid_.begin() + indexWithX + resolution_.x ),
-                normedPoint.x );
+            xPlaneCache[index] = interpolateNPoints( { refPointsGrid_.data() + indexWithX, size_t(resolution_.x) }, normedPoint.x );
         }
 
     for ( int z = 0; z < resolution_.z; ++z )
     {
-        yLineCache[z] = interpolateNPoints( std::vector<Vector3f>(
-            xPlaneCache.begin() + z * resolution_.y, xPlaneCache.begin() + ( z + 1 ) * resolution_.y ),
-            normedPoint.y );
+        yLineCache[z] = interpolateNPoints( { xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) }, normedPoint.y );
     }
     return interpolateNPoints( yLineCache, normedPoint.z );
 }

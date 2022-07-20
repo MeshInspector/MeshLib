@@ -463,10 +463,10 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 
     for ( const auto& filter: params.filters )
     {
-        auto filter_text = Gtk::FileFilter::create();
-        filter_text->set_name(filter.name);
-        filter_text->add_pattern(filter.extension);
-        dialog.add_filter(filter_text);
+        auto filterText = Gtk::FileFilter::create();
+        filterText->set_name( filter.name );
+        filterText->add_pattern( filter.extension );
+        dialog.add_filter( filterText);
     }
 
     if ( !params.fileName.empty() )
@@ -475,7 +475,7 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     }
 
     std::string res;
-    auto on_response = [&dialog, &params, &res]( int responseId )
+    auto onResponse = [&dialog, &params, &res]( int responseId )
     {
         if ( responseId == Gtk::RESPONSE_OK )
         {
@@ -485,10 +485,10 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
 
             if ( !resPath.has_extension() )
             {
-                const std::string filter_name = dialog.get_filter()->get_name();
+                const std::string filterName = dialog.get_filter()->get_name();
                 for ( const auto& filter: params.filters )
                 {
-                    if ( filter_name == filter.name )
+                    if ( filterName == filter.name )
                     {
                         resPath.replace_extension( filter.extension.substr( 1 ) );
                         break;
@@ -505,11 +505,11 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     };
 
     #if defined( __APPLE__ )
-    on_response( dialog.run() );
+    onResponse( dialog.run() );
     #else // __APPLE__
-    dialog.signal_response().connect([&dialog, &on_response]( int responseId )
+    dialog.signal_response().connect([&dialog, &onResponse]( int responseId )
     {
-        on_response( responseId );
+        onResponse( responseId );
         dialog.hide();
     });
     kit->run( dialog );

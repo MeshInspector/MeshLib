@@ -33,8 +33,9 @@ Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef
         return points[0] * invCoef + points[1] * coef;
 
     const size_t N = points.size();
-    const size_t tempPointCount = N * ( N - 1 ) / 2 - 1;
 
+    //we need no more than 14 temporary points if grid side <= 6. 
+    //std::array is three times faster than std::vector
     std::array<Vector3f, 14> tempPoints;   
 
     for ( size_t i = 0; i < N - 1; ++i )
@@ -51,19 +52,8 @@ Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef
 
         offset += j;
     }
-
+    assert( offset <= 12 );
     return tempPoints[offset] * invCoef + tempPoints[offset + 1] * coef;
- /*   auto pointsCopy = points;
-    std::vector<Vector3f> nextStepPoints( points.size() - 1 );
-    while ( !nextStepPoints.empty() )
-    {
-        for ( int i = 0; i < nextStepPoints.size(); ++i )
-            nextStepPoints[i] = pointsCopy[i] * ( 1 - coef ) + pointsCopy[i + 1] * coef;
-
-        pointsCopy = nextStepPoints;
-        nextStepPoints.resize( pointsCopy.size() - 1 );
-    }
-    assert( pointsCopy.size() == 1 );*/
 }
 
 std::vector<Vector3f> makeOriginGrid( const Box3f& box, const Vector3i& resolution )

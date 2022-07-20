@@ -48,7 +48,6 @@ Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef
 
         offset += j;
     }
-    assert( offset <= 12 );
     return tempPoints[offset] * invCoef + tempPoints[offset + 1] * coef;
 }
 

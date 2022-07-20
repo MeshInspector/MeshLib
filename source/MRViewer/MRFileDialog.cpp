@@ -480,23 +480,23 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
         if ( responseId == Gtk::RESPONSE_OK )
         {
             using std::filesystem::path;
-            auto res_path = path( dialog.get_current_folder() );
-            res_path /= path( dialog.get_current_name() );
+            auto resPath = path( dialog.get_current_folder() );
+            resPath /= path( dialog.get_current_name() );
 
-            if ( !res_path.has_extension() )
+            if ( !resPath.has_extension() )
             {
                 const std::string filter_name = dialog.get_filter()->get_name();
                 for ( const auto& filter: params.filters )
                 {
                     if ( filter_name == filter.name )
                     {
-                        res_path.replace_extension( filter.extension.substr( 1 ) );
+                        resPath.replace_extension( filter.extension.substr( 1 ) );
                         break;
                     }
                 }
             }
 
-            res = res_path.string();
+            res = resPath.string();
         }
         else if ( responseId != Gtk::RESPONSE_CANCEL )
         {

@@ -26,17 +26,13 @@
 namespace
 {
 using namespace MR;
-Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef )
+Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef, std::vector<Vector3f>& tempPoints )
 {
     const float invCoef = 1 - coef;
     if ( points.size() == 2 )
         return points[0] * invCoef + points[1] * coef;
 
     const size_t N = points.size();
-
-    //we need no more than 14 temporary points if grid side <= 6. 
-    //std::array is three times faster than std::vector
-    std::array<Vector3f, 14> tempPoints;   
 
     for ( size_t i = 0; i < N - 1; ++i )
     {
@@ -217,6 +213,9 @@ const Vector3f& FreeFormDeformer::getRefGridPointPosition( const Vector3i& coord
 void FreeFormDeformer::apply() const
 {
     auto& meshPoints = mesh_.points;
+    auto maxRes = std::max( resolution_.x, std::max( resolution_.y, resolution_.z ) );
+    tbb::enumerable_thread_specific<std::vector<Vector3f>> buffer( maxRes * ( maxRes - 1 ) / 2 - 1);
+
     tbb::parallel_for( tbb::blocked_range<int>( 0, (int) meshPoints.size() ),
         [&]( const tbb::blocked_range<int>& range )
     {
@@ -224,7 +223,7 @@ void FreeFormDeformer::apply() const
         std::vector<Vector3f> yLine( resolution_.z );
         for ( int i = range.begin(); i < range.end(); ++i )
         {
-            meshPoints[VertId( i )] = applyToNormedPoint_( meshPointsNormedPoses_[i], xPlane, yLine );
+            meshPoints[VertId( i )] = applyToNormedPoint_( meshPointsNormedPoses_[i], xPlane, yLine, buffer.local() );
         }
     } );
 }
@@ -241,8 +240,9 @@ Vector3f FreeFormDeformer::applySinglePoint( const Vector3f& point ) const
 
     std::vector<Vector3f> xPlane( resolution_.y * resolution_.z );
     std::vector<Vector3f> yLine( resolution_.z );
-
-    return applyToNormedPoint_( normedPoint, xPlane, yLine );
+    auto maxRes = std::max( resolution_.x, std::max( resolution_.y, resolution_.z ) );
+    std::vector<Vector3f> buffer(maxRes * (maxRes - 1) / 2 - 1);
+    return applyToNormedPoint_( normedPoint, xPlane, yLine, buffer );
 }
 
 int FreeFormDeformer::getIndex( const Vector3i& coordOfPointInGrid ) const
@@ -261,21 +261,21 @@ Vector3i FreeFormDeformer::getCoord( int index ) const
     return res;
 }
 
-Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache ) const
+Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache, std::vector<Vector3f>& tempPoints ) const
 {
     for ( int z = 0; z < resolution_.z; ++z )
         for ( int y = 0; y < resolution_.y; ++y )
         {
             auto index = y + z * resolution_.y;
             auto indexWithX = index * resolution_.x;
-            xPlaneCache[index] = interpolateNPoints( { refPointsGrid_.data() + indexWithX, size_t(resolution_.x) }, normedPoint.x );
+            xPlaneCache[index] = interpolateNPoints( { refPointsGrid_.data() + indexWithX, size_t(resolution_.x) }, normedPoint.x, tempPoints );
         }
 
     for ( int z = 0; z < resolution_.z; ++z )
     {
-        yLineCache[z] = interpolateNPoints( { xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) }, normedPoint.y );
+        yLineCache[z] = interpolateNPoints( { xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) }, normedPoint.y, tempPoints );
     }
-    return interpolateNPoints( yLineCache, normedPoint.z );
+    return interpolateNPoints( yLineCache, normedPoint.z, tempPoints );
 }
 
 std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::vector<Vector3f>& source, const std::vector<Vector3f>& target, 

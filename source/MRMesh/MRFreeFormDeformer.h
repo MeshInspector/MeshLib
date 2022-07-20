@@ -38,7 +38,7 @@ private:
     std::vector<Vector3f> meshPointsNormedPoses_;
     Vector3i resolution_;
 
-    Vector3f applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache ) const;
+    Vector3f applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache, std::vector<Vector3f>& tempPoints ) const;
 };
 
 // Calculates best Free Form transform to fit given source->target deformation

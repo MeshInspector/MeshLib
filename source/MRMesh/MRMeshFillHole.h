@@ -44,10 +44,16 @@ struct FillHoleParams
         Simple,
         Strong
     } multipleEdgesResolveMode{ MultipleEdgesResolveMode::Simple };
+
     /** If true creates degenerate faces band around hole to have sharp angle visualization
       * \warning This flag bad for result topology, most likely you do not need it
       */
     bool makeDegenerateBand{ false };
+
+    /** The maximum number of polygon subdivisions on a triangle and two smaller polygons,
+      * must be 2 or larger
+      */
+    int maxPolygonSubdivisions{ 20 };
 };
 
 /** \struct MR::StitchHolesParams

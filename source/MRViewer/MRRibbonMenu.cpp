@@ -1517,9 +1517,13 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             std::ifstream ifs( filename );
             if ( ifs )
             {
+                std::string text( ( std::istreambuf_iterator<char>( ifs ) ), std::istreambuf_iterator<char>() );
+
                 Json::Value root;
-                Json::Reader reader;
-                if ( reader.parse( ifs, root ) )
+                Json::CharReaderBuilder readerBuilder;
+                std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
+                std::string error;
+                if ( reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
                 {
                     if ( auto tr = deserializeTransform( root ))
                     {

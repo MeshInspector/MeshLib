@@ -76,35 +76,34 @@ bool holeHasDuplicateVerts( const MeshTopology& topology, EdgeId a )
     return false;
 }
 
-constexpr int maxStepsNum = 20;
-void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsigned steps, unsigned loopSize )
+void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsigned steps, unsigned loopSize, int maxPolygonSubdivisions )
 {
     optimalSteps.resize(0);
     --steps;
-    if ( steps <= maxStepsNum )
+    if ( (int)steps <= maxPolygonSubdivisions )
     {
         for ( unsigned i = 0; i < steps; ++i )
             optimalSteps.push_back( ( start + i ) % loopSize );
         return;
     }
 
-    for ( int i = 0; i < ( maxStepsNum / 4 ); ++i )
+    for ( int i = 0; i < ( maxPolygonSubdivisions / 4 ); ++i )
         optimalSteps.push_back( ( start + i ) % loopSize );
 
 
-    auto bigStep = ( steps - ( maxStepsNum / 2 ) ) / ( maxStepsNum / 2 );
-    auto numBigSteps = ( maxStepsNum / 2 );
+    auto bigStep = ( steps - ( maxPolygonSubdivisions / 2 ) ) / ( maxPolygonSubdivisions / 2 );
+    auto numBigSteps = ( maxPolygonSubdivisions / 2 );
     if ( bigStep < 2 )
     {
         bigStep = 2;
-        numBigSteps = ( maxStepsNum / 4 );
+        numBigSteps = ( maxPolygonSubdivisions / 4 );
     }
     auto bigStepHalf = bigStep / 2;
-    const auto newStart = start + bigStepHalf + ( maxStepsNum / 4 ) - 1;
+    const auto newStart = start + bigStepHalf + ( maxPolygonSubdivisions / 4 ) - 1;
     for ( int i = 0; i < numBigSteps; ++i )
         optimalSteps.push_back( ( newStart + i * bigStep ) % loopSize );
 
-    for ( int i = ( maxStepsNum / 4 ) -1; i >=0 ; --i )
+    for ( int i = ( maxPolygonSubdivisions / 4 ) -1; i >=0 ; --i )
         optimalSteps.push_back( ( start + steps - i - 1 ) % loopSize );
 }
 
@@ -160,7 +159,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
 bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
-    WeightedConn start )
+    WeightedConn start, int maxPolygonSubdivisions )
 {
     MR_TIMER;
 
@@ -172,7 +171,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdge
         auto it = edgesInTriangulation.find( { a,b } );
         return it != edgesInTriangulation.end();
     };
-    std::vector<unsigned> optimalStepsCache( maxStepsNum );
+    std::vector<unsigned> optimalStepsCache( maxPolygonSubdivisions );
     std::queue<WeightedConn> newEdgesQueue;
     newEdgesQueue.push( start );
     while ( !newEdgesQueue.empty() )
@@ -194,7 +193,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdge
             {
                 // fix multiple edge 
                 unsigned steps = ( start.b + unsigned( loop.size() ) - start.a ) % unsigned( loop.size() );
-                getOptimalSteps( optimalStepsCache, ( start.a + 1 ) % loop.size(), steps, unsigned( loop.size() ) );
+                getOptimalSteps( optimalStepsCache, ( start.a + 1 ) % loop.size(), steps, unsigned( loop.size() ), maxPolygonSubdivisions );
                 optimalStepsCache.erase( std::remove_if( optimalStepsCache.begin(), optimalStepsCache.end(), [&] ( unsigned v )
                 {
                     VertId vV = topology.org( loop[v] );
@@ -461,6 +460,11 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
 // Sub cubic complexity
 void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
+    if ( params.maxPolygonSubdivisions < 2 )
+    {
+        assert( false );
+        return;
+    }
     MR_TIMER;
     MR_WRITER( mesh );
     if ( mesh.topology.left( a0 ) )
@@ -515,7 +519,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         tbb::parallel_for( tbb::blocked_range<unsigned>( 0, loopEdgesCounter, 15 ), [&]( const tbb::blocked_range<unsigned>& range )
         {
             std::vector<unsigned> optimalStepsCache;
-            optimalStepsCache.resize( maxStepsNum );
+            optimalStepsCache.resize( params.maxPolygonSubdivisions );
             for ( unsigned i = range.begin(); i < range.end(); ++i )
             {
                 const auto cIndex = ( i + steps ) % loopEdgesCounter;
@@ -526,7 +530,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
                 if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
                     sameEdgeExists( mesh.topology, aCur, cCur ) )
                     continue;
-                getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter );
+                getOptimalSteps( optimalStepsCache, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
                 getTriangulationWeights( mesh.topology, newEdgesMap, edgeMap, metrics, optimalStepsCache, current ); // find better among steps
             }
         });
@@ -548,7 +552,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i] ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap, edgeMap, metrics, newEdgesMap[cIndex][i], params.maxPolygonSubdivisions ) ) )
         {
             finConn = newEdgesMap[cIndex][i];
             finConn.weight = weight;

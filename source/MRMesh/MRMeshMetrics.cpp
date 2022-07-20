@@ -17,7 +17,7 @@ constexpr double TriangleAreaModifier = 1e2;
 namespace MR
 {
 
-FillHoleMetric getCircumscribedFillMetric( const Mesh& mesh )
+FillHoleMetric getCircumscribedMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;
     metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
@@ -115,11 +115,6 @@ FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh )
     return metric;
 }
 
-FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh )
-{
-    return getCircumscribedFillMetric( mesh );
-}
-
 FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir )
 {
     FillHoleMetric metric;
@@ -212,16 +207,16 @@ FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e0, const Pl
 FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;
-    metric.edgeMetric = [&] ( VertId a, VertId b, VertId l, VertId r )
+    metric.edgeMetric = [&] ( VertId a, VertId b, VertId l, VertId r ) -> double
     {
         const auto& aP = mesh.points[a];
         const auto& bP = mesh.points[b];
         const auto& lP = mesh.points[l];
         const auto& rP = mesh.points[r];
         auto ab = bP - aP;
-        auto normL = cross( lP - aP, ab ).normalized();
-        auto normR = cross( ab, rP - aP ).normalized();
-        return std::abs( double( dihedralAngle( normL, normR, ab ) ) );
+        auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
+        auto normR = cross( ab, rP - aP );
+        return std::abs( dihedralAngle( normL, normR, ab ) );
     };
     metric.combineMetric = [] ( double a, double b )
     {

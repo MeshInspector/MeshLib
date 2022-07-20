@@ -47,7 +47,7 @@ T dihedralAngleCos( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm )
     return dot( leftNorm, rightNorm );
 }
 
-/// given an edge direction between two faces with given normals, computes the dihedral angle between the faces:
+/// given an edge direction between two faces with given normals (not necessary of unit length), computes the dihedral angle between the faces:
 /// 0 if both faces are in the same plane,
 /// positive if the faces form convex surface,
 /// negative if the faces form concave surface;

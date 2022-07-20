@@ -38,29 +38,30 @@ struct FillHoleMetric
     FillCombineMetric combineMetric;
 };
 
-/// Provides triangle metric as circumscribed circle diameter
-MRMESH_API FillHoleMetric getCircumscribedFillMetric( const Mesh& mesh );
+/// This metric minimizes the sum circumcircle radii for all triangles in the triangulation.
+/// It is rather fast to calculate, and it results in typically good triangulations.
+MRMESH_API FillHoleMetric getCircumscribedMetric( const Mesh& mesh );
 
-/// As far as hole is planar, only outside triangles should have penalty,\n
-/// this metric is good for planar holes
-/// 
-/// Provides triangle metric as area
+inline [[deprecated]] FillHoleMetric getCircumscribedFillMetric( const Mesh& mesh ) { return getCircumscribedMetric( mesh ); }
+inline [[deprecated]] FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh ) { return getCircumscribedMetric( mesh ); }
+
+/// Same as getCircumscribedFillMetric, but with extra penalty for the triangles having
+/// normals looking in the opposite side of plane containing left of (e).
 MRMESH_API FillHoleMetric getPlaneFillMetric( const Mesh& mesh, EdgeId e );
 
-/// As far as hole is planar, only outside triangles should have penalty,\n
-/// this metric is good for planar holes
-/// 
-/// Provides triangle metric as area
+/// Similar to getPlaneFillMetric with extra penalty for the triangles having
+/// normals looking in the opposite side of plane containing left of (e),
+/// but the metric minimizes the sum of circumcircle radius times aspect ratio for all triangles in the triangulation.
 MRMESH_API FillHoleMetric getPlaneNormalizedFillMetric( const Mesh& mesh, EdgeId e );
 
-/// Forbids connecting vertices from the same hole \n
-/// Complex metric for non-trivial holes, forbids degenerate triangles\n
-/// 
-/// triangleMetric - grows with neighbors angles and triangle aspect ratio( R / 2r )\n
-/// edgeMetric - grows with angle
+/// This metric minimizes the sum of triangleMetric for all triangles in the triangulation
+/// plus the sum edgeMetric for all edges inside and on the boundary of the triangulation.\n
+/// Where\n
+/// triangleMetric is proportional to triangle aspect ratio\n
+/// edgeMetric is proportional to ( 1 - dihedralAngleCos )
 MRMESH_API FillHoleMetric getComplexStitchMetric( const Mesh& mesh );
 
-/// Simple metric minimizing edge length
+/// Simple metric minimizing the sum of all edge lengths
 MRMESH_API FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh );
 
 /// Forbids connecting vertices from the same hole \n
@@ -68,29 +69,21 @@ MRMESH_API FillHoleMetric getEdgeLengthFillMetric( const Mesh& mesh );
 MRMESH_API FillHoleMetric getEdgeLengthStitchMetric( const Mesh& mesh );
 
 /// Forbids connecting vertices from the same hole \n
-/// Provides triangle metric as circumscribed circle diameter
-MRMESH_API FillHoleMetric getCircumscribedStitchMetric( const Mesh& mesh );
-
-/// Forbids connecting vertices from the same hole \n
 /// All new faces should be parallel to given direction
 MRMESH_API FillHoleMetric getVerticalStitchMetric( const Mesh& mesh, const Vector3f& upDir );
 
-/// This function provides complex metric which penalizes new triangles for: \n
-/// 1. Angle with neighbors : ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4\n
-/// 2. Triangle aspect ratio : Rabc / ( 2 rabc )\n
-/// 3. Triangle area( normalized by max loop edge length ^ 2 )\n
-///
-/// triangleMetric - grows with neighbors angles and triangle aspect ratio( R / 2r )\n
-/// edgeMetric - grows with angle
+/// This metric minimizes the sum of triangleMetric for all triangles in the triangulation
+/// plus the sum edgeMetric for all edges inside and on the boundary of the triangulation.\n
+/// Where\n
+/// triangleMetric is proportional to weighted triangle area and triangle aspect ratio\n
+/// edgeMetric grows with angle between triangles as ( ( 1 - cos( x ) ) / ( 1 + cos( x ) ) ) ^ 4.
 MRMESH_API FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e );
 
 /// This metric minimizes summary projection of new edges to plane normal, (try do produce edges parallel to plane)
-/// 
-/// triangleMetric - ac projection to normal
-/// edgeMetric - -ab projection to normal( it is needed to count last edge only once, as far as edge metric is called only for edge that connects parts of triangulation )
 MRMESH_API FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e, const Plane3f* plane = nullptr );
 
-/// This metric minimizes maximum dihedral angle in triangulation
+/// This metric minimizes the maximal dihedral angle between the faces in the triangulation
+/// and on its boundary
 MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
 
 /// \}

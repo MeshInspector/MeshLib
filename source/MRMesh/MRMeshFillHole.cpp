@@ -507,7 +507,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
     FillHoleMetric metrics = params.metric;
     if ( !metrics.edgeMetric && !metrics.triangleMetric )
-        metrics = getCircumscribedFillMetric( mesh );
+        metrics = getCircumscribedMetric( mesh );
     if ( !metrics.combineMetric )
         metrics.combineMetric = [] ( double a, double b ) { return a + b; };
 

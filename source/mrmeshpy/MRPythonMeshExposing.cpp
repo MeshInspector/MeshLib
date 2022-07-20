@@ -196,7 +196,7 @@ void pythonSetFillHoleEdgeLengthMetric( MR::FillHoleParams& params, const Mesh& 
 
 void pythonSetFillHoleCircumscribedMetric( MR::FillHoleParams& params, const Mesh& mesh )
 {
-    params.metric = getCircumscribedFillMetric( mesh );
+    params.metric = getCircumscribedMetric( mesh );
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )

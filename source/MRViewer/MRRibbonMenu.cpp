@@ -16,7 +16,7 @@
 #include "ImGuiHelpers.h"
 #include "MRMesh/MRString.h"
 #include "MRImGuiImage.h"
-#include "ImGuiHelpers.h"
+#include "MRFileDialog.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
@@ -1437,14 +1437,34 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     auto buttonSize = 100.0f * menu_scaling();
 
+    struct Transform
+    {
+        AffineXf3f xf;
+        bool uniformScale{ true };
+    };
+    auto serializeTransform = [] ( Json::Value& root, const Transform& tr )
+    {
+        root["Name"] = "MeshLib Transform";
+        serializeToJson( tr.xf, root["XF"] );
+        root["UniformScale"] = tr.uniformScale;
+    };
+    auto deserializeTransform = [] ( const Json::Value& root ) -> std::optional<Transform>
+    {
+        if ( !root.isObject() || root["Name"].asString() != "MeshLib Transform" )
+            return std::nullopt;
+
+        AffineXf3f xf;
+        deserializeFromJson( root["XF"], xf );
+        auto uniformScale = root["UniformScale"].asBool();
+        return Transform{ xf, uniformScale };
+    };
+
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
     if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
     {
         Json::Value root;
-        root["Name"] = "MeshLib Transform";
-        serializeToJson( startXf, root["XF"] );
-        root["UniformScale"] = uniformScale_;
+        serializeTransform( root, { startXf, uniformScale_ } );
         SetClipboardText( root.toStyledString() );
         ImGui::CloseCurrentPopup();
     }
@@ -1457,22 +1477,71 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::CharReaderBuilder readerBuilder;
         std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
         std::string error;
-        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) &&
-            root.isObject() )
+        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) )
         {
-            if ( root["Name"].isString() && root["Name"].asString() == "MeshLib Transform" )
+            if ( auto tr = deserializeTransform( root ))
             {
                 if ( RibbonButtonDrawer::GradientButton( "Paste", ImVec2( buttonSize, 0 ) ) )
                 {
-                    AffineXf3f xf;
-                    deserializeFromJson( root["XF"], xf );
                     AppendHistory<ChangeXfAction>( "Change XF", selected );
-                    selected->setXf( xf );
-                    uniformScale_ = root["UniformScale"].asBool();
+                    selected->setXf( tr->xf );
+                    uniformScale_ = tr->uniformScale;
                     ImGui::CloseCurrentPopup();
                 }
             }
         }
+    }
+
+    if ( RibbonButtonDrawer::GradientButton( "Save to file", ImVec2( buttonSize, 0 ) ) )
+    {
+        auto filename = saveFileDialog( { "Transform", {}, { {"JSON (.json)", "*.json"} } } );
+        if ( !filename.empty() )
+        {
+            Json::Value root;
+            serializeTransform( root, { startXf, uniformScale_ } );
+
+            std::ofstream ofs( filename );
+            if ( ofs )
+                ofs << root.toStyledString();
+            else
+                spdlog::error( "Cannot open file for writing" );
+        }
+        ImGui::CloseCurrentPopup();
+    }
+
+    if ( RibbonButtonDrawer::GradientButton( "Load from file", ImVec2( buttonSize, 0 ) ) )
+    {
+        auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
+        if ( !filename.empty() )
+        {
+            std::ifstream ifs( filename );
+            if ( ifs )
+            {
+                Json::Value root;
+                Json::Reader reader;
+                if ( reader.parse( ifs, root ) )
+                {
+                    if ( auto tr = deserializeTransform( root ))
+                    {
+                        AppendHistory<ChangeXfAction>( "Change XF", selected );
+                        selected->setXf( tr->xf );
+                        uniformScale_ = tr->uniformScale;
+                    } else
+                    {
+                        spdlog::error( "Cannot parse transform" );
+                    }
+                }
+                else
+                {
+                    spdlog::error( "Cannot parse transform" );
+                }
+            }
+            else
+            {
+                spdlog::error( "Cannot open file for reading" );
+            }
+        }
+        ImGui::CloseCurrentPopup();
     }
 
     if ( startXf != AffineXf3f() )

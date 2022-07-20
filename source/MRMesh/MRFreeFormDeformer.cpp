@@ -213,7 +213,7 @@ const Vector3f& FreeFormDeformer::getRefGridPointPosition( const Vector3i& coord
 void FreeFormDeformer::apply() const
 {
     auto& meshPoints = mesh_.points;
-    auto maxRes = std::max( resolution_.x, std::max( resolution_.y, resolution_.z ) );
+    auto maxRes = std::max( { resolution_.x, resolution_.y, resolution_.z } );
     tbb::enumerable_thread_specific<std::vector<Vector3f>> buffer( maxRes * ( maxRes - 1 ) / 2 - 1);
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, (int) meshPoints.size() ),
@@ -240,7 +240,7 @@ Vector3f FreeFormDeformer::applySinglePoint( const Vector3f& point ) const
 
     std::vector<Vector3f> xPlane( resolution_.y * resolution_.z );
     std::vector<Vector3f> yLine( resolution_.z );
-    auto maxRes = std::max( resolution_.x, std::max( resolution_.y, resolution_.z ) );
+    auto maxRes = std::max( { resolution_.x, resolution_.y, resolution_.z } );
     std::vector<Vector3f> buffer(maxRes * (maxRes - 1) / 2 - 1);
     return applyToNormedPoint_( normedPoint, xPlane, yLine, buffer );
 }

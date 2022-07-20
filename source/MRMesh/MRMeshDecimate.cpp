@@ -68,6 +68,13 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
         topology.splice( ePrev, a );
         topology.splice( topology.prev( a.sym() ), a.sym() );
         assert( topology.isLoneEdge( a ) );
+        if ( !topology.left( ePrev ) && !topology.right( ePrev ) )
+        {
+            topology.splice( topology.prev( ePrev ), ePrev );
+            topology.splice( topology.prev( ePrev.sym() ), ePrev.sym() );
+            topology.setOrg( ePrev, {} );
+            topology.setOrg( ePrev.sym(), {} );
+        }
     }
 
     if ( topology.next( eNext.sym() ) == b.sym() )
@@ -75,6 +82,13 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e )
         topology.splice( eNext.sym(), b.sym() );
         topology.splice( topology.prev( b ), b );
         assert( topology.isLoneEdge( b ) );
+        if ( !topology.left( eNext ) && !topology.right( eNext ) )
+        {
+            topology.splice( topology.prev( eNext ), eNext );
+            topology.splice( topology.prev( eNext.sym() ), eNext.sym() );
+            topology.setOrg( eNext, {} );
+            topology.setOrg( eNext.sym(), {} );
+        }
     }
 
     return ePrev != e ? ePrev : EdgeId();

@@ -1542,7 +1542,7 @@ float ImGuiMenu::drawTransform_()
                 ImGui::EndTooltip();
             }
 
-            if ( inputChanged )
+            if ( resultRotation.valueChanged )
             {
                 // resolve singularity
                 constexpr float cZenithEps = 0.01f;
@@ -1553,8 +1553,14 @@ float ImGuiMenu::drawTransform_()
                     invertedRotation_ = !invertedRotation_;
                     euler.y = euler.y > 0.f ? 90.f - cZenithEps : -90.f + cZenithEps;
                 }
-                xf.A = Matrix3f::rotationFromEuler(( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
             }
+            if ( resultRotation.itemDeactivatedAfterEdit )
+            {
+                invertedRotation_ = false;
+            }
+
+            if ( inputChanged )
+                xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 
             const char* tooltipsTranslation[3] = {
                 "Translation along Ox-axis",

@@ -18,6 +18,7 @@ public:
     enum class Preset
     {
         Dark,
+        Default = Dark,
         Light,
         Count
     };

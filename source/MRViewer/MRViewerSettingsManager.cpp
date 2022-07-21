@@ -67,7 +67,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     SceneSettings::set( SceneSettings::Type::MeshFlatShading, cfg.getBool( cFlatShadingParamKey, SceneSettings::get( SceneSettings::Type::MeshFlatShading ) ) );
 
     ColorTheme::Type colorThemeType = ColorTheme::Type::Default;
-    std::string colorThemeName = ColorTheme::getPresetName( ColorTheme::Preset::Dark ); // default
+    std::string colorThemeName = ColorTheme::getPresetName( ColorTheme::Preset::Default ); // default
     if ( cfg.hasJsonValue( cColorThemeParamKey ) )
     {
         const auto& presetCfg = cfg.getJsonValue( cColorThemeParamKey );
@@ -141,6 +141,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
+    if ( !ColorTheme::isInitialized() )
+    {
+        // most likely we loaded some bad user theme file
+        // setup default in this case
+        ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );
+    }
     ColorTheme::apply();
 
     Json::Value lastExtentions = cfg.getJsonValue( lastExtextentionsParamKey );

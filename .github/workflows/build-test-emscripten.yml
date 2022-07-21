@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: meshrus/meshlib-emscripten:${{inputs.image_tag}}
-      options: --user root
+      options: --user 1001
     strategy:
       matrix:
         config: [Singlethreaded, Multithreaded]
@@ -46,7 +46,6 @@ jobs:
 
       - name: Tests
         run: |
-          sudo -i
           Xvfb -ac :99 -screen 0 1280x1024x16 > /dev/null 2>&1 &
           export DISPLAY=:99
           emrun ./build/Release/bin/MRTest.html

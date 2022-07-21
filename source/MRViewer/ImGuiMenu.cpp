@@ -1532,7 +1532,7 @@ float ImGuiMenu::drawTransform_()
                 "Rotation around Oz-axis, degrees"
             };
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
-            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
+            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
             if ( ImGui::IsItemHovered() )
@@ -1540,6 +1540,23 @@ float ImGuiMenu::drawTransform_()
                 ImGui::BeginTooltip();
                 ImGui::Text( "Sequential intrinsic rotations around Oz, Oy and Ox axes." ); // see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
                 ImGui::EndTooltip();
+            }
+
+            if ( resultRotation.valueChanged && ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+            {
+                // resolve singularity
+                constexpr float cZenithEps = 0.01f;
+                if ( std::fabs( euler.y ) > 90.f - cZenithEps )
+                {
+                    euler.x = euler.x > 0.f ? euler.x - 180.f : euler.x + 180.f;
+                    euler.z = euler.z > 0.f ? euler.z - 180.f : euler.z + 180.f;
+                    invertedRotation_ = !invertedRotation_;
+                    euler.y = euler.y > 0.f ? 90.f - cZenithEps : -90.f + cZenithEps;
+                }
+            }
+            if ( resultRotation.itemDeactivatedAfterEdit )
+            {
+                invertedRotation_ = false;
             }
 
             if ( inputChanged )

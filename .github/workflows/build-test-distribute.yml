@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@Update-emscripten-build
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -46,7 +46,7 @@ jobs:
 
   emscripten-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@Update-emscripten-build
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 

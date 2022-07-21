@@ -1521,7 +1521,7 @@ float ImGuiMenu::drawTransform_()
                 inputChanged = ImGui::DragFloatValid( "##scaleZ", &scale.z, scale.z * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
             }
-            ImGui::SameLine();
+            ImGui::SameLine( 0, uniformScale_ ? -1 : 2 * scaling );
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
             ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();

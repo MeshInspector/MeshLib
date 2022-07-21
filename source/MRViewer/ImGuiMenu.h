@@ -93,6 +93,7 @@ protected:
   bool allowRemoval_{ true };
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
+  bool invertedRotation_{ false };
 
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;

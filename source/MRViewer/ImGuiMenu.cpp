@@ -1532,7 +1532,7 @@ float ImGuiMenu::drawTransform_()
                 "Rotation around Oz-axis, degrees"
             };
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
-            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
+            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
             if ( ImGui::IsItemHovered() )
@@ -1543,7 +1543,17 @@ float ImGuiMenu::drawTransform_()
             }
 
             if ( inputChanged )
-                xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
+            {
+                // resolve singularity
+                if ( std::fabs( euler.y ) > 89.9f )
+                {
+                    euler.x = euler.x > 0.f ? euler.x - 180.f : euler.x + 180.f;
+                    euler.z = euler.z > 0.f ? euler.z - 180.f : euler.z + 180.f;
+                    invertedRotation_ = !invertedRotation_;
+                    euler.y = euler.y > 0.f ? 89.9f : -89.9f;
+                }
+                xf.A = Matrix3f::rotationFromEuler(( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
+            }
 
             const char* tooltipsTranslation[3] = {
                 "Translation along Ox-axis",

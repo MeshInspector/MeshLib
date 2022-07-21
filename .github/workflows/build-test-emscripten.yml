@@ -43,3 +43,6 @@ jobs:
           MESHRUS_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
         run: ./scripts/build_source.sh
+
+      - name: Tests
+        run: emrun ./build/Release/bin/MRTest.html

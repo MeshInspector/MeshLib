@@ -267,12 +267,12 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
         {
             auto index = y + z * resolution_.y;
             auto indexWithX = index * resolution_.x;
-            xPlaneCache[index] = interpolateNPoints( { refPointsGrid_.data() + indexWithX, size_t(resolution_.x) }, normedPoint.x, tempPoints );
+            xPlaneCache[index] = interpolateNPoints( std::span { refPointsGrid_.data() + indexWithX, size_t(resolution_.x) }, normedPoint.x, tempPoints );
         }
 
     for ( int z = 0; z < resolution_.z; ++z )
     {
-        yLineCache[z] = interpolateNPoints( { xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) }, normedPoint.y, tempPoints );
+        yLineCache[z] = interpolateNPoints( std::span { xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) }, normedPoint.y, tempPoints );
     }
     return interpolateNPoints( yLineCache, normedPoint.z, tempPoints );
 }

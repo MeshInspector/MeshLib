@@ -45,6 +45,7 @@ jobs:
               - '.github/workflows/docker-images.yml'
               - 'docker/ubuntu**'
               - 'docker/fedora**'
+              - 'docker/emscripten**'
               - 'requirements/!(windows.txt|macos.txt)'              
               - 'scripts/build_thirdparty.sh'    
               - 'scripts/install_**.sh'  

@@ -15,7 +15,7 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@Update-emscripten-build
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -41,6 +41,12 @@ jobs:
   fedora35-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
+    with:
+      image_tag: ${{needs.prepare-image.outputs.image_tag}}
+
+  emscripten-build-test:
+    needs: [ prepare-image ]
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@Update-emscripten-build
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 

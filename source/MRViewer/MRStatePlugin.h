@@ -33,22 +33,22 @@ Inheritance diagram:
                functions from IPCC, that is called from Menu's SBP*
                (leads to: warning C4250: 'EP': inherits 'PCC' via dominance, OK on clang and gcc)
 
-       • ICon
-      /|\(virtual)   ___________• ISSC
+       . ICon
+      /|\(virtual)   ___________. ISSC
      / | \          /           |(virt)
-    •  •  • ConHold/            |
+    .  .  . ConHold/            |
     |  |  |       /             |
     |  |  |  VP  /              |
-Con •  •  •  •  •RMI            |
+Con .  .  .  .  .RMI            |
      \ | /   | /                |
       \|/    |/   IPCC          | 
-    ML • SBP •--• (virt)     __/
+    ML . SBP .--. (virt)     __/
         \   /  /          __/
          \ /  /        __/
-      SLP •  • PCC  __• SSC Block
+      SLP .  . PCC  __. SSC Block
            \ |   __/
             \|__/
-             • EP
+             . EP
 */
 
 

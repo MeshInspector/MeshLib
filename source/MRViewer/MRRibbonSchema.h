@@ -2,7 +2,7 @@
 #include "MRViewerFwd.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRPch/MRJson.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRMesh/MRphmap.h"
 #include <filesystem>
 #include <vector>
 #include <string>

@@ -6,7 +6,7 @@ project (MRTest CXX)
 
 add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
-IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22})
+IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22} AND NOT ${MR_EMSCRIPTEN})
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh
          MRViewer
@@ -27,6 +27,8 @@ ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
     target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest
+        pthread
+        zip
         -Wl,--whole-archive
         MRMesh
         MRViewer

@@ -1,0 +1,45 @@
+name: Build and test Emscripten
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+
+jobs:
+  emscripten-build:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/meshlib-emscripten:${{inputs.image_tag}}
+      options: --user root
+    strategy:
+      matrix:
+        config: [Singlethreaded, Multithreaded]
+        include:
+          - config: Singlethreaded
+            aws-dir: RMISingle
+          - config: Multithreaded
+            aws-dir: RMI
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        env:
+          MESHRUS_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
+        run: |
+          ln -s /usr/local/lib/${{ env.MESHRUS_THIRDPATY_DIR }}/lib ./lib
+          cp -rv /usr/local/lib/${{ env.MESHRUS_THIRDPATY_DIR }}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release ./thirdparty/wasmtbb/build
+
+      - name: Build
+        env:
+          MR_EMSCRIPTEN: "ON"
+          MESHRUS_BUILD_RELEASE: "ON"
+          MESHRUS_BUILD_DEBUG: "OFF"
+          MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
+        run: ./scripts/build_source.sh

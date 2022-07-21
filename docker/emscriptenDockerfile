@@ -1,0 +1,51 @@
+FROM emscripten/emsdk:3.1.16
+
+# update and install req
+RUN export DEBIAN_FRONTEND=noninteractive; \
+    export DEBCONF_NONINTERACTIVE_SEEN=true; \
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
+    apt-get update -qqy \
+ && apt-get install -qqy --no-install-recommends \
+        tzdata git firefox pkg-config xvfb \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+## preprare thirdparty
+RUN mkdir /home/MeshLib
+WORKDIR "/home/MeshLib"
+
+#copy files
+COPY . .
+
+#build thirdparty
+ENV MR_STATE=DOCKER_BUILD
+ENV MR_EMSCRIPTEN=ON
+RUN ./scripts/build_thirdparty.sh
+
+RUN mkdir /usr/local/lib/emscripten/ && \
+    cp -r lib /usr/local/lib/emscripten/
+
+RUN mkdir -p /usr/local/lib/emscripten/wasmtbb/build && \
+    cp -r ./thirdparty/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release /usr/local/lib/emscripten/wasmtbb/build/
+
+RUN rm -rf ./lib
+
+ENV MR_EMSCRIPTEN_SINGLE=ON
+RUN ./scripts/build_thirdparty.sh
+
+RUN mkdir /usr/local/lib/emscripten-single/ && \
+    cp -r lib /usr/local/lib/emscripten-single/
+
+RUN mkdir -p /usr/local/lib/emscripten-single/wasmtbb/build && \
+    cp -r ./thirdparty/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release /usr/local/lib/emscripten-single/wasmtbb/build/
+
+WORKDIR "/home/"
+RUN rm -rf MeshLib
+
+# Add a new user "actions-runner" with user id 8877
+RUN useradd -u 8877 -m user && \
+    sudo chmod -R 777 /emsdk/upstream/emscripten/
+
+# Change to non-root privilege
+USER user

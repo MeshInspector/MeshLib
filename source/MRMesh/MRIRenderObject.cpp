@@ -1,5 +1,5 @@
 #include "MRIRenderObject.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRphmap.h"
 
 namespace MR
 {

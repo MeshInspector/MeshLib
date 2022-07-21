@@ -23,7 +23,7 @@ COPY requirements requirements
 
 # build and install thirdparty
 ENV MR_STATE=DOCKER_BUILD
-RUN sudo ./scripts/build_thirdparty.sh
+RUN ./scripts/build_thirdparty.sh
 
 
 FROM ubuntu:20.04 AS production

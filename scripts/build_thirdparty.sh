@@ -24,22 +24,34 @@ else
   fi
 fi
 
-if [ "${NAME}" == "Ubuntu" ] && [ $MR_STATE != "DOCKER_BUILD" ]; then
+MR_EMSCRIPTEN_SINGLETHREAD=0
+if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
+  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
   echo;
   if [[ $REPLY =~ ^[Yy]$ ]]; then
    MR_EMSCRIPTEN="ON"
   else
-   MR_EMSCRIPTEN="OFF"
+   if [[ $REPLY =~ ^[Ss]$ ]]; then
+     MR_EMSCRIPTEN="ON"
+     MR_EMSCRIPTEN_SINGLETHREAD=1
+   else
+     MR_EMSCRIPTEN="OFF"
+   fi
   fi
-  printf "Emscripten ${MR_EMSCRIPTEN}\n"
+  printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
  fi  
 fi
 
-printf "Check requirements. Running ${FILE_NAME} ...\n"
-./scripts/$FILE_NAME
 MR_THIRDPARTY_DIR="thirdparty/"
+if [ $MR_EMSCRIPTEN == "ON" ]; then
+ if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
+  MR_EMSCRIPTEN_SINGLETHREAD=1
+ fi
+else
+ printf "Check requirements. Running ${FILE_NAME} ...\n"
+ ./scripts/$FILE_NAME
+fi
 
 #build Third party
 if ! [ -d "./lib/" ]; then
@@ -48,7 +60,7 @@ fi
 
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cd lib
-  emcmake cmake -DMR_EMSCRIPTEN=1 ../${MR_THIRDPARTY_DIR}
+  emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR}
   emmake make -j `nproc` #VERBOSE=1
   cd ..
   

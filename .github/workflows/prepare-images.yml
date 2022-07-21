@@ -45,6 +45,7 @@ jobs:
               - '.github/workflows/docker-images.yml'
               - 'docker/ubuntu**'
               - 'docker/fedora**'
+              - 'docker/emscripten**'
               - 'requirements/!(windows.txt|macos.txt)'              
               - 'scripts/build_thirdparty.sh'    
               - 'scripts/install_**.sh'  
@@ -103,9 +104,9 @@ jobs:
           if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-build\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           else
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           fi
 
   image-build-upload:

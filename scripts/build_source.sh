@@ -34,17 +34,29 @@ if [[ $OSTYPE != 'darwin'* ]]; then
   fi
 fi
 
+MR_EMSCRIPTEN_SINGLETHREAD=0
 if [ "${NAME}" == "Ubuntu" ]; then
  if [ ! -n "$MR_EMSCRIPTEN" ]; then
-  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/N)" -rsn 1
+  read -t 5 -p "Build with emscripten? Press (y) in 5 seconds to build (y/s/N) (s - singlethreaded)" -rsn 1
   echo;
   if [[ $REPLY =~ ^[Yy]$ ]]; then
    MR_EMSCRIPTEN="ON"
   else
-   MR_EMSCRIPTEN="OFF"
+   if [[ $REPLY =~ ^[Ss]$ ]]; then
+     MR_EMSCRIPTEN="ON"
+     MR_EMSCRIPTEN_SINGLETHREAD=1
+   else
+     MR_EMSCRIPTEN="OFF"
+   fi
   fi
-  printf "Emscripten ${MR_EMSCRIPTEN}\n"
- fi  
+  printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
+ fi
+fi
+
+if [ $MR_EMSCRIPTEN == "ON" ]; then
+ if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
+  MR_EMSCRIPTEN_SINGLETHREAD=1
+ fi
 fi
 
 if [ ! -n "$MESHRUS_BUILD_RELEASE" ]; then
@@ -91,7 +103,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
     else
-      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
     fi
  fi 
  if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
@@ -114,7 +126,7 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
     else
-      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
     fi
  fi
  if [ "${MR_EMSCRIPTEN}" != "ON" ]; then

@@ -7,7 +7,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config \
+        tzdata git firefox pkg-config xvfb \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

@@ -272,7 +272,7 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
 
     for ( int z = 0; z < resolution_.z; ++z )
     {
-        yLineCache[z] = interpolateNPoints( std::span<const Vector3f> ( xPlaneCache.begin() + z * resolution_.y, size_t( resolution_.y ) ), normedPoint.y, tempPoints );
+        yLineCache[z] = interpolateNPoints( std::span<const Vector3f> ( xPlaneCache.data() + z * resolution_.y, size_t( resolution_.y ) ), normedPoint.y, tempPoints );
     }
     return interpolateNPoints( yLineCache, normedPoint.z, tempPoints );
 }

@@ -1545,12 +1545,13 @@ float ImGuiMenu::drawTransform_()
             if ( inputChanged )
             {
                 // resolve singularity
-                if ( std::fabs( euler.y ) > 89.9f )
+                constexpr float cZenithEps = 0.01f;
+                if ( std::fabs( euler.y ) > 90.f - cZenithEps )
                 {
                     euler.x = euler.x > 0.f ? euler.x - 180.f : euler.x + 180.f;
                     euler.z = euler.z > 0.f ? euler.z - 180.f : euler.z + 180.f;
                     invertedRotation_ = !invertedRotation_;
-                    euler.y = euler.y > 0.f ? 89.9f : -89.9f;
+                    euler.y = euler.y > 0.f ? 90.f - cZenithEps : -90.f + cZenithEps;
                 }
                 xf.A = Matrix3f::rotationFromEuler(( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
             }

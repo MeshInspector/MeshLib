@@ -1542,7 +1542,7 @@ float ImGuiMenu::drawTransform_()
                 ImGui::EndTooltip();
             }
 
-            if ( resultRotation.valueChanged )
+            if ( resultRotation.valueChanged && ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
             {
                 // resolve singularity
                 constexpr float cZenithEps = 0.01f;

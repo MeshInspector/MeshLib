@@ -1,4 +1,4 @@
-name: Build and test Ubuntu22
+name: Build and test Emscripten
 
 on:
   workflow_call:

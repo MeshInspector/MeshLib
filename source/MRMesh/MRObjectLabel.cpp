@@ -212,4 +212,28 @@ std::shared_ptr<MR::Object> ObjectLabel::shallowClone() const
     return res;
 }
 
+AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const
+{
+    AllVisualizeProperties res;
+    res.resize( LabelVisualizePropertyType::LabelVisualizePropsCount );
+    for ( int i = 0; i < res.size(); ++i )
+        res[i] = getVisualizePropertyMask( unsigned( i ) );
+    return res;
+}
+
+const ViewportMask &ObjectLabel::getVisualizePropertyMask( unsigned int type ) const
+{
+    switch ( LabelVisualizePropertyType::Type( type ) )
+    {
+    case LabelVisualizePropertyType::SourcePoint:
+        return sourcePoint_;
+    case LabelVisualizePropertyType::Background:
+        return background_;
+    case LabelVisualizePropertyType::LeaderLine:
+        return leaderLine_;
+    default:
+        return VisualObject::getVisualizePropertyMask( type );
+    }
+}
+
 }

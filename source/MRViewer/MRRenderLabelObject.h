@@ -22,6 +22,10 @@ private:
     GLuint vertPosBufferObjId_{ 0 };
     GLuint facesIndicesBufferObjId_{ 0 };
 
+    void renderSourcePoint_( const RenderParams& parameters ) const;
+    void renderBackground_( const RenderParams& parameters ) const;
+    void renderLeaderLine_( const RenderParams& parameters ) const;
+
     void bindLabel_() const;
 
     // Create a new set of OpenGL buffer objects

@@ -90,6 +90,28 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, facesIndicesBufferObj_.size() );
 
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( facesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::SourcePoint, renderParams.viewportId ) )
+        renderSourcePoint_( renderParams );
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
+        renderBackground_( renderParams );
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
+        renderLeaderLine_( renderParams );
+}
+
+void RenderLabelObject::renderSourcePoint_( const RenderParams& parameters ) const
+{
+    //
+}
+
+void RenderLabelObject::renderBackground_( const RenderParams& parameters ) const
+{
+    //
+}
+
+void RenderLabelObject::renderLeaderLine_( const RenderParams& parameters ) const
+{
+    //
 }
 
 void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned ) const

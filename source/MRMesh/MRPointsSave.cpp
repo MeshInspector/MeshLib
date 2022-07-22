@@ -19,16 +19,16 @@ const IOFilters Filters =
     {"PTS (.pts)",        "*.pts"}
 };
 
-tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPly( points, out, colors );
+    return toPly( points, out, colors, callback );
 }
 
-tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -39,12 +39,16 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     if ( colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
     out << "end_header\n";
+    if ( !callback( 0.01f ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     if ( !colors )
     {
         // write vertices
         static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
-        out.write( (const char*) &points.points.front().x, 12 * numVertices );
+        out.write( ( const char* )&points.points.front().x, 12 * numVertices );
+        if ( !callback( 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     else
     {
@@ -71,21 +75,22 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in PLY-format" ) );
 
+    callback( 1.f );
     return {};
 }
 
 tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
-                                                  const CtmSavePointsOptions& options /*= {}*/ )
+                                                  const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toCtm( points, out, colors, options );
+    return toCtm( points, out, colors, options, callback );
 }
 
 tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
-                                                  const CtmSavePointsOptions& options /*= {}*/ )
+                                                  const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -142,29 +147,35 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
 
+    callback( 1.f );
     return {};
-
 }
 
-tl::expected<void, std::string> toPts( const PointCloud& points, const std::filesystem::path& file )
+tl::expected<void, std::string> toPts( const PointCloud& points, const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toPts( points, out );
+    return toPts( points, out, callback );
 }
 
-tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out )
+tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out, ProgressCallback callback )
 {
     out << "BEGIN_Polyline\n";
     for ( auto v : points.validPoints )
         out << points.points[v] << "\n";
     out << "END_Polyline\n";
+
+    if ( !out )
+        return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
+
+    callback( 1.f );
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
+                                                      ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -172,14 +183,15 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == u8".ply" )
-        res = MR::PointsSave::toPly( points, file, colors );
+        res = MR::PointsSave::toPly( points, file, colors, callback );
     else if ( ext == u8".ctm" )
-        res = MR::PointsSave::toCtm( points, file, colors );
+        res = MR::PointsSave::toCtm( points, file, colors, {}, callback );
     else if ( ext == u8".pts" )
-        res = MR::PointsSave::toPts( points, file );
+        res = MR::PointsSave::toPts( points, file, callback );
     return res;
 }
-tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */,
+                                                      ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -187,11 +199,11 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
-        res = MR::PointsSave::toPly( points, out, colors );
+        res = MR::PointsSave::toPly( points, out, colors, callback );
     else if ( ext == ".ctm" )
-        res = MR::PointsSave::toCtm( points, out, colors );
+        res = MR::PointsSave::toCtm( points, out, colors, {}, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsSave::toPts( points, out );
+        res = MR::PointsSave::toPts( points, out, callback );
     return res;
 }
 

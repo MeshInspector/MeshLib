@@ -59,6 +59,9 @@
     <Filter Include="resource\object_icons\X3">
       <UniqueIdentifier>{65aa8698-acd3-4ead-9a9b-a1ba50ce1b69}</UniqueIdentifier>
     </Filter>
+    <Filter Include="IO">
+      <UniqueIdentifier>{d5a52afb-6078-4698-ac58-593be7f5ec9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -216,6 +219,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectMeshHistory.cpp">
       <Filter>History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewerIO.cpp">
+      <Filter>IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -415,6 +421,9 @@
     </ClInclude>
     <ClInclude Include="MRObjectMeshHistory.h">
       <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerIO.h">
+      <Filter>IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

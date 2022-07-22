@@ -43,6 +43,7 @@
     <ClCompile Include="MRStatePluginAutoClose.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
+    <ClCompile Include="MRViewerIO.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
     <ClCompile Include="MRRecentFilesStore.cpp" />
     <ClCompile Include="MRRenderLinesObject.cpp" />
@@ -122,6 +123,7 @@
     <ClInclude Include="MRViewer.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
+    <ClInclude Include="MRViewerIO.h" />
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />

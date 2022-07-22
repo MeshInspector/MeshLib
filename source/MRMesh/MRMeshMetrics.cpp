@@ -9,7 +9,7 @@
 namespace 
 {
 // Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it
-constexpr double BadTriangulationMetric = 1e100;
+constexpr double BadTriangulationMetric = 1e10;
 // This constant modifier was born empirically
 constexpr double TriangleAreaModifier = 1e2;
 }
@@ -163,7 +163,10 @@ FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
 
         double normedArea = TriangleAreaModifier * cross( mesh.points[b] - mesh.points[a], mesh.points[c] - mesh.points[a] ).length() * reverseCharacteristicTriArea;
 
-        return aspectRatio + normedArea;
+        auto res = aspectRatio + normedArea;
+        if ( res > BadTriangulationMetric || std::isnan( res ) || std::isinf( res ) )
+            return BadTriangulationMetric;
+        return res;
     };
     metric.edgeMetric = [&mesh] ( VertId a, VertId b, VertId l, VertId r )
     {
@@ -177,9 +180,11 @@ FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
         auto cosAC = dot( normA, normC ) / ( s_Abc_double * s_abC_double );
 
         if ( cosAC <= -1.0f )
-            return DBL_MAX;
-
-        return double( sqr( sqr( ( 1.0f - cosAC ) / ( 1.0f + cosAC ) ) ) );
+            return BadTriangulationMetric;
+        auto res = double( sqr( sqr( ( 1.0f - cosAC ) / ( 1.0f + cosAC ) ) ) );
+        if ( res > BadTriangulationMetric || std::isnan( res ) || std::isinf( res ) )
+            return BadTriangulationMetric;
+        return res;
     };
     return metric;
 }

@@ -9,7 +9,8 @@
 namespace 
 {
 // Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it
-constexpr double BadTriangulationMetric = 1e100;
+// e10 - real metrics to have weight in triangulation, if it would be more than e15+ some metrics will be less than double precision
+constexpr double BadTriangulationMetric = 1e10;
 // This constant modifier was born empirically
 constexpr double TriangleAreaModifier = 1e2;
 }
@@ -158,8 +159,8 @@ FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
     metric.triangleMetric = [&mesh, reverseCharacteristicTriArea] ( VertId a, VertId b, VertId c )
     {
         double aspectRatio = triangleAspectRatio( mesh.points[a], mesh.points[b], mesh.points[c] );
-        if ( aspectRatio == DBL_MAX )
-            return DBL_MAX;
+        if ( aspectRatio > BadTriangulationMetric )
+            return BadTriangulationMetric;
 
         double normedArea = TriangleAreaModifier * cross( mesh.points[b] - mesh.points[a], mesh.points[c] - mesh.points[a] ).length() * reverseCharacteristicTriArea;
 
@@ -174,10 +175,13 @@ FillHoleMetric getComplexFillMetric( const Mesh& mesh, EdgeId e0 )
 
         auto s_Abc_double = normA.length();
         auto s_abC_double = normC.length();
+        auto denom = s_Abc_double * s_abC_double;
+        if ( denom == 0.0f )
+            return BadTriangulationMetric;
         auto cosAC = dot( normA, normC ) / ( s_Abc_double * s_abC_double );
 
         if ( cosAC <= -1.0f )
-            return DBL_MAX;
+            return BadTriangulationMetric;
 
         return double( sqr( sqr( ( 1.0f - cosAC ) / ( 1.0f + cosAC ) ) ) );
     };

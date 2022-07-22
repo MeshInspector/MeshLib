@@ -682,6 +682,7 @@ void ImGuiMenu::draw_helpers()
     {
         showRenameModal_ = false;
         ImGui::OpenPopup( "Rename object" );
+        popUpRenameBuffer_ = renameBuffer_;
     }
 
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
@@ -694,14 +695,14 @@ void ImGuiMenu::draw_helpers()
         }
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        ImGui::InputText( "Name", renameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
         if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
-            obj->setName( renameBuffer_ );
+            obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );

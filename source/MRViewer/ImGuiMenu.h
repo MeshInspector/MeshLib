@@ -56,6 +56,7 @@ protected:
   long long frameTimeMillisecThreshold_{ 25 };
   bool showRenameModal_{ false };
   std::string renameBuffer_;
+  std::string popUpRenameBuffer_;
   std::string storedError_;
   std::shared_ptr<ShortcutManager> shortcutManager_;
 

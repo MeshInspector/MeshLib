@@ -461,12 +461,7 @@ void ObjectTransformWidget::passiveMove_()
 
     std::vector<VisualObject*> objsToPick_;
     objsToPick_.reserve( 6 );
-    auto hoveredViewportId = getViewerInstance().get_hovered_viewport_id();
-    if ( !hoveredViewportId )
-    {
-        dropCurrentObj();
-        return;
-    }
+    auto hoveredViewportId = getViewerInstance().getHoveredViewportId();
 
     if ( pickThrough_ )
     {

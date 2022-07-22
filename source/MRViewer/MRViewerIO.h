@@ -1,6 +1,6 @@
 #pragma once
 #include "exports.h"
-#include "MRMesh\MRProgressCallback.h"
+#include "MRMesh/MRProgressCallback.h"
 
 namespace MR
 {

@@ -11,6 +11,8 @@
 #include "mrmeshpy/MRLoadModule.h"
 #endif
 
+#include <thread>
+
 namespace MR
 {
 
@@ -22,6 +24,15 @@ TEST(MRMesh, QuadraticForm)
     auto r = sum( q0, Vector3f{0,0,0}, q1, Vector3f{2,0,0} );
 
     EXPECT_EQ( r.second, (Vector3f{1,0,0}) );
+}
+
+TEST(MRMesh, OtherThread)
+{
+    std::thread th([&]
+    {
+        spdlog::info( "Other thread!" );
+    });
+    th.join();
 }
 
 } //namespace MR

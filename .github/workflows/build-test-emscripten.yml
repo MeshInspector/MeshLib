@@ -44,7 +44,8 @@ jobs:
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
         run: ./scripts/build_source.sh
 
-      - name: Tests
+      - name: Test
+        timeout-minutes: 1
         run: |
           Xvfb -ac :99 -screen 0 1280x1024x16 > /dev/null 2>&1 &
           export DISPLAY=:99

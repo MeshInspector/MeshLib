@@ -5,6 +5,7 @@
 #include "MRPointsInBall.h"
 #include "MRBestFit.h"
 #include "MRPlane3.h"
+#include "MRTriMath.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>

@@ -151,10 +151,6 @@ template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<Boxed
 
 TEST(MRMesh, TBBTask)
 {
-    std::ostringstream s;
-    s << "Main in thread " << std::this_thread::get_id();
-    spdlog::info( s.str() ); 
-
     tbb::task_group group;
     group.run( [] { 
         std::ostringstream s;
@@ -162,8 +158,9 @@ TEST(MRMesh, TBBTask)
         spdlog::info( s.str() ); 
     } );
 
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for( 10ms ); //to avoid running task in the main thread
+    std::ostringstream s;
+    s << "Main in thread " << std::this_thread::get_id();
+    spdlog::info( s.str() ); 
 }
 
 } //namespace MR

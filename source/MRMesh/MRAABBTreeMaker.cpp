@@ -151,6 +151,8 @@ template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<Boxed
 
 TEST(MRMesh, TBBTask)
 {
+    spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
+
     std::ostringstream s;
     s << "Main in thread " << std::this_thread::get_id();
     spdlog::info( s.str() ); 

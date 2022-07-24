@@ -4,14 +4,14 @@
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRViewer/MRViewer.h"
+#include "MRPch/MRTBB.h"
+#include <sstream>
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "mrmeshpy/MRLoadModule.h"
 #endif
-
-#include <thread>
 
 namespace MR
 {
@@ -26,13 +26,21 @@ TEST(MRMesh, QuadraticForm)
     EXPECT_EQ( r.second, (Vector3f{1,0,0}) );
 }
 
-TEST(MRMesh, OtherThread)
+TEST(MRMesh, TBBTask)
 {
-    std::thread th([&]
-    {
-        spdlog::info( "Other thread!" );
-    });
-    th.join();
+    std::ostringstream s;
+    s << "Main in thread " << std::this_thread::get_id();
+    spdlog::info( s.str() ); 
+
+    tbb::task_group group;
+    group.run( [] { 
+        std::ostringstream s;
+        s << "Task in thread " << std::this_thread::get_id();
+        spdlog::info( s.str() ); 
+    } );
+
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for( 100ms ); //to avoid running task in the main thread
 }
 
 } //namespace MR

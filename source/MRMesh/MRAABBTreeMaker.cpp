@@ -5,7 +5,6 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
 #include <stack>
-#include <sstream>
 #include <thread>
 
 namespace MR
@@ -158,20 +157,16 @@ TEST(MRMesh, TBBTask)
     tbb::task_group group;
     group.run( [] 
     { 
-        std::ostringstream s;
-        s << "Task in thread " << std::this_thread::get_id();
         for( int i = 0; i < 3; ++i )
         {
-            spdlog::info( s.str() );
+            spdlog::info( "Task in thread {}", std::this_thread::get_id() );
             std::this_thread::sleep_for( 10ms );
         }
     } );
 
-    std::ostringstream s;
-    s << "Main in thread " << std::this_thread::get_id();
     for( int i = 0; i < 3; ++i )
     {
-        spdlog::info( s.str() );
+        spdlog::info( "Main in thread {}", std::this_thread::get_id() );
         std::this_thread::sleep_for( 10ms );
     }
 

@@ -151,6 +151,10 @@ template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<Boxed
 
 TEST(MRMesh, TBBTask)
 {
+    std::ostringstream s;
+    s << "Main in thread " << std::this_thread::get_id();
+    spdlog::info( s.str() ); 
+
     tbb::task_group group;
     group.run( [] { 
         std::ostringstream s;

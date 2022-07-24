@@ -38,7 +38,7 @@ struct FillHoleMetric
     FillCombineMetric combineMetric;
 };
 
-/// This metric minimizes the sum circumcircle radii for all triangles in the triangulation.
+/// This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.
 /// It is rather fast to calculate, and it results in typically good triangulations.
 MRMESH_API FillHoleMetric getCircumscribedMetric( const Mesh& mesh );
 
@@ -82,6 +82,14 @@ MRMESH_API FillHoleMetric getParallelPlaneFillMetric( const Mesh& mesh, EdgeId e
 /// This metric minimizes the maximal dihedral angle between the faces in the triangulation
 /// and on its boundary
 MRMESH_API FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh );
+
+/// This metric minimizes the maximal dihedral angle between the faces in the triangulation
+/// and on its boundary, and it avoids creating too degenerate triangles;
+///  for planar holes it is the same as getCircumscribedMetric
+MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
+
+/// This metric maximizes the minimal angle among all faces in the triangulation
+MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );
 
 /// \}
 

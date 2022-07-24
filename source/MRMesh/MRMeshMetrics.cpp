@@ -5,6 +5,7 @@
 #include "MRTriMath.h"
 #include "MRPlane3.h"
 #include "MRBestFit.h"
+#include "MRConstants.h"
 
 namespace 
 {
@@ -227,6 +228,38 @@ FillHoleMetric getMaxDihedralAngleMetric( const Mesh& mesh )
     metric.combineMetric = [] ( double a, double b )
     {
         return a > b ? a : b;
+    };
+    return metric;
+}
+
+FillHoleMetric getUniversalMetric( const Mesh& mesh )
+{
+    FillHoleMetric metric;
+    metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
+    {
+        return circumcircleDiameter( mesh.points[a], mesh.points[b], mesh.points[c] );
+    };
+    metric.edgeMetric = [&] ( VertId a, VertId b, VertId l, VertId r ) -> double
+    {
+        const auto& aP = mesh.points[a];
+        const auto& bP = mesh.points[b];
+        const auto& lP = mesh.points[l];
+        const auto& rP = mesh.points[r];
+        auto ab = bP - aP;
+        auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
+        auto normR = cross( ab, rP - aP );
+        return ab.length() * std::exp( 10 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
+    };
+    return metric;
+}
+
+FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
+{
+    FillHoleMetric metric;
+    metric.triangleMetric = [&] ( VertId a, VertId b, VertId c )
+    {
+        constexpr double maxSin = 0.86602540378443864676372317075294; //std::sqrt( 3. ) / 2;
+        return std::exp( 25 * ( maxSin - minTriangleAngleSin( mesh.points[a], mesh.points[b], mesh.points[c] ) ) );
     };
     return metric;
 }

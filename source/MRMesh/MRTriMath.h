@@ -2,6 +2,7 @@
 // triangle-related mathematical functions are here
 
 #include "MRVector3.h"
+#include <algorithm>
 #include <limits>
 #include <cmath>
 
@@ -26,6 +27,26 @@ T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector
     if ( f <= 0 )
         return std::numeric_limits<T>::max();
     return ab * ca * bc / f;
+}
+
+/// Computes sine of minimal angle in ABC triangle, which is equal to ratio of minimal edge length to circumcircle diameter
+/// \ingroup MathGroup
+template <typename T>
+T minTriangleAngleSin( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    const auto ab = ( b - a ).length();
+    const auto ca = ( a - c ).length();
+    const auto bc = ( c - b ).length();
+    if ( ab <= 0  || ca <= 0 || bc <= 0 )
+        return 0;
+    const auto f = cross( b - a, c - a ).length();
+    return f * std::min( { ab, ca, bc } ) / ( ab * ca * bc );
+}
+
+template <typename T>
+T minTriangleAngle( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    return std::asin( minTriangleAngleSin( a, b, c ) );
 }
 
 /// Aspect ratio of a triangle is the ratio of the circum-radius to twice its in-radius

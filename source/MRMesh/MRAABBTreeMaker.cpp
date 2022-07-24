@@ -158,9 +158,9 @@ TEST(MRMesh, TBBTask)
         spdlog::info( s.str() ); 
     } );
 
-    std::ostringstream s;
-    s << "Main in thread " << std::this_thread::get_id();
-    spdlog::info( s.str() ); 
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for( 10ms ); //to avoid running task in the main thread
+    group.wait();
 }
 
 } //namespace MR

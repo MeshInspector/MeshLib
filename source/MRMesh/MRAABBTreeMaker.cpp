@@ -153,19 +153,28 @@ TEST(MRMesh, TBBTask)
 {
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
 
-    std::ostringstream s;
-    s << "Main in thread " << std::this_thread::get_id();
-    spdlog::info( s.str() ); 
-
+    using namespace std::chrono_literals;
+    
     tbb::task_group group;
-    group.run( [] { 
+    group.run( [] 
+    { 
         std::ostringstream s;
         s << "Task in thread " << std::this_thread::get_id();
-        spdlog::info( s.str() ); 
+        for( int i = 0; i < 3; ++i )
+        {
+            spdlog::info( s.str() );
+            std::this_thread::sleep_for( 10ms );
+        }
     } );
 
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for( 10ms ); //to avoid running task in the main thread
+    std::ostringstream s;
+    s << "Main in thread " << std::this_thread::get_id();
+    for( int i = 0; i < 3; ++i )
+    {
+        spdlog::info( s.str() );
+        std::this_thread::sleep_for( 10ms );
+    }
+
     group.wait();
 }
 

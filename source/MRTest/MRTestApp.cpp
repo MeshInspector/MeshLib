@@ -4,8 +4,6 @@
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRViewer/MRViewer.h"
-#include "MRPch/MRTBB.h"
-#include <sstream>
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
@@ -24,23 +22,6 @@ TEST(MRMesh, QuadraticForm)
     auto r = sum( q0, Vector3f{0,0,0}, q1, Vector3f{2,0,0} );
 
     EXPECT_EQ( r.second, (Vector3f{1,0,0}) );
-}
-
-TEST(MRMesh, TBBTask)
-{
-    std::ostringstream s;
-    s << "Main in thread " << std::this_thread::get_id();
-    spdlog::info( s.str() ); 
-
-    tbb::task_group group;
-    group.run( [] { 
-        std::ostringstream s;
-        s << "Task in thread " << std::this_thread::get_id();
-        spdlog::info( s.str() ); 
-    } );
-
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for( 100ms ); //to avoid running task in the main thread
 }
 
 } //namespace MR

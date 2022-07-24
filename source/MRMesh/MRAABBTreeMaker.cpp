@@ -1,8 +1,11 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
 #include "MRTimer.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
 #include <stack>
+#include <sstream>
 #include <thread>
 
 namespace MR
@@ -145,5 +148,22 @@ AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> boxedLeaves )
 template AABBTreeNodeVec<FaceTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<FaceTreeTraits3>> boxedLeaves );
 template AABBTreeNodeVec<LineTreeTraits2> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits2>> boxedLeaves );
 template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits3>> boxedLeaves );
+
+TEST(MRMesh, TBBTask)
+{
+    std::ostringstream s;
+    s << "Main in thread " << std::this_thread::get_id();
+    spdlog::info( s.str() ); 
+
+    tbb::task_group group;
+    group.run( [] { 
+        std::ostringstream s;
+        s << "Task in thread " << std::this_thread::get_id();
+        spdlog::info( s.str() ); 
+    } );
+
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for( 10ms ); //to avoid running task in the main thread
+}
 
 } //namespace MR

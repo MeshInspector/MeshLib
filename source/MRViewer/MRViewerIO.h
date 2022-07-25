@@ -1,4 +1,5 @@
 #pragma once
+#include <MRMesh/MRMeshFwd.h>
 #include "exports.h"
 #include "MRMesh/MRProgressCallback.h"
 

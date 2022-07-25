@@ -65,9 +65,9 @@ HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::s
         const EdgeId& initEdge = holeRepresentativeEdges[i];
         for ( const auto& e : leftRing( mesh.topology, initEdge ) )
         {
-            const auto& pOrg = mesh.orgPnt( e );
+            const auto& pOrg = objMesh->worldXf()(mesh.orgPnt( e ));
             auto orgPix = viewport.projectToViewportSpace( pOrg );
-            const auto& pDest = mesh.destPnt( e );
+            const auto& pDest = objMesh->worldXf()(mesh.destPnt( e ));
             auto destPix = viewport.projectToViewportSpace( pDest );
             auto dist = findPixelDistSq( mousePix, { orgPix, destPix }, projPointOut, posOnEdge );
             if ( attractToVert )

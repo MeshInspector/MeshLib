@@ -4,6 +4,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRSpdlog.h"
+#include <atomic>
 #include <stack>
 #include <thread>
 
@@ -150,41 +151,25 @@ template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<Boxed
 
 TEST(MRMesh, TBBTask)
 {
-    spdlog::info( "TBB num threads is {}", tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
-    tbb::global_control c(tbb::global_control::max_allowed_parallelism, 4);
-    spdlog::info( "TBB num threads (after set 4) is {}", tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
-
+    const auto numThreads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    spdlog::info( "TBB number of threads is {}", numThreads );
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
 
-    using namespace std::chrono_literals;
-    
+    const auto mainThreadId = std::this_thread::get_id();
     tbb::task_group group;
-    group.run( [] 
+    std::atomic<bool> sameThread;
+    group.run( [mainThreadId, &sameThread]
     { 
-        for( int i = 0; i < 3; ++i )
-        {
-            spdlog::info( "Task in thread {}", std::this_thread::get_id() );
-            std::this_thread::sleep_for( 10ms );
-        }
+        const auto taskThreadId = std::this_thread::get_id();
+        spdlog::info( "Task in thread {}", taskThreadId );
+        sameThread = mainThreadId == taskThreadId;
     } );
 
-    for( int i = 0; i < 3; ++i )
-    {
-        spdlog::info( "Main in thread {}", std::this_thread::get_id() );
-        std::this_thread::sleep_for( 10ms );
-    }
-
+    spdlog::info( "Main in thread {}", mainThreadId );
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
     group.wait();
-
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 6 ),
-        [&] ( const tbb::blocked_range<int>& range )
-    {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            spdlog::info( "For item in thread {}", std::this_thread::get_id() );
-            std::this_thread::sleep_for( 10ms );
-        }
-    } );
+    EXPECT_TRUE( ( numThreads == 1 && sameThread ) || ( numThreads > 1 && !sameThread ) );
 }
 
 } //namespace MR

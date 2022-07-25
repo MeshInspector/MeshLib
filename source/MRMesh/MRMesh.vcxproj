@@ -220,7 +220,6 @@
     <ClInclude Include="MRMeshBoundary.h" />
     <ClInclude Include="MRMeshDelete.h" />
     <ClInclude Include="MRMeshDelone.h" />
-    <ClInclude Include="MRMeshDelone.hpp" />
     <ClInclude Include="MRMeshEigen.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />

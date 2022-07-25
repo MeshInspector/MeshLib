@@ -771,9 +771,6 @@
     <ClInclude Include="MRMeshDelone.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshDelone.hpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClInclude>
     <ClInclude Include="MRPolyline2Intersect.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>

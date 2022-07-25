@@ -27,10 +27,6 @@ struct DeloneSettings
 /// \ingroup MeshAlgorithmGroup
 /// \{
 
-/// computes the diameter of the triangle's ABC circumcircle
-template <typename T>
-T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c );
-
 /// given quadrangle ABCD, checks whether its edge AC satisfies Delone's condition;
 /// if dihedral angles
 ///   1) between triangles ABD and DBC and
@@ -57,5 +53,3 @@ MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationA
 /// \}
 
 } // namespace MR
-
-#include "MRMeshDelone.hpp"

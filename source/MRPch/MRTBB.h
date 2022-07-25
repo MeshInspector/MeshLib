@@ -21,6 +21,7 @@
 #include <tbb/parallel_reduce.h>
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
+#include <tbb/task_scheduler_init.h>
 #pragma warning(pop)
 
 #ifdef __EMSCRIPTEN__

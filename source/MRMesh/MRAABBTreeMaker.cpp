@@ -171,6 +171,16 @@ TEST(MRMesh, TBBTask)
     }
 
     group.wait();
+
+    tbb::parallel_for( tbb::blocked_range<int>( 0, 6 ),
+        [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            spdlog::info( "For item in thread {}", std::this_thread::get_id() );
+            std::this_thread::sleep_for( 10ms );
+        }
+    } );
 }
 
 } //namespace MR

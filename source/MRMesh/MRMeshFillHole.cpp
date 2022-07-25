@@ -306,13 +306,13 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
             return true;
         // we need to spin back candidate to find first edge to count edge metric of last edge
         WeightedConn currentSpin;
-        WeightedConn prevSpin = map[nextConn.prevA % aEdgesMapSize][nextConn.prevB % bEdgesMapSize];
+        WeightedConn prevSpin = map[nextConn.prevA][nextConn.prevB];
         for ( ;;)
         {
             if ( prevSpin.hasPrev() )
             {
                 currentSpin = prevSpin;
-                prevSpin = map[currentSpin.prevA % aEdgesMapSize][currentSpin.prevB % bEdgesMapSize];
+                prevSpin = map[currentSpin.prevA][currentSpin.prevB];
             }
             else
             {

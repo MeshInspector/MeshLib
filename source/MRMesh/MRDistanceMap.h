@@ -231,7 +231,7 @@ MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, flo
 /**
  * \brief computes the union of the shapes bounded by input 2d contours
  * \return the boundary of the union
- * \details input contours must be closed within the area of distance map and be consistently oriented (counterclockwise, that is leaving the bounded shapes from the left).
+ * \details input contours must be closed within the area of distance map and be consistently oriented (clockwise, that is leaving the bounded shapes from the left).
  * the value of params.withSign must be true (checked with assert() inside the function)
  * \note that polyline topology should be consistently oriented
  */
@@ -241,7 +241,7 @@ MRMESH_API Polyline2 contourUnion( const Polyline2& contoursA, const Polyline2& 
 /**
  * \brief computes the intersection of the shapes bounded by input 2d contours
  * \return the boundary of the intersection
- * \details input contours must be closed within the area of distance map and be consistently oriented (counterclockwise, that is leaving the bounded shapes from the left).
+ * \details input contours must be closed within the area of distance map and be consistently oriented (clockwise, that is leaving the bounded shapes from the left).
  * the value of params.withSign must be true (checked with assert() inside the function)
  * \note that polyline topology should be consistently oriented
  */
@@ -251,7 +251,7 @@ MRMESH_API Polyline2 contourIntersection( const Polyline2& contoursA, const Poly
 /**
  * \brief computes the difference between the shapes bounded by contoursA and the shapes bounded by contoursB
  * \return the boundary of the difference
- * \details input contours must be closed within the area of distance map and be consistently oriented (counterclockwise, that is leaving the bounded shapes from the left).
+ * \details input contours must be closed within the area of distance map and be consistently oriented (clockwise, that is leaving the bounded shapes from the left).
  * the value of params.withSign must be true (checked with assert() inside the function)
  * \note that polyline topology should be consistently oriented
  */

@@ -18,9 +18,10 @@ Contours2f getTestCont1()
 {
     Contours2f c;
     // simple case
-    c.push_back( { {2.f,1.f},{3.f,1.f},{3.f,4.f},{2.f,4.f},{2.f,1.f} } );
+    c.push_back( { {2.f,1.f},{2.f,4.f},{3.f,4.f},{3.f,1.f},{2.f,1.f} } );
 
     // a bit more complicated...
+    // should be clockwise
     //c.push_back( { {0.f,0.f},{1.f,2.f},{2.5f,2.5f},{3.f,4.f},{5.f,5.f} } );
     //c.push_back( { {5.f,5.f},{4.f,3.f},{2.5f,2.5f},{2.f,1.f},{0.f,0.f} } );
     return c;
@@ -29,9 +30,10 @@ Contours2f getTestCont2()
 {
     Contours2f c;
     //simple case
-    c.push_back( { {1.f,2.f},{4.f,2.f},{4.f,3.f},{1.f,3.f},{1.f,2.f} } );
+    c.push_back( { {1.f,2.f},{1.f,3.f} ,{4.f,3.f},{4.f,2.f},{1.f,2.f} } );
 
     // a bit more complicated...
+    // should be clockwise
     //c.push_back( { {0.f,5.f},{1.f,1.f},{5.f,0.f} } );
     //c.push_back( { {4.f,0.f},{4.f,4.f},{0.f,5.f} } );
     return c;

@@ -11,6 +11,8 @@ namespace MR
 namespace MeshSave
 {
 
+const size_t blockSize = size_t( 1 ) << 16;
+
 const IOFilters Filters =
 {
     {"MrMesh (.mrmesh)",  "*.mrmesh"},
@@ -21,7 +23,7 @@ const IOFilters Filters =
     {"CTM (.ctm)",        "*.ctm"}
 };
 
-tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -30,7 +32,7 @@ tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesyst
     return toMrmesh( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
     mesh.topology.write( out );
@@ -38,18 +40,28 @@ tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out,
     // write points
     auto numPoints = (std::uint32_t)mesh.points.size();
     out.write( (const char*)&numPoints, 4 );
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
-    out.write( (const char*)mesh.points.data(), mesh.points.size() * sizeof(Vector3f) );
+    int blockIndex = 0;
+    const float sizeAll = float( mesh.points.size() * sizeof( Vector3f ) );
+    for ( size_t max = mesh.points.size() * sizeof( Vector3f ) / blockSize; blockIndex < max; ++blockIndex )
+    {
+        out.write( ( const char* )( mesh.points.data() ) + blockIndex * blockSize, blockSize );
+        if ( callback && !callback( blockIndex * blockSize / sizeAll ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
+    }
+    const size_t remnant = mesh.points.size() * sizeof( Vector3f ) - blockIndex * blockSize;
+    if ( remnant )
+        out.write( ( const char* )( mesh.points.data() ) + blockIndex * blockSize, remnant );
+
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in Mrmesh-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
-tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file );
     if ( !out )
@@ -58,46 +70,49 @@ tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem:
     return toOff( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
     VertId lastValidPoint = mesh.topology.lastValidVert();
     int numPolygons = mesh.topology.numValidFaces();
 
     out << "OFF\n" << lastValidPoint + 1 << ' ' << numPolygons << " 0\n\n";
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
     
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
     {
         auto p = mesh.points[i];
         out << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        if ( callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
 
-    if ( !callback( 0.5f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
-
+    const float facesNum = float( mesh.topology.edgePerFace().size() );
+    size_t faceIndex = 0;
     for ( const auto & e : mesh.topology.edgePerFace() )
     {
+        ++faceIndex;
         if ( !e.valid() )
             continue;
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
         out << "3 " << a << ' ' << b << ' ' << c << '\n';
+        if ( callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in OFF-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
 
 tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf, int firstVertId,
-                                       ProgressCallback callback /*= nullptr*/ )
+                                       ProgressCallback callback )
 {
     std::ofstream out( file );
     if ( !out )
@@ -107,7 +122,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem:
 }
 
 tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf, int firstVertId,
-                                       ProgressCallback callback /*= nullptr*/ )
+                                       ProgressCallback callback )
 {
     MR_TIMER
     VertId lastValidPoint = mesh.topology.lastValidVert();
@@ -116,29 +131,34 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
     {
         auto p = xf( mesh.points[i] );
         out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
+        if ( callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
-    if (!callback( 0.5f ))
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
-
+    const float facesNum = float( mesh.topology.edgePerFace().size() );
+    size_t faceIndex = 0;
     for ( const auto & e : mesh.topology.edgePerFace() )
     {
+        ++faceIndex;
         if ( !e.valid() )
             continue;
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
         out << "f " << a + firstVertId << ' ' << b + firstVertId << ' ' << c + firstVertId << '\n';
+        if ( callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in OBJ-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
-tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -147,14 +167,12 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::files
     return toBinaryStl( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
 
     char header[80] = "MeshInspector.com";
     out.write( header, 80 );
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     auto notDegenTris = mesh.topology.getValidFaces();
     for ( auto f : notDegenTris )
@@ -172,9 +190,9 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
 
     auto numTris = (std::uint32_t)notDegenTris.count();
     out.write( ( const char* )&numTris, 4 );
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
+    const float trisNum = float( notDegenTris.count() );
+    int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
         VertId a, b, c;
@@ -190,17 +208,21 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
         out.write( (const char*)&bp, 12 );
         out.write( (const char*)&cp, 12 );
         std::uint16_t attr{ 0 };
-        out.write( (const char*)&attr, 2 );
+        out.write( ( const char* )&attr, 2 );
+        if ( callback && !callback( trisIndex / trisNum ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
+        ++trisIndex;
     }
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in binary STL-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -209,7 +231,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, const std::filesystem:
     return toPly( mesh, out, colors, callback );
 }
 
-tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors, ProgressCallback callback /*= nullptr*/ )
+tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -223,15 +245,23 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
 
     out <<  "element face " << mesh.topology.numValidFaces() << "\nproperty list uchar int vertex_indices\nend_header\n";
 
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
-
     // write vertices
     static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
     if ( !saveColors )
     {
-        out.write( ( const char* )&mesh.points.front().x, 12 * numVertices );
-        if ( !callback( 0.3f ) )
+
+        int blockIndex = 0;
+        const float sizeAll = float( mesh.points.size() * sizeof( Vector3f ) );
+        for ( size_t max = mesh.points.size() * sizeof( Vector3f ) / blockSize; blockIndex < max; ++blockIndex )
+        {
+            out.write( ( const char* )( mesh.points.data() ) + blockIndex * blockSize, blockSize );
+            if ( callback && !callback( blockIndex * blockSize / sizeAll * 0.5f ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
+        }
+        const size_t remnant = mesh.points.size() * sizeof( Vector3f ) - blockIndex * blockSize;
+        if ( remnant )
+            out.write( ( const char* )( mesh.points.data() ) + blockIndex * blockSize, remnant );
+        if ( callback && !callback( 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     else
@@ -240,10 +270,10 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
         for ( VertId i{ 0 }; i < numVertices; ++i )
         {
             out.write( (const char*) &mesh.points[i].x, 12 );
-            out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
+            out.write( ( const char* )&( *colors )[i].r, 3 ); // write only r g b, not a
+            if ( callback && !callback( float( i ) / numVertices * 0.5f ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
-        if ( !callback( 0.7f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     // write triangles
@@ -257,21 +287,27 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     static_assert( sizeof( PlyTriangle ) == 13, "check your padding" );
 
     PlyTriangle tri;
+    const float facesNum = float( mesh.topology.getValidFaces().count() );
+    int faceIndex = 0;
     for ( auto f : mesh.topology.getValidFaces() )
     {
         mesh.topology.getTriVerts( f, tri.v );
         out.write( (const char *)&tri, 13 );
+        if ( callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
+        ++faceIndex;
     }
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in PLY-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
 tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
-                                       ProgressCallback callback /*= nullptr*/ )
+                                       ProgressCallback callback )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -281,7 +317,7 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem:
 }
 
 tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
-                                       ProgressCallback callback /*= nullptr*/ )
+                                       ProgressCallback callback )
 {
     MR_TIMER
 
@@ -364,12 +400,13 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
     if ( !out || ctmGetError(context) != CTM_NONE )
         return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
 tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
-                                                      ProgressCallback callback /*= nullptr*/ )
+                                                      ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
     for ( auto & c : ext )
@@ -392,7 +429,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
 }
 
 tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension,
-                                                      const Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback /*= nullptr*/ )
+                                                      const Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )

@@ -23,33 +23,33 @@ MRMESH_API extern const IOFilters Filters;
 
 /// saves in internal file format
 MRMESH_API tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesystem::path & file,
-                                                     ProgressCallback callback = emptyProgressCallback );
+                                                     ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out,
-                                                     ProgressCallback callback = emptyProgressCallback );
+                                                     ProgressCallback callback = {} );
 
 /// saves in .off file
 MRMESH_API tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem::path & file,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 
 /// saves in .obj file
 /// \param xf will be applied to all mesh vertices prior to saving;
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
 MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, const std::filesystem::path & file, const AffineXf3f & xf = {}, int firstVertId = 1,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, const AffineXf3f & xf = {}, int firstVertId = 1,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 
 /// saves in binary .stl file
-MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback = emptyProgressCallback );
-MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback = emptyProgressCallback );
+MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback = {} );
+MRMESH_API tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & out, ProgressCallback callback = {} );
 
 /// saves in .ply file
 MRMESH_API tl::expected<void, std::string> toPly( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 
 struct CtmSaveOptions
 {
@@ -73,16 +73,16 @@ struct CtmSaveOptions
 
 /// saves in .ctm file
 MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 
 /// detects the format from file extension and save mesh to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors = nullptr,
-                                                                 ProgressCallback callback = emptyProgressCallback );
+                                                                 ProgressCallback callback = {} );
 /// extension in `*.ext` format
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors = nullptr,
-                                                                 ProgressCallback callback = emptyProgressCallback );
+                                                                 ProgressCallback callback = {} );
 
 /// \}
 

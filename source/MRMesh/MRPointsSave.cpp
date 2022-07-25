@@ -10,6 +10,8 @@
 namespace MR
 {
 
+const size_t blockSize = size_t( 1 ) << 16;
+
 namespace PointsSave
 {
 const IOFilters Filters =
@@ -39,16 +41,22 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     if ( colors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
     out << "end_header\n";
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     if ( !colors )
     {
         // write vertices
         static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
-        out.write( ( const char* )&points.points.front().x, 12 * numVertices );
-        if ( !callback( 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
+        int blockIndex = 0;
+        const float sizeAll = float( points.points.size() * sizeof( Vector3f ) );
+        for ( size_t max = points.points.size() * sizeof( Vector3f ) / blockSize; blockIndex < max; ++blockIndex )
+        {
+            out.write( ( const char* )( points.points.data() ) + blockIndex * blockSize, blockSize );
+            if ( callback && !callback( blockIndex * blockSize / sizeAll ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
+        }
+        const size_t remnant = points.points.size() * sizeof( Vector3f ) - blockIndex * blockSize;
+        if ( remnant )
+            out.write( ( const char* )( points.points.data() ) + blockIndex * blockSize, remnant );
     }
     else
     {
@@ -68,14 +76,17 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
             cVert.p = points.points[VertId( v )];
             const auto& c = ( *colors )[VertId( v )];
             cVert.r = c.r; cVert.g = c.g; cVert.b = c.b;
-            out.write( (const char*) &cVert, 15 );
+            out.write( ( const char* )&cVert, 15 );
+            if ( callback && !callback( float( v ) / numVertices ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
     }
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in PLY-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
@@ -147,7 +158,8 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 
@@ -163,14 +175,22 @@ tl::expected<void, std::string> toPts( const PointCloud& points, const std::file
 tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out, ProgressCallback callback )
 {
     out << "BEGIN_Polyline\n";
+    const float pointsNum = float( points.validPoints.count() );
+    int pointIndex = 0;
     for ( auto v : points.validPoints )
+    {
         out << points.points[v] << "\n";
+        if ( callback && !callback( float( pointIndex ) / pointsNum ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
+        ++pointIndex;
+    }
     out << "END_Polyline\n";
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 

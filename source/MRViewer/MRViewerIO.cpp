@@ -92,7 +92,9 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
 
 #ifdef __EMSCRIPTEN__
 
-int load_files( int count, const char** filenames )
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE int load_files( int count, const char** filenames )
 {
     using namespace MR;
     std::vector<std::filesystem::path> paths( count );
@@ -122,7 +124,7 @@ int load_files( int count, const char** filenames )
     return 1;
 }
 
-int save_file( const char* filename )
+EMSCRIPTEN_KEEPALIVE int save_file( const char* filename )
 {
     using namespace MR;
     std::filesystem::path savePath = std::string( filename );
@@ -136,7 +138,7 @@ int save_file( const char* filename )
     return 1;
 }
 
-int save_scene( const char* filename )
+EMSCRIPTEN_KEEPALIVE int save_scene( const char* filename )
 {
     using namespace MR;
     std::filesystem::path savePath = std::string( filename );
@@ -153,6 +155,7 @@ int save_scene( const char* filename )
     return 1;
 }
 
+}
 #endif
 
 }

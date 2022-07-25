@@ -53,8 +53,6 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
             return tl::make_unexpected( ss.str() );
         }
     }
-    if ( !callback( 0.01f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     std::stringstream prefix;
     prefix.precision( 3 );
@@ -62,8 +60,6 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     const auto& voxSize = voxelsObject.voxelSize();
     prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f << "_F "; // voxel size "_F" for float
     prefix << utf8string( path.filename() );                        // name
-    if ( !callback( 0.02f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     std::filesystem::path outPath = parentPath / prefix.str();
     std::ofstream outFile( outPath, std::ios::binary );
@@ -73,8 +69,6 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
         return tl::make_unexpected( ss.str() );
     }
-    if ( !callback( 0.03f ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     const auto& grid = voxelsObject.grid();
     auto accessor = grid->getConstAccessor();
@@ -92,6 +86,8 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
                 buffer[z*dimsXY + y * dims.x + x] = accessor.getValue( {x,y,z} );
             }
         }
+        if ( callback && !callback( float( z ) / dims.z ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     if ( !outFile.write( (const char*) buffer.data(), buffer.size() * sizeof( float ) ) )
@@ -101,7 +97,8 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         return tl::make_unexpected( ss.str() );
     }
 
-    callback( 1.f );
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 

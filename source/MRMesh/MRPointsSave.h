@@ -23,9 +23,9 @@ MRMESH_API extern const IOFilters Filters;
 
 /// saves in .ply file
 MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors = nullptr,
-                                                  ProgressCallback callback = emptyProgressCallback );
+                                                  ProgressCallback callback = {} );
 
 struct CtmSavePointsOptions
 {
@@ -37,20 +37,20 @@ struct CtmSavePointsOptions
 
 /// saves in .ctm file
 MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
-                                                  const CtmSavePointsOptions& options = {}, ProgressCallback callback = emptyProgressCallback );
+                                                  const CtmSavePointsOptions& options = {}, ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors = nullptr,
-                                                  const CtmSavePointsOptions& options = {}, ProgressCallback callback = emptyProgressCallback );
+                                                  const CtmSavePointsOptions& options = {}, ProgressCallback callback = {} );
 
 /// saves in .pts file
-MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, const std::filesystem::path& file, ProgressCallback callback = emptyProgressCallback );
-MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out, ProgressCallback callback = emptyProgressCallback );
+MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& out, ProgressCallback callback = {} );
 
 /// detects the format from file extension and save points to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
-                                                                 ProgressCallback callback = emptyProgressCallback );
+                                                                 ProgressCallback callback = {} );
 /// extension in `*.ext` format
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors = nullptr,
-                                                                 ProgressCallback callback = emptyProgressCallback );
+                                                                 ProgressCallback callback = {} );
 
 /// \}
 

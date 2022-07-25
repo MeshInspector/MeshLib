@@ -9,9 +9,4 @@ namespace MR
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-const ProgressCallback emptyProgressCallback = [] ( float )
-{
-    return true;
-};
-
 }

@@ -1,7 +1,10 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
 #include "MRTimer.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
+#include <atomic>
 #include <stack>
 #include <thread>
 
@@ -145,5 +148,28 @@ AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> boxedLeaves )
 template AABBTreeNodeVec<FaceTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<FaceTreeTraits3>> boxedLeaves );
 template AABBTreeNodeVec<LineTreeTraits2> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits2>> boxedLeaves );
 template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits3>> boxedLeaves );
+
+TEST(MRMesh, TBBTask)
+{
+    const auto numThreads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    spdlog::info( "TBB number of threads is {}", numThreads );
+    spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
+
+    const auto mainThreadId = std::this_thread::get_id();
+    tbb::task_group group;
+    std::atomic<bool> sameThread;
+    group.run( [mainThreadId, &sameThread]
+    { 
+        const auto taskThreadId = std::this_thread::get_id();
+        spdlog::info( "Task in thread {}", taskThreadId );
+        sameThread = mainThreadId == taskThreadId;
+    } );
+
+    spdlog::info( "Main in thread {}", mainThreadId );
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
+    group.wait();
+    EXPECT_TRUE( ( numThreads == 1 && sameThread ) || ( numThreads > 1 && !sameThread ) );
+}
 
 } //namespace MR

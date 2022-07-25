@@ -155,6 +155,7 @@ TEST(MRMesh, TBBTask)
     spdlog::info( "TBB num threads (after set 4) is {}", tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
+    std::thread( [] { spdlog::info( "Separate thread {}", std::this_thread::get_id() ); } ).detach();
 
     using namespace std::chrono_literals;
     

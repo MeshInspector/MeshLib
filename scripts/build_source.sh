@@ -103,7 +103,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
     else
-      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release | tee ${logfile}
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON | tee ${logfile}
     fi
  fi 
  if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
@@ -126,7 +126,7 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
     else
-      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Debug | tee ${logfile}
+      emcmake cmake ../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON | tee ${logfile}
     fi
  fi
  if [ "${MR_EMSCRIPTEN}" != "ON" ]; then

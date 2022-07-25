@@ -1178,7 +1178,7 @@ Polyline2 contourUnion( const Polyline2& contoursA, const Polyline2& contoursB,
     assert( params.withSign );
     auto mapA = distanceMapFromContours( contoursA, params );
     auto mapB = distanceMapFromContours( contoursB, params );
-    mapA.mergeMax( mapB );
+    mapA.mergeMin( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 
@@ -1188,7 +1188,7 @@ Polyline2 contourIntersection( const Polyline2& contoursA, const Polyline2& cont
     assert( params.withSign );
     auto mapA = distanceMapFromContours( contoursA, params );
     auto mapB = distanceMapFromContours( contoursB, params );
-    mapA.mergeMin( mapB );
+    mapA.mergeMax( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 
@@ -1199,7 +1199,7 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
     auto mapA = distanceMapFromContours( contoursA, params );
     auto mapB = distanceMapFromContours( contoursB, params );
     mapB.negate();
-    mapA.mergeMin( mapB );
+    mapA.mergeMax( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 

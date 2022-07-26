@@ -134,15 +134,20 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     const auto corners = getCorners( objLabel_->labelRepresentingMesh()->getBoundingBox() );
-    std::vector<Vector3f> bbox( std::begin(corners), std::end(corners) );
-    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, bbox, 3, dirty_ & DIRTY_POSITION );
+    std::vector<Vector3f> bbox( std::begin( corners ), std::end( corners ) );
+    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, bbox, 3, dirtyBg_ );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, bgFacesIndicesBufferObjId_ ) );
-    GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * bgFacesIndicesBufferObj_.size(), bgFacesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
+    if ( dirtyBg_ )
+    {
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * bgFacesIndicesBufferObj_.size(), bgFacesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
+    }
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, bgFacesIndicesBufferObj_.size() );
 
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( bgFacesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+
+    dirtyBg_ = false;
 }
 
 void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) const
@@ -184,6 +189,7 @@ void RenderLabelObject::initBuffers_()
     GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     dirty_ = DIRTY_ALL;
+    dirtyBg_ = true;
 }
 
 void RenderLabelObject::freeBuffers_()
@@ -225,6 +231,7 @@ void RenderLabelObject::update_() const
             { 0, 1, 2 },
             { 0, 2, 3 },
         };
+        dirtyBg_ = true;
     }
 
     objLabel_->resetDirty();

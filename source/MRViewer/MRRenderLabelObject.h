@@ -47,6 +47,7 @@ private:
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
+    mutable bool dirtyBg_;
 };
 
 }

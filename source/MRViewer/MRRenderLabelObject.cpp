@@ -204,9 +204,60 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     dirtyBg_ = false;
 }
 
-void RenderLabelObject::renderLeaderLine_( const RenderParams& ) const
+void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) const
 {
-    //
+    GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
+
+    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    GL_EXEC( glUseProgram( shader ) );
+
+    const auto shift = objLabel_->getPivotShift();
+    const auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
+    const std::vector<Vector3f> leaderLineVertices {
+        { shift.x, shift.y, 0.f },
+        { box.min.x, box.min.y, 0.f },
+        { box.max.x, box.min.y, 0.f },
+    };
+    bindVertexAttribArray( shader, "position", llineVertPosBufferObjId_, leaderLineVertices, 3, dirtyLLine_ );
+
+    constexpr std::array<Vector2i, 2> llineEdgesIndices{
+        Vector2i{ 0, 1 },
+        Vector2i{ 1, 2 },
+    };
+    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, llineEdgesIndicesBufferObjId_ ) );
+    if ( dirtyLLine_ )
+    {
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * llineEdgesIndices.size(), llineEdgesIndices.data(), GL_DYNAMIC_DRAW ) );
+    }
+
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
+
+    auto height = objLabel_->getFontHeight();
+
+    Vector2f modifier;
+    modifier.y = height / ( SymbolMeshParams::MaxGeneratedFontHeight * renderParams.viewport.w );
+    modifier.x = modifier.y * renderParams.viewport.w / renderParams.viewport.z;
+
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "modifier" ), modifier.x, modifier.y ) );
+
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
+
+    const auto& pos = objLabel_->getLabel().position;
+    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
+
+    const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndices.size() );
+
+    // FIXME: parametrize it
+    const float lineWidth = 1.f;
+    GL_EXEC( glLineWidth( lineWidth ) );
+    GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndices.size() ), GL_UNSIGNED_INT, 0 ) );
+
+    dirtyLLine_ = false;
 }
 
 void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned ) const
@@ -247,9 +298,15 @@ void RenderLabelObject::initBuffers_()
     GL_EXEC( glGenBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
+    GL_EXEC( glGenVertexArrays( 1, &llineArrayObjId_ ) );
+    GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &llineVertPosBufferObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
+
     dirty_ = DIRTY_ALL;
     dirtySrc_ = true;
     dirtyBg_ = true;
+    dirtyLLine_ = true;
 }
 
 void RenderLabelObject::freeBuffers_()
@@ -268,6 +325,10 @@ void RenderLabelObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
+
+    GL_EXEC( glDeleteVertexArrays( 1, &llineArrayObjId_ ) );
+    GL_EXEC( glDeleteBuffers( 1, &llineVertPosBufferObjId_ ) );
+    GL_EXEC( glDeleteBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
 }
 
 void RenderLabelObject::update_() const
@@ -291,10 +352,21 @@ void RenderLabelObject::update_() const
         } );
 
         dirtyBg_ = true;
+        dirtyLLine_ = true;
     }
+
     if ( dirty_ & DIRTY_POSITION )
     {
         dirtySrc_ = true;
+        dirtyLLine_ = true;
+    }
+
+    const auto pivotShift = objLabel_->getPivotShift();
+    if ( pivotShift != pivotShiftState_ )
+    {
+        pivotShiftState_ = pivotShift;
+
+        dirtyLLine_ = true;
     }
 
     objLabel_->resetDirty();

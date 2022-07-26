@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMesh/MRIRenderObject.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -30,6 +31,10 @@ private:
     GLuint bgVertPosBufferObjId_{ 0 };
     GLuint bgFacesIndicesBufferObjId_{ 0 };
 
+    GLuint llineArrayObjId_{ 0 };
+    GLuint llineVertPosBufferObjId_{ 0 };
+    GLuint llineEdgesIndicesBufferObjId_{ 0 };
+
     void renderSourcePoint_( const RenderParams& renderParams ) const;
     void renderBackground_( const RenderParams& renderParams ) const;
     void renderLeaderLine_( const RenderParams& renderParams ) const;
@@ -48,6 +53,8 @@ private:
     mutable uint32_t dirty_;
     mutable bool dirtySrc_;
     mutable bool dirtyBg_;
+    mutable bool dirtyLLine_;
+    mutable Vector2f pivotShiftState_;
 };
 
 }

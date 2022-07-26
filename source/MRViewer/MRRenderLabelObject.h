@@ -23,10 +23,6 @@ private:
     GLuint vertPosBufferObjId_{ 0 };
     GLuint facesIndicesBufferObjId_{ 0 };
 
-    GLuint pointArrayObjId_{ 0 };
-    GLuint pointBufferObjId_{ 0 };
-    GLuint validIndicesBufferObjId_{ 0 };
-
     GLuint bgArrayObjId_{ 0 };
     GLuint bgVertPosBufferObjId_{ 0 };
     GLuint bgFacesIndicesBufferObjId_{ 0 };

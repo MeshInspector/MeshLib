@@ -155,6 +155,9 @@ TEST(MRMesh, TBBTask)
     spdlog::info( "TBB number of threads is {}", numThreads );
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
 
+    std::thread th( [] { spdlog::info( "Joinable thread {}", std::this_thread::get_id() ); } );
+    std::thread( [] { spdlog::info( "Detached thread {}", std::this_thread::get_id() ); } ).detach();
+ 
     const auto mainThreadId = std::this_thread::get_id();
     tbb::task_group group;
     std::atomic<bool> sameThread;
@@ -170,6 +173,8 @@ TEST(MRMesh, TBBTask)
     std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
     group.wait();
     EXPECT_TRUE( ( numThreads == 1 && sameThread ) || ( numThreads > 1 && !sameThread ) );
+
+    th.join();
 }
 
 } //namespace MR

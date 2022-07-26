@@ -62,26 +62,19 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     if ( allComponents.empty() )
         return {};
 
-    struct PerThreadArea
+    double maxArea = -DBL_MAX;
+    int maxI = 0;
+    for ( int i = 0; i < allComponents.size(); ++i )
     {
-        float area{0.0f};
-    };
-
-    std::vector<float> areas( allComponents.size(), 0.0f );
-    for ( int i = 0; i < areas.size(); ++i )
-    {
-        const auto& component = allComponents[i];
-
-        tbb::enumerable_thread_specific<PerThreadArea> perTreadAreas;
-        BitSetParallelFor( component, [&]( FaceId f )
+        auto area = meshPart.mesh.area( allComponents[i] );
+        if ( area > maxArea )
         {
-            perTreadAreas.local().area += meshPart.mesh.dblArea( f );
-        } );
-        for ( const auto& pta : perTreadAreas )
-            areas[i] += pta.area;
+            maxArea = area;
+            maxI = i;
+        }
     }
 
-    return allComponents[std::distance( areas.begin(), std::max_element( areas.begin(), areas.end() ) )];
+    return allComponents[maxI];
 }
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
@@ -198,7 +191,18 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
             ++k;
         }
     }
-    std::vector<FaceBitSet> res( k, FaceBitSet( allRoots.size() ) );
+    std::vector<FaceBitSet> res( k );
+    // this block is needed to limit allocations for not packed meshes
+    std::vector<int> resSizes( k, 0 );
+    for ( auto f : region )
+    {
+        int index = uniqueRootsMap[allRoots[f]];
+        if ( f > resSizes[index] )
+            resSizes[index] = f;
+    }
+    for ( int i = 0; i < k; ++i )
+        res[i].resize( resSizes[i] + 1 );
+    // end of allocation block
     for ( auto f : region )
     {
         curRoot = allRoots[f];
@@ -304,7 +308,7 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
 
     FaceId f1;
     EdgeId e;
-    UnionFind<FaceId> unionFindStructure( edgesPerFaces.size() );
+    UnionFind<FaceId> unionFindStructure( region.find_last() + 1 );
     for ( auto f0 : region )
     { 
         e = edgesPerFaces[f0];

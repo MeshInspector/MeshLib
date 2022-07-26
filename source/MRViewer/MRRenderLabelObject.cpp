@@ -61,6 +61,16 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
 
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
+
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::SourcePoint, renderParams.viewportId ) )
+        renderSourcePoint_( renderParams );
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
+        renderBackground_( renderParams );
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
+        renderLeaderLine_( renderParams );
+
     bindLabel_();
 
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
@@ -91,12 +101,7 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
 
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( facesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
 
-    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::SourcePoint, renderParams.viewportId ) )
-        renderSourcePoint_( renderParams );
-    //if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
-        renderBackground_( renderParams );
-    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
-        renderLeaderLine_( renderParams );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
 void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) const

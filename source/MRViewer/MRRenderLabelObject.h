@@ -54,7 +54,7 @@ private:
     mutable bool dirtySrc_;
     mutable bool dirtyBg_;
     mutable bool dirtyLLine_;
-    mutable Vector2f pivotShiftState_;
+    mutable Vector2f pivotPointState_;
 };
 
 }

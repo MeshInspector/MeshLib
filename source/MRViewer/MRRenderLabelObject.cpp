@@ -376,10 +376,10 @@ void RenderLabelObject::update_() const
         dirtyLLine_ = true;
     }
 
-    const auto pivotShift = objLabel_->getPivotShift();
-    if ( pivotShift != pivotShiftState_ )
+    const auto pivotPoint = objLabel_->getPivotPoint();
+    if ( pivotPoint != pivotPointState_ )
     {
-        pivotShiftState_ = pivotShift;
+        pivotPointState_ = pivotPoint;
 
         dirtyLLine_ = true;
     }

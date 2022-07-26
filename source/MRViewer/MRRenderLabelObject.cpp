@@ -148,9 +148,9 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     };
     bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, corners, 3, dirtyBg_ );
 
-    static const std::vector<Vector3i> bgFacesIndicesBufferObj {
-        { 0, 1, 2 },
-        { 1, 2, 3 },
+    constexpr std::array<Vector3i, 2> bgFacesIndicesBufferObj = {
+        Vector3i{ 0, 1, 2 },
+        Vector3i{ 1, 2, 3 },
     };
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, bgFacesIndicesBufferObjId_ ) );

@@ -166,12 +166,11 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
         return false;
 
     if ( oldParent )
-    {
         oldParent->removeChild( child );
-    }
+
     child->parent_ = this;
     if ( recognizedChild )
-    {        
+    {
         children_.push_back( std::move( child ) );
     }
     else
@@ -216,9 +215,7 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
     }
 
     if ( oldParent )
-    {
         oldParent->removeChild( newChild );
-    }
 
     newChild->parent_ = this;
     children_.insert( it1, std::move( newChild ) );
@@ -260,7 +257,7 @@ bool Object::removeChild( Object* child )
 
 void Object::removeAllChildren()
 {
-    for ( const auto& ch : children_ )
+    for ( const auto&ch : children_ )
     {
         ch->parent_ = nullptr;
     }

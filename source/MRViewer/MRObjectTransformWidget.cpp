@@ -129,7 +129,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
-    xfValidatorConnection_ = controlsRoot_->xfChangedSignal.connect( [&] ()
+    xfValidatorConnection_ = controlsRoot_->worldXfChangedSignal.connect( [&] ()
     {
         if ( !approvedChange_ && picked_ )
             stopModify_();

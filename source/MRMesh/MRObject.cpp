@@ -78,7 +78,7 @@ void Object::setXf( const AffineXf3f& xf )
     if ( xf_ == xf )
         return;
     xf_ = xf; 
-    xfChangedSignal();
+    propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
@@ -328,7 +328,7 @@ void Object::swapBase_( Object& other )
 
 void Object::swapSignals_( Object& other )
 {
-    std::swap( xfChangedSignal, other.xfChangedSignal );
+    std::swap( worldXfChangedSignal, other.worldXfChangedSignal );
 }
 
 tl::expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const
@@ -372,6 +372,22 @@ void Object::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["XF"], xf_ );
     if ( root["Locked"].isBool() )
         locked_ = root["Locked"].asBool();
+}
+
+ void Object::propagateWorldXfChangedSignal_()
+{
+    std::stack<Object*> buf;
+    buf.push( this );
+
+    while ( !buf.empty() )
+    {
+        auto obj = buf.top();
+        obj->worldXfChangedSignal();
+        buf.pop();
+
+        for ( auto& child : obj->children_ )
+            buf.push( child.get() );
+    }
 }
 
 std::shared_ptr<Object> Object::cloneTree() const

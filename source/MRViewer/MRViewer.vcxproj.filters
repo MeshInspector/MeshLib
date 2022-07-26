@@ -223,6 +223,9 @@
     <ClCompile Include="MRViewerIO.cpp">
       <Filter>IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRProgressReadWrite.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -424,6 +427,9 @@
     </ClInclude>
     <ClInclude Include="MRViewerIO.h">
       <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProgressReadWrite.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

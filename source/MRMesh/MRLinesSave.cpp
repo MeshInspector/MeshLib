@@ -4,11 +4,10 @@
 #include "MRVector3.h"
 #include "MRStringConvert.h"
 #include <fstream>
+#include "MRViewer\MRProgressReadWrite.h"
 
 namespace MR
 {
-
-const size_t blockSize = size_t( 1 ) << 16;
 
 namespace LinesSave
 {
@@ -37,18 +36,10 @@ tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostre
     out.write( (const char*)&type, 4 );
     auto numPoints = (std::uint32_t)polyline.points.size();
     out.write( ( const char* )&numPoints, 4 );
-
-    int blockIndex = 0;
-    const float sizeAll = float( polyline.points.size() * sizeof( Vector3f ) );
-    for ( size_t max = polyline.points.size() * sizeof( Vector3f ) / blockSize; blockIndex < max; ++blockIndex )
-    {
-        out.write( ( const char* )( polyline.points.data() ) + blockIndex * blockSize, blockSize );
-        if ( callback && !callback( blockIndex * blockSize / sizeAll ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
-    }
-    const size_t remnant = polyline.points.size() * sizeof( Vector3f ) - blockIndex * blockSize;
-    if ( remnant )
-        out.write( ( const char* )( polyline.points.data() ) + blockIndex * blockSize, remnant );
+        
+    const bool cancel = !MR::writeWithProgress( out, (const char*) polyline.points.data(), polyline.points.size() * sizeof( Vector3f ), callback );
+    if ( cancel )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in MrLines-format" ) );

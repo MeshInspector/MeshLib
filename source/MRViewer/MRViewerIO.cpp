@@ -11,6 +11,8 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMenu.h"
 
 namespace MR

@@ -6,11 +6,10 @@
 #include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
 #include <fstream>
+#include "MRViewer/MRProgressReadWrite.h"
 
 namespace MR
 {
-
-const size_t blockSize = size_t( 1 ) << 16;
 
 namespace PointsSave
 {
@@ -46,17 +45,9 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     {
         // write vertices
         static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
-        int blockIndex = 0;
-        const float sizeAll = float( points.points.size() * sizeof( Vector3f ) );
-        for ( size_t max = points.points.size() * sizeof( Vector3f ) / blockSize; blockIndex < max; ++blockIndex )
-        {
-            out.write( ( const char* )( points.points.data() ) + blockIndex * blockSize, blockSize );
-            if ( callback && !callback( blockIndex * blockSize / sizeAll ) )
-                return tl::make_unexpected( std::string( "Saving canceled" ) );
-        }
-        const size_t remnant = points.points.size() * sizeof( Vector3f ) - blockIndex * blockSize;
-        if ( remnant )
-            out.write( ( const char* )( points.points.data() ) + blockIndex * blockSize, remnant );
+        const bool cancel = !MR::writeWithProgress( out, (const char*) points.points.data(), points.points.size() * sizeof( Vector3f ), callback );
+        if ( cancel )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     else
     {
@@ -148,12 +139,28 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     if ( ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( "Error encoding in CTM-format colors" );
 
-    ctmSaveCustom( context, []( const void* buf, CTMuint size, void* data )
+    struct SaveData
     {
-        std::ostream& s = *reinterpret_cast<std::ostream*>( data );
-        s.write( (const char*) buf, size );
-        return s.good() ? size : 0;
-    }, &out );
+        std::function<bool( float )> callbackFn{};
+        std::ostream* stream;
+        size_t sum{ 0 };
+        size_t maxSize{ 0 };
+    } saveData;
+    saveData.callbackFn = callback;
+    saveData.stream = &out;
+    saveData.maxSize = points.points.size() * sizeof( Vector3f );
+    ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
+    {
+        SaveData& saveData = *reinterpret_cast< SaveData* >( data );
+        std::ostream& outStream = *saveData.stream;
+
+        const bool cancel = !MR::writeWithProgress( outStream, ( const char* )buf, size, saveData.callbackFn, saveData.sum, saveData.maxSize );
+        saveData.sum += size;
+        if ( cancel )
+            return 0u;
+
+        return outStream.good() ? size : 0;
+    }, &saveData );
 
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );

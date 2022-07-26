@@ -25,6 +25,7 @@
     <ClCompile Include="MRObjectMeshHistory.cpp" />
     <ClCompile Include="MRObjectTransformWidget.cpp" />
     <ClCompile Include="MRPickHoleBorderElement.cpp" />
+    <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRRenderHelpers.cpp" />
     <ClCompile Include="MRRenderLabelObject.cpp" />
     <ClCompile Include="MRRibbonButtonDrawer.cpp" />
@@ -85,6 +86,7 @@
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />
     <ClInclude Include="MRPickHoleBorderElement.h" />
+    <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRenderHelpers.h" />
     <ClInclude Include="MRRenderLabelObject.h" />
     <ClInclude Include="MRRibbonButtonDrawer.h" />

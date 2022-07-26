@@ -206,7 +206,7 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    /// signal about xf changing, triggered in setXf and setWorldXf
+    /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for childern too
     using XfChangedSignal = boost::signals2::signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:

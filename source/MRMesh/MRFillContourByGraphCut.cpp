@@ -212,7 +212,10 @@ void GraphCut::augment_( EdgeId e )
             assert( topology_.left( parent ) == f );
             capacity_[parent] += minResidualCapacity;
             if ( ( capacity_[parent.sym()] -= minResidualCapacity ) == 0 )
+            {
                 orphans_.push_back( f );
+                parent_[f] = EdgeId{};
+            }
             f = topology_.right( parent );
         }
         adapt_( Left );
@@ -226,7 +229,10 @@ void GraphCut::augment_( EdgeId e )
             assert( topology_.left( parent ) == f );
             capacity_[parent.sym()] += minResidualCapacity;
             if ( ( capacity_[parent] -= minResidualCapacity ) == 0 )
+            {
                 orphans_.push_back( f );
+                parent_[f] = EdgeId{};
+            }
             f = topology_.right( parent );
         }
         adapt_( Right );

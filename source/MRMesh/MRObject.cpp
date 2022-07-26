@@ -78,7 +78,7 @@ void Object::setXf( const AffineXf3f& xf )
     if ( xf_ == xf )
         return;
     xf_ = xf; 
-    propagateSignal_();
+    propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
@@ -379,7 +379,7 @@ void Object::deserializeFields_( const Json::Value& root )
         locked_ = root["Locked"].asBool();
 }
 
- void Object::propagateSignal_()
+ void Object::propagateWorldXfChangedSignal_()
 {
     std::stack<Object*> buf;
     buf.push( this );

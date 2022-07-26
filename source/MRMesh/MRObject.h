@@ -206,7 +206,7 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for childern too
+    /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for children too
     using XfChangedSignal = boost::signals2::signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:
@@ -249,7 +249,7 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    void propagateSignal_();
+    void propagateWorldXfChangedSignal_();
 };
 
 template <typename T>

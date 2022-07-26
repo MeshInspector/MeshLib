@@ -16,15 +16,24 @@ private:
     const ObjectLabel* objLabel_;
 
     mutable std::vector<Vector3i> facesIndicesBufferObj_;
+    mutable std::vector<Vector3i> bgFacesIndicesBufferObj_;
     typedef unsigned int GLuint;
 
     GLuint labelArrayObjId_{ 0 };
     GLuint vertPosBufferObjId_{ 0 };
     GLuint facesIndicesBufferObjId_{ 0 };
 
-    void renderSourcePoint_( const RenderParams& parameters ) const;
-    void renderBackground_( const RenderParams& parameters ) const;
-    void renderLeaderLine_( const RenderParams& parameters ) const;
+    GLuint pointArrayObjId_{ 0 };
+    GLuint pointBufferObjId_{ 0 };
+    GLuint validIndicesBufferObjId_{ 0 };
+
+    GLuint bgArrayObjId_{ 0 };
+    GLuint bgVertPosBufferObjId_{ 0 };
+    GLuint bgFacesIndicesBufferObjId_{ 0 };
+
+    void renderSourcePoint_( const RenderParams& renderParams ) const;
+    void renderBackground_( const RenderParams& renderParams ) const;
+    void renderLeaderLine_( const RenderParams& renderParams ) const;
 
     void bindLabel_() const;
 

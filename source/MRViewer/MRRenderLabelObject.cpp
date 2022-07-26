@@ -93,23 +93,59 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
 
     if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::SourcePoint, renderParams.viewportId ) )
         renderSourcePoint_( renderParams );
-    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
+    //if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
         renderBackground_( renderParams );
     if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
         renderLeaderLine_( renderParams );
 }
 
-void RenderLabelObject::renderSourcePoint_( const RenderParams& parameters ) const
+void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) const
 {
     //
 }
 
-void RenderLabelObject::renderBackground_( const RenderParams& parameters ) const
+void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) const
 {
-    //
+    GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
+
+    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    GL_EXEC( glUseProgram( shader ) );
+
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr ) );
+
+    auto height = objLabel_->getFontHeight();
+
+    Vector2f modifier;
+    modifier.y = height / ( SymbolMeshParams::MaxGeneratedFontHeight * renderParams.viewport.w );
+    modifier.x = modifier.y * renderParams.viewport.w / renderParams.viewport.z;
+
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "modifier" ), modifier.x, modifier.y ) );
+
+    Vector2f shift = objLabel_->getPivotShift();
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
+
+    const auto& pos = objLabel_->getLabel().position;
+    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
+
+    const auto mainColor = Vector4f( objLabel_->getBackColor() );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+
+    const auto corners = getCorners( objLabel_->labelRepresentingMesh()->getBoundingBox() );
+    std::vector<Vector3f> bbox( std::begin(corners), std::end(corners) );
+    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, bbox, 3, dirty_ & DIRTY_POSITION );
+
+    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, bgFacesIndicesBufferObjId_ ) );
+    GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * bgFacesIndicesBufferObj_.size(), bgFacesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
+
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, bgFacesIndicesBufferObj_.size() );
+
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( bgFacesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
 }
 
-void RenderLabelObject::renderLeaderLine_( const RenderParams& parameters ) const
+void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) const
 {
     //
 }
@@ -142,6 +178,11 @@ void RenderLabelObject::initBuffers_()
     GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
 
+    GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
+    GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &bgVertPosBufferObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
+
     dirty_ = DIRTY_ALL;
 }
 
@@ -153,6 +194,11 @@ void RenderLabelObject::freeBuffers_()
 
     GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
+
+    GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
+
+    GL_EXEC( glDeleteBuffers( 1, &bgVertPosBufferObjId_ ) );
+    GL_EXEC( glDeleteBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 }
 
 void RenderLabelObject::update_() const
@@ -174,6 +220,11 @@ void RenderLabelObject::update_() const
                 return;
             mesh->topology.getTriVerts( f, ( VertId( & )[3] ) facesIndicesBufferObj_[int( f )] );
         } );
+
+        bgFacesIndicesBufferObj_ = {
+            { 0, 1, 2 },
+            { 0, 2, 3 },
+        };
     }
 
     objLabel_->resetDirty();

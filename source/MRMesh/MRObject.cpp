@@ -379,6 +379,30 @@ void Object::deserializeFields_( const Json::Value& root )
         locked_ = root["Locked"].asBool();
 }
 
+ void Object::propagateSignal_()
+{
+    std::stack<Object*> buf;
+    buf.push( this );
+
+    while ( !buf.empty() )
+    {
+        auto obj = buf.top();
+        obj->worldXfChangedSignal();
+        buf.pop();
+
+        while ( true )
+        {
+            if ( obj->children_.empty() )
+                break;
+
+            for ( auto& child : obj->children_ )
+                buf.push( child.get() );
+
+            obj = obj->children_.back().get();
+        }
+    }
+}
+
 std::shared_ptr<Object> Object::cloneTree() const
 {
     std::shared_ptr<Object> res = clone();

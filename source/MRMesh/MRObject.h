@@ -249,14 +249,7 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    void propagateSignal_()
-    {
-        worldXfChangedSignal();
-        for ( auto& child : children_ )
-        {          
-            child->propagateSignal_();
-        }
-    }
+    void propagateSignal_();
 };
 
 template <typename T>

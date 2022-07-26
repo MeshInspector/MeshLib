@@ -137,9 +137,16 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     const auto mainColor = Vector4f( objLabel_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    const auto corners = getCorners( objLabel_->labelRepresentingMesh()->getBoundingBox() );
-    std::vector<Vector3f> bbox( std::begin( corners ), std::end( corners ) );
-    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, bbox, 3, dirtyBg_ );
+    const auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
+    constexpr int cBackgroundPaddingPx = 8;
+    const auto padding = cBackgroundPaddingPx * ( box.max.y - box.min.y ) / height;
+    const std::vector<Vector3f> corners {
+        { box.min.x - padding, box.min.y - padding, 0.f },
+        { box.max.x + padding, box.min.y - padding, 0.f },
+        { box.min.x - padding, box.max.y + padding, 0.f },
+        { box.max.x + padding, box.max.y + padding, 0.f },
+    };
+    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, corners, 3, dirtyBg_ );
 
     static const std::vector<Vector3i> bgFacesIndicesBufferObj {
         { 0, 1, 2 },

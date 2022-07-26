@@ -104,9 +104,47 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
-void RenderLabelObject::renderSourcePoint_( const RenderParams& ) const
+void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) const
 {
-    //
+    GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
+
+    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    GL_EXEC( glUseProgram( shader ) );
+
+    const std::vector<Vector3f> point { objLabel_->getLabel().position };
+    bindVertexAttribArray( shader, "position", srcVertPosBufferObjId_, point, 3, dirtySrc_ );
+
+    constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
+    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, srcIndicesBufferObjId_ ) );
+    if ( dirtySrc_ )
+    {
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( VertId ) * pointIndices.size(), pointIndices.data(), GL_DYNAMIC_DRAW ) );
+    }
+
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
+
+    const auto& backColor = Vector4f( objLabel_->getBackColor() );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
+
+    const auto& mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+
+    GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
+
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, pointIndices.size() );
+
+    // FIXME: parametrize it
+    const float pointSize = 5.f;
+#ifdef __EMSCRIPTEN__
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), pointSize ) );
+#else
+    GL_EXEC( glPointSize( pointSize ) );
+#endif
+    GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )pointIndices.size(), GL_UNSIGNED_INT, 0 ) );
+
+    dirtySrc_ = false;
 }
 
 void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) const
@@ -199,12 +237,18 @@ void RenderLabelObject::initBuffers_()
     GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
 
+    GL_EXEC( glGenVertexArrays( 1, &srcArrayObjId_ ) );
+    GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &srcVertPosBufferObjId_ ) );
+    GL_EXEC( glGenBuffers( 1, &srcIndicesBufferObjId_ ) );
+
     GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     dirty_ = DIRTY_ALL;
+    dirtySrc_ = true;
     dirtyBg_ = true;
 }
 
@@ -212,13 +256,16 @@ void RenderLabelObject::freeBuffers_()
 {
     if ( !Viewer::constInstance()->isGLInitialized() || !loadGL() )
         return;
-    GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );
 
+    GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
 
-    GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
+    GL_EXEC( glDeleteVertexArrays( 1, &srcArrayObjId_ ) );
+    GL_EXEC( glDeleteBuffers( 1, &srcVertPosBufferObjId_ ) );
+    GL_EXEC( glDeleteBuffers( 1, &srcIndicesBufferObjId_ ) );
 
+    GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 }
@@ -244,6 +291,10 @@ void RenderLabelObject::update_() const
         } );
 
         dirtyBg_ = true;
+    }
+    if ( dirty_ & DIRTY_POSITION )
+    {
+        dirtySrc_ = true;
     }
 
     objLabel_->resetDirty();

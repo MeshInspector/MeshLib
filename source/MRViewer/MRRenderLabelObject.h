@@ -16,7 +16,6 @@ private:
     const ObjectLabel* objLabel_;
 
     mutable std::vector<Vector3i> facesIndicesBufferObj_;
-    mutable std::vector<Vector3i> bgFacesIndicesBufferObj_;
     typedef unsigned int GLuint;
 
     GLuint labelArrayObjId_{ 0 };

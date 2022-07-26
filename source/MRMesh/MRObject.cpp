@@ -15,7 +15,6 @@ MR_ADD_CLASS_FACTORY( Object )
 ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept 
     : children_( std::move( b.children_ ) )
     , bastards_( std::move( b.bastards_ ) )
-    , xfConnection_( std::move( b.xfConnection_ ) )
 {
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
@@ -37,7 +36,6 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
 
     children_ = std::move( b.children_ );
     bastards_ = std::move( b.bastards_ );
-    xfConnection_ = std::move( b.xfConnection_ );
     auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
         if ( child )
@@ -50,8 +48,6 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
 
 ObjectChildrenHolder::~ObjectChildrenHolder()
 {
-    xfConnection_.disconnect();
-
     for ( const auto & child : children_ )
         if ( child )
             child->parent_ = nullptr;
@@ -82,7 +78,7 @@ void Object::setXf( const AffineXf3f& xf )
     if ( xf_ == xf )
         return;
     xf_ = xf; 
-    xfChangedSignal();
+    propagateSignal_();
     needRedraw_ = true;
 }
 
@@ -171,17 +167,11 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
 
     if ( oldParent )
     {
-        child->xfConnection_.disconnect();
         oldParent->removeChild( child );
     }
     child->parent_ = this;
     if ( recognizedChild )
-    {
-        child->xfConnection_ = xfChangedSignal.connect( [child]
-        {
-            child->xfChangedSignal();
-        } );
-        
+    {        
         children_.push_back( std::move( child ) );
     }
     else
@@ -228,13 +218,7 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
     if ( oldParent )
     {
         oldParent->removeChild( newChild );
-        newChild->xfConnection_.disconnect();
     }
-
-    newChild->xfConnection_ = xfChangedSignal.connect( [newChild]
-    {
-        newChild->xfChangedSignal();
-    } );
 
     newChild->parent_ = this;
     children_.insert( it1, std::move( newChild ) );
@@ -252,7 +236,6 @@ bool Object::removeChild( Object* child )
         return false;
 
     child->parent_ = nullptr;
-    child->xfConnection_.disconnect();
 
     auto it = std::remove_if( children_.begin(), children_.end(), [child]( const std::shared_ptr<Object>& obj )
     {
@@ -279,7 +262,6 @@ void Object::removeAllChildren()
 {
     for ( const auto& ch : children_ )
     {
-        ch->xfConnection_.disconnect();
         ch->parent_ = nullptr;
     }
     children_.clear();

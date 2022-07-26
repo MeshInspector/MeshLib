@@ -63,8 +63,6 @@ protected:
     Object * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; /// recognized ones
     std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
-
-    boost::signals2::connection xfConnection_;
 };
 
 /// named object in the data model
@@ -250,6 +248,15 @@ protected:
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
+
+    void propagateSignal_()
+    {
+        xfChangedSignal();
+        for ( auto& child : children_ )
+        {          
+            child->propagateSignal_();
+        }
+    }
 };
 
 template <typename T>

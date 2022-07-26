@@ -16,6 +16,25 @@ namespace MR
 namespace MeshComponents
 {
 
+std::pair<std::vector<int>, int> getUniqueRoots( const FaceMap& allRoots, const FaceBitSet& region )
+{
+    constexpr int InvalidRoot = -1;
+    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    int k = 0;
+    int curRoot;
+    for ( auto f : region )
+    {
+        curRoot = allRoots[f];
+        auto& uniqIndex = uniqueRootsMap[curRoot];
+        if ( uniqIndex == InvalidRoot )
+        {
+            uniqIndex = k;
+            ++k;
+        }
+    }
+    return { std::move( uniqueRootsMap ),k };
+}
+
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence/* = FaceIncidence::PerEdge*/ )
 {
     MR_TIMER;
@@ -57,24 +76,36 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
 {
     MR_TIMER;
 
-    auto allComponents =  getAllComponents( meshPart, incidence );
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence );
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
-    if ( allComponents.empty() )
-        return {};
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
 
     double maxArea = -DBL_MAX;
     int maxI = 0;
-    for ( int i = 0; i < allComponents.size(); ++i )
+    std::vector<double> areas( k, 0.0 );
+    for ( auto f : region )
     {
-        auto area = meshPart.mesh.area( allComponents[i] );
+        auto index = uniqueRootsMap[allRoots[f]];
+        auto& area = areas[index];
+        area += meshPart.mesh.dblArea( f );
         if ( area > maxArea )
         {
+            maxI = index;
             maxArea = area;
-            maxI = i;
         }
     }
-
-    return allComponents[maxI];
+    FaceBitSet maxAreaComponent( region.find_last() + 1 );
+    for ( auto f : region )
+    {
+        auto index = uniqueRootsMap[allRoots[f]];
+        if ( index != maxI )
+            continue;
+        maxAreaComponent.set( f );
+    }
+    return maxAreaComponent;
 }
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
@@ -177,20 +208,7 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
     const auto& allRoots = unionFindStruct.roots();
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-    int k = 0;
-    int curRoot;
-    for ( auto f : region )
-    {
-        curRoot = allRoots[f];
-        auto& uniqIndex = uniqueRootsMap[curRoot];
-        if ( uniqIndex == InvalidRoot )
-        {
-            uniqIndex = k;
-            ++k;
-        }
-    }
+    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
     std::vector<FaceBitSet> res( k );
     // this block is needed to limit allocations for not packed meshes
     std::vector<int> resSizes( k, 0 );
@@ -205,8 +223,7 @@ std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidenc
     // end of allocation block
     for ( auto f : region )
     {
-        curRoot = allRoots[f];
-        res[uniqueRootsMap[curRoot]].set( f );
+        res[uniqueRootsMap[allRoots[f]]].set( f );
     }
     return res;
 }

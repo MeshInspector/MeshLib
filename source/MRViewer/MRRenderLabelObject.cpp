@@ -175,7 +175,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     const auto mainColor = Vector4f( objLabel_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    const auto& box = labelState_.box;
+    const auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     constexpr int cBackgroundPaddingPx = 8;
     const auto padding = cBackgroundPaddingPx * ( box.max.y - box.min.y ) / height;
     const std::vector<Vector3f> corners {
@@ -211,8 +211,8 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
     GL_EXEC( glUseProgram( shader ) );
 
-    const auto& shift = objLabel_->getPivotShift();
-    const auto& box = labelState_.box;
+    const auto shift = objLabel_->getPivotShift();
+    const auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     const std::vector<Vector3f> leaderLineVertices {
         { shift.x, shift.y, 0.f },
         { box.min.x, box.min.y, 0.f },
@@ -351,8 +351,6 @@ void RenderLabelObject::update_() const
             mesh->topology.getTriVerts( f, ( VertId( & )[3] ) facesIndicesBufferObj_[int( f )] );
         } );
 
-        labelState_.box = objLabel_->labelRepresentingMesh()->getBoundingBox();
-
         dirtyBg_ = true;
         dirtyLLine_ = true;
     }
@@ -364,9 +362,9 @@ void RenderLabelObject::update_() const
     }
 
     const auto pivotShift = objLabel_->getPivotShift();
-    if ( pivotShift != labelState_.pivotShift )
+    if ( pivotShift != pivotShiftState_ )
     {
-        labelState_.pivotShift = pivotShift;
+        pivotShiftState_ = pivotShift;
 
         dirtyLLine_ = true;
     }

@@ -376,11 +376,10 @@ void RenderLabelObject::update_() const
         positionState_ = position;
 
         dirtySrc_ = true;
-        dirtyLLine_ = true;
     }
 
     const auto pivotPoint = objLabel_->getPivotPoint();
-    if ( pivotPoint != pivotPointState_ )
+    if ( pivotPoint != pivotPointState_ || dirty_ & DIRTY_POSITION )
     {
         pivotPointState_ = pivotPoint;
 

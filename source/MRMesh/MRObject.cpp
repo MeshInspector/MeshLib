@@ -257,10 +257,8 @@ bool Object::removeChild( Object* child )
 
 void Object::removeAllChildren()
 {
-    for ( const auto&ch : children_ )
-    {
-        ch->parent_ = nullptr;
-    }
+    for ( const auto & ch : children_ )
+        ch->parent_ = nullptr;    
     children_.clear();
 }
 

@@ -234,7 +234,7 @@ void RenderLabelObject::update_() const
 
         bgFacesIndicesBufferObj_ = {
             { 0, 1, 2 },
-            { 0, 2, 3 },
+            { 1, 2, 3 },
         };
         dirtyBg_ = true;
     }

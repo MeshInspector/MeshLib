@@ -258,7 +258,7 @@ bool Object::removeChild( Object* child )
 void Object::removeAllChildren()
 {
     for ( const auto & ch : children_ )
-        ch->parent_ = nullptr;    
+        ch->parent_ = nullptr;
     children_.clear();
 }
 
@@ -385,16 +385,8 @@ void Object::deserializeFields_( const Json::Value& root )
         obj->worldXfChangedSignal();
         buf.pop();
 
-        while ( true )
-        {
-            if ( obj->children_.empty() )
-                break;
-
-            for ( auto& child : obj->children_ )
-                buf.push( child.get() );
-
-            obj = obj->children_.back().get();
-        }
+        for ( auto& child : obj->children_ )
+            buf.push( child.get() );
     }
 }
 

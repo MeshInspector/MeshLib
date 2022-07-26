@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRBox.h"
 
 namespace MR
 {
@@ -54,7 +55,13 @@ private:
     mutable bool dirtySrc_;
     mutable bool dirtyBg_;
     mutable bool dirtyLLine_;
-    mutable Vector2f pivotShiftState_;
+
+    struct LabelState
+    {
+        Box3f box;
+        Vector2f pivotShift;
+    };
+    mutable LabelState labelState_;
 };
 
 }

@@ -208,7 +208,7 @@ public:
 
     /// signal about xf changing, triggered in setXf and setWorldXf
     using XfChangedSignal = boost::signals2::signal<void() >;
-    XfChangedSignal xfChangedSignal;
+    XfChangedSignal worldXfChangedSignal;
 protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:
@@ -251,7 +251,7 @@ protected:
 
     void propagateSignal_()
     {
-        xfChangedSignal();
+        worldXfChangedSignal();
         for ( auto& child : children_ )
         {          
             child->propagateSignal_();

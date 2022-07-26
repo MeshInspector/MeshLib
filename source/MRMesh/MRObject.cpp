@@ -333,7 +333,7 @@ void Object::swapBase_( Object& other )
 
 void Object::swapSignals_( Object& other )
 {
-    std::swap( xfChangedSignal, other.xfChangedSignal );
+    std::swap( worldXfChangedSignal, other.worldXfChangedSignal );
 }
 
 tl::expected<std::future<void>, std::string> Object::serializeModel_( const std::filesystem::path& ) const

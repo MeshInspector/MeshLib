@@ -370,8 +370,11 @@ void RenderLabelObject::update_() const
         dirtyLLine_ = true;
     }
 
-    if ( dirty_ & DIRTY_POSITION )
+    const auto position = objLabel_->getLabel().position;
+    if ( position != positionState_ )
     {
+        positionState_ = position;
+
         dirtySrc_ = true;
         dirtyLLine_ = true;
     }

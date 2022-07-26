@@ -23,11 +23,17 @@ struct MeshIntersectionResult
     float distanceAlongLine = 0;
 };
 
-/// Intersects ray with mesh. Finds the closest to origin intersection (or any intersection for better performance if !closestIntersect)
-/// \anchor rayMeshIntersectF
+/// Finds ray and mesh intersection in float-precision.
+/// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
+/// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
+/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
 MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
     float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, bool closestIntersect = true );
-/// Same as \ref rayMeshIntersectF, but use double precision
+
+/// Finds ray and mesh intersection in double-precision.
+/// \p rayStart and \p rayEnd define the interval on the ray to detect an intersection.
+/// \p prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).
+/// Finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect).
 MRMESH_API std::optional<MeshIntersectionResult> rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true );
 

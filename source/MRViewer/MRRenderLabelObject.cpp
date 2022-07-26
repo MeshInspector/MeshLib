@@ -104,7 +104,7 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
-void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) const
+void RenderLabelObject::renderSourcePoint_( const RenderParams& ) const
 {
     //
 }
@@ -166,7 +166,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     dirtyBg_ = false;
 }
 
-void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) const
+void RenderLabelObject::renderLeaderLine_( const RenderParams& ) const
 {
     //
 }

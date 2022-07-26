@@ -5,6 +5,17 @@
 namespace MR
 {
 
+struct LabelVisualizePropertyType : VisualizeMaskType
+{
+    enum Type : unsigned
+    {
+        SourcePoint = VisualizeMaskType::VisualizePropsCount,
+        LeaderLine,
+        Background,
+
+        LabelVisualizePropsCount
+    };
+};
 
 /// This object type renders label in scene
 /// \details default pivot point = (0, 0)
@@ -77,6 +88,11 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+
+    /// get all visualize properties masks as array
+    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// returns mask of viewports where given property is set
+    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 protected:
     PositionedText label_;
     std::filesystem::path pathToFont_;
@@ -86,6 +102,10 @@ protected:
 
     /// size of label font on screen in pixels
     float fontHeight_{ 25.0f };
+
+    ViewportMask sourcePoint_;
+    ViewportMask background_;
+    ViewportMask leaderLine_;
 
     ObjectLabel( const ObjectLabel& other ) = default;
 

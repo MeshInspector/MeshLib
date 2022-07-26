@@ -22,6 +22,14 @@ private:
     GLuint vertPosBufferObjId_{ 0 };
     GLuint facesIndicesBufferObjId_{ 0 };
 
+    GLuint bgArrayObjId_{ 0 };
+    GLuint bgVertPosBufferObjId_{ 0 };
+    GLuint bgFacesIndicesBufferObjId_{ 0 };
+
+    void renderSourcePoint_( const RenderParams& renderParams ) const;
+    void renderBackground_( const RenderParams& renderParams ) const;
+    void renderLeaderLine_( const RenderParams& renderParams ) const;
+
     void bindLabel_() const;
 
     // Create a new set of OpenGL buffer objects
@@ -34,6 +42,7 @@ private:
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
+    mutable bool dirtyBg_;
 };
 
 }

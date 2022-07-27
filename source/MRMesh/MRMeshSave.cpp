@@ -4,7 +4,6 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "OpenCTM/openctm.h"
-#include "MRViewer/MRProgressBar.h"
 #include "MRViewer/MRProgressReadWrite.h"
 
 namespace MR

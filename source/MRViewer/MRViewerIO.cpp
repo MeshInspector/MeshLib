@@ -15,6 +15,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMenu.h"
 #include "MRAppendHistory.h"
+#include "MRMesh/MRSerializer.h"
 
 namespace MR
 {
@@ -26,7 +27,7 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
     if ( !obj )
         return {};
 
-    if ( !callback( 0.f ) )
+    if ( callback && !callback( 0.f ) )
         return "Saving canceled";
 
     std::string error;

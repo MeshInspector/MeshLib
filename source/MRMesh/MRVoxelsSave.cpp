@@ -3,6 +3,7 @@
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"
 #include "MRStringConvert.h"
+#include "MRProgressReadWrite.h"
 #include <fstream>
 #include <filesystem>
 
@@ -86,11 +87,11 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
                 buffer[z*dimsXY + y * dims.x + x] = accessor.getValue( {x,y,z} );
             }
         }
-        if ( callback && !callback( float( z ) / dims.z ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
-    if ( !outFile.write( (const char*) buffer.data(), buffer.size() * sizeof( float ) ) )
+    if ( !writeByBlocks( outFile, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
+    if ( !outFile )
     {
         std::stringstream ss;
         ss << "Cannot write file: " << utf8string( outPath ) << std::endl;

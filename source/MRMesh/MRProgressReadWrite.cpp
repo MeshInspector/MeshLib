@@ -15,13 +15,13 @@ bool writeByBlocks( std::ostream& out, const char* data, size_t dataSize, Progre
     for ( size_t max = dataSize / blockSize; blockIndex < max; ++blockIndex )
     {
         out.write( data + blockIndex * blockSize, blockSize );
-        if ( callback && !callback( float( blockIndex * blockSize ) / dataSize ) )
+        if ( !callback( float( blockIndex * blockSize ) / dataSize ) )
             return false;
     }
     const size_t remnant = dataSize - blockIndex * blockSize;
     if ( remnant )
         out.write( data + blockIndex * blockSize, remnant );
-    if ( callback && !callback( float( blockIndex * blockSize + remnant ) / dataSize ) )
+    if ( !callback( float( blockIndex * blockSize + remnant ) / dataSize ) )
         return false;
 
     return true;

@@ -4,7 +4,7 @@
 #include "MRColor.h"
 #include "MRStringConvert.h"
 #include "OpenCTM/openctm.h"
-#include "MRMesh/MRProgressReadWrite.h"
+#include "MRProgressReadWrite.h"
 
 namespace MR
 {
@@ -378,25 +378,38 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
         size_t blockSize{ 0 };
         size_t maxSize{ 0 };
     } saveData;
-    saveData.callbackFn = [callback, &saveData] ( float progress )
+    if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
     {
-        progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-        float newProgress = 0.f;
-        for ( int i = 0; i < 5; ++i )
+        saveData.callbackFn = [callback, &saveData] ( float progress )
         {
-            if ( progress < 0.2f )
+            // calculate full progress
+            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+            return callback( progress );
+        };
+    }
+    else
+    {
+        saveData.callbackFn = [callback, &saveData] ( float progress )
+        {
+            // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+            float newProgress = 0.f;
+            for ( int i = 0; i < 5; ++i )
             {
-                newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
-                break;
+                if ( progress < 0.2f )
+                {
+                    newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
+                    break;
+                }
+                else
+                {
+                    progress = ( progress - 0.2f ) / 0.8f;
+                    newProgress += ( 1 - newProgress ) * 0.7f;
+                }
             }
-            else
-            {
-                progress = ( progress - 0.2f ) / 0.8f;
-                newProgress += ( 1 - newProgress ) * 0.7f;
-            }
-        }
-        return callback( newProgress );
-    };
+            return callback( newProgress );
+        };
+    }
     saveData.stream = &out;
     saveData.maxSize = mesh.points.size() * sizeof( Vector3f ) + mesh.topology.getValidFaces().count() * 3 * sizeof( int );
     ctmSaveCustom( context, []( const void * buf, CTMuint size, void * data )

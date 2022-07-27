@@ -5,8 +5,8 @@
 #include "MRStringConvert.h"
 #include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
+#include "MRProgressReadWrite.h"
 #include <fstream>
-#include "MRMesh/MRProgressReadWrite.h"
 
 namespace MR
 {
@@ -114,13 +114,13 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     ctmCompressionMethod( context, CTM_METHOD_MG1 );
     ctmCompressionLevel( context, options.compressionLevel );
 
-    const CTMfloat* normalsPtr = points.normals.empty() ? nullptr : (const CTMfloat*) points.normals.data();
+    const CTMfloat* normalsPtr = points.normals.empty() ? nullptr : ( const CTMfloat* )points.normals.data();
     CTMuint aVertexCount = CTMuint( points.points.size() );
 
-    std::vector<CTMuint> aIndices{0,0,0};
+    std::vector<CTMuint> aIndices{ 0,0,0 };
 
     ctmDefineMesh( context,
-        (const CTMfloat*) points.points.data(), aVertexCount,
+        ( const CTMfloat* )points.points.data(), aVertexCount,
         aIndices.data(), 1, normalsPtr );
 
     if ( ctmGetError( context ) != CTM_NONE )
@@ -131,9 +131,9 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     {
         colors4f.resize( colors->size() );
         for ( int i = 0; i < colors4f.size(); ++i )
-            colors4f[i] = Vector4f( ( *colors )[VertId{i}] );
+            colors4f[i] = Vector4f( ( *colors )[VertId{ i }] );
 
-        ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
+        ctmAddAttribMap( context, ( const CTMfloat* )colors4f.data(), "Color" );
     }
 
     if ( ctmGetError( context ) != CTM_NONE )
@@ -149,6 +149,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     } saveData;
     saveData.callbackFn = [callback, &saveData] ( float progress )
     {
+        // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
         progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
         float newProgress = 0.f;
         for ( int i = 0; i < 5; ++i )

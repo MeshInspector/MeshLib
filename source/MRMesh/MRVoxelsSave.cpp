@@ -3,6 +3,7 @@
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"
 #include "MRStringConvert.h"
+#include "MRProgressReadWrite.h"
 #include <fstream>
 #include <filesystem>
 
@@ -16,7 +17,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const ObjectVoxels& voxelsObject )
+tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const ObjectVoxels& voxelsObject, ProgressCallback callback )
 {
     if ( path.empty() )
     {
@@ -88,12 +89,17 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         }
     }
 
-    if ( !outFile.write( (const char*) buffer.data(), buffer.size() * sizeof( float ) ) )
+    if ( !writeByBlocks( outFile, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
+    if ( !outFile )
     {
         std::stringstream ss;
         ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
         return tl::make_unexpected( ss.str() );
     }
+
+    if ( callback )
+        callback( 1.f );
     return {};
 }
 

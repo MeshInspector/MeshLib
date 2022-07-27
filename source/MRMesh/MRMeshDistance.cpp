@@ -263,6 +263,40 @@ MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart 
     return (signedRes.signedDist > 0.0f) ? MeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
 }
 
+MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    MR_TIMER;
+
+    const auto& bMeshVerts = b.mesh.points;
+        
+    return tbb::parallel_reduce
+    (
+        tbb::blocked_range( MR::begin(bMeshVerts), MR::end( bMeshVerts ) ),
+        0.0f, 
+        [&] ( const auto& range, float init )
+        {
+        for ( auto& vert : range )
+        {
+            auto distSq = findProjection( vert, a, maxDistanceSq, rigidB2A ).distSq;
+            if ( distSq > init )
+                init = distSq;
+        }           
+
+        return  init;
+        }, 
+        [] ( float a, float b ) -> float
+        {
+            return a > b ? a : b;
+        }
+    );
+}
+
+MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
+    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
+}
+
 TEST(MRMesh, MeshDistance) 
 {
     Mesh sphere1 = makeUVSphere( 1, 8, 8 );

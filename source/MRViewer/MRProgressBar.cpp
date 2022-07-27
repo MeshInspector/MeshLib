@@ -256,20 +256,20 @@ void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
     }
     catch ( const std::bad_alloc& badAllocE )
     {
-        onFinish_ = [badAllocE] ()
+        onFinish_ = [msg = badAllocE.what()] ()
         {
-            spdlog::error( badAllocE.what() );
+            spdlog::error( msg );
             if ( auto menu = getViewerInstance().getMenuPlugin() )
                 menu->showErrorModal( "Device ran out of memory during this operation." );
         };
     }
     catch ( const std::exception& e )
     {
-        onFinish_ = [e] ()
+        onFinish_ = [msg = e.what()] ()
         {
-            spdlog::error( e.what() );
+            spdlog::error( msg );
             if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->showErrorModal( e.what() );
+                menu->showErrorModal( msg );
         };
     }
     finish_();

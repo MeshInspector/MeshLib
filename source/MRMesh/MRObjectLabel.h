@@ -75,6 +75,28 @@ public:
     /// get pivot shift (pivot point * text diagonal)
     const Vector2f& getPivotShift() const { return pivotShift_; }
 
+    /// sets width of leader line in pixels
+    MRMESH_API virtual void setLeaderLineWidth( float width );
+    /// returns width of leader line in pixels
+    float getLeaderLineWidth() const { return leaderLineWidth_; }
+    /// sets size of source point in pixels
+    MRMESH_API virtual void setSourcePointSize( float size );
+    /// returns size of source point in pixels
+    float getSourcePointSize() const { return sourcePointSize_; }
+    /// sets background padding in pixels
+    MRMESH_API virtual void setBackgroundPadding( float padding );
+    /// returns background padding in pixels
+    float getBackgroundPadding() const { return backgroundPadding_; }
+
+    /// sets color of source point
+    MRMESH_API virtual void setSourcePointColor( const Color& color );
+    /// returns color of source point
+    const Color& getSourcePointColor() const { return sourcePointColor_; }
+    /// sets color of leader line
+    MRMESH_API virtual void setLeaderLineColor( const Color& color );
+    /// return color of leader line
+    const Color& getLeaderLineColor() const { return leaderLineColor_; }
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
     {}
@@ -102,10 +124,19 @@ protected:
 
     /// size of label font on screen in pixels
     float fontHeight_{ 25.0f };
+    /// width of leader line on screen in pixels
+    float leaderLineWidth_{ 1.0f };
+    /// radius of source point on screen in pixels
+    float sourcePointSize_{ 5.f };
+    /// padding of background on screen in pixels
+    float backgroundPadding_{ 8.f };
 
     ViewportMask sourcePoint_;
     ViewportMask background_;
     ViewportMask leaderLine_;
+
+    Color sourcePointColor_;
+    Color leaderLineColor_;
 
     ObjectLabel( const ObjectLabel& other ) = default;
 

@@ -226,13 +226,43 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
         { shift.x, shift.y, 0.f },
         { box.min.x, box.min.y, 0.f },
         { box.max.x, box.min.y, 0.f },
+        { box.min.x, box.max.y, 0.f },
+        { box.max.x, box.max.y, 0.f },
     };
     bindVertexAttribArray( shader, "position", llineVertPosBufferObjId_, leaderLineVertices, 3, dirtyLLine_ );
 
-    constexpr std::array<Vector2i, 2> llineEdgesIndices{
-        Vector2i{ 0, 1 },
-        Vector2i{ 1, 2 },
+    std::vector<Vector2i> llineEdgesIndices {
+        // underscore line
+        { 1, 2 },
     };
+    const auto middleX = ( box.max.x - box.min.x ) / 2.f;
+    if ( shift.x < box.min.x || box.max.x < shift.x || shift.y < box.min.y )
+    {
+        // lead to closest lower corner
+        if ( shift.x < middleX )
+            llineEdgesIndices.emplace_back( 0, 1 );
+        else
+            llineEdgesIndices.emplace_back( 0, 2 );
+    }
+    else if ( box.max.y < shift.y )
+    {
+        // lead to closest upper corner and then to bottom
+        if ( shift.x < middleX )
+        {
+            llineEdgesIndices.emplace_back( 0, 3 );
+            llineEdgesIndices.emplace_back( 1, 3 );
+        }
+        else
+        {
+            llineEdgesIndices.emplace_back( 0, 4 );
+            llineEdgesIndices.emplace_back( 2, 4 );
+        }
+    }
+    else
+    {
+        // source point is hidden
+    }
+
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, llineEdgesIndicesBufferObjId_ ) );
     if ( dirtyLLine_ )
     {

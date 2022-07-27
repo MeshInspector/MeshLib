@@ -3,7 +3,7 @@
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
-#include "MRViewer/MRProgressReadWrite.h"
+#include "MRMesh/MRProgressReadWrite.h"
 #include <fstream>
 
 namespace MR

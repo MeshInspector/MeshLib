@@ -6,7 +6,7 @@
 #include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
 #include <fstream>
-#include "MRViewer/MRProgressReadWrite.h"
+#include "MRMesh/MRProgressReadWrite.h"
 
 namespace MR
 {
@@ -144,17 +144,39 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         std::function<bool( float )> callbackFn{};
         std::ostream* stream;
         size_t sum{ 0 };
+        size_t blockSize{ 0 };
         size_t maxSize{ 0 };
     } saveData;
-    saveData.callbackFn = callback;
+    saveData.callbackFn = [callback, &saveData] ( float progress )
+    {
+        progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+
+        float newProgress = 0.f;
+        for ( int i = 0; i < 5; ++i )
+        {
+            if ( progress < 0.2f )
+            {
+                newProgress = progress / 0.2f * 0.7f;
+                break;
+            }
+            else
+            {
+                progress = ( progress - 0.2f ) / 0.8f;
+                newProgress += ( 1 - progress ) * 0.7f;
+            }
+        }
+
+        return callback( progress );
+    };
     saveData.stream = &out;
     saveData.maxSize = points.points.size() * sizeof( Vector3f );
     ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
     {
         SaveData& saveData = *reinterpret_cast< SaveData* >( data );
         std::ostream& outStream = *saveData.stream;
+        saveData.blockSize = size;
 
-        const bool cancel = !MR::writeWithProgress( outStream, ( const char* )buf, size, saveData.callbackFn, saveData.sum, saveData.maxSize );
+        const bool cancel = !MR::writeWithProgress( outStream, (const char*) buf, size, saveData.callbackFn );
         saveData.sum += size;
         if ( cancel )
             return 0u;

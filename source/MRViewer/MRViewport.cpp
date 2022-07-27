@@ -114,6 +114,8 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
 std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObject*>& renderVector, const std::vector<Vector2f>& viewportPoints ) const
 {
     MR_TIMER;
+    if ( viewportPoints.empty() )
+        return {};
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,

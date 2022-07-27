@@ -269,6 +269,8 @@ MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const 
 
     const auto& meshVerts = b.mesh.points;
     auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
+    if ( !vertBitSet.any() )
+        return 0.0f;
 
     std::vector<float> distances( vertBitSet.find_last() + 1 );
 

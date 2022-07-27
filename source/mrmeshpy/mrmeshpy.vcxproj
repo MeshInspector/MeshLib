@@ -23,7 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRLoadModule.cpp" />
-    <ClCompile Include="MRMaxMeshDistance.cpp" />
     <ClCompile Include="MRPythonBaseExposing.cpp" />
     <ClCompile Include="MRPythonBooleanExposing.cpp" />
     <ClCompile Include="MRPythonDecimate.cpp" />

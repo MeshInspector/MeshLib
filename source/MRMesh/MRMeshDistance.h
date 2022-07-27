@@ -42,7 +42,12 @@ MRMESH_API MeshDistanceResult findDistance( const MeshPart & a, const MeshPart &
 MRMESH_API MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b,
     const AffineXf3f* rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );
 
-MRMESH_API float findMaxDistance( const Mesh& a, const Mesh& b, const AffineXf3f* rigidB2A );
+/**
+ * \brief returns the maximum of the distances from each B-mesh point to A-mesh
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ */
+MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq = FLT_MAX );
 
 /// \}
 

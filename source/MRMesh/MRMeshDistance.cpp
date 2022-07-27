@@ -263,30 +263,34 @@ MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart 
     return (signedRes.signedDist > 0.0f) ? MeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
 }
 
-MRMESH_API float findMaxDistance( const Mesh& refMesh, const Mesh& mesh, const AffineXf3f* rigidB2A )
+MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
 
-    const auto& meshVerts = mesh.points;
+    const auto& meshVerts = b.mesh.points;
 
-    std::vector<float> vertColorFloats( meshVerts.size() );
+    std::vector<float> distances( meshVerts.size() );
 
     const auto objXf = rigidB2A ? *rigidB2A : AffineXf3f();
 
     //call refmesh-point distance finder for each point
-    std::atomic<float> res( 0 );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId i )
+    BitSetParallelFor( a.mesh.topology.getValidVerts(), [&] ( VertId i )
     {
         const auto p = objXf( meshVerts[VertId( i )] );
-        if ( auto pp = refMesh.projectPoint( p ) )
+        if ( auto pp = a.mesh.projectPoint( p ) )
         {
-            float temp = sqrt( pp->distSq );
-            if ( temp > res )
-                res = temp;
+            distances[i] =  pp->distSq ;
         }
     });
 
-    return res;
+    float res = 0;
+    for ( const auto& dist : distances )
+    {
+        if ( dist > res )
+            res = dist;
+    }
+
+    return  ( res < maxDistanceSq) ? res : maxDistanceSq;
 }
 
 TEST(MRMesh, MeshDistance) 

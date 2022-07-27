@@ -152,19 +152,25 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         saveData.callbackFn = [callback, &saveData] ( float progress )
         {
             // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+            // conversion rules:
+            // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
+            // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
+            // step 3) go to step 1)
+            const float rangeBefore = 0.2f;
+            const float rangeAfter = 0.7f;
             progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
             float newProgress = 0.f;
-            for ( int i = 0; i < 5; ++i )
+            for ( ; newProgress < 98.5f; )
             {
-                if ( progress < 0.2f )
+                if ( progress < rangeBefore )
                 {
-                    newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
+                    newProgress += progress / rangeBefore * rangeAfter * ( 1 - newProgress );
                     break;
                 }
                 else
                 {
-                    progress = ( progress - 0.2f ) / 0.8f;
-                    newProgress += ( 1 - newProgress ) * 0.7f;
+                    progress = ( progress - rangeBefore ) / ( 1 - rangeBefore );
+                    newProgress += ( 1 - newProgress ) * rangeAfter;
                 }
             }
             return callback( newProgress );

@@ -409,7 +409,7 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
                 const float rangeAfter = 0.7f;
                 progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
                 float newProgress = 0.f;
-                for ( int i = 0; newProgress < 98.5f; ++i )
+                for ( ; newProgress < 98.5f; )
                 {
                     if ( progress < rangeBefore )
                     {

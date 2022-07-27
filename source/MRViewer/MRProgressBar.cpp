@@ -256,7 +256,7 @@ void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
     }
     catch ( const std::bad_alloc& badAllocE )
     {
-        onFinish_ = [msg = badAllocE.what()] ()
+        onFinish_ = [msg = std::string( badAllocE.what() )]()
         {
             spdlog::error( msg );
             if ( auto menu = getViewerInstance().getMenuPlugin() )
@@ -265,7 +265,7 @@ void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
     }
     catch ( const std::exception& e )
     {
-        onFinish_ = [msg = e.what()] ()
+        onFinish_ = [msg = std::string( e.what() )]()
         {
             spdlog::error( msg );
             if ( auto menu = getViewerInstance().getMenuPlugin() )

@@ -432,7 +432,7 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
     {
         auto res = s;
         for ( auto & c : res )
-            if ( c == '?' || c == '*' || c == '/' || c == '\\' )
+            if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' )
                 c = '_';
         return res;
     };

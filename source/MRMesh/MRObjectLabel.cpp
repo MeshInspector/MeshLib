@@ -113,6 +113,9 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     
     root["PathToFontFile"] = utf8string( pathToFont_ );
 
+    // append base type
+    root["Type"].append( ObjectLabel::TypeName() );
+    
     root["SourcePointSize"] = sourcePointSize_;
     root["LeaderLineWidth"] = leaderLineWidth_;
     root["BackgroundPadding"] = backgroundPadding_;

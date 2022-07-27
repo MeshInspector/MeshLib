@@ -267,7 +267,7 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
 {
     MR_TIMER;
 
-    const auto& meshVerts = b.mesh.points;
+    const auto& bMeshVerts = b.mesh.points;
     auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
     if ( !vertBitSet.any() )
         return 0.0f;
@@ -276,10 +276,24 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
 
     BitSetParallelFor( vertBitSet, [&] ( VertId i )
     {
-        distances[i] = findProjection( meshVerts[i], a, maxDistanceSq, rigidB2A ).distSq;
+        distances[i] = findProjection( bMeshVerts[i], a, maxDistanceSq, rigidB2A ).distSq;
     });
 
-    return  *std::max_element( distances.begin(), distances.end() );
+    
+    return tbb::parallel_reduce
+    (
+        tbb::blocked_range( distances.begin(), distances.end() ), 
+        0.0f, 
+        [] ( const auto& range, float init )
+        {
+            float temp = *std::max_element( range.begin(), range.end() );
+            return temp > init ? temp : init;
+        }, 
+        [] ( float a, float b ) -> float
+        {
+            return a > b ? a : b;
+        }
+    );
 }
 
 MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )

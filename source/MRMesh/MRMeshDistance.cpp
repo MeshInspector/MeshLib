@@ -268,29 +268,16 @@ MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const 
     MR_TIMER;
 
     const auto& meshVerts = b.mesh.points;
+    auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
 
-    std::vector<float> distances( meshVerts.size() );
+    std::vector<float> distances( vertBitSet.find_last() + 1 );
 
-    const auto objXf = rigidB2A ? *rigidB2A : AffineXf3f();
-
-    //call refmesh-point distance finder for each point
-    BitSetParallelFor( a.mesh.topology.getValidVerts(), [&] ( VertId i )
+    BitSetParallelFor( vertBitSet, [&] ( VertId i )
     {
-        const auto p = objXf( meshVerts[VertId( i )] );
-        if ( auto pp = a.mesh.projectPoint( p ) )
-        {
-            distances[i] =  pp->distSq ;
-        }
+        distances[i] = findProjection( meshVerts[i], a, maxDistanceSq, rigidB2A ).distSq;
     });
 
-    float res = 0;
-    for ( const auto& dist : distances )
-    {
-        if ( dist > res )
-            res = dist;
-    }
-
-    return  ( res < maxDistanceSq) ? res : maxDistanceSq;
+    return  *std::max_element( distances.begin(), distances.end() );
 }
 
 TEST(MRMesh, MeshDistance) 

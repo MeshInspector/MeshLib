@@ -150,23 +150,21 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     saveData.callbackFn = [callback, &saveData] ( float progress )
     {
         progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-
         float newProgress = 0.f;
         for ( int i = 0; i < 5; ++i )
         {
             if ( progress < 0.2f )
             {
-                newProgress = progress / 0.2f * 0.7f;
+                newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
                 break;
             }
             else
             {
                 progress = ( progress - 0.2f ) / 0.8f;
-                newProgress += ( 1 - progress ) * 0.7f;
+                newProgress += ( 1 - newProgress ) * 0.7f;
             }
         }
-
-        return callback( progress );
+        return callback( newProgress );
     };
     saveData.stream = &out;
     saveData.maxSize = points.points.size() * sizeof( Vector3f );
@@ -176,7 +174,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         std::ostream& outStream = *saveData.stream;
         saveData.blockSize = size;
 
-        const bool cancel = !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn );
+        const bool cancel = !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
         saveData.sum += size;
         if ( cancel )
             return 0u;

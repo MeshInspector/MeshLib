@@ -1,7 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"
-#include "MRMesh\MRMeshDistance.h"
+#include "MRMesh/MRMeshDistance.h"
 
 using namespace MR;
 

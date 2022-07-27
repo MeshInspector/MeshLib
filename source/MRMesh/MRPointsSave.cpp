@@ -45,7 +45,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     {
         // write vertices
         static_assert( sizeof( points.points.front() ) == 12, "wrong size of Vector3f" );
-        const bool cancel = !MR::writeWithProgress( out, (const char*) points.points.data(), points.points.size() * sizeof( Vector3f ), callback );
+        const bool cancel = !MR::writeByBlocks( out, (const char*) points.points.data(), points.points.size() * sizeof( Vector3f ), callback );
         if ( cancel )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
@@ -176,7 +176,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         std::ostream& outStream = *saveData.stream;
         saveData.blockSize = size;
 
-        const bool cancel = !MR::writeWithProgress( outStream, (const char*) buf, size, saveData.callbackFn );
+        const bool cancel = !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn );
         saveData.sum += size;
         if ( cancel )
             return 0u;

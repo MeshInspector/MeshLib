@@ -3,7 +3,7 @@
 namespace MR
 {
 
-bool writeWithProgress( std::ostream& out, const char* data, size_t dataSize, ProgressCallback callback /*= {}*/, size_t blockSize /*= ( size_t( 1 ) << 16 )*/ )
+bool writeByBlocks( std::ostream& out, const char* data, size_t dataSize, ProgressCallback callback /*= {}*/, size_t blockSize /*= ( size_t( 1 ) << 16 )*/ )
 {
     if ( !callback )
     {

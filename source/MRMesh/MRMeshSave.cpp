@@ -40,7 +40,7 @@ tl::expected<void, std::string> toMrmesh( const Mesh & mesh, std::ostream & out,
     auto numPoints = (std::uint32_t)mesh.points.size();
     out.write( (const char*)&numPoints, 4 );
 
-    const bool cancel = !MR::writeWithProgress( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
+    const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
     if ( cancel )
         return tl::make_unexpected( std::string( "Saving canceled" ) );
 
@@ -240,7 +240,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
     if ( !saveColors )
     {
-        const bool cancel = !MR::writeWithProgress( out, (const char*) mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
+        const bool cancel = !MR::writeByBlocks( out, (const char*) mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
         if ( cancel )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
@@ -407,7 +407,7 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
         std::ostream& outStream = *saveData.stream;
         saveData.blockSize = size;
 
-        const bool cancel = !MR::writeWithProgress( outStream, (const char*) buf, size, saveData.callbackFn );
+        const bool cancel = !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn );
         saveData.sum += size;
         if ( cancel )
             return 0u;

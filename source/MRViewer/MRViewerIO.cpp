@@ -14,6 +14,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMenu.h"
+#include "MRAppendHistory.h"
 
 namespace MR
 {

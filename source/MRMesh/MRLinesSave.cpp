@@ -37,7 +37,7 @@ tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostre
     auto numPoints = (std::uint32_t)polyline.points.size();
     out.write( ( const char* )&numPoints, 4 );
         
-    const bool cancel = !MR::writeWithProgress( out, (const char*) polyline.points.data(), polyline.points.size() * sizeof( Vector3f ), callback );
+    const bool cancel = !MR::writeByBlocks( out, (const char*) polyline.points.data(), polyline.points.size() * sizeof( Vector3f ), callback );
     if ( cancel )
         return tl::make_unexpected( std::string( "Saving canceled" ) );
 

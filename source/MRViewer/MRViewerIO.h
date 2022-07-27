@@ -3,6 +3,7 @@
 #include "MRMesh/MRProgressCallback.h"
 #include <filesystem>
 #include <cstring>
+#include <tl/expected.hpp>
 
 namespace MR
 {

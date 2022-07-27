@@ -378,6 +378,15 @@ void RenderLabelObject::update_() const
         dirtyLLine_ = true;
     }
 
+    const auto backgroundPadding = objLabel_->getBackgroundPadding();
+    if ( backgroundPadding != backgroundPaddingState_ )
+    {
+        backgroundPaddingState_ = backgroundPadding;
+
+        dirtyBg_ = true;
+        dirtyLLine_ = true;
+    }
+
     objLabel_->resetDirty();
 }
 

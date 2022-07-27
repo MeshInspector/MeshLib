@@ -56,6 +56,7 @@ private:
     mutable bool dirtyLLine_;
     mutable Vector3f positionState_;
     mutable Vector2f pivotPointState_;
+    mutable float backgroundPaddingState_;
 };
 
 }

@@ -112,6 +112,9 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["FontHeight"] = fontHeight_;
     
     root["PathToFontFile"] = utf8string( pathToFont_ );
+
+    // append base type
+    root["Type"].append( ObjectLabel::TypeName() );
 }
 
 void ObjectLabel::deserializeFields_( const Json::Value& root )

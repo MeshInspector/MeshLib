@@ -6,13 +6,14 @@
 
 namespace MR
 {
-class VisualObject;
+class Object;
 
 /**
  * \brief save visual object (mesh, lines, points or voxels) to file
  * \param callback - callback function to set progress (for progress bar)
+ * \return empty string if no error or error text
  */
-MRVIEWER_API std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const std::filesystem::path& filename,
+MRVIEWER_API std::string saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
                                            ProgressCallback callback = {} );
 
 }

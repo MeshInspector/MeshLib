@@ -61,36 +61,36 @@ tl::expected<void, std::string> toOff( const Mesh & mesh, const std::filesystem:
     return toOff( mesh, out, callback );
 }
 
-tl::expected<void, std::string> toOff( const Mesh & mesh, std::ostream & out, ProgressCallback callback )
+tl::expected<void, std::string> toOff( const Mesh& mesh, std::ostream& out, ProgressCallback callback )
 {
     MR_TIMER
-    VertId lastValidPoint = mesh.topology.lastValidVert();
+        VertId maxPoints = mesh.topology.lastValidVert() + 1;
     int numPolygons = mesh.topology.numValidFaces();
 
-    out << "OFF\n" << lastValidPoint + 1 << ' ' << numPolygons << " 0\n\n";
-    
-    for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
+    out << "OFF\n" << maxPoints << ' ' << numPolygons << " 0\n\n";
+    for ( VertId i{ 0 }; i < maxPoints; ++i )
     {
         auto p = mesh.points[i];
         out << p.x << ' ' << p.y << ' ' << p.z << '\n';
-        if ( callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
+        if ( !( i % 1000 ) && callback && !callback( float( i ) / maxPoints * 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
 
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;
-    for ( const auto & e : mesh.topology.edgePerFace() )
+    for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
+        if ( !( faceIndex % 1000 ) && callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
+
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
         out << "3 " << a << ' ' << b << ' ' << c << '\n';
-        if ( callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     if ( !out )
@@ -122,23 +122,24 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
     {
         auto p = xf( mesh.points[i] );
         out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
-        if ( callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
+        if ( !( i % 1000 ) && callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;
-    for ( const auto & e : mesh.topology.edgePerFace() )
+    for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
+        if ( !( faceIndex % 1000 ) && callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
+
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
         out << "f " << a + firstVertId << ' ' << b + firstVertId << ' ' << c + firstVertId << '\n';
-        if ( callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
     if ( !out )
@@ -190,9 +191,9 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
 
-        const Vector3f & ap = mesh.points[a];
-        const Vector3f & bp = mesh.points[b];
-        const Vector3f & cp = mesh.points[c];
+        const Vector3f& ap = mesh.points[a];
+        const Vector3f& bp = mesh.points[b];
+        const Vector3f& cp = mesh.points[c];
         Vector3f normal = cross( bp - ap, cp - ap ).normalized();
         out.write( (const char*)&normal, 12 );
         out.write( (const char*)&ap, 12 );
@@ -200,7 +201,7 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
         out.write( (const char*)&cp, 12 );
         std::uint16_t attr{ 0 };
         out.write( ( const char* )&attr, 2 );
-        if ( callback && !callback( trisIndex / trisNum ) )
+        if ( !( trisIndex % 1000 ) && callback && !callback( trisIndex / trisNum ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
@@ -240,7 +241,8 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
     if ( !saveColors )
     {
-        const bool cancel = !MR::writeByBlocks( out, (const char*) mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback );
+        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ),
+            callback ? [callback] ( float v ) { return callback( v / 2.f ); } : {} );
         if ( cancel )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
@@ -250,8 +252,8 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
         for ( VertId i{ 0 }; i < numVertices; ++i )
         {
             out.write( (const char*) &mesh.points[i].x, 12 );
-            out.write( ( const char* )&( *colors )[i].r, 3 ); // write only r g b, not a
-            if ( callback && !callback( float( i ) / numVertices * 0.5f ) )
+            out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
+            if ( !(i % 1000) && callback && !callback( float( i ) / numVertices * 0.5f ) )
                 return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
     }
@@ -273,7 +275,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     {
         mesh.topology.getTriVerts( f, tri.v );
         out.write( (const char *)&tri, 13 );
-        if ( callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( !( faceIndex % 1000 ) && callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         ++faceIndex;
     }
@@ -378,37 +380,46 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
         size_t blockSize{ 0 };
         size_t maxSize{ 0 };
     } saveData;
-    if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
+    if ( callback )
     {
-        saveData.callbackFn = [callback, &saveData] ( float progress )
+        if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
         {
-            // calculate full progress
-            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-            return callback( progress );
-        };
-    }
-    else
-    {
-        saveData.callbackFn = [callback, &saveData] ( float progress )
-        {
-            // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
-            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-            float newProgress = 0.f;
-            for ( int i = 0; i < 5; ++i )
+            saveData.callbackFn = [callback, &saveData] ( float progress )
             {
-                if ( progress < 0.2f )
+                // calculate full progress
+                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+                return callback( progress );
+            };
+        }
+        else
+        {
+            saveData.callbackFn = [callback, &saveData] ( float progress )
+            {
+                // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+                // conversion rules:
+                // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
+                // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
+                // step 3) go to step 1)
+                const float rangeBefore = 0.2f;
+                const float rangeAfter = 0.7f;
+                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+                float newProgress = 0.f;
+                for ( int i = 0; newProgress < 98.5f; ++i )
                 {
-                    newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
-                    break;
+                    if ( progress < rangeBefore )
+                    {
+                        newProgress += progress / rangeBefore * rangeAfter * ( 1 - newProgress );
+                        break;
+                    }
+                    else
+                    {
+                        progress = ( progress - rangeBefore ) / ( 1 - rangeBefore );
+                        newProgress += ( 1 - newProgress ) * rangeAfter;
+                    }
                 }
-                else
-                {
-                    progress = ( progress - 0.2f ) / 0.8f;
-                    newProgress += ( 1 - newProgress ) * 0.7f;
-                }
-            }
-            return callback( newProgress );
-        };
+                return callback( newProgress );
+            };
+        }
     }
     saveData.stream = &out;
     saveData.maxSize = mesh.points.size() * sizeof( Vector3f ) + mesh.topology.getValidFaces().count() * 3 * sizeof( int );

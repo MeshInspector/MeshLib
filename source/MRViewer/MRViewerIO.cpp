@@ -22,17 +22,14 @@ namespace MR
 
 
 
-std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const std::filesystem::path& filename, ProgressCallback callback )
+std::string saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
-    if ( !obj )
-        return {};
-
     if ( callback && !callback( 0.f ) )
         return "Saving canceled";
 
     std::string error;
 
-    if ( auto objPoints = obj->asType<ObjectPoints>() )
+    if ( auto objPoints = obj.asType<ObjectPoints>() )
     {
         if ( objPoints->pointCloud() )
         {
@@ -45,7 +42,7 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
         else
             error = "ObjectPoints has no PointCloud in it";
     }
-    else if ( auto objLines = obj->asType<ObjectLines>() )
+    else if ( auto objLines = obj.asType<ObjectLines>() )
     {
         if ( objLines->polyline() )
         {
@@ -56,13 +53,13 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
         else
             error = "ObjectLines has no Polyline in it";
     }
-    else if ( auto objMesh = obj->asType<ObjectMesh>() )
+    else if ( auto objMesh = obj.asType<ObjectMesh>() )
     {
         if ( objMesh->mesh() )
         {
             const Vector<Color, VertId>* colors{ nullptr };
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
-                colors = &obj->getVertsColorMap();
+                colors = &objMesh->getVertsColorMap();
 
             auto res = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, callback );
             if ( !res.has_value() )
@@ -72,7 +69,7 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
             error = "ObjectMesh has no Mesh in it";
     }
 #ifndef __EMSCRIPTEN__
-    else if ( auto objVoxels = obj->asType<ObjectVoxels>() )
+    else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
     {
         auto ext = filename.extension().u8string();
         for ( auto& c : ext )
@@ -89,8 +86,9 @@ std::string saveObjectToFile( const std::shared_ptr<VisualObject>& obj, const st
 
     if ( error.empty() )
         getViewerInstance().recentFilesStore.storeFile( filename );
+    else
+        spdlog::error( error );
 
-    spdlog::error( error );
     return error;
 }
 

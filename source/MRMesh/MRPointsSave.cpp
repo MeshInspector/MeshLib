@@ -68,7 +68,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
             const auto& c = ( *colors )[VertId( v )];
             cVert.r = c.r; cVert.g = c.g; cVert.b = c.b;
             out.write( ( const char* )&cVert, 15 );
-            if ( callback && !callback( float( v ) / numVertices ) )
+            if ( !( v % 1000 ) && callback && !callback( float( v ) / numVertices ) )
                 return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
     }
@@ -147,26 +147,29 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         size_t blockSize{ 0 };
         size_t maxSize{ 0 };
     } saveData;
-    saveData.callbackFn = [callback, &saveData] ( float progress )
+    if ( callback )
     {
-        // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
-        progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-        float newProgress = 0.f;
-        for ( int i = 0; i < 5; ++i )
+        saveData.callbackFn = [callback, &saveData] ( float progress )
         {
-            if ( progress < 0.2f )
+            // calculate full progress in partical-linear scale (we don't know compressed size and it less than real size)
+            progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
+            float newProgress = 0.f;
+            for ( int i = 0; i < 5; ++i )
             {
-                newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
-                break;
+                if ( progress < 0.2f )
+                {
+                    newProgress += progress / 0.2f * 0.7f * ( 1 - newProgress );
+                    break;
+                }
+                else
+                {
+                    progress = ( progress - 0.2f ) / 0.8f;
+                    newProgress += ( 1 - newProgress ) * 0.7f;
+                }
             }
-            else
-            {
-                progress = ( progress - 0.2f ) / 0.8f;
-                newProgress += ( 1 - newProgress ) * 0.7f;
-            }
-        }
-        return callback( newProgress );
-    };
+            return callback( newProgress );
+        };
+    }
     saveData.stream = &out;
     saveData.maxSize = points.points.size() * sizeof( Vector3f );
     ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
@@ -208,9 +211,9 @@ tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& o
     for ( auto v : points.validPoints )
     {
         out << points.points[v] << "\n";
-        if ( callback && !callback( float( pointIndex ) / pointsNum ) )
-            return tl::make_unexpected( std::string( "Saving canceled" ) );
         ++pointIndex;
+        if ( !( pointIndex % 1000 ) && callback && !callback( float( pointIndex ) / pointsNum ) )
+            return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     out << "END_Polyline\n";
 

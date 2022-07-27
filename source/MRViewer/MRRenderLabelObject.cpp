@@ -231,42 +231,48 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     };
     bindVertexAttribArray( shader, "position", llineVertPosBufferObjId_, leaderLineVertices, 3, dirtyLLine_ );
 
-    std::vector<Vector2i> llineEdgesIndices {
-        // underscore line
-        { 1, 2 },
+    std::array<Vector2i, 3> llineEdgesIndices {
+        Vector2i{ 1, 2 },
+        Vector2i{ 0, 1 },
+        Vector2i{ 1, 3 },
     };
+    size_t llineEdgesIndicesSize;
     const auto middleX = ( box.max.x - box.min.x ) / 2.f;
     if ( shift.x < box.min.x || box.max.x < shift.x || shift.y < box.min.y )
     {
+        llineEdgesIndicesSize = 2;
         // lead to closest lower corner
         if ( shift.x < middleX )
-            llineEdgesIndices.emplace_back( 0, 1 );
+            llineEdgesIndices[1] = Vector2i{ 0, 1 };
         else
-            llineEdgesIndices.emplace_back( 0, 2 );
+            llineEdgesIndices[1] = Vector2i{ 0, 2 };
     }
     else if ( box.max.y < shift.y )
     {
+        llineEdgesIndicesSize = 3;
         // lead to closest upper corner and then to bottom
         if ( shift.x < middleX )
         {
-            llineEdgesIndices.emplace_back( 0, 3 );
-            llineEdgesIndices.emplace_back( 1, 3 );
+            llineEdgesIndices[1] = Vector2i{ 0, 3 };
+            llineEdgesIndices[2] = Vector2i{ 1, 3 };
         }
         else
         {
-            llineEdgesIndices.emplace_back( 0, 4 );
-            llineEdgesIndices.emplace_back( 2, 4 );
+            llineEdgesIndices[1] = Vector2i{ 0, 4 };
+            llineEdgesIndices[2] = Vector2i{ 2, 4 };
         }
     }
     else
     {
         // source point is hidden
+        llineEdgesIndicesSize = 1;
     }
+    assert( llineEdgesIndicesSize <= llineEdgesIndices.size() );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, llineEdgesIndicesBufferObjId_ ) );
     if ( dirtyLLine_ )
     {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * llineEdgesIndices.size(), llineEdgesIndices.data(), GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * llineEdgesIndicesSize, llineEdgesIndices.data(), GL_DYNAMIC_DRAW ) );
     }
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
@@ -289,10 +295,10 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     const auto mainColor = Vector4f( objLabel_->getLeaderLineColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndices.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndicesSize );
 
     GL_EXEC( glLineWidth( objLabel_->getLeaderLineWidth() ) );
-    GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndices.size() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndicesSize ), GL_UNSIGNED_INT, 0 ) );
 
     dirtyLLine_ = false;
 }

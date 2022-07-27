@@ -263,7 +263,7 @@ MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart 
     return (signedRes.signedDist > 0.0f) ? MeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
 }
 
-MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
 
@@ -280,6 +280,12 @@ MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const 
     });
 
     return  *std::max_element( distances.begin(), distances.end() );
+}
+
+MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
+    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
 }
 
 TEST(MRMesh, MeshDistance) 

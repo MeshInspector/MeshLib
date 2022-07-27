@@ -326,4 +326,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, position_verts_smoothly, &positionVertsSmoothly, "shifts vertices to make smooth surface by Unit Laplacian" )
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, findMaxMeshDistanceSq, &findMaxDistanceSq, "returns the maximum of the distances from each mesh point to another mesh" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, findMaxMeshDistanceSqOneWay, &findMaxDistanceSqOneWay, "returns the maximum of the distances from each B-mesh point to A-mesh" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, findMaxMeshDistanceSq, &findMaxDistanceSq, "returns the maximum of the distances from each mesh point to another mesh in both direction" )

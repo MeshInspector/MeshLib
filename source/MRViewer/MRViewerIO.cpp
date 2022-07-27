@@ -22,36 +22,32 @@ namespace MR
 
 
 
-std::string saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
+tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
-        return "Saving canceled";
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
-    std::string error;
+    tl::expected<void, std::string> result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {
         if ( objPoints->pointCloud() )
         {
             const auto& colors = objPoints->getVertsColorMap();
-            auto res = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename,
+            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename,
                                                          colors.empty() ? nullptr : &colors, callback );
-            if ( !res.has_value() )
-                error = res.error();
         }
         else
-            error = "ObjectPoints has no PointCloud in it";
+            result = tl::make_unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );
     }
     else if ( auto objLines = obj.asType<ObjectLines>() )
     {
         if ( objLines->polyline() )
         {
-            auto res = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, callback );
-            if ( !res.has_value() )
-                error = res.error();
+            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, callback );
         }
         else
-            error = "ObjectLines has no Polyline in it";
+            result = tl::make_unexpected( std::string( "ObjectLines has no Polyline in it" ) );
     }
     else if ( auto objMesh = obj.asType<ObjectMesh>() )
     {
@@ -61,12 +57,10 @@ std::string saveObjectToFile( const Object& obj, const std::filesystem::path& fi
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 colors = &objMesh->getVertsColorMap();
 
-            auto res = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, callback );
-            if ( !res.has_value() )
-                error = res.error();
+            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, colors, callback );
         }
         else
-            error = "ObjectMesh has no Mesh in it";
+            result = tl::make_unexpected( std::string( "ObjectMesh has no Mesh in it" ) );
     }
 #ifndef __EMSCRIPTEN__
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
@@ -77,19 +71,17 @@ std::string saveObjectToFile( const Object& obj, const std::filesystem::path& fi
 
         if ( ext == u8".raw" )
         {
-            auto res = VoxelsSave::saveRAW( filename, *objVoxels, callback );
-            if ( !res.has_value() )
-                error = res.error();
+            result = VoxelsSave::saveRAW( filename, *objVoxels, callback );
         }
     }
 #endif
 
-    if ( error.empty() )
+    if ( result.has_value() )
         getViewerInstance().recentFilesStore.storeFile( filename );
     else
-        spdlog::error( error );
+        spdlog::error( result.error() );
 
-    return error;
+    return result;
 }
 
 #ifdef __EMSCRIPTEN__

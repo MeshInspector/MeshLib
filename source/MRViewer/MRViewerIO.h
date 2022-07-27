@@ -13,7 +13,7 @@ class Object;
  * \param callback - callback function to set progress (for progress bar)
  * \return empty string if no error or error text
  */
-MRVIEWER_API std::string saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
-                                           ProgressCallback callback = {} );
+MRVIEWER_API tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
+                                                               ProgressCallback callback = {} );
 
 }

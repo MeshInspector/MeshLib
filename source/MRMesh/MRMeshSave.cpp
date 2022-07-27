@@ -72,7 +72,7 @@ tl::expected<void, std::string> toOff( const Mesh& mesh, std::ostream& out, Prog
     {
         auto p = mesh.points[i];
         out << p.x << ' ' << p.y << ' ' << p.z << '\n';
-        if ( !( i % 1000 ) && callback && !callback( float( i ) / maxPoints * 0.5f ) )
+        if ( callback && !( i % 1000 ) && !callback( float( i ) / maxPoints * 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     out << '\n';
@@ -82,7 +82,7 @@ tl::expected<void, std::string> toOff( const Mesh& mesh, std::ostream& out, Prog
     for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
-        if ( !( faceIndex % 1000 ) && callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( callback && !( faceIndex % 1000 ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
@@ -122,7 +122,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
     {
         auto p = xf( mesh.points[i] );
         out << "v " << p.x << ' ' << p.y << ' ' << p.z << '\n';
-        if ( !( i % 1000 ) && callback && !callback( float( i ) / lastValidPoint * 0.5f ) )
+        if ( callback && !( i % 1000 ) && !callback( float( i ) / lastValidPoint * 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
 
@@ -131,7 +131,7 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
     for ( const auto& e : mesh.topology.edgePerFace() )
     {
         ++faceIndex;
-        if ( !( faceIndex % 1000 ) && callback && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
+        if ( callback && !( faceIndex % 1000 ) && !callback( faceIndex / facesNum * 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         if ( !e.valid() )
             continue;
@@ -201,7 +201,7 @@ tl::expected<void, std::string> toBinaryStl( const Mesh & mesh, std::ostream & o
         out.write( (const char*)&cp, 12 );
         std::uint16_t attr{ 0 };
         out.write( ( const char* )&attr, 2 );
-        if ( !( trisIndex % 1000 ) && callback && !callback( trisIndex / trisNum ) )
+        if ( callback && !( trisIndex % 1000 ) && !callback( trisIndex / trisNum ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         ++trisIndex;
     }
@@ -241,8 +241,13 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     static_assert( sizeof( mesh.points.front() ) == 12, "wrong size of Vector3f" );
     if ( !saveColors )
     {
-        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ),
-            callback ? [callback] ( float v ) { return callback( v / 2.f ); } : {} );
+        ProgressCallback callbackFn = {};
+        if (callback)
+            callbackFn = [callback] ( float v )
+            {
+                return callback( v / 2.f );
+            };
+        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callbackFn );
         if ( cancel )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
@@ -253,7 +258,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
         {
             out.write( (const char*) &mesh.points[i].x, 12 );
             out.write( (const char*) &( *colors )[i].r, 3 ); // write only r g b, not a
-            if ( !(i % 1000) && callback && !callback( float( i ) / numVertices * 0.5f ) )
+            if ( callback && !(i % 1000) && !callback( float( i ) / numVertices * 0.5f ) )
                 return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
     }
@@ -275,7 +280,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     {
         mesh.topology.getTriVerts( f, tri.v );
         out.write( (const char *)&tri, 13 );
-        if ( !( faceIndex % 1000 ) && callback && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( callback && !( faceIndex % 1000 ) && !callback( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
         ++faceIndex;
     }

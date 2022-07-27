@@ -14,8 +14,6 @@
 
 namespace
 {
-    constexpr int cBackgroundPaddingPx = 8;
-
     void applyPadding( MR::Box3f& box, float padding )
     {
         box.min.x -= padding;
@@ -140,22 +138,18 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
 
-    const auto& backColor = Vector4f( objLabel_->getBackColor() );
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
-
-    const auto& mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
+    const auto& mainColor = Vector4f( objLabel_->getSourcePointColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, pointIndices.size() );
 
-    // FIXME: parametrize it
-    const float pointSize = 5.f;
 #ifdef __EMSCRIPTEN__
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), pointSize ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "pointSize" ), objLabel_->getSourcePointSize() ) );
 #else
-    GL_EXEC( glPointSize( pointSize ) );
+    GL_EXEC( glPointSize( objLabel_->getSourcePointSize() ) );
 #endif
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )pointIndices.size(), GL_UNSIGNED_INT, 0 ) );
 
@@ -191,7 +185,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
-    applyPadding( box, cBackgroundPaddingPx * ( box.max.y - box.min.y ) / height );
+    applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / height );
     const std::vector<Vector3f> corners {
         { box.min.x, box.min.y, 0.f },
         { box.max.x, box.min.y, 0.f },
@@ -227,7 +221,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
 
     const auto shift = objLabel_->getPivotShift();
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
-    applyPadding( box, cBackgroundPaddingPx * ( box.max.y - box.min.y ) / objLabel_->getFontHeight() );
+    applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / objLabel_->getFontHeight() );
     const std::vector<Vector3f> leaderLineVertices {
         { shift.x, shift.y, 0.f },
         { box.min.x, box.min.y, 0.f },
@@ -262,14 +256,12 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     const auto& pos = objLabel_->getLabel().position;
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
 
-    const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
+    const auto mainColor = Vector4f( objLabel_->getLeaderLineColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndices.size() );
 
-    // FIXME: parametrize it
-    const float lineWidth = 1.f;
-    GL_EXEC( glLineWidth( lineWidth ) );
+    GL_EXEC( glLineWidth( objLabel_->getLeaderLineWidth() ) );
     GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndices.size() ), GL_UNSIGNED_INT, 0 ) );
 
     dirtyLLine_ = false;

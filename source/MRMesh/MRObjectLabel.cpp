@@ -112,6 +112,13 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["FontHeight"] = fontHeight_;
     
     root["PathToFontFile"] = utf8string( pathToFont_ );
+
+    root["SourcePointSize"] = sourcePointSize_;
+    root["LeaderLineWidth"] = leaderLineWidth_;
+    root["BackgroundPadding"] = backgroundPadding_;
+
+    serializeToJson( sourcePointColor_, root["Colors"]["SourcePoint"] );
+    serializeToJson( leaderLineColor_, root["Colors"]["LeaderLine"] );
 }
 
 void ObjectLabel::deserializeFields_( const Json::Value& root )
@@ -125,6 +132,16 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
         label_.text = root["Text"].asString();
     if ( root["PathToFontFile"].isString() )
         pathToFont_ = root["PathToFontFile"].asString();
+
+    if ( root["SourcePointSize"].isDouble() )
+        sourcePointSize_ = root["SourcePointSize"].asFloat();
+    if ( root["LeaderLineWidth"].isDouble() )
+        leaderLineWidth_ = root["LeaderLineWidth"].asFloat();
+    if ( root["BackgroundPadding"].isDouble() )
+        backgroundPadding_ = root["BackgroundPadding"].asFloat();
+
+    deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_ );
+    deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_ );
 }
 
 void ObjectLabel::setupRenderObject_() const
@@ -234,6 +251,49 @@ const ViewportMask &ObjectLabel::getVisualizePropertyMask( unsigned int type ) c
     default:
         return VisualObject::getVisualizePropertyMask( type );
     }
+}
+
+void ObjectLabel::setLeaderLineWidth( float width )
+{
+    if ( leaderLineWidth_ == width )
+        return;
+
+    leaderLineWidth_ = width;
+    needRedraw_ = true;
+}
+
+void ObjectLabel::setSourcePointSize( float size )
+{
+    if ( sourcePointSize_ == size )
+        return;
+
+    sourcePointSize_ = size;
+    needRedraw_ = true;
+}
+
+void ObjectLabel::setBackgroundPadding( float padding )
+{
+    if ( backgroundPadding_ == padding )
+        return;
+
+    backgroundPadding_ = padding;
+    needRedraw_ = true;
+}
+
+void ObjectLabel::setSourcePointColor( const Color &color )
+{
+    if ( sourcePointColor_ == color )
+        return;
+
+    sourcePointColor_ = color;
+}
+
+void ObjectLabel::setLeaderLineColor( const Color &color )
+{
+    if ( leaderLineColor_ == color )
+        return;
+
+    leaderLineColor_ = color;
 }
 
 }

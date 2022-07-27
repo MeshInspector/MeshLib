@@ -1377,7 +1377,12 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
     }
     if ( allIsObjLabels )
+    {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid, true );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Source point", LabelVisualizePropertyType::SourcePoint, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Background", LabelVisualizePropertyType::Background, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
+    }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
@@ -1391,6 +1396,7 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     bool someChanges = false;
     const auto selectedMeshObjs = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     const auto selectedPointsObjs = getAllObjectsInTree<ObjectPointsHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto selectedLabelObjs = getAllObjectsInTree<ObjectLabel>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
@@ -1464,7 +1470,23 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
             data->setSelectedVerticesColor( Color( color ) );
         } );
     }
-
+    if ( !selectedLabelObjs.empty() )
+    {
+        make_color_selector<ObjectLabel>( selectedLabelObjs, "Source point color", [&] ( const ObjectLabel* data )
+        {
+            return Vector4f( data->getSourcePointColor() );
+        }, [&] ( ObjectLabel* data, const Vector4f& color )
+        {
+            data->setSourcePointColor( Color( color ) );
+        } );
+        make_color_selector<ObjectLabel>( selectedLabelObjs, "Leader line color", [&] ( const ObjectLabel* data )
+        {
+            return Vector4f( data->getLeaderLineColor() );
+        }, [&] ( ObjectLabel* data, const Vector4f& color )
+        {
+            data->setLeaderLineColor( Color( color ) );
+        } );
+    }
 
     return someChanges;
 }

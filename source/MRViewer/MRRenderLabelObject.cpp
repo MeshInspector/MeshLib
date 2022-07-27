@@ -77,12 +77,12 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
 
     GL_EXEC( glDepthFunc( GL_LEQUAL ) );
 
+    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
+        renderLeaderLine_( renderParams );
     if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::SourcePoint, renderParams.viewportId ) )
         renderSourcePoint_( renderParams );
     if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Background, renderParams.viewportId ) )
         renderBackground_( renderParams );
-    if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::LeaderLine, renderParams.viewportId ) )
-        renderLeaderLine_( renderParams );
 
     bindLabel_();
 

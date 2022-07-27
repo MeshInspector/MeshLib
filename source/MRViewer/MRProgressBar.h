@@ -12,6 +12,7 @@ namespace MR
 class ProgressBar
 {
 public:
+    using TaskWithMainThreadPostProcessing = std::function< std::function<void()>() >;
     // this function should be called only once for each frame (it is called in MR::Menu (MR::RibbonMenu))
     MRVIEWER_API static void setup( float scaling );
 
@@ -19,7 +20,7 @@ public:
     MRVIEWER_API static void order(const char * name, const std::function<void()>& task, int taskCount = 1 );
 
     // in this version the task returns a function to be executed in main thread
-    MRVIEWER_API static void orderWithMainThreadPostProcessing(const char * name, const std::function< std::function<void()> () >& task, int taskCount = 1 );
+    MRVIEWER_API static void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
     MRVIEWER_API static bool isCanceled();
 
@@ -48,6 +49,10 @@ private:
 
     ProgressBar();
     ~ProgressBar();
+
+    // cover task execution with try catch block
+    // if catches exception shows error in main thread overriding user defined main thread post processing
+    void tryRunTask_( TaskWithMainThreadPostProcessing task );
 
     void postEvent_();
     void finish_();

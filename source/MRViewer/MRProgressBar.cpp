@@ -1,7 +1,9 @@
 #include "MRProgressBar.h"
 #include "MRViewer.h"
-#include <MRMesh/MRSystem.h>
+#include "MRMesh/MRSystem.h"
+#include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 
@@ -93,7 +95,7 @@ void ProgressBar::order( const char* name, const std::function<void()>& task, in
         taskCount );
 }
 
-void ProgressBar::orderWithMainThreadPostProcessing( const char* name, const std::function< std::function<void()>() >& task, int taskCount )
+void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
     auto& instance = instance_();
     if ( isFinished() && instance.thread_.joinable() )
@@ -132,14 +134,12 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, const std
         instance.thread_ = std::thread( [task, &instance] ()
         {
             SetCurrentThreadName( "ProgressBar" );
-            instance.onFinish_ = task();
-            instance.finish_();
+            instance.tryRunTask_( task );
         } );
 #else
         staticTaskForLaterCall = [&instance, task] () 
         {
-            instance.onFinish_ = task();
-            instance.finish_();            
+            instance.tryRunTask_( task );
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -246,6 +246,33 @@ ProgressBar::~ProgressBar()
     canceled_ = true;
     if ( thread_.joinable() )
         thread_.join();
+}
+
+void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
+{
+    try
+    {
+        onFinish_ = task();
+    }
+    catch ( const std::bad_alloc& badAllocE )
+    {
+        onFinish_ = [msg = std::string( badAllocE.what() )]()
+        {
+            spdlog::error( msg );
+            if ( auto menu = getViewerInstance().getMenuPlugin() )
+                menu->showErrorModal( "Device ran out of memory during this operation." );
+        };
+    }
+    catch ( const std::exception& e )
+    {
+        onFinish_ = [msg = std::string( e.what() )]()
+        {
+            spdlog::error( msg );
+            if ( auto menu = getViewerInstance().getMenuPlugin() )
+                menu->showErrorModal( msg );
+        };
+    }
+    finish_();
 }
 
 void ProgressBar::postEvent_()

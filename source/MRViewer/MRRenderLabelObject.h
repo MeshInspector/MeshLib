@@ -26,6 +26,7 @@ private:
     GLuint srcArrayObjId_{ 0 };
     GLuint srcVertPosBufferObjId_{ 0 };
     GLuint srcIndicesBufferObjId_{ 0 };
+    GLuint srcIndicesSelectionTexId_{ 0 };
 
     GLuint bgArrayObjId_{ 0 };
     GLuint bgVertPosBufferObjId_{ 0 };

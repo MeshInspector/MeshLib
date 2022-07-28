@@ -157,6 +157,8 @@ void ObjectLabel::setDefaultColors_()
 {
     setFrontColor( SceneColors::get( SceneColors::Labels ) );
     setFrontColor( SceneColors::get( SceneColors::Labels ), false );
+    setSourcePointColor( SceneColors::get( SceneColors::Labels ) );
+    setLeaderLineColor( SceneColors::get( SceneColors::Labels ) );
 }
 
 void ObjectLabel::buildMesh_()

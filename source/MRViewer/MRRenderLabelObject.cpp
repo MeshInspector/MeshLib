@@ -144,6 +144,25 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
 
+    int maxTexSize = 0;
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
+    assert( maxTexSize > 0 );
+
+    // Selection
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, srcIndicesSelectionTexId_ ) );
+    if ( dirtySrc_ )
+    {
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
+        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+        unsigned selTexture = 0;
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, 1, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, &selTexture ) );
+    }
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
+
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, pointIndices.size() );
 
 #ifdef __EMSCRIPTEN__
@@ -335,6 +354,7 @@ void RenderLabelObject::initBuffers_()
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &srcVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &srcIndicesBufferObjId_ ) );
+    GL_EXEC( glGenTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
@@ -364,6 +384,7 @@ void RenderLabelObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &srcArrayObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &srcVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &srcIndicesBufferObjId_ ) );
+    GL_EXEC( glDeleteTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgVertPosBufferObjId_ ) );

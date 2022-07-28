@@ -64,8 +64,8 @@ void Viewport::shut()
 
 void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer, bool alphaSort ) const
 {
-    auto normM = viewM * Matrix4f( xf );
     auto modelTemp = Matrix4f( xf );
+    auto normM = ( viewM * modelTemp ).inverse().transposed();
 
     RenderParams params
     {

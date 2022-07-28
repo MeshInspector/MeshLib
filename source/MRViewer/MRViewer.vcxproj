@@ -148,6 +148,12 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="..\..\thirdparty\Selawik\selawk.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\Selawik\selawksb.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\fontawesome-free\fa-solid-900.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>

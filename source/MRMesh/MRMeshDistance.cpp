@@ -268,16 +268,22 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
     MR_TIMER;
 
     const auto& bMeshVerts = b.mesh.points;
-        
+    auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
+    if ( !vertBitSet.any() )
+        return 0.0f;
+
     return tbb::parallel_reduce
     (
-        tbb::blocked_range( MR::begin(bMeshVerts), MR::end( bMeshVerts ) ),
+        tbb::blocked_range( vertBitSet.find_first(), vertBitSet.find_last() + 1 ),
         0.0f, 
-        [&] ( const auto& range, float init )
+        [&] ( const tbb::blocked_range<VertId>& range, float init )
         {
-        for ( auto& vert : range )
+        for ( VertId i = range.begin(); i < range.end(); ++i )
         {
-            auto distSq = findProjection( vert, a, maxDistanceSq, rigidB2A ).distSq;
+            if ( !vertBitSet.test( i ) )
+                continue;
+
+            auto distSq = findProjection( bMeshVerts[i], a, maxDistanceSq, rigidB2A ).distSq;
             if ( distSq > init )
                 init = distSq;
         }           

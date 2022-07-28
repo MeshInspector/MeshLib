@@ -144,10 +144,6 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
 
-    int maxTexSize = 0;
-    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
-    assert( maxTexSize > 0 );
-
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, srcIndicesSelectionTexId_ ) );

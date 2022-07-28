@@ -269,12 +269,14 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
 
     const auto& bMeshVerts = b.mesh.points;
     auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
-    
+    if ( !vertBitSet.any() )
+        return 0.0f;
+
     return tbb::parallel_reduce
     (
-        tbb::blocked_range(VertId(0), vertBitSet.find_last() + 1 ),
+        tbb::blocked_range( vertBitSet.find_first(), vertBitSet.find_last() + 1 ),
         0.0f, 
-        [&] ( tbb::blocked_range<VertId>& range, float init )
+        [&] ( const tbb::blocked_range<VertId>& range, float init )
         {
         for ( VertId i = range.begin(); i < range.end(); ++i )
         {

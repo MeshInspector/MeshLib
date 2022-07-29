@@ -493,10 +493,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\thirdparty\Selawik\selawk.ttf">
+    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
       <Filter>Fonts</Filter>
     </Font>
-    <Font Include="..\..\thirdparty\Selawik\selawksb.ttf">
+    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <Filter>Fonts</Filter>
     </Font>
   </ItemGroup>

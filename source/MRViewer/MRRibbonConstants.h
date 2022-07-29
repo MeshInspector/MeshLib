@@ -33,7 +33,7 @@ constexpr float cQuickAccessBarHeight = 40.0f;
 constexpr float cScrollBarSize = 10.0f;
 constexpr float cBigIconSize = 20.0f;
 
-constexpr int cSmallFontSize = 12;
-constexpr int cDefaultFontSize = 14;
-constexpr int cBigFontSize = 16;
+constexpr int cSmallFontSize = 11;
+constexpr int cDefaultFontSize = 13;
+constexpr int cBigFontSize = 15;
 }

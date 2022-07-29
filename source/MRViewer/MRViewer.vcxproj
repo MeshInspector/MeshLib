@@ -148,10 +148,10 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\..\thirdparty\Selawik\selawk.ttf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\thirdparty\Selawik\selawksb.ttf">
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\fontawesome-free\fa-solid-900.ttf">

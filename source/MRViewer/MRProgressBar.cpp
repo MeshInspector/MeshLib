@@ -57,7 +57,7 @@ void ProgressBar::setup( float scaling )
         {
             if ( !instance.canceled_ )
             {
-                ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetWindowContentRegionWidth() ) * 0.5f - 75.0f * scaling );
+                ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
                 if ( ImGui::Button( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
                     instance.canceled_ = true;
             }

@@ -145,6 +145,14 @@ RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const Men
             maxTextWidth = std::max( maxTextWidth, i.second );
 
         res.baseWidth = maxTextWidth + 2 * cRibbonButtonWindowPaddingX * scaling_;
+
+        if ( item.item->type() == RibbonItemType::ButtonWithDrop )
+        {
+            auto additionalSize = 3 * cSmallIconSize * scaling_;
+            if ( cMinItemSize - res.baseWidth < additionalSize )
+                res.baseWidth += additionalSize;
+        }
+
         if ( res.baseWidth < cMinItemSize )
             res.baseWidth = cMinItemSize;
         return res;
@@ -464,6 +472,7 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
 void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::string& requirements )
 {
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * scaling_, cRibbonButtonWindowPaddingY * scaling_ ) );
     const std::string& tooltip = item.tooltip;
 
     const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
@@ -510,7 +519,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
         ImGui::PopStyleColor();
     }
     ImGui::EndTooltip();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar( 2 );
 }
 
 

@@ -5,6 +5,7 @@
 #include "MRMeshEdgePoint.h"
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
+#include "MRConstants.h"
 #include <cfloat>
 
 namespace MR
@@ -114,7 +115,7 @@ struct [[nodiscard]] Mesh
     // this version returns optional without value if the projection point is not within maxDist
     MRMESH_API std::optional<float> signedDistance( const Vector3f & pt, float maxDistSq, const FaceBitSet * region = nullptr ) const;
 
-    // computes the sum of triangle angles at given vertex; optionally returns whether the vertex is boundary
+    // computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
     // returns vertices where the sum of triangle angles is below given threshold
     MRMESH_API VertBitSet findSpikeVertices( float minSumAngle, const VertBitSet * region = nullptr ) const;
@@ -139,6 +140,10 @@ struct [[nodiscard]] Mesh
     // computes discrete mean curvature in given vertex measures in length^-1;
     // 0 for planar regions, positive for convex surface, negative for concave surface
     MRMESH_API float discreteMeanCurvature( VertId v ) const;
+    // computes discrete Gaussian curvature (or angle defect) at given vertex,
+    // which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
+    // optionally returns whether the vertex is on boundary
+    float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return 2 * PI_F - sumAngles( v, outBoundaryVert ); }
 
     // finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
     MRMESH_API UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const;

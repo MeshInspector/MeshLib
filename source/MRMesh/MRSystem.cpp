@@ -301,6 +301,7 @@ void SetClipboardText( const std::string& text )
 
 std::string GetMRVersionString()
 {
+#ifndef __EMSCRIPTEN__
     auto directory = GetResourcesDirectory();
     auto versionFilePath = directory / "mr.version";
     std::error_code ec;
@@ -318,6 +319,20 @@ std::string GetMRVersionString()
     if ( !versFile )
         return configPrefix + "Version reading error";
     return configPrefix + version;
+#else
+    auto *jsStr = (char *)EM_ASM_PTR({
+        var version = "undefined";
+        if ( typeof mrVersion != "undefined" )
+            version = mrVersion;
+        var lengthBytes = lengthBytesUTF8( version ) + 1;
+        var stringOnWasmHeap = _malloc( lengthBytes );
+        stringToUTF8( version, stringOnWasmHeap, lengthBytes );
+        return stringOnWasmHeap;
+    });
+    std::string version( jsStr );
+    free( jsStr );
+    return version;
+#endif
 }
 
 void OpenLink( const std::string& url )

@@ -283,7 +283,7 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
             if ( !vertBitSet.test( i ) )
                 continue;
 
-            auto distSq = findProjection( bMeshVerts[i], a, maxDistanceSq, rigidB2A ).distSq;
+            auto distSq = findProjection( rigidB2A ? (*rigidB2A)( bMeshVerts[i] ) : bMeshVerts[i], a, maxDistanceSq ).distSq;
             if ( distSq > init )
                 init = distSq;
         }           

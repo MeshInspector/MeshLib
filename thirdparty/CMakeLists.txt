@@ -9,9 +9,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas \
-       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
-# -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
+       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
+       -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations")
 
 IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -44,15 +44,11 @@ ELSE()
       message("Homebrew not found!")
       message( FATAL_ERROR "${CMD_ERROR} ${HOMEBREW_PREFIX}" )
     ENDIF()
-    # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
-    LINK_DIRECTORIES(${HOMEBREW_PREFIX}/lib)
-    set(CPPFLAGS "${CPPFLAGS} -I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
-    set(LDFLAGS "${LDFLAGS} -L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20 -stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
     target_link_libraries(imgui PRIVATE ${FREETYPE_LIBRARIES})
+  ELSE()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
   ENDIF()
 ENDIF()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable -Wno-unused-variable")
 
 IF(APPLE OR MR_EMSCRIPTEN)
  add_subdirectory(./expected ./expected)

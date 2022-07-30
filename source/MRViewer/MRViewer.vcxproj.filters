@@ -492,4 +492,12 @@
       <Filter>resource\object_icons\X3</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
+      <Filter>Fonts</Filter>
+    </Font>
+    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
+      <Filter>Fonts</Filter>
+    </Font>
+  </ItemGroup>
 </Project>

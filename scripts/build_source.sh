@@ -49,9 +49,13 @@ if [ "${NAME}" == "Ubuntu" ]; then
      MR_EMSCRIPTEN="OFF"
    fi
   fi
-  printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
+ fi
+else
+ if [ ! -n "$MR_EMSCRIPTEN" ]; then
+  MR_EMSCRIPTEN="OFF"
  fi
 fi
+printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then

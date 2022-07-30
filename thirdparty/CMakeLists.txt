@@ -9,9 +9,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas \
-       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing")
-# -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
+       -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
+       -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations")
 
 IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -19,15 +19,26 @@ IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
 ENDIF()
 
 #imgui build
-file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp")
-file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h")
+file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp" "./imgui/misc/freetype/*.cpp")
+file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h" "./imgui/misc/freetype/*.h")
 include_directories("../source/imgui/")
+include_directories("../thirdparty/imgui/")
 add_compile_definitions(IMGUI_USER_CONFIG=\"MRCustomImGuiConfig.h\")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable -Wno-unused-variable")
+add_compile_definitions(IMGUI_ENABLE_FREETYPE)
 add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})
+IF ( MR_EMSCRIPTEN )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
+ELSE()
+  find_package(Freetype REQUIRED)
+  include_directories(${FREETYPE_INCLUDE_DIRS})
+  IF(APPLE)
+    target_link_libraries(imgui PRIVATE ${FREETYPE_LIBRARIES})
+  ELSE()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
+  ENDIF()
+ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
- add_subdirectory(./expected ./expected)
 ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")

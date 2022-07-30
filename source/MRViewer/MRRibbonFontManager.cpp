@@ -49,34 +49,20 @@ float RibbonFontManager::getFontSizeByType( FontType type ) const
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-#ifdef _WIN32
-    // get windows font
-    wchar_t winDir[MAX_PATH];
-    GetWindowsDirectoryW( winDir, MAX_PATH );
-    std::filesystem::path winDirPath( winDir );
-    winDirPath /= "Fonts";
-    winDirPath /= "segoeui.ttf";
-    return winDirPath;
-#else
-    return {}; // we don't have windows font distributed with out app, so use default Dear ImGui font
-#endif
+    return  GetFontsDirectory() / "NotoSans-Regular.ttf";
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float scaling )
 {
     if ( type == FontType::Default )
     {
-#ifdef _WIN32
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( 0, -4 );
+        config.GlyphOffset = ImVec2( 0, -3 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
-#else
-        loadDefaultFont_( cDefaultFontSize * scaling );
-#endif // _WIN32
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::Icons )
@@ -90,49 +76,36 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Small )
     {
-#ifdef _WIN32
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( 0, -3 * scaling );
+        config.GlyphOffset = ImVec2( 0, -2 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cSmallFontSize * scaling,
             &config, ranges );
-#else
-        loadDefaultFont_( cSmallFontSize * scaling );
-#endif // _WIN32
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::SemiBold )
     {
-#ifdef _WIN32
         auto fontPath = getMenuFontPath();
-        fontPath = fontPath.parent_path() / "seguisb.ttf";
+        fontPath = fontPath.parent_path() / "NotoSans-SemiBold.ttf";
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( 0, -1 * scaling );
+        //config.GlyphOffset = ImVec2( 0, 0 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
-#else
-        // 3 offset to imitate seguisb.ttf behavior
-        loadDefaultFont_( cDefaultFontSize * scaling, 3 * scaling );
-#endif // _WIN32
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::Big )
     {
-#ifdef _WIN32
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( 0, -4 * scaling );
+        config.GlyphOffset = ImVec2( 0, -2 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cBigFontSize * scaling,
             &config, ranges );
-#else
-        loadDefaultFont_( cBigFontSize * scaling );
-#endif // _WIN32
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
 }

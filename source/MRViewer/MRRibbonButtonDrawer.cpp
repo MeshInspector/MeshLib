@@ -406,7 +406,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
             frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
             ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
             menuWindow->AutoPosLastDirection = ImGuiDir_Down;
-            ImRect rectOuter = ImGui::GetWindowAllowedExtentRect( menuWindow );
+            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
             ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
             ImGui::SetNextWindowPos( pos );
         }

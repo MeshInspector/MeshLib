@@ -36,6 +36,7 @@ if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
    if [[ $REPLY =~ ^[Ss]$ ]]; then
      MR_EMSCRIPTEN="ON"
      MR_EMSCRIPTEN_SINGLETHREAD=1
+   fi
   fi
  fi  
 fi

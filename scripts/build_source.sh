@@ -46,6 +46,7 @@ if [ "${NAME}" == "Ubuntu" ]; then
    if [[ $REPLY =~ ^[Ss]$ ]]; then
      MR_EMSCRIPTEN="ON"
      MR_EMSCRIPTEN_SINGLETHREAD=1
+   fi
   fi
  fi
 fi

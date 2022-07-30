@@ -626,7 +626,7 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushFont( &font );
         ImGui::Text( "Hot Key List" );
         ImGui::PopFont();
-        ImGui::Text( "" );
+        ImGui::NewLine();
         if ( shortcutManager_ )
         {
             const auto& shortcutsList = shortcutManager_->getShortcutList();

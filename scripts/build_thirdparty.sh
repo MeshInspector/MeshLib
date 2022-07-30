@@ -41,7 +41,9 @@ if [ "${NAME}" == "Ubuntu" ] && [ "${MR_STATE}" != "DOCKER_BUILD" ]; then
   fi
  fi  
 else
- MR_EMSCRIPTEN="OFF"
+ if [ ! -n "$MR_EMSCRIPTEN" ]; then
+  MR_EMSCRIPTEN="OFF"
+ fi
 fi
 printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
 

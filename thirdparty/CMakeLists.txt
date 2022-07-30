@@ -32,18 +32,6 @@ ELSE()
   find_package(Freetype REQUIRED)
   include_directories(${FREETYPE_INCLUDE_DIRS})
   IF(APPLE)
-    message("building for Apple")
-    execute_process(
-            COMMAND brew --prefix
-            RESULT_VARIABLE CMD_ERROR
-            OUTPUT_VARIABLE HOMEBREW_PREFIX
-             OUTPUT_STRIP_TRAILING_WHITESPACE)
-    IF(CMD_ERROR EQUAL 0 AND EXISTS "${HOMEBREW_PREFIX}")
-      message("Homebrew found. Prefix:${HOMEBREW_PREFIX} ")
-    ELSE()
-      message("Homebrew not found!")
-      message( FATAL_ERROR "${CMD_ERROR} ${HOMEBREW_PREFIX}" )
-    ENDIF()
     target_link_libraries(imgui PRIVATE ${FREETYPE_LIBRARIES})
   ELSE()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
@@ -51,7 +39,6 @@ ELSE()
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
- add_subdirectory(./expected ./expected)
 ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")

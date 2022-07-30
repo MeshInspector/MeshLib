@@ -34,6 +34,7 @@ if [[ $OSTYPE != 'darwin'* ]]; then
   fi
 fi
 
+MR_EMSCRIPTEN="OFF"
 MR_EMSCRIPTEN_SINGLETHREAD=0
 if [ "${NAME}" == "Ubuntu" ]; then
  if [ ! -n "$MR_EMSCRIPTEN" ]; then
@@ -45,13 +46,10 @@ if [ "${NAME}" == "Ubuntu" ]; then
    if [[ $REPLY =~ ^[Ss]$ ]]; then
      MR_EMSCRIPTEN="ON"
      MR_EMSCRIPTEN_SINGLETHREAD=1
-   else
-     MR_EMSCRIPTEN="OFF"
-   fi
   fi
-  printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
  fi
 fi
+printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then

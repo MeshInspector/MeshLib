@@ -222,7 +222,7 @@ static void addTrianglesSeqCore( MeshTopology& res, std::vector<Triangle>& tris,
     {
         for ( const auto & tri : tris )
         {
-            auto x = fa.add( res, tri.f, tri.v, tri.v + 3, allowNonManifoldEdge );
+            auto x = fa.add( res, tri.f, tri.v.data(), tri.v.data() + 3, allowNonManifoldEdge );
             if ( x == AddFaceResult::UnsafeTryLater )
                 nextPass.push_back( tri );
             else if ( x != AddFaceResult::Success )
@@ -470,7 +470,7 @@ struct IncidentVert {
     {}
 };
 
-using FaceToVerticesVector = Vector<std::array<VertId, 3>, FaceId>;
+using FaceToVerticesVector = Vector<ThreeVertIds, FaceId>;
 
 // to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 struct PathOverIncidentVert {
@@ -566,14 +566,14 @@ struct PathOverIncidentVert {
 
 // from Triangle vector: fill FaceToVerticesVector ( to find all vertices by FaceId),
 // fill and sort incidentVertVector by central vertex
-void preprocessTriangles( std::vector<Triangle>& tris, std::vector<IncidentVert>& incidentVertVector,
+void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<IncidentVert>& incidentVertVector,
                                      FaceToVerticesVector& faceToVertices )
 {
     incidentVertVector.reserve( 3 * tris.size() );
 
     size_t maxFaceId = tris.size();
     for ( auto& tr : tris )
-        maxFaceId = std::max( maxFaceId, static_cast< size_t >(tr.f.get()) + 1 );
+        maxFaceId = std::max( maxFaceId, size_t( tr.f ) + 1 );
 
     faceToVertices.resize( maxFaceId );
     for ( const auto& tr : tris )
@@ -581,9 +581,9 @@ void preprocessTriangles( std::vector<Triangle>& tris, std::vector<IncidentVert>
         if ( tr.v[0] == tr.v[1] || tr.v[1] == tr.v[2] || tr.v[2] == tr.v[0] )
             continue;
 
-        std::copy( std::begin( tr.v ), std::end( tr.v ), std::begin( faceToVertices[tr.f] ) );
+        faceToVertices[tr.f] = tr.v;
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( tr.f, i, tr.v[i]);
+            incidentVertVector.emplace_back( tr.f, i, tr.v[i] );
     }
 
     std::sort( incidentVertVector.begin(), incidentVertVector.end(),

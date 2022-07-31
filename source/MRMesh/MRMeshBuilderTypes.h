@@ -9,7 +9,7 @@ namespace MR
 namespace MeshBuilder
 {
 
-/// three vector3-coordinates describing a triangle
+/// three vector3-coordinates describing a triangle geometry
 using ThreePoints = std::array<Vector3f, 3>;
 
 /// mesh triangle represented by its three vertices and by its face ID
@@ -17,7 +17,7 @@ struct Triangle
 {
     Triangle() noexcept = default;
     Triangle( VertId a, VertId b, VertId c, FaceId f ) : f(f) { v[0] = a; v[1] = b; v[2] = c; }
-    VertId v[3];
+    ThreeVertIds v;
     FaceId f;
 
     bool operator==( const Triangle& other )const

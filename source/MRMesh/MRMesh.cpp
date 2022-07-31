@@ -773,7 +773,7 @@ TEST( MRMesh, BasicExport )
 {
     Mesh mesh = makeCube();
 
-    const std::vector<std::array<VertId, 3>> triangles = mesh.topology.getAllTriVerts();
+    const std::vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
 
     const std::vector<Vector3f> & points =  mesh.points.vec_;
     const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );

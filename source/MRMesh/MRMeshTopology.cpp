@@ -203,10 +203,10 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
-std::vector<std::array<VertId, 3>> MeshTopology::getAllTriVerts() const
+std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER
-    std::vector<std::array<VertId, 3>> res;
+    std::vector<ThreeVertIds> res;
     res.reserve( numValidFaces_ );
     for ( auto f : validFaces_ )
     {

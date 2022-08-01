@@ -27,7 +27,7 @@ struct FileDialogParameters : MR::FileParameters
     bool saveDialog{false};   // true for save dialog, false for open
 };
 
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__ ) && !defined( _WIN32 )
 const std::string cLastUsedDirKey = "lastUsedDir";
 
 std::string getCurrentFolder( const FileDialogParameters& params )

@@ -541,12 +541,13 @@ struct PathOverIncidentVert {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
         vertDup.srcVert = faceToVertices[vertexBegIt->f][vertexBegIt->cIdx];
+        assert( vertDup.srcVert == vertexBegIt->srcVert );
         if ( dups )
             dups->push_back( vertDup );
 
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt; it < vertexEndIt; ++it )
+            for ( auto it = vertexBegIt + lastUnvisitedIndex; it < vertexEndIt; ++it )
             {
                 size_t centalNum = it->cIdx;
                 size_t firstNum = ( centalNum + 1 ) % 3;
@@ -554,10 +555,13 @@ struct PathOverIncidentVert {
 
                 auto& vertices = faceToVertices[it->f];
 
-                if ( ( vertices[firstNum] == path[i - 1] || vertices[secondNum] == path[i - 1] ) &&
+                if ( vertices[centalNum] == vertDup.srcVert &&
+                     ( vertices[firstNum] == path[i - 1] || vertices[secondNum] == path[i - 1] ) &&
                      ( vertices[firstNum] == path[i] || vertices[secondNum] == path[i] ) )
                 {
                     vertices[it->cIdx] = vertDup.dupVert;
+                    it->srcVert = vertDup.dupVert;
+                    break;
                 }
             }
         }

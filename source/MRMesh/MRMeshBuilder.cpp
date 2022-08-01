@@ -222,7 +222,7 @@ static void addTrianglesSeqCore( MeshTopology& res, std::vector<Triangle>& tris,
     {
         for ( const auto & tri : tris )
         {
-            auto x = fa.add( res, tri.f, tri.v, tri.v + 3, allowNonManifoldEdge );
+            auto x = fa.add( res, tri.f, tri.v.data(), tri.v.data() + 3, allowNonManifoldEdge );
             if ( x == AddFaceResult::UnsafeTryLater )
                 nextPass.push_back( tri );
             else if ( x != AddFaceResult::Success )
@@ -470,7 +470,7 @@ struct IncidentVert {
     {}
 };
 
-using FaceToVerticesVector = Vector<std::array<VertId, 3>, FaceId>;
+using FaceToVerticesVector = Vector<ThreeVertIds, FaceId>;
 
 // to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 struct PathOverIncidentVert {
@@ -532,21 +532,22 @@ struct PathOverIncidentVert {
     }
 
     // duplicate the vertex around which the chain was found
-    void duplicateVertex( std::vector<VertId>& path, int& newVertIndex,
+    void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
                           std::vector<VertDuplication>* dups = nullptr )
     {
         if ( path.front() != path.back() )
             return;
 
         VertDuplication vertDup;
-        vertDup.dupVert = VertId( ++newVertIndex );
+        vertDup.dupVert = ++lastUsedVertId;
         vertDup.srcVert = faceToVertices[vertexBegIt->f][vertexBegIt->cIdx];
+        assert( vertDup.srcVert == vertexBegIt->srcVert );
         if ( dups )
             dups->push_back( vertDup );
 
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt; it < vertexEndIt; ++it )
+            for ( auto it = vertexBegIt + lastUnvisitedIndex; it < vertexEndIt; ++it )
             {
                 size_t centalNum = it->cIdx;
                 size_t firstNum = ( centalNum + 1 ) % 3;
@@ -554,10 +555,13 @@ struct PathOverIncidentVert {
 
                 auto& vertices = faceToVertices[it->f];
 
-                if ( ( vertices[firstNum] == path[i - 1] || vertices[secondNum] == path[i - 1] ) &&
+                if ( vertices[centalNum] == vertDup.srcVert &&
+                     ( vertices[firstNum] == path[i - 1] || vertices[secondNum] == path[i - 1] ) &&
                      ( vertices[firstNum] == path[i] || vertices[secondNum] == path[i] ) )
                 {
                     vertices[it->cIdx] = vertDup.dupVert;
+                    it->srcVert = vertDup.dupVert;
+                    break;
                 }
             }
         }
@@ -566,14 +570,14 @@ struct PathOverIncidentVert {
 
 // from Triangle vector: fill FaceToVerticesVector ( to find all vertices by FaceId),
 // fill and sort incidentVertVector by central vertex
-void preprocessTriangles( std::vector<Triangle>& tris, std::vector<IncidentVert>& incidentVertVector,
+void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<IncidentVert>& incidentVertVector,
                                      FaceToVerticesVector& faceToVertices )
 {
     incidentVertVector.reserve( 3 * tris.size() );
 
     size_t maxFaceId = tris.size();
     for ( auto& tr : tris )
-        maxFaceId = std::max( maxFaceId, static_cast< size_t >(tr.f.get()) + 1 );
+        maxFaceId = std::max( maxFaceId, size_t( tr.f ) + 1 );
 
     faceToVertices.resize( maxFaceId );
     for ( const auto& tr : tris )
@@ -581,9 +585,9 @@ void preprocessTriangles( std::vector<Triangle>& tris, std::vector<IncidentVert>
         if ( tr.v[0] == tr.v[1] || tr.v[1] == tr.v[2] || tr.v[2] == tr.v[0] )
             continue;
 
-        std::copy( std::begin( tr.v ), std::end( tr.v ), std::begin( faceToVertices[tr.f] ) );
+        faceToVertices[tr.f] = tr.v;
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( tr.f, i, tr.v[i]);
+            incidentVertVector.emplace_back( tr.f, i, tr.v[i] );
     }
 
     std::sort( incidentVertVector.begin(), incidentVertVector.end(),
@@ -611,44 +615,26 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
     }
 }
 
-// all IncidentVert in [posBegin, posEnd) have the same central vertex
-size_t getIntervalEndIndex( const std::vector<IncidentVert>& incidentItemsVector,
-                            const FaceToVerticesVector& faceToVertices,
-                            size_t posBegin)
-{
-    size_t posEnd = posBegin + 1;
-    auto prev = incidentItemsVector[posBegin];
-    if ( posEnd < incidentItemsVector.size() )
-    {
-        auto curr = incidentItemsVector[posEnd];
-        while ( posEnd < incidentItemsVector.size() &&
-            faceToVertices[prev.f][prev.cIdx] == faceToVertices[curr.f][curr.cIdx] )
-        {
-            ++posEnd;
-            if ( posEnd < incidentItemsVector.size() )
-                curr = incidentItemsVector[posEnd];
-        }
-    }
-    return posEnd;
-}
-
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<VertDuplication>* dups )
 {
     MR_TIMER
+    if ( tris.empty() )
+        return 0;
+
     FaceToVerticesVector faceToVertices;
     std::vector<IncidentVert> incidentItemsVector;
     preprocessTriangles( tris, incidentItemsVector, faceToVertices );
 
-    auto lastIt = incidentItemsVector.rbegin();
-    int maxIndex = faceToVertices[lastIt->f][lastIt->cIdx];
+    auto lastUsedVertId = incidentItemsVector.back().srcVert;
 
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
     {
-        posBegin = posEnd;
-        posEnd = getIntervalEndIndex( incidentItemsVector, faceToVertices, posBegin );
+        posBegin = posEnd++;
+        while ( posEnd < incidentItemsVector.size() && incidentItemsVector[posBegin].srcVert == incidentItemsVector[posEnd].srcVert )
+            ++posEnd;
         PathOverIncidentVert incidentItems( faceToVertices, incidentItemsVector, posBegin, posEnd );
 
         size_t foundedPathCnt = 0;
@@ -681,7 +667,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                     // if not first connected sequence found
                     if ( foundedPathCnt > 0 )
                     {
-                        incidentItems.duplicateVertex( closedPath, maxIndex, dups );
+                        incidentItems.duplicateVertex( closedPath, lastUsedVertId, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundedPathCnt;
@@ -693,10 +679,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
     }
     // save modified vertices
     for ( auto& tr : tris )
-    {
-        const auto& vert = faceToVertices[tr.f];
-        std::copy( std::begin( vert ), std::end( vert ), std::begin( tr.v ) );
-    }
+        tr.v = faceToVertices[tr.f];
     return duplicatedVerticesCnt;
 }
 

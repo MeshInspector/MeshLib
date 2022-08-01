@@ -20,6 +20,7 @@
     #endif
 #endif
 
+#include <array>
 #include <vector>
 #include <parallel_hashmap/phmap_fwd_decl.h>
 
@@ -56,6 +57,9 @@ using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 class ViewportId;
 class ViewportMask;
+
+/// three vertex ids describing a triangle topology
+using ThreeVertIds = std::array<VertId, 3>;
 
 using EdgePath = std::vector<EdgeId>;
 using EdgeLoop = std::vector<EdgeId>;

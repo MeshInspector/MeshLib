@@ -18,11 +18,10 @@
 #include "MRViewerInstance.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRViewer/MRAppendHistory.h"
 
 namespace MR
 {
-
-
 
 tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
@@ -87,6 +86,8 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
 tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                         ProgressCallback callback )
 {
+    if ( callback && !callback( 0.f ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
 
     tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
 

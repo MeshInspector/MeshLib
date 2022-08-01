@@ -369,24 +369,25 @@ void ImGuiMenu::rescaleStyle_()
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
-    capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
     return ImGui::GetIO().WantCaptureMouse;
 }
 
-bool ImGuiMenu::onMouseUp_( Viewer::MouseButton, int )
+bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
 {
-    return capturedMouse_;
+    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
-bool ImGuiMenu::onMouseMove_(int /*mouse_x*/, int /*mouse_y*/)
+bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 {
-  return ImGui::GetIO().WantCaptureMouse;
+    ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
-  ImGui_ImplGlfw_ScrollCallback(viewer->window, 0.f, delta_y);
-  return ImGui::GetIO().WantCaptureMouse;
+    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 // Keyboard IO

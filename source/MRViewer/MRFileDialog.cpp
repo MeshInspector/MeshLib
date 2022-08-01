@@ -1,5 +1,7 @@
 #include "MRFileDialog.h"
+#include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <clocale>
@@ -24,6 +26,24 @@ struct FileDialogParameters : MR::FileParameters
     bool multiselect{true};   // open dialog only
     bool saveDialog{false};   // true for save dialog, false for open
 };
+
+const std::string cLastUsedDirKey = "lastUsedDir";
+
+std::string getCurrentFolder( const FileDialogParameters& params )
+{
+    if ( !params.baseFolder.empty() )
+        return params.baseFolder;
+
+    auto& cfg = MR::Config::instance();
+    if ( cfg.hasJsonValue( cLastUsedDirKey ) )
+    {
+        auto lastUsedDir = cfg.getJsonValue( cLastUsedDirKey );
+        if ( lastUsedDir.isString() )
+            return lastUsedDir.asString();
+    }
+
+    return MR::GetHomeDirectory();
+}
 
 #ifdef  _WIN32
 std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
@@ -207,8 +227,8 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         dialog.add_filter( filterText );
     }
 
-    if ( !params.baseFolder.empty() )
-        dialog.set_current_folder( params.baseFolder.string() );
+    dialog.set_current_folder( getCurrentFolder( params ) );
+
     if ( !params.fileName.empty() )
         dialog.set_current_name( params.fileName );
 
@@ -234,6 +254,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
                 }
                 results.emplace_back( std::move( filepath ) );
             }
+
+            auto& cfg = MR::Config::instance();
+            cfg.setJsonValue( cLastUsedDirKey, dialog.get_current_folder() );
         }
         else if ( responseId != Gtk::RESPONSE_CANCEL )
         {

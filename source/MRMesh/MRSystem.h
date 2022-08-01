@@ -34,6 +34,9 @@ MRMESH_API std::filesystem::path getUserConfigFilePath();
 // returns temp directory
 MRMESH_API std::filesystem::path GetTempDirectory();
 
+// returns home directory
+MRMESH_API std::filesystem::path GetHomeDirectory();
+
 // returns data in clipboard
 MRMESH_API std::string GetClipboardText();
 

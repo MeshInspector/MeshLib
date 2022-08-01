@@ -9,16 +9,18 @@ namespace MR
 namespace MeshLoad
 {
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects )
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+                                                                    ProgressCallback callback )
 {
     std::ifstream in( file );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromSceneObjFile( in, combineAllObjects );
+    return fromSceneObjFile( in, combineAllObjects, callback );
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects )
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects,
+                                                                    ProgressCallback callback )
 {
     MR_TIMER
 
@@ -53,6 +55,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         }
         currentObjName.clear();
     };
+
+    auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    auto posEnd = in.tellg();
+    in.seekg( posStart );
+    float streamSize = float( posEnd - posStart );
+    int lastProcent{ 0 };
 
     for ( ;; )
     {
@@ -111,6 +120,16 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             // skip unknown line
             std::string str;
             std::getline( in, str );
+        }
+        if ( callback )
+        {
+            int procent = int( ( in.tellg() - posStart ) / streamSize * 100 );
+            if ( procent != lastProcent )
+            {
+                lastProcent = procent;
+                if ( !callback( procent / 100.f ) )
+                    return tl::make_unexpected( std::string( "Loading canceled" ));
+            }
         }
         if ( in.eof() )
             break;

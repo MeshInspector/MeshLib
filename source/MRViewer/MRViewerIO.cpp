@@ -13,9 +13,11 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMenu.h"
-#include "MRAppendHistory.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRMeshLoadObj.h"
+#include "MRViewerInstance.h"
+#include "MRViewer/MRViewer.h"
+#include "MRMesh/MRObjectLoad.h"
 
 namespace MR
 {
@@ -78,6 +80,96 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
 
     if ( result.has_value() )
         getViewerInstance().recentFilesStore.storeFile( filename );
+    else
+        spdlog::error( result.error() );
+
+    return result;
+}
+
+tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
+                                                                                        ProgressCallback callback )
+{
+
+    tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+
+    auto ext = filename.extension().u8string();
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+
+    if ( ext == u8".obj" )
+    {
+        auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
+        if ( res.has_value() )
+        {
+            std::vector<std::shared_ptr<Object>> objects( res.value().size() );
+            auto& resValue = *res;
+            for ( int i = 0; i < objects.size(); ++i )
+            {
+                std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
+                if ( resValue[i].name.empty() )
+                    objectMesh->setName( utf8string( filename.stem() ) );
+                else
+                    objectMesh->setName( std::move( resValue[i].name ) );
+                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
+                objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+            }
+            result = objects;
+        }
+        else
+            result = tl::make_unexpected( res.error() );
+    }
+    else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
+    {
+        auto res = deserializeObjectTree( filename );
+        if ( res.has_value() )
+        {
+            result = std::vector( { *res } );
+        }
+        else
+            result = tl::make_unexpected( res.error() );
+    }
+    else
+    {
+        auto objectMesh = makeObjectMeshFromFile( filename );
+        if ( objectMesh.has_value() )
+        {
+            objectMesh->select( true );
+            auto obj = std::make_shared<ObjectMesh>( std::move( *objectMesh ) );
+            result = { obj };
+        }
+        else
+        {
+            result = tl::make_unexpected( objectMesh.error() );
+
+            auto objectPoints = makeObjectPointsFromFile( filename );
+            if ( objectPoints.has_value() )
+            {
+                objectPoints->select( true );
+                auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
+                result = { obj };
+            }
+            else if ( result.error() == "unsupported file extension" )
+            {
+                result = tl::make_unexpected( objectPoints.error() );
+
+                auto objectLines = makeObjectLinesFromFile( filename );
+                if ( objectLines.has_value() )
+                {
+                    objectLines->select( true );
+                    auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
+                    result = { obj };
+                }
+                else if ( result.error() == "unsupported file extension" )
+                {
+                    result = tl::make_unexpected( objectLines.error() );
+                }
+            }
+        }
+    }
+
+    if ( result.has_value() )
+        getViewerInstance().onSceneSaved( filename );
     else
         spdlog::error( result.error() );
 

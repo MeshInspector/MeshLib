@@ -66,6 +66,7 @@
     <ClCompile Include="MRViewportGL.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="imgui_impl_opengl3_loader.h" />
     <ClInclude Include="MRAlphaSortGL.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />

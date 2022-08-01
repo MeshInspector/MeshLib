@@ -425,6 +425,9 @@
     <ClInclude Include="MRViewerIO.h">
       <Filter>IO</Filter>
     </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3_loader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -453,6 +456,8 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="MRDarkTheme.json" />
     <CopyFileToFolders Include="MRLightTheme.json" />
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf" />
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\object_icons\X1\Object.png">
@@ -491,13 +496,5 @@
     <Image Include="resource\object_icons\X3\ObjectVoxels.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
-      <Filter>Fonts</Filter>
-    </Font>
-    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
-      <Filter>Fonts</Filter>
-    </Font>
   </ItemGroup>
 </Project>

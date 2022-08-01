@@ -78,9 +78,7 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
     }
 #endif
 
-    if ( result.has_value() )
-        getViewerInstance().recentFilesStore.storeFile( filename );
-    else
+    if ( !result.has_value() )
         spdlog::error( result.error() );
 
     return result;
@@ -168,9 +166,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         }
     }
 
-    if ( result.has_value() )
-        getViewerInstance().recentFilesStore.storeFile( filename );
-    else
+    if ( !result.has_value() )
         spdlog::error( result.error() );
 
     return result;

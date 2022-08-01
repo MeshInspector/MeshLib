@@ -9,8 +9,8 @@
 #include <MRMesh/MRToFromEigen.h>
 #include "ImGuiMenu.h"
 #include "MRMeshViewer.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 #include "imgui_fonts_droid_sans.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRVisualObject.h"
@@ -323,6 +323,11 @@ void ImGuiMenu::preDraw_()
       // needed for dear ImGui
       ImGui::GetIO().DisplaySize = ImVec2( float( viewer->window_width ), float( viewer->window_height ) );
   }
+  auto& style = ImGui::GetStyle();
+  if ( storedError_.empty() )
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.8f, 0.8f, 0.8f, 0.5f );
+  else
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
   ImGui::NewFrame();
 }
 

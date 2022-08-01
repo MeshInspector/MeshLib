@@ -11,6 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\thirdparty\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="..\..\thirdparty\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="..\..\thirdparty\imgui\backends\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="..\..\thirdparty\imgui\imconfig.h" />
     <ClInclude Include="..\..\thirdparty\imgui\imgui.h" />
     <ClInclude Include="..\..\thirdparty\imgui\imgui_internal.h" />
@@ -21,6 +24,8 @@
     <ClInclude Include="MRCustomImGuiConfig.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\thirdparty\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\thirdparty\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\..\thirdparty\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\thirdparty\imgui\misc\cpp\imgui_stdlib.cpp" />
     <ClCompile Include="..\..\thirdparty\imgui\imgui.cpp" />

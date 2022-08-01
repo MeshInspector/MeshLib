@@ -67,12 +67,6 @@
     <ClCompile Include="ImGuiMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MROpen.cpp">
       <Filter>Plugins</Filter>
     </ClCompile>
@@ -232,12 +226,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiTraits.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMenu.h">
@@ -424,9 +412,6 @@
     </ClInclude>
     <ClInclude Include="MRViewerIO.h">
       <Filter>IO</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3_loader.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

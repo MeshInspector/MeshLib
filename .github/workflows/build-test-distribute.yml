@@ -51,7 +51,6 @@ jobs:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
-    needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
 
   versioning-and-release-url:

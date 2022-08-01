@@ -27,6 +27,7 @@ struct FileDialogParameters : MR::FileParameters
     bool saveDialog{false};   // true for save dialog, false for open
 };
 
+#ifndef __EMSCRIPTEN__
 const std::string cLastUsedDirKey = "lastUsedDir";
 
 std::string getCurrentFolder( const FileDialogParameters& params )
@@ -44,6 +45,7 @@ std::string getCurrentFolder( const FileDialogParameters& params )
 
     return MR::GetHomeDirectory().string();
 }
+#endif
 
 #ifdef  _WIN32
 std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
@@ -198,6 +200,7 @@ std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false
         return "Save Folder";
     }
     assert( false );
+    return {};
 }
 
 std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params = {} )
@@ -275,7 +278,7 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 #endif // __APPLE__
 
     return results;
-};
+}
 #endif
 #endif
 }

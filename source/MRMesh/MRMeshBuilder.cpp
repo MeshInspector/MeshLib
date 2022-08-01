@@ -535,9 +535,6 @@ struct PathOverIncidentVert {
     void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
                           std::vector<VertDuplication>* dups = nullptr )
     {
-        if ( path.front() != path.back() )
-            return;
-
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
         vertDup.srcVert = faceToVertices[vertexBegIt->f][vertexBegIt->cIdx];

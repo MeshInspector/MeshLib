@@ -699,14 +699,14 @@ void ImGuiMenu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysData[GLFW_KEY_ENTER].DownDuration == 0.0f )
+        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysData[GLFW_KEY_ESCAPE].DownDuration == 0.0f )
+        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ESCAPE ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -733,7 +733,7 @@ void ImGuiMenu::draw_helpers()
 
         ImGui::Spacing();
         ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysData[GLFW_KEY_ENTER].DownDuration == 0.0f ||
+        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            

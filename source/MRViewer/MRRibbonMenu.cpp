@@ -622,6 +622,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImRect tabRect( basePos, tabBbMaxPoint );
         std::string strId = "##" + tabStr + "TabId"; // TODO_store: add to some store at the beginning not to calc each time
         auto tabId = window->GetID( strId.c_str() );
+        ImGui::ItemAdd( tabRect, tabId );
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
         if ( pressed )

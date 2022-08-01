@@ -169,7 +169,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
     }
 
     if ( result.has_value() )
-        getViewerInstance().onSceneSaved( filename );
+        getViewerInstance().recentFilesStore.storeFile( filename );
     else
         spdlog::error( result.error() );
 

@@ -32,7 +32,7 @@ const std::string cLastUsedDirKey = "lastUsedDir";
 std::string getCurrentFolder( const FileDialogParameters& params )
 {
     if ( !params.baseFolder.empty() )
-        return params.baseFolder;
+        return params.baseFolder.string();
 
     auto& cfg = MR::Config::instance();
     if ( cfg.hasJsonValue( cLastUsedDirKey ) )
@@ -42,7 +42,7 @@ std::string getCurrentFolder( const FileDialogParameters& params )
             return lastUsedDir.asString();
     }
 
-    return MR::GetHomeDirectory();
+    return MR::GetHomeDirectory().string();
 }
 
 #ifdef  _WIN32

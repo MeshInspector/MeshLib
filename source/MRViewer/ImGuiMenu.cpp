@@ -9,8 +9,8 @@
 #include <MRMesh/MRToFromEigen.h>
 #include "ImGuiMenu.h"
 #include "MRMeshViewer.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 #include "imgui_fonts_droid_sans.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRVisualObject.h"
@@ -323,6 +323,11 @@ void ImGuiMenu::preDraw_()
       // needed for dear ImGui
       ImGui::GetIO().DisplaySize = ImVec2( float( viewer->window_width ), float( viewer->window_height ) );
   }
+  auto& style = ImGui::GetStyle();
+  if ( storedError_.empty() )
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.8f, 0.8f, 0.8f, 0.5f );
+  else
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
   ImGui::NewFrame();
 }
 
@@ -369,24 +374,25 @@ void ImGuiMenu::rescaleStyle_()
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
-    capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
     return ImGui::GetIO().WantCaptureMouse;
 }
 
-bool ImGuiMenu::onMouseUp_( Viewer::MouseButton, int )
+bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
 {
-    return capturedMouse_;
+    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
-bool ImGuiMenu::onMouseMove_(int /*mouse_x*/, int /*mouse_y*/)
+bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 {
-  return ImGui::GetIO().WantCaptureMouse;
+    ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
-  ImGui_ImplGlfw_ScrollCallback(viewer->window, 0.f, delta_y);
-  return ImGui::GetIO().WantCaptureMouse;
+    ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 // Keyboard IO
@@ -626,7 +632,7 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushFont( &font );
         ImGui::Text( "Hot Key List" );
         ImGui::PopFont();
-        ImGui::Text( "" );
+        ImGui::NewLine();
         if ( shortcutManager_ )
         {
             const auto& shortcutsList = shortcutManager_->getShortcutList();
@@ -699,14 +705,14 @@ void ImGuiMenu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f )
+        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ESCAPE] == 0.0f )
+        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ESCAPE ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -733,7 +739,7 @@ void ImGuiMenu::draw_helpers()
 
         ImGui::Spacing();
         ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::GetIO().KeysDownDuration[GLFW_KEY_ENTER] == 0.0f ||
+        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            

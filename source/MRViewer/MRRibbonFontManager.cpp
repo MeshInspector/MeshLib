@@ -91,7 +91,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         fontPath = fontPath.parent_path() / "NotoSans-SemiBold.ttf";
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        //config.GlyphOffset = ImVec2( 0, 0 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
@@ -102,7 +101,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
-        config.GlyphOffset = ImVec2( 0, -2 * scaling );
+        config.GlyphOffset = ImVec2( 0, -4 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cBigFontSize * scaling,
             &config, ranges );

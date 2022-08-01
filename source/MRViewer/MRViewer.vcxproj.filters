@@ -67,12 +67,6 @@
     <ClCompile Include="ImGuiMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MROpen.cpp">
       <Filter>Plugins</Filter>
     </ClCompile>
@@ -232,12 +226,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiTraits.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_impl_opengl3.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMenu.h">
@@ -453,6 +441,8 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="MRDarkTheme.json" />
     <CopyFileToFolders Include="MRLightTheme.json" />
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf" />
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\object_icons\X1\Object.png">
@@ -491,13 +481,5 @@
     <Image Include="resource\object_icons\X3\ObjectVoxels.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
-      <Filter>Fonts</Filter>
-    </Font>
-    <Font Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
-      <Filter>Fonts</Filter>
-    </Font>
   </ItemGroup>
 </Project>

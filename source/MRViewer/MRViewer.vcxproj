@@ -15,8 +15,6 @@
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="MRAsyncTimer.cpp" />
     <ClCompile Include="MRColorTheme.cpp" />
     <ClCompile Include="MRCommandLoop.cpp" />
@@ -73,8 +71,6 @@
     <ClInclude Include="ImGuiMenu.h" />
     <ClInclude Include="ImGuiTraits.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
-    <ClInclude Include="imgui_impl_glfw.h" />
-    <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="MRAsyncTimer.h" />
     <ClInclude Include="MRColorTheme.h" />
     <ClInclude Include="MRCommandLoop.h" />

@@ -320,7 +320,7 @@ void RibbonMenu::drawSearchButton_()
             frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
             ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
             menuWindow->AutoPosLastDirection = ImGuiDir_Down;
-            ImRect rectOuter = ImGui::GetWindowAllowedExtentRect( menuWindow );
+            ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
             ImVec2 pos = ImGui::FindBestWindowPosForPopupEx( frame.GetBL(), expectedSize, &menuWindow->AutoPosLastDirection, rectOuter, frame, ImGuiPopupPositionPolicy_ComboBox );
             ImGui::SetNextWindowPos( pos );
         }
@@ -622,6 +622,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImRect tabRect( basePos, tabBbMaxPoint );
         std::string strId = "##" + tabStr + "TabId"; // TODO_store: add to some store at the beginning not to calc each time
         auto tabId = window->GetID( strId.c_str() );
+        ImGui::ItemAdd( tabRect, tabId );
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
         if ( pressed )

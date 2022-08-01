@@ -46,7 +46,7 @@ public:
 
     using DropItemsList = std::vector<std::shared_ptr<RibbonMenuItem>>;
 
-    // set drop list by founded in RibbonSchema items
+    // set drop list by found in RibbonSchema items
     // !note also set type_ to ButtonWithDrop
     MRVIEWER_API void setDropItemsFromItemList( const MenuItemsList& itemsList );
 

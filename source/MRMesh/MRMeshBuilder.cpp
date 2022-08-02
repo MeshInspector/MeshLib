@@ -459,13 +459,11 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
 // two incident vertices can be found using this struct
 struct IncidentVert {
     FaceId f; // to find triangle in triangleToVertices vector
-    int cIdx = 0; // index of the central vertex in Triangle.v vector
-    VertId srcVert; // used only for sort to speed up all search 
+    VertId srcVert; // central vertex, used for sorting triangles per their incident vertices
     // the vertices of the triangle can be upgraded, so no reason to store VertId!
 
-    IncidentVert( FaceId f, int cIdx, VertId srcVert )
+    IncidentVert( FaceId f, VertId srcVert )
         : f(f)
-        , cIdx(cIdx)
         , srcVert( srcVert )
     {}
 };
@@ -496,7 +494,11 @@ struct PathOverIncidentVert {
     // first unvisited vertex
     VertId getFirstVertex() const
     {
-        return faceToVertices[vertexBegIt->f][( vertexBegIt->cIdx + 1 ) % 3];
+        for ( auto v : faceToVertices[vertexBegIt->f] )
+            if ( v != vertexBegIt->srcVert )
+                return v;
+        assert( false );
+        return {};
     }
 
     // find incident unvisited vertex 
@@ -507,18 +509,16 @@ struct PathOverIncidentVert {
 
         for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
         {
-            const auto& vertices = faceToVertices[it->f];
             VertId nextVertex( -1 );
             bool isIncident = false;
-            for ( size_t i = 0; i < 3; ++i )
+            for ( auto vi : faceToVertices[it->f] )
             {
-                if ( i != it->cIdx )
-                {
-                    if ( vertices[i] != v )
-                        nextVertex = vertices[i];
-                    else
-                        isIncident = true;
-                }
+                if ( vi == it->srcVert )
+                    continue;
+                if ( vi != v )
+                    nextVertex = vi;
+                else
+                    isIncident = true;
             }
             if ( isIncident && nextVertex.valid() )
             {
@@ -528,7 +528,7 @@ struct PathOverIncidentVert {
             }
 
         }
-        return VertId( -1 );
+        return {};
     }
 
     // duplicate the vertex around which the chain was found
@@ -537,8 +537,7 @@ struct PathOverIncidentVert {
     {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = faceToVertices[vertexBegIt->f][vertexBegIt->cIdx];
-        assert( vertDup.srcVert == vertexBegIt->srcVert );
+        vertDup.srcVert = vertexBegIt->srcVert;
         if ( dups )
             dups->push_back( vertDup );
 
@@ -546,17 +545,31 @@ struct PathOverIncidentVert {
         {
             for ( auto it = vertexBegIt + lastUnvisitedIndex; it < vertexEndIt; ++it )
             {
-                size_t centalNum = it->cIdx;
-                size_t firstNum = ( centalNum + 1 ) % 3;
-                size_t secondNum = ( centalNum + 2 ) % 3;
-
-                auto& vertices = faceToVertices[it->f];
-
-                if ( vertices[centalNum] == vertDup.srcVert &&
-                     ( vertices[firstNum] == path[i - 1] || vertices[secondNum] == path[i - 1] ) &&
-                     ( vertices[firstNum] == path[i] || vertices[secondNum] == path[i] ) )
+                VertId v1, v2;
+                bool alreadyDuplicted = true;
+                for ( VertId vi : faceToVertices[it->f] )
                 {
-                    vertices[it->cIdx] = vertDup.dupVert;
+                    if ( vi == vertDup.srcVert )
+                        alreadyDuplicted = false;
+                    else if ( !v1 )
+                        v1 = vi;
+                    else if ( !v2 )
+                        v2 = vi;
+                }
+                if ( alreadyDuplicted )
+                    continue;
+                assert( v1 && v2 );
+
+                if ( ( v1 == path[i - 1] || v2 == path[i - 1] ) &&
+                     ( v1 == path[i] || v2 == path[i] ) )
+                {
+                    for ( VertId & vi : faceToVertices[it->f] )
+                    {
+                        if ( vi != vertDup.srcVert )
+                            continue;
+                        vi = vertDup.dupVert;
+                        break;
+                    }
                     it->srcVert = vertDup.dupVert;
                     break;
                 }
@@ -584,7 +597,7 @@ void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<Inciden
 
         faceToVertices[tr.f] = tr.v;
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( tr.f, i, tr.v[i] );
+            incidentVertVector.emplace_back( tr.f, tr.v[i] );
     }
 
     std::sort( incidentVertVector.begin(), incidentVertVector.end(),

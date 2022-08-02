@@ -478,6 +478,7 @@ struct PathOverIncidentVert {
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
     std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
+    VertBitSet visitedVertices;
 
     PathOverIncidentVert( FaceToVerticesVector& triangleToVertices,
                 std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
@@ -485,6 +486,7 @@ struct PathOverIncidentVert {
         , vertexBegIt( incidentItemsVector.begin() + beg )
         , vertexEndIt( incidentItemsVector.begin() + end )
         , lastUnvisitedIndex( end - beg )
+        , visitedVertices( incidentItemsVector.back().srcVert )
     {}
 
     // false if there are some unvisited vertices
@@ -494,9 +496,11 @@ struct PathOverIncidentVert {
     }
 
     // first unvisited vertex
-    VertId getFirstVertex() const
+    VertId getFirstVertex()
     {
-        return faceToVertices[vertexBegIt->f][( vertexBegIt->cIdx + 1 ) % 3];
+        auto v = faceToVertices[vertexBegIt->f][( vertexBegIt->cIdx + 1 ) % 3];
+        markVertexVisited(v);
+        return v;
     }
 
     // find incident unvisited vertex 
@@ -524,11 +528,44 @@ struct PathOverIncidentVert {
             {
                 --lastUnvisitedIndex;
                 std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
+                markVertexVisited(nextVertex);
                 return nextVertex;
             }
 
         }
         return VertId( -1 );
+    }
+
+    // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
+    void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
+    {
+        auto lastVertex = path.back();
+        for ( size_t i = 0; i < path.size(); ++i )
+        {
+            if ( path[i] == lastVertex )
+            {
+                closedPath.reserve( path.size() - i );
+                closedPath.insert( closedPath.end(), std::make_move_iterator( path.begin() + i ),
+                                                     std::make_move_iterator( path.end() ) );
+
+                path.resize(i);
+                break;
+            }
+        }
+        for ( const auto& v : closedPath )
+            visitedVertices.reset( v );
+    }
+
+    void markVertexVisited( const VertId& v)
+    {
+        if ( visitedVertices.size() <= v )
+            visitedVertices.resize( v + 64 );
+        visitedVertices.set( v );
+    }
+
+    bool wasVisited( const VertId& v )
+    {
+        return visitedVertices.test( v );
     }
 
     // duplicate the vertex around which the chain was found
@@ -594,23 +631,6 @@ void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<Inciden
     } );
 }
 
-// path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
-void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
-{
-    auto lastVertex = path.back();
-    for ( size_t i = 0; i < path.size(); ++i )
-    {
-        if ( path[i] == lastVertex )
-        {
-            closedPath.reserve( path.size() - i );
-            closedPath.insert( closedPath.end(), std::make_move_iterator( path.begin() + i ),
-                                                 std::make_move_iterator( path.end() ) );
-
-            path.resize(i);
-            break;
-        }
-    }
-}
 
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<VertDuplication>* dups )
@@ -668,12 +688,12 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                 }
 
                 // returned to already visited vertex
-                if ( std::find(path.begin(), path.end(), nextVertex ) != path.end() )
+                if ( incidentItems.wasVisited(nextVertex) )
                 {
                     // save only closed path and prepare for new search starting with non-manifold vertex
                     path.push_back( nextVertex );
                     std::vector<VertId> closedPath;
-                    extractClosedPath( path, closedPath );
+                    incidentItems.extractClosedPath( path, closedPath );
 
                     if ( foundChains )
                     {

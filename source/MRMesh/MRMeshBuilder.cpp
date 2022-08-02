@@ -460,7 +460,7 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
 struct IncidentVert {
     FaceId f; // to find triangle in triangleToVertices vector
     int cIdx = 0; // index of the central vertex in Triangle.v vector
-    VertId srcVert; // used only for sort to speed up all search 
+    VertId srcVert; // used only for sort to speed up all search
     // the vertices of the triangle can be upgraded, so no reason to store VertId!
 
     IncidentVert( FaceId f, int cIdx, VertId srcVert )
@@ -478,7 +478,6 @@ struct PathOverIncidentVert {
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
     std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
-    VertBitSet visitedVertices;
 
     PathOverIncidentVert( FaceToVerticesVector& triangleToVertices,
                 std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
@@ -486,7 +485,6 @@ struct PathOverIncidentVert {
         , vertexBegIt( incidentItemsVector.begin() + beg )
         , vertexEndIt( incidentItemsVector.begin() + end )
         , lastUnvisitedIndex( end - beg )
-        , visitedVertices( incidentItemsVector.back().srcVert )
     {}
 
     // false if there are some unvisited vertices
@@ -496,14 +494,12 @@ struct PathOverIncidentVert {
     }
 
     // first unvisited vertex
-    VertId getFirstVertex()
+    VertId getFirstVertex() const
     {
-        auto v = faceToVertices[vertexBegIt->f][( vertexBegIt->cIdx + 1 ) % 3];
-        markVertexVisited(v);
-        return v;
+        return faceToVertices[vertexBegIt->f][( vertexBegIt->cIdx + 1 ) % 3];
     }
 
-    // find incident unvisited vertex 
+    // find incident unvisited vertex
     VertId getNextIncidentVertex( VertId v )
     {
         if ( lastUnvisitedIndex <= 0 )
@@ -528,44 +524,11 @@ struct PathOverIncidentVert {
             {
                 --lastUnvisitedIndex;
                 std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
-                markVertexVisited(nextVertex);
                 return nextVertex;
             }
 
         }
         return VertId( -1 );
-    }
-
-    // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
-    void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
-    {
-        auto lastVertex = path.back();
-        for ( size_t i = 0; i < path.size(); ++i )
-        {
-            if ( path[i] == lastVertex )
-            {
-                closedPath.reserve( path.size() - i );
-                closedPath.insert( closedPath.end(), std::make_move_iterator( path.begin() + i ),
-                                                     std::make_move_iterator( path.end() ) );
-
-                path.resize(i);
-                break;
-            }
-        }
-        for ( const auto& v : closedPath )
-            visitedVertices.reset( v );
-    }
-
-    void markVertexVisited( const VertId& v)
-    {
-        if ( visitedVertices.size() <= v )
-            visitedVertices.resize( v + 64 );
-        visitedVertices.set( v );
-    }
-
-    bool wasVisited( const VertId& v )
-    {
-        return visitedVertices.test( v );
     }
 
     // duplicate the vertex around which the chain was found
@@ -631,6 +594,24 @@ void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<Inciden
     } );
 }
 
+// path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
+void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
+{
+    closedPath.clear();
+    auto lastVertex = path.back();
+    for ( size_t i = 0; i < path.size(); ++i )
+    {
+        if ( path[i] == lastVertex )
+        {
+            closedPath.reserve( path.size() - i );
+            closedPath.insert( closedPath.end(), std::make_move_iterator( path.begin() + i ),
+                                                 std::make_move_iterator( path.end() ) );
+
+            path.resize(i);
+            break;
+        }
+    }
+}
 
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<VertDuplication>* dups )
@@ -645,6 +626,9 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
     auto lastUsedVertId = incidentItemsVector.back().srcVert;
 
+    std::vector<VertId> path;
+    std::vector<VertId> closedPath;
+    VertBitSet visitedVertices(lastUsedVertId);
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
@@ -656,12 +640,14 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
-        std::vector<VertId> path;
         while ( !incidentItems.empty() )
         {
+            visitedVertices.reset();
             VertId firstVertex = incidentItems.getFirstVertex();
+            visitedVertices.autoResizeSet( firstVertex );
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
-            
+            visitedVertices.autoResizeSet( nextVertex );
+
             assert( nextVertex.valid() );
 
             path = { firstVertex, nextVertex };
@@ -688,12 +674,13 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                 }
 
                 // returned to already visited vertex
-                if ( incidentItems.wasVisited(nextVertex) )
+                if ( visitedVertices.test(nextVertex) )
                 {
                     // save only closed path and prepare for new search starting with non-manifold vertex
                     path.push_back( nextVertex );
-                    std::vector<VertId> closedPath;
-                    incidentItems.extractClosedPath( path, closedPath );
+                    extractClosedPath( path, closedPath );
+                    for( const auto& v : closedPath)
+                        visitedVertices.reset(v);
 
                     if ( foundChains )
                     {
@@ -705,6 +692,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                         break;
                 }
                 path.push_back( nextVertex );
+                visitedVertices.autoResizeSet( nextVertex );
             }
         }
     }

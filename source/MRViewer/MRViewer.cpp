@@ -521,6 +521,15 @@ void Viewer::launchEventLoop()
             glfwWaitEvents();
             processMouseEventsQueue_();
         }
+#ifdef __APPLE__
+        static bool first_time_hack = true;
+        if ( first_time_hack )
+        {
+            glfwHideWindow( window );
+            glfwShowWindow( window );
+            first_time_hack = false;
+        }
+#endif
     }
 }
 

@@ -234,7 +234,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if (gl_FrontFacing == false)
+    if (gl_FrontFacing == false) // don't use !gl_FrontFacing for some rare mac issue
       dot_prod = -dot_prod;
 
     if (dot_prod < 0.0)
@@ -371,7 +371,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if (gl_FrontFacing == false)
+    if (gl_FrontFacing == false) // don't use !gl_FrontFacing for some rare mac issue
       dot_prod = -dot_prod;
 
     dot_prod = max(dot_prod,0.0);
@@ -518,7 +518,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if (gl_FrontFacing == false)
+    if (gl_FrontFacing == false) // don't use !gl_FrontFacing for some rare mac issue
       dot_prod = -dot_prod;
 
     dot_prod = max(dot_prod,0.0);

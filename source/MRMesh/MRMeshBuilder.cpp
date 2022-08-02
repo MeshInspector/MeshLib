@@ -501,7 +501,7 @@ struct PathOverIncidentVert {
         return {};
     }
 
-    // find incident unvisited vertex 
+    // find incident unvisited vertex
     VertId getNextIncidentVertex( VertId v )
     {
         if ( lastUnvisitedIndex <= 0 )
@@ -610,6 +610,7 @@ void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<Inciden
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
 void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
 {
+    closedPath.clear();
     auto lastVertex = path.back();
     for ( size_t i = 0; i < path.size(); ++i )
     {
@@ -638,6 +639,9 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
     auto lastUsedVertId = incidentItemsVector.back().srcVert;
 
+    std::vector<VertId> path;
+    std::vector<VertId> closedPath;
+    VertBitSet visitedVertices(lastUsedVertId);
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
@@ -649,12 +653,16 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
-        std::vector<VertId> path;
         while ( !incidentItems.empty() )
         {
+            for(const auto& v : path)
+                visitedVertices.reset(v);
+
             VertId firstVertex = incidentItems.getFirstVertex();
+            visitedVertices.autoResizeSet( firstVertex );
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
-            
+            visitedVertices.autoResizeSet( nextVertex );
+
             assert( nextVertex.valid() );
 
             path = { firstVertex, nextVertex };
@@ -681,12 +689,13 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                 }
 
                 // returned to already visited vertex
-                if ( std::find(path.begin(), path.end(), nextVertex ) != path.end() )
+                if ( visitedVertices.test(nextVertex) )
                 {
                     // save only closed path and prepare for new search starting with non-manifold vertex
                     path.push_back( nextVertex );
-                    std::vector<VertId> closedPath;
                     extractClosedPath( path, closedPath );
+                    for( const auto& v : closedPath)
+                        visitedVertices.reset(v);
 
                     if ( foundChains )
                     {
@@ -698,6 +707,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                         break;
                 }
                 path.push_back( nextVertex );
+                visitedVertices.autoResizeSet( nextVertex );
             }
         }
     }

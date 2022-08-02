@@ -80,7 +80,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 colorThemeName = presetCfg["Name"].asString();
         }
     }
-
+#ifndef __EMSCRIPTEN__
     if ( cfg.hasVector2i( cMainWindowSize ) )
     {
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
@@ -99,7 +99,20 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             CommandLoop::appendCommand( [&viewer, pos]
             {
                 if ( viewer.window )
-                    glfwSetWindowPos( viewer.window, pos.x, pos.y );
+                {
+                    int count;
+                    auto monitors = glfwGetMonitors( &count );
+                    bool posIsOk = false;
+                    for ( int i = 0; !posIsOk && i < count; ++i )
+                    {
+                        int xpos, ypos, width, height;
+                        glfwGetMonitorWorkarea( monitors[i], &xpos, &ypos, &width, &height );
+                        Box2i monBox = Box2i::fromMinAndSize( { xpos,ypos }, { width,height } );
+                        posIsOk = monBox.contains( pos );
+                    }
+                    if ( posIsOk )
+                        glfwSetWindowPos( viewer.window, pos.x, pos.y );
+                }
             } );
         }
     }
@@ -116,7 +129,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 glfwRestoreWindow( viewer.window );
         } );
     }
-
+#endif
     if ( ribbonMenu )
     {
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )

@@ -312,25 +312,24 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
     int windowHeight = params.height;
 #ifdef __APPLE__
     alphaSorter_.reset();
-    spdlog::warn( "Alpha sort is not available" );
-    glfwWindowHint( GLFW_CLIENT_API, GLFW_OPENGL_ES_API );
+        spdlog::warn( "Alpha sort is not available" );
 
-    spdlog::warn( "Loading OpenGL ES 3.0 for macOS" );
-    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 0 ) )
-    {
-        spdlog::critical( "Cannot load OpenGL ES 3.0" );
-        return false;
-}
+        spdlog::warn( "Loading OpenGL 4.1 for macOS" );
+        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
+        {
+            spdlog::critical( "Cannot load OpenGL 4.1" );
+            return false;
+        }
 #else
 #ifdef __EMSCRIPTEN__
     alphaSorter_.reset();
-    spdlog::warn( "Alpha sort is not available" );
-    spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
-    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
-    {
-        spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
-        return false;
-    }
+        spdlog::warn( "Alpha sort is not available" );
+        spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
+        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
+        {
+            spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
+            return false;
+        }
 #else
     if ( params.preferOpenGL3 || !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 3 ) )
     {

@@ -565,7 +565,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         prevScaling_ = startScaling_ = newScaling;
 
     const auto scale = Matrix3f::scale( newScaling - prevScaling_ ) + Matrix3f::scale( 1 );
-    auto addXf = AffineXf3f::xfAround( scale, xf( center_ ) );
+    auto addXf = xf * AffineXf3f::xfAround( scale, center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
 

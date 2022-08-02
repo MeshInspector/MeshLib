@@ -80,7 +80,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 colorThemeName = presetCfg["Name"].asString();
         }
     }
-
+#ifndef __EMSCRIPTEN__
     if ( cfg.hasVector2i( cMainWindowSize ) )
     {
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
@@ -129,7 +129,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                 glfwRestoreWindow( viewer.window );
         } );
     }
-
+#endif
     if ( ribbonMenu )
     {
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )

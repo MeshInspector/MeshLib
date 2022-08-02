@@ -202,8 +202,8 @@ void ShadersHolder::createShader_( ShaderType type )
       uint block = texelFetch( selection, ivec2( index % uint(texSize.x), index / uint(texSize.x) ), 0 ).r;
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
-    bool frontFacingBuffer = gl_FrontFacing; // handle for macos bug
-    if ( frontFacingBuffer == invertNormals )
+
+    if ( gl_FrontFacing == invertNormals )
         if ( !selected )
             colorCpy = backColor;
         else
@@ -234,7 +234,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if ( !frontFacingBuffer )
+    if (gl_FrontFacing == false)
       dot_prod = -dot_prod;
 
     if (dot_prod < 0.0)
@@ -340,8 +340,7 @@ void ShadersHolder::createShader_( ShaderType type )
       uint block = texelFetch( selection, ivec2( index % uint(texSize.x), index / uint(texSize.x) ), 0 ).r;
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
-    bool frontFacingBuffer = gl_FrontFacing; // handle for macos bug
-    if ( frontFacingBuffer == invertNormals )
+    if ( gl_FrontFacing == invertNormals )
         if ( !selected )
             colorCpy = backColor;
         else
@@ -372,7 +371,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if ( !frontFacingBuffer )
+    if (gl_FrontFacing == false)
       dot_prod = -dot_prod;
 
     dot_prod = max(dot_prod,0.0);
@@ -488,8 +487,7 @@ void ShadersHolder::createShader_( ShaderType type )
       uint block = texelFetch( selection, ivec2( index % uint(texSize.x), index / uint(texSize.x) ), 0 ).r;
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
-    bool frontFacingBuffer = gl_FrontFacing; // handle for macos bug
-    if ( frontFacingBuffer == invertNormals )
+    if ( gl_FrontFacing == invertNormals )
         if ( !selected )
             colorCpy = backColor;
         else
@@ -520,7 +518,7 @@ void ShadersHolder::createShader_( ShaderType type )
         colorCpy.rgb = mix(colorCpy.rgb*destA,textColor.rgb,textColor.a)/colorCpy.a;
     }  
 
-    if ( !frontFacingBuffer )
+    if (gl_FrontFacing == false)
       dot_prod = -dot_prod;
 
     dot_prod = max(dot_prod,0.0);

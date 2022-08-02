@@ -535,9 +535,6 @@ struct PathOverIncidentVert {
     void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
                           std::vector<VertDuplication>* dups = nullptr )
     {
-        if ( path.front() != path.back() )
-            return;
-
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
         vertDup.srcVert = faceToVertices[vertexBegIt->f][vertexBegIt->cIdx];
@@ -637,24 +634,38 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
             ++posEnd;
         PathOverIncidentVert incidentItems( faceToVertices, incidentItemsVector, posBegin, posEnd );
 
-        size_t foundedPathCnt = 0;
-
+        // first chain of vertices around the center does not require duplication
+        int foundChains = 0;
+        std::vector<VertId> path;
         while ( !incidentItems.empty() )
         {
-            VertId currVertex = incidentItems.getFirstVertex();
-            VertId nextVertex = incidentItems.getNextIncidentVertex( currVertex );
+            VertId firstVertex = incidentItems.getFirstVertex();
+            VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
             
             assert( nextVertex.valid() );
 
-            std::vector<VertId> path = { currVertex, nextVertex };
+            path = { firstVertex, nextVertex };
             while ( true )
             {
-                currVertex = nextVertex;
-                nextVertex = incidentItems.getNextIncidentVertex( currVertex );
+                nextVertex = incidentItems.getNextIncidentVertex( nextVertex );
 
-                // no next vertex - not connected sequences
-                if ( !nextVertex.valid() ) 
-                    break;
+                if ( !nextVertex )
+                {
+                    if ( firstVertex ) // try the opposite direction from firstVertex
+                        nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
+                    if ( !nextVertex )
+                    {
+                        if ( foundChains )
+                        {
+                            incidentItems.duplicateVertex( path, lastUsedVertId, dups );
+                            ++duplicatedVerticesCnt;
+                        }
+                        ++foundChains;
+                        break;
+                    }
+                    std::reverse( path.begin(), path.end() );
+                    firstVertex = VertId{}; // both directions from firstVertex are processed
+                }
 
                 // returned to already visited vertex
                 if ( std::find(path.begin(), path.end(), nextVertex ) != path.end() )
@@ -664,14 +675,14 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                     std::vector<VertId> closedPath;
                     extractClosedPath( path, closedPath );
 
-                    // if not first connected sequence found
-                    if ( foundedPathCnt > 0 )
+                    if ( foundChains )
                     {
                         incidentItems.duplicateVertex( closedPath, lastUsedVertId, dups );
                         ++duplicatedVerticesCnt;
                     }
-                    ++foundedPathCnt;
-                    
+                    ++foundChains;
+                    if ( path.empty() )
+                        break;
                 }
                 path.push_back( nextVertex );
             }

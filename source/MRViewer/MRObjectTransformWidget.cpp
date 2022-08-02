@@ -568,12 +568,6 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     auto addXf = xf * AffineXf3f::xfAround( scale, center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
-
-    const std::vector<Vector3f> activePoints {
-        xf( startScaling_ ),
-        xf( newScaling ),
-    };
-    setActiveLineFromPoints_( activePoints );
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )

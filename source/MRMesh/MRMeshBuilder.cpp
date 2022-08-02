@@ -642,7 +642,9 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
         int foundChains = 0;
         while ( !incidentItems.empty() )
         {
-            visitedVertices.reset();
+            for(const auto& v : path)
+                visitedVertices.reset(v);
+
             VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex );

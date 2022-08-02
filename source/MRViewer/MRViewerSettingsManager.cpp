@@ -103,12 +103,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                     int count;
                     auto monitors = glfwGetMonitors( &count );
                     bool posIsOk = false;
-                    for ( int i = 0; i < count; ++i )
+                    for ( int i = 0; !posIsOk && i < count; ++i )
                     {
                         int xpos, ypos, width, height;
                         glfwGetMonitorWorkarea( monitors[i], &xpos, &ypos, &width, &height );
                         Box2i monBox = Box2i::fromMinAndSize( { xpos,ypos }, { width,height } );
-                        posIsOk = posIsOk || monBox.contains( pos );
+                        posIsOk = monBox.contains( pos );
                     }
                     if ( posIsOk )
                         glfwSetWindowPos( viewer.window, pos.x, pos.y );

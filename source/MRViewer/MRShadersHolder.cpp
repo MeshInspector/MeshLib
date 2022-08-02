@@ -3,10 +3,10 @@
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 
-#ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 150)"
-#else
+#if defined(__EMSCRIPTEN__) || defined(__APPLE__)
 #define MR_GLSL_VERSION_LINE R"(#version 300 es)"
+#else
+#define MR_GLSL_VERSION_LINE R"(#version 150)"
 #endif
 
 namespace

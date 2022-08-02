@@ -313,13 +313,12 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
 #ifdef __APPLE__
     alphaSorter_.reset();
     spdlog::warn( "Alpha sort is not available" );
-    glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
-    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+    glfwWindowHint( GLFW_CLIENT_API, GLFW_OPENGL_ES_API );
 
-    spdlog::warn( "Loading OpenGL 3.3 for macOS" );
-    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
+    spdlog::warn( "Loading OpenGL ES 3.0 for macOS" );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 0 ) )
     {
-        spdlog::critical( "Cannot load OpenGL 3.3" );
+        spdlog::critical( "Cannot load OpenGL ES 3.0" );
         return false;
 }
 #else

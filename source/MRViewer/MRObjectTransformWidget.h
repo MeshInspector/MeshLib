@@ -86,6 +86,7 @@ private:
     void passiveMove_();
     void activeMove_( bool press = false );
 
+    void processScaling_( Axis ax, bool press );
     void processTranslation_( Axis ax, bool press );
     void processRotation_( Axis ax, bool press );
 
@@ -118,8 +119,10 @@ private:
 
     Vector3f center_;
 
+    Vector3f startScaling_;
+    Vector3f prevScaling_;
     Vector3f startTranslation_;
-    Vector3f prevTraslation_;
+    Vector3f prevTranslation_;
     AffineXf3f startRotXf_;
     float startAngle_ = 0;
     float accumAngle_ = 0;
@@ -128,6 +131,7 @@ private:
     float thresholdDot_{ 0.0f };
     bool picked_{ false };
     bool pickThrough_{ false };
+    bool scaleMode_{ false };
 
     std::function<void( float )> translateTooltipCallback_;
     std::function<void( float )> rotateTooltipCallback_;

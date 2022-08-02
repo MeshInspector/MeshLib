@@ -12,6 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
+#include <GLFW/glfw3.h>
 
 namespace
 {
@@ -242,7 +243,7 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
-bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
+bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;
@@ -250,6 +251,8 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
         return false;
     if ( !controlsRoot_ )
         return false;
+
+    scaleMode_ = ( modifier == GLFW_MOD_CONTROL );
 
     if ( startModifyCallback_ )
         startModifyCallback_();
@@ -341,7 +344,7 @@ void ObjectTransformWidget::draw_()
             auto xf = controlsRoot_->xf();
             auto axis = xf( translateLines_[currentIndex]->polyline()->points.vec_[1] ) -
                 xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
-            translateTooltipCallback_( dot( prevTraslation_ - startTranslation_, axis.normalized() ) );
+            translateTooltipCallback_( dot( prevTranslation_ - startTranslation_, axis.normalized() ) );
         }
     }
     else // rotation
@@ -529,13 +532,48 @@ void ObjectTransformWidget::activeMove_( bool press )
 {
     assert( currentObj_ );
 
-    int currnetIndex = findCurrentObjIndex_();
+    int currentObjIndex = findCurrentObjIndex_();
 
     // we now know who is picked
-    if ( currnetIndex < 3 )
-        processTranslation_( Axis( currnetIndex ), press );
+    if ( currentObjIndex < 3 )
+    {
+        if ( scaleMode_ )
+            processScaling_( Axis( currentObjIndex ), press );
+        else
+            processTranslation_( Axis( currentObjIndex ), press );
+    }
     else
-        processRotation_( Axis( currnetIndex - 3 ), press );
+    {
+        processRotation_( Axis( currentObjIndex - 3 ), press );
+    }
+}
+
+void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, bool press )
+{
+    const auto& mousePos = getViewerInstance().mouseController.getMousePos();
+    auto& viewport = getViewerInstance().viewport();
+    auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
+    auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
+    auto xf = controlsRoot_->xf();
+    auto newScaling = findClosestPointOfSkewLines(
+        translateLines_[int( ax )]->polyline()->points.vec_[0],
+        translateLines_[int( ax )]->polyline()->points.vec_[1],
+        line.p, line.p + line.d
+    );
+
+    if ( press )
+        prevScaling_ = startScaling_ = newScaling;
+
+    const auto scale = Matrix3f::scale( newScaling - prevScaling_ ) + Matrix3f::scale( 1 );
+    auto addXf = AffineXf3f::xfAround( scale, xf( center_ ) );
+    addXf_( addXf );
+    prevScaling_ = newScaling;
+
+    const std::vector<Vector3f> activePoints {
+        xf( startScaling_ ),
+        xf( newScaling ),
+    };
+    setActiveLineFromPoints_( activePoints );
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
@@ -552,15 +590,15 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     );
 
     if ( press )
-        prevTraslation_ = startTranslation_ = newTranslation;
+        prevTranslation_ = startTranslation_ = newTranslation;
 
     std::vector<Vector3f> activePoints( 2 );
     activePoints[0] = startTranslation_;
     activePoints[1] = newTranslation;
 
-    auto addXf = AffineXf3f::translation( newTranslation - prevTraslation_ );
+    auto addXf = AffineXf3f::translation( newTranslation - prevTranslation_ );
     addXf_( addXf );
-    prevTraslation_ = newTranslation;
+    prevTranslation_ = newTranslation;
 
     setActiveLineFromPoints_( activePoints );
 }

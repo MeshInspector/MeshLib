@@ -65,6 +65,8 @@ public:
     // if obj argument is null, stop following
     MRVIEWER_API void followObjVisibility( const std::weak_ptr<Object>& obj );
 
+    // Sets callback that will be called in draw function during scaling with current scale arg
+    void setScaleTooltipCallback( std::function<void( float )> callback ) { scaleTooltipCallback_ = callback; }
     // Sets callback that will be called in draw function during translation with current shift arg
     void setTranslateTooltipCallback( std::function<void( float )> callback ) { translateTooltipCallback_ = callback; }
     // Sets callback that will be called in draw function during rotation with current angle in rad
@@ -119,7 +121,7 @@ private:
 
     Vector3f center_;
 
-    Vector3f startScaling_;
+    float sumScale_;
     Vector3f prevScaling_;
     Vector3f startTranslation_;
     Vector3f prevTranslation_;
@@ -133,6 +135,7 @@ private:
     bool pickThrough_{ false };
     bool scaleMode_{ false };
 
+    std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;
     std::function<void( float )> rotateTooltipCallback_;
 

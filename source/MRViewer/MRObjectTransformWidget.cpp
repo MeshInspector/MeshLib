@@ -339,12 +339,16 @@ void ObjectTransformWidget::draw_()
     // translation
     if ( currentIndex < 3 )
     {
-        if ( translateTooltipCallback_ )
+        if ( !scaleMode_ && translateTooltipCallback_ )
         {
             auto xf = controlsRoot_->xf();
             auto axis = xf( translateLines_[currentIndex]->polyline()->points.vec_[1] ) -
                 xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
             translateTooltipCallback_( dot( prevTranslation_ - startTranslation_, axis.normalized() ) );
+        }
+        else if ( scaleMode_ && scaleTooltipCallback_ )
+        {
+            scaleTooltipCallback_( sumScale_ );
         }
     }
     else // rotation
@@ -562,12 +566,16 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     );
 
     if ( press )
-        prevScaling_ = startScaling_ = newScaling;
+    {
+        prevScaling_ = newScaling;
+        sumScale_ = 1.f;
+    }
 
-    const auto scale = Matrix3f::scale( newScaling - prevScaling_ ) + Matrix3f::scale( 1 );
-    auto addXf = xf * AffineXf3f::xfAround( scale, center_ ) * xf.inverse();
+    const auto scale = ( newScaling - prevScaling_ ) + Vector3f::diagonal( 1 );
+    auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
+    sumScale_ *= scale.x * scale.y * scale.z;
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )

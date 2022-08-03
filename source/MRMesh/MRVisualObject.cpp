@@ -360,6 +360,11 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
         res.push_back( ss.str() );
 
         ss = {};
+        const auto bcenter = bbox.center();
+        ss << "box center: (" << bcenter.x << ", " << bcenter.y << ", " << bcenter.z << ")";
+        res.push_back( ss.str() );
+
+        ss = {};
         const auto bsize = bbox.size();
         ss << "(" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
         const auto boxStr = ss.str();

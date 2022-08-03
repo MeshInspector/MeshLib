@@ -724,7 +724,8 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    controlsRoot_->setXf( addXf * controlsRoot_->xf() );
+    if ( findCurrentObjIndex_() >= 3 || axisTransformMode_ == Translation )
+        controlsRoot_->setXf( addXf * controlsRoot_->xf() );
     approvedChange_ = false;
 }
 

@@ -105,24 +105,28 @@ void PlotCustomHistogram( const char* str_id,
     bool encolorSelected = selectedBarId >= 0;
 
     const ImGuiStyle& style = GetStyle();
-    [[maybe_unused]] const ImGuiID id = GetID( str_id );
+    const ImGuiID id = GetID( str_id );
 
     if ( frame_size.x == 0.0f )
         frame_size.x = CalcItemWidth();
     if ( frame_size.y == 0.0f )
         frame_size.y = ( style.FramePadding.y * 2 );
 
-    const ImVec2 cursorPos = GetCursorScreenPos();
-    ImVec2 max, minPlus, maxPlus;
-    max.x = cursorPos.x + frame_size.x; max.y = cursorPos.y + frame_size.y;
-    ImVec2 innerMin = cursorPos; innerMin.x += style.FramePadding.x; innerMin.y += style.FramePadding.y;
-    ImVec2 innerMax = max; innerMax.x -= style.FramePadding.x; innerMax.y -= style.FramePadding.y;
+    ImRect rect;
+    rect.Min = GetCursorScreenPos();
+    ImVec2 minPlus, maxPlus;
+    rect.Max.x = rect.Min.x + frame_size.x; rect.Max.y = rect.Min.y + frame_size.y;
+    ImVec2 innerMin = rect.Min; innerMin.x += style.FramePadding.x; innerMin.y += style.FramePadding.y;
+    ImVec2 innerMax = rect.Max; innerMax.x -= style.FramePadding.x; innerMax.y -= style.FramePadding.y;
     if ( ( innerMax.y - innerMin.y ) <= 0.0f )
         return;
 
-    Dummy( frame_size );
+    // ImGui::Dummy did not handle click properly (it somehow breaks modal openenig) so we changed it to ButtonBehavior
+    //Dummy( frame_size );
 
-    const bool hovered = IsItemHovered();
+    ItemAdd( rect, id );
+    bool hovered, held;
+    ButtonBehavior( rect, id, &hovered, &held );
 
     // Determine scale from values if not specified
     if ( scale_min == FLT_MAX || scale_max == FLT_MAX )
@@ -144,14 +148,14 @@ void PlotCustomHistogram( const char* str_id,
     }
 
     ImDrawList* drawList  = GetWindowDrawList();
-    drawList->AddRectFilled( cursorPos, max, GetColorU32( ImGuiCol_FrameBg ), style.FrameRounding );
+    drawList->AddRectFilled( rect.Min, rect.Max, GetColorU32( ImGuiCol_FrameBg ), style.FrameRounding );
     const float border_size = style.FrameBorderSize;
     if ( border_size > 0.0f )
     {
-        minPlus.x = cursorPos.x + 1; minPlus.y = cursorPos.y + 1;
-        maxPlus.x = max.x + 1; minPlus.y = max.y + 1;
+        minPlus.x = rect.Min.x + 1; minPlus.y = rect.Min.y + 1;
+        maxPlus.x = rect.Max.x + 1; minPlus.y = rect.Max.y + 1;
         drawList->AddRect( minPlus, maxPlus, GetColorU32( ImGuiCol_BorderShadow ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
-        drawList->AddRect( cursorPos, max, GetColorU32( ImGuiCol_Border ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
+        drawList->AddRect( rect.Min, rect.Max, GetColorU32( ImGuiCol_Border ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
     }
 
     const int values_count_min = 1;

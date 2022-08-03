@@ -121,7 +121,9 @@ void PlotCustomHistogram( const char* str_id,
     if ( ( innerMax.y - innerMin.y ) <= 0.0f )
         return;
 
+    // ImGui::Dummy did not handle click properly (it somehow breaks modal openenig) so we changed it to ButtonBehavior
     //Dummy( frame_size );
+
     ItemAdd( rect, id );
     bool hovered, held;
     ButtonBehavior( rect, id, &hovered, &held );

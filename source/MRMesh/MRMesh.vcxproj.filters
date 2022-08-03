@@ -855,6 +855,9 @@
     <ClInclude Include="MRProgressReadWrite.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeIsoAction.h">
+      <Filter>Source Files\History</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

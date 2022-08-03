@@ -75,7 +75,7 @@ void ObjectVoxels::updateHistogramAndSurface( const ProgressCallback& cb )
     }
 }
 
-bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
+bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb, bool updateSurface )
 {
     if ( !grid_ )
         return false; // no volume presented in this
@@ -83,21 +83,36 @@ bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb )
         return false; // current iso surface represents required iso value
 
     isoValue_ = iso;
-    auto meshRes = gridToMesh( grid_, voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
-    
+    if ( updateSurface )
+        updateIsoSurface( recalculateIsoSurface( isoValue_, cb ) );
+    return updateSurface;
+}
+
+std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh )
+{
+    if ( mesh != mesh_ )
+    {
+        mesh_.swap( mesh );
+        setDirtyFlags( DIRTY_ALL );
+        isoSurfaceChangedSignal();
+    }
+    return mesh;
+
+}
+
+std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, const ProgressCallback& cb /*= {} */ )
+{
+    if ( !grid_ )
+        return {};
+    auto meshRes = gridToMesh( grid_, voxelSize_, maxSurfaceTriangles_, iso, 0.0f, cb );
+
     FloatGrid downsampledGrid = grid_;
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, maxSurfaceTriangles_, isoValue_, 0.0f, cb );
+        meshRes = gridToMesh( downsampledGrid, 2.0f * voxelSize_, maxSurfaceTriangles_, iso, 0.0f, cb );
     }
-    mesh_ = std::make_shared<Mesh>( std::move( meshRes.value() ) );
-    setDirtyFlags( DIRTY_ALL );
-
-    ancillary_ = false;
-    isoChangedSignal();
-
-    return true;
+    return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }
 
 void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
@@ -199,7 +214,7 @@ void ObjectVoxels::swapSignals_( Object& other )
 {
     ObjectMeshHolder::swapSignals_( other );
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
-        std::swap( isoChangedSignal, otherVoxels->isoChangedSignal );
+        std::swap( isoSurfaceChangedSignal, otherVoxels->isoSurfaceChangedSignal );
     else
         assert( false );
 }

@@ -56,7 +56,16 @@ public:
 
     /// Sets iso value and updates iso-surfaces if needed: 
     /// Returns true if iso-value was updated, false - otherwise
-    MRMESH_API virtual bool setIsoValue( float iso, const ProgressCallback& cb = {} );
+    MRMESH_API virtual bool setIsoValue( float iso, const ProgressCallback& cb = {}, bool updateSurface = true );
+
+    /// Sets external surface mesh for this object
+    /// and returns back previous mesh of this
+    MRMESH_API std::shared_ptr<Mesh> updateIsoSurface( std::shared_ptr<Mesh> mesh );
+
+    /// Calculates and return new mesh
+    /// returns empty pointer if no volume is present
+    MRMESH_API std::shared_ptr<Mesh> recalculateIsoSurface( float iso, const ProgressCallback& cb = {} );
+
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
     MRMESH_API virtual void setActiveBounds( const Box3i& activeBox );
@@ -91,7 +100,7 @@ public:
 
     /// signal about ISO changing, triggered in setIsoValue
     using IsoChangedSignal = boost::signals2::signal<void()>;
-    IsoChangedSignal isoChangedSignal;
+    IsoChangedSignal isoSurfaceChangedSignal;
 
 private:
     int maxSurfaceTriangles_{ 10000000 };

@@ -98,7 +98,7 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// signal about ISO changing, triggered in setIsoValue
+    /// signal about ISO changing, triggered in when iso surface updates (setIsoValue, updateIsoSurface)
     using IsoChangedSignal = boost::signals2::signal<void()>;
     IsoChangedSignal isoSurfaceChangedSignal;
 

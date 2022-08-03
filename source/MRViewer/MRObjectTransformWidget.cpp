@@ -252,8 +252,6 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifi
     if ( !controlsRoot_ )
         return false;
 
-    scaleMode_ = ( modifier == GLFW_MOD_CONTROL );
-
     if ( startModifyCallback_ )
         startModifyCallback_();
 
@@ -339,14 +337,14 @@ void ObjectTransformWidget::draw_()
     // translation
     if ( currentIndex < 3 )
     {
-        if ( !scaleMode_ && translateTooltipCallback_ )
+        if ( axisTransformMode_ == Translation && translateTooltipCallback_ )
         {
             auto xf = controlsRoot_->xf();
             auto axis = xf( translateLines_[currentIndex]->polyline()->points.vec_[1] ) -
                 xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
             translateTooltipCallback_( dot( prevTranslation_ - startTranslation_, axis.normalized() ) );
         }
-        else if ( scaleMode_ && scaleTooltipCallback_ )
+        else if ( axisTransformMode_ == Scaling && scaleTooltipCallback_ )
         {
             scaleTooltipCallback_( sumScale_ );
         }
@@ -541,7 +539,7 @@ void ObjectTransformWidget::activeMove_( bool press )
     // we now know who is picked
     if ( currentObjIndex < 3 )
     {
-        if ( scaleMode_ )
+        if ( axisTransformMode_ == AxisTransformMode::Scaling )
             processScaling_( Axis( currentObjIndex ), press );
         else
             processTranslation_( Axis( currentObjIndex ), press );

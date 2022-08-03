@@ -53,6 +53,14 @@ public:
     void setPickThrough( bool on ) { pickThrough_ = on; }
     bool getPickThrough() const { return pickThrough_; }
 
+    enum AxisTransformMode
+    {
+        Translation,
+        Scaling,
+    };
+    AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
+    void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
+
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
 
@@ -121,6 +129,8 @@ private:
 
     Vector3f center_;
 
+    AxisTransformMode axisTransformMode_;
+
     float sumScale_;
     Vector3f prevScaling_;
     Vector3f startTranslation_;
@@ -133,7 +143,6 @@ private:
     float thresholdDot_{ 0.0f };
     bool picked_{ false };
     bool pickThrough_{ false };
-    bool scaleMode_{ false };
 
     std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;

@@ -130,7 +130,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
     }
     else
     {
-        auto objectMesh = makeObjectMeshFromFile( filename );
+        auto objectMesh = makeObjectMeshFromFile( filename, callback );
         if ( objectMesh.has_value() )
         {
             objectMesh->select( true );
@@ -141,7 +141,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         {
             result = tl::make_unexpected( objectMesh.error() );
 
-            auto objectPoints = makeObjectPointsFromFile( filename );
+            auto objectPoints = makeObjectPointsFromFile( filename, callback );
             if ( objectPoints.has_value() )
             {
                 objectPoints->select( true );
@@ -152,7 +152,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
             {
                 result = tl::make_unexpected( objectPoints.error() );
 
-                auto objectLines = makeObjectLinesFromFile( filename );
+                auto objectLines = makeObjectLinesFromFile( filename, callback );
                 if ( objectLines.has_value() )
                 {
                     objectLines->select( true );

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRIOFilters.h"
+#include "MRProgressCallback.h"
 #include <tl/expected.hpp>
 #include <filesystem>
 
@@ -14,8 +15,8 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, Vector<Color, VertId>* );
-using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, Vector<Color, VertId>* );
+using MeshLoader = tl::expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, Vector<Color, VertId>*, ProgressCallback );
+using MeshStreamLoader = tl::expected<MR::Mesh, std::string>( * )( std::istream&, Vector<Color, VertId>*, ProgressCallback );
 
 struct NamedMeshLoader
 {

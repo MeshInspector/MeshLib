@@ -12,9 +12,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRToFromEigen.h"
+#include "MRMesh/MRAffineXfDecompose.h"
 #include <GLFW/glfw3.h>
-#include <Eigen/Dense>
 
 namespace
 {
@@ -94,27 +93,6 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
         return angleRes - PI_F;
     }
     return angleRes;
-}
-
-void decomposeQR( const Matrix3f& m, Matrix3f& q, Matrix3f& r )
-{
-    Eigen::HouseholderQR<Eigen::MatrixXf> qr( toEigen( m ) );
-    q = fromEigen( Eigen::Matrix3f{ qr.householderQ() } );
-    r = fromEigen( Eigen::Matrix3f{ qr.matrixQR() } );
-    r.y.x = r.z.x = r.z.y = 0;
-}
-
-void decomposePositiveQR( const Matrix3f& m, Matrix3f& q, Matrix3f& r )
-{
-    decomposeQR( m, q, r );
-    Matrix3f sign;
-    for ( int i = 0; i < 3; ++i )
-    {
-        if ( r[i][i] < 0 )
-            sign[i][i] = -1;
-    }
-    q = q * sign;
-    r = sign * r;
 }
 
 }
@@ -263,12 +241,12 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
-    Matrix3f q, r;
-    decomposePositiveQR( xf.A, q, r );
+    Matrix3f rotation, scaling;
+    decomposeXf( xf, rotation, scaling );
 
     AffineXf3f unscaledXf;
-    unscaledXf.A = q;
-    unscaledXf.b = xf.b + xf.A * center_ - q * center_;
+    unscaledXf.A = rotation;
+    unscaledXf.b = xf.b + xf.A * center_ - rotation * center_;
 
     controlsRoot_->setXf( unscaledXf );
 }

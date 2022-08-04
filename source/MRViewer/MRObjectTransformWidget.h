@@ -134,7 +134,7 @@ private:
 
     Vector3f center_;
 
-    AxisTransformMode axisTransformMode_;
+    AxisTransformMode axisTransformMode_{ Translation };
 
     float sumScale_;
     Vector3f prevScaling_;

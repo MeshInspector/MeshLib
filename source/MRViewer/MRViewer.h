@@ -62,6 +62,7 @@ public:
         } windowMode{ HideInit };
         bool enableTransparentBackground{ false };
         bool preferOpenGL3{ false };
+        bool developerFeatures{ false }; // If set shows some developer features useful for debugging
         std::string name{"MRViewer"}; // Window name
         bool startEventLoop{ true }; // If false - does not start event loop
         bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
@@ -382,6 +383,9 @@ public:
     // glInitialized_ can be already reset and it requires `loadGL()` check too
     bool isGLInitialized() const { return glInitialized_; }
 
+    // returns true if developer features are enabled, false otherwise
+    bool isDeveloperFeaturesEnabled() const { return enableDeveloperFeatures_; }
+
     // update the title of the main window and, if any scene was opened, show its filename
     MRVIEWER_API void makeTitleFromSceneRootPath();
 
@@ -531,6 +535,9 @@ private:
     int forceRedrawFrames_{ 0 };
     // if this flag is true, only last forced frame will be present on screen
     bool swapOnLastForcedFrameOnly_{ false };
+
+    // if this flag is set shows some developer features useful for debugging
+    bool enableDeveloperFeatures_{ false };
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;

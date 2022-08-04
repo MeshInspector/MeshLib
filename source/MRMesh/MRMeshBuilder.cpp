@@ -501,26 +501,35 @@ struct PathOverIncidentVert {
         return {};
     }
 
-    // find incident unvisited vertex 
-    VertId getNextIncidentVertex( VertId v )
+    // find incident unvisited vertex
+    VertId getNextIncidentVertex( VertId v, bool triOrientation )
     {
         if ( lastUnvisitedIndex <= 0 )
             return VertId( -1 );
 
         for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
         {
-            VertId nextVertex( -1 );
-            bool isIncident = false;
-            for ( auto vi : faceToVertices[it->f] )
+            VertId nextVertex;
+            const auto & vs = faceToVertices[it->f];
+            if ( triOrientation )
             {
-                if ( vi == it->srcVert )
-                    continue;
-                if ( vi != v )
-                    nextVertex = vi;
-                else
-                    isIncident = true;
+                if ( vs[0] == it->srcVert && vs[1] == v )
+                    nextVertex = vs[2];
+                else if ( vs[1] == it->srcVert && vs[2] == v )
+                    nextVertex = vs[0];
+                else if ( vs[2] == it->srcVert && vs[0] == v )
+                    nextVertex = vs[1];
             }
-            if ( isIncident && nextVertex.valid() )
+            else
+            {
+                if ( vs[1] == it->srcVert && vs[0] == v )
+                    nextVertex = vs[2];
+                else if ( vs[2] == it->srcVert && vs[1] == v )
+                    nextVertex = vs[0];
+                else if ( vs[0] == it->srcVert && vs[2] == v )
+                    nextVertex = vs[1];
+            }
+            if ( nextVertex )
             {
                 --lastUnvisitedIndex;
                 std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
@@ -610,6 +619,7 @@ void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<Inciden
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
 void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
 {
+    closedPath.clear();
     auto lastVertex = path.back();
     for ( size_t i = 0; i < path.size(); ++i )
     {
@@ -638,6 +648,9 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
     auto lastUsedVertId = incidentItemsVector.back().srcVert;
 
+    std::vector<VertId> path;
+    std::vector<VertId> closedPath;
+    VertBitSet visitedVertices(lastUsedVertId);
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
     while ( posEnd != incidentItemsVector.size() )
@@ -649,23 +662,31 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
-        std::vector<VertId> path;
         while ( !incidentItems.empty() )
         {
-            VertId firstVertex = incidentItems.getFirstVertex();
-            VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
-            
+            for(const auto& v : path)
+                visitedVertices.reset(v);
+
+            bool triOrientation = true;
+            const VertId firstVertex = incidentItems.getFirstVertex();
+            visitedVertices.autoResizeSet( firstVertex );
+            VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+            visitedVertices.autoResizeSet( nextVertex );
+
             assert( nextVertex.valid() );
 
             path = { firstVertex, nextVertex };
             while ( true )
             {
-                nextVertex = incidentItems.getNextIncidentVertex( nextVertex );
+                nextVertex = incidentItems.getNextIncidentVertex( nextVertex, triOrientation );
 
                 if ( !nextVertex )
                 {
-                    if ( firstVertex ) // try the opposite direction from firstVertex
-                        nextVertex = incidentItems.getNextIncidentVertex( firstVertex );
+                    if ( triOrientation ) // try the opposite direction from firstVertex
+                    {
+                        triOrientation = false;
+                        nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+                    }
                     if ( !nextVertex )
                     {
                         if ( foundChains )
@@ -677,16 +698,16 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                         break;
                     }
                     std::reverse( path.begin(), path.end() );
-                    firstVertex = VertId{}; // both directions from firstVertex are processed
                 }
 
                 // returned to already visited vertex
-                if ( std::find(path.begin(), path.end(), nextVertex ) != path.end() )
+                if ( visitedVertices.test(nextVertex) )
                 {
                     // save only closed path and prepare for new search starting with non-manifold vertex
                     path.push_back( nextVertex );
-                    std::vector<VertId> closedPath;
                     extractClosedPath( path, closedPath );
+                    for( const auto& v : closedPath)
+                        visitedVertices.reset(v);
 
                     if ( foundChains )
                     {
@@ -698,6 +719,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
                         break;
                 }
                 path.push_back( nextVertex );
+                visitedVertices.autoResizeSet( nextVertex );
             }
         }
     }

@@ -855,6 +855,8 @@
     <ClInclude Include="MRProgressReadWrite.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRChangeIsoAction.h">
+      <Filter>Source Files\History</Filter>
     <ClInclude Include="MRAffineXfDecompose.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>

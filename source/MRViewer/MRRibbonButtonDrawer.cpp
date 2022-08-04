@@ -64,7 +64,7 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
         texture->getImTextureId(),
         bb.Min, bb.Max,
-        ImVec2( 0, 0 ), ImVec2( 1, 1 ),
+        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), style.FrameRounding );
 
     auto res = ImGui::Button( label, size );
@@ -94,7 +94,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
         texture->getImTextureId(),
         bb.Min, bb.Max,
-        ImVec2( 0, 0 ), ImVec2( 1, 1 ),
+        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), style.FrameRounding );
 
     auto res = ImGui::Checkbox( label, value );
@@ -123,7 +123,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
         texture->getImTextureId(),
         bb.Min, bb.Max,
-        ImVec2( 0, 0 ), ImVec2( 1, 1 ),
+        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), clickSize * 0.5f );
 
     auto res = ImGui::RadioButton( label, value, v_button );

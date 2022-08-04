@@ -171,7 +171,7 @@ std::filesystem::path GetLibsDirectory()
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
     #ifdef __APPLE__
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
+    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
     #else
     return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
     #endif

@@ -258,6 +258,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.console = true;
         else if ( flag == "-openGL3" )
             params.preferOpenGL3 = true;
+        else if ( flag == "-develop" )
+            params.developerFeatures = true;
         else if ( flag == "-width" )
             nextW = true;
         else if ( flag == "-height" )
@@ -283,6 +285,7 @@ int Viewer::launch( const LaunchParams& params )
     }
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
+    enableDeveloperFeatures_ = params.developerFeatures;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;

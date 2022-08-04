@@ -455,6 +455,7 @@ bool Link( const char* label )
     ImRect linkRect( basePos, linkBbMaxPoint );
 
     auto linkId = window->GetID( label );
+    ItemAdd( linkRect, linkId );
     bool hovered, held;
     bool pressed = ButtonBehavior( linkRect, linkId, &hovered, &held );
 

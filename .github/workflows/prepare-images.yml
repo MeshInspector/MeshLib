@@ -48,7 +48,8 @@ jobs:
               - 'docker/emscripten**'
               - 'requirements/!(windows.txt|macos.txt)'              
               - 'scripts/build_thirdparty.sh'    
-              - 'scripts/install_**.sh'  
+              - 'scripts/install_apt_requirements.sh'
+              - 'scripts/install_dnf_requirements.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'
 
       - name: Filter Windows paths

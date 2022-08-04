@@ -83,7 +83,7 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
         if ( !in )
             return tl::make_unexpected( std::string( "Points read error" ) );
         points.emplace_back( x, y, z );
-        if ( callback && !( i % 1000 ) && !callback( float( i ) / numPoints * 0.5f ) )
+        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numPoints * 0.5f ) )
             return tl::make_unexpected( std::string( "Loading canceled" ) );
     }
 
@@ -97,7 +97,7 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
         if ( !in || k != 3 )
             return tl::make_unexpected( std::string( "Polygons read error" ) );
         tris.emplace_back( VertId( a ), VertId( b ), VertId( c ), FaceId( i ) );
-        if ( callback && !( i % 1000 ) && !callback( float( i ) / numPolygons* 0.5f ) )
+        if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numPolygons* 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Loading canceled" ) );
     }
 
@@ -162,7 +162,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & fil
     return fromBinaryStl( in, nullptr, callback );
 }
 
-tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback /*callback*/ )
+tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -203,6 +203,9 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
     if ( !in  )
         return tl::make_unexpected( std::string( "Binary STL read error" ) );
 
+    size_t readedBytes = 0;
+    const float streamSize = float( posEnd - posCur );
+
     for ( ;; )
     {
         tbb::task_group taskGroup;
@@ -212,9 +215,12 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
             const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             hasTask = true;
-            taskGroup.run( [&in, &nextBuffer] ()
+            taskGroup.run( [&in, &nextBuffer, callback, &readedBytes, streamSize] ()
             {
-                in.read( ( char* )nextBuffer.data(), sizeof( StlTriangle ) * nextBuffer.size() );
+                const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
+                in.read( ( char* )nextBuffer.data(), size );
+                readedBytes += size;
+                callback( readedBytes / streamSize );
             } );
         }
 
@@ -321,9 +327,9 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
             ++f;
             continue;
         }
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !( i & 0x3FF ) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
@@ -405,9 +411,9 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
             gotFaces = true;
         }
 
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !(i & 0x3FF) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
@@ -474,7 +480,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     {
         loadData.callbackFn = [callback, posStart, sizeAll = float( posEnd - posStart ), &in] ( float )
         {
-            float progress = int( in.tellg() - posStart ) / sizeAll;
+            float progress = float( in.tellg() - posStart ) / sizeAll;
             return callback( progress );
         };
     }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRPointCloud.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include <tl/expected.hpp>

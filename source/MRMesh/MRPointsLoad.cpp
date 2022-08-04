@@ -5,8 +5,9 @@
 #include "MRStringConvert.h"
 #include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
-#include <fstream>
 #include "MRProgressReadWrite.h"
+#include "MRPointCloud.h"
+#include <fstream>
 
 namespace MR
 {
@@ -67,7 +68,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
     {
         loadData.callbackFn = [callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
         {
-            float progress = int( in.tellg() - posStart ) / sizeAll;
+            float progress = float( in.tellg() - posStart ) / sizeAll;
             return callback( progress );
         };
     }
@@ -166,9 +167,9 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
             continue;
         }
 
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !( i & 0x3FF ) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
@@ -237,9 +238,9 @@ tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in, ProgressCal
         cloud.points.push_back( point );
         ++i;
 
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !( i & 0x3FF ) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
@@ -288,9 +289,9 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCal
             std::getline( in, str );
         }
 
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !( i & 0x3FF ) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
@@ -352,9 +353,9 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
             }
         }
 
-        if ( callback && !( i % 1000 ) )
+        if ( callback && !( i & 0x3FF ) )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }

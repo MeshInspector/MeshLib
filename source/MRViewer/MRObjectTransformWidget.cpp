@@ -283,7 +283,7 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
-bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
+bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;

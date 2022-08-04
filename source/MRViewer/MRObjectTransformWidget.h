@@ -66,8 +66,8 @@ public:
 
     // Changes controls xf (controls will affect object in basis of new xf)
     // note that rotation is applied around 0 coordinate in world space, so use xfAround to process rotation around user defined center
-    void setControlsXf( const AffineXf3f& xf );
-    AffineXf3f getControlsXf() const;
+    MRVIEWER_API void setControlsXf( const AffineXf3f& xf );
+    MRVIEWER_API AffineXf3f getControlsXf() const;
 
     // Returns threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     float getThresholdDot() const { return thresholdDot_; }

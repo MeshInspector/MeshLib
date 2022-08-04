@@ -580,17 +580,27 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         translateLines_[int( ax )]->polyline()->points.vec_[1],
         line.p, line.p + line.d
     );
+    auto newTranslation = findClosestPointOfSkewLines(
+        xf( translateLines_[int( ax )]->polyline()->points.vec_[0] ),
+        xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
+        line.p, line.p + line.d
+    );
 
     if ( press )
     {
         prevScaling_ = newScaling;
+        prevTranslation_ = newTranslation;
         sumScale_ = 1.f;
     }
 
-    const auto scale = ( newScaling - prevScaling_ ) + Vector3f::diagonal( 1 );
+    auto scale = ( newScaling - prevScaling_ );
+    auto direction = dot( prevTranslation_ - xf( center_ ), newTranslation - prevTranslation_ ) >= 0.f ? 1.f : -1.f;
+    for ( auto i = 0; i < Vector3f::elements; i++ )
+        scale[i] = 1.f + std::abs( scale[i] ) * direction;
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
+    prevTranslation_ = newTranslation;
     sumScale_ *= scale.x * scale.y * scale.z;
 }
 

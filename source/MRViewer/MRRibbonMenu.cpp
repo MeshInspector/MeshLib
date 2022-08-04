@@ -448,8 +448,7 @@ void RibbonMenu::drawCollapseButton_()
     {
         bool hovered = ImGui::IsWindowHovered(
             ImGuiHoveredFlags_ChildWindows |
-            ImGuiHoveredFlags_AllowWhenBlockedByActiveItem |
-            ImGuiHoveredFlags_AllowWhenDisabled );
+            ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
             asyncTimer_.resetTime();

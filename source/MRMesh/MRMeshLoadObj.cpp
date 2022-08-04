@@ -120,7 +120,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             std::string str;
             std::getline( in, str );
         }
-        if ( callback && !(i % 1000) )
+        if ( callback && !(i & 0x3FF) )
         {
             const float progress = int( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )

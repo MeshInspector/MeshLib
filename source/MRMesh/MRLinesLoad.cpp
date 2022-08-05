@@ -3,6 +3,7 @@
 #include "MRTimer.h"
 #include "MRStringConvert.h"
 #include <fstream>
+#include "MRProgressReadWrite.h"
 
 namespace MR
 {
@@ -15,16 +16,16 @@ const IOFilters Filters =
     {"MrLines (.mrlines)", "*.mrlines"}
 };
 
-tl::expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & file )
+tl::expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromMrLines( in );
+    return fromMrLines( in, callback );
 }
 
-tl::expected<Polyline3, std::string> fromMrLines( std::istream & in )
+tl::expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -44,14 +45,14 @@ tl::expected<Polyline3, std::string> fromMrLines( std::istream & in )
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading the number of points from lines-file" ) );
     polyline.points.resize( numPoints );
-    in.read( (char*)polyline.points.data(), polyline.points.size() * sizeof(Vector3f) );
+    readByBlocks( in, (char*)polyline.points.data(), polyline.points.size() * sizeof(Vector3f), callback );
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading  points from lines-file" ) );
 
     return std::move( polyline );
 }
 
-tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
+tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -59,11 +60,11 @@ tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesyst
 
     tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == u8".mrlines" )
-        res = fromMrLines( file );
+        res = fromMrLines( file, callback );
     return res;
 }
 
-tl::expected<MR::Polyline3, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension )
+tl::expected<MR::Polyline3, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -71,7 +72,7 @@ tl::expected<MR::Polyline3, std::string> fromAnySupportedFormat( std::istream& i
 
     tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
-        res = fromMrLines( in );
+        res = fromMrLines( in, callback );
     return res;
 }
 

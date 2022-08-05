@@ -12,12 +12,12 @@
 namespace MR
 {
 
-tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file )
+tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
 {
     MR_TIMER;
 
     Vector<Color, VertId> colors;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors );
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !mesh.has_value() )
     {
         return tl::make_unexpected( mesh.error() );
@@ -35,11 +35,11 @@ tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesys
     return objectMesh;
 }
 
-tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file )
+tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
-    auto lines = LinesLoad::fromAnySupportedFormat( file );
+    auto lines = LinesLoad::fromAnySupportedFormat( file, callback );
     if ( !lines.has_value() )
     {
         return tl::make_unexpected( lines.error() );
@@ -52,7 +52,7 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
     return objectLines;
 }
 
-tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file )
+tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback /*callback*/ )
 {
     MR_TIMER;
 

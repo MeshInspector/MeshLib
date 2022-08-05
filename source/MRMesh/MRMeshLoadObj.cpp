@@ -56,14 +56,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         currentObjName.clear();
     };
 
-    auto posStart = in.tellg();
+    const auto posStart = in.tellg();
     in.seekg( 0, std::ios_base::end );
-    auto posEnd = in.tellg();
+    const auto posEnd = in.tellg();
     in.seekg( posStart );
-    float streamSize = float( posEnd - posStart );
-    int lastProcent{ 0 };
+    const float streamSize = float( posEnd - posStart );
 
-    for ( ;; )
+    for ( int i = 0;; ++i )
     {
         if ( !in )
             return tl::make_unexpected( std::string( "OBJ-format read error" ) );
@@ -121,15 +120,11 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             std::string str;
             std::getline( in, str );
         }
-        if ( callback )
+        if ( callback && !(i & 0x3FF) )
         {
-            int procent = int( ( in.tellg() - posStart ) / streamSize * 100 );
-            if ( procent != lastProcent )
-            {
-                lastProcent = procent;
-                if ( !callback( procent / 100.f ) )
-                    return tl::make_unexpected( std::string( "Loading canceled" ));
-            }
+            const float progress = int( in.tellg() - posStart ) / streamSize;
+            if ( !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ));
         }
         if ( in.eof() )
             break;

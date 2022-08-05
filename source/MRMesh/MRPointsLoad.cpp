@@ -5,6 +5,8 @@
 #include "MRStringConvert.h"
 #include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
+#include "MRProgressReadWrite.h"
+#include "MRPointCloud.h"
 #include <fstream>
 
 namespace MR
@@ -23,16 +25,16 @@ const IOFilters Filters =
     {"PTS (.pts)",        "*.pts"}
 };
 
-tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromCtm( in, colors );
+    return fromCtm( in, colors, callback );
 }
 
-tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -50,13 +52,35 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
         }
     } context;
 
+    struct LoadData
+    {
+        std::function<bool( float )> callbackFn{};
+        std::istream* stream;
+    } loadData;
+    loadData.stream = &in;
+
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+
+    if ( callback )
+    {
+        loadData.callbackFn = [callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
+        {
+            float progress = float( in.tellg() - posStart ) / sizeAll;
+            return callback( progress );
+        };
+    }
+
     ctmLoadCustom( context, []( void* buf, CTMuint size, void* data )
     {
-        std::istream& s = *reinterpret_cast<std::istream*>( data );
-        auto pos = s.tellg();
-        s.read( (char*) buf, size );
-        return (CTMuint) ( s.tellg() - pos );
-    }, &in );
+        LoadData& loadData = *reinterpret_cast< LoadData* >( data );
+        auto& stream = *loadData.stream;
+        auto pos = stream.tellg();
+        readByBlocks( stream, (char*)buf, size, loadData.callbackFn, 1u << 12 );
+        return ( CTMuint )( stream.tellg() - pos );
+    }, & loadData );
 
     auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
     auto vertices = ctmGetFloatArray( context, CTM_VERTICES );
@@ -95,16 +119,16 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
     return points;
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPly( in, colors );
+    return fromPly( in, colors, callback );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -117,7 +141,14 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
 
     std::vector<unsigned char> colorsBuffer;
     PointCloud res;
-    for ( ; reader.has_element() && !gotVerts; reader.next_element() )
+
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const float streamSize = float( posEnd - posStart );
+
+    for ( int i = 0; reader.has_element() && !gotVerts; reader.next_element(), ++i )
     {
         if ( reader.element_is( miniply::kPLYVertexElement ) && reader.load_element() )
         {
@@ -134,6 +165,13 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
             continue;
+        }
+
+        if ( callback && !( i & 0x3FF ) )
+        {
+            const float progress = float( in.tellg() - posStart ) / streamSize;
+            if ( !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
     }
 
@@ -157,20 +195,27 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
     return std::move( res );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file )
+tl::expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPts( in );
+    return fromPts( in, callback );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in )
+tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in, ProgressCallback callback )
 {
     std::string line;
     int i = 0;
     PointCloud cloud;
+
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const float streamSize = float( posEnd - posStart );
+
     while ( std::getline( in, line ) )
     {
         line.erase( std::find_if( line.rbegin(), line.rend(), [] ( unsigned char ch ) { return !std::isspace( ch ); } ).base(), line.end() ); 
@@ -192,25 +237,38 @@ tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in )
             return tl::make_unexpected( "Not valid .pts format" );
         cloud.points.push_back( point );
         ++i;
+
+        if ( callback && !( i & 0x3FF ) )
+        {
+            const float progress = float( in.tellg() - posStart ) / streamSize;
+            if ( !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
+        }
     }
     cloud.validPoints.resize( i - 1, true );
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file )
+tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromObj( in );
+    return fromObj( in, callback );
 }
 
-tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in )
+tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
 {
     PointCloud cloud;
 
-    for ( ;; )
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const float streamSize = float( posEnd - posStart );
+
+    for ( int i = 0;; ++i )
     {
         if ( !in )
             return tl::make_unexpected( std::string( "OBJ-format read error" ) );
@@ -230,27 +288,40 @@ tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in )
             std::string str;
             std::getline( in, str );
         }
+
+        if ( callback && !( i & 0x3FF ) )
+        {
+            const float progress = float( in.tellg() - posStart ) / streamSize;
+            if ( !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
+        }
     }
 
     cloud.validPoints.resize( cloud.points.size(), true );
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file )
+tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromAsc( in );
+    return fromAsc( in, callback );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in )
+tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )
 {
     PointCloud cloud;
     bool allNormalsValid = true;
 
-    while ( in )
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const float streamSize = float( posEnd - posStart );
+
+    for( int i = 0; in; ++i )
     {
         std::string str;
         std::getline( in, str );
@@ -281,13 +352,21 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in )
                 allNormalsValid = false;
             }
         }
+
+        if ( callback && !( i & 0x3FF ) )
+        {
+            const float progress = float( in.tellg() - posStart ) / streamSize;
+            if ( !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
+        }
     }
 
     cloud.validPoints.resize( cloud.points.size(), true );
     return std::move( cloud );
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */,
+                                                                  ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
     for ( auto& c : ext )
@@ -295,19 +374,20 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
 
     tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == u8".ply" )
-        res = MR::PointsLoad::fromPly( file, colors );
+        res = MR::PointsLoad::fromPly( file, colors, callback );
     else if ( ext == u8".ctm" )
-        res = MR::PointsLoad::fromCtm( file, colors );
+        res = MR::PointsLoad::fromCtm( file, colors, callback );
     else if ( ext == u8".pts" )
-        res = MR::PointsLoad::fromPts( file );
+        res = MR::PointsLoad::fromPts( file, callback );
     else if ( ext == u8".obj" )
-        res = MR::PointsLoad::fromObj( file );
+        res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == u8".asc" )
-        res = MR::PointsLoad::fromAsc( file );
+        res = MR::PointsLoad::fromAsc( file, callback );
     return res;
 }
 
-tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors /*= nullptr */ )
+tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, Vector<Color, VertId>* colors /*= nullptr */,
+                                                                  ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
@@ -315,15 +395,15 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& 
 
     tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
-        res = MR::PointsLoad::fromPly( in, colors );
+        res = MR::PointsLoad::fromPly( in, colors, callback );
     else if ( ext == ".ctm" )
-        res = MR::PointsLoad::fromCtm( in, colors );
+        res = MR::PointsLoad::fromCtm( in, colors, callback );
     else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( in );
+        res = MR::PointsLoad::fromPts( in, callback );
     else if ( ext == ".obj" )
-        res = MR::PointsLoad::fromObj( in );
+        res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )
-        res = MR::PointsLoad::fromAsc( in );
+        res = MR::PointsLoad::fromAsc( in, callback );
     return res;
 }
 

@@ -203,7 +203,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
     if ( !in  )
         return tl::make_unexpected( std::string( "Binary STL read error" ) );
 
-    size_t readedBytes = 0;
+    size_t readBytes = 0;
     const float streamSize = float( posEnd - posCur );
 
     for ( ;; )
@@ -215,12 +215,13 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
             const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             hasTask = true;
-            taskGroup.run( [&in, &nextBuffer, callback, &readedBytes, streamSize] ()
+            taskGroup.run( [&in, &nextBuffer, callback, &readBytes, streamSize] ()
             {
                 const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
                 in.read( ( char* )nextBuffer.data(), size );
-                readedBytes += size;
-                callback( readedBytes / streamSize );
+                readBytes += size;
+                if ( callback )
+                    callback( readBytes / streamSize );
             } );
         }
 

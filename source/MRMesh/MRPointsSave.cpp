@@ -68,7 +68,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
             const auto& c = ( *colors )[VertId( v )];
             cVert.r = c.r; cVert.g = c.g; cVert.b = c.b;
             out.write( ( const char* )&cVert, 15 );
-            if ( callback && !( v % 1000 ) && !callback( float( v ) / numVertices ) )
+            if ( callback && !( v & 0x3FF ) && !callback( float( v ) / numVertices ) )
                 return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
     }
@@ -177,7 +177,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         };
     }
     saveData.stream = &out;
-    saveData.maxSize = points.points.size() * sizeof( Vector3f );
+    saveData.maxSize = points.points.size() * sizeof( Vector3f ) + points.normals.size() * sizeof( Vector3f ) + 150; // 150 - reserve for some ctm specific data
     ctmSaveCustom( context, [] ( const void* buf, CTMuint size, void* data )
     {
         SaveData& saveData = *reinterpret_cast< SaveData* >( data );
@@ -218,7 +218,7 @@ tl::expected<void, std::string> toPts( const PointCloud& points, std::ostream& o
     {
         out << points.points[v] << "\n";
         ++pointIndex;
-        if ( callback && !( pointIndex % 1000 ) && !callback( float( pointIndex ) / pointsNum ) )
+        if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }
     out << "END_Polyline\n";

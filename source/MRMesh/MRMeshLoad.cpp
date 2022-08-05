@@ -215,14 +215,12 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
             const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             hasTask = true;
-            taskGroup.run( [&in, &nextBuffer, callback, &readBytes, streamSize] ()
+            const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
+            taskGroup.run( [&in, &nextBuffer, size] ()
             {
-                const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
                 in.read( ( char* )nextBuffer.data(), size );
-                readBytes += size;
-                if ( callback )
-                    callback( readBytes / streamSize );
             } );
+            readBytes += size;
         }
 
         chunk.resize( buffer.size() );
@@ -234,6 +232,8 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
         if ( !hasTask )
             break;
         taskGroup.wait();
+        if ( callback && !callback( readBytes / streamSize ) )
+            return tl::make_unexpected( std::string( "Loading canceled" ) );
         if ( !in  )
             return tl::make_unexpected( std::string( "Binary STL read error" ) );
         buffer.swap( nextBuffer );

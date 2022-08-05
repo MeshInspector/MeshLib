@@ -41,6 +41,7 @@ ELSE() # MR_EMSCRIPTEN
 IF(APPLE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 			MRMesh
+			mrmeshpy
 			fmt
 			tbb
 			OpenVDB

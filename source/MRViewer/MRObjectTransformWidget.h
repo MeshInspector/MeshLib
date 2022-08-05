@@ -141,7 +141,7 @@ private:
 
     AxisTransformMode axisTransformMode_{ Translation };
 
-    float sumScale_;
+    float sumScale_ = 1;
     Vector3f prevScaling_;
     Vector3f startTranslation_;
     Vector3f prevTranslation_;

@@ -66,6 +66,10 @@ public:
     // Sets current axis transform mode (translate/scale object while dragging an axis)
     void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
 
+    // Enables or disables uniform scaling
+    bool getUniformScaling() { return uniformScaling_; };
+    void setUniformScaling( bool uniformScaling ) { uniformScaling_ = uniformScaling; };
+
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
 
@@ -140,6 +144,7 @@ private:
     Vector3f center_;
 
     AxisTransformMode axisTransformMode_{ Translation };
+    bool uniformScaling_{ false };
 
     float sumScale_ = 1;
     Vector3f prevScaling_;

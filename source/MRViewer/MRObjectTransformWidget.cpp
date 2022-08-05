@@ -208,6 +208,7 @@ void ObjectTransformWidget::reset()
     radius_ = -1.0f;
 
     axisTransformMode_ = Translation;
+    uniformScaling_ = false;
 
     thresholdDot_ = 0.f;
 }
@@ -600,13 +601,21 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
 
     auto scale = ( newScaling - prevScaling_ );
     auto direction = dot( prevTranslation_ - xf( center_ ), newTranslation - prevTranslation_ ) >= 0.f ? 1.f : -1.f;
-    for ( auto i = 0; i < Vector3f::elements; i++ )
-        scale[i] = 1.f + std::abs( scale[i] ) * direction;
+    if ( uniformScaling_ )
+    {
+        scale = Vector3f::diagonal( 1.f + scale.length() * direction );
+        sumScale_ *= scale.x;
+    }
+    else
+    {
+        for ( auto i = 0; i < Vector3f::elements; i++ )
+            scale[i] = 1.f + std::abs( scale[i] ) * direction;
+        sumScale_ *= scale.x * scale.y * scale.z;
+    }
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
     prevTranslation_ = newTranslation;
-    sumScale_ *= scale.x * scale.y * scale.z;
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )

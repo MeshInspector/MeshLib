@@ -53,14 +53,13 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    Boost::boost
 		    jsoncpp
 		    cpr
-		    ${PYTHON_LIB}
 		    podofo
 		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		    png
 		    fmt
 		    tbb
-			clip
-			${COCOA_LIBRARY}
+		    clip
+		    ${COCOA_LIBRARY}
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -96,7 +95,6 @@ ELSE()
 		Boost::boost
 		jsoncpp
 		cpr
-		${PYTHON_LIB}
 		podofo
 		turbojpeg
 		clip

@@ -13,6 +13,7 @@ constexpr float cTabLabelMinPadding = 12.0f;
 constexpr float cTopPanelScrollStep = 50.0f;
 constexpr float cTopPanelScrollBtnSize = 20.0f;
 constexpr float cTopPanelAditionalButtonSize = cTabHeight - cTabYOffset;
+constexpr float cSeparatorSpacing = 16.0f;
 
 constexpr float cRibbonItemInterval = 4.0f; 
 constexpr float cRibbonItemMinWidth = 86.0f;

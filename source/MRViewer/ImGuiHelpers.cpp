@@ -6,6 +6,7 @@
 #include "MRPalette.h"
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
+#include "MRRibbonConstants.h"
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 
@@ -516,8 +517,8 @@ PaletteChanges Palette(
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 3.0f * menuScaling, 3.0f * menuScaling } );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 9.0f * menuScaling } );
-          fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
-          ImGui::PopStyleVar( 2 );
+        fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
+        ImGui::PopStyleVar( 2 );
     }
     bool isDiscrete = palette.getTexture().filter == MeshTexture::FilterType::Discrete;
     
@@ -537,7 +538,7 @@ PaletteChanges Palette(
     {
         ImGui::SameLine();
         int discretization = params.discretization;
-        ImGui::SetNextItemWidth( 0.3333f * scaledWidth );
+        ImGui::SetNextItemWidth( scaledWidth / 3.0f );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 5 );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 8.0f * menuScaling } );
         if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
@@ -619,16 +620,14 @@ PaletteChanges Palette(
         }
         else
         {
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16 } );
+            ImGui::PushItemWidth( scaledWidth * 1.2f );
+            rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );            
+            rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );            
+            rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );            
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min negative (blue)", &ranges[0], speed, min, max, format );
             ImGui::PopStyleVar();
+            ImGui::PopItemWidth();
         }
     }
     ImGui::PopItemWidth();
@@ -666,7 +665,7 @@ PaletteChanges Palette(
     std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
 
-    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( 1.7f / 1.5f * scaledWidth, 28.0f * menuScaling ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( 1.7f / 1.5f * scaledWidth, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
 
     ImGui::PopStyleVar();
@@ -764,7 +763,7 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
 
 void Separator( float scaling, const std::string& text )
 {
-    if ( ImGui::GetStyle().ItemSpacing.y < 16.0f * scaling )
+    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparatorSpacing * scaling )
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 16.0f * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
@@ -775,10 +774,8 @@ void Separator( float scaling, const std::string& text )
     }
     else if ( ImGui::BeginTable( "SeparatorTable", 2 ) )
     {
-        auto textSize = ImGui::CalcTextSize( text.c_str() );
-        
         ImGui::TableNextColumn();
-        ImGui::Text( text.c_str() );
+        ImGui::Text( "%s", text.c_str());
         ImGui::TableNextColumn();
         auto width = ImGui::GetWindowWidth();
         ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );
@@ -786,7 +783,7 @@ void Separator( float scaling, const std::string& text )
         ImGui::EndTable();
     }
 
-    if ( ImGui::GetStyle().ItemSpacing.y < 16.0f * scaling )
+    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparatorSpacing * scaling )
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 16.0f * scaling - ImGui::GetStyle().ItemSpacing.y );
     }

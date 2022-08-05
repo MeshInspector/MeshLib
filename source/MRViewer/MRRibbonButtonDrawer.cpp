@@ -78,17 +78,11 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
     auto& texture = GetGradientTexture();
     if ( !texture || ( value && !*value ) )
-    {
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 3.0f, 3.0f } );
-        auto res =  ImGui::Checkbox( label, value );
-        ImGui::PopStyleVar();
-        return res;
-    }
+        return  ImGui::Checkbox( label, value );
 
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 3.0f, 3.0f } );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const ImGuiStyle& style = ImGui::GetStyle();
@@ -105,7 +99,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 
     auto res = ImGui::Checkbox( label, value );
 
-    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleVar();
     ImGui::PopStyleColor( 2 );
     return res;
 }

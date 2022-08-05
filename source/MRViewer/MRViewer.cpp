@@ -9,7 +9,7 @@
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRUVSphere.h"
-#include "MRMesh/MREmbeddedPython.h"
+#include "mrmeshpy/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImageSave.h"

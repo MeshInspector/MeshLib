@@ -1,7 +1,7 @@
 #ifndef __EMSCRIPTEN__
 #include "MREmbeddedPython.h"
 #include "MRPython.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 #include <pybind11/embed.h>
 #include <fstream>

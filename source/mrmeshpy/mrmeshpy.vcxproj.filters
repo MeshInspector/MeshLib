@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="MRLoadModule.cpp" />
+    <ClCompile Include="MRPythonBaseExposing.cpp" />
+    <ClCompile Include="MRPythonBooleanExposing.cpp" />
+    <ClCompile Include="MRPythonDecimate.cpp" />
+    <ClCompile Include="MRPythonIO.cpp" />
+    <ClCompile Include="MRPythonMeshExposing.cpp" />
+    <ClCompile Include="MRPythonMeshICPExposing.cpp" />
+    <ClCompile Include="MRPythonMeshPlugins.cpp" />
+    <ClCompile Include="MRPythonMeshToPointCloud.cpp" />
+    <ClCompile Include="MRPythonPointCloudExposing.cpp" />
+    <ClCompile Include="MRPythonPointCloudTriangulation.cpp" />
+    <ClCompile Include="MRPythonRegularMapMesh.cpp" />
+    <ClCompile Include="MRPythonSampling.cpp" />
+    <ClCompile Include="MRPythonSegmentation.cpp" />
+    <ClCompile Include="MRPython.cpp" />
+    <ClCompile Include="MREmbeddedPython.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="exports.h" />
+    <ClInclude Include="MRLoadModule.h" />
+    <ClInclude Include="MRPython.h" />
+    <ClInclude Include="MREmbeddedPython.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig" />
+  </ItemGroup>
+</Project>

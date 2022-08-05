@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef __EMSCRIPTEN__
-#include "MRMeshFwd.h"
+#include "exports.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
@@ -55,9 +55,9 @@ template<StreamType T>
 class PythonStreamRedirector
 {
 public:
-    MRMESH_API void write( const std::string& text );
+    MRMESHPY_API void write( const std::string& text );
     void flush() {}
-    MRMESH_API static int getNumWritten();
+    MRMESHPY_API static int getNumWritten();
 };
 
 using StdoutPyRedirector = PythonStreamRedirector<Stdout>;
@@ -69,7 +69,7 @@ namespace MR
 class PythonExport
 {
 public:
-    MRMESH_API static PythonExport& instance();
+    MRMESHPY_API static PythonExport& instance();
 
     using PythonRegisterFuncton = std::function<void( pybind11::module_& m )>;
 
@@ -110,8 +110,8 @@ private:
 
 struct PythonFunctionAdder
 {
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func );
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
+    MRMESHPY_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func );
+    MRMESHPY_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
 }

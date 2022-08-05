@@ -190,6 +190,9 @@
     <ProjectReference Include="..\imgui\imgui.vcxproj">
       <Project>{766f017f-ba42-484a-abb7-b667e7fa924c}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\mrmeshpy\mrmeshpy.vcxproj">
+      <Project>{cc7f9661-34a7-4756-8791-acfd10a427eb}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>

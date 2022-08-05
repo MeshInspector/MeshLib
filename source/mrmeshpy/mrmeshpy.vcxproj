@@ -22,7 +22,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRLoadModule.cpp" />
+    <ClCompile Include="MRPython.cpp" />
     <ClCompile Include="MRPythonBaseExposing.cpp" />
     <ClCompile Include="MRPythonBooleanExposing.cpp" />
     <ClCompile Include="MRPythonDecimate.cpp" />
@@ -39,7 +41,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MREmbeddedPython.h" />
     <ClInclude Include="MRLoadModule.h" />
+    <ClInclude Include="MRPython.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

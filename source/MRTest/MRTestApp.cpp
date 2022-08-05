@@ -6,8 +6,8 @@
 #include "MRViewer/MRViewer.h"
 
 #ifndef __EMSCRIPTEN__
-#include "MRMesh/MRPython.h"
-#include "MRMesh/MREmbeddedPython.h"
+#include "mrmeshpy/MRPython.h"
+#include "mrmeshpy/MREmbeddedPython.h"
 #include "mrmeshpy/MRLoadModule.h"
 #endif
 

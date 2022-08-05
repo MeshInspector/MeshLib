@@ -515,8 +515,8 @@ PaletteChanges Palette(
     bool fixZeroChanged = false;
     if ( fixZero )
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 3.0f * menuScaling, 3.0f * menuScaling } );
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 9.0f * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cDefaultItemSpacing * menuScaling } );
         fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
         ImGui::PopStyleVar( 2 );
     }
@@ -525,8 +525,8 @@ PaletteChanges Palette(
     const auto& params = palette.getParameters();
 
     
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 16.0f * menuScaling, 16.0f * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 3.0f * menuScaling, 3.0f * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * menuScaling, cSeparateBlocksSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? MeshTexture::FilterType::Discrete : MeshTexture::FilterType::Linear );
@@ -538,9 +538,9 @@ PaletteChanges Palette(
     {
         ImGui::SameLine();
         int discretization = params.discretization;
-        ImGui::SetNextItemWidth( scaledWidth / 3.0f );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 5 );
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 8.0f * menuScaling } );
+        ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
         if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
         {
             palette.setDiscretizationNumber( discretization );
@@ -555,7 +555,7 @@ PaletteChanges Palette(
     assert( params.ranges.size() == 2 || params.ranges.size() == 4 );
     int paletteRangeMode = params.ranges.size() == 2 ? 0 : 1;
     int paletteRangeModeBackUp = paletteRangeMode;
-    ImGui::SetNextItemWidth( scaledWidth * 1.2f );
+    ImGui::PushItemWidth( scaledWidth );
     ImGui::Combo( "Palette Type", &paletteRangeMode, "Even Space\0Central Zone\0\0" );
 
     float ranges[4];
@@ -571,8 +571,7 @@ PaletteChanges Palette(
             ranges[2] = params.ranges[2];
         }
     }
-
-    ImGui::PushItemWidth( scaledWidth );
+    
     bool rangesChanged = false;
     if ( paletteRangeMode == 0 )
     {
@@ -580,8 +579,7 @@ PaletteChanges Palette(
         {
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min/Max", &ranges[3], speed, 0.0f, max, format );
             ImGui::PopStyleVar();
 
@@ -590,10 +588,8 @@ PaletteChanges Palette(
         }
         else
         {
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
             rangesChanged |= ImGui::DragFloatValid( "Max (red)", &ranges[3], speed, min, max, format );
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min (blue)", &ranges[0], speed, min, max, format );
             ImGui::PopStyleVar();
         }
@@ -604,15 +600,15 @@ PaletteChanges Palette(
         {
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
+
             rangesChanged |= ImGui::DragFloatValid( "Max positive / Min negative", &ranges[3], speed, min, max, format );
             if ( rangesChanged || fixZeroChanged )
                 ranges[0] = -ranges[3];
 
             if ( ranges[2] < 0.0f )
                 ranges[2] = 0.0f;
-            ImGui::SetNextItemWidth( scaledWidth * 1.2f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
+
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing* menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min positive / Max negative", &ranges[2], speed, min, max, format );
             ImGui::PopStyleVar();
             if ( rangesChanged || fixZeroChanged )
@@ -620,14 +616,12 @@ PaletteChanges Palette(
         }
         else
         {
-            ImGui::PushItemWidth( scaledWidth * 1.2f );
             rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );            
             rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );            
             rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );            
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min negative (blue)", &ranges[0], speed, min, max, format );
             ImGui::PopStyleVar();
-            ImGui::PopItemWidth();
         }
     }
     ImGui::PopItemWidth();
@@ -663,7 +657,7 @@ PaletteChanges Palette(
     }
     
     std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 16.0f * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( 1.7f / 1.5f * scaledWidth, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
@@ -763,9 +757,9 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
 
 void Separator( float scaling, const std::string& text )
 {
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparatorSpacing * scaling )
+    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
     {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 16.0f * scaling - ImGui::GetStyle().ItemSpacing.y );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
     
     if ( text.empty() )
@@ -783,9 +777,9 @@ void Separator( float scaling, const std::string& text )
         ImGui::EndTable();
     }
 
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparatorSpacing * scaling )
+    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
     {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 16.0f * scaling - ImGui::GetStyle().ItemSpacing.y );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
 }
 

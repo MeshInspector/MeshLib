@@ -207,6 +207,8 @@ void ObjectTransformWidget::reset()
     width_ = -1.0f;
     radius_ = -1.0f;
 
+    axisTransformMode_ = Translation;
+
     thresholdDot_ = 0.f;
 }
 

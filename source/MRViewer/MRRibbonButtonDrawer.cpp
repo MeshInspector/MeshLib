@@ -78,7 +78,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
     auto& texture = GetGradientTexture();
     if ( !texture || ( value && !*value ) )
-        return ImGui::Checkbox( label, value );
+        return  ImGui::Checkbox( label, value );
 
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );

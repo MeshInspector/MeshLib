@@ -182,6 +182,7 @@ MRVIEWER_API PaletteChanges Palette(
     const char* label,
     MR::Palette& palette,
     float width,
+    float menuScaling,
     bool* fixZero = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
@@ -198,5 +199,7 @@ MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, con
 
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void SetTooltipIfHovered( const std::string& text, float scaling );
+///add text with separator line 
+MRVIEWER_API void Separator( float scaling, const std::string& text = "" );
 
 } // namespace ImGui

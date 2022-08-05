@@ -53,8 +53,26 @@ public:
     void setPickThrough( bool on ) { pickThrough_ = on; }
     bool getPickThrough() const { return pickThrough_; }
 
+    // Transform operation applying to object while dragging an axis
+    enum AxisTransformMode
+    {
+        // object moves along an axis
+        Translation,
+        // object inflates or deflates along an axis depending on drag direction (away from center or toward center respectively)
+        Scaling,
+    };
+    // Returns current axis transform mode (translate/scale object while dragging an axis)
+    AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
+    // Sets current axis transform mode (translate/scale object while dragging an axis)
+    void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
+
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
+
+    // Changes controls xf (controls will affect object in basis of new xf)
+    // note that rotation is applied around 0 coordinate in world space, so use xfAround to process rotation around user defined center
+    MRVIEWER_API void setControlsXf( const AffineXf3f& xf );
+    MRVIEWER_API AffineXf3f getControlsXf() const;
 
     // Returns threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     float getThresholdDot() const { return thresholdDot_; }
@@ -65,6 +83,8 @@ public:
     // if obj argument is null, stop following
     MRVIEWER_API void followObjVisibility( const std::weak_ptr<Object>& obj );
 
+    // Sets callback that will be called in draw function during scaling with current scale arg
+    void setScaleTooltipCallback( std::function<void( float )> callback ) { scaleTooltipCallback_ = callback; }
     // Sets callback that will be called in draw function during translation with current shift arg
     void setTranslateTooltipCallback( std::function<void( float )> callback ) { translateTooltipCallback_ = callback; }
     // Sets callback that will be called in draw function during rotation with current angle in rad
@@ -86,6 +106,7 @@ private:
     void passiveMove_();
     void activeMove_( bool press = false );
 
+    void processScaling_( Axis ax, bool press );
     void processTranslation_( Axis ax, bool press );
     void processRotation_( Axis ax, bool press );
 
@@ -118,8 +139,12 @@ private:
 
     Vector3f center_;
 
+    AxisTransformMode axisTransformMode_{ Translation };
+
+    float sumScale_ = 1;
+    Vector3f prevScaling_;
     Vector3f startTranslation_;
-    Vector3f prevTraslation_;
+    Vector3f prevTranslation_;
     AffineXf3f startRotXf_;
     float startAngle_ = 0;
     float accumAngle_ = 0;
@@ -129,6 +154,7 @@ private:
     bool picked_{ false };
     bool pickThrough_{ false };
 
+    std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;
     std::function<void( float )> rotateTooltipCallback_;
 

@@ -6,7 +6,6 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
-#include <MRMesh/MRToFromEigen.h>
 #include "ImGuiMenu.h"
 #include "MRMeshViewer.h"
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -32,21 +31,11 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRMesh/MRObjectLabel.h"
 
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include <Eigen/Dense>
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMeshModifier.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRProgressBar.h"
 #include "MRFileDialog.h"
-
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectLoad.h>
@@ -76,18 +65,10 @@
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRToFromEigen.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRChangeLabelAction.h"
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include <Eigen/Dense>
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
+#include "MRMesh/MRAffineXfDecompose.h"
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
@@ -135,28 +116,6 @@ bool objectHasRealChildren( const MR::Object& object )
             break;
     }
     return res;
-}
-
-static void decomposeQR( const Matrix3f& m, Matrix3f& q, Matrix3f& r )
-{
-    Eigen::HouseholderQR<Eigen::MatrixXf> qr( toEigen( m ) );
-    q = fromEigen( Eigen::Matrix3f{ qr.householderQ() } );
-    r = fromEigen( Eigen::Matrix3f{ qr.matrixQR() } );
-    r.y.x = r.z.x = r.z.y = 0;
-}
-
-// m = q*r with all diagonal elements in (r) positive
-static void decomposePositiveQR( const Matrix3f& m, Matrix3f& q, Matrix3f& r )
-{
-    decomposeQR( m, q, r );
-    Matrix3f sign;
-    for ( int i = 0; i < 3; ++i )
-    {
-        if ( r[i][i] < 0 )
-            sign[i][i] = -1;
-    }
-    q = q * sign;
-    r = sign * r;
 }
 
 void selectRecursive( Object& obj )
@@ -1522,7 +1481,7 @@ float ImGuiMenu::drawTransform_()
 
             auto xf = data.xf();
             Matrix3f q, r;
-            decomposePositiveQR( xf.A, q, r );
+            decomposeXf( xf, q, r );
 
             auto euler = ( 180 / PI_F ) * q.toEulerAngles();
             Vector3f scale{ r.x.x, r.y.y, r.z.z };

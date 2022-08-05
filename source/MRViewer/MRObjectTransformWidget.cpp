@@ -12,6 +12,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRAffineXfDecompose.h"
+#include <GLFW/glfw3.h>
 
 namespace
 {
@@ -123,7 +125,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
 
     SceneRoot::get().addChild( controlsRoot_ );
     SceneRoot::get().addChild( activeLine_ );
-    controlsRoot_->setXf( worldXf );
+    setControlsXf( worldXf );
 
     setTransformMode( MoveX | MoveY | MoveZ | RotX | RotY | RotZ );
 
@@ -152,6 +154,7 @@ void ObjectTransformWidget::reset()
     startModifyCallback_ = {};
     stopModifyCallback_ = {};
     addXfCallback_ = {};
+    scaleTooltipCallback_ = {};
     translateTooltipCallback_ = {};
     rotateTooltipCallback_ = {};
 
@@ -203,6 +206,10 @@ void ObjectTransformWidget::reset()
 
     width_ = -1.0f;
     radius_ = -1.0f;
+
+    axisTransformMode_ = Translation;
+
+    thresholdDot_ = 0.f;
 }
 
 void ObjectTransformWidget::setWidth( float width )
@@ -235,6 +242,23 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
     auto visMask = controlsRoot_->visibilityMask();
     
     updateVisualTransformMode_( transformModeMask_, visMask );
+}
+
+void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
+{
+    Matrix3f rotation, scaling;
+    decomposeXf( xf, rotation, scaling );
+
+    AffineXf3f unscaledXf;
+    unscaledXf.A = rotation;
+    unscaledXf.b = xf.b + xf.A * center_ - rotation * center_;
+
+    controlsRoot_->setXf( unscaledXf );
+}
+
+AffineXf3f ObjectTransformWidget::getControlsXf() const
+{
+    return controlsRoot_->xf();
 }
 
 void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& obj )
@@ -336,12 +360,16 @@ void ObjectTransformWidget::draw_()
     // translation
     if ( currentIndex < 3 )
     {
-        if ( translateTooltipCallback_ )
+        if ( axisTransformMode_ == Translation && translateTooltipCallback_ )
         {
             auto xf = controlsRoot_->xf();
             auto axis = xf( translateLines_[currentIndex]->polyline()->points.vec_[1] ) -
                 xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
-            translateTooltipCallback_( dot( prevTraslation_ - startTranslation_, axis.normalized() ) );
+            translateTooltipCallback_( dot( prevTranslation_ - startTranslation_, axis.normalized() ) );
+        }
+        else if ( axisTransformMode_ == Scaling && scaleTooltipCallback_ )
+        {
+            scaleTooltipCallback_( sumScale_ );
         }
     }
     else // rotation
@@ -529,13 +557,56 @@ void ObjectTransformWidget::activeMove_( bool press )
 {
     assert( currentObj_ );
 
-    int currnetIndex = findCurrentObjIndex_();
+    int currentObjIndex = findCurrentObjIndex_();
 
     // we now know who is picked
-    if ( currnetIndex < 3 )
-        processTranslation_( Axis( currnetIndex ), press );
+    if ( currentObjIndex < 3 )
+    {
+        if ( axisTransformMode_ == AxisTransformMode::Scaling )
+            processScaling_( Axis( currentObjIndex ), press );
+        else
+            processTranslation_( Axis( currentObjIndex ), press );
+    }
     else
-        processRotation_( Axis( currnetIndex - 3 ), press );
+    {
+        processRotation_( Axis( currentObjIndex - 3 ), press );
+    }
+}
+
+void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, bool press )
+{
+    const auto& mousePos = getViewerInstance().mouseController.getMousePos();
+    auto& viewport = getViewerInstance().viewport();
+    auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
+    auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
+    auto xf = controlsRoot_->xf();
+    auto newScaling = findClosestPointOfSkewLines(
+        translateLines_[int( ax )]->polyline()->points.vec_[0],
+        translateLines_[int( ax )]->polyline()->points.vec_[1],
+        line.p, line.p + line.d
+    );
+    auto newTranslation = findClosestPointOfSkewLines(
+        xf( translateLines_[int( ax )]->polyline()->points.vec_[0] ),
+        xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
+        line.p, line.p + line.d
+    );
+
+    if ( press )
+    {
+        prevScaling_ = newScaling;
+        prevTranslation_ = newTranslation;
+        sumScale_ = 1.f;
+    }
+
+    auto scale = ( newScaling - prevScaling_ );
+    auto direction = dot( prevTranslation_ - xf( center_ ), newTranslation - prevTranslation_ ) >= 0.f ? 1.f : -1.f;
+    for ( auto i = 0; i < Vector3f::elements; i++ )
+        scale[i] = 1.f + std::abs( scale[i] ) * direction;
+    auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
+    addXf_( addXf );
+    prevScaling_ = newScaling;
+    prevTranslation_ = newTranslation;
+    sumScale_ *= scale.x * scale.y * scale.z;
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
@@ -552,15 +623,15 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     );
 
     if ( press )
-        prevTraslation_ = startTranslation_ = newTranslation;
+        prevTranslation_ = startTranslation_ = newTranslation;
 
     std::vector<Vector3f> activePoints( 2 );
     activePoints[0] = startTranslation_;
     activePoints[1] = newTranslation;
 
-    auto addXf = AffineXf3f::translation( newTranslation - prevTraslation_ );
+    auto addXf = AffineXf3f::translation( newTranslation - prevTranslation_ );
     addXf_( addXf );
-    prevTraslation_ = newTranslation;
+    prevTranslation_ = newTranslation;
 
     setActiveLineFromPoints_( activePoints );
 }
@@ -686,7 +757,8 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    controlsRoot_->setXf( addXf * controlsRoot_->xf() );
+    if ( findCurrentObjIndex_() >= 3 || axisTransformMode_ == Translation )
+        controlsRoot_->setXf( addXf * controlsRoot_->xf() );
     approvedChange_ = false;
 }
 

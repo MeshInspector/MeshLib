@@ -53,12 +53,17 @@ public:
     void setPickThrough( bool on ) { pickThrough_ = on; }
     bool getPickThrough() const { return pickThrough_; }
 
+    // Transform operation applying to object while dragging an axis
     enum AxisTransformMode
     {
+        // object moves along an axis
         Translation,
+        // object inflates or deflates along an axis depending on drag direction (away from center or toward center respectively)
         Scaling,
     };
+    // Returns current axis transform mode (translate/scale object while dragging an axis)
     AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
+    // Sets current axis transform mode (translate/scale object while dragging an axis)
     void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
 
     // Returns root object of widget

@@ -267,7 +267,7 @@ void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& ob
     visibilityParent_ = obj;
 }
 
-bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
+bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int modifier )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;
@@ -278,6 +278,8 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
 
     if ( startModifyCallback_ )
         startModifyCallback_();
+
+    axisTransformMode_ = ( modifier == GLFW_MOD_CONTROL ) ? Scaling : Translation;
 
     getViewerInstance().select_hovered_viewport();
     picked_ = true;

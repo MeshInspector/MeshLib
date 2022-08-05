@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "mrmeshpy/MRPython.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRPlane3.h"

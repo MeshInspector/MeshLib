@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "mrmeshpy/MRPython.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRViewportId.h"
 #include "MRViewer/MRViewport.h"

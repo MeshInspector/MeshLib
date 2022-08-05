@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "mrmeshpy/MRPython.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointCloudTriangulation.h"
 #include <pybind11/stl.h>

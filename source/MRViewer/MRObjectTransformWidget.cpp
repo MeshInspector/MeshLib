@@ -154,6 +154,7 @@ void ObjectTransformWidget::reset()
     startModifyCallback_ = {};
     stopModifyCallback_ = {};
     addXfCallback_ = {};
+    scaleTooltipCallback_ = {};
     translateTooltipCallback_ = {};
     rotateTooltipCallback_ = {};
 
@@ -205,6 +206,8 @@ void ObjectTransformWidget::reset()
 
     width_ = -1.0f;
     radius_ = -1.0f;
+
+    thresholdDot_ = 0.f;
 }
 
 void ObjectTransformWidget::setWidth( float width )

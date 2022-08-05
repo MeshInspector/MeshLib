@@ -671,9 +671,13 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
             const VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+            if ( !nextVertex )
+            {
+                triOrientation = false;
+                nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+                assert( nextVertex.valid() );
+            }
             visitedVertices.autoResizeSet( nextVertex );
-
-            assert( nextVertex.valid() );
 
             path = { firstVertex, nextVertex };
             while ( true )

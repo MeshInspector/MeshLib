@@ -53,13 +53,15 @@ public:
     void setPickThrough( bool on ) { pickThrough_ = on; }
     bool getPickThrough() const { return pickThrough_; }
 
-    // Transform operation applying to object while dragging an axis
+    // Transform operation applying to object while dragging an axis. This parameter does not apply to active operation.
     enum AxisTransformMode
     {
         // object moves along an axis
-        Translation,
+        AxisTranslation,
         // object inflates or deflates along an axis depending on drag direction (away from center or toward center respectively)
-        Scaling,
+        AxisScaling,
+        // object inflates or deflates along all axes depending on drag direction (away from center or toward center respectively)
+        UniformScaling,
     };
     // Returns current axis transform mode (translate/scale object while dragging an axis)
     AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
@@ -139,7 +141,16 @@ private:
 
     Vector3f center_;
 
-    AxisTransformMode axisTransformMode_{ Translation };
+    AxisTransformMode axisTransformMode_{ AxisTranslation };
+
+    enum ActiveEditMode
+    {
+        TranslationMode,
+        ScalingMode,
+        UniformScalingMode,
+        RotationMode,
+    };
+    ActiveEditMode activeEditMode_{ TranslationMode };
 
     float sumScale_ = 1;
     Vector3f prevScaling_;

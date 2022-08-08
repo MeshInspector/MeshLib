@@ -247,7 +247,7 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
             {
                 return callback( v / 2.f );
             };
-        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callbackFn );
+        const bool cancel = !MR::writeByBlocks( out, ( const char* )mesh.points.data(), numVertices * sizeof( Vector3f ), callbackFn );
         if ( cancel )
             return tl::make_unexpected( std::string( "Saving canceled" ) );
     }

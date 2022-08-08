@@ -85,6 +85,9 @@ MRVIEWER_API bool DragFloatValid( const char *label, float* value, float speed=1
                                 float max = std::numeric_limits<float>::max(),
                                 const char* format = "%.3f", ImGuiSliderFlags flags = 0 );
 
+/// similar to ImGui::DragFloatValid but use available line width range
+MRVIEWER_API bool DragFloatValidLineWidth( const char* label, float* value );
+
 struct MultiDragRes
 {
     bool valueChanged = false; // any of N

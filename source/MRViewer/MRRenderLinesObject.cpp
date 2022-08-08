@@ -34,9 +34,8 @@ float RenderLinesObject::actualLineWidth() const
     if ( !Viewer::constInstance()->isGLInitialized() )
         return 0.0f;
 
-    GLfloat lineWidthRange[2] = { 0, 10 };
-    GL_EXEC( glGetFloatv( GL_ALIASED_LINE_WIDTH_RANGE, lineWidthRange ) ); // it is really 1 1 for __EMSCRIPTEN__
-    return std::clamp( objLines_->getLineWidth(), lineWidthRange[0], lineWidthRange[1] );
+    const auto& range = GetAvailableLineWidthRange();
+    return std::clamp( objLines_->getLineWidth(), range[0], range[1] );
 }
 
 void RenderLinesObject::render( const RenderParams& renderParams ) const
@@ -432,6 +431,17 @@ void RenderLinesObject::update_() const
         } );
     }
     objLines_->resetDirty();
+}
+
+const Vector2f& GetAvailableLineWidthRange()
+{
+    static Vector2f availableWidth = Vector2f::diagonal( -1.0f );
+
+    if ( availableWidth[0] < 0.0f )
+    {
+        GL_EXEC( glGetFloatv( GL_ALIASED_LINE_WIDTH_RANGE, &availableWidth[0] ) ); // it is really 1 1 for __EMSCRIPTEN__
+    }
+    return availableWidth;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderLinesObject )

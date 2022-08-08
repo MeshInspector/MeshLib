@@ -1,5 +1,5 @@
 #pragma once
-
+#include "exports.h"
 #include <MRMesh/MRIRenderObject.h>
 #include <MRMesh/MRMeshTexture.h>
 #include <MRMesh/MRId.h>
@@ -60,5 +60,8 @@ private:
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
 };
+
+// Returns range of line width that are allowed by current renderer
+MRVIEWER_API const Vector2f& GetAvailableLineWidthRange();
 
 }

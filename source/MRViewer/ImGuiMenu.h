@@ -211,7 +211,8 @@ public:
                             std::function<void( ObjectT*, const Vector4f& )> setter );
   void make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
                    std::function<float( const ObjectLinesHolder* )> getter,
-                   std::function<void( ObjectLinesHolder*, const float& )> setter );
+                   std::function<void( ObjectLinesHolder*, const float& )> setter,
+                   bool lineWidth = false );
 
   MRVIEWER_API void draw_custom_plugins();
 

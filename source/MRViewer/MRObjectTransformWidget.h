@@ -53,7 +53,7 @@ public:
     void setPickThrough( bool on ) { pickThrough_ = on; }
     bool getPickThrough() const { return pickThrough_; }
 
-    // Transform operation applying to object while dragging an axis
+    // Transform operation applying to object while dragging an axis. This parameter does not apply to active operation.
     enum AxisTransformMode
     {
         // object moves along an axis
@@ -66,7 +66,7 @@ public:
     // Sets current axis transform mode (translate/scale object while dragging an axis)
     void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
 
-    // Enables or disables uniform scaling
+    // Enables or disables uniform scaling. This parameter does not apply to active operation.
     bool getUniformScaling() { return uniformScaling_; };
     void setUniformScaling( bool uniformScaling ) { uniformScaling_ = uniformScaling; };
 

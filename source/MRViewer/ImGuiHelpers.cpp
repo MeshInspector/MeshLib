@@ -677,7 +677,7 @@ PaletteChanges Palette(
     std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
-    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( 1.7f / 1.5f * scaledWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( -1, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
 
     ImGui::PopStyleVar();

@@ -61,7 +61,7 @@ private:
     mutable uint32_t dirty_;
 };
 
-// Returns range of line width that are allowed by current renderer
+// Returns the range of line widths that are allowed by current renderer
 MRVIEWER_API const Vector2f& GetAvailableLineWidthRange();
 
 }

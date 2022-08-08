@@ -19,6 +19,7 @@ private:
 
     bool shouldClose_{false};
     bool showCloseModal_{false};
+    float activeModalHighlightTimer_{ 0.0f };
 };
 
 } //namespace MR

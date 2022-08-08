@@ -24,7 +24,7 @@ constexpr float cButtonPadding = 8.0f;
 constexpr float cDefaultItemSpacing = 8.0f;
 constexpr float cDefaultInnerSpacing = 8.0f;
 constexpr float cDefaultWindowPaddingX = 8.0f;
-constexpr float cDefaultWindowPaddingY = 16.0f;
+constexpr float cDefaultWindowPaddingY = 12.0f;
 
 constexpr float cSmallItemDropSizeModifier = 0.5f;
 

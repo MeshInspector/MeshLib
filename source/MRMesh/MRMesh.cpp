@@ -46,27 +46,26 @@ std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector
 
 Mesh Mesh::fromTriangles(
     VertCoords vertexCoordinates,
-    const std::vector<MeshBuilder::Triangle> & tris,
-    std::vector<MeshBuilder::Triangle> * skippedTris )
+    const Triangulation & t, const MeshBuilder::BuildSettings & settings )
 {
     MR_TIMER
     Mesh res;
     res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromTriangles( tris, skippedTris );
+    res.topology = MeshBuilder::fromTriangles( t, settings );
     return res;
 }
 
 Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
     VertCoords vertexCoordinates,
-    std::vector<MeshBuilder::Triangle> & tris,
+    Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
-    std::vector<MeshBuilder::Triangle> * skippedTris )
+    const MeshBuilder::BuildSettings & settings )
 {
     MR_TIMER
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
-    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( tris, &localDups, skippedTris );
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings );
     res.points.resize( res.topology.vertSize() );
     for ( const auto & d : localDups )
         res.points[d.dupVert] = res.points[d.srcVert];
@@ -78,6 +77,7 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
 void Mesh::getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const
 {
     VertId a, b, c;
+
     topology.getLeftTriVerts( e, a, b, c );
     v0 = points[a];
     v1 = points[b];

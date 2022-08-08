@@ -159,23 +159,24 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     Mesh mesh;
     mesh.points = pointCloud_.points;
 
-    std::vector<MeshBuilder::Triangle> tris3;
-    std::vector<MeshBuilder::Triangle> tris2;
-    int faceCounter = 0;
+    Triangulation t;
+    FaceBitSet region2, region3;
     for ( const auto& triplet : map )
     {
+        if ( triplet.second == 2 || triplet.second == 3 )
+            t.push_back( { triplet.first.a, triplet.first.b, triplet.first.c, } );
         if ( triplet.second == 3 )
-            tris3.emplace_back( triplet.first.a, triplet.first.b, triplet.first.c, FaceId( faceCounter++ ) );
+            region3.autoResizeSet( t.backId() );
         else if ( triplet.second == 2 )
-            tris2.emplace_back( triplet.first.a, triplet.first.b, triplet.first.c, FaceId( faceCounter++ ) );
+            region2.autoResizeSet( t.backId() );
     }
     // create topology
-    MeshBuilder::addTriangles( mesh.topology, tris3, false );
-    tris2.insert( tris2.end(), tris3.begin(), tris3.end() );
+    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region3, .allowNonManifoldEdge = false } );
+    region2 |= region3;
     if ( progressCb )
         if ( !progressCb( 0.67f ) ) // 67%
             return {};
-    MeshBuilder::addTriangles( mesh.topology, tris2, false );
+    MeshBuilder::addTriangles( mesh.topology, t, { .region = &region2, .allowNonManifoldEdge = false } );
     if ( progressCb )
         if ( !progressCb( 0.70f ) ) // 70%
             return {};

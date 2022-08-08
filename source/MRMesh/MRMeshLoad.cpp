@@ -248,8 +248,8 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
 //         "load_factor = " << hmap.load_factor() << "\n"
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
-    auto tris = vi.takeTris();
-    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), tris );
+    auto t = vi.takeTriangulation();
+    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t );
 }
 
 tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, Vector<Color, VertId>*, ProgressCallback callback )
@@ -269,13 +269,12 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
     using HMap = ParallelHashMap<Vector3f, VertId>;
     HMap hmap;
     VertCoords points;
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     std::string line;
     std::string prefix;
     Vector3f point;
-    int f{0};
-    MeshBuilder::Triangle currTri;
+    ThreeVertIds currTri;
     int triPos = 0;
     bool solidFound = false;
 
@@ -317,15 +316,13 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
                 id = VertId( points.size() );
                 points.push_back( point );
             }
-            currTri.v[triPos] = id;
+            currTri[triPos] = id;
             ++triPos;
             continue;
         }
         if ( prefix == "endloop" )
         {
-            currTri.f = FaceId( f );
-            tris.push_back( currTri );
-            ++f;
+            t.push_back( currTri );
             continue;
         }
         if ( callback && !( i & 0x3FF ) )
@@ -339,7 +336,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, Ve
     if ( !solidFound )
         return tl::make_unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
 
-    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), tris );
+    return Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t );
 }
 
 tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors, ProgressCallback callback )

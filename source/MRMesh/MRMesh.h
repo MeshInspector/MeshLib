@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMeshBuilderTypes.h"
 #include "MRMeshTopology.h"
 #include "MRMeshProject.h"
 #include "MRMeshEdgePoint.h"
@@ -24,15 +25,14 @@ struct [[nodiscard]] Mesh
     /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
     MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
-        const std::vector<MeshBuilder::Triangle> & tris,
-        std::vector<MeshBuilder::Triangle> * skippedTris = nullptr );
+        const Triangulation & t, const MeshBuilder::BuildSettings & settings = {} );
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
     MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices( 
         VertCoords vertexCoordinates,
-        std::vector<MeshBuilder::Triangle> & tris,
+        Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
-        std::vector<MeshBuilder::Triangle> * skippedTris = nullptr );
+        const MeshBuilder::BuildSettings & settings = {} );
 
     // comparison
     bool operator ==( const Mesh & b ) const { return topology == b.topology && points == b.points; }

@@ -25,21 +25,18 @@ MR::Mesh makeCylinder(float radius, float length,
         }
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve(4 * resolution);
-    for (int i = 0; i < resolution; ++i)
+    Triangulation t;
+    t.reserve( 4 * resolution );
+    for ( int i = 0; i < resolution; ++i )
     {
-        tris.emplace_back(VertId(0), VertId(((i + 1) % resolution) + 2),
-            VertId(i + 2), FaceId(4 * i));
-        tris.emplace_back(VertId(1), VertId(i + 2 + resolution),
-            VertId(((i + 1) % resolution) + 2 + resolution), FaceId(4 * i + 1));
-        tris.emplace_back(VertId(i + 2), VertId(((i + 1) % resolution) + 2),
-            VertId(i + 2 + resolution), FaceId(4 * i + 2));
-        tris.emplace_back(VertId(((i + 1) % resolution) + 2), VertId(((i + 1) % resolution) + 2 + resolution),
-            VertId(i + 2 + resolution), FaceId(4 * i + 3));
+        t.push_back( { 0_v, VertId(((i + 1) % resolution) + 2), VertId(i + 2) } );
+        t.push_back( { 1_v, VertId(i + 2 + resolution), VertId(((i + 1) % resolution) + 2 + resolution) } );
+        t.push_back( { VertId(i + 2), VertId(((i + 1) % resolution) + 2), VertId(i + 2 + resolution) } );
+        t.push_back( { VertId(((i + 1) % resolution) + 2), VertId(((i + 1) % resolution) + 2 + resolution),
+            VertId(i + 2 + resolution) } );
     }
 
-    return Mesh::fromTriangles( std::move( points ), tris );
+    return Mesh::fromTriangles( std::move( points ), t );
 }
 
 MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
@@ -94,32 +91,26 @@ MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
         ++ver_id;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve(2 * (cap0 + cap1) + 4 * slice);
-    int face_id = 0;
+    Triangulation t;
+    t.reserve(2 * (cap0 + cap1) + 4 * slice);
 
     for (int i = 0; i < resolution; ++i)
     {
         if (cap0)
         {
-            tris.emplace_back(VertId(0), VertId(((i + 1) % cap0) + 2),
-                VertId(i + 2), FaceId(face_id++));
-            tris.emplace_back(VertId(i + 2), VertId(((i + 1) % cap0) + 2),
-                VertId(cap1 ? i + 2 + cap0 : 1), FaceId(face_id++));
+            t.push_back( { VertId(0), VertId(((i + 1) % cap0) + 2), VertId(i + 2) } );
+            t.push_back( { VertId(i + 2), VertId(((i + 1) % cap0) + 2), VertId(cap1 ? i + 2 + cap0 : 1) } );
         }
         if (cap1)
         {
-            tris.emplace_back(VertId(1), VertId(i + 2 + cap0),
-                VertId(((i + 1) % cap1) + 2 + cap0), FaceId(face_id++));
+            t.push_back( { VertId(1), VertId(i + 2 + cap0), VertId(((i + 1) % cap1) + 2 + cap0) } );
             if (cap0)
             {
-                tris.emplace_back(VertId(((i + 1) % cap1) + 2), VertId(((i + 1) % cap1) + 2 + cap0),
-                    VertId(i + 2 + cap0), FaceId(face_id++));
+                t.push_back( { VertId(((i + 1) % cap1) + 2), VertId(((i + 1) % cap1) + 2 + cap0), VertId(i + 2 + cap0) } );
             }
             else
             {
-                tris.emplace_back(VertId(0), VertId(((i + 1) % cap1) + 2),
-                    VertId(i + 2 + cap0), FaceId(face_id++));
+                t.push_back( { VertId(0), VertId(((i + 1) % cap1) + 2), VertId(i + 2 + cap0) } );
             }
         }
     }
@@ -127,25 +118,17 @@ MR::Mesh makeCylinderAdvanced( float radius0, float radius1, float start_angle,
     {
         if (cap0)
         {
-            tris.emplace_back(VertId(0), VertId(2),
-                VertId(cap1 ? 2 + cap0 : 1), FaceId(face_id++));
-            tris.emplace_back(VertId(resolution + 2), VertId(0),
-                VertId(cap1 ? resolution + 2 + cap0 : 1), FaceId(face_id++));
+            t.push_back( { VertId(0), VertId(2), VertId(cap1 ? 2 + cap0 : 1) } );
+            t.push_back( { VertId(resolution + 2), VertId(0), VertId(cap1 ? resolution + 2 + cap0 : 1) } );
         }
         if (cap1)
         {
-            tris.emplace_back(VertId(1), VertId(0),
-                VertId(2 + cap0), FaceId(face_id++));
-            tris.emplace_back(VertId(0), VertId(1),
-                VertId(resolution + 2 + cap0), FaceId(face_id++));
+            t.push_back( { VertId(1), VertId(0), VertId(2 + cap0) } );
+            t.push_back( { VertId(0), VertId(1), VertId(resolution + 2 + cap0) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles(tris);
-    res.points.vec_ = std::move(points);
-
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 }

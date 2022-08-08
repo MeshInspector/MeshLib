@@ -14,12 +14,12 @@ namespace MR
   * 
   * Simple example with key steps
   * \code
-  * std::vector<MR::MeshBuilder::Triangle> tris;
+  * MR::MeshBuilder::Triangulation t;
   * // add siple plane triangles
-  * tris.push_back({0_v,1_v,2_v,0_f});
-  * tris.push_back({2_v,1_v,3_v,1_f});
+  * t.push_back({0_v,1_v,2_v}); // face #0
+  * t.push_back({2_v,1_v,3_v}); // face #1
   * // make topology
-  * auto topology = MR::MeshBuilder::fromTriangles(tris);
+  * auto topology = MR::MeshBuilder::fromTriangles(t);
   * \endcode
   *
   * \warning Vertices of triangles should have consistent bypass direction
@@ -31,9 +31,10 @@ namespace MR
 namespace MeshBuilder
 {
 
-// construct mesh topology from a set of triangles with given ids;
-// if skippedTris is given then it receives all input triangles not added in the resulting topology
-MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
+/// construct mesh topology from a set of triangles with given ids;
+/// if skippedTris is given then it receives all input triangles not added in the resulting topology
+/*[[deprecated]]*/ MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
+MRMESH_API MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings = {} );
 
 struct VertDuplication
 {
@@ -41,17 +42,18 @@ struct VertDuplication
     VertId dupVert; // new vertex after duplication
 };
 
-// resolve non-manifold vertices by creating duplicate vertices
+// resolve non-manifold vertices by creating duplicate vertices in the triangulation (which is modified)
 // return number of duplicated vertices
-MRMESH_API size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris,
+MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
     std::vector<VertDuplication>* dups = nullptr );
 
 // construct mesh topology from a set of triangles with given ids;
-// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
+// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices;
+// triangulation is modified to introduce duplicates
 MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( 
-    std::vector<Triangle> & tris,
+    Triangulation & t,
     std::vector<VertDuplication> * dups = nullptr,
-    std::vector<Triangle> * skippedTris = nullptr );
+    const BuildSettings & settings = {} );
 
 // construct mesh topology from vertex-index triples
 MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples );
@@ -66,17 +68,19 @@ struct MeshPiece
     FaceMap fmap; // face of part -> face of whole mesh
     VertMap vmap; // vert of part -> vert of whole mesh
     MeshTopology topology;
-    std::vector<Triangle> tris; // remaining triangles, not in topology
+    FaceBitSet rem; // remaining triangles of part, not in topology
 };
 
 // construct mesh topology in parallel from given disjoint mesh pieces (which do not have any shared vertex)
-// and some additional triangles that join the pieces
-MRMESH_API MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, VertId maxVertId, FaceId maxFaceId,
-    std::vector<Triangle> & borderTris ); //< on output borderTris will contain not added triangles
+// and some additional triangles (in settings) that join the pieces
+MRMESH_API MeshTopology fromDisjointMeshPieces(
+    const Triangulation & t, VertId maxVertId,
+    const std::vector<MeshPiece> & pieces,
+    const BuildSettings & settings = {} );
 
 // adds triangles in the existing topology, given face indecies must be free;
-// tris on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh
-MRMESH_API void addTriangles( MeshTopology & res, std::vector<Triangle> & tris, bool allowNonManifoldEdge = true );
+// settings.region on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh
+MRMESH_API void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings = {} );
 
 // adds triangles in the existing topology, auto selecting face ids for them;
 // vertTriples on output contain the remaining triangles that could not be added into the topology right now, but may be added later when other triangles appear in the mesh

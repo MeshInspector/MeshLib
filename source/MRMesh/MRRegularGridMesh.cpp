@@ -10,8 +10,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 {
     Mesh res;
     res.points.resize( width*height );
-    std::vector<MeshBuilder::Triangle> faces;
-    int faceIdx = 0;
+    Triangulation faces;
     for ( int y = 0; y < height; y++ )
     {
         for ( int x = 0; x < width; x++ )
@@ -27,36 +26,32 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
                     if ( validator( x - 1, y - 1 ) )
                     {
                         if ( validator( x, y - 1 ) )
-                            faces.push_back( MeshBuilder::Triangle(
+                            faces.push_back( {
                                 VertId( idx ),
                                 VertId( idx - 1 - width ),
-                                VertId( idx - width ),
-                                FaceId( faceIdx++ ) ) );
+                                VertId( idx - width ) } );
                         if ( validator( x - 1, y ) )
-                            faces.push_back( MeshBuilder::Triangle(
+                            faces.push_back( {
                                 VertId( idx ),
                                 VertId( idx - 1 ),
-                                VertId( idx - 1 - width ),
-                                FaceId( faceIdx++ ) ) );
+                                VertId( idx - 1 - width ) } );
                     }
                     else
                     {
                         if ( validator( x, y - 1 ) && validator( x - 1, y ) )
-                            faces.push_back( MeshBuilder::Triangle(
+                            faces.push_back( {
                                 VertId( idx ),
                                 VertId( idx - 1 ),
-                                VertId( idx - width ),
-                                FaceId( faceIdx++ ) ) );
+                                VertId( idx - width ) } );
                     }
                 }
                 else
                 {
                     if ( validator( x - 1, y - 1 ) && validator(x, y - 1 ) && validator( x - 1, y ) )
-                        faces.push_back( MeshBuilder::Triangle(
+                        faces.push_back( {
                             VertId( idx - 1 ),
                             VertId( idx - 1 - width ),
-                            VertId( idx - width ),
-                            FaceId( faceIdx++ ) ) );
+                            VertId( idx - width ) } );
                 }
             }
         }

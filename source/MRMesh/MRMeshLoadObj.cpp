@@ -27,31 +27,31 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     std::vector<NamedMesh> res;
     std::string currentObjName;
     std::vector<Vector3f> points;
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     auto finishObject = [&]() 
     {
-        if ( !tris.empty() )
+        if ( !t.empty() )
         {
             res.emplace_back();
             res.back().name = std::move( currentObjName );
 
             // copy only minimal span of vertices for this object
             VertId minV(INT_MAX), maxV(-1);
-            for ( const auto & t : tris )
+            for ( const auto & vs : t )
             {
-                minV = std::min( { minV, t.v[0], t.v[1], t.v[2] } );
-                maxV = std::max( { maxV, t.v[0], t.v[1], t.v[2] } );
+                minV = std::min( { minV, vs[0], vs[1], vs[2] } );
+                maxV = std::max( { maxV, vs[0], vs[1], vs[2] } );
             }
-            for ( auto & t : tris )
+            for ( auto & vs : t )
             {
                 for ( int i = 0; i < 3; ++i )
-                    t.v[i] -= minV;
+                    vs[i] -= minV;
             }
 
             res.back().mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), tris );
-            tris.clear();
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t );
+            t.clear();
         }
         currentObjName.clear();
     };
@@ -100,7 +100,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             int a = readVert();
             int b = readVert();
             int c = readVert();
-            tris.emplace_back( VertId( a-1 ), VertId( b-1 ), VertId( c-1 ), FaceId( tris.size() ) );
+            t.push_back( { VertId( a-1 ), VertId( b-1 ), VertId( c-1 ) } );
         }
         else if ( ch == 'o' )
         {

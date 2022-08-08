@@ -125,12 +125,12 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
     const VertId v1 = getFurthestVertexFromPoint( points, validPoints, points[v0] );
     const VertId v2 = getFurthestVertexFromLine( points, validPoints, Line3f{ points[v0], ( points[v1] - points[v0] ).normalized() } );
 
-    std::vector<MeshBuilder::Triangle> tris = 
+    Triangulation t =
     {
-        { 0_v, 1_v, 2_v, 0_f },
-        { 0_v, 2_v, 1_v, 1_f }
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 1_v }
     };
-    res.topology = MeshBuilder::fromTriangles( tris );
+    res.topology = MeshBuilder::fromTriangles( t );
 
     res.points.push_back( points[v0] );
     res.points.push_back( points[v1] );

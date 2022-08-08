@@ -1823,9 +1823,9 @@ void RibbonMenu::beginTopPanel_()
     else
     {
         colorBg.a = 228;
-        ImGui::GetBackgroundDrawList()->AddRectFilled( ImVec2( 0.0f, 0.0f ), 
-        ImVec2(sceneSize_.x,currentTopPanelHeight_ * scaling ), 
-        ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ).getUInt32() );
+        ImGui::GetBackgroundDrawList()->AddRectFilled( ImVec2( 0.0f, 0.0f ),
+            ImVec2( sceneSize_.x, currentTopPanelHeight_ * scaling ),
+            ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ).getUInt32() );
     }
     ImGui::PushStyleColor( ImGuiCol_WindowBg, colorBg.getUInt32() );
 

@@ -13,40 +13,42 @@ namespace MR
 namespace MeshBuilder
 {
 
-class MaxIdCalc 
-{
-public:
-    FaceId maxFaceId;
-    VertId maxVertId;
-
-    MaxIdCalc( const std::vector<Triangle> & tris ) : tris_( tris ) { }
-    MaxIdCalc( MaxIdCalc & x, tbb::split ) : tris_( x.tris_ ) { }
-    void join( const MaxIdCalc & y ) 
-    { 
-        maxFaceId = std::max( maxFaceId, y.maxFaceId );
-        maxVertId = std::max( maxVertId, y.maxVertId );
-    }
-
-    void operator()( const tbb::blocked_range<size_t> & r ) 
-    {
-        for ( size_t i = r.begin(); i < r.end(); ++i ) 
-        {
-            const auto & t = tris_[i];
-            maxFaceId = std::max( maxFaceId, t.f );
-            maxVertId = std::max( { maxVertId, t.v[0], t.v[1], t.v[2] } );
-        }
-    }
-            
-public:
-    const std::vector<Triangle> & tris_;
-};
-
-static std::pair<FaceId, VertId> computeMaxIds( const std::vector<Triangle> & tris )
+static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region )
 {
     MR_TIMER
-    MaxIdCalc calc( tris );
-    parallel_reduce( tbb::blocked_range<size_t>( size_t{0}, tris.size() ), calc );
-    return { calc.maxFaceId, calc.maxVertId };
+    return parallel_reduce( tbb::blocked_range( 0_f, t.endId() ), VertId{},
+    [&] ( const auto & range, VertId currMax )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            if ( region && !region->test( f ) )
+                continue;
+            currMax = std::max( { currMax, t[f][0], t[f][1], t[f][2] } );
+        }
+        return currMax;
+    },
+    [] ( VertId a, VertId b )
+    {
+        return a > b ? a : b;
+    } );
+}
+
+static FaceId findMaxFaceId( const std::vector<Triangle> & tris )
+{
+    MR_TIMER
+    return parallel_reduce( tbb::blocked_range( tris.begin(), tris.end() ), FaceId{},
+    [&] ( const auto & range, FaceId currMax )
+    {
+        for ( const Triangle & t : range )
+        {
+            currMax = std::max( currMax, t.f );
+        }
+        return currMax;
+    },
+    [] ( FaceId a, FaceId b )
+    {
+        return a > b ? a : b;
+    } );
 }
 
 // returns the edge with the origin in a if it is the only such edge with invalid left face;
@@ -209,32 +211,51 @@ AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * firs
     return AddFaceResult::Success;
 }
 
-static void addTrianglesSeqCore( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge = true )
+static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
+{
+    FaceBitSet res;
+    if ( region )
+        res = std::move( *region );
+    else
+    {
+        res = FaceBitSet( tSize );
+        res.set();
+    }
+    return res;
+}
+
+static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
 {
     MR_TIMER
 
     FaceAdder fa;
-    // these are triangles remaining from the previous pass to try again
-    std::vector<Triangle> nextPass;
+    // we will try to add these triangles in the current pass
+    FaceBitSet active = getLocalRegion( settings.region, t.size() );
     // these are triangles that cannot be added even after other triangles
-    std::vector<Triangle> bad;
-    while ( !tris.empty() )
+    FaceBitSet bad;
+    for (;;)
     {
-        for ( const auto & tri : tris )
+        size_t triAddedOnThisPass = 0;
+        for ( FaceId f : active )
         {
-            auto x = fa.add( res, tri.f, tri.v.data(), tri.v.data() + 3, allowNonManifoldEdge );
+            auto x = fa.add( res, f + settings.shiftFaceId, t[f].data(), t[f].data() + 3, settings.allowNonManifoldEdge );
             if ( x == AddFaceResult::UnsafeTryLater )
-                nextPass.push_back( tri );
-            else if ( x != AddFaceResult::Success )
-                bad.push_back( tri );
+                continue;
+            active.reset( f );
+            if ( x != AddFaceResult::Success )
+                bad.autoResizeSet( f );
+            else
+                ++triAddedOnThisPass;
         }
 
-        if ( nextPass.size() == tris.size() )
+        if ( triAddedOnThisPass == 0 )
             break; // no single triangle added during the pass
-        tris.swap( nextPass );
-        nextPass.clear();
     }
-    tris.insert( tris.end(), bad.begin(), bad.end() );
+    if ( settings.region )
+    {
+        active |= bad;
+        *settings.region = std::move( active );
+    }
 }
 
 MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces )
@@ -277,16 +298,19 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRe
     return res;
 }
 
-void addTriangles( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge )
+//void addTriangles( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge )
+void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
 {
     MR_TIMER
+    if ( t.empty() )
+        return;
 
     // reserve enough elements for faces and vertices
-    auto [maxFaceId, maxVertId] = computeMaxIds( tris );
-    res.faceResize( maxFaceId + 1 );
+    const auto maxVertId = findMaxVertId( t, settings.region );
+    res.faceResize( t.size() );
     res.vertResize( maxVertId + 1 );
 
-    addTrianglesSeqCore( res, tris, allowNonManifoldEdge );
+    addTrianglesSeqCore( res, t, settings );
 }
 
 void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
@@ -295,21 +319,12 @@ void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
     MR_TIMER
 
     const int numTri = (int)vertTriples.size() / 3;
-    std::vector<Triangle> tris;
-    tris.reserve( numTri );
-    auto firstNewFace = res.lastValidFace() + 1;
+    Triangulation t;
+    t.reserve( numTri );
+    const auto firstNewFace = res.lastValidFace() + 1;
 
-    for ( int t = 0; t < numTri; ++t )
-    {
-        Triangle tri
-        {
-            vertTriples[3*t],
-            vertTriples[3*t+1], 
-            vertTriples[3*t+2],
-            firstNewFace + t
-        };
-        tris.push_back( tri );
-    }
+    for ( int f = 0; f < numTri; ++f )
+        t.push_back( { vertTriples[3*f], vertTriples[3*f+1], vertTriples[3*f+2] } );
 
     if ( createdFaces )
     {
@@ -319,25 +334,28 @@ void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
     }
 
     vertTriples.clear();
-    addTriangles( res, tris );
-    for ( const auto & t : tris )
+    FaceBitSet region( numTri, 1 );
+    addTriangles( res, t, { .region = &region, .shiftFaceId = firstNewFace } );
+    for ( FaceId f : region )
     {
-        vertTriples.push_back( t.v[0] );
-        vertTriples.push_back( t.v[1] );
-        vertTriples.push_back( t.v[2] );
+        vertTriples.push_back( t[f][0] );
+        vertTriples.push_back( t[f][1] );
+        vertTriples.push_back( t[f][2] );
         if ( createdFaces )
-            createdFaces->reset( t.f );
+            createdFaces->reset( f );
     }
 }
 
-static MeshTopology fromTrianglesSeq( std::vector<Triangle> & tris )
+static MeshTopology fromTrianglesSeq( const Triangulation & t, const BuildSettings & settings )
 {
     MeshTopology res;
-    addTriangles( res, tris );
+    addTriangles( res, t, settings );
     return res;
 }
 
-MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, VertId maxVertId, FaceId maxFaceId, std::vector<Triangle> & borderTris )
+MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
+    const std::vector<MeshPiece> & pieces,
+    const BuildSettings & settings0 )
 {
     MR_TIMER
 
@@ -345,20 +363,23 @@ MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, Vert
     const auto numParts = pieces.size();
     std::vector<EdgeId> firstPartEdge( numParts + 1 );
     firstPartEdge[0] = 0_e;
+    FaceBitSet region;
+    if ( settings0.region )
+        region = std::move( *settings0.region );
+    region.resize( t.size() );
     for ( int i = 0; i < pieces.size(); ++i )
     {
         const auto & p = pieces[i];
         firstPartEdge[i + 1] = firstPartEdge[i] + (int)p.topology.edgeSize();
-        for ( const auto & t : p.tris ) // remaining triangles
-        {
-            borderTris.emplace_back( p.vmap[t.v[0]], p.vmap[t.v[1]], p.vmap[t.v[2]], p.fmap[t.f] );
-        }
+        for ( FaceId f : p.rem ) // remaining triangles
+            region.set( p.fmap[f] );
     }
     int numEdgesInParts = firstPartEdge.back();
 
     MeshTopology res;
-    res.edgeReserve( numEdgesInParts + 6 * borderTris.size() ); // should be enough even of all border triangles are disconnected
-    res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, maxFaceId + 1 );
+    const auto borderTriCount = settings0.region ? settings0.region->count() : 0;
+    res.edgeReserve( numEdgesInParts + 6 * borderTriCount ); // should be enough even if all border triangles are disconnected
+    res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, t.size() );
 
     // add pieces in res in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
@@ -373,7 +394,11 @@ MeshTopology fromDisjointMeshPieces( const std::vector<MeshPiece> & pieces, Vert
     res.computeValidsFromEdges();
 
     // and add border triangles
-    addTrianglesSeqCore( res, borderTris );
+    BuildSettings settings = settings0;
+    settings.region = &region;
+    addTrianglesSeqCore( res, t, settings );
+    if ( settings0.region )
+        *settings0.region = std::move( region );
 
     return res;
 }
@@ -383,27 +408,47 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
     if ( tris.empty() )
         return {};
     MR_TIMER
+
+    const auto maxFaceId = findMaxFaceId( tris );
+    Triangulation triangulation( maxFaceId + 1 );
+    FaceBitSet region( maxFaceId + 1 );
+    for ( const auto & t : tris )
+    {
+        triangulation[t.f] = t.v;
+        region.set( t.f );
+    }
+
+    auto res = fromTriangles( triangulation, { .region = &region } );
+    if ( skippedTris )
+    {
+        skippedTris->clear();
+        for ( auto f : region )
+            skippedTris->push_back( tris[f] );
+    }
+    return res;
+}
+
+MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings )
+{
+    if ( t.empty() )
+        return {};
+    MR_TIMER
     
     // reserve enough elements for faces and vertices
-    auto [maxFaceId, maxVertId] = computeMaxIds( tris );
+    //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
+    const auto maxVertId = findMaxVertId( t, settings.region );
 
     constexpr size_t minTrisInPart = 32768;
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
-    const size_t numParts = std::min( ( tris.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
+    const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
     assert( numParts >= 1 );
     MeshTopology res;
     if ( numParts <= 1 )
-    {
-        auto trisCopy = tris;
-        res = fromTrianglesSeq( trisCopy );
-        if ( skippedTris )
-            *skippedTris = std::move( trisCopy );
-        return res;
-    }
+        return fromTrianglesSeq( t, settings );
 
     const size_t vertsInPart = ( (int)maxVertId + numParts ) / numParts;
     std::vector<MeshPiece> parts( numParts );
-    std::vector<Triangle> borderTris; // triangles having vertices in distinct parts, computed by thread 0
+    FaceBitSet borderTris( t.size() ); // triangles having vertices in distinct parts, computed by thread 0
 
     Timer timer("parallel parts");
     // construct mesh parts
@@ -413,12 +458,17 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
         for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
         {
             MeshPiece part;
+            Triangulation partTriangulation;
+            BuildSettings partSettings{ .region = &part.rem, .allowNonManifoldEdge = settings.allowNonManifoldEdge };
             part.vmap.resize( vertsInPart );
-            for ( const auto & t : tris )
+            for ( FaceId f{0}; f < t.size(); ++f )
             {
-                auto v0p = t.v[0] / vertsInPart;
-                auto v1p = t.v[1] / vertsInPart;
-                auto v2p = t.v[2] / vertsInPart;
+                if ( settings.region && !settings.region->test( f ) )
+                    continue;
+                const auto & vs = t[f];
+                auto v0p = vs[0] / vertsInPart;
+                auto v1p = vs[1] / vertsInPart;
+                auto v2p = vs[2] / vertsInPart;
 
                 if ( v0p != myPartId || v1p != myPartId || v2p != myPartId )
                 {
@@ -426,33 +476,34 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
 
                     // thread 0 has to process border triangles
                     if ( myPartId == 0 && ( v0p != v1p || v1p != v2p || v2p != v0p ) )
-                        borderTris.push_back( t );
+                        borderTris.set( f );
 
                     continue;
                 }
 
                 VertId v[3] = {
-                    VertId( t.v[0] % vertsInPart ),
-                    VertId( t.v[1] % vertsInPart ),
-                    VertId( t.v[2] % vertsInPart )
+                    VertId( vs[0] % vertsInPart ),
+                    VertId( vs[1] % vertsInPart ),
+                    VertId( vs[2] % vertsInPart )
                 };
-                FaceId f{ part.tris.size() };
-                part.tris.emplace_back( v[0], v[1], v[2], f );
-                part.fmap.push_back( t.f );
-                part.vmap[ v[0] ] = t.v[0];
-                part.vmap[ v[1] ] = t.v[1];
-                part.vmap[ v[2] ] = t.v[2];
+                FaceId fp{ partTriangulation.size() };
+                partTriangulation.push_back( ThreeVertIds{ v[0], v[1], v[2] } );
+                part.fmap.push_back( f );
+                part.vmap[ v[0] ] = vs[0];
+                part.vmap[ v[1] ] = vs[1];
+                part.vmap[ v[2] ] = vs[2];
+                part.rem.autoResizeSet( fp );
             }
-            part.topology = fromTrianglesSeq( part.tris );
+            part.topology = fromTrianglesSeq( partTriangulation, partSettings );
             parts[myPartId] = std::move( part );
         }
     } );
 
-    res = fromDisjointMeshPieces( parts, maxVertId, maxFaceId, borderTris );
-    if ( skippedTris )
-    {
-        *skippedTris = std::move( borderTris );
-    }
+    auto joinSettings = settings;
+    joinSettings.region = &borderTris;
+    res = fromDisjointMeshPieces( t, maxVertId, parts, joinSettings );
+    if ( settings.region )
+        *settings.region = std::move( borderTris );
     return res;
 }
 
@@ -468,16 +519,14 @@ struct IncidentVert {
     {}
 };
 
-using FaceToVerticesVector = Vector<ThreeVertIds, FaceId>;
-
 // to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 struct PathOverIncidentVert {
-    FaceToVerticesVector& faceToVertices;
+    Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
     std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
 
-    PathOverIncidentVert( FaceToVerticesVector& triangleToVertices,
+    PathOverIncidentVert( Triangulation& triangleToVertices,
                 std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
         , vertexBegIt( incidentItemsVector.begin() + beg )
@@ -587,26 +636,21 @@ struct PathOverIncidentVert {
     }
 };
 
-// from Triangle vector: fill FaceToVerticesVector ( to find all vertices by FaceId),
 // fill and sort incidentVertVector by central vertex
-void preprocessTriangles( const std::vector<Triangle>& tris, std::vector<IncidentVert>& incidentVertVector,
-                                     FaceToVerticesVector& faceToVertices )
+void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
 {
-    incidentVertVector.reserve( 3 * tris.size() );
+    incidentVertVector.reserve( 3 * t.size() );
 
-    size_t maxFaceId = tris.size();
-    for ( auto& tr : tris )
-        maxFaceId = std::max( maxFaceId, size_t( tr.f ) + 1 );
-
-    faceToVertices.resize( maxFaceId );
-    for ( const auto& tr : tris )
+    for ( FaceId f{0}; f < t.size(); ++f )
     {
-        if ( tr.v[0] == tr.v[1] || tr.v[1] == tr.v[2] || tr.v[2] == tr.v[0] )
+        if ( region && !region->test( f ) )
+            continue;
+        const auto & vs = t[f];
+        if ( vs[0] == vs[1] || vs[1] == vs[2] || vs[2] == vs[0] )
             continue;
 
-        faceToVertices[tr.f] = tr.v;
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( tr.f, tr.v[i] );
+            incidentVertVector.emplace_back( f, vs[i] );
     }
 
     std::sort( incidentVertVector.begin(), incidentVertVector.end(),
@@ -636,15 +680,14 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 }
 
 // for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<VertDuplication>* dups )
+size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups )
 {
     MR_TIMER
-    if ( tris.empty() )
+    if ( t.empty() )
         return 0;
 
-    FaceToVerticesVector faceToVertices;
     std::vector<IncidentVert> incidentItemsVector;
-    preprocessTriangles( tris, incidentItemsVector, faceToVertices );
+    preprocessTriangles( t, region, incidentItemsVector );
 
     auto lastUsedVertId = incidentItemsVector.back().srcVert;
 
@@ -658,7 +701,7 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
         posBegin = posEnd++;
         while ( posEnd < incidentItemsVector.size() && incidentItemsVector[posBegin].srcVert == incidentItemsVector[posEnd].srcVert )
             ++posEnd;
-        PathOverIncidentVert incidentItems( faceToVertices, incidentItemsVector, posBegin, posEnd );
+        PathOverIncidentVert incidentItems( t, incidentItemsVector, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
@@ -727,42 +770,41 @@ size_t duplicateNonManifoldVertices( std::vector<Triangle>& tris, std::vector<Ve
             }
         }
     }
-    // save modified vertices
-    for ( auto& tr : tris )
-        tr.v = faceToVertices[tr.f];
     return duplicatedVerticesCnt;
 }
 
-MeshTopology fromTrianglesDuplicatingNonManifoldVertices( std::vector<Triangle> & tris,
-    std::vector<VertDuplication> * dups, std::vector<Triangle> * skippedTris )
+MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
+    std::vector<VertDuplication> * dups, const BuildSettings & settings )
 {
     MR_TIMER
-    std::vector<Triangle> localSkippedTries;
+    FaceBitSet localRegion = getLocalRegion( settings.region, t.size() );
+    BuildSettings localSettings = settings;
+    localSettings.region = &localRegion;
     // try happy path first
-    MeshTopology res = fromTriangles( tris, &localSkippedTries );
-    if ( localSkippedTries.empty() )
+    MeshTopology res = fromTriangles( t, localSettings );
+    if ( !localRegion.any() )
     {
         // all triangles added successfully, which means no non-manifold vertices
         if ( dups )
             dups->clear();
-        if ( skippedTris )
-            skippedTris->clear();
+        if ( settings.region )
+            settings.region->clear();
         return res;
     }
     // full path
     std::vector<VertDuplication> localDups;
-    MeshBuilder::duplicateNonManifoldVertices( tris, &localDups );
+    MeshBuilder::duplicateNonManifoldVertices( t, settings.region, &localDups );
     const bool noDuplicates = localDups.empty();
     if ( dups )
         *dups = std::move( localDups );
     if ( noDuplicates )
     {
-        // no duplicates creates, so res is ok
-        if ( skippedTris )
-            *skippedTris = std::move( localSkippedTries );
+        // no duplicates created, so res is ok
+        if ( settings.region )
+            settings.region->clear();
         return res;
     }
-    res = fromTriangles( tris, skippedTris );
+    res = fromTriangles( t, settings );
     return res;
 }
 
@@ -795,7 +837,7 @@ Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )
     vi.addTriangles( posTriples );
     Mesh res;
     res.points = vi.takePoints();
-    res.topology = fromTriangles( vi.takeTris() );
+    res.topology = fromTriangles( vi.takeTriangulation() );
     return res;
 }
 
@@ -830,21 +872,22 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
     if ( numChanged <= 0 )
         return numChanged;
 
-    std::vector<Triangle> tris;
+    Triangulation t( mesh.topology.faceSize() );
+    FaceBitSet region( mesh.topology.faceSize() );
     for ( auto f : mesh.topology.getValidFaces() )
     {
-        Triangle oldt, newt;
-        newt.f = oldt.f = f;
-        mesh.topology.getTriVerts( f, oldt.v );
+        ThreeVertIds oldt, newt;
+        mesh.topology.getTriVerts( f, oldt );
         for ( int i = 0; i < 3; ++i )
-            newt.v[i] = vertOldToNew[oldt.v[i]];
+            newt[i] = vertOldToNew[oldt[i]];
         if ( oldt != newt )
         {
             mesh.topology.deleteFace( f );
-            tris.push_back( newt );
+            t[f] = newt;
+            region.set( f );
         }
     }
-    addTriangles( mesh.topology, tris );
+    addTriangles( mesh.topology, t, { .region = &region } );
     mesh.invalidateCaches();
     if ( optionalVertOldToNew )
         *optionalVertOldToNew = std::move( vertOldToNew );
@@ -855,29 +898,29 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
 // check non-manifold vertices resolving
 TEST( MRMesh, duplicateNonManifoldVertices )
 {
-    std::vector<Triangle> tris;
-    tris.emplace_back( 0_v, 1_v, 2_v, 0_f );
-    tris.emplace_back( 0_v, 2_v, 3_v, 1_f );
-    tris.emplace_back( 0_v, 3_v, 1_v, 2_f );
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 1_v } ); //2_f
 
     std::vector<VertDuplication> dups;
-    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( tris, &dups );
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     ASSERT_EQ( duplicatedVerticesCnt, 0 );
     ASSERT_EQ( dups.size(), 0 );
 
-    tris.emplace_back( 0_v, 4_v, 5_v, 3_f );
-    tris.emplace_back( 0_v, 5_v, 6_v, 4_f );
-    tris.emplace_back( 0_v, 6_v, 4_v, 5_f );
+    t.push_back( { 0_v, 4_v, 5_v } ); //3_f
+    t.push_back( { 0_v, 5_v, 6_v } ); //4_f
+    t.push_back( { 0_v, 6_v, 4_v } ); //5_f
 
-    duplicatedVerticesCnt = duplicateNonManifoldVertices( tris, &dups );
-    ASSERT_EQ( duplicatedVerticesCnt,  1);
+    duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    ASSERT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
     ASSERT_EQ( dups[0].srcVert, 0 );
     ASSERT_EQ( dups[0].dupVert, 7 );
 
-    int firstChangedTriangleNum = tris[0].v[0] != 0 ? 0 : 3;
-    for ( int i = firstChangedTriangleNum; i < firstChangedTriangleNum + 3; ++i )
-        ASSERT_EQ( tris[i].v[0], 7 );
+    int firstChangedTriangleNum = t[0_f][0] != 0 ? 0 : 3;
+    for ( FaceId i{ firstChangedTriangleNum }; i < firstChangedTriangleNum + 3; ++i )
+        ASSERT_EQ( t[i][0], 7 );
 }
 
 } //namespace MeshBuilder

@@ -34,9 +34,9 @@ public:
     /// identifies vertices from a chunk of triangles
     MRMESH_API void addTriangles( const std::vector<ThreePoints> & buffer );
     /// returns the number of triangles added so far
-    size_t numTris() const { return tris_.size(); }
-    /// obtains triangles with vertex ids
-    std::vector<MeshBuilder::Triangle> takeTris() { return std::move( tris_ ); }
+    size_t numTris() const { return t_.size(); }
+    /// obtains triangulation with vertex ids
+    Triangulation takeTriangulation() { return std::move( t_ ); }
     /// obtains coordinates of unique points in the order of vertex ids
     VertCoords takePoints() { return std::move( points_ ); }
 
@@ -45,7 +45,7 @@ private:
     std::vector<VertInHMap> vertsInHMap_;
     using HMap = phmap::parallel_flat_hash_map<Vector3f, VertId, phmap::priv::hash_default_hash<Vector3f>, equalVector3f>;
     HMap hmap_;
-    std::vector<MeshBuilder::Triangle> tris_;
+    Triangulation t_;
     VertCoords points_;
 };
 

@@ -11,13 +11,13 @@ namespace MeshBuilder
 void VertexIdentifier::reserve( size_t numTris )
 {
     hmap_.reserve( numTris / 2 ); // there should be about twice more triangles than vertices
-    tris_.reserve( numTris );
+    t_.reserve( numTris );
 }
 
 void VertexIdentifier::addTriangles( const std::vector<ThreePoints> & buffer )
 {
     MR_TIMER
-    assert ( tris_.size() + buffer.size() <= tris_.capacity() );
+    assert ( t_.size() + buffer.size() <= t_.capacity() );
     vertsInHMap_.resize( buffer.size() );
 
     for (;;)
@@ -63,7 +63,7 @@ void VertexIdentifier::addTriangles( const std::vector<ThreePoints> & buffer )
                 points_.push_back( st[k] );
             }
         }
-        tris_.emplace_back( *it[0], *it[1], *it[2], FaceId( int( tris_.size() ) ) );
+        t_.push_back( { *it[0], *it[1], *it[2] } );
     }
 }
 

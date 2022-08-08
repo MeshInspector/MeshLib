@@ -26,6 +26,16 @@ struct Triangle
     }
 };
 
+struct BuildSettings
+{
+    /// if region is given then on input it contains the faces to be added, and on output the faces failed to be added
+    FaceBitSet * region = nullptr;
+    /// this value to be added to every faceId before its inclusion in the topology
+    int shiftFaceId = 0;
+    /// whether to permit non-manifold edges in the resulting topology
+    bool allowNonManifoldEdge = true;
+};
+
 } //namespace MeshBuilder
 
 } //namespace MR

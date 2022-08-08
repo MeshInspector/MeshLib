@@ -48,6 +48,7 @@ class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 
 template <typename T> class Id;
+template <typename T, typename I> class Vector;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
@@ -60,6 +61,8 @@ class ViewportMask;
 
 /// three vertex ids describing a triangle topology
 using ThreeVertIds = std::array<VertId, 3>;
+/// mapping from FaceId to a triple of vertex indices
+using Triangulation = Vector<ThreeVertIds, FaceId>;
 
 using EdgePath = std::vector<EdgeId>;
 using EdgeLoop = std::vector<EdgeId>;
@@ -228,8 +231,6 @@ struct MeshProjectionResult;
 struct MeshIntersectionResult;
 template <typename T> struct IntersectionPrecomputes;
 
-template <typename T, typename I> class Vector;
-
 template <typename I> struct IteratorRange;
 
 using FaceMap = Vector<FaceId, FaceId>;
@@ -332,6 +333,7 @@ inline constexpr bool dependent_false = false;
 namespace MeshBuilder
 {
 
+struct BuildSettings;
 struct Triangle;
 struct VertDuplication;
 

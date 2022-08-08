@@ -69,12 +69,12 @@ void ProgressBar::setup( float scaling )
         }
         if ( instance.finished_ )
         {
-            ImGui::CloseCurrentPopup();
             if ( instance.onFinish_ )
             {
                 instance.onFinish_();
                 instance.onFinish_ = {};
             }
+            ImGui::CloseCurrentPopup();
         }
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
         ImGui::TextWrapped( "Progress bar is not supported for single thread version, window can hang..." );

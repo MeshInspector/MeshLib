@@ -19,6 +19,8 @@ private:
 
     bool shouldClose_{false};
     bool showCloseModal_{false};
+    // how long active modal will blink in seconds
+    float activeModalHighlightTimer_{ 0.0f };
 };
 
 } //namespace MR

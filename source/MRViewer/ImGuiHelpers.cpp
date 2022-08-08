@@ -9,6 +9,7 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
+#include "MRRenderLinesObject.h"
 
 namespace ImGui
 {
@@ -233,6 +234,23 @@ bool DragFloatValid( const char* label, float* v, float v_speed, float v_min, fl
     bool res = DragFloat( label, v, v_speed, v_min, v_max, format, flags );
     *v = std::clamp( *v, v_min, v_max );
     drawTooltip( v_min, v_max );
+    return res;
+}
+
+bool DragFloatValidLineWidth( const char* label, float* value )
+{
+    const auto& range = MR::GetAvailableLineWidthRange();
+    bool cannotChange = range.x == range.y;
+    if ( cannotChange )
+        ImGui::PushStyleColor( ImGuiCol_Text, MR::Color::gray().getUInt32() );
+    bool res = DragFloatValid( label, value, 1.0f, range.x, range.y, "%.1f",
+        cannotChange ? ImGuiSliderFlags_NoInput : ImGuiSliderFlags_None );
+    if ( cannotChange )
+    {
+        ImGui::PopStyleColor();
+        if ( IsItemHovered() && !IsItemActive() )
+            SetTooltip( "Line width cannot be changed with current renderer." );
+    }
     return res;
 }
 

@@ -441,8 +441,12 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="MRDarkTheme.json" />
     <CopyFileToFolders Include="MRLightTheme.json" />
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf" />
-    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf" />
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\object_icons\X1\Object.png">

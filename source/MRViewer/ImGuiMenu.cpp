@@ -1328,7 +1328,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
-        } );
+        }, true );
         make_width( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
@@ -1694,7 +1694,10 @@ void ImGuiMenu::make_color_selector( std::vector<std::shared_ptr<ObjectT>> selec
             setter( data.get(), color );
 }
 
-void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, std::function<float( const ObjectLinesHolder* )> getter, std::function<void( ObjectLinesHolder*, const float& )> setter )
+void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
+    std::function<float( const ObjectLinesHolder* )> getter, 
+    std::function<void( ObjectLinesHolder*, const float& )> setter,
+    bool lineWidth )
 {
     auto objLines = selectedVisualObjs[0]->asType<ObjectLinesHolder>();
     auto value = getter( objLines );
@@ -1714,7 +1717,10 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::DragFloatValid( label, &value, 0.02f, 1.f, 10.f, "%.1f" );
+    if ( lineWidth )
+        ImGui::DragFloatValidLineWidth( label, &value );
+    else
+        ImGui::DragFloatValid( label, &value, 0.02f, 1.0f, 10.0f, "%.1f");
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )

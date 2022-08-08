@@ -581,11 +581,6 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
     auto xf = controlsRoot_->xf();
     auto newScaling = findClosestPointOfSkewLines(
-        translateLines_[int( ax )]->polyline()->points.vec_[0],
-        translateLines_[int( ax )]->polyline()->points.vec_[1],
-        line.p, line.p + line.d
-    );
-    auto newTranslation = findClosestPointOfSkewLines(
         xf( translateLines_[int( ax )]->polyline()->points.vec_[0] ),
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
         line.p, line.p + line.d
@@ -594,27 +589,19 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     if ( press )
     {
         prevScaling_ = newScaling;
-        prevTranslation_ = newTranslation;
         sumScale_ = 1.f;
     }
 
-    auto scale = ( newScaling - prevScaling_ );
-    auto direction = dot( prevTranslation_ - xf( center_ ), newTranslation - prevTranslation_ ) >= 0.f ? 1.f : -1.f;
+    auto scaleFactor = ( newScaling - xf( center_ ) ).length() / ( prevScaling_ - xf( center_ ) ).length();
+    auto scale = Vector3f::diagonal( 1.f );
     if ( uniformScaling_ )
-    {
-        scale = Vector3f::diagonal( 1.f + scale.length() * direction );
-        sumScale_ *= scale.x;
-    }
+        scale *= scaleFactor;
     else
-    {
-        for ( auto i = 0; i < Vector3f::elements; i++ )
-            scale[i] = 1.f + std::abs( scale[i] ) * direction;
-        sumScale_ *= scale.x * scale.y * scale.z;
-    }
+        scale[int( ax )] = scaleFactor;
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );
     prevScaling_ = newScaling;
-    prevTranslation_ = newTranslation;
+    sumScale_ *= scaleFactor;
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )

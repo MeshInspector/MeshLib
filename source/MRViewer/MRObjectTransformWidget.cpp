@@ -206,7 +206,7 @@ void ObjectTransformWidget::reset()
     width_ = -1.0f;
     radius_ = -1.0f;
 
-    axisTransformMode_ = Translation;
+    axisTransformMode_ = AxisTranslation;
     uniformScaling_ = false;
 
     thresholdDot_ = 0.f;
@@ -357,25 +357,25 @@ void ObjectTransformWidget::draw_()
     if ( currentIndex < 0 )
         return;
 
-    // translation
-    if ( currentIndex < 3 )
+    switch ( activeEditMode_ )
     {
-        if ( axisTransformMode_ == Translation && translateTooltipCallback_ )
+    case TranslationMode:
+        if ( translateTooltipCallback_ )
         {
             auto xf = controlsRoot_->xf();
             auto axis = xf( translateLines_[currentIndex]->polyline()->points.vec_[1] ) -
-                xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
+                        xf( translateLines_[currentIndex]->polyline()->points.vec_[0] );
             translateTooltipCallback_( dot( prevTranslation_ - startTranslation_, axis.normalized() ) );
         }
-        else if ( axisTransformMode_ == Scaling && scaleTooltipCallback_ )
-        {
+        break;
+    case ScalingMode:
+        if ( scaleTooltipCallback_ )
             scaleTooltipCallback_( sumScale_ );
-        }
-    }
-    else // rotation
-    {
+        break;
+    case RotationMode:
         if ( rotateTooltipCallback_ )
             rotateTooltipCallback_( accumAngle_ );
+        break;
     }
 }
 
@@ -559,17 +559,38 @@ void ObjectTransformWidget::activeMove_( bool press )
 
     int currentObjIndex = findCurrentObjIndex_();
 
-    // we now know who is picked
-    if ( currentObjIndex < 3 )
+    if ( press )
     {
-        if ( axisTransformMode_ == AxisTransformMode::Scaling )
-            processScaling_( Axis( currentObjIndex ), press );
+        // we now know who is picked
+        if ( currentObjIndex < 3 )
+        {
+            if ( axisTransformMode_ == AxisTransformMode::AxisTranslation )
+            {
+                activeEditMode_ = TranslationMode;
+            }
+            else
+            {
+                activeEditMode_ = ScalingMode;
+                activeUniformScaling_ = uniformScaling_;
+            }
+        }
         else
-            processTranslation_( Axis( currentObjIndex ), press );
+        {
+            activeEditMode_ = RotationMode;
+        }
     }
-    else
+
+    switch ( activeEditMode_ )
     {
+    case TranslationMode:
+        processTranslation_( Axis( currentObjIndex ), press );
+        break;
+    case ScalingMode:
+        processScaling_( Axis( currentObjIndex ), press );
+        break;
+    case RotationMode:
         processRotation_( Axis( currentObjIndex - 3 ), press );
+        break;
     }
 }
 
@@ -594,7 +615,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
 
     auto scaleFactor = ( newScaling - xf( center_ ) ).length() / ( prevScaling_ - xf( center_ ) ).length();
     auto scale = Vector3f::diagonal( 1.f );
-    if ( uniformScaling_ )
+    if ( activeUniformScaling_ )
         scale *= scaleFactor;
     else
         scale[int( ax )] = scaleFactor;
@@ -752,7 +773,7 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    if ( findCurrentObjIndex_() >= 3 || axisTransformMode_ == Translation )
+    if ( activeEditMode_ != ScalingMode )
         controlsRoot_->setXf( addXf * controlsRoot_->xf() );
     approvedChange_ = false;
 }

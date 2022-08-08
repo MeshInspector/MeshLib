@@ -57,9 +57,9 @@ public:
     enum AxisTransformMode
     {
         // object moves along an axis
-        Translation,
+        AxisTranslation,
         // object inflates or deflates along an axis depending on drag direction (away from center or toward center respectively)
-        Scaling,
+        AxisScaling,
     };
     // Returns current axis transform mode (translate/scale object while dragging an axis)
     AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
@@ -143,8 +143,17 @@ private:
 
     Vector3f center_;
 
-    AxisTransformMode axisTransformMode_{ Translation };
+    AxisTransformMode axisTransformMode_{ AxisTranslation };
     bool uniformScaling_{ false };
+
+    enum ActiveEditMode
+    {
+        TranslationMode,
+        ScalingMode,
+        RotationMode,
+    };
+    ActiveEditMode activeEditMode_{ TranslationMode };
+    bool activeUniformScaling_{ false };
 
     float sumScale_ = 1;
     Vector3f prevScaling_;

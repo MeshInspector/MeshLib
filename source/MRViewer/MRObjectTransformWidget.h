@@ -60,15 +60,13 @@ public:
         AxisTranslation,
         // object inflates or deflates along an axis depending on drag direction (away from center or toward center respectively)
         AxisScaling,
+        // object inflates or deflates along all axes depending on drag direction (away from center or toward center respectively)
+        UniformScaling,
     };
     // Returns current axis transform mode (translate/scale object while dragging an axis)
     AxisTransformMode getAxisTransformMode() const { return axisTransformMode_; };
     // Sets current axis transform mode (translate/scale object while dragging an axis)
     void setAxisTransformMode( AxisTransformMode mode ) { axisTransformMode_ = mode; };
-
-    // Enables or disables uniform scaling. This parameter does not apply to active operation.
-    bool getUniformScaling() { return uniformScaling_; };
-    void setUniformScaling( bool uniformScaling ) { uniformScaling_ = uniformScaling; };
 
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
@@ -144,7 +142,6 @@ private:
     Vector3f center_;
 
     AxisTransformMode axisTransformMode_{ AxisTranslation };
-    bool uniformScaling_{ false };
 
     enum ActiveEditMode
     {

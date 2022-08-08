@@ -207,7 +207,6 @@ void ObjectTransformWidget::reset()
     radius_ = -1.0f;
 
     axisTransformMode_ = AxisTranslation;
-    uniformScaling_ = false;
 
     thresholdDot_ = 0.f;
 }
@@ -564,14 +563,19 @@ void ObjectTransformWidget::activeMove_( bool press )
         // we now know who is picked
         if ( currentObjIndex < 3 )
         {
-            if ( axisTransformMode_ == AxisTransformMode::AxisTranslation )
+            switch ( axisTransformMode_ )
             {
+            case AxisTranslation:
                 activeEditMode_ = TranslationMode;
-            }
-            else
-            {
+                break;
+            case AxisScaling:
                 activeEditMode_ = ScalingMode;
-                activeUniformScaling_ = uniformScaling_;
+                activeUniformScaling_ = false;
+                break;
+            case UniformScaling:
+                activeEditMode_ = ScalingMode;
+                activeUniformScaling_ = true;
+                break;
             }
         }
         else

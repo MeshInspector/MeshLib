@@ -42,13 +42,14 @@ struct VertDuplication
     VertId dupVert; // new vertex after duplication
 };
 
-// resolve non-manifold vertices by creating duplicate vertices
+// resolve non-manifold vertices by creating duplicate vertices in the triangulation (which is modified)
 // return number of duplicated vertices
 MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
     std::vector<VertDuplication>* dups = nullptr );
 
 // construct mesh topology from a set of triangles with given ids;
-// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
+// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices;
+// triangulation is modified to introduce duplicates
 MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( 
     Triangulation & t,
     std::vector<VertDuplication> * dups = nullptr,

@@ -298,7 +298,6 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRe
     return res;
 }
 
-//void addTriangles( MeshTopology& res, std::vector<Triangle>& tris, bool allowNonManifoldEdge )
 void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
 {
     MR_TIMER

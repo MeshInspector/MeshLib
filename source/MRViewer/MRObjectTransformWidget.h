@@ -147,10 +147,10 @@ private:
     {
         TranslationMode,
         ScalingMode,
+        UniformScalingMode,
         RotationMode,
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
-    bool activeUniformScaling_{ false };
 
     float sumScale_ = 1;
     Vector3f prevScaling_;

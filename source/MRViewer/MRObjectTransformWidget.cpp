@@ -368,6 +368,7 @@ void ObjectTransformWidget::draw_()
         }
         break;
     case ScalingMode:
+    case UniformScalingMode:
         if ( scaleTooltipCallback_ )
             scaleTooltipCallback_( sumScale_ );
         break;
@@ -570,11 +571,9 @@ void ObjectTransformWidget::activeMove_( bool press )
                 break;
             case AxisScaling:
                 activeEditMode_ = ScalingMode;
-                activeUniformScaling_ = false;
                 break;
             case UniformScaling:
-                activeEditMode_ = ScalingMode;
-                activeUniformScaling_ = true;
+                activeEditMode_ = UniformScalingMode;
                 break;
             }
         }
@@ -590,6 +589,7 @@ void ObjectTransformWidget::activeMove_( bool press )
         processTranslation_( Axis( currentObjIndex ), press );
         break;
     case ScalingMode:
+    case UniformScalingMode:
         processScaling_( Axis( currentObjIndex ), press );
         break;
     case RotationMode:
@@ -619,7 +619,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
 
     auto scaleFactor = ( newScaling - xf( center_ ) ).length() / ( prevScaling_ - xf( center_ ) ).length();
     auto scale = Vector3f::diagonal( 1.f );
-    if ( activeUniformScaling_ )
+    if ( activeEditMode_ == UniformScalingMode )
         scale *= scaleFactor;
     else
         scale[int( ax )] = scaleFactor;
@@ -777,7 +777,7 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    if ( activeEditMode_ != ScalingMode )
+    if ( activeEditMode_ == TranslationMode || activeEditMode_ == RotationMode )
         controlsRoot_->setXf( addXf * controlsRoot_->xf() );
     approvedChange_ = false;
 }

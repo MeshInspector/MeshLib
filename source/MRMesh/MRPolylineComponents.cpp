@@ -118,16 +118,16 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
 
     auto maxLength = std::numeric_limits<float>::lowest();
     int maxI = 0;
-    std::vector<float> areas( k, 0.f );
+    std::vector<float> lengths( k, 0.f );
     for ( auto e : region )
     {
         auto index = uniqueRootsMap[allRoots[e]];
-        auto& area = areas[index];
-        area += polyline.edgeLength( EdgeId( e ) );
-        if ( area > maxLength )
+        auto& length = lengths[index];
+        length += polyline.edgeLength( EdgeId( e ) );
+        if ( length > maxLength )
         {
             maxI = index;
-            maxLength = area;
+            maxLength = length;
         }
     }
 

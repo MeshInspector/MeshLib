@@ -13,13 +13,13 @@ MeshTopology topologyFromEigen( const Eigen::MatrixXi & F )
     MR_TIMER
     assert( F.cols() == 3 );
     int numTris = (int)F.rows();
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( numTris );
+    Triangulation t;
+    t.reserve( numTris );
 
     for ( int r = 0; r < numTris; ++r )
-        tris.emplace_back( VertId( F(r, 0) ), VertId( F(r, 1) ), VertId( F(r, 2) ), FaceId( r ) );
+        t.push_back( { VertId( F(r, 0) ), VertId( F(r, 1) ), VertId( F(r, 2) ) } );
 
-    return fromTriangles( tris );
+    return MeshBuilder::fromTriangles( t );
 }
 
 Mesh meshFromEigen( const Eigen::MatrixXd & V, const Eigen::MatrixXi & F )

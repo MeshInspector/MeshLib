@@ -85,13 +85,13 @@ void MeshDiff::applyAndSwap( Mesh & m )
 
 TEST(MRMesh, MeshDiff) 
 {
-    std::vector<MeshBuilder::Triangle> tris
+    Triangulation t
     { 
-        { 0_v, 1_v, 2_v, 0_f },
-        { 0_v, 2_v, 3_v, 1_f }
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v }
     };
     Mesh mesh0;
-    mesh0.topology = MeshBuilder::fromTriangles( tris );
+    mesh0.topology = MeshBuilder::fromTriangles( t );
     mesh0.points.emplace_back( 0.f, 0.f, 0.f );
     mesh0.points.emplace_back( 1.f, 0.f, 0.f );
     mesh0.points.emplace_back( 1.f, 1.f, 0.f );

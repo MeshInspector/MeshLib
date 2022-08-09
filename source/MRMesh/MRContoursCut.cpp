@@ -1627,12 +1627,12 @@ TEST( MRMesh, BooleanIntersectionsSort )
         { 8.92162418f, 14.4169340f,-0.203402281f },
         { 8.95297337f, 14.4501600f,-0.191835344f }
     };
-    std::vector<MeshBuilder::Triangle> trisA = 
+    Triangulation tA = 
     {
-        { 0_v, 1_v, 3_v, 0_f },
-        { 0_v, 3_v, 2_v, 1_f }
+        { 0_v, 1_v, 3_v },
+        { 0_v, 3_v, 2_v }
     };
-    meshA.topology = MeshBuilder::fromTriangles( trisA );
+    meshA.topology = MeshBuilder::fromTriangles( tA );
 
     Mesh meshB;
     meshB.points = std::vector<Vector3f>
@@ -1643,13 +1643,13 @@ TEST( MRMesh, BooleanIntersectionsSort )
         { 8.99934673f, 14.4161797f, -0.209171638f },
         { 8.91623878f, 14.3510427f, -0.205425277f }
     };
-    std::vector<MeshBuilder::Triangle> trisB =
+    Triangulation tB =
     {
-        { 0_v, 1_v, 2_v, 0_f },
-        { 0_v, 2_v, 4_v, 1_f },
-        { 2_v, 3_v, 4_v, 2_f }
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 4_v },
+        { 2_v, 3_v, 4_v }
     };
-    meshB.topology = MeshBuilder::fromTriangles( trisB );
+    meshB.topology = MeshBuilder::fromTriangles( tB );
     auto converters = getVectorConverters( meshA, meshB );
     auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt );
     auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );

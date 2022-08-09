@@ -78,7 +78,7 @@ bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, con
 {
     auto& texture = GetGradientTexture();
     if ( !texture )
-        return ImGui::Button( label, size );
+        return ImGui::ButtonValid( label, valid, size );
 
     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );

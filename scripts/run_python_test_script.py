@@ -17,7 +17,7 @@ elif platformSystem == 'Darwin':
 directory = os.path.dirname(os.path.abspath(__file__))
 if len(sys.argv) == 1:
     directory = os.path.join(directory, "..")
-    directory = os.path.join(directory, "python_test")
+    directory = os.path.join(directory, "test_python")
 else:
     directory = os.path.join(directory, sys.argv[1])
 

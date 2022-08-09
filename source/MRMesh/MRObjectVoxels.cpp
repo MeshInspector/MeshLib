@@ -115,7 +115,7 @@ std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, const Prog
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }
 
-void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
+void ObjectVoxels::setActiveBounds( const Box3i& activeBox, const ProgressCallback& cb, bool updateSurface )
 {
     if ( !grid_ )
         return;
@@ -124,6 +124,10 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
 
     activeBox_ = activeBox;
     auto accessor = grid_->getAccessor();
+
+    int counter = 0;
+    float volume = float( dimensions_.x ) * dimensions_.y * dimensions_.z;
+    float cbModifier = updateSurface ? 0.5f : 1.0f;
 
     bool insideX = false;
     bool insideY = false;
@@ -136,9 +140,21 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox )
         insideY = ( y >= activeBox_.min.y && y < activeBox_.max.y );
         insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
+        ++counter;
+        if ( cb && ( counter % 256 == 0 ) )
+            cb( cbModifier * float( counter ) / volume );
     }
-    mesh_.reset();
-    setIsoValue( isoValue_ );
+    if ( updateSurface )
+    {
+        ProgressCallback isoProgressCallback;
+        if ( cb )
+            isoProgressCallback = [&] ( float p )->bool
+        {
+            return cb( cbModifier + ( 1.0f - cbModifier ) * p );
+        };
+
+        updateIsoSurface( recalculateIsoSurface( isoValue_, isoProgressCallback ) );
+    }
 }
 
 VoxelId ObjectVoxels::getVoxelIdByCoordinate( const Vector3i& coord ) const

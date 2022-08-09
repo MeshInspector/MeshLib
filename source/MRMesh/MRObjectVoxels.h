@@ -68,7 +68,7 @@ public:
 
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
-    MRMESH_API virtual void setActiveBounds( const Box3i& activeBox );
+    MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, const ProgressCallback& cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
     const Box3i& getActiveBounds() const

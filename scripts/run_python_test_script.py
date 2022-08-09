@@ -16,5 +16,5 @@ elif platformSystem == 'Darwin':
 
 res = os.system(python_cmd + "-m pytest -s -v" )
 
-if (globalRes != 0):
+if (res != 0):
 	sys.exit(1)

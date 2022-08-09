@@ -11,7 +11,9 @@ namespace
 
 using namespace MR;
 
-std::pair<std::vector<int>, int> getUniqueRoots( const Vector<UndirectedEdgeId, UndirectedEdgeId>& allRoots, const IteratorRange<PolylineUndirectedEdgeIterator>& region )
+using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
+
+std::pair<std::vector<int>, int> getUniqueRoots( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
 {
     constexpr int InvalidRoot = -1;
     std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
@@ -111,7 +113,10 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
 
     auto& topology = polyline.topology;
     auto unionFindStruct = getUnionFindStructure( topology );
-    auto region = undirectedEdges( topology );
+
+    UndirectedEdgeBitSet region( topology.lastNotLoneEdge() + 1 );
+    for ( auto e : undirectedEdges( topology ) )
+        region.set( e );
 
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );

@@ -122,6 +122,7 @@ jobs:
       DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}
     steps:
       - name: Remove unused Docker data
+        if: ${{ matrix.distribution != 'windows' }}
         run: docker system prune --force --all --volumes
 
       - name: Checkout
@@ -142,4 +143,5 @@ jobs:
         run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
         
       - name: Remove unused Docker data
+        if: ${{ matrix.distribution != 'windows' }}
         run: docker system prune --force --all --volumes

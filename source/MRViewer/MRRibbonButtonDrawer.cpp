@@ -74,6 +74,48 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
     return res;
 }
 
+bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )
+{
+    auto& texture = GetGradientTexture();
+    if ( !texture )
+        return ImGui::Button( label, size );
+
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
+
+    int pushedStyleNum = 1;
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    if ( size.y == 0 )
+    {
+        auto framePadding = style.FramePadding;
+        framePadding.y = cGradientButtonFramePadding;
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            framePadding.y *= menu->menu_scaling();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+        ++pushedStyleNum;
+    }
+
+    ImVec2 pos = window->DC.CursorPos;
+    ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
+    const ImRect bb( pos, ImVec2( pos.x + realSize.x, pos.y + realSize.y ) );
+
+    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
+        texture->getImTextureId(),
+        bb.Min, bb.Max,
+        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
+        Color::white().getUInt32(), style.FrameRounding );
+
+    auto res = ImGui::ButtonValid( label, valid, size );
+
+    ImGui::PopStyleVar( pushedStyleNum );
+    ImGui::PopStyleColor( 2 );
+    return res;
+}
+
 bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
     auto& texture = GetGradientTexture();

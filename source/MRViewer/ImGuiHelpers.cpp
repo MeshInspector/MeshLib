@@ -784,7 +784,7 @@ void Separator( float scaling, const std::string& text )
     {
         ImGui::Separator();
     }
-    else if ( ImGui::BeginTable( "SeparatorTable", 2 ) )
+    else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
     {
         ImGui::TableNextColumn();
         ImGui::Text( "%s", text.c_str());

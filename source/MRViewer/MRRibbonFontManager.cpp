@@ -10,7 +10,7 @@ namespace MR
 
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 {
-    fonts_ = { nullptr,nullptr,nullptr,nullptr };
+    fonts_ = {};
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
 
@@ -40,6 +40,11 @@ float RibbonFontManager::getFontSizeByType( FontType type ) const
         return cSmallFontSize;
     case MR::RibbonFontManager::FontType::Icons:
         return cBigIconSize;
+    case MR::RibbonFontManager::FontType::Headline:
+        return cHeadlineFontSize;
+    case MR::RibbonFontManager::FontType::Big:
+    case MR::RibbonFontManager::FontType::BigSemiBold:
+        return cBigFontSize;
     case MR::RibbonFontManager::FontType::Count:
     default:
         return 0.f;
@@ -105,6 +110,30 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cBigFontSize * scaling,
+            &config, ranges );
+        fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
+    }
+    else if ( type == FontType::BigSemiBold )
+    {
+        auto fontPath = getMenuFontPath();
+        fontPath = fontPath.parent_path() / "NotoSans-SemiBold.ttf";
+        ImFontConfig config;
+        config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+        config.GlyphOffset = ImVec2( 0, -4 * scaling );
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+            utf8string( fontPath ).c_str(), cBigFontSize * scaling,
+            &config, ranges );
+        fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
+    }
+    else if ( type == FontType::Headline )
+    {
+        auto fontPath = getMenuFontPath();
+        fontPath = fontPath.parent_path() / "NotoSans-SemiBold.ttf";
+        ImFontConfig config;
+        config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+        config.GlyphOffset = ImVec2( 0, -4 * scaling );
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+            utf8string( fontPath ).c_str(), cHeadlineFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }

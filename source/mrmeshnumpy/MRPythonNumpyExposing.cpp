@@ -30,13 +30,14 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
     MR::Mesh res;
 
     // faces to topology part
-    std::vector<MR::MeshBuilder::Triangle> triangles( infoFaces.shape[0] );
+    MR::Triangulation t;
     if ( infoFaces.itemsize == sizeof( int ) )
     {
+        t.reserve( infoFaces.shape[0] );
         int* data = reinterpret_cast< int* >( infoFaces.ptr );
         for ( auto i = 0; i < infoFaces.shape[0]; i++ )
         {
-            triangles[i] = MR::MeshBuilder::Triangle( MR::VertId( data[3 * i] ), MR::VertId( data[3 * i + 1] ), MR::VertId( data[3 * i + 2] ), MR::FaceId( i ) );
+            t.push_back( { MR::VertId( data[3 * i] ), MR::VertId( data[3 * i + 1] ), MR::VertId( data[3 * i + 2] ) } );
         }
     }
     else
@@ -45,7 +46,7 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
         PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector 'faces' should be int32" );
         assert( false );
     }
-    res.topology = MR::MeshBuilder::fromTriangles( triangles );
+    res.topology = MR::MeshBuilder::fromTriangles( t );
 
     // verts to points part
     res.points.resize( infoVerts.shape[0] );

@@ -41,46 +41,37 @@ namespace MR
         points[k].z = radius;
         top_cap = k;
 
-        std::vector<MeshBuilder::Triangle> tris;
+        Triangulation t;
 
         int triangleCount = 2 * horisontalResolution * verticalResolution;
-        tris.reserve(triangleCount);
+        t.reserve(triangleCount);
 
-        k = 0;
         for (j = 0; j < verticalResolution - 1; ++j) {
             for (i = 0; i < horisontalResolution; ++i) {
-                tris.emplace_back(
+                t.push_back( {
                     VertId((j + 1) * horisontalResolution + i),
                     VertId(j * horisontalResolution + (i + 1) % horisontalResolution),
-                    VertId(j * horisontalResolution + i),
-                    FaceId(k)); ++k;
+                    VertId(j * horisontalResolution + i) } );
 
-                tris.emplace_back(
+                t.push_back( {
                     VertId((j + 1) * horisontalResolution + i),
                     VertId((j + 1) * horisontalResolution + (i + 1) % horisontalResolution),
-                    VertId(j * horisontalResolution + (i + 1) % horisontalResolution),
-                    FaceId(k)); ++k;
+                    VertId(j * horisontalResolution + (i + 1) % horisontalResolution) } );
             }
         }
 
         for (i = 0; i < horisontalResolution; ++i) {
-            tris.emplace_back(
+            t.push_back( {
                 VertId(0 * horisontalResolution + i),
                 VertId(0 * horisontalResolution + (i + 1) % horisontalResolution),
-                VertId(bottom_cap),
-                FaceId(k)); ++k;
+                VertId(bottom_cap) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId((verticalResolution - 1) * horisontalResolution + (i + 1) % horisontalResolution),
                 VertId((verticalResolution - 1) * horisontalResolution + i),
-                VertId(top_cap),
-                FaceId(k)); ++k;
+                VertId(top_cap) } );
         }
 
-        Mesh res;
-        res.topology = MeshBuilder::fromTriangles(tris);
-        res.points.vec_ = std::move(points);
-
-        return res;
+        return Mesh::fromTriangles( std::move(points), t );
     }
 }

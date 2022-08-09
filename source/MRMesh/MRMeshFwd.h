@@ -236,6 +236,7 @@ template <typename I> struct IteratorRange;
 using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
+using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 
 template <typename K>

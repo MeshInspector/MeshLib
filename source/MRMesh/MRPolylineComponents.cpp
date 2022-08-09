@@ -11,8 +11,6 @@ namespace
 
 using namespace MR;
 
-using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
-
 std::pair<std::vector<int>, int> getUniqueRoots( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
 {
     constexpr int InvalidRoot = -1;

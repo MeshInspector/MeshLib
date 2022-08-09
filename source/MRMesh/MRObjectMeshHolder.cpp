@@ -300,6 +300,11 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
+bool ObjectMeshHolder::valid() const
+{
+    return mesh_ && mesh_->topology.numValidVerts() != 0 && mesh_->topology.numValidFaces() != 0;
+}
+
 std::shared_ptr<Object> ObjectMeshHolder::clone() const
 {
     auto res = std::make_shared<ObjectMeshHolder>( ProtectedStruct{}, *this );

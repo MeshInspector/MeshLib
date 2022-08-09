@@ -240,6 +240,11 @@ void VisualObject::renderForPicker( const BaseRenderParams& params, unsigned id)
     renderObj_->renderPicker( params, id );
 }
 
+bool VisualObject::valid() const
+{
+    return false;
+}
+
 void VisualObject::swapBase_( Object& other )
 {    
     if ( auto otherVis = other.asType<VisualObject>() )

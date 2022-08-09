@@ -31,6 +31,8 @@ public:
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
+    MRMESH_API virtual bool valid() const override;
+
     const std::shared_ptr<const PointCloud>& pointCloud() const 
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 

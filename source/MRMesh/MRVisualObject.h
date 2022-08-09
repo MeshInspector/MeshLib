@@ -174,6 +174,8 @@ public:
     MRMESH_API virtual void render( const RenderParams& ) const;
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
 
+    /// is object valid and has visual elements
+    MRMESH_API virtual bool valid() const;
 
     /// returns bounding box of this object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()

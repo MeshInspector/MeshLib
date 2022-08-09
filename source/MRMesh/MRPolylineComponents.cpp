@@ -1,7 +1,36 @@
 #include "MRPolylineComponents.h"
+#include "MRPolyline.h"
 #include "MRPolylineTopology.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRTimer.h"
+#include "MRVector2.h"
+#include "MRVector3.h"
+
+namespace
+{
+
+using namespace MR;
+
+std::pair<std::vector<int>, int> getUniqueRoots( const Vector<UndirectedEdgeId, UndirectedEdgeId>& allRoots, const IteratorRange<PolylineUndirectedEdgeIterator>& region )
+{
+    constexpr int InvalidRoot = -1;
+    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    int k = 0;
+    int curRoot;
+    for ( auto e : region )
+    {
+        curRoot = allRoots[e];
+        auto& uniqIndex = uniqueRootsMap[curRoot];
+        if ( uniqIndex == InvalidRoot )
+        {
+            uniqIndex = k;
+            ++k;
+        }
+    }
+    return { std::move( uniqueRootsMap ), k };
+}
+
+}
 
 namespace MR
 {
@@ -74,6 +103,47 @@ UnionFind<MR::UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& t
     }
     return unionFindStructure;
 }
+
+template <typename V>
+UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
+{
+    MR_TIMER;
+
+    auto& topology = polyline.topology;
+    auto unionFindStruct = getUnionFindStructure( topology );
+    auto region = undirectedEdges( topology );
+
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRoots( allRoots, region );
+
+    auto maxLength = std::numeric_limits<float>::lowest();
+    int maxI = 0;
+    std::vector<float> areas( k, 0.f );
+    for ( auto e : region )
+    {
+        auto index = uniqueRootsMap[allRoots[e]];
+        auto& area = areas[index];
+        area += polyline.edgeLength( EdgeId( e ) );
+        if ( area > maxLength )
+        {
+            maxI = index;
+            maxLength = area;
+        }
+    }
+
+    UndirectedEdgeBitSet maxLengthComponent( allRoots.size() );
+    for ( auto e : region )
+    {
+        auto index = uniqueRootsMap[allRoots[e]];
+        if ( index != maxI )
+            continue;
+        maxLengthComponent.set( e );
+    }
+    return maxLengthComponent;
+}
+
+template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector2f>( const Polyline2& polyline );
+template MRMESH_API UndirectedEdgeBitSet getLargestComponent<Vector3f>( const Polyline3& polyline );
 
 }
 

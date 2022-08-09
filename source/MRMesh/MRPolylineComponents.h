@@ -21,6 +21,11 @@ MRMESH_API std::vector<UndirectedEdgeBitSet> getAllComponents( const PolylineTop
 /// \ingroup ComponentsGroup
 MRMESH_API UnionFind<UndirectedEdgeId> getUnionFindStructure( const PolylineTopology& topology );
 
+/// returns largest by length component
+/// \ingroup ComponentsGroup
+template <typename V>
+UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline );
+
 }
 
 }

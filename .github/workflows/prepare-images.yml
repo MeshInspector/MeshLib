@@ -61,6 +61,7 @@ jobs:
             src:
               - 'docker/windowsDockerfile'
               - 'requirements/windows.txt'
+              - 'requirements/python.txt'
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 

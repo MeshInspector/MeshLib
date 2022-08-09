@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBooleanOperation.h" />
-    <ClInclude Include="MRChangeIsoAction.h" />
+    <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeLabelAction.h" />
     <ClInclude Include="MRChangePointCloudAction.h" />
     <ClInclude Include="MRChangePolylineAction.h" />

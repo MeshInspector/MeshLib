@@ -855,7 +855,7 @@
     <ClInclude Include="MRProgressReadWrite.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRChangeIsoAction.h">
+    <ClInclude Include="MRChangeVoxelsAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRAffineXfDecompose.h">

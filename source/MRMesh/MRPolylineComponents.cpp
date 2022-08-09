@@ -131,7 +131,7 @@ UndirectedEdgeBitSet getLargestComponent( const Polyline<V>& polyline )
         }
     }
 
-    UndirectedEdgeBitSet maxLengthComponent( allRoots.size() );
+    UndirectedEdgeBitSet maxLengthComponent( topology.lastNotLoneEdge() + 1 );
     for ( auto e : region )
     {
         auto index = uniqueRootsMap[allRoots[e]];

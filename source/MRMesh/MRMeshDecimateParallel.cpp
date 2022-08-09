@@ -167,23 +167,20 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     // recombine mesh from parts
     MR::Vector<MR::QuadraticForm3f, MR::VertId> unitedVertForms( mesh.topology.vertSize() );
     VertBitSet bdOfSomePiece( mesh.topology.vertSize() );
-    std::vector<MR::MeshBuilder::Triangle> tris;
-    FaceId nextFace{ 0 };
+    Triangulation t;
     if ( settings.region )
         settings.region->clear();
     for ( const auto & submesh : submeshes )
     {
-        for ( auto t : submesh.m.topology.getValidFaces() )
+        for ( auto f : submesh.m.topology.getValidFaces() )
         {
-            MR::MeshBuilder::Triangle tri;
-            tri.f = nextFace;
-            ++nextFace;
-            submesh.m.topology.getTriVerts( t, tri.v );
+            ThreeVertIds tri;
+            submesh.m.topology.getTriVerts( f, tri );
             for ( int i = 0; i < 3; ++i )
-                tri.v[i] = submesh.subVertToOriginal[ tri.v[i] ];
-            tris.push_back( tri );
-            if ( settings.region && submesh.region.test( t ) )
-                settings.region->autoResizeSet( tri.f );
+                tri[i] = submesh.subVertToOriginal[ tri[i] ];
+            t.push_back( tri );
+            if ( settings.region && submesh.region.test( f ) )
+                settings.region->autoResizeSet( t.backId() );
         }
         for ( auto v : submesh.m.topology.getValidVerts() )
         {
@@ -204,7 +201,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     if ( settings.progressCallback && !settings.progressCallback( 0.8f ) )
         return res;
 
-    mesh.topology = fromTriangles( tris );
+    mesh.topology = MeshBuilder::fromTriangles( t );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.85f ) )
         return res;

@@ -33,7 +33,7 @@ namespace MeshBuilder
 
 /// construct mesh topology from a set of triangles with given ids;
 /// if skippedTris is given then it receives all input triangles not added in the resulting topology
-/*[[deprecated]]*/ MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
+[[deprecated]] MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
 MRMESH_API MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings = {} );
 
 struct VertDuplication

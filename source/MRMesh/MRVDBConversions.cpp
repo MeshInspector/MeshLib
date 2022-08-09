@@ -77,8 +77,8 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         if ( !cb( 0.0f ) )
             return tl::make_unexpected( "Operation was canceled." );
     std::vector<Vector3f> points( pointsArg.size() );
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( trisArg.size() + 2 * quadArg.size() );
+    Triangulation t;
+    t.reserve( trisArg.size() + 2 * quadArg.size() );
     for ( int i = 0; i < points.size(); ++i )
     {
         points[i][0] = pointsArg[i][0] * voxelSize[0];
@@ -89,55 +89,48 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
             if ( !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
-    int t = 0;
     for ( const auto& tri : trisArg )
     {
-        MeshBuilder::Triangle newTri
+        ThreeVertIds newTri
         {
             VertId( ( int )tri[2] ),
             VertId( ( int )tri[1] ),
-            VertId( ( int )tri[0] ),
-            FaceId( t )
+            VertId( ( int )tri[0] )
         };
-        tris.push_back( newTri );
-        ++t;
+        t.push_back( newTri );
 
         if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
     for ( const auto& quad : quadArg )
     {
-        MeshBuilder::Triangle newTri
+        ThreeVertIds newTri
         {
             VertId( ( int )quad[2] ),
             VertId( ( int )quad[1] ),
             VertId( ( int )quad[0] ),
-            FaceId( t )
         };
-        tris.push_back( newTri );
-        ++t;
+        t.push_back( newTri );
 
         if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
         newTri =
         {
             VertId( ( int )quad[0] ),
             VertId( ( int )quad[3] ),
             VertId( ( int )quad[2] ),
-            FaceId( t )
         };
-        tris.push_back( newTri );
-        ++t;
+        t.push_back( newTri );
 
         if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t ) / float( tris.capacity() ) ) ) )
+            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
 
     Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
+    res.topology = MeshBuilder::fromTriangles( t );
     res.points.vec_ = std::move( points );
 
     if ( cb )

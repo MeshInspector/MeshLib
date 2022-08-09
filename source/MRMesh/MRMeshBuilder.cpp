@@ -811,21 +811,14 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )
 {
     MR_TIMER
     const size_t numTri = vertTriples.size() / 3;
-    std::vector<Triangle> tris;
-    tris.reserve( numTri );
-
-    for ( size_t t = 0; t < numTri; ++t )
+    Triangulation t;
+    t.reserve( numTri );
+    
+    for ( size_t f = 0; f < numTri; ++f )
     {
-        Triangle tri
-        {
-            vertTriples[3*t],
-            vertTriples[3*t+1], 
-            vertTriples[3*t+2],
-            FaceId( int( t ) )
-        };
-        tris.push_back( tri );
+        t.push_back( { vertTriples[3*f], vertTriples[3*f+1], vertTriples[3*f+2] } );
     }
-    return fromTriangles( tris );
+    return fromTriangles( t );
 }
 
 Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )

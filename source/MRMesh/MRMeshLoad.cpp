@@ -87,8 +87,8 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
             return tl::make_unexpected( std::string( "Loading canceled" ) );
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( numPolygons );
+    Triangulation t;
+    t.reserve( numPolygons );
 
     for ( int i = 0; i < numPolygons; ++i )
     {
@@ -96,16 +96,12 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
         in >> k >> a >> b >> c;
         if ( !in || k != 3 )
             return tl::make_unexpected( std::string( "Polygons read error" ) );
-        tris.emplace_back( VertId( a ), VertId( b ), VertId( c ), FaceId( i ) );
+        t.push_back( { VertId( a ), VertId( b ), VertId( c ) } );
         if ( callback && !( i & 0x3FF ) && !callback( float( i ) / numPolygons* 0.5f + 0.5f ) )
             return tl::make_unexpected( std::string( "Loading canceled" ) );
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-
-    return std::move( res );
+    return Mesh::fromTriangles( std::move( points ), t );
 }
 
 tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vector<Color, VertId>*, ProgressCallback callback )
@@ -523,14 +519,14 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     for ( VertId i{0}; i < (int)vertCount; ++i )
         mesh.points[i] = Vector3f( vertices[3*i], vertices[3*i+1], vertices[3*i+2] );
 
-    std::vector<MeshBuilder::Triangle> tris;
-    tris.reserve( triCount );
+    Triangulation t;
+    t.reserve( triCount );
     for ( FaceId i{0}; i < (int)triCount; ++i )
-        tris.emplace_back( VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ), i );
+        t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
-    mesh.topology = MeshBuilder::fromTriangles( tris );
+    mesh.topology = MeshBuilder::fromTriangles( t );
 
-    return std::move( mesh );
+    return mesh;
 }
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )

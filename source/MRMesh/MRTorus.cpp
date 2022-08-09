@@ -35,34 +35,27 @@ MR::Mesh makeTorus( float primaryRadius, float secondaryRadius, int primaryResol
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
-
+    Triangulation t;
     int triangleCount = 2 * vertexCount;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
-    k = 0;
     for ( i = 0; i < secondaryResolution; ++i )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + secondaryResolution - 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + primaryResolution - 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + primaryResolution - 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 MR::Mesh makeOuterHalfTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution,
@@ -94,34 +87,28 @@ MR::Mesh makeOuterHalfTorus( float primaryRadius, float secondaryRadius, int pri
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     int triangleCount = 2 * vertexCount - 2 * primaryResolution;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
-    k = 0;
     for ( i = 0; i < secondaryResolution - 1; ++i )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 MR::Mesh makeTorusWithUndercut( float primaryRadius, float secondaryRadiusInner, float secondaryRadiusOuter, int primaryResolution, int secondaryResolution,
@@ -155,34 +142,28 @@ MR::Mesh makeTorusWithUndercut( float primaryRadius, float secondaryRadiusInner,
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     int triangleCount = 2 * vertexCount;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
-    k = 0;
     for ( i = 0; i < secondaryResolution; ++i )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 MR::Mesh makeTorusWithSpikes( float primaryRadius, float secondaryRadiusInner, float secondaryRadiusOuter, int primaryResolution, int secondaryResolution,
@@ -217,34 +198,28 @@ MR::Mesh makeTorusWithSpikes( float primaryRadius, float secondaryRadiusInner, f
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     int triangleCount = 2 * vertexCount - 2 * primaryResolution;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
-    k = 0;
     for ( i = 0; i < secondaryResolution; ++i )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 MR::Mesh makeTorusWithComponents( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution,
@@ -276,34 +251,28 @@ MR::Mesh makeTorusWithComponents( float primaryRadius, float secondaryRadius, in
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     int triangleCount = 2 * vertexCount - 2 * primaryResolution;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
-    k = 0;
     for ( i = 0; i < secondaryResolution - 1; i+=2 )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 MR::Mesh makeTorusWithSelfIntersections( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution,
@@ -335,34 +304,29 @@ MR::Mesh makeTorusWithSelfIntersections( float primaryRadius, float secondaryRad
         pSet = true;
     }
 
-    std::vector<MeshBuilder::Triangle> tris;
+    Triangulation t;
 
     int triangleCount = 2 * vertexCount - 2 * primaryResolution;
-    tris.reserve( triangleCount );
+    t.reserve( triangleCount );
 
     k = 0;
     for ( i = 0; i < secondaryResolution; ++i )
     {
         for ( j = 0; j < primaryResolution; ++j )
         {
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + j ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ) } );
 
-            tris.emplace_back(
+            t.push_back( {
                 VertId( i * primaryResolution + ( j + 1 ) % primaryResolution ),
                 VertId( ( i + 1 ) % secondaryResolution * primaryResolution + j ),
-                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ),
-                FaceId( k ) ); ++k;
+                VertId( ( i + 1 ) % secondaryResolution * primaryResolution + ( j + 1 ) % primaryResolution ) } );
         }
     }
 
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( tris );
-    res.points.vec_ = std::move( points );
-    return res;
+    return Mesh::fromTriangles( std::move(points), t );
 }
 
 }

@@ -32,7 +32,7 @@ void ObjectLinesHolder::applyScale( float scaleFactor )
 
 bool ObjectLinesHolder::valid() const
 {
-    return polyline_ && polyline_->topology.numValidVerts() != 0;
+    return polyline_ && polyline_->topology.lastNotLoneEdge().valid();
 }
 
 std::shared_ptr<Object> ObjectLinesHolder::clone() const

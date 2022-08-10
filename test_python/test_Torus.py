@@ -1,4 +1,5 @@
 from helper import *
+import pytest
 
 torus = mrmesh.make_outer_half_test_torus(2, 1, 10, 10, None)
 #mrmesh.save_mesh(torus, "/home/tim/models/testTorus_half.stl")

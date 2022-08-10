@@ -55,9 +55,6 @@ inline bool model( const ObjectDistanceMap& obj )
 }
 }
 
-// special namespace not to have signature conflicts
-namespace VisualRepresentationCheck
-{
 inline bool hasVisualRepresentation( const Object& )
 {
     return true;
@@ -66,7 +63,6 @@ inline bool hasVisualRepresentation( const Object& )
 inline bool hasVisualRepresentation( const VisualObject& obj )
 {
     return obj.hasVisualRepresentation();
-}
 }
 
 // special struct for disabling visual representation check
@@ -89,7 +85,7 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
             return "Selected object(s) must have valid model";
 
         if constexpr ( visualRepresentationCheck )
-            if ( !VisualRepresentationCheck::hasVisualRepresentation( *tObj ) )
+            if ( !hasVisualRepresentation( *tObj ) )
                 return "Selected object(s) must have valid visual representation";
     }
     return "";
@@ -111,7 +107,7 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
         if ( !ModelCheck::model( *tObj ) )
             continue;
         if constexpr ( visualRepresentationCheck )
-            if ( !VisualRepresentationCheck::hasVisualRepresentation( *tObj ) )
+            if ( !hasVisualRepresentation( *tObj ) )
                 continue;
         ++i;
     }

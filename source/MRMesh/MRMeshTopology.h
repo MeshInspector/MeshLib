@@ -4,7 +4,9 @@
 #include "MRVector.h"
 #include "MRBitSet.h"
 #include "MRPartMapping.h"
+#include "MRProgressCallback.h"
 #include <fstream>
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -239,7 +241,8 @@ public:
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
     /// loads from binary stream
-    MRMESH_API bool read( std::istream & s );
+    /// \return text of error if any
+    MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
 
     /// comparison via edges (all other members are considered as not important caches)
     [[nodiscard]] bool operator ==( const MeshTopology & b ) const { return edges_ == b.edges_; }

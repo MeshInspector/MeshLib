@@ -35,10 +35,10 @@ tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, Vert
     MR_TIMER
 
     Mesh mesh;
-    auto readRes = mesh.topology.read( in, [callback] ( float v )
+    auto readRes = mesh.topology.read( in, callback ? [callback] ( float v )
     {
         return callback( v / 2.f );
-    } );
+    } : callback );
     if ( !readRes.has_value() )
     {
         std::string error = readRes.error();
@@ -53,10 +53,10 @@ tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, Vert
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading the number of points from mrmesh-file" ) );
     mesh.points.resize( numPoints );
-    readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), [callback] ( float v )
+    readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback ? [callback] ( float v )
     {
         return callback( v / 2.f + 0.5f );
-    } );
+    } : callback );
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading  points from mrmesh-file" ) );
 

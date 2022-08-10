@@ -7,7 +7,7 @@
 namespace MR
 {
 
-class Open [[deprecated]] : public MR::ViewerPlugin, public MultiListener<LoadListener, DragDropListener>
+class [[deprecated]] Open : public MR::ViewerPlugin, public MultiListener<LoadListener, DragDropListener>
 {
 public:
     MRVIEWER_API virtual void init( Viewer* _viewer ) override;

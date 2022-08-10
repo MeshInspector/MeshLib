@@ -27,9 +27,17 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     bool needCutMeshB = opearation != BooleanOperation::InsideA && opearation != BooleanOperation::OutsideA;
 
     if ( needCutMeshA )
+    {
+        // build aabbtree for init mesh
+        meshA.getAABBTree();
         meshACut = meshA;
+    }
     if ( needCutMeshB )
+    {
+        // build aabbtree for init mesh
+        meshB.getAABBTree();
         meshBCut = meshB;
+    }
 
     const Mesh& constMeshARef = needCutMeshA ? meshACut : meshA;
     const Mesh& constMeshBRef = needCutMeshB ? meshBCut : meshB;

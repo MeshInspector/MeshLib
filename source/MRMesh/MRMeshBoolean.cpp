@@ -28,13 +28,15 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 
     if ( needCutMeshA )
     {
-        // build aabbtree for init mesh
+        // build tree for input mesh for the cloned mesh to copy the tree,
+        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshA.getAABBTree();
         meshACut = meshA;
     }
     if ( needCutMeshB )
     {
-        // build aabbtree for init mesh
+        // build tree for input mesh for the cloned mesh to copy the tree,
+        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshB.getAABBTree();
         meshBCut = meshB;
     }

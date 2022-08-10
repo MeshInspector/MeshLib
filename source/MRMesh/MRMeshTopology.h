@@ -241,7 +241,7 @@ public:
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
     /// loads from binary stream
-    /// \return error text, if it exists
+    /// \return text of error if any
     MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
 
     /// comparison via edges (all other members are considered as not important caches)

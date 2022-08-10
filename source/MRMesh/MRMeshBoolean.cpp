@@ -27,9 +27,19 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     bool needCutMeshB = opearation != BooleanOperation::InsideA && opearation != BooleanOperation::OutsideA;
 
     if ( needCutMeshA )
+    {
+        // build tree for input mesh for the cloned mesh to copy the tree,
+        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+        meshA.getAABBTree();
         meshACut = meshA;
+    }
     if ( needCutMeshB )
+    {
+        // build tree for input mesh for the cloned mesh to copy the tree,
+        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+        meshB.getAABBTree();
         meshBCut = meshB;
+    }
 
     const Mesh& constMeshARef = needCutMeshA ? meshACut : meshA;
     const Mesh& constMeshBRef = needCutMeshB ? meshBCut : meshB;

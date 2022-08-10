@@ -1,0 +1,123 @@
+.button {
+    background-image: linear-gradient(to bottom, #1b83ff, #004da9), linear-gradient(to bottom, #1b83ff, #1b83ff);
+}
+
+.button:hover {
+    background-image: none;
+    background-color: #1b83ff;
+}
+
+.button:active {
+    background-image: none;
+    background-color: #004da9;
+}
+
+.unselectable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+body {
+    font-family: arial;
+    margin: 0;
+    padding: none
+}
+
+.emscripten {
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block
+}
+
+div.emscripten {
+    text-align: center
+}
+
+canvas.emscripten {
+    border: 0 none;
+    background-color: #000
+}
+
+#emscripten_logo {
+    display: inline-block;
+    margin: 0
+}
+
+.spinner {
+    height: 30px;
+    width: 30px;
+    margin: 0;
+    margin-top: 20px;
+    margin-left: 20px;
+    display: inline-block;
+    vertical-align: top;
+    -webkit-animation: rotation .8s linear infinite;
+    -moz-animation: rotation .8s linear infinite;
+    -o-animation: rotation .8s linear infinite;
+    animation: rotation .8s linear infinite;
+    border-left: 5px solid #ebebeb;
+    border-right: 5px solid #ebebeb;
+    border-bottom: 5px solid #ebebeb;
+    border-top: 5px solid #787878;
+    border-radius: 100%;
+    background-color: #bdd72e
+}
+
+@-webkit-keyframes rotation {
+    from {
+        -webkit-transform: rotate(0)
+    }
+
+    to {
+        -webkit-transform: rotate(360deg)
+    }
+}
+
+@-moz-keyframes rotation {
+    from {
+        -moz-transform: rotate(0)
+    }
+
+    to {
+        -moz-transform: rotate(360deg)
+    }
+}
+
+@-o-keyframes rotation {
+    from {
+        -o-transform: rotate(0)
+    }
+
+    to {
+        -o-transform: rotate(360deg)
+    }
+}
+
+@keyframes rotation {
+    from {
+        transform: rotate(0)
+    }
+
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+#status {
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 30px;
+    margin-left: 20px;
+    font-weight: 700;
+    color: #787878
+}
+
+#progress {
+    height: 20px;
+    width: 300px
+}

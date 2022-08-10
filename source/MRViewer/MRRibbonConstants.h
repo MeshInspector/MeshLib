@@ -43,6 +43,7 @@ constexpr float cBigIconSize = 20.0f;
 constexpr int cSmallFontSize = 11;
 constexpr int cDefaultFontSize = 13;
 constexpr int cBigFontSize = 15;
+constexpr int cHeadlineFontSize = 24;
 
 constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
 

@@ -570,35 +570,7 @@ void ImGuiMenu::draw_helpers()
 {
     if ( showShortcuts_ )
     {
-        const auto& style = ImGui::GetStyle();
-        const float hotkeysWindowWidth = 300 * menu_scaling();
-        size_t numLines = 2;
-        if ( shortcutManager_ )
-            numLines += shortcutManager_->getShortcutList().size();
-
-        const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
-
-        ImVec2 windowPos = ImGui::GetMousePos();
-        windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
-        windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
-
-        ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-        ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
-        ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-
-        ImFont font = *ImGui::GetFont();
-        font.Scale = 1.2f;
-        ImGui::PushFont( &font );
-        ImGui::Text( "Hot Key List" );
-        ImGui::PopFont();
-        ImGui::NewLine();
-        if ( shortcutManager_ )
-        {
-            const auto& shortcutsList = shortcutManager_->getShortcutList();
-            for ( const auto& [key, name] : shortcutsList )
-                ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
-        }
-        ImGui::End();
+        drawShortcutsWindow_();
     }
 
     if ( showStatistics_ )
@@ -2394,6 +2366,42 @@ void ImGuiMenu::draw_open_recent_button_()
         ImGui::GetStyle().Colors[ImGuiCol_Header] = storedColor;
         ImGui::EndCombo();
     }
+}
+
+void ImGuiMenu::drawShortcutsWindow_()
+{
+    const auto& style = ImGui::GetStyle();
+    const float hotkeysWindowWidth = 300 * menu_scaling();
+    size_t numLines = 2;
+
+    auto callback = [this] ( const ShortcutManager::ShortcutKey& key ) { return this->getShortcutCathegory_( key ); };
+    if ( shortcutManager_ )
+        numLines += shortcutManager_->getShortcutList( callback ).size();
+
+    const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
+
+    ImVec2 windowPos = ImGui::GetMousePos();
+    windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - hotkeysWindowWidth );
+    windowPos.y = std::min( windowPos.y, Viewer::instanceRef().window_height - hotkeysWindowHeight );
+
+    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
+    ImGui::SetNextWindowSize( ImVec2( hotkeysWindowWidth, hotkeysWindowHeight ) );
+    ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
+
+    ImFont font = *ImGui::GetFont();
+    font.Scale = 1.2f;
+    ImGui::PushFont( &font );
+    ImGui::Text( "Hot Key List" );
+    ImGui::PopFont();
+    ImGui::NewLine();
+    if ( shortcutManager_ )
+    {
+
+        const auto& shortcutsList = shortcutManager_->getShortcutList( callback );
+        for ( const auto& [key, name] : shortcutsList )
+            ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
+    }
+    ImGui::End();
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

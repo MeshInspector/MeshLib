@@ -29,6 +29,15 @@ public:
     {
         int key{ 0 };
         int mod{ 0 };
+
+        bool operator<( const ShortcutKey& other ) const
+        {
+            if ( key < other.key )
+                return true;
+            if ( key == other.key )
+                return mod < other.mod;
+            return false;
+        }
     };
 
     // set shortcut
@@ -40,7 +49,7 @@ public:
 
     // returns cached list of sorted shortcuts
     // if this structure was changed since last call of this function - updates cache
-    MRVIEWER_API const ShortcutList& getShortcutList() const;
+    MRVIEWER_API const ShortcutList& getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCathegoryCallback = {} ) const;
 
     enum class Reason 
     {

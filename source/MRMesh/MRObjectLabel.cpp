@@ -218,11 +218,6 @@ void ObjectLabel::applyScale( float scaleFactor )
     fontHeight_ *= scaleFactor;
 }
 
-bool ObjectLabel::valid() const
-{
-    return true;
-}
-
 std::shared_ptr<MR::Object> ObjectLabel::clone() const
 {
     auto res = std::make_shared<ObjectLabel>( ProtectedStruct{}, *this );

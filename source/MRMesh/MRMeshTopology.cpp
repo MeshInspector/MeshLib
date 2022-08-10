@@ -1349,10 +1349,10 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
 
     edges_.resize( numEdges );
     if ( !readByBlocks( s, ( char* )edges_.data(), edges_.size() * sizeof( HalfEdgeRecord ),
-        [callback] ( float v )
+        callback ? [callback] ( float v )
     {
         return callback( v / 3.f );
-    } ) )
+    } : callback ) )
         return tl::make_unexpected( std::string( "Loading canceled" ) );
 
     // read verts
@@ -1363,10 +1363,10 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
     edgePerVertex_.resize( numVerts );
     validVerts_.resize( numVerts );
     if ( !readByBlocks( s, (char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof( EdgeId ),
-        [callback] ( float v )
+        callback ? [callback] ( float v )
     {
         return callback( ( 1.f + v ) / 3.f );
-    } ) )
+    } : callback ) )
         return tl::make_unexpected( std::string( "Loading canceled" ) );
 
     // read faces
@@ -1377,10 +1377,10 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
     edgePerFace_.resize( numFaces );
     validFaces_.resize( numFaces );
     if ( !readByBlocks( s, (char*)edgePerFace_.data(), edgePerFace_.size() * sizeof( EdgeId ),
-        [callback] ( float v )
+        callback ? [callback] ( float v )
     {
         return callback( ( 2.f + v ) / 3.f );
-    } ) )
+    } : callback ) )
         return tl::make_unexpected( std::string( "Loading canceled" ) );
 
     computeValidsFromEdges();

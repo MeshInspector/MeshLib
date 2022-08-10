@@ -180,6 +180,4 @@ bool Open::dragDrop_( const std::vector<std::filesystem::path>& paths )
     return res;
 }
 
-MRVIEWER_PLUGIN_REGISTRATION( Open )
-
 } //namespace MR

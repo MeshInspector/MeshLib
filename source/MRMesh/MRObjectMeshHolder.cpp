@@ -300,7 +300,7 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-bool ObjectMeshHolder::valid() const
+bool ObjectMeshHolder::hasVisualRepresentation() const
 {
     return mesh_ && mesh_->topology.numValidFaces() != 0;
 }

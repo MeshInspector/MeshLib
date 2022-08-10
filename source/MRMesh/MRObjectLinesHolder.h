@@ -35,7 +35,7 @@ public:
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
-    MRMESH_API virtual bool valid() const override;
+    MRMESH_API virtual bool hasVisualRepresentation() const override;
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

@@ -30,7 +30,7 @@ void ObjectLinesHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-bool ObjectLinesHolder::valid() const
+bool ObjectLinesHolder::hasVisualRepresentation() const
 {
     return polyline_ && polyline_->topology.numValidVerts() != 0;
 }

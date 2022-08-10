@@ -39,7 +39,7 @@ void ObjectPointsHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
-bool ObjectPointsHolder::valid() const
+bool ObjectPointsHolder::hasVisualRepresentation() const
 {
     return points_ && points_->validPoints.any();
 }

@@ -55,9 +55,22 @@ inline bool model( const ObjectDistanceMap& obj )
 }
 }
 
+inline bool hasVisualRepresentation( const Object& )
+{
+    return true;
+}
+
+inline bool hasVisualRepresentation( const VisualObject& obj )
+{
+    return obj.hasVisualRepresentation();
+}
+
+// special struct for disabling visual representation check
+struct NoVisualRepresentationCheck {};
+
 // check that given vector has exactly N objects if type ObjectT
 // returns error message if requirements are not satisfied
-template<typename ObjectT>
+template<typename ObjectT, bool visualRepresentationCheck>
 std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object>>& objs, unsigned n )
 {
     if ( objs.size() != n )
@@ -70,13 +83,17 @@ std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object
 
         if ( !ModelCheck::model( *tObj ) )
             return "Selected object(s) must have valid model";
+
+        if constexpr ( visualRepresentationCheck )
+            if ( !hasVisualRepresentation( *tObj ) )
+                return "Selected object(s) must have valid visual representation";
     }
     return "";
 }
 
 // checks that given vector has at least N objects if type ObjectT
 // returns error message if requirements are not satisfied
-template<typename ObjectT>
+template<typename ObjectT, bool visualRepresentationCheck>
 std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object>>& objs, unsigned n )
 {
     if ( objs.size() < n )
@@ -89,6 +106,9 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
             continue;
         if ( !ModelCheck::model( *tObj ) )
             continue;
+        if constexpr ( visualRepresentationCheck )
+            if ( !hasVisualRepresentation( *tObj ) )
+                continue;
         ++i;
     }
     return ( i >= n ) ? 
@@ -97,26 +117,48 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
 }
 
 // check that given vector has exactly N objects if type ObjectT
-template<unsigned N, typename ObjectT>
+template<unsigned N, typename ObjectT, typename = void>
 class SceneStateExactCheck : virtual public ISceneStateCheck
 {
 public:
     virtual ~SceneStateExactCheck() = default;
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
     {
-        return sceneSelectedExactly<ObjectT>(objs, N);
+        return sceneSelectedExactly<ObjectT, true>(objs, N);
+    }
+};
+
+template<unsigned N, typename ObjectT>
+class SceneStateExactCheck<N, ObjectT, NoVisualRepresentationCheck> : virtual public ISceneStateCheck
+{
+public:
+    virtual ~SceneStateExactCheck() = default;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
+    {
+        return sceneSelectedExactly<ObjectT, false>(objs, N);
     }
 };
 
 // checks that given vector has at least N objects if type ObjectT
-template<unsigned N, typename ObjectT>
+template<unsigned N, typename ObjectT, typename = void>
 class SceneStateAtLeastCheck : virtual public ISceneStateCheck
 {
 public:
     virtual ~SceneStateAtLeastCheck() = default;
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
     {
-        return sceneSelectedAtLeast<ObjectT>( objs, N );
+        return sceneSelectedAtLeast<ObjectT, true>( objs, N );
+    }
+};
+
+template<unsigned N, typename ObjectT>
+class SceneStateAtLeastCheck<N, ObjectT, NoVisualRepresentationCheck> : virtual public ISceneStateCheck
+{
+public:
+    virtual ~SceneStateAtLeastCheck() = default;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const override
+    {
+        return sceneSelectedAtLeast<ObjectT, false>( objs, N );
     }
 };
 

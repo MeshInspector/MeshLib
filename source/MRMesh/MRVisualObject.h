@@ -175,7 +175,7 @@ public:
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
 
     /// is object has visual representation (faces, edges, etc.)
-    virtual bool hasVisualRepresentation() const { return false; };
+    virtual bool hasVisualRepresentation() const { return false; }
 
     /// returns bounding box of this object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()

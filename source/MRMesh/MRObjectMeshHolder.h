@@ -38,6 +38,8 @@ public:
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;
 
+    MRMESH_API virtual bool hasVisualRepresentation() const override;
+
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( mesh_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
 

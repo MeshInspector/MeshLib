@@ -39,6 +39,11 @@ void ObjectPointsHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
+bool ObjectPointsHolder::hasVisualRepresentation() const
+{
+    return points_ && points_->validPoints.any();
+}
+
 std::shared_ptr<MR::Object> ObjectPointsHolder::clone() const
 {
     auto res = std::make_shared<ObjectPointsHolder>( ProtectedStruct{}, *this );

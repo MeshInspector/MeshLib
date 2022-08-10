@@ -30,6 +30,11 @@ void ObjectLinesHolder::applyScale( float scaleFactor )
     setDirtyFlags( DIRTY_POSITION );
 }
 
+bool ObjectLinesHolder::hasVisualRepresentation() const
+{
+    return polyline_ && polyline_->topology.numValidVerts() != 0;
+}
+
 std::shared_ptr<Object> ObjectLinesHolder::clone() const
 {
     auto res = std::make_shared<ObjectLinesHolder>( ProtectedStruct{}, *this );

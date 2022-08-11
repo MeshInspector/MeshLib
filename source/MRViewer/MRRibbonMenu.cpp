@@ -1688,6 +1688,21 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
     ImGui::SameLine();
 }
 
+void RibbonMenu::addShortcut_( const ShortcutManager::ShortcutKey& key, const ShortcutManager::ShortcutCommand& command, ShortcutCategory category )
+{
+    shortcutManager_->setShortcut( key, command );
+    _shortcutsByCategory[key] = category;
+}
+
+int RibbonMenu::getShortcutCategory_( const ShortcutManager::ShortcutKey& shortcutKey ) const
+{
+    auto it = _shortcutsByCategory.find( shortcutKey );
+    if ( it == std::end( _shortcutsByCategory ) )
+        return 0;
+
+    return static_cast< int >( it->second );
+}
+
 void RibbonMenu::setupShortcuts_()
 {
     if ( !shortcutManager_ )
@@ -1709,15 +1724,15 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& data : selected )
             if ( data )
                 data->setVisible( !atLeastOne, viewportid );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_F1,0 }, { "Show this help with hot keys",[this] ()
    {
        showShortcuts_ = !showShortcuts_;
-   } }, ShortcutCathegory::Info );
+   } }, ShortcutCategory::Info );
     addShortcut_( { GLFW_KEY_D,0 }, { "Toggle statistics window",[this] ()
     {
         showStatistics_ = !showStatistics_;
-    } }, ShortcutCathegory::Info );
+    } }, ShortcutCategory::Info );
     addShortcut_( { GLFW_KEY_F,0 }, { "Toggle shading of selected objects",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1725,7 +1740,7 @@ void RibbonMenu::setupShortcuts_()
         const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_I,0 }, { "Invert normals of selected objects",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1733,7 +1748,7 @@ void RibbonMenu::setupShortcuts_()
         const auto selected = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_L,0 }, { "Toggle edges on selected meshes",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1741,12 +1756,12 @@ void RibbonMenu::setupShortcuts_()
         const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_O,0 }, { "Toggle orthographic in current viewport",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_T,0 }, { "Toggle faces on selected meshes",[] ()
     {
         auto& viewport = getViewerInstance().viewport();
@@ -1754,25 +1769,25 @@ void RibbonMenu::setupShortcuts_()
         const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
-    } }, ShortcutCathegory::View );
+    } }, ShortcutCategory::View );
     addShortcut_( { GLFW_KEY_DOWN,0 }, { "Select next object",[] ()
     {
         changeSelection( true,0 );
-    } }, ShortcutCathegory::Objects );
+    } }, ShortcutCategory::Objects );
     addShortcut_( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { "Add next object to selection",[] ()
     {
         changeSelection( true,GLFW_MOD_SHIFT );
-    } }, ShortcutCathegory::Objects );
+    } }, ShortcutCategory::Objects );
     addShortcut_( { GLFW_KEY_UP,0 }, { "Select previous object",[] ()
     {
         changeSelection( false,0 );
-    } }, ShortcutCathegory::Objects );
+    } }, ShortcutCategory::Objects );
     addShortcut_( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { "Add previous object to selection",[] ()
     {
         changeSelection( false,GLFW_MOD_SHIFT );
-    } }, ShortcutCathegory::Objects );
+    } }, ShortcutCategory::Objects );
 
-    auto addShortcut = [this] ( std::string pluginName, const ShortcutManager::ShortcutKey& key, ShortcutCathegory cathegory )
+    auto addShortcut = [this] ( std::string pluginName, const ShortcutManager::ShortcutKey& key, ShortcutCategory category )
     {
         auto pluginIt = RibbonSchemaHolder::schema().items.find( pluginName );
         if ( pluginIt != RibbonSchemaHolder::schema().items.end() )
@@ -1781,7 +1796,7 @@ void RibbonMenu::setupShortcuts_()
             addShortcut_( key, { caption,[item = pluginIt->second.item, this]()
             {
                 itemPressed_( item, getRequirements_( item ).empty() );
-            } }, cathegory );
+            } }, category );
         }
 #ifndef __EMSCRIPTEN__
         else
@@ -1789,31 +1804,32 @@ void RibbonMenu::setupShortcuts_()
 #endif
     };
 
-    addShortcut( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutCathegory::Objects );
-    addShortcut( "Undo", { GLFW_KEY_Z, GLFW_MOD_CONTROL }, ShortcutCathegory::Edit );
-    addShortcut( "Redo", { GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutCathegory::Edit );
-    addShortcut( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutCathegory::View );
-    addShortcut( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutCathegory::Objects );
-    addShortcut( "Face Selector", { GLFW_KEY_W, GLFW_MOD_CONTROL }, ShortcutCathegory::Selection );
-    addShortcut( "Clear Selections", { GLFW_KEY_T, GLFW_MOD_CONTROL }, ShortcutCathegory::Selection );
-    addShortcut( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutCathegory::Scene );
-    addShortcut( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutCathegory::Scene );
-    addShortcut( "Save Scene As", { GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutCathegory::Scene );
-    addShortcut( "New", { GLFW_KEY_N, GLFW_MOD_CONTROL }, ShortcutCathegory::Scene );
-    addShortcut( "Delete Selection", { GLFW_KEY_DELETE, 0 }, ShortcutCathegory::Edit );
-    addShortcut( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutCathegory::View );
-    addShortcut( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutCathegory::View );
-    addShortcut( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutCathegory::Objects );
-    addShortcut( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCathegory::Objects );
+    addShortcut( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutCategory::Objects );
+    addShortcut( "Undo", { GLFW_KEY_Z, GLFW_MOD_CONTROL }, ShortcutCategory::Edit );
+    addShortcut( "Redo", { GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutCategory::Edit );
+    addShortcut( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutCategory::View );
+    addShortcut( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutCategory::Objects );
+    addShortcut( "Face Selector", { GLFW_KEY_W, GLFW_MOD_CONTROL }, ShortcutCategory::Selection );
+    addShortcut( "Clear Selections", { GLFW_KEY_T, GLFW_MOD_CONTROL }, ShortcutCategory::Selection );
+    addShortcut( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutCategory::Scene );
+    addShortcut( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutCategory::Scene );
+    addShortcut( "Save Scene As", { GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutCategory::Scene );
+    addShortcut( "New", { GLFW_KEY_N, GLFW_MOD_CONTROL }, ShortcutCategory::Scene );
+    addShortcut( "Delete Selection", { GLFW_KEY_DELETE, 0 }, ShortcutCategory::Edit );
+    addShortcut( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutCategory::View );
+    addShortcut( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutCategory::View );
+    addShortcut( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutCategory::Objects );
+    addShortcut( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCategory::Objects );
 }
 
-static const std::string cathegoryNames[6] = { "Edit", "View", "Scene", "Objects", "Info", "Selection " };
+static const std::string categoryNames[6] = { "Info", "Edit", "View", "Scene", "Objects", "Selection " };
 
 void RibbonMenu::drawShortcutsWindow_()
 {
+    const auto& style = ImGui::GetStyle();
     const auto scaling = menu_scaling();
     float windowWidth = 920.0f * scaling;
-    float windowHeight = 600.0f * scaling;
+    float windowHeight = 710.0f * scaling;
 
     ImVec2 windowPos = ImGui::GetMousePos();
     windowPos.x = std::min( windowPos.x, Viewer::instanceRef().window_width - windowWidth );
@@ -1824,8 +1840,10 @@ void RibbonMenu::drawShortcutsWindow_()
 
     ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
     
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cButtonPadding * scaling, cButtonPadding * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, 2 * cDefaultItemSpacing * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultInnerSpacing / 1.5f * scaling, 2 * cDefaultInnerSpacing / 1.5f * scaling } );
 
     ImGui::Indent();
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * cDefaultItemSpacing * scaling );
@@ -1838,79 +1856,139 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::SameLine( windowWidth - exitButtonSize - 2.0f * cDefaultItemSpacing * scaling );
 
     ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::Icons ) );
-    ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y + cDefaultWindowPaddingY * scaling );
-    if ( RibbonButtonDrawer::GradientButton( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) )
+    ImGui::SetCursorPosY( style.WindowPadding.y + cDefaultWindowPaddingY * scaling );
+    ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor(ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) )
     {
+        ImGui::PopStyleColor( 2 );
         ImGui::PopFont();
-        ImGui::PopStyleVar( 2 );
+        ImGui::PopStyleVar( 4 );
         ImGui::End();
         showShortcuts_ = false;
         return;
     }
+    ImGui::PopStyleColor( 2 );
     ImGui::PopFont();
 
-    auto shortcutList = shortcutManager_->getShortcutList( [this] ( const ShortcutManager::ShortcutKey& key ) { return this->getShortcutCathegory_( key ); } );
+    auto shortcutList = shortcutManager_->getShortcutList( [this] ( const ShortcutManager::ShortcutKey& key ) { return this->getShortcutCategory_( key ); } );
     auto shortcutListIt = shortcutList.begin();
 
-    auto addReadOnlyLine = [scaling] ( const std::string& line )
+    auto addReadOnlyLine = [scaling, &style] ( const std::string& line )
     {
-        ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 2 * ImGui::GetStyle().FramePadding.x, cButtonPadding * scaling } );        
+        ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );           
 
         const auto textWidth = ImGui::CalcTextSize( line.c_str() ).x;
         // read only so const_sast should be ok
-        ImGui::PushItemWidth( textWidth + 2 * ImGui::GetStyle().FramePadding.x );
+        auto itemWidth = std::max( textWidth + 2 * style.FramePadding.x, 30.0f * scaling );
+        ImGui::PushItemWidth( itemWidth );
+
+        auto framePaddingX = std::max( style.FramePadding.x, ( itemWidth - textWidth ) / 2.0f );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { framePaddingX, cButtonPadding * scaling } );
         ImGui::InputText( ( "##" + line ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopItemWidth();        
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
     };
 
-    const auto columnWidth = ( windowWidth - 2 * ImGui::GetStyle().WindowPadding.x ) / 2;
+    const auto columnWidth = ( windowWidth - 2 * style.WindowPadding.x ) / 2;
+    
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
+
     if ( ImGui::BeginTable( "HotKeysTable", 2, ImGuiTableFlags_SizingStretchSame ) )
     {
-        const int cathegoryCount = static_cast< int >( ShortcutCathegory::Count );
-        for ( int i = 0; i < cathegoryCount; ++i )
+        const int categoryCount = static_cast< int >( ShortcutCategory::Count );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cButtonPadding * scaling, cButtonPadding * scaling } );
+
+        ImGui::TableNextColumn();
+        for ( int i = 0; i < categoryCount; ++i )
         {
-            if ( i % ( cathegoryCount / 2 ) == 0 )
+            if ( i == categoryCount / 2  )
             {
                 ImGui::TableNextColumn();
-                
+                ImGui::Indent();
             }
 
             ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
-            ImGui::Separator( scaling, cathegoryNames[i].c_str() );
+            ImGui::Separator( scaling, categoryNames[i].c_str() );
             ImGui::PopFont();
 
             auto key = shortcutListIt->first;
 
-            while ( getShortcutCathegory_( key ) == i )
+            while ( getShortcutCategory_( key ) == i )
             {
                 auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
                 transparentColor.w *= 0.5f;
                 ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
                 ImGui::Text( shortcutListIt->second.c_str() );
                 ImGui::PopStyleColor();
-                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+
+                float paddings = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;
+                if ( i >= categoryCount / 2 )
+                    paddings += style.IndentSpacing;
+
+                std::string text = shortcutListIt->second;
+                if ( key.mod & GLFW_MOD_CONTROL )
+                {
+                    paddings += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+                    text += "Ctrl+";
+                }
+                if ( key.mod & GLFW_MOD_ALT )
+                {
+                    paddings += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+                    text += "Alt+";
+                }
+                if ( key.mod & GLFW_MOD_SHIFT )
+                {
+                    paddings += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+                    text += "Shift+";
+                }
+
+                if ( key.key == GLFW_KEY_DELETE )
+                {
+                    text += "Delete";
+                }
+                else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
+                {
+                    text += "F";
+                    text += std::to_string( key.key - GLFW_KEY_F1 + 1 );
+                }
+                else
+                {
+                    paddings += 2 * cButtonPadding * scaling;
+                }
+
+                float shift = columnWidth - ImGui::CalcTextSize( text.c_str() ).x - paddings;
+                ImGui::SameLine( 0, shift );
 
                 if ( key.mod & GLFW_MOD_CONTROL )
                 {
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     addReadOnlyLine( std::string( "Ctrl" ) );
-                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     ImGui::Text( "+" );
-                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                }
+
+                if ( key.mod & GLFW_MOD_ALT )
+                {
+                    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                    addReadOnlyLine( std::string( "Alt" ) );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                    ImGui::Text( "+" );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 }
 
                 if ( key.mod & GLFW_MOD_SHIFT )
                 {
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     addReadOnlyLine( std::string( "Shift" ) );
-                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     ImGui::Text( "+" );
-                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                    ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 }
 
                 std::string keyStr;
@@ -1926,16 +2004,20 @@ void RibbonMenu::drawShortcutsWindow_()
                     switch ( key.key )
                     {
                     case GLFW_KEY_UP:
-                        keyStr += "Up";
+                        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Icons ) );
+                        keyStr += "\xef\x81\xa2";
                         break;
                     case GLFW_KEY_DOWN:
-                        keyStr += "Down";
+                        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Icons ) );
+                        keyStr += "\xef\x81\xa3";
                         break;
                     case GLFW_KEY_LEFT:
-                        keyStr += "Left";
+                        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Icons ) );
+                        keyStr += "\xef\x81\xa0";
                         break;
                     case GLFW_KEY_RIGHT:
-                        keyStr += "Right";
+                        ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Icons ) );
+                        keyStr += "\xef\x81\xa1";
                         break;
                     case GLFW_KEY_DELETE:
                         keyStr += "Delete";
@@ -1947,16 +2029,21 @@ void RibbonMenu::drawShortcutsWindow_()
                     }
                 }
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
-                addReadOnlyLine( keyStr );
+                addReadOnlyLine( keyStr );                
+
+                if ( key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT )
+                    ImGui::PopFont();
 
                 ++shortcutListIt;
                 key = shortcutListIt->first;
             }
         }
+
+        ImGui::PopStyleVar();
         ImGui::EndTable();
     }
 
-    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleVar( 4 );
     ImGui::End();
 }
 

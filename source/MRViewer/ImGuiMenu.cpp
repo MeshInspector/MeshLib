@@ -2374,9 +2374,8 @@ void ImGuiMenu::drawShortcutsWindow_()
     const float hotkeysWindowWidth = 300 * menu_scaling();
     size_t numLines = 2;
 
-    auto callback = [this] ( const ShortcutManager::ShortcutKey& key ) { return this->getShortcutCathegory_( key ); };
     if ( shortcutManager_ )
-        numLines += shortcutManager_->getShortcutList( callback ).size();
+        numLines += shortcutManager_->getShortcutList().size();
 
     const float hotkeysWindowHeight = ( style.WindowPadding.y * 2 + numLines * ( ImGui::GetTextLineHeight() + style.ItemSpacing.y ) );
 
@@ -2396,8 +2395,7 @@ void ImGuiMenu::drawShortcutsWindow_()
     ImGui::NewLine();
     if ( shortcutManager_ )
     {
-
-        const auto& shortcutsList = shortcutManager_->getShortcutList( callback );
+        const auto& shortcutsList = shortcutManager_->getShortcutList();
         for ( const auto& [key, name] : shortcutsList )
             ImGui::Text( "%s - %s", ShortcutManager::getKeyString( key ).c_str(), name.c_str() );
     }

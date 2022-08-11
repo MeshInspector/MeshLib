@@ -141,32 +141,23 @@ protected:
 
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
 
-    enum class ShortcutCathegory
+    enum class ShortcutCategory
     {
+        Info,
         Edit,
         View,
         Scene,
-        Objects,
-        Info,
+        Objects,        
         Selection,
         Count
     };
 
-    std::map<ShortcutManager::ShortcutKey, ShortcutCathegory> _shortcutsByCathegory;
-    MRVIEWER_API void addShortcut_( const ShortcutManager::ShortcutKey& key, const ShortcutManager::ShortcutCommand& command, ShortcutCathegory cathegory )
-    {
-        shortcutManager_->setShortcut( key, command );
-        _shortcutsByCathegory[key] = cathegory;
-    }
+    std::map<ShortcutManager::ShortcutKey, ShortcutCategory> _shortcutsByCategory;
 
-    MRVIEWER_API virtual int getShortcutCathegory_( const ShortcutManager::ShortcutKey& shortcutKey ) const override
-    {
-        auto it = _shortcutsByCathegory.find( shortcutKey );
-        if ( it == std::end( _shortcutsByCathegory ) )
-            return 0;
+    // 
+    MRVIEWER_API void addShortcut_( const ShortcutManager::ShortcutKey& key, const ShortcutManager::ShortcutCommand& command, ShortcutCategory category );
 
-        return static_cast< int >( it->second );
-    }
+    MRVIEWER_API int getShortcutCategory_( const ShortcutManager::ShortcutKey& shortcutKey ) const;
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 

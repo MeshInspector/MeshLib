@@ -35,6 +35,7 @@ float RibbonFontManager::getFontSizeByType( FontType type ) const
     {
     case MR::RibbonFontManager::FontType::Default:
     case MR::RibbonFontManager::FontType::SemiBold:
+    case MR::RibbonFontManager::FontType::SmallIcons:
         return cDefaultFontSize;
     case MR::RibbonFontManager::FontType::Small:
         return cSmallFontSize;
@@ -71,6 +72,15 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::Icons )
+    {
+        ImFontConfig config;
+        const float fontSize = cDefaultFontSize * scaling;
+        config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced
+        auto fontPath = GetFontsDirectory() / "fa-solid-900.ttf";
+        ImGui::GetIO().Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, ranges );
+        fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
+    }
+    else if ( type == FontType::SmallIcons )
     {
         ImFontConfig config;
         const float fontSize = cBigIconSize * scaling;

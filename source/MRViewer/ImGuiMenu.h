@@ -12,7 +12,6 @@
 #include "MRMeshViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
-#include "MRShortcutManager.h"
 #include <unordered_map>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -291,8 +290,6 @@ protected:
     void draw_history_block_();
 
     void draw_open_recent_button_();
-
-    MRVIEWER_API virtual int getShortcutCathegory_( const ShortcutManager::ShortcutKey& ) const { return 0; }
 
     MRVIEWER_API virtual void drawShortcutsWindow_();
 };

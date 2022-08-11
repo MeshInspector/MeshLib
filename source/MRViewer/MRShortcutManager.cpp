@@ -1,4 +1,6 @@
 #include "MRShortcutManager.h"
+#include "MRRibbonConstants.h"
+#include "imgui.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -36,10 +38,10 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList() const
 
     std::sort( listRes.begin(), listRes.end(), [] ( const auto& a, const auto& b )
     {
-        if ( std::get<ShortcutCategory>( a ) < std::get<ShortcutCategory>( b ) )
+        if ( std::get<Category>( a ) < std::get<Category>( b ) )
             return true;
 
-        if ( std::get<ShortcutCategory>( a ) > std::get<ShortcutCategory>( b ) )
+        if ( std::get<Category>( a ) > std::get<Category>( b ) )
             return false;
 
         return std::get<ShortcutKey>(a) < std::get<ShortcutKey>(b);
@@ -59,7 +61,7 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
-std::string ShortcutManager::getKeyString( const ShortcutKey& key )
+std::string ShortcutManager::getKeyString( const ShortcutKey& key, bool respectLastKey )
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
@@ -69,14 +71,20 @@ std::string ShortcutManager::getKeyString( const ShortcutKey& key )
     if ( key.mod & GLFW_MOD_SHIFT )
         res += "Shift+";
 
-    if ( key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
-        res += char( key.key );
+    if ( key.key == GLFW_KEY_DELETE )
+    {
+        res += "Delete";
+    }
     else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
     {
         res += "F";
         res += std::to_string( key.key - GLFW_KEY_F1 + 1 );
     }
-    else
+    else if ( respectLastKey && key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
+    {
+        res += char( key.key );
+    }
+    else if ( respectLastKey )
     {
         switch ( key.key )
         {
@@ -92,8 +100,7 @@ std::string ShortcutManager::getKeyString( const ShortcutKey& key )
         case GLFW_KEY_RIGHT:
             res += "Right";
             break;
-        case GLFW_KEY_DELETE:
-            res += "Delete";
+        
             break;
         default:
             assert( false );
@@ -101,6 +108,25 @@ std::string ShortcutManager::getKeyString( const ShortcutKey& key )
             break;
         }
     }
+    return res;
+}
+
+// calculates paddings needed for drawing shortcut key with modifiers
+
+float ShortcutManager::getKeyPaddings( const ShortcutKey& key, float scaling )
+{
+    const auto& style = ImGui::GetStyle();
+    float res = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;;
+    if ( key.mod & GLFW_MOD_ALT )
+        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+    if ( key.mod & GLFW_MOD_CONTROL )
+        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+    if ( key.mod & GLFW_MOD_SHIFT )
+        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+
+    if ( key.key != GLFW_KEY_DELETE && key.key <= GLFW_KEY_F1 && key.key >= GLFW_KEY_F25 )
+        res += 2 * cButtonPadding * scaling;
+
     return res;
 }
 

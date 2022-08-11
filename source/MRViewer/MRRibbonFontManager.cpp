@@ -73,7 +73,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     else if ( type == FontType::Icons )
     {
         ImFontConfig config;
-        const float fontSize = cDefaultFontSize * scaling;
+        const float fontSize = cBigIconSize * scaling;
         config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced
         auto fontPath = GetFontsDirectory() / "fa-solid-900.ttf";
         ImGui::GetIO().Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, ranges );

@@ -124,7 +124,7 @@ float ShortcutManager::getKeyPaddings( const ShortcutKey& key, float scaling )
     if ( key.mod & GLFW_MOD_SHIFT )
         res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
 
-    if ( key.key != GLFW_KEY_DELETE && key.key <= GLFW_KEY_F1 && key.key >= GLFW_KEY_F25 )
+    if ( key.key != GLFW_KEY_DELETE && ( key.key < GLFW_KEY_F1 || key.key > GLFW_KEY_F25 ) )
         res += 2 * cButtonPadding * scaling;
 
     return res;

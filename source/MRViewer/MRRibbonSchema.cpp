@@ -42,12 +42,12 @@ void RibbonSchemaLoader::loadSchema() const
         readUIJson_( file );
 }
 
-void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
+void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& resList )
 {
     if ( !root.isArray() )
         return;
 
-    list.clear();
+    MenuItemsList list;
 
     for ( int i = 0; i <int( root.size() ); ++i )
     {
@@ -69,6 +69,8 @@ void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsLi
         list.push_back( itemName.asString() );
     }
     recalcItemSizes();
+    resList.insert( resList.end(), std::make_move_iterator( list.begin() ),
+                                    std::make_move_iterator( list.end() ) );
 }
 
 float sCalcSize( const ImFont* font, const char* begin, const char* end )

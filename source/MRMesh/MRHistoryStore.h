@@ -49,6 +49,8 @@ public:
 
     /// Returns names of last N undo actions or first N redo actions
     MRMESH_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type )const;
+    /// Returns the name of last undo or redo action (or empty string if there is no such action)
+    MRMESH_API std::string getLastActionName( HistoryAction::Type type ) const;
 
     /// Signal is called after this store changed
     enum class ChangeType

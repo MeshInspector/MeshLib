@@ -515,7 +515,9 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 {
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cRibbonButtonWindowPaddingX * scaling_, cRibbonButtonWindowPaddingY * scaling_ ) );
-    const std::string& tooltip = item.tooltip;
+    std::string tooltip = item.item->getDynamicTooltip();
+    if ( tooltip.empty() )
+        tooltip = item.tooltip;
 
     const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
 

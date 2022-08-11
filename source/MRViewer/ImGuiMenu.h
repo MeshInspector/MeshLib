@@ -291,6 +291,7 @@ protected:
 
     void draw_open_recent_button_();
 
+    // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
 };
 

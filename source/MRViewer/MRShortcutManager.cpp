@@ -23,7 +23,7 @@ void ShortcutManager::setShortcut( const ShortcutKey& key, const ShortcutCommand
     listCache_ = {};
 }
 
-const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCathegoryCallback ) const
+const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCategoryCallback ) const
 {
     if ( listCache_ )
         return *listCache_;
@@ -34,12 +34,12 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList( std::opti
     for ( const auto& [key, command] : map_ )
         listRes.emplace_back( kayAndModFromMapKey( key ), command.name );
 
-    std::sort( listRes.begin(), listRes.end(), [sortByCathegoryCallback] ( const auto& a, const auto& b )
+    std::sort( listRes.begin(), listRes.end(), [sortByCategoryCallback] ( const auto& a, const auto& b )
     {
-        if ( sortByCathegoryCallback )
+        if ( sortByCategoryCallback )
         {
-            int aCat = ( *sortByCathegoryCallback )( a.first );
-            int bCat = ( *sortByCathegoryCallback )( b.first );
+            int aCat = ( *sortByCategoryCallback )( a.first );
+            int bCat = ( *sortByCategoryCallback )( b.first );
             if ( aCat < bCat)
                 return true;
             if ( aCat > bCat )

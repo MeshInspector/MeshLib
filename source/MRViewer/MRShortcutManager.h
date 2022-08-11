@@ -47,9 +47,10 @@ public:
 
     using ShortcutList = std::vector<std::pair<ShortcutKey, std::string>>;
 
-    // returns cached list of sorted shortcuts
+    // returns cached list of sorted shortcuts (sorting by key)
     // if this structure was changed since last call of this function - updates cache
-    MRVIEWER_API const ShortcutList& getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCathegoryCallback = {} ) const;
+    // if the callback is passed shortcuts will be sorted by category firstly and then by key
+    MRVIEWER_API const ShortcutList& getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCategoryCallback = {} ) const;
 
     enum class Reason 
     {

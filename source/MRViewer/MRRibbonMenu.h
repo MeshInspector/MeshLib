@@ -154,9 +154,9 @@ protected:
 
     std::map<ShortcutManager::ShortcutKey, ShortcutCategory> _shortcutsByCategory;
 
-    // 
+    //add shortcut with category 
     MRVIEWER_API void addShortcut_( const ShortcutManager::ShortcutKey& key, const ShortcutManager::ShortcutCommand& command, ShortcutCategory category );
-
+    //get category of the shortcut
     MRVIEWER_API int getShortcutCategory_( const ShortcutManager::ShortcutKey& shortcutKey ) const;
 
     MRVIEWER_API virtual void setupShortcuts_() override;

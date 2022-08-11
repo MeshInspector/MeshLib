@@ -93,10 +93,15 @@ void Viewport::setRotation( bool state )
         updateSceneBox_();
     }
 
-    auto [obj, pick] = pick_render_object();
-    if ( obj && pick.face.valid() )
-        setRotationPivot_( obj->worldXf()( pick.point ) );
-    else if ( !params_.saveRotationPosition )
+    bool pickedSuccessfuly_{ false };
+    if ( params_.rotationMode != Parameters::RotationCenterMode::Static )
+    {
+        auto [obj, pick] = pick_render_object();
+        pickedSuccessfuly_ = obj && pick.face.valid();
+        if ( pickedSuccessfuly_ )
+            setRotationPivot_( obj->worldXf()( pick.point ) );
+    }
+    if ( params_.rotationMode != Parameters::RotationCenterMode::Dynamic && !pickedSuccessfuly_ )
     {
         if ( !boxUpdated )
             updateSceneBox_(); // need update here anyway, but under flag, not to update twice

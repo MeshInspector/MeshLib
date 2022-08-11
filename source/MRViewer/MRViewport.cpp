@@ -366,11 +366,11 @@ void Viewport::showRotationCenter( bool on )
     Viewer::constInstance()->rotationSphere->setVisible( on, id );
 }
 
-void Viewport::saveRotationPosition( bool on )
+void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 {
-    if ( params_.saveRotationPosition == on )
+    if ( mode == params_.rotationMode )
         return;
-    params_.saveRotationPosition = on;
+    params_.rotationMode = mode;
     needRedraw_ = true;
 }
 
@@ -626,7 +626,7 @@ bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
         objectScale == objectScale &&
         borderColor == other.borderColor &&
         clippingPlane == other.clippingPlane &&
-        saveRotationPosition == other.saveRotationPosition &&
+        rotationMode == other.rotationMode &&
         selectable == other.selectable;
 }
 

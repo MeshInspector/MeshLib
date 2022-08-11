@@ -18,7 +18,6 @@ public:
         Small,
         SemiBold,
         Icons,
-        SmallIcons,
         Big,
         BigSemiBold,
         Headline,

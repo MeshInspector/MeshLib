@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <optional>
+#include <map>
 
 namespace MR
 {
@@ -18,8 +19,20 @@ class MRVIEWER_CLASS ShortcutManager
 public:
     virtual ~ShortcutManager() = default;
 
+    enum class ShortcutCategory
+    {
+        Info,
+        Edit,
+        View,
+        Scene,
+        Objects,
+        Selection,
+        Count
+    };    
+
     struct ShortcutCommand
     {
+        ShortcutCategory category;
         std::string name; // name of action
         std::function<void()> action;
         bool repeatable = true; // shortcut shall be applied many times while the user holds the keys down
@@ -45,12 +58,11 @@ public:
     // if action already has other shortcut, other one will be removed
     MRVIEWER_API virtual void setShortcut( const ShortcutKey& key, const ShortcutCommand& command );
 
-    using ShortcutList = std::vector<std::pair<ShortcutKey, std::string>>;
+    using ShortcutList = std::vector<std::tuple<ShortcutKey, ShortcutCategory, std::string>>;
 
     // returns cached list of sorted shortcuts (sorting by key)
     // if this structure was changed since last call of this function - updates cache
-    // if the callback is passed shortcuts will be sorted by category firstly and then by key
-    MRVIEWER_API const ShortcutList& getShortcutList( std::optional< std::function<int( const ShortcutKey& )> > sortByCategoryCallback = {} ) const;
+    MRVIEWER_API const ShortcutList& getShortcutList() const;
 
     enum class Reason 
     {

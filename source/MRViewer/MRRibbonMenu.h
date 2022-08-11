@@ -139,25 +139,7 @@ protected:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
-
-    enum class ShortcutCategory
-    {
-        Info,
-        Edit,
-        View,
-        Scene,
-        Objects,        
-        Selection,
-        Count
-    };
-
-    std::map<ShortcutManager::ShortcutKey, ShortcutCategory> _shortcutsByCategory;
-
-    //add shortcut with category 
-    MRVIEWER_API void addShortcut_( const ShortcutManager::ShortcutKey& key, const ShortcutManager::ShortcutCommand& command, ShortcutCategory category );
-    //get category of the shortcut
-    MRVIEWER_API int getShortcutCategory_( const ShortcutManager::ShortcutKey& shortcutKey ) const;
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;   
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 

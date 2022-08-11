@@ -235,9 +235,12 @@ public:
         mutable AffineXf3f globalBasisAxesXf; // xf representing scale of global basis in this viewport (changes each frame)
         mutable AffineXf3f basisAxesXf; // xf representing scale and translation of basis in this viewport (changes each frame)
 
-        // If this flag is true, rotation center are saved as last one in case of missclicking mesh
-        // otherwise it is reset to scene center
-        bool saveRotationPosition{true};
+        enum class RotationCenterMode
+        {
+            Static, // scene is always rotated around its center
+            DynamicStatic, // scene is rotated around picked point on object, or around center, if miss pick
+            Dynamic // scene is rotated around picked point on object, or around last rotation pivot, if miss pick
+        } rotationMode{ RotationCenterMode::Dynamic };
 
         // this flag allows viewport to be selected by user
         bool selectable{true};
@@ -397,7 +400,7 @@ public:
     MRVIEWER_API void showClippingPlane( bool on );
     MRVIEWER_API void showRotationCenter( bool on );
     MRVIEWER_API void showGlobalBasis( bool on );
-    MRVIEWER_API void saveRotationPosition( bool on );
+    MRVIEWER_API void rotationCenterMode( Parameters::RotationCenterMode mode );
 
     MRVIEWER_API void setParameters( const Viewport::Parameters& params );
 

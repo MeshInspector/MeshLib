@@ -1905,7 +1905,7 @@ void RibbonMenu::drawShortcutsWindow_()
                 auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
                 transparentColor.w *= 0.5f;
                 ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
-                ImGui::Text( text.c_str() );
+                ImGui::Text( "%s", text.c_str());
                 ImGui::PopStyleColor();
 
                 float paddings = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;

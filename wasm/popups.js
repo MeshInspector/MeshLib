@@ -20,6 +20,19 @@ var addKeyboardEvents = function () {
 
 var createPopup = function (closeId, label, width, height) {
     var popup = document.createElement('div');
+
+    popup.addEventListener('touchmove', function (event) {
+        if (event.scale !== 1) { event.preventDefault(); }
+    }, false);
+    var lastTouchEnd = 0;
+    popup.addEventListener('touchend', function (event) {
+        var now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+
     var positionStyle = 'top:50%;left:50%;transform:translate(-50%,-50%);';
 
     if (label === "")
@@ -50,6 +63,17 @@ var createOverlayPopup = function (id, label, width, height) {
     var overlay = document.createElement('div');
     overlay.setAttribute('style', 'position:absolute;top:0;right:0;bottom:0;left:0;background-color: rgba(0,0,0,0.8);z-index:9999;');
     overlay.setAttribute('id', id);
+    overlay.addEventListener('touchmove', function (event) {
+        if (event.scale !== 1) { event.preventDefault(); }
+    }, false);
+    var lastTouchEnd = 0;
+    overlay.addEventListener('touchend', function (event) {
+        var now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
 
     var popup = createPopup(id, label, width, height);
     overlay.appendChild(popup);

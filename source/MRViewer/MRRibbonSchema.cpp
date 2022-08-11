@@ -42,12 +42,12 @@ void RibbonSchemaLoader::loadSchema() const
         readUIJson_( file );
 }
 
-void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& resList )
+void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
 {
     if ( !root.isArray() )
         return;
 
-    MenuItemsList list;
+    list.clear();
 
     for ( int i = 0; i <int( root.size() ); ++i )
     {
@@ -69,8 +69,6 @@ void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsLi
         list.push_back( itemName.asString() );
     }
     recalcItemSizes();
-    resList.insert( resList.end(), std::make_move_iterator( list.begin() ),
-                                    std::make_move_iterator( list.end() ) );
 }
 
 float sCalcSize( const ImFont* font, const char* begin, const char* end )
@@ -385,8 +383,15 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
     if ( itemsStructRes.value().isMember( "Quick Access" ) )
         readMenuItemsList( itemsStructRes.value()["Quick Access"], RibbonSchemaHolder::schema().defaultQuickAccessList );
 
+    MenuItemsList headerItems;
     if ( itemsStructRes.value().isMember( "Header Quick Access" ) )
-        readMenuItemsList( itemsStructRes.value()["Header Quick Access"], RibbonSchemaHolder::schema().headerQuickAccessList );
+        readMenuItemsList( itemsStructRes.value()["Header Quick Access"], headerItems);
+
+    RibbonSchemaHolder::schema().headerQuickAccessList.insert(
+            RibbonSchemaHolder::schema().headerQuickAccessList.end(),
+            std::make_move_iterator( headerItems.begin() ),
+            std::make_move_iterator( headerItems.end() ) );
+
 
     if ( itemsStructRes.value().isMember( "Scene Buttons" ) )
         readMenuItemsList( itemsStructRes.value()["Scene Buttons"], RibbonSchemaHolder::schema().sceneButtonsList );

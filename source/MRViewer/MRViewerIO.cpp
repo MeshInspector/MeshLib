@@ -110,6 +110,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     objectMesh->setName( utf8string( filename.stem() ) );
                 else
                     objectMesh->setName( std::move( resValue[i].name ) );
+                objectMesh->select( true );
                 objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }
@@ -124,6 +125,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         if ( res.has_value() )
         {
             result = std::vector( { *res } );
+            ( *result )[0]->setName( utf8string( filename.stem() ) );
         }
         else
             result = tl::make_unexpected( res.error() );

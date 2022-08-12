@@ -58,10 +58,10 @@ struct Matrix4
     /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq() + w.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
-    /// computes submatrix
-    constexpr Matrix3<T> submatrix( int i, int j ) const noexcept;
+    /// computes submatrix of the matrix with excluded i-th row and j-th column
+    Matrix3<T> submatrix( int i, int j ) const noexcept;
     /// computes determinant of the matrix
-    constexpr T det() const noexcept;
+    T det() const noexcept;
     /// computes inverse matrix
     constexpr Matrix4<T> inverse() const noexcept;
     /// computes transposed matrix
@@ -165,7 +165,7 @@ inline Matrix4<T> operator /( Matrix4<T> b, T a )
     { b /= a; return b; }
 
 template <typename T>
-constexpr Matrix3<T> Matrix4<T>::submatrix( int i, int j ) const noexcept
+Matrix3<T> Matrix4<T>::submatrix( int i, int j ) const noexcept
 {
     Matrix3<T> res;
     auto* resM = (T*) &res.x;
@@ -186,7 +186,7 @@ constexpr Matrix3<T> Matrix4<T>::submatrix( int i, int j ) const noexcept
 }
 
 template <typename T>
-constexpr T Matrix4<T>::det() const noexcept
+T Matrix4<T>::det() const noexcept
 {
     return
         x.x * submatrix( 0, 0 ).det()

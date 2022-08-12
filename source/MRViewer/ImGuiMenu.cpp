@@ -2433,7 +2433,10 @@ void ImGuiMenu::setObjectTreeState( const Object* obj, bool open )
         sceneOpenCommands_[obj] = open;
 }
 
-
+MRVIEWER_API void ImGuiMenu::setShowShortcuts( bool val )
+{
+    showShortcuts_ = val;
+}
 
 void ImGuiMenu::PluginsCache::validate( const std::vector<ViewerPlugin*>& viewerPlugins )
 {

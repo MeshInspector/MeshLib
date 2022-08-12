@@ -232,6 +232,8 @@ public:
 
   MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+  MRVIEWER_API void setShowShortcuts( bool val );
+
 protected:
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

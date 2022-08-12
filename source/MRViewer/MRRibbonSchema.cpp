@@ -380,14 +380,34 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         }
     }
 
-    if ( itemsStructRes.value().isMember( "Quick Access" ) )
-        readMenuItemsList( itemsStructRes.value()["Quick Access"], RibbonSchemaHolder::schema().defaultQuickAccessList );
+    auto loadQuickAccess = [&] ( const std::string& key, MenuItemsList& oldList )
+    {
+        if ( itemsStructRes.value().isMember( key ) )
+        {
+            MenuItemsList newDefaultList;
+            readMenuItemsList( itemsStructRes.value()[key], newDefaultList );
+            // move items of `newDefaultList` that are not preset in `oldList` to the end of `oldList`
+            std::copy_if(
+                std::make_move_iterator( newDefaultList.begin() ),
+                std::make_move_iterator( newDefaultList.end() ),
+                std::back_inserter( oldList ),
+                [&] ( const auto& newDefItem )
+            {
+                return std::none_of(
+                    oldList.begin(),
+                    oldList.end(),
+                    [&] ( const auto& oldDefItem )
+                {
+                    return newDefItem == oldDefItem;
+                }
+                );
+            } );
+        }
+    };
 
-    if ( itemsStructRes.value().isMember( "Header Quick Access" ) )
-        readMenuItemsList( itemsStructRes.value()["Header Quick Access"], RibbonSchemaHolder::schema().headerQuickAccessList );
-
-    if ( itemsStructRes.value().isMember( "Scene Buttons" ) )
-        readMenuItemsList( itemsStructRes.value()["Scene Buttons"], RibbonSchemaHolder::schema().sceneButtonsList );
+    loadQuickAccess( "Quick Access", RibbonSchemaHolder::schema().defaultQuickAccessList );
+    loadQuickAccess( "Header Quick Access", RibbonSchemaHolder::schema().headerQuickAccessList );
+    loadQuickAccess( "Scene Buttons", RibbonSchemaHolder::schema().sceneButtonsList );
 }
 
 }

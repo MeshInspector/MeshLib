@@ -5,6 +5,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <boost/algorithm/string.hpp>
 
 #ifdef _WIN32
 
@@ -422,7 +423,7 @@ std::string GetCpuId()
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
 #endif
-    return CPUBrandString;
+    return boost::trim_copy(std::string(CPUBrandString));
 #endif
 }
 

@@ -422,7 +422,8 @@ std::string GetCpuId()
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
 #endif
-    return CPUBrandString;
+    auto res = std::string( CPUBrandString );
+    return res.substr( res.find_first_not_of(' ') );
 #endif
 }
 

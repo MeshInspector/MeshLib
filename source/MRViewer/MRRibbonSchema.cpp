@@ -380,21 +380,33 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         }
     }
 
-    if ( itemsStructRes.value().isMember( "Quick Access" ) )
-        readMenuItemsList( itemsStructRes.value()["Quick Access"], RibbonSchemaHolder::schema().defaultQuickAccessList );
+    auto loadQuickAccess = [&] ( const std::string& key, MenuItemsList& oldList )
+    {
+        if ( itemsStructRes.value().isMember( key ) )
+        {
+            MenuItemsList newDefaultList;
+            readMenuItemsList( itemsStructRes.value()[key], newDefaultList );
+            std::copy_if(
+                std::make_move_iterator( newDefaultList.begin() ),
+                std::make_move_iterator( newDefaultList.end() ),
+                std::back_inserter( oldList ),
+                [&] ( const auto& newDefItem )
+            {
+                return std::none_of(
+                    oldList.begin(),
+                    oldList.end(),
+                    [&] ( const auto& oldDefItem )
+                {
+                    return newDefItem == oldDefItem;
+                }
+                );
+            } );
+        }
+    };
 
-    MenuItemsList headerItems;
-    if ( itemsStructRes.value().isMember( "Header Quick Access" ) )
-        readMenuItemsList( itemsStructRes.value()["Header Quick Access"], headerItems);
-
-    RibbonSchemaHolder::schema().headerQuickAccessList.insert(
-            RibbonSchemaHolder::schema().headerQuickAccessList.end(),
-            std::make_move_iterator( headerItems.begin() ),
-            std::make_move_iterator( headerItems.end() ) );
-
-
-    if ( itemsStructRes.value().isMember( "Scene Buttons" ) )
-        readMenuItemsList( itemsStructRes.value()["Scene Buttons"], RibbonSchemaHolder::schema().sceneButtonsList );
+    loadQuickAccess( "Quick Access", RibbonSchemaHolder::schema().defaultQuickAccessList );
+    loadQuickAccess( "Header Quick Access", RibbonSchemaHolder::schema().headerQuickAccessList );
+    loadQuickAccess( "Scene Buttons", RibbonSchemaHolder::schema().sceneButtonsList );
 }
 
 }

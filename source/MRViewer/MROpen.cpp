@@ -141,6 +141,7 @@ bool Open::load_( const std::filesystem::path & filename )
     return false;
 }
 
+#ifndef __EMSCRIPTEN__
 bool Open::dragDrop_( const std::vector<std::filesystem::path>& paths )
 {
     // if drop to menu scene window -> add objects
@@ -179,5 +180,10 @@ bool Open::dragDrop_( const std::vector<std::filesystem::path>& paths )
         viewerRef.viewport().preciseFitDataToScreenBorder( { 0.9f } );
     return res;
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+MRVIEWER_PLUGIN_REGISTRATION(Open)
+#endif
 
 } //namespace MR

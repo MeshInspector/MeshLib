@@ -386,6 +386,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         {
             MenuItemsList newDefaultList;
             readMenuItemsList( itemsStructRes.value()[key], newDefaultList );
+            // move items of `newDefaultList` that are not preset in `oldList` to the end of `oldList`
             std::copy_if(
                 std::make_move_iterator( newDefaultList.begin() ),
                 std::make_move_iterator( newDefaultList.end() ),

@@ -16,7 +16,7 @@
 namespace
 {
 
-/// maximum supported distance to rotation pivot
+/// maximum supported distance square to rotation pivot
 constexpr float cMaxRotationPivotLengthSq = 1e9f;
 /// maximum supported object scale factor
 constexpr float cMaxObjectScale = 1e9f;

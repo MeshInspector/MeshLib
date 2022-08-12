@@ -59,7 +59,7 @@ struct Matrix4
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq() + w.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
     /// computes submatrix of the matrix with excluded i-th row and j-th column
-    Matrix3<T> submatrix( int i, int j ) const noexcept;
+    Matrix3<T> submatrix3( int i, int j ) const noexcept;
     /// computes determinant of the matrix
     T det() const noexcept;
     /// computes inverse matrix
@@ -165,7 +165,7 @@ inline Matrix4<T> operator /( Matrix4<T> b, T a )
     { b /= a; return b; }
 
 template <typename T>
-Matrix3<T> Matrix4<T>::submatrix( int i, int j ) const noexcept
+Matrix3<T> Matrix4<T>::submatrix3( int i, int j ) const noexcept
 {
     Matrix3<T> res;
     auto* resM = (T*) &res.x;
@@ -189,10 +189,10 @@ template <typename T>
 T Matrix4<T>::det() const noexcept
 {
     return
-        x.x * submatrix( 0, 0 ).det()
-      - x.y * submatrix( 0, 1 ).det()
-      + x.z * submatrix( 0, 2 ).det()
-      - x.w * submatrix( 0, 3 ).det();
+        x.x * submatrix3( 0, 0 ).det()
+      - x.y * submatrix3( 0, 1 ).det()
+      + x.z * submatrix3( 0, 2 ).det()
+      - x.w * submatrix3( 0, 3 ).det();
 }
 
 template <typename T>

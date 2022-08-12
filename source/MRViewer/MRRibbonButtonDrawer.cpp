@@ -528,7 +528,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
         auto shortcut = shortcutManager_->findShortcutByName( item.item->name() );
         if ( shortcut )
         {
-            shortcutStr = " (" + ShortcutManager::getKeyString( *shortcut ) + ")";
+            shortcutStr = " (" + ShortcutManager::getKeyFullString( *shortcut ) + ")";
             fullText += shortcutStr;
         }
     }

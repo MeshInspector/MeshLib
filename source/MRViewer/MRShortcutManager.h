@@ -75,10 +75,12 @@ public:
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
 
-    // make string form key and returns it
-    MRVIEWER_API static std::string getKeyString( const ShortcutKey& key, bool respectLastKey = true );
-    // calculates paddings needed for drawing shortcut key with modifiers
-    MRVIEWER_API static float getKeyPaddings( const ShortcutKey& key, float scaling );
+    //make string from strictly one modifier
+    MRVIEWER_API static std::string getModifierString( int mod );
+    //make string from a key without modifiers
+    MRVIEWER_API static std::string getKeyString( int key );
+    // make string from all modifiers and with/without key and returns it
+    MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );    
 
     // if action with given name is present in shortcut list - returns it
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;

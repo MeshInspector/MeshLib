@@ -61,72 +61,65 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
-std::string ShortcutManager::getKeyString( const ShortcutKey& key, bool respectLastKey )
+std::string ShortcutManager::getModifierString( int mod )
+{
+    switch ( mod )
+    {
+    case GLFW_MOD_CONTROL:
+        return "Ctrl";
+    case GLFW_MOD_ALT:
+        return "Alt";
+    case GLFW_MOD_SHIFT:
+        return "Shift";
+    default:
+        return "";
+    }
+}
+
+std::string ShortcutManager::getKeyString( int key )
+{
+    if ( key == GLFW_KEY_DELETE )
+    {
+        return "Delete";
+    }
+    else if ( key >= GLFW_KEY_F1 && key <= GLFW_KEY_F25 )
+    {
+        return std::string("F") + std::to_string( key - GLFW_KEY_F1 + 1 );
+    }
+    else if ( key >= GLFW_KEY_APOSTROPHE && key <= GLFW_KEY_GRAVE_ACCENT )
+    {
+        return { char( key ) };
+    }
+    else
+    {
+        switch ( key )
+        {
+        case GLFW_KEY_UP:
+            return "\xef\x81\xa2";
+        case GLFW_KEY_DOWN:
+            return "\xef\x81\xa3";
+        case GLFW_KEY_LEFT:
+            return "\xef\x81\xa0";
+        case GLFW_KEY_RIGHT:
+            return "\xef\x81\xa1";
+        default:
+            assert( false );
+            return "ERROR";
+        }
+    }
+}
+
+std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool respectKey )
 {
     std::string res;
     if ( key.mod & GLFW_MOD_ALT )
-        res += "Alt+";
+        res += getModifierString( GLFW_MOD_ALT ) + "+";
     if ( key.mod & GLFW_MOD_CONTROL )
-        res += "Ctrl+";
+        res += getModifierString( GLFW_MOD_CONTROL ) + "+";
     if ( key.mod & GLFW_MOD_SHIFT )
-        res += "Shift+";
-
-    if ( key.key == GLFW_KEY_DELETE )
-    {
-        res += "Delete";
-    }
-    else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
-    {
-        res += "F";
-        res += std::to_string( key.key - GLFW_KEY_F1 + 1 );
-    }
-    else if ( respectLastKey && key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
-    {
-        res += char( key.key );
-    }
-    else if ( respectLastKey )
-    {
-        switch ( key.key )
-        {
-        case GLFW_KEY_UP:
-            res += "Up";
-            break;
-        case GLFW_KEY_DOWN:
-            res += "Down";
-            break;
-        case GLFW_KEY_LEFT:
-            res += "Left";
-            break;
-        case GLFW_KEY_RIGHT:
-            res += "Right";
-            break;
-        
-            break;
-        default:
-            assert( false );
-            res += "ERROR";
-            break;
-        }
-    }
-    return res;
-}
-
-// calculates paddings needed for drawing shortcut key with modifiers
-
-float ShortcutManager::getKeyPaddings( const ShortcutKey& key, float scaling )
-{
-    const auto& style = ImGui::GetStyle();
-    float res = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;;
-    if ( key.mod & GLFW_MOD_ALT )
-        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-    if ( key.mod & GLFW_MOD_CONTROL )
-        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-    if ( key.mod & GLFW_MOD_SHIFT )
-        res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-
-    if ( key.key != GLFW_KEY_DELETE && ( key.key < GLFW_KEY_F1 || key.key > GLFW_KEY_F25 ) )
-        res += 2 * cButtonPadding * scaling;
-
+        res += getModifierString( GLFW_MOD_SHIFT ) + "+";
+    if ( respectKey )
+        res += getKeyString( key.key );
     return res;
 }
 

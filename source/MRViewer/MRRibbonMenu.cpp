@@ -1874,6 +1874,23 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopStyleVar();
     };
 
+    auto getKeyPaddings = [] ( const ShortcutManager::ShortcutKey& key, float scaling )
+    {
+        const auto& style = ImGui::GetStyle();
+        float res = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;;
+        if ( key.mod & GLFW_MOD_ALT )
+            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+        if ( key.mod & GLFW_MOD_CONTROL )
+            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+        if ( key.mod & GLFW_MOD_SHIFT )
+            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
+
+        if ( key.key != GLFW_KEY_DELETE )
+            res += 2 * cButtonPadding * scaling;
+
+        return res;
+    };
+
     const auto columnWidth = ( windowWidth - 2 * style.WindowPadding.x ) / 2;
     
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
@@ -1906,8 +1923,8 @@ void RibbonMenu::drawShortcutsWindow_()
                 ImGui::Text( "%s", text.c_str());
                 ImGui::PopStyleColor();
 
-                text += ShortcutManager::getKeyString( key, false );
-                float paddings = ShortcutManager::getKeyPaddings(key, scaling);
+                text += ShortcutManager::getKeyFullString( key, key.key == GLFW_KEY_DELETE );
+                float paddings = getKeyPaddings(key, scaling);
                 if ( i >= categoryCount / 2 )
                     paddings += style.IndentSpacing;
 
@@ -1917,7 +1934,7 @@ void RibbonMenu::drawShortcutsWindow_()
                 if ( key.mod & GLFW_MOD_CONTROL )
                 {
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
-                    addReadOnlyLine( std::string( "Ctrl" ) );
+                    addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_CONTROL ) );
                     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     ImGui::Text( "+" );
@@ -1927,7 +1944,7 @@ void RibbonMenu::drawShortcutsWindow_()
                 if ( key.mod & GLFW_MOD_ALT )
                 {
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
-                    addReadOnlyLine( std::string( "Alt" ) );
+                    addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_ALT ) );
                     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     ImGui::Text( "+" );
@@ -1937,66 +1954,28 @@ void RibbonMenu::drawShortcutsWindow_()
                 if ( key.mod & GLFW_MOD_SHIFT )
                 {
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
-                    addReadOnlyLine( std::string( "Shift" ) );
+                    addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SHIFT ) );
                     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                     ImGui::Text( "+" );
                     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 }
 
-                std::string keyStr;
-                if ( key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
-                    keyStr += char( key.key );
-                else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
+                std::string keyStr = ShortcutManager::getKeyString( key.key );
+                bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;
+                ImFont* font = nullptr;
+                if ( isArrow )
                 {
-                    keyStr += "F";
-                    keyStr += std::to_string( key.key - GLFW_KEY_F1 + 1 );
+                    font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+                    font->Scale = cDefaultFontSize / cBigIconSize;
+                    ImGui::PushFont( font );
                 }
-                else
-                {
-                    ImFont* font = nullptr;
 
-                    if ( key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT )
-                    {
-                        font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-                        font->Scale =  cDefaultFontSize / cBigIconSize;
-                    }
-
-                    switch ( key.key )
-                    {
-                    case GLFW_KEY_UP:
-                        ImGui::PushFont( font );
-                        keyStr += "\xef\x81\xa2";
-                        break;
-                    case GLFW_KEY_DOWN:
-                        ImGui::PushFont( font );
-                        keyStr += "\xef\x81\xa3";
-                        break;
-                    case GLFW_KEY_LEFT:
-                        ImGui::PushFont( font );
-                        keyStr += "\xef\x81\xa0";
-                        break;
-                    case GLFW_KEY_RIGHT:
-                        ImGui::PushFont( font );
-                        keyStr += "\xef\x81\xa1";
-                        break;
-                    case GLFW_KEY_DELETE:
-                        keyStr += "Delete";
-                        break;
-                    default:
-                        assert( false );
-                        keyStr += "ERROR";
-                        break;
-                    }
-
-                    if ( font )
-                        font->Scale = 1.0f;
-                }
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
-                addReadOnlyLine( keyStr );                
+                addReadOnlyLine( keyStr );
 
-                if ( key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT )
-                {                    
+                if ( isArrow )
+                {
                     ImGui::PopFont();
                 }
 

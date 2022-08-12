@@ -180,12 +180,10 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE int load_files( int count, const char** filenames )
 {
     using namespace MR;
-    spdlog::info("load_files: {}",count);
     std::vector<std::filesystem::path> paths( count );
     for ( int i = 0; i < count; ++i )
     {
         paths[i] = MR::pathFromUtf8( filenames[i] );
-        spdlog::info(filenames[i]);
     }
 
     if ( !paths.empty() )

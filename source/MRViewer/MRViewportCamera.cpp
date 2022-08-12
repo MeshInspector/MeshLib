@@ -16,7 +16,10 @@
 namespace
 {
 
-constexpr float cMaxObjectScale = 1e9;
+/// maximum supported distance to rotation pivot
+constexpr float cMaxRotationPivotLengthSq = 1e9f;
+/// maximum supported object scale factor
+constexpr float cMaxObjectScale = 1e9f;
 
 }
 
@@ -178,8 +181,8 @@ const float Viewport::getPixelSize() const
 void Viewport::setRotationPivot_( const Vector3f& point )
 {
     rotationPivot_ = point;
-    if ( rotationPivot_.lengthSq() > cMaxObjectScale )
-        rotationPivot_ /= std::sqrt( rotationPivot_.lengthSq() / cMaxObjectScale );
+    if ( rotationPivot_.lengthSq() > cMaxRotationPivotLengthSq )
+        rotationPivot_ /= std::sqrt( rotationPivot_.lengthSq() / cMaxRotationPivotLengthSq );
 }
 
 // ================================================================

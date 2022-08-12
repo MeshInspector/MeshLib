@@ -21,7 +21,7 @@ class ISceneStateCheck
 public:
     virtual ~ISceneStateCheck() = default;
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
-    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return ""; }
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return {}; }
 };
 
 // special namespace not to have signature conflicts

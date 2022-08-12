@@ -73,24 +73,25 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
     const std::vector<openvdb::Vec4I>& quadArg,
     ProgressCallback cb )
 {
-    if ( cb )
-        if ( !cb( 0.0f ) )
+    if ( cb && !cb( 0.0f ) )
             return tl::make_unexpected( "Operation was canceled." );
     std::vector<Vector3f> points( pointsArg.size() );
     Triangulation t;
-    t.reserve( trisArg.size() + 2 * quadArg.size() );
+    const size_t tNum = trisArg.size() + 2 * quadArg.size();
+    t.reserve( tNum );
     for ( int i = 0; i < points.size(); ++i )
     {
         points[i][0] = pointsArg[i][0] * voxelSize[0];
         points[i][1] = pointsArg[i][1] * voxelSize[1];
         points[i][2] = pointsArg[i][2] * voxelSize[2];
 
-        if ( cb )
-            if ( !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
+        if ( cb && !(i & 0x3FF) && !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
+    size_t tCounter = 0;
     for ( const auto& tri : trisArg )
     {
+
         ThreeVertIds newTri
         {
             VertId( ( int )tri[2] ),
@@ -99,8 +100,8 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         };
         t.push_back( newTri );
 
-        if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
+        ++tCounter;
+        if ( cb && !(tCounter & 0x3FF) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
     for ( const auto& quad : quadArg )
@@ -113,9 +114,6 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         };
         t.push_back( newTri );
 
-        if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
-                return tl::make_unexpected( "Operation was canceled." );
         newTri =
         {
             VertId( ( int )quad[0] ),
@@ -124,8 +122,8 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         };
         t.push_back( newTri );
 
-        if ( cb )
-            if ( !cb( 0.5f + 0.5f * ( float( t.size() ) / float( t.capacity() ) ) ) )
+        tCounter += 2;
+        if ( cb && !(tCounter & 0x3FE) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
 
@@ -133,8 +131,7 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
     res.topology = MeshBuilder::fromTriangles( t );
     res.points.vec_ = std::move( points );
 
-    if ( cb )
-        if ( !cb( 1.0f ) )
+    if ( cb && !cb( 1.0f ) )
             return tl::make_unexpected( "Operation was canceled." );
 
     return res;

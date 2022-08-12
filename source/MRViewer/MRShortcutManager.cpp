@@ -1,4 +1,6 @@
 #include "MRShortcutManager.h"
+#include "MRRibbonConstants.h"
+#include "imgui.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -32,15 +34,17 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList() const
     auto& listRes = *listCache_;
     listRes.reserve( map_.size() );
     for ( const auto& [key, command] : map_ )
-        listRes.emplace_back( kayAndModFromMapKey( key ), command.name );
+        listRes.emplace_back( kayAndModFromMapKey( key ), command.category, command.name );
 
     std::sort( listRes.begin(), listRes.end(), [] ( const auto& a, const auto& b )
     {
-        if ( a.first.key < b.first.key )
+        if ( std::get<Category>( a ) < std::get<Category>( b ) )
             return true;
-        if ( a.first.key == b.first.key )
-            return a.first.mod < b.first.mod;
-        return false;
+
+        if ( std::get<Category>( a ) > std::get<Category>( b ) )
+            return false;
+
+        return std::get<ShortcutKey>(a) < std::get<ShortcutKey>(b);
     } );
 
     return *listCache_;
@@ -57,48 +61,65 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
-std::string ShortcutManager::getKeyString( const ShortcutKey& key )
+std::string ShortcutManager::getModifierString( int mod )
 {
-    std::string res;
-    if ( key.mod & GLFW_MOD_ALT )
-        res += "Alt+";
-    if ( key.mod & GLFW_MOD_CONTROL )
-        res += "Ctrl+";
-    if ( key.mod & GLFW_MOD_SHIFT )
-        res += "Shift+";
-
-    if ( key.key >= GLFW_KEY_APOSTROPHE && key.key <= GLFW_KEY_GRAVE_ACCENT )
-        res += char( key.key );
-    else if ( key.key >= GLFW_KEY_F1 && key.key <= GLFW_KEY_F25 )
+    switch ( mod )
     {
-        res += "F";
-        res += std::to_string( key.key - GLFW_KEY_F1 + 1 );
+    case GLFW_MOD_CONTROL:
+        return "Ctrl";
+    case GLFW_MOD_ALT:
+        return "Alt";
+    case GLFW_MOD_SHIFT:
+        return "Shift";
+    default:
+        return "";
+    }
+}
+
+std::string ShortcutManager::getKeyString( int key )
+{
+    if ( key == GLFW_KEY_DELETE )
+    {
+        return "Delete";
+    }
+    else if ( key >= GLFW_KEY_F1 && key <= GLFW_KEY_F25 )
+    {
+        return std::string("F") + std::to_string( key - GLFW_KEY_F1 + 1 );
+    }
+    else if ( key >= GLFW_KEY_APOSTROPHE && key <= GLFW_KEY_GRAVE_ACCENT )
+    {
+        return { char( key ) };
     }
     else
     {
-        switch ( key.key )
+        switch ( key )
         {
         case GLFW_KEY_UP:
-            res += "Up";
-            break;
+            return "\xef\x81\xa2";
         case GLFW_KEY_DOWN:
-            res += "Down";
-            break;
+            return "\xef\x81\xa3";
         case GLFW_KEY_LEFT:
-            res += "Left";
-            break;
+            return "\xef\x81\xa0";
         case GLFW_KEY_RIGHT:
-            res += "Right";
-            break;
-        case GLFW_KEY_DELETE:
-            res += "Delete";
-            break;
+            return "\xef\x81\xa1";
         default:
             assert( false );
-            res += "ERROR";
-            break;
+            return "ERROR";
         }
     }
+}
+
+std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool respectKey )
+{
+    std::string res;
+    if ( key.mod & GLFW_MOD_ALT )
+        res += getModifierString( GLFW_MOD_ALT ) + "+";
+    if ( key.mod & GLFW_MOD_CONTROL )
+        res += getModifierString( GLFW_MOD_CONTROL ) + "+";
+    if ( key.mod & GLFW_MOD_SHIFT )
+        res += getModifierString( GLFW_MOD_SHIFT ) + "+";
+    if ( respectKey )
+        res += getKeyString( key.key );
     return res;
 }
 

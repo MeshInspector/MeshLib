@@ -232,6 +232,11 @@ public:
 
   MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+  //set show shortcuts state (enable / disable)
+  MRVIEWER_API void setShowShortcuts( bool val );
+  //return show shortcuts state (enable / disable)
+  MRVIEWER_API bool getShowShortcuts() const;
+
 protected:
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
@@ -291,6 +296,8 @@ protected:
 
     void draw_open_recent_button_();
 
+    // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
+    MRVIEWER_API virtual void drawShortcutsWindow_();
 };
 
 } // end namespace

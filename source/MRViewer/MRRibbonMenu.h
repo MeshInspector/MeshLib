@@ -139,10 +139,11 @@ protected:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;   
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
+    MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
 

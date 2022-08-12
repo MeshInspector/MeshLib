@@ -232,7 +232,10 @@ public:
 
   MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+  //set show shortcuts state (enable / disable)
   MRVIEWER_API void setShowShortcuts( bool val );
+  //return show shortcuts state (enable / disable)
+  MRVIEWER_API bool getShowShortcuts();
 
 protected:
     // Mouse IO

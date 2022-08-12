@@ -2438,6 +2438,11 @@ MRVIEWER_API void ImGuiMenu::setShowShortcuts( bool val )
     showShortcuts_ = val;
 }
 
+bool ImGuiMenu::getShowShortcuts()
+{
+    return showShortcuts_;
+}
+
 void ImGuiMenu::PluginsCache::validate( const std::vector<ViewerPlugin*>& viewerPlugins )
 {
     // if same then cache is valid

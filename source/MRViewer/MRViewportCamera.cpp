@@ -178,6 +178,8 @@ const float Viewport::getPixelSize() const
 void Viewport::setRotationPivot_( const Vector3f& point )
 {
     rotationPivot_ = point;
+    if ( rotationPivot_.lengthSq() > cMaxObjectScale )
+        rotationPivot_ /= std::sqrt( rotationPivot_.lengthSq() / cMaxObjectScale );
 }
 
 // ================================================================

@@ -8,11 +8,10 @@ namespace MR
 {
 
 class Open : public MR::ViewerPlugin, public MultiListener<LoadListener
-#ifdef __EMSCRIPTEN__
->
-#else
-, DragDropListener>
+#ifndef __EMSCRIPTEN__
+, DragDropListener
 #endif
+>
 {
 public:
     MRVIEWER_API virtual void init( Viewer* _viewer ) override;

@@ -54,6 +54,9 @@ public:
     // !note that this function can be called each frame for opened drop list
     virtual const DropItemsList& dropItems() const { return dropList_; };
 
+    // return not-empty string with tooltip that shall replace the static tooltip from json
+    virtual std::string getDynamicTooltip() const { return {}; }
+
 protected:
     RibbonItemType type_{ RibbonItemType::Button };
     DropItemsList dropList_;

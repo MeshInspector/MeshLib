@@ -78,7 +78,7 @@ void Object::setXf( const AffineXf3f& xf )
 {
     if ( xf_ == xf )
         return;
-    if ( Matrix4( xf ).det() == 0 )
+    if ( xf.A.det() == 0 )
     {
         spdlog::warn( "Object transform is degenerate" );
         return;

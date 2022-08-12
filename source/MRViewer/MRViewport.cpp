@@ -69,9 +69,16 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBu
     if ( normTemp.det() == 0 )
     {
         auto norm = normTemp.norm();
-        assert( std::isnormal( norm ) );
-        normTemp /= norm;
-        normTemp.w = { 0, 0, 0, 1 };
+        if ( std::isnormal( norm ) )
+        {
+            normTemp /= norm;
+            normTemp.w = { 0, 0, 0, 1 };
+        }
+        else
+        {
+            spdlog::warn( "Object transform is degenerate" );
+            return;
+        }
     }
     auto normM = normTemp.inverse().transposed();
 

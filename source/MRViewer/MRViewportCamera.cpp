@@ -10,7 +10,18 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
+#include "MRPch/MRSpdlog.h"
 #include <tbb/parallel_reduce.h>
+
+namespace
+{
+
+/// maximum supported distance square to rotation pivot
+constexpr float cMaxRotationPivotLengthSq = 1e9f;
+/// maximum supported object scale factor
+constexpr float cMaxObjectScale = 1e9f;
+
+}
 
 namespace MR
 {
@@ -170,6 +181,8 @@ const float Viewport::getPixelSize() const
 void Viewport::setRotationPivot_( const Vector3f& point )
 {
     rotationPivot_ = point;
+    if ( rotationPivot_.lengthSq() > cMaxRotationPivotLengthSq )
+        rotationPivot_ /= std::sqrt( rotationPivot_.lengthSq() / cMaxRotationPivotLengthSq );
 }
 
 // ================================================================
@@ -389,6 +402,11 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
     params_.objectScale = dif.length();
     if ( params_.objectScale == 0.0f )
         params_.objectScale = 1.0f;
+    if ( params_.objectScale > cMaxObjectScale )
+    {
+        spdlog::warn( "Object scale exceeded its limit" );
+        params_.objectScale = cMaxObjectScale;
+    }
 
     if ( params_.orthographic )
     {
@@ -606,6 +624,11 @@ void Viewport::fitData( float fill, bool snapView )
     params_.objectScale = dif.length();
     if ( params_.objectScale == 0.0f )
         params_.objectScale = 1.0f;
+    if ( params_.objectScale > cMaxObjectScale )
+    {
+        spdlog::warn( "Object scale exceeded its limit" );
+        params_.objectScale = cMaxObjectScale;
+    }
 
     auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
     auto factor = params_.orthographic ? 1.f / (params_.cameraEye - params_.cameraCenter).length() : 1.f;

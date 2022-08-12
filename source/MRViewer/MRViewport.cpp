@@ -65,7 +65,22 @@ void Viewport::shut()
 void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer, bool alphaSort ) const
 {
     auto modelTemp = Matrix4f( xf );
-    auto normM = ( viewM * modelTemp ).inverse().transposed();
+    auto normTemp = viewM * modelTemp;
+    if ( normTemp.det() == 0 )
+    {
+        auto norm = normTemp.norm();
+        if ( std::isnormal( norm ) )
+        {
+            normTemp /= norm;
+            normTemp.w = { 0, 0, 0, 1 };
+        }
+        else
+        {
+            spdlog::warn( "Object transform is degenerate" );
+            return;
+        }
+    }
+    auto normM = normTemp.inverse().transposed();
 
     RenderParams params
     {

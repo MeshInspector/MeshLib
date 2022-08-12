@@ -2433,12 +2433,12 @@ void ImGuiMenu::setObjectTreeState( const Object* obj, bool open )
         sceneOpenCommands_[obj] = open;
 }
 
-MRVIEWER_API void ImGuiMenu::setShowShortcuts( bool val )
+void ImGuiMenu::setShowShortcuts( bool val )
 {
     showShortcuts_ = val;
 }
 
-bool ImGuiMenu::getShowShortcuts()
+bool ImGuiMenu::getShowShortcuts() const
 {
     return showShortcuts_;
 }

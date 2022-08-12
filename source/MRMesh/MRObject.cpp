@@ -4,6 +4,7 @@
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include <filesystem>
 
@@ -77,7 +78,12 @@ void Object::setXf( const AffineXf3f& xf )
 {
     if ( xf_ == xf )
         return;
-    xf_ = xf; 
+    if ( Matrix4( xf ).det() == 0 )
+    {
+        spdlog::warn( "Object transform is degenerate" );
+        return;
+    }
+    xf_ = xf;
     propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }

@@ -58,9 +58,14 @@ struct Matrix4
     /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq() + w.lengthSq(); }
     constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
+    /// computes submatrix
+    constexpr Matrix3<T> submatrix( int i, int j ) const noexcept;
+    /// computes determinant of the matrix
+    constexpr T det() const noexcept;
+    /// computes inverse matrix
+    constexpr Matrix4<T> inverse() const noexcept;
     /// computes transposed matrix
     constexpr Matrix4<T> transposed() const noexcept;
-    constexpr Matrix4<T> inverse() const noexcept;
 
     constexpr Matrix3<T> getRotation() const noexcept;
     void setRotation( const Matrix3<T>& rot) noexcept;
@@ -158,6 +163,37 @@ inline Matrix4<T> operator *( const Matrix4<T> & b, T a )
 template <typename T>
 inline Matrix4<T> operator /( Matrix4<T> b, T a )
     { b /= a; return b; }
+
+template <typename T>
+constexpr Matrix3<T> Matrix4<T>::submatrix( int i, int j ) const noexcept
+{
+    Matrix3<T> res;
+    auto* resM = (T*) &res.x;
+    int cur = 0;
+    for ( int m = 0; m < 4; m++ )
+    {
+        if ( m == i )
+            continue;
+        for ( int n = 0; n < 4; n++ )
+        {
+            if ( n == j )
+                continue;
+            resM[cur++] = (*this)[m][n];
+        }
+    }
+    assert( cur == 9 );
+    return res;
+}
+
+template <typename T>
+constexpr T Matrix4<T>::det() const noexcept
+{
+    return
+        x.x * submatrix( 0, 0 ).det()
+      - x.y * submatrix( 0, 1 ).det()
+      + x.z * submatrix( 0, 2 ).det()
+      - x.w * submatrix( 0, 3 ).det();
+}
 
 template <typename T>
 constexpr Matrix4<T> Matrix4<T>::transposed() const noexcept

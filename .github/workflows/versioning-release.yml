@@ -38,7 +38,7 @@ jobs:
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          RELEASE_PATH: ../../releases/download/${{steps.version.outputs.version}}
+          RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version.outputs.version}}
         with:
           tag_name: ${{steps.version.outputs.version }}
           release_name: Release ${{steps.version.outputs.version}}

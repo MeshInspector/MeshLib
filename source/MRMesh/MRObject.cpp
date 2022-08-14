@@ -424,6 +424,15 @@ std::shared_ptr<Object> Object::shallowClone() const
     return clone();
 }
 
+std::vector<std::string> Object::getInfoLines() const
+{
+    std::vector<std::string> res;
+
+    res.push_back( "type: " + getClassName() );
+    res.push_back( "mem: " + bytesString( heapBytes() ) );
+    return res;
+}
+
 tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root,
     int childId ) const
 {

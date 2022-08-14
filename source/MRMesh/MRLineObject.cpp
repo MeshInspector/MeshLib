@@ -72,14 +72,6 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
     setSize( box.diagonal() * 2.f );
 }
 
-std::vector<std::string> LineObject::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type: Line" );
-    return res;
-}
-
 std::shared_ptr<Object> LineObject::shallowClone() const
 {
     auto res = std::make_shared<LineObject>( ProtectedStruct{}, *this );

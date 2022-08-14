@@ -372,14 +372,9 @@ tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::file
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
-    for ( auto & s : res )
-        s = "mesh " + s;
-    if ( res.empty() )
-        res.emplace_back();
-    res.front() = "type: Voxels";
-    res.insert( res.begin() + 1, "dims: (" + std::to_string( dimensions_.x ) + ", " + std::to_string( dimensions_.y ) + ", " + std::to_string( dimensions_.z ) + ")" );
-    res.insert( res.begin() + 2, "voxel size: (" + std::to_string( voxelSize_.x ) + ", " + std::to_string( voxelSize_.y ) + ", " + std::to_string( voxelSize_.z ) + ")" );
-    res.insert( res.begin() + 3, "iso-value: " + std::to_string( isoValue_ ) );
+    res.push_back( "dims: (" + std::to_string( dimensions_.x ) + ", " + std::to_string( dimensions_.y ) + ", " + std::to_string( dimensions_.z ) + ")" );
+    res.push_back( "voxel size: (" + std::to_string( voxelSize_.x ) + ", " + std::to_string( voxelSize_.y ) + ", " + std::to_string( voxelSize_.z ) + ")" );
+    res.push_back( "iso-value: " + std::to_string( isoValue_ ) );
     return res;
 }
 

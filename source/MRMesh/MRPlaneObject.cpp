@@ -71,14 +71,6 @@ PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
     setSize( box.diagonal() * 2.f );
 }
 
-std::vector<std::string> PlaneObject::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type: Plane" );
-    return res;
-}
-
 std::shared_ptr<Object> PlaneObject::shallowClone() const
 {
     auto res = std::make_shared<PlaneObject>( ProtectedStruct{}, *this );

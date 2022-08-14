@@ -34,8 +34,7 @@ ObjectPoints::ObjectPoints( const ObjectPoints& other ) :
 
 std::vector<std::string> ObjectPoints::getInfoLines() const
 {
-    std::vector<std::string> res;
-    res.push_back( "type: Points" );
+    std::vector<std::string> res = ObjectPointsHolder::getInfoLines();
 
     if ( points_ )
     {

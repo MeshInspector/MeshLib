@@ -29,6 +29,7 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
+    virtual std::string getClassName() const override { return "Distance Map"; }
 
     /// setters
     MRMESH_API void setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams );

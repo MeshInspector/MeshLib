@@ -26,7 +26,7 @@ public:
     PlaneObject( ProtectedStruct, const PlaneObject& obj ) : PlaneObject( obj )
     {}
 
-    MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
+    virtual std::string getClassName() const override { return "Plane"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;

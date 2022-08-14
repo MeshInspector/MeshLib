@@ -48,4 +48,11 @@ inline std::string utf8string( const std::filesystem::path & path )
 
 /// \}
 
+/// converts given size in string:
+/// [0,1024) -> nnn bytes
+/// [1024,1024*1024) -> nnn.nn Kb
+/// [1024*1024,1024*1024*1024) -> nnn.nn Mb
+/// ...
+MRMESH_API std::string bytesString( size_t size );
+
 }

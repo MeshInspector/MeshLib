@@ -105,14 +105,6 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
     setRadius( radius );
 }
 
-std::vector<std::string> CircleObject::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type: Circle" );
-    return res;
-}
-
 std::shared_ptr<Object> CircleObject::shallowClone() const
 {
     auto res = std::make_shared<CircleObject>( ProtectedStruct{}, *this );

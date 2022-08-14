@@ -22,14 +22,6 @@ PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
     setPoint( Vector3f( center / double( pointsToApprox.size() ) ) );
 }
 
-std::vector<std::string> PointObject::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type: Point" );
-    return res;
-}
-
 std::shared_ptr<MR::Object> PointObject::clone() const
 {
     auto res = std::make_shared<PointObject>( ProtectedStruct{}, *this );

@@ -74,6 +74,7 @@ public:
     Object & operator = ( Object && ) noexcept = default;
     virtual ~Object() = default;
 
+    // return name of subtype for serialization purposes
     constexpr static const char* TypeName() noexcept { return "Object"; }
     virtual const char* typeName() const { return TypeName(); }
 
@@ -179,7 +180,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const;
 
     /// return several info lines that can better describe object in the UI
-    virtual std::vector<std::string> getInfoLines() const { return {}; }
+    MRMESH_API virtual std::vector<std::string> getInfoLines() const;
+    /// return human readable name of subclass
+    virtual std::string getClassName() const { return "Object"; }
 
     /// creates futures that save this object subtree:
     ///   models in the folder by given path and

@@ -52,9 +52,8 @@ std::shared_ptr< Mesh > ObjectMesh::updateMesh( std::shared_ptr< Mesh > mesh )
 
 std::vector<std::string> ObjectMesh::getInfoLines() const
 {
-    std::vector<std::string> res;
+    std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
 
-    res.push_back( "type: Mesh" );
     if ( mesh_ )
     {
         updateMeshStat_();

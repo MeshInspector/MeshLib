@@ -67,9 +67,7 @@ void ObjectDistanceMap::swapBase_( Object& other )
 
 std::vector<std::string> ObjectDistanceMap::getInfoLines() const
 {
-    std::vector<std::string> res;
-
-    res.push_back( "type: Distance Map" );
+    std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
 
     std::stringstream ss;
     if ( dmap_ )

@@ -1,6 +1,7 @@
 #include "MRStringConvert.h"
 #include <codecvt>
 #include <locale>
+#include "MRPch/MRSpdlog.h"
 #ifdef _WIN32
 #include "windows.h"
 #endif
@@ -48,6 +49,17 @@ std::u8string systemToUtf8( const char* system )
 #else
     return asU8String( system );
 #endif
+}
+
+std::string bytesString( size_t size )
+{
+    if ( size < 1024 )
+        return fmt::format( "{} bytes", size );
+    if ( size < 1024*1024 )
+        return fmt::format( "{:.2f} Kb", size / 1024.f );
+    if ( size < 1024*1024*1024 )
+        return fmt::format( "{:.2f} Mb", size / float(1024*1024) );
+    return fmt::format( "{:.2f} Gb", size / float(1024*1024*1024) );
 }
 
 }

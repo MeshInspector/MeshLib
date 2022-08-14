@@ -44,7 +44,7 @@ public:
     { return voxelSize_; }
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
+    virtual std::string getClassName() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram
     MRMESH_API void construct( const SimpleVolume& volume, const ProgressCallback& cb = {} );

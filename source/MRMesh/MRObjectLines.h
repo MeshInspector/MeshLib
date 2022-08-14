@@ -33,6 +33,7 @@ public:
     ObjectLines( ProtectedStruct, const ObjectLines& obj ) : ObjectLines( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
+    virtual std::string getClassName() const override { return "Lines"; }
 
 protected:
     MRMESH_API ObjectLines( const ObjectLines& other );

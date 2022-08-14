@@ -72,14 +72,6 @@ SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     setRadius( float( sqrt( std::max( rSq, 0.0 ) ) ) );
 }
 
-std::vector<std::string> SphereObject::getInfoLines() const
-{
-    std::vector<std::string> res;
-
-    res.push_back( "type: Sphere" );
-    return res;
-}
-
 std::shared_ptr<Object> SphereObject::shallowClone() const
 {
     auto res = std::make_shared<SphereObject>( ProtectedStruct{}, *this );

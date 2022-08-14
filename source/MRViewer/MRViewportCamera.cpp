@@ -29,9 +29,23 @@ namespace MR
 AffineXf3f Viewport::getViewXf_() const
 {
     AffineXf3f c = lookAt( params_.cameraCenter, params_.cameraEye, params_.cameraUp );
-    Matrix3f rot = Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom );
-    AffineXf3f factor( rot, rot * params_.cameraTranslation );
-    return c * factor;
+    AffineXf3f rot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom ) );
+    AffineXf3f tr = AffineXf3f::translation( params_.cameraTranslation );
+    return c * rot * tr;
+}
+
+Vector3f Viewport::getCameraPoint() const
+{
+    AffineXf3f xfInv = AffineXf3f( viewM ).inverse();
+    return xfInv.b;
+}
+
+void Viewport::setCameraPoint( const Vector3f& cameraWorldPos )
+{
+    AffineXf3f c = lookAt( params_.cameraCenter, params_.cameraEye, params_.cameraUp );
+    AffineXf3f rot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom ) );
+    params_.cameraTranslation = ( c * rot ).inverse().b - cameraWorldPos;
+    needRedraw_ = true;
 }
 
 void Viewport::setupViewMatrix() const
@@ -647,12 +661,6 @@ float Viewport::getRatio() const
 {
     // tan([left-right] / 2) / tan([up-down] / 2)
     return width( viewportRect_ ) / height( viewportRect_ );
-}
-
-Vector3f Viewport::getCameraPoint() const
-{
-    AffineXf3f xfInv = AffineXf3f( viewM ).inverse();
-    return xfInv.b;
 }
 
 void Viewport::setCameraTrackballAngle( const Quaternionf& rot )

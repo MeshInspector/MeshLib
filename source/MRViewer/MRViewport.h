@@ -379,6 +379,8 @@ public:
 
     // returns camera world location for the current view
     MRVIEWER_API Vector3f getCameraPoint() const;
+    // sets camera world location for the current view
+    MRVIEWER_API void setCameraPoint( const Vector3f& cameraWorldPos );
 
     MRVIEWER_API void setCameraTrackballAngle( const Quaternionf& rot );
 

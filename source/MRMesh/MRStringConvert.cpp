@@ -1,7 +1,7 @@
 #include "MRStringConvert.h"
 #include <codecvt>
 #include <locale>
-#include <fmt/format.h>
+#include "MRPch/MRSpdlog.h"
 #ifdef _WIN32
 #include "windows.h"
 #endif

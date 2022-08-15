@@ -491,7 +491,6 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
 tl::expected<void, std::string> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
         ProgressCallback progressCb, int* objCounter )
 {
-    std::chrono::time_point<std::chrono::high_resolution_clock> timeBegin = std::chrono::high_resolution_clock::now();
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();
 
     auto res = deserializeModel_( path / key, progressCb );
@@ -501,8 +500,6 @@ tl::expected<void, std::string> Object::deserializeRecursive( const std::filesys
     deserializeFields_( root );
     if ( objCounter )
         ++( *objCounter );
-    std::chrono::time_point<std::chrono::high_resolution_clock> timeEnd = std::chrono::high_resolution_clock::now();
-    std::cout << ( objCounter ? *objCounter : 0 ) << "\t" << std::chrono::duration<double>( timeEnd - timeBegin ) << "\n";
 
     {
         // split keys by type to sort numeric

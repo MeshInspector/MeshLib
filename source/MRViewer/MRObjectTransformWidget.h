@@ -152,7 +152,8 @@ private:
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
 
-    float sumScale_ = 1;
+    Matrix3f objScale_;
+
     Vector3f prevScaling_;
     Vector3f startTranslation_;
     Vector3f prevTranslation_;

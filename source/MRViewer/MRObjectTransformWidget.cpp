@@ -13,6 +13,7 @@
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRAffineXfDecompose.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace
 {
@@ -627,8 +628,13 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
 
     auto resultScale = Matrix3f::scale( scale ) * objScale_;
     for ( auto i = 0; i < 3; i++ )
+    {
         if ( resultScale[i][i] < cMinScaleFactor || cMaxScaleFactor < resultScale[i][i] )
+        {
+            spdlog::warn( "Scale factor limits exceeded" );
             return;
+        }
+    }
     objScale_ = resultScale;
 
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();

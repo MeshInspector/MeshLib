@@ -138,6 +138,11 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesBufferObj_.size(), GL_UNSIGNED_INT, 0 ) );
 }
 
+size_t RenderPointsObject::heapBytes() const
+{
+    return MR::heapBytes( validIndicesBufferObj_ ) + MR::heapBytes( vertSelectionTexture_ );
+}
+
 void RenderPointsObject::bindPoints_() const
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );

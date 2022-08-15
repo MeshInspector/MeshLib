@@ -343,7 +343,8 @@ size_t VisualObject::heapBytes() const
         + texture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + MR::heapBytes( labels_ )
-        + vertsNormalsCache_.heapBytes();
+        + vertsNormalsCache_.heapBytes()
+        + (renderObj_ ? renderObj_->heapBytes() : 0);
 }
 
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const

@@ -139,6 +139,15 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
     // Fedor: should not we draw points here as well?
 }
 
+size_t RenderLinesObject::heapBytes() const
+{
+    return MR::heapBytes( vertPosBufferObj_ )
+        + MR::heapBytes( vertNormalsBufferObj_ )
+        + MR::heapBytes( vertColorsBufferObj_ )
+        + MR::heapBytes( vertUVBufferObj_ )
+        + MR::heapBytes( linesIndicesBufferObj_ );
+}
+
 void RenderLinesObject::bindLines_() const
 {
     MR_TIMER;

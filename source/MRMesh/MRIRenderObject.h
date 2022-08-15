@@ -37,6 +37,8 @@ public:
     // 3) draw data
     virtual void render( const RenderParams& params ) const = 0;
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const = 0;
+    /// returns the amount of memory this object occupies on heap
+    virtual size_t heapBytes() const = 0;
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

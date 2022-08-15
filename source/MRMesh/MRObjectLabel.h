@@ -150,7 +150,7 @@ protected:
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 
-    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path ) override;
+    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 

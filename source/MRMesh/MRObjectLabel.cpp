@@ -93,9 +93,9 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
     return std::async( getAsyncLaunchType(), save );
 }
 
-tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path )
+tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
+    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

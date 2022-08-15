@@ -76,7 +76,7 @@ MRMESH_API tl::expected<void, std::string> serializeObjectTree( const Object& ob
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
 MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path,
-    FolderCallback postDecompress = {} );
+    FolderCallback postDecompress = {}, ProgressCallback progressCb = {} );
 
 /**
  * \brief loads objects tree from given scene folder
@@ -86,7 +86,8 @@ MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectT
  *  
  * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
  */
-MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder );
+MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+    ProgressCallback progressCb = {} );
 
 /**
  * \brief decompresses given zip-file into given folder

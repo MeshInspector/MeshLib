@@ -323,6 +323,11 @@ void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned ) const
     // no picker for labels
 }
 
+size_t RenderLabelObject::heapBytes() const
+{
+    return MR::heapBytes( facesIndicesBufferObj_ );
+}
+
 void RenderLabelObject::bindLabel_() const
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );

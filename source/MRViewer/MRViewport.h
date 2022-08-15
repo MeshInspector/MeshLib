@@ -214,9 +214,6 @@ public:
 
         Quaternionf cameraTrackballAngle;
         Vector3f cameraTranslation;
-        Vector3f cameraEye{0.0f,0.0f,5.0f};
-        Vector3f cameraUp{0.0f,1.0f,0.0f};
-        Vector3f cameraCenter;
         float cameraZoom{1.0f};
         float cameraViewAngle{45.0f};
         float cameraDnear{1.0f};

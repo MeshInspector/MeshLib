@@ -485,18 +485,6 @@ void Viewport::draw_axes() const
     }
 }
 
-void Viewport::draw_rotation_center() const
-{
-    if ( !rotation_ || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
-        return;
-
-    auto factor = params_.orthographic ? 0.1f / (params_.cameraEye - params_.cameraCenter).length() : 0.1f;
-    Viewer::constInstance()->rotationSphere->setXf( AffineXf3f::translation( rotationPivot_ ) *
-        AffineXf3f::linear( Matrix3f::scale(factor * tan( params_.cameraViewAngle / 360.0f * PI_F ) / params_.cameraZoom ) ) );
-
-    draw( *Viewer::constInstance()->rotationSphere, Viewer::constInstance()->rotationSphere->worldXf() );
-}
-
 void Viewport::draw_clipping_plane() const
 {
     const auto& v = Viewer::constInstance();
@@ -629,9 +617,6 @@ bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const
         lightPosition == other.lightPosition &&
         cameraTrackballAngle == other.cameraTrackballAngle &&
         cameraTranslation == other.cameraTranslation &&
-        cameraEye == other.cameraEye &&
-        cameraUp == other.cameraUp &&
-        cameraCenter == other.cameraCenter &&
         cameraZoom == other.cameraZoom &&
         cameraViewAngle == other.cameraViewAngle &&
         cameraDnear == other.cameraDnear &&

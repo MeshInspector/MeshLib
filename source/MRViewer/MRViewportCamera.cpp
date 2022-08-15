@@ -13,6 +13,9 @@
 #include "MRPch/MRSpdlog.h"
 #include <tbb/parallel_reduce.h>
 
+namespace MR
+{
+
 namespace
 {
 
@@ -21,17 +24,18 @@ constexpr float cMaxRotationPivotLengthSq = 1e9f;
 /// maximum supported object scale factor
 constexpr float cMaxObjectScale = 1e9f;
 
-}
+constexpr Vector3f cameraEye{0.0f,0.0f,5.0f};
+constexpr Vector3f cameraUp{0.0f,1.0f,0.0f};
+constexpr Vector3f cameraCenter;
+const AffineXf3f cXf = lookAt( cameraCenter, cameraEye, cameraUp );
 
-namespace MR
-{
+}
 
 AffineXf3f Viewport::getViewXf_() const
 {
-    AffineXf3f c = lookAt( params_.cameraCenter, params_.cameraEye, params_.cameraUp );
     AffineXf3f rot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom ) );
     AffineXf3f tr = AffineXf3f::translation( params_.cameraTranslation );
-    return c * rot * tr;
+    return cXf * rot * tr;
 }
 
 Vector3f Viewport::getCameraPoint() const
@@ -42,9 +46,8 @@ Vector3f Viewport::getCameraPoint() const
 
 void Viewport::setCameraPoint( const Vector3f& cameraWorldPos )
 {
-    AffineXf3f c = lookAt( params_.cameraCenter, params_.cameraEye, params_.cameraUp );
     AffineXf3f rot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom ) );
-    params_.cameraTranslation = ( c * rot ).inverse().b - cameraWorldPos;
+    params_.cameraTranslation = ( cXf * rot ).inverse().b - cameraWorldPos;
     needRedraw_ = true;
 }
 
@@ -88,7 +91,7 @@ void Viewport::setupProjMatrix() const
 
 void Viewport::setupStaticProjMatrix() const
 {
-    float h = (params_.cameraEye - params_.cameraCenter).length();
+    float h = (cameraEye - cameraCenter).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
     staticProj( 0, 0 ) = 1.f / d; staticProj( 0, 1 ) = 0.f; staticProj( 0, 2 ) = 0.f; staticProj( 0, 3 ) = 0.f;
     staticProj( 1, 0 ) = 0.f; staticProj( 1, 1 ) = 1.f / h; staticProj( 1, 2 ) = 0.f; staticProj( 1, 3 ) = 0.f;
@@ -168,7 +171,7 @@ void Viewport::rotateView_() const
     // changing translation should not really be here, so const cast is OK
     // meanwhile it is because we need to keep distance(camera, scene center) static
     Vector3f* transConstCasted = const_cast<Vector3f*>( &params_.cameraTranslation );
-    *transConstCasted = Matrix3f( params_.cameraTrackballAngle.inverse() ) * (shift + params_.cameraEye);
+    *transConstCasted = Matrix3f( params_.cameraTrackballAngle.inverse() ) * (shift + cameraEye);
     *transConstCasted = params_.cameraTranslation / params_.cameraZoom;
     assert( !std::isnan( transConstCasted->x ) );
     viewM.setTranslation( shift );
@@ -424,7 +427,7 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
 
     if ( params_.orthographic )
     {
-        auto factor = 1.f / (params_.cameraEye - params_.cameraCenter).length();
+        auto factor = 1.f / (cameraEye - cameraCenter).length();
         auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
         params_.cameraZoom = factor / ( params_.objectScale * tanFOV );
 
@@ -645,7 +648,7 @@ void Viewport::fitData( float fill, bool snapView )
     }
 
     auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
-    auto factor = params_.orthographic ? 1.f / (params_.cameraEye - params_.cameraCenter).length() : 1.f;
+    auto factor = params_.orthographic ? 1.f / (cameraEye - cameraCenter).length() : 1.f;
     params_.cameraZoom = factor * fill / ( params_.objectScale * tanFOV );
 
     if ( snapView )
@@ -710,10 +713,10 @@ void Viewport::cameraLookAlong( const Vector3f& newDir, const Vector3f& up )
 {
     assert( std::abs( dot( newDir.normalized(), up.normalized() ) ) < 1e-6f );
 
-    Vector3f lookDir = params_.cameraCenter - params_.cameraEye; 
+    Vector3f lookDir = cameraCenter - cameraEye; 
     auto rotLook = Matrix3f::rotation( newDir, lookDir );
 
-    auto upVec = rotLook.inverse() * params_.cameraUp;
+    auto upVec = rotLook.inverse() * cameraUp;
     float sign = 1.0f;
     if ( dot( cross( up, upVec ), newDir ) < 0.0f )
         sign = -1.0f;
@@ -742,6 +745,18 @@ void Viewport::cameraRotateAround( const Line3f& axis, float angle )
     params_.cameraTranslation += worldToCameraXf.inverse().A * ( shift );
 
     needRedraw_ = true;
+}
+
+void Viewport::draw_rotation_center() const
+{
+    if ( !rotation_ || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
+        return;
+
+    auto factor = params_.orthographic ? 0.1f / (cameraEye - cameraCenter).length() : 0.1f;
+    Viewer::constInstance()->rotationSphere->setXf( AffineXf3f::translation( rotationPivot_ ) *
+        AffineXf3f::linear( Matrix3f::scale(factor * tan( params_.cameraViewAngle / 360.0f * PI_F ) / params_.cameraZoom ) ) );
+
+    draw( *Viewer::constInstance()->rotationSphere, Viewer::constInstance()->rotationSphere->worldXf() );
 }
 
 }

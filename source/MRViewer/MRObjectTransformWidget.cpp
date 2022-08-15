@@ -94,6 +94,8 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     return angleRes;
 }
 
+constexpr float cMinScaleFactor = 1e-6f;
+constexpr float cMaxScaleFactor = 1e+6f;
 }
 
 namespace MR
@@ -253,6 +255,7 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
     unscaledXf.b = xf.b + xf.A * center_ - rotation * center_;
 
     controlsRoot_->setXf( unscaledXf );
+    objScale_ = scaling;
 }
 
 AffineXf3f ObjectTransformWidget::getControlsXf() const
@@ -370,7 +373,7 @@ void ObjectTransformWidget::draw_()
     case ScalingMode:
     case UniformScalingMode:
         if ( scaleTooltipCallback_ )
-            scaleTooltipCallback_( sumScale_ );
+            scaleTooltipCallback_( objScale_[currentIndex][currentIndex] );
         break;
     case RotationMode:
         if ( rotateTooltipCallback_ )
@@ -612,10 +615,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     );
 
     if ( press )
-    {
         prevScaling_ = newScaling;
-        sumScale_ = 1.f;
-    }
 
     auto scaleFactor = ( newScaling - xf( center_ ) ).length() / ( prevScaling_ - xf( center_ ) ).length();
     auto scale = Vector3f::diagonal( 1.f );
@@ -623,10 +623,16 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         scale *= scaleFactor;
     else
         scale[int( ax )] = scaleFactor;
+    prevScaling_ = newScaling;
+
+    auto resultScale = Matrix3f::scale( scale ) * objScale_;
+    for ( auto i = 0; i < 3; i++ )
+        if ( resultScale[i][i] < cMinScaleFactor || cMaxScaleFactor < resultScale[i][i] )
+            return;
+    objScale_ = resultScale;
+
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );
-    prevScaling_ = newScaling;
-    sumScale_ *= scaleFactor;
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )

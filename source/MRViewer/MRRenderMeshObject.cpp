@@ -13,7 +13,7 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
-#define RESET_VECTOR( v ) decltype( v )().swap( v )
+#define RESET_VECTOR( v ) std::remove_cvref_t<decltype( v )>().swap( v )
 
 namespace MR
 {
@@ -130,9 +130,9 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
 
     if ( renderParams.alphaSort )
     {
@@ -192,12 +192,9 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( selectedEdgesPoints_ );
 }
 
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
-    const Color& colorChar, unsigned dirtyValue ) const
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, std::vector<Vector3f>& data,
+    GLuint count, const Color& colorChar, unsigned dirtyValue ) const
 {
-    if ( data.empty() )
-        return;
-
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( vao ) );
 
@@ -228,15 +225,16 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     if ( dirty_ & dirtyValue )
     {
         GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * data.size(), data.data(), GL_DYNAMIC_DRAW ) );
+        RESET_VECTOR( data );
         dirty_ ^= dirtyValue;
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, data.size() / 2 );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, count / 2 );
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, GLsizei( data.size() ) ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, count ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const
@@ -693,6 +691,7 @@ void RenderMeshObject::update_( ViewportId id ) const
                 borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
             }
         }
+        borderPointsCount_ = borderHighlightPoints_.size();
     }
 
     if ( objDirty & DIRTY_EDGES_SELECTION )
@@ -706,6 +705,7 @@ void RenderMeshObject::update_( ViewportId id ) const
                 selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
             }
         }
+        selectedPointsCount_ = selectedEdgesPoints_.size();
     }
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );

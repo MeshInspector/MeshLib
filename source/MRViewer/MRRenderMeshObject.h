@@ -78,6 +78,9 @@ private:
     mutable bool meshEdgesDirty_{ false };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
+    mutable bool facesDirty_{ false };
+    mutable GLuint facesCount_{ 0 };
+    mutable GLuint edgesCount_{ 0 };
 };
 
 }

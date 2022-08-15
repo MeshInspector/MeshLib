@@ -9,12 +9,13 @@ GLint bindVertexAttribArray(
     GLuint bufferID,
     const std::vector<T>& V,
     int baseTypeElementsNumber,
-    bool refresh )
+    bool refresh,
+    bool forceUse = false )
 {
     GL_EXEC( GLint id = glGetAttribLocation( program_shader, name.c_str() ) );
     if ( id < 0 )
         return id;
-    if ( V.size() == 0 )
+    if ( V.size() == 0 && !forceUse )
     {
         GL_EXEC( glDisableVertexAttribArray( id ) );
         return id;

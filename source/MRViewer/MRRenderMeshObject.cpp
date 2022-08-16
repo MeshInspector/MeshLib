@@ -132,13 +132,13 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
     {
         if ( dirty_ & DIRTY_BORDER_LINES )
-            updateBorderLinesBuffer();
+            updateBorderLinesBuffer_();
         renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
     }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
     {
         if ( dirty_ & DIRTY_EDGES_SELECTION )
-            updateSelectedEdgesBuffer();
+            updateSelectedEdgesBuffer_();
         renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
     }
 
@@ -150,7 +150,8 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
     }
 
-    RESET_VECTOR( vertPosBufferObj_ );
+    if ( memorySavingMode_ )
+        resetBuffers_();
 }
 
 void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
@@ -183,7 +184,8 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     drawMesh_( true, parameters.viewportId, true );
 
-    RESET_VECTOR( vertPosBufferObj_ );
+    if ( memorySavingMode_ )
+        resetBuffers_();
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -233,7 +235,6 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     if ( dirty_ & dirtyValue )
     {
         GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * data.size(), data.data(), GL_DYNAMIC_DRAW ) );
-        RESET_VECTOR( data );
         dirty_ ^= dirtyValue;
     }
     GL_EXEC( glBindVertexArray( vao ) );
@@ -274,9 +275,8 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
-        updateMeshEdgesBuffer();
+        updateMeshEdgesBuffer_();
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * edgesIndicesBufferObj_.size(), edgesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        RESET_VECTOR( edgesIndicesBufferObj_ );
         meshEdgesDirty_ = false;
     }
 
@@ -297,15 +297,11 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals, true );
     bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, true );
     bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, true );
-    RESET_VECTOR( vertNormalsBufferObj_ );
-    RESET_VECTOR( vertColorsBufferObj_ );
-    RESET_VECTOR( vertUVBufferObj_ );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        RESET_VECTOR( facesIndicesBufferObj_ );
         meshFacesDirty_ = false;
     }
 
@@ -375,7 +371,6 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
         auto res = calcTextureRes( int( faceNormalsTexture_.size() ), maxTexSize );
         faceNormalsTexture_.resize( res.x * res.y );
         GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, res.x, res.y, 0, GL_RGBA, GL_FLOAT, faceNormalsTexture_.data() ) );
-        RESET_VECTOR( faceNormalsTexture_ );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
@@ -393,7 +388,6 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
         auto res = calcTextureRes( int( faceSelectionTexture_.size() ), maxTexSize );
         faceSelectionTexture_.resize( res.x * res.y );
         GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelectionTexture_.data() ) );
-        RESET_VECTOR( faceSelectionTexture_ );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
@@ -413,7 +407,6 @@ void RenderMeshObject::bindMeshPicker_() const
     if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        RESET_VECTOR( facesIndicesBufferObj_ );
         meshFacesDirty_ = false;
     }
 
@@ -693,7 +686,7 @@ void RenderMeshObject::update_( ViewportId id ) const
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-void RenderMeshObject::updateMeshEdgesBuffer() const
+void RenderMeshObject::updateMeshEdgesBuffer_() const
 {
     auto mesh = objMesh_->mesh();
     const auto& edgePerFace = mesh->topology.edgePerFace();
@@ -717,7 +710,7 @@ void RenderMeshObject::updateMeshEdgesBuffer() const
     } );
 }
 
-void RenderMeshObject::updateBorderLinesBuffer() const
+void RenderMeshObject::updateBorderLinesBuffer_() const
 {
     auto mesh = objMesh_->mesh();
     auto boundary = mesh->topology.findBoundary();
@@ -734,7 +727,7 @@ void RenderMeshObject::updateBorderLinesBuffer() const
     borderPointsCount_ = borderHighlightPoints_.size();
 }
 
-void RenderMeshObject::updateSelectedEdgesBuffer() const
+void RenderMeshObject::updateSelectedEdgesBuffer_() const
 {
     auto mesh = objMesh_->mesh();
 
@@ -748,6 +741,20 @@ void RenderMeshObject::updateSelectedEdgesBuffer() const
         }
     }
     selectedPointsCount_ = selectedEdgesPoints_.size();
+}
+
+void RenderMeshObject::resetBuffers_() const
+{
+    RESET_VECTOR( vertPosBufferObj_ );
+    RESET_VECTOR( vertNormalsBufferObj_ );
+    RESET_VECTOR( vertColorsBufferObj_ );
+    RESET_VECTOR( vertUVBufferObj_ );
+    RESET_VECTOR( facesIndicesBufferObj_ );
+    RESET_VECTOR( edgesIndicesBufferObj_ );
+    RESET_VECTOR( faceSelectionTexture_ );
+    RESET_VECTOR( faceNormalsTexture_ );
+    RESET_VECTOR( borderHighlightPoints_ );
+    RESET_VECTOR( selectedEdgesPoints_ );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

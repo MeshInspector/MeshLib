@@ -119,10 +119,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
 }
 
-tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path )
+tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
+    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

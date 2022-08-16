@@ -56,6 +56,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
     {
         std::function<bool( float )> callbackFn{};
         std::istream* stream;
+        bool wasCanceled{ false };
     } loadData;
     loadData.stream = &in;
 
@@ -78,12 +79,16 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
         LoadData& loadData = *reinterpret_cast< LoadData* >( data );
         auto& stream = *loadData.stream;
         auto pos = stream.tellg();
-        readByBlocks( stream, (char*)buf, size, loadData.callbackFn, 1u << 12 );
+        loadData.wasCanceled |= !readByBlocks( stream, (char*)buf, size, loadData.callbackFn, 1u << 12 );
+        if ( loadData.wasCanceled )
+            return 0u;
         return ( CTMuint )( stream.tellg() - pos );
     }, & loadData );
 
     auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
     auto vertices = ctmGetFloatArray( context, CTM_VERTICES );
+    if ( loadData.wasCanceled )
+        return tl::make_unexpected( "Loading canceled" );
     if ( ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( "Error reading CTM format" );
 

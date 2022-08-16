@@ -2,6 +2,7 @@
 #include "MRTimer.h"
 #include "MRDistanceMap.h"
 #include "MRStringConvert.h"
+#include "MRProgressReadWrite.h"
 #include <filesystem>
 
 namespace MR
@@ -15,7 +16,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& path )
+tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     MR_TIMER;
 
@@ -50,7 +51,10 @@ tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& pat
     const size_t size = size_t( resolution[0] ) * size_t( resolution[1] );
     std::vector<float> buffer( size );
 
-    if ( !inFile.read( ( char* )buffer.data(), buffer.size() * sizeof( float ) ) )
+    if ( !readByBlocks( inFile, ( char* )buffer.data(), buffer.size() * sizeof( float ), progressCb ) )
+        return tl::make_unexpected( std::string( "Loading canceled" ) );
+
+    if ( !inFile )
         return tl::make_unexpected( readError );
 
     for ( size_t i = 0; i < size; ++i )

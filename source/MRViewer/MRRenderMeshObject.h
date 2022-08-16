@@ -28,6 +28,8 @@ private:
     mutable std::vector<Vector4f> faceNormalsTexture_;
     mutable std::vector<Vector3f> borderHighlightPoints_;
     mutable std::vector<Vector3f> selectedEdgesPoints_;
+    mutable Vector<TriangleCornerNormals, FaceId> cornerNormalsCache_;
+    mutable Vector<Vector3f, FaceId> facesNormalsCache_;
 
     typedef unsigned int GLuint;
 
@@ -72,6 +74,9 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
+
+    virtual Vector<Vector3f, FaceId> computeFacesNormals_() const;
+    virtual Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;

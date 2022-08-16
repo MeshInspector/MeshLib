@@ -183,7 +183,9 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( faceSelectionTexture_ )
         + MR::heapBytes( faceNormalsTexture_ )
         + MR::heapBytes( borderHighlightPoints_ )
-        + MR::heapBytes( selectedEdgesPoints_ );
+        + MR::heapBytes( selectedEdgesPoints_ )
+        + cornerNormalsCache_.heapBytes()
+        + facesNormalsCache_.heapBytes();
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
@@ -688,6 +690,20 @@ void RenderMeshObject::update_( ViewportId id ) const
     }
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+}
+
+Vector<MR::Vector3f, MR::FaceId> RenderMeshObject::computeFacesNormals_() const
+{
+    if ( !objMesh_ )
+        return {};
+    return computePerFaceNormals( *mesh_ );
+}
+
+Vector<MR::TriangleCornerNormals, MR::FaceId> RenderMeshObject::computeCornerNormals_() const
+{
+    if ( !mesh_ )
+        return {};
+    return computePerCornerNormals( *mesh_, creases_.any() ? &creases_ : nullptr );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

@@ -136,8 +136,7 @@ protected:
     UndirectedEdgeBitSet selectedEdges_;
     UndirectedEdgeBitSet creases_;
 
-    mutable Vector<TriangleCornerNormals, FaceId> cornerNormalsCache_;
-    mutable Vector<Vector3f, FaceId> facesNormalsCache_;
+
 
     struct MeshStat
     {
@@ -168,8 +167,7 @@ protected:
     MRMESH_API virtual Box3f computeBoundingBoxXf_() const override;
 
     MRMESH_API virtual Vector<Vector3f, VertId> computeVertsNormals_() const override;
-    MRMESH_API virtual Vector<Vector3f, FaceId> computeFacesNormals_() const;
-    MRMESH_API virtual Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
+
 
     MRMESH_API virtual void setupRenderObject_() const override;
 

@@ -152,19 +152,7 @@ Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
     return computePerVertNormals( *mesh_ );
 }
 
-Vector<MR::Vector3f, MR::FaceId> ObjectMeshHolder::computeFacesNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerFaceNormals( *mesh_ );
-}
 
-Vector<MR::TriangleCornerNormals, MR::FaceId> ObjectMeshHolder::computeCornerNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerCornerNormals( *mesh_, creases_.any() ? &creases_ : nullptr );
-}
 
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
@@ -393,9 +381,7 @@ size_t ObjectMeshHolder::heapBytes() const
     return VisualObject::heapBytes()
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
-        + creases_.heapBytes()
-        + cornerNormalsCache_.heapBytes()
-        + facesNormalsCache_.heapBytes()
+        + creases_.heapBytes()      
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }

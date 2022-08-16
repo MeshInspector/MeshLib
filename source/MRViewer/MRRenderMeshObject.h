@@ -72,15 +72,18 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
+    void updateMeshEdgesBuffer() const;
+    void updateBorderLinesBuffer() const;
+    void updateSelectedEdgesBuffer() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
+    mutable bool meshFacesDirty_{ false };
     mutable bool meshEdgesDirty_{ false };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
-    mutable bool facesDirty_{ false };
-    mutable GLuint facesCount_{ 0 };
-    mutable GLuint edgesCount_{ 0 };
+    mutable GLuint meshFacesCount_{ 0 };
+    mutable GLuint meshEdgesCount_{ 0 };
     mutable GLuint borderPointsCount_{ 0 };
     mutable GLuint selectedPointsCount_{ 0 };
 };

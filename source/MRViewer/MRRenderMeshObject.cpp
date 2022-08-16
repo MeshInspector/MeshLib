@@ -130,9 +130,17 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
+    {
+        if ( dirty_ & DIRTY_BORDER_LINES )
+            updateBorderLinesBuffer();
         renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+    }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
+    {
+        if ( dirty_ & DIRTY_EDGES_SELECTION )
+            updateSelectedEdgesBuffer();
         renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+    }
 
     if ( renderParams.alphaSort )
     {
@@ -266,15 +274,16 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
+        updateMeshEdgesBuffer();
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * edgesIndicesBufferObj_.size(), edgesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
         RESET_VECTOR( edgesIndicesBufferObj_ );
         meshEdgesDirty_ = false;
     }
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgesCount_ );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, meshEdgesCount_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, 2 * edgesCount_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, 2 * meshEdgesCount_, GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort ) const
@@ -293,11 +302,11 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     RESET_VECTOR( vertUVBufferObj_ );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( facesDirty_ )
+    if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
         RESET_VECTOR( facesIndicesBufferObj_ );
-        facesDirty_ = false;
+        meshFacesDirty_ = false;
     }
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -401,11 +410,11 @@ void RenderMeshObject::bindMeshPicker_() const
     bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, true );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( facesDirty_ )
+    if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
         RESET_VECTOR( facesIndicesBufferObj_ );
-        facesDirty_ = false;
+        meshFacesDirty_ = false;
     }
 
     dirty_ &= ~DIRTY_POSITION;
@@ -434,7 +443,7 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     if ( !picker )
         getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, facesIndicesBufferObj_.size() );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * facesCount_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * meshFacesCount_, GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -613,31 +622,23 @@ void RenderMeshObject::update_( ViewportId id ) const
     // Face indices
     if ( dirty_ & DIRTY_FACE )
     {
+        meshFacesDirty_ = true;
         meshEdgesDirty_ = true;
-        facesIndicesBufferObj_.resize( numF );
-        edgesIndicesBufferObj_.resize( numF * 3 );
+        meshFacesCount_ = numF;
+        meshEdgesCount_ = numF * 3;
+
+        facesIndicesBufferObj_.resize( meshFacesCount_ );
         BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
             auto ind = 3 * f;
             if ( f >= numF )
                 return;
             if ( !edgePerFace[f].valid() )
-            {
                 facesIndicesBufferObj_[f] = Vector3i();
-                for ( int i = 0; i < 3; ++i )
-                    edgesIndicesBufferObj_[ind + i] = Vector2i();
-            }
             else
-            {
                 facesIndicesBufferObj_[f] = Vector3i{ ind,ind + 1,ind + 2 };
-                for ( int i = 0; i < 3; ++i )
-                    edgesIndicesBufferObj_[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
-            }
         } );
-
-        facesDirty_ = true;
-        facesCount_ = numF;
-        edgesCount_ = numF * 3;
+        // NOTE: mesh edges' buffer updating is delayed until it's used
     }
     // Texture coordinates
     if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
@@ -681,34 +682,72 @@ void RenderMeshObject::update_( ViewportId id ) const
     // meshgl_.dirty is cleared only after render of borders, and it will not render if border highlight is turned off
     if ( objDirty & DIRTY_BORDER_LINES )
     {
-        auto boundary = mesh->topology.findBoundary();
-        borderHighlightPoints_.clear();
-        for ( auto& b : boundary )
-        {
-            for ( auto& e : b )
-            {
-                borderHighlightPoints_.push_back( mesh->points[mesh->topology.org( e )] );
-                borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
-            }
-        }
-        borderPointsCount_ = borderHighlightPoints_.size();
+        // NOTE: border lines' buffer updating is delayed until it's used
     }
 
     if ( objDirty & DIRTY_EDGES_SELECTION )
-    {        
-        selectedEdgesPoints_.clear();
-        for ( auto e : objMesh_->getSelectedEdges() )
-        {
-            if ( mesh->topology.hasEdge( e ) )
-            {
-                selectedEdgesPoints_.push_back( mesh->orgPnt( e ) );
-                selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
-            }
-        }
-        selectedPointsCount_ = selectedEdgesPoints_.size();
+    {
+        // NOTE: selected edges' buffer updating is delayed until it's used
     }
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+}
+
+void RenderMeshObject::updateMeshEdgesBuffer() const
+{
+    auto mesh = objMesh_->mesh();
+    const auto& edgePerFace = mesh->topology.edgePerFace();
+
+    edgesIndicesBufferObj_.resize( meshEdgesCount_ );
+    BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        if ( f >= meshFacesCount_ )
+            return;
+        if ( !edgePerFace[f].valid() )
+        {
+            for ( int i = 0; i < 3; ++i )
+                edgesIndicesBufferObj_[ind + i] = Vector2i();
+        }
+        else
+        {
+            for ( int i = 0; i < 3; ++i )
+                edgesIndicesBufferObj_[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+        }
+    } );
+}
+
+void RenderMeshObject::updateBorderLinesBuffer() const
+{
+    auto mesh = objMesh_->mesh();
+    auto boundary = mesh->topology.findBoundary();
+
+    borderHighlightPoints_.clear();
+    for ( auto& b : boundary )
+    {
+        for ( auto& e : b )
+        {
+            borderHighlightPoints_.push_back( mesh->points[mesh->topology.org( e )] );
+            borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
+        }
+    }
+    borderPointsCount_ = borderHighlightPoints_.size();
+}
+
+void RenderMeshObject::updateSelectedEdgesBuffer() const
+{
+    auto mesh = objMesh_->mesh();
+
+    selectedEdgesPoints_.clear();
+    for ( auto e : objMesh_->getSelectedEdges() )
+    {
+        if ( mesh->topology.hasEdge( e ) )
+        {
+            selectedEdgesPoints_.push_back( mesh->orgPnt( e ) );
+            selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
+        }
+    }
+    selectedPointsCount_ = selectedEdgesPoints_.size();
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

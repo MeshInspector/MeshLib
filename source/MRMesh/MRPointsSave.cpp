@@ -146,6 +146,7 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         size_t sum{ 0 };
         size_t blockSize{ 0 };
         size_t maxSize{ 0 };
+        bool wasCanceled{ false };
     } saveData;
     if ( callback )
     {
@@ -184,14 +185,16 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         std::ostream& outStream = *saveData.stream;
         saveData.blockSize = size;
 
-        const bool cancel = !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
+        saveData.wasCanceled |= !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
         saveData.sum += size;
-        if ( cancel )
+        if ( saveData.wasCanceled )
             return 0u;
 
         return outStream.good() ? size : 0;
     }, &saveData );
 
+    if ( saveData.wasCanceled )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
     if ( !out || ctmGetError( context ) != CTM_NONE )
         return tl::make_unexpected( std::string( "Error saving in CTM-format" ) );
 

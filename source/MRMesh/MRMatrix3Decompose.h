@@ -6,7 +6,7 @@
 namespace MR
 {
 
-/// Decomposes affine transformation matrix into rotation and scaling matrices
+/// Decomposes matrix into rotation and scaling matrices
 template <typename T>
 void decomposeMatrix3( const Matrix3<T>& m, Matrix3<T>& rotation, Matrix3<T>& scaling )
 {

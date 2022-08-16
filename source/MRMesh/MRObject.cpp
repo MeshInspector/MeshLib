@@ -501,6 +501,7 @@ tl::expected<void, std::string> Object::deserializeRecursive( const std::filesys
     if ( objCounter )
         ++( *objCounter );
 
+    if (!root["Children"].isNull())
     {
         // split keys by type to sort numeric
         std::vector<long> orderedLongChildKeys; // all that can be converted to Long type

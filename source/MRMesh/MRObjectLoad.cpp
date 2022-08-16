@@ -52,12 +52,12 @@ tl::expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::files
     return objectLines;
 }
 
-tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback /*callback*/ )
+tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
     Vector<Color, VertId> colors;
-    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors );
+    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, callback );
     if ( !pointsCloud.has_value() )
     {
         return tl::make_unexpected( pointsCloud.error() );

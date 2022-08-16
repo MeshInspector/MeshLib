@@ -1859,8 +1859,6 @@ void RibbonMenu::drawShortcutsWindow_()
 
     auto addReadOnlyLine = [scaling, &style] ( const std::string& line )
     {
-        ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );           
-
         const auto textWidth = ImGui::CalcTextSize( line.c_str() ).x;
         // read only so const_sast should be ok
         auto itemWidth = std::max( textWidth + 2 * style.FramePadding.x, 30.0f * scaling );
@@ -1869,29 +1867,9 @@ void RibbonMenu::drawShortcutsWindow_()
         auto framePaddingX = std::max( style.FramePadding.x, ( itemWidth - textWidth ) / 2.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { framePaddingX, cButtonPadding * scaling } );
         ImGui::InputText( ( "##" + line ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
-        ImGui::PopItemWidth();        
-        ImGui::PopStyleColor();
+        ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };
-
-    auto getKeyPaddings = [] ( const ShortcutManager::ShortcutKey& key, float scaling )
-    {
-        const auto& style = ImGui::GetStyle();
-        float res = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;;
-        if ( key.mod & GLFW_MOD_ALT )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-        if ( key.mod & GLFW_MOD_CONTROL )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-        if ( key.mod & GLFW_MOD_SHIFT )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-
-        if ( key.key != GLFW_KEY_DELETE )
-            res += 2 * cButtonPadding * scaling;
-
-        return res;
-    };
-
-    const auto columnWidth = ( windowWidth - 2 * style.WindowPadding.x ) / 2;
     
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
 
@@ -1923,13 +1901,8 @@ void RibbonMenu::drawShortcutsWindow_()
                 ImGui::Text( "%s", text.c_str());
                 ImGui::PopStyleColor();
 
-                text += ShortcutManager::getKeyFullString( key, key.key == GLFW_KEY_DELETE );
-                float paddings = getKeyPaddings(key, scaling);
-                if ( i >= categoryCount / 2 )
-                    paddings += style.IndentSpacing;
-
-                float shift = columnWidth - ImGui::CalcTextSize( text.c_str() ).x - paddings;
-                ImGui::SameLine( 0, shift );
+                float textSize = ImGui::CalcTextSize( text.c_str() ).x;
+                ImGui::SameLine( 0, 260 * scaling - textSize );
 
                 if ( key.mod & GLFW_MOD_CONTROL )
                 {

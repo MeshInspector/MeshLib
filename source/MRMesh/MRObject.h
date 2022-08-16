@@ -6,6 +6,7 @@
 #include "MRBox.h"
 #include "MRBitSet.h"
 #include "MRViewportId.h"
+#include "MRProgressCallback.h"
 #include <boost/signals2/signal.hpp>
 #include <tl/expected.hpp>
 #include <string>
@@ -194,7 +195,8 @@ public:
     /// loads subtree into this Object
     ///   models from the folder by given path and
     ///   fields from given JSON
-    tl::expected<void, std::string> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root );
+    tl::expected<void, std::string> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
+        ProgressCallback progressCb = {}, int* objCounter = nullptr );
 
     /// swaps this object with other
     /// note: do not swap object signals, so listeners will get notifications from swapped object
@@ -237,7 +239,7 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const;
 
     /// Reads model from file
-    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path );
+    MRMESH_API virtual tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
 
     /// Reads parameters from json value
     /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning

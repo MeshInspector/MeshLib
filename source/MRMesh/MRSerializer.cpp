@@ -376,7 +376,8 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
     return res;
 }
 
-tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress )
+tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
+                                                                          ProgressCallback progressCb )
 {
     MR_TIMER;
     UniqueTemporaryFolder scenePath( postDecompress );
@@ -386,10 +387,11 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const 
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 
-    return deserializeObjectTreeFromFolder( scenePath );
+    return deserializeObjectTreeFromFolder( scenePath, progressCb );
 }
 
-tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder )
+tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                                                    ProgressCallback progressCb )
 {
     MR_TIMER;
 
@@ -424,7 +426,40 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
     if ( !rootObject )
         return tl::make_unexpected( "Unknown root object type" );
 
-    auto resDeser = rootObject->deserializeRecursive( folder, root );
+    int modelNumber{ 0 };
+    int modelCounter{ 0 };
+    if ( progressCb )
+    {
+        std::function<int( const Json::Value& )> calculateModelNum = [&calculateModelNum] ( const Json::Value& root )
+        {
+            int res{ 1 };
+
+            if ( root["Children"].isNull() )
+                return res;
+
+            for ( const std::string& childKey : root["Children"].getMemberNames() )
+            {
+                if ( !root["Children"].isMember( childKey ) )
+                    continue;
+
+                const auto& child = root["Children"][childKey];
+                if ( child.isNull() )
+                    continue;
+                res += calculateModelNum( child );
+            }
+
+            return res;
+        };
+        modelNumber = calculateModelNum( root );
+
+        modelNumber = std::max( modelNumber, 1 );
+        progressCb = [progressCb, &modelCounter, modelNumber] ( float v )
+        {
+            return progressCb( ( modelCounter + v ) / modelNumber );
+        };
+    }
+
+    auto resDeser = rootObject->deserializeRecursive( folder, root, progressCb, &modelCounter );
     if ( !resDeser.has_value() )
         return tl::make_unexpected( "Cannot deserialize: " + resDeser.error());
 

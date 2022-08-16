@@ -121,7 +121,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
     }
     else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
     {
-        auto res = deserializeObjectTree( filename );
+        auto res = deserializeObjectTree( filename, {}, callback );
         if ( res.has_value() )
         {
             result = std::vector( { *res } );

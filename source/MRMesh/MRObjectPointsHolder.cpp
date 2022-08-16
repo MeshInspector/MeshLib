@@ -202,9 +202,9 @@ tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_
         [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
 }
 
-tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path )
+tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_ );
+    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

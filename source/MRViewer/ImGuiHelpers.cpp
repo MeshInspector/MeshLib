@@ -457,15 +457,12 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     return valueRef != valueOld;
 }
 
-bool Link( const char* label, std::optional<uint32_t> color )
+bool Link( const char* label, uint32_t color )
 {
     auto window = GetCurrentContext()->CurrentWindow;
     assert( window );
     if ( !window )
         return false;
-
-    if (!color) 
-        color = MR::Color( 60, 120, 255 ).getUInt32();
 
     auto linkSize = CalcTextSize( label );
 
@@ -484,10 +481,10 @@ bool Link( const char* label, std::optional<uint32_t> color )
         SetMouseCursor( ImGuiMouseCursor_Hand );
         window->DrawList->AddLine( ImVec2( basePos.x, linkBbMaxPoint.y - 1.0f ), 
                                    ImVec2( linkBbMaxPoint.x, linkBbMaxPoint.y - 1.0f ), 
-                                   *color );
+                                   color );
     }
 
-    PushStyleColor( ImGuiCol_Text, *color );
+    PushStyleColor( ImGuiCol_Text, color );
     ImGui::Text( "%s", label );
     PopStyleColor();
 

@@ -10,6 +10,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "exports.h"
 #include "ImGuiTraits.h"
+#include "MRMesh/MRColor.h"
 #include <algorithm>
 #include <functional>
 #include <cstddef>
@@ -21,7 +22,6 @@ namespace MR
 {
 class Palette;
 class ImGuiImage;
-struct Color;
 }
 
 // Extend ImGui by populating its namespace directly
@@ -164,7 +164,7 @@ MRVIEWER_API bool DragInputInt( const char* label, int* value, float speed = 1, 
  * \brief Draw text as link, calls callback on click
  * \details Draw text as link, colored with blue, calls callback on click
  */
-MRVIEWER_API bool Link( const char* label, std::optional<uint32_t> color = {} );
+MRVIEWER_API bool Link( const char* label, uint32_t color = MR::Color( 60, 120, 255 ).getUInt32() );
 
 /// return struct of ImGui::Palette \n
 /// values are bits

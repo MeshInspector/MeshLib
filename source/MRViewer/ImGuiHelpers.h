@@ -164,7 +164,7 @@ MRVIEWER_API bool DragInputInt( const char* label, int* value, float speed = 1, 
  * \brief Draw text as link, calls callback on click
  * \details Draw text as link, colored with blue, calls callback on click
  */
-MRVIEWER_API bool Link( const char* label );
+MRVIEWER_API bool Link( const char* label, std::optional<uint32_t> color = {} );
 
 /// return struct of ImGui::Palette \n
 /// values are bits

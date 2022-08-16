@@ -474,6 +474,7 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     {
         std::function<bool( float )> callbackFn{};
         std::istream* stream;
+        bool wasCanceled{ false };
     } loadData;
     loadData.stream = &in;
 
@@ -496,7 +497,9 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
         LoadData& loadData = *reinterpret_cast<LoadData*>( data );
         auto& stream = *loadData.stream;
         auto pos = stream.tellg();
-        readByBlocks( stream, ( char* )buf, size, loadData.callbackFn, 1u << 12 );
+        loadData.wasCanceled |= !readByBlocks( stream, ( char* )buf, size, loadData.callbackFn, 1u << 12 );
+        if ( loadData.wasCanceled )
+            return 0u;
         return (CTMuint)( stream.tellg() - pos );
     }, &loadData );
 
@@ -504,6 +507,8 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     auto triCount  = ctmGetInteger( context, CTM_TRIANGLE_COUNT );
     auto vertices  = ctmGetFloatArray( context, CTM_VERTICES );
     auto indices   = ctmGetIntegerArray( context, CTM_INDICES );
+    if ( loadData.wasCanceled )
+        return tl::make_unexpected( "Loading canceled" );
     if ( ctmGetError(context) != CTM_NONE )
         return tl::make_unexpected( "Error reading CTM format" );
 

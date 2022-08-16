@@ -461,7 +461,12 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFold
 
     auto resDeser = rootObject->deserializeRecursive( folder, root, progressCb, &modelCounter );
     if ( !resDeser.has_value() )
-        return tl::make_unexpected( "Cannot deserialize: " + resDeser.error());
+    {
+        std::string errorStr = resDeser.error();
+        if ( errorStr != "Loading canceled" )
+            errorStr = "Cannot deserialize: " + errorStr;
+        return tl::make_unexpected( errorStr );
+    }
 
     return rootObject;
 }

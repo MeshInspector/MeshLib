@@ -808,16 +808,19 @@ void ObjectTransformWidget::stopModify_()
 
     passiveMove_();
 
-    auto xf = controlsRoot_->xf();
+    // apply uniform scaling to controls
+    {
+        auto xf = controlsRoot_->xf();
 
-    Matrix3f rotation, scaling;
-    decomposeMatrix3( xf.A, rotation, scaling );
+        Matrix3f rotation, scaling;
+        decomposeMatrix3( xf.A, rotation, scaling );
 
-    Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
-    auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
+        Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
+        auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
 
-    auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( objScale_.trace() / 3.f ), center_ );
-    controlsRoot_->setXf( uniformScale * unscaledXf );
+        auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( objScale_.trace() / 3.f ), center_ );
+        controlsRoot_->setXf( uniformScale * unscaledXf );
+    }
 
     if ( stopModifyCallback_ )
         stopModifyCallback_();

@@ -12,7 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRAffineXfDecompose.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -249,13 +249,13 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
     Matrix3f rotation, scaling;
-    decomposeXf( xf, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling );
 
-    AffineXf3f unscaledXf;
-    unscaledXf.A = rotation;
-    unscaledXf.b = xf.b + xf.A * center_ - rotation * center_;
+    Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
+    auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
+    auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( scaling.trace() / 3.f ), center_ );
+    controlsRoot_->setXf( uniformScale * unscaledXf );
 
-    controlsRoot_->setXf( unscaledXf );
     objScale_ = scaling;
 }
 
@@ -807,6 +807,20 @@ void ObjectTransformWidget::stopModify_()
             obj->setVisible( true );
 
     passiveMove_();
+
+    // apply uniform scaling to controls
+    {
+        auto xf = controlsRoot_->xf();
+
+        Matrix3f rotation, scaling;
+        decomposeMatrix3( xf.A, rotation, scaling );
+
+        Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
+        auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
+
+        auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( objScale_.trace() / 3.f ), center_ );
+        controlsRoot_->setXf( uniformScale * unscaledXf );
+    }
 
     if ( stopModifyCallback_ )
         stopModifyCallback_();

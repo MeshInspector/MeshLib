@@ -261,7 +261,7 @@
     <ClInclude Include="MRXfBasedCache.h" />
     <ClInclude Include="MRPolylineRelax.h" />
     <ClInclude Include="MRRelaxParams.h" />
-    <ClInclude Include="MRAffineXfDecompose.h" />
+    <ClInclude Include="MRMatrix3Decompose.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

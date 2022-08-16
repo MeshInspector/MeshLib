@@ -68,7 +68,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRChangeLabelAction.h"
-#include "MRMesh/MRAffineXfDecompose.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
@@ -1453,7 +1453,7 @@ float ImGuiMenu::drawTransform_()
 
             auto xf = data.xf();
             Matrix3f q, r;
-            decomposeXf( xf, q, r );
+            decomposeMatrix3( xf.A, q, r );
 
             auto euler = ( 180 / PI_F ) * q.toEulerAngles();
             Vector3f scale{ r.x.x, r.y.y, r.z.z };

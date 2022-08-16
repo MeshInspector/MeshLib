@@ -1870,25 +1870,6 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };
-
-    auto getKeyPaddings = [] ( const ShortcutManager::ShortcutKey& key, float scaling )
-    {
-        const auto& style = ImGui::GetStyle();
-        float res = 2 * style.FramePadding.x + 3 * style.ItemInnerSpacing.x;;
-        if ( key.mod & GLFW_MOD_ALT )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-        if ( key.mod & GLFW_MOD_CONTROL )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-        if ( key.mod & GLFW_MOD_SHIFT )
-            res += 2 * style.FramePadding.x + 2 * style.ItemInnerSpacing.x;
-
-        if ( key.key != GLFW_KEY_DELETE )
-            res += 2 * cButtonPadding * scaling;
-
-        return res;
-    };
-
-    const auto columnWidth = ( windowWidth - 2 * style.WindowPadding.x ) / 2;
     
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * scaling );
 

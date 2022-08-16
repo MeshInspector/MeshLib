@@ -789,20 +789,8 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    switch ( activeEditMode_ )
-    {
-    case TranslationMode:
-    case UniformScalingMode:
-    case RotationMode:
+    if ( activeEditMode_ == TranslationMode || activeEditMode_ == RotationMode )
         controlsRoot_->setXf( addXf * controlsRoot_->xf() );
-        break;
-    case ScalingMode:
-    {
-        auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( addXf.A.trace() / 3.f ), center_ );
-        controlsRoot_->setXf( uniformScale * controlsRoot_->xf() );
-    }
-        break;
-    }
     approvedChange_ = false;
 }
 
@@ -819,6 +807,17 @@ void ObjectTransformWidget::stopModify_()
             obj->setVisible( true );
 
     passiveMove_();
+
+    auto xf = controlsRoot_->xf();
+
+    Matrix3f rotation, scaling;
+    decomposeXf( xf, rotation, scaling );
+
+    Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
+    auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
+
+    auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( objScale_.trace() / 3.f ), center_ );
+    controlsRoot_->setXf( uniformScale * unscaledXf );
 
     if ( stopModifyCallback_ )
         stopModifyCallback_();

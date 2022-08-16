@@ -12,7 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRAffineXfDecompose.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -249,7 +249,7 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
     Matrix3f rotation, scaling;
-    decomposeXf( xf, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling );
 
     Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
     auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
@@ -811,7 +811,7 @@ void ObjectTransformWidget::stopModify_()
     auto xf = controlsRoot_->xf();
 
     Matrix3f rotation, scaling;
-    decomposeXf( xf, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling );
 
     Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
     auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;

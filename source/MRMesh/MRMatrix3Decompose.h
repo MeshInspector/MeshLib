@@ -8,9 +8,9 @@ namespace MR
 
 /// Decomposes affine transformation matrix into rotation and scaling matrices
 template <typename T>
-void decomposeXf( const AffineXf3<T>& xf, Matrix3<T>& rotation, Matrix3<T>& scaling )
+void decomposeMatrix3( const Matrix3<T>& m, Matrix3<T>& rotation, Matrix3<T>& scaling )
 {
-    Eigen::HouseholderQR<Eigen::MatrixXf> qr( toEigen( xf.A ) );
+    Eigen::HouseholderQR<Eigen::MatrixXf> qr( toEigen( m ) );
     auto q = fromEigen( Eigen::Matrix3f{ qr.householderQ() } );
     auto r = fromEigen( Eigen::Matrix3f{ qr.matrixQR() } );
 

@@ -25,7 +25,7 @@ jobs:
       - name: Install thirdparty libs
         run: |
           ./scripts/build_thirdparty.sh
-          brew link --overwrite python3
+          brew unlink python@3.10 && brew link python@3.9
           which python3
 
       - name: Build

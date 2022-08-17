@@ -427,7 +427,7 @@ MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Tria
     return res;
 }
 
-MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings )
+MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
 {
     if ( t.empty() )
         return {};
@@ -451,6 +451,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 
     Timer timer("parallel parts");
     // construct mesh parts
+    if ( progressCb && !progressCb( 0.33f ) )
+        return {};
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
     {
         assert( range.begin() + 1 == range.end() );
@@ -500,6 +502,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 
     auto joinSettings = settings;
     joinSettings.region = &borderTris;
+    if ( progressCb && !progressCb( 0.66f ) )
+        return {};
     res = fromDisjointMeshPieces( t, maxVertId, parts, joinSettings );
     if ( settings.region )
         *settings.region = std::move( borderTris );
@@ -807,7 +811,7 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
     return res;
 }
 
-MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )
+MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples, ProgressCallback progressCb )
 {
     MR_TIMER
     const size_t numTri = vertTriples.size() / 3;
@@ -818,7 +822,7 @@ MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples )
     {
         t.push_back( { vertTriples[3*f], vertTriples[3*f+1], vertTriples[3*f+2] } );
     }
-    return fromTriangles( t );
+    return fromTriangles( t, {},  progressCb );
 }
 
 Mesh fromPointTriples( const std::vector<ThreePoints> & posTriples )

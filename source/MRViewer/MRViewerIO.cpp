@@ -139,6 +139,10 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
             auto obj = std::make_shared<ObjectMesh>( std::move( *objectMesh ) );
             result = { obj };
         }
+        else if ( objectMesh.error() == "Loading canceled" )
+        {
+            result = tl::make_unexpected( objectMesh.error() );
+        }
         else
         {
             result = tl::make_unexpected( objectMesh.error() );

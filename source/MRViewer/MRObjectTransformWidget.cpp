@@ -252,9 +252,7 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
     decomposeMatrix3( xf.A, rotation, scaling );
 
     Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
-    auto unscaledXf = AffineXf3f::xfAround( Matrix3f::scale( invScaling ), center_ ) * xf;
-    auto uniformScale = AffineXf3f::xfAround( Matrix3f::scale( scaling.trace() / 3.f ), center_ );
-    controlsRoot_->setXf( uniformScale * unscaledXf );
+    controlsRoot_->setXf( xf * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( scaling.trace() / 3.f ), center_ ) );
 
     objScale_ = scaling;
 }

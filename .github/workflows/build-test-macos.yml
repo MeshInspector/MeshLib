@@ -25,7 +25,7 @@ jobs:
       - name: Install thirdparty libs
         run: |
           echo $PATH
-          brew install python3
+          brew uninstall python3 && brew instll python@3.9
           echo $PATH
           which python3
           brew doctor

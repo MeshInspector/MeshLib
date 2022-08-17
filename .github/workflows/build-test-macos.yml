@@ -23,7 +23,10 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
+        run: |
+          ./scripts/build_thirdparty.sh
+          brew link --overwrite python3
+          which python3
 
       - name: Build
         run: ./scripts/build_source.sh

@@ -18,7 +18,7 @@ IF(APPLE)
  ENDIF()
  # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
  LINK_DIRECTORIES(${HOMEBREW_PREFIX}/lib)
- LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/lib/)
+ LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/)
  set(CPPFLAGS "-I${HOMEBREW_PREFIX}/opt/llvm/include -I${HOMEBREW_PREFIX}/include")
  set(LDFLAGS "-L${HOMEBREW_PREFIX}/opt/llvm/lib -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib")
  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -std=c++20-stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework IOKit") # https://github.com/pybind/pybind11/issues/382
@@ -90,7 +90,7 @@ ELSE()
  include_directories(/usr/include)
 ENDIF() # APPLE
 
-IF(${MR_UBUNTU22})
+IF(${MR_UBUNTU22} OR APPLE)
  SET(PYTHON_VERSION 3.10)
  set(PYTHON_LIB python3.10)
 ELSE()

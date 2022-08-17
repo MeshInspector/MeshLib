@@ -24,10 +24,14 @@ jobs:
 
       - name: Install thirdparty libs
         run: |
-          ./scripts/build_thirdparty.sh
-          brew unlink python@3.10 && brew link python@3.9
-          which python3
+          echo $PATH
+          brew install python@3.9
+          echo $PATH
+          which python3.9
+          python3.9 -m pip install python-config
           ls -al $(python3-config --prefix)/include/python3.9
+
+          ./scripts/build_thirdparty.sh
 
       - name: Build
         run: ./scripts/build_source.sh

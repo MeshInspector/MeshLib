@@ -695,7 +695,7 @@ void RenderMeshObject::updateMeshEdgesBuffer_() const
     BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
     {
         auto ind = 3 * f;
-        if ( f >= meshFacesCount_ )
+        if ( GLuint( f ) >= meshFacesCount_ )
             return;
         if ( !edgePerFace[f].valid() )
         {
@@ -724,7 +724,7 @@ void RenderMeshObject::updateBorderLinesBuffer_() const
             borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
         }
     }
-    borderPointsCount_ = borderHighlightPoints_.size();
+    borderPointsCount_ = GLuint( borderHighlightPoints_.size() );
 }
 
 void RenderMeshObject::updateSelectedEdgesBuffer_() const
@@ -740,7 +740,7 @@ void RenderMeshObject::updateSelectedEdgesBuffer_() const
             selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
         }
     }
-    selectedPointsCount_ = selectedEdgesPoints_.size();
+    selectedPointsCount_ = GLuint( selectedEdgesPoints_.size() );
 }
 
 void RenderMeshObject::resetBuffers_() const

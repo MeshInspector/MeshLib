@@ -89,10 +89,10 @@ private:
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
     // store element counts separately because the buffers could be cleared
-    mutable GLuint meshFacesCount_{ 0 };
-    mutable GLuint meshEdgesCount_{ 0 };
-    mutable GLuint borderPointsCount_{ 0 };
-    mutable GLuint selectedPointsCount_{ 0 };
+    mutable int meshFacesCount_{ 0 };
+    mutable int meshEdgesCount_{ 0 };
+    mutable int borderPointsCount_{ 0 };
+    mutable int selectedPointsCount_{ 0 };
 };
 
 }

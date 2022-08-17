@@ -274,7 +274,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
         color[0], color[1], color[2], color[3] ) );
 
     // positions
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, true );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ );
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
@@ -294,12 +294,12 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, true );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ );
 
     bool needRefreshNormals = bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
-    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals, true );
-    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, true );
-    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, true );
+    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals, memorySavingMode_ );
+    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, memorySavingMode_ );
+    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, memorySavingMode_ );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )
@@ -404,7 +404,7 @@ void RenderMeshObject::bindMeshPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, true );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )

@@ -79,7 +79,7 @@ private:
     void updateBorderLinesBuffer_() const;
     void updateSelectedEdgesBuffer_() const;
 
-    bool memorySavingMode_{ false };
+    bool memorySavingMode_{ true };
     void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL

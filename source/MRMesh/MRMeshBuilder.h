@@ -2,6 +2,7 @@
 
 #include "MRMeshBuilderTypes.h"
 #include "MRMesh.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -34,7 +35,7 @@ namespace MeshBuilder
 /// construct mesh topology from a set of triangles with given ids;
 /// if skippedTris is given then it receives all input triangles not added in the resulting topology
 [[deprecated]] MRMESH_API MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris = nullptr );
-MRMESH_API MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings = {} );
+MRMESH_API MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings = {}, ProgressCallback progressCb = {} );
 
 struct VertDuplication
 {
@@ -56,7 +57,7 @@ MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices(
     const BuildSettings & settings = {} );
 
 // construct mesh topology from vertex-index triples
-MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples );
+MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId>& vertTriples, ProgressCallback progressCb = {} );
 
 // construct mesh from point triples;
 // all coinciding points are given the same VertId in the result

@@ -89,10 +89,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def_readwrite( "vec", &MR::Vector<float, VertId>::vec_ );
 } )
 
+MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
+{
+    return MR::MeshBuilder::fromTriangles( t, s );
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
 {
     m.def( "topologyFromTriangles",
-        (MeshTopology(*)( const Triangulation &, const MeshBuilder::BuildSettings & ))&MR::MeshBuilder::fromTriangles,
+        (MeshTopology(*)( const Triangulation &, const MeshBuilder::BuildSettings & )) &topologyFromTriangles,
         "constructs topology from given triangulation" );
 } )
 

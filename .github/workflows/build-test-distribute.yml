@@ -51,7 +51,7 @@ jobs:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@macos-env
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}

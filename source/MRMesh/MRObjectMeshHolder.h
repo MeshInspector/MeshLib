@@ -194,6 +194,10 @@ protected:
 private:
     /// this is private function to set default colors of this type (ObjectMeshHolder) in constructor only
     void setDefaultColors_();
+
+public:
+    MRMESH_API std::shared_ptr<Mesh> getMesh() const;
+    MRMESH_API const UndirectedEdgeBitSet& getCreases() const;
 };
 
 } // namespace MR

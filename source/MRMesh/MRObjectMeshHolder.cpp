@@ -13,6 +13,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRViewer/MRRenderMeshObject.h"
 #include <filesystem>
 
 namespace MR
@@ -177,6 +178,16 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
     }
 }
 
+const Vector<Vector3f, FaceId>& ObjectMeshHolder::getFacesNormals() const
+{
+    return static_cast< RenderMeshObject* >( renderObj_.get() )->getFacesNormals();
+}
+
+const Vector<TriangleCornerNormals, FaceId>& ObjectMeshHolder::getCornerNormals() const
+{
+    return static_cast< RenderMeshObject* >( renderObj_.get() )->getCornerNormals();
+}
+
 void ObjectMeshHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )
@@ -202,6 +213,16 @@ void ObjectMeshHolder::setDefaultColors_()
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
+}
+
+std::shared_ptr<Mesh> ObjectMeshHolder::getMesh() const
+{
+    return mesh_;
+}
+
+const UndirectedEdgeBitSet& ObjectMeshHolder::getCreases() const
+{
+    return creases_;
 }
 
 ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
@@ -449,26 +470,6 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
     return res;
 }
 
-const Vector<MR::Vector3f, MR::FaceId>& ObjectMeshHolder::getFacesNormals() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if ( dirty_ & DIRTY_FACES_NORMAL )
-    {
-        facesNormalsCache_ = computeFacesNormals_();
-        dirty_ &= ~DIRTY_FACES_NORMAL;
-    }
-    return facesNormalsCache_;
-}
 
-const Vector<MR::TriangleCornerNormals, MR::FaceId>& ObjectMeshHolder::getCornerNormals() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if ( dirty_ & DIRTY_CORNERS_NORMAL )
-    {
-        cornerNormalsCache_ = computeCornerNormals_();
-        dirty_ &= ~DIRTY_CORNERS_NORMAL;
-    }
-    return cornerNormalsCache_;
-}
 
 } //namespace MR

@@ -13,6 +13,9 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
+#include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRObjectMeshHolder.h"
+
 namespace MR
 {
 
@@ -186,6 +189,28 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( selectedEdgesPoints_ )
         + cornerNormalsCache_.heapBytes()
         + facesNormalsCache_.heapBytes();
+}
+
+const Vector<Vector3f, FaceId>& RenderMeshObject::getFacesNormals() const
+{
+    std::unique_lock lock( readCacheMutex_ );
+    if ( dirty_ & DIRTY_FACES_NORMAL )
+    {
+        facesNormalsCache_ = computeFacesNormals_();
+        dirty_ &= ~DIRTY_FACES_NORMAL;
+    }
+    return facesNormalsCache_;
+}
+
+const Vector<TriangleCornerNormals, FaceId>& RenderMeshObject::getCornerNormals() const
+{
+    std::unique_lock lock( readCacheMutex_ );
+    if ( dirty_ & DIRTY_CORNERS_NORMAL )
+    {
+        cornerNormalsCache_ = computeCornerNormals_();
+        dirty_ &= ~DIRTY_CORNERS_NORMAL;
+    }
+    return cornerNormalsCache_;
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
@@ -692,18 +717,20 @@ void RenderMeshObject::update_( ViewportId id ) const
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-Vector<MR::Vector3f, MR::FaceId> RenderMeshObject::computeFacesNormals_() const
+Vector<Vector3f, FaceId> RenderMeshObject::computeFacesNormals_() const
 {
-    if ( !objMesh_ )
+    if ( !objMesh_ || !objMesh_->getMesh() )
         return {};
-    return computePerFaceNormals( *mesh_ );
+    return computePerFaceNormals( *( objMesh_->getMesh() ) );
 }
 
-Vector<MR::TriangleCornerNormals, MR::FaceId> RenderMeshObject::computeCornerNormals_() const
+Vector<TriangleCornerNormals, FaceId> RenderMeshObject::computeCornerNormals_() const
 {
-    if ( !mesh_ )
+    if ( !objMesh_ || !objMesh_->getMesh() )
         return {};
-    return computePerCornerNormals( *mesh_, creases_.any() ? &creases_ : nullptr );
+
+    const auto& creases = objMesh_->getCreases();
+    return computePerCornerNormals( *( objMesh_->getMesh() ), creases.any() ? &creases : nullptr );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRMeshNormals.h"
 
 namespace MR
 {
@@ -14,9 +15,12 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const override;
     virtual size_t heapBytes() const override;
 
+    virtual const Vector<Vector3f, FaceId>& getFacesNormals() const;
+    virtual const Vector<TriangleCornerNormals, FaceId>& getCornerNormals() const;
+
 private:
     const ObjectMeshHolder* objMesh_;
-
+    mutable std::mutex readCacheMutex_;
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
     mutable std::vector<Vector3f> vertPosBufferObj_;
     mutable std::vector<Vector3f> vertNormalsBufferObj_;

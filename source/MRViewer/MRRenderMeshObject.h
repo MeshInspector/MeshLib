@@ -89,6 +89,10 @@ private:
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
     // store element counts separately because the buffers could be cleared
+    mutable size_t vertsCount_{ 0 };
+    mutable size_t vertNormalsCount_{ 0 };
+    mutable size_t vertColorsCount_{ 0 };
+    mutable size_t vertUVCount_{ 0 };
     mutable int meshFacesCount_{ 0 };
     mutable int meshEdgesCount_{ 0 };
     mutable int borderPointsCount_{ 0 };

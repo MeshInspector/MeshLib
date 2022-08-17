@@ -13,7 +13,7 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
-#define RESET_VECTOR( v ) std::remove_cvref_t<decltype( v )>().swap( v )
+#define RESET_VECTOR( v ) v = decltype( v ){}
 
 namespace MR
 {

@@ -202,7 +202,7 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( selectedEdgesPoints_ );
 }
 
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, std::vector<Vector3f>& data,
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
     GLuint count, const Color& colorChar, unsigned dirtyValue ) const
 {
     // Send lines data to GL, install lines properties

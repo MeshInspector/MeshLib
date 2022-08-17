@@ -58,7 +58,7 @@ private:
 
     GLuint facesNormalsTex_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, std::vector<Vector3f>& data,
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
         GLuint count, const Color& color, unsigned dirtyValue ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;

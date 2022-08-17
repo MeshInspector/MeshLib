@@ -27,6 +27,7 @@ jobs:
           ./scripts/build_thirdparty.sh
           brew unlink python@3.10 && brew link python@3.9
           which python3
+          ls -al $(python3-config --prefix)/include/python3.9
 
       - name: Build
         run: ./scripts/build_source.sh

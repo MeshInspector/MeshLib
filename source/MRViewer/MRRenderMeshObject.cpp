@@ -205,6 +205,9 @@ size_t RenderMeshObject::heapBytes() const
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
     GLuint count, const Color& colorChar, unsigned dirtyValue ) const
 {
+    if ( !count )
+        return;
+
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( vao ) );
 

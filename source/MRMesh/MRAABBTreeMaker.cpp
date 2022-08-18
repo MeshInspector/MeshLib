@@ -161,11 +161,11 @@ TEST(MRMesh, TBBTask)
     group.run( [mainThreadId, &sameThread]
     { 
         const auto taskThreadId = std::this_thread::get_id();
-        //spdlog::info( "Task in thread {%d}", taskThreadId );
+        spdlog::info( "Task in thread {}", taskThreadId );
         sameThread = mainThreadId == taskThreadId;
     } );
 
-    //spdlog::info( "Main in thread {}", mainThreadId );
+    spdlog::info( "Main in thread {}", mainThreadId );
     using namespace std::chrono_literals;
     std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
     group.wait();

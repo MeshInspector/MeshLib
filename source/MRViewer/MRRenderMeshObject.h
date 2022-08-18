@@ -14,6 +14,9 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const override;
     virtual size_t heapBytes() const override;
 
+    bool getMemorySavingMode() const { return memorySavingMode_; }
+    void setMemorySavingMode( bool mode ) { memorySavingMode_ = mode; }
+
 private:
     const ObjectMeshHolder* objMesh_;
 
@@ -56,7 +59,7 @@ private:
     GLuint facesNormalsTex_{ 0 };
 
     void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
-        const Color& color, unsigned dirtyValue ) const;
+        GLuint count, const Color& color, unsigned dirtyValue ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
 
@@ -72,12 +75,28 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
+    void updateMeshEdgesBuffer_() const;
+    void updateBorderLinesBuffer_() const;
+    void updateSelectedEdgesBuffer_() const;
+
+    bool memorySavingMode_{ true };
+    void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
+    mutable bool meshFacesDirty_{ false };
     mutable bool meshEdgesDirty_{ false };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
+    // store element counts separately because the buffers could be cleared
+    mutable size_t vertsCount_{ 0 };
+    mutable size_t vertNormalsCount_{ 0 };
+    mutable size_t vertColorsCount_{ 0 };
+    mutable size_t vertUVCount_{ 0 };
+    mutable int meshFacesCount_{ 0 };
+    mutable int meshEdgesCount_{ 0 };
+    mutable int borderPointsCount_{ 0 };
+    mutable int selectedPointsCount_{ 0 };
 };
 
 }

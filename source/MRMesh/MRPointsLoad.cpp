@@ -169,14 +169,10 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
-            continue;
-        }
-
-        if ( callback && !( i & 0x3FF ) )
-        {
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
+            if ( callback && !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
+            continue;
         }
     }
 

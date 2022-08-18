@@ -12,6 +12,7 @@
 #include "OpenCTM/openctm.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
+#include "MRViewer/MRProgressBar.h"
 #include <array>
 #include <future>
 
@@ -392,8 +393,13 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
+            const float progress = float( in.tellg() - posStart ) / streamSize;
+            if ( callback && !callback( progress ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
             continue;
         }
+
+        const auto posLast = in.tellg();
         if ( reader.element_is(miniply::kPLYFaceElement) && reader.load_element() && reader.find_indices(indecies) )
         {
             bool polys = reader.requires_triangulation( indecies[0] );
@@ -413,15 +419,23 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
                 vertTriples.resize( numIndices );
                 reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &vertTriples.front() );
             }
-            res.topology = MeshBuilder::fromVertexTriples( vertTriples );
-            gotFaces = true;
-        }
-
-        if ( callback && !(i & 0x3FF) )
-        {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
+            const auto posCurent = in.tellg();
+            // suppose  that reading is 10% of progress and building mesh is 90% of progress
+            float progress = ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize;
+            if ( callback && !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
+            bool isCanceled = false;
+            ProgressCallback partedProgressCb = callback ? [callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )
+            {
+                const bool res = callback( ( float( posLast ) + ( posCurent - posLast ) * ( 0.1f + v * 0.9f ) - posStart ) / streamSize );
+                isCanceled |= !res;
+                return res;
+            } : callback;
+            res.topology = MeshBuilder::fromVertexTriples( vertTriples, partedProgressCb );
+            progress = float( posCurent - posStart ) / streamSize;
+            if ( callback && ( !callback( progress ) || isCanceled ) )
+                return tl::make_unexpected( std::string( "Loading canceled" ) );
+            gotFaces = true;
         }
     }
 

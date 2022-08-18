@@ -102,7 +102,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
  fi
  cd Release
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
+    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.10.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.10 | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
@@ -125,7 +125,7 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  fi
  cd Debug
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.9.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.9 | tee ${logfile}
+    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.10.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.10 | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}

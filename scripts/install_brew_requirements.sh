@@ -13,6 +13,8 @@ done
 
 brew bundle install --file=requirements/Brewfile
 
+brew install pybind11
+
 # check and upgrade python3 pip
 python3 -m ensurepip --upgrade
 python3 -m pip install --upgrade pip

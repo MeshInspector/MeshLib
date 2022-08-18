@@ -763,7 +763,8 @@ void RenderMeshObject::updateSelectedEdgesBuffer_() const
 void RenderMeshObject::resetBuffers_() const
 {
     RESET_VECTOR( vertPosBufferObj_ );
-    RESET_VECTOR( vertNormalsBufferObj_ );
+    if ( normalsBound_ )
+        RESET_VECTOR( vertNormalsBufferObj_ );
     RESET_VECTOR( vertColorsBufferObj_ );
     RESET_VECTOR( vertUVBufferObj_ );
     RESET_VECTOR( facesIndicesBufferObj_ );

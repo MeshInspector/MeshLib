@@ -134,12 +134,14 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         if ( dirty_ & DIRTY_BORDER_LINES )
             updateBorderLinesBuffer_();
         renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+        dirty_ &= ~DIRTY_BORDER_LINES;
     }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
     {
         if ( dirty_ & DIRTY_EDGES_SELECTION )
             updateSelectedEdgesBuffer_();
         renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+        dirty_ &= ~DIRTY_EDGES_SELECTION;
     }
 
     if ( renderParams.alphaSort )
@@ -645,18 +647,25 @@ void RenderMeshObject::update_( ViewportId id ) const
     {
         assert( uvCoords.size() >= numV );
     }
-    if ( dirty_ & DIRTY_UV && uvCoords.size() >= numV )
+    if ( dirty_ & DIRTY_UV )
     {
-        vertUVBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        if ( uvCoords.size() >= numV )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                vertUVBufferObj_[ind + i] = uvCoords[v[i]];
-        } );
-        vertUVCount_ = vertUVBufferObj_.size();
+            vertUVBufferObj_.resize( 3 * numF );
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    vertUVBufferObj_[ind + i] = uvCoords[v[i]];
+            } );
+            vertUVCount_ = vertUVBufferObj_.size();
+        }
+        else
+        {
+            vertUVCount_ = 0;
+        }
     }
 
     if ( dirty_ & DIRTY_SELECTION )
@@ -754,7 +763,8 @@ void RenderMeshObject::updateSelectedEdgesBuffer_() const
 void RenderMeshObject::resetBuffers_() const
 {
     RESET_VECTOR( vertPosBufferObj_ );
-    RESET_VECTOR( vertNormalsBufferObj_ );
+    if ( normalsBound_ )
+        RESET_VECTOR( vertNormalsBufferObj_ );
     RESET_VECTOR( vertColorsBufferObj_ );
     RESET_VECTOR( vertUVBufferObj_ );
     RESET_VECTOR( facesIndicesBufferObj_ );

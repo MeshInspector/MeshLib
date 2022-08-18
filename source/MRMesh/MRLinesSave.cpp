@@ -3,6 +3,7 @@
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
+#include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include <fstream>
 
@@ -14,7 +15,8 @@ namespace LinesSave
 
 const IOFilters Filters =
 {
-    {"MrLines (.mrlines)", "*.mrlines"}
+    {"MrLines (.mrlines)", "*.mrlines"},
+    {"PTS (.pts)",        "*.pts"}
 };
 
 tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
@@ -49,6 +51,44 @@ tl::expected<void, std::string> toMrLines( const Polyline3& polyline, std::ostre
     return {};
 }
 
+tl::expected<void, std::string> toPts( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toPts( polyline, out, callback );
+}
+
+tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+{
+    float pointsNum{ 0.f };
+    auto contours = polyline.contours();
+    for ( const auto& contour : contours )
+        pointsNum += contour.size();
+
+    int pointIndex = 0;
+    for ( const auto& contour : contours )
+    {
+        out << "BEGIN_Polyline\n";
+        for ( auto p : contour )
+        {
+            out << p << "\n";
+            ++pointIndex;
+            if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
+        }
+        out << "END_Polyline\n";
+    }
+
+    if ( !out )
+        return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
+
+    if ( callback )
+        callback( 1.f );
+    return {};
+}
+
 tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
@@ -58,6 +98,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline,
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == u8".mrlines" )
         res = toMrLines( polyline, file, callback );
+    if ( ext == u8".pts" )
+        res = toPts( polyline, file, callback );
     return res;
 }
 
@@ -70,6 +112,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline,
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = toMrLines( polyline, out, callback );
+    if ( ext == ".pts" )
+        res = toPts( polyline, out, callback );
     return res;
 }
 

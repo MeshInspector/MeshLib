@@ -8,6 +8,11 @@
 #include <stack>
 #include <thread>
 
+
+#if FMT_VERSION >= 90000
+    template <> struct fmt::formatter<std::thread::id> : ostream_formatter{};
+#endif
+
 namespace MR
 {
 

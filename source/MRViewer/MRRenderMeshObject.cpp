@@ -134,12 +134,14 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         if ( dirty_ & DIRTY_BORDER_LINES )
             updateBorderLinesBuffer_();
         renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+        dirty_ &= ~DIRTY_BORDER_LINES;
     }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
     {
         if ( dirty_ & DIRTY_EDGES_SELECTION )
             updateSelectedEdgesBuffer_();
         renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+        dirty_ &= ~DIRTY_EDGES_SELECTION;
     }
 
     if ( renderParams.alphaSort )

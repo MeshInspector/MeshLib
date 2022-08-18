@@ -23,9 +23,7 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: |
-          ls -al $(python3-config --prefix)/include/python3.10
-          ./scripts/build_thirdparty.sh
+        run: ./scripts/build_thirdparty.sh
 
       - name: Build
         run: ./scripts/build_source.sh

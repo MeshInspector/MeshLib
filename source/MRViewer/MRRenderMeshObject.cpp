@@ -645,18 +645,25 @@ void RenderMeshObject::update_( ViewportId id ) const
     {
         assert( uvCoords.size() >= numV );
     }
-    if ( dirty_ & DIRTY_UV && uvCoords.size() >= numV )
+    if ( dirty_ & DIRTY_UV )
     {
-        vertUVBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        if ( uvCoords.size() >= numV )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                vertUVBufferObj_[ind + i] = uvCoords[v[i]];
-        } );
-        vertUVCount_ = vertUVBufferObj_.size();
+            vertUVBufferObj_.resize( 3 * numF );
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    vertUVBufferObj_[ind + i] = uvCoords[v[i]];
+            } );
+            vertUVCount_ = vertUVBufferObj_.size();
+        }
+        else
+        {
+            vertUVCount_ = 0;
+        }
     }
 
     if ( dirty_ & DIRTY_SELECTION )

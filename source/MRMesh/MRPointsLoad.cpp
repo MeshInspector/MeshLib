@@ -208,7 +208,7 @@ tl::expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& 
 tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in, ProgressCallback callback )
 {
     std::string line;
-    int i = 0;
+    int pointCount = 0;
     PointCloud cloud;
 
     const auto posStart = in.tellg();
@@ -217,36 +217,48 @@ tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in, ProgressCal
     in.seekg( posStart );
     const float streamSize = float( posEnd - posStart );
 
+    bool isPolylineBlock{ false };
+
     while ( std::getline( in, line ) )
     {
-        line.erase( std::find_if( line.rbegin(), line.rend(), [] ( unsigned char ch ) { return !std::isspace( ch ); } ).base(), line.end() ); 
-        if ( i == 0 )
+        line.erase( std::find_if( line.rbegin(), line.rend(), [] ( unsigned char ch )
+        {
+            return !std::isspace( ch );
+        } ).base(), line.end() );
+        if ( !isPolylineBlock )
         {
             if ( line != "BEGIN_Polyline" )
                 return tl::make_unexpected( "Not valid .pts format" );
             else
             {
-                ++i;
+                isPolylineBlock = true;
                 continue;
             }
         }
-        if ( line == "END_Polyline" )
-            break;
+        else if ( line == "END_Polyline" )
+        {
+            isPolylineBlock = false;
+            continue;
+        }
+
         std::istringstream iss( line );
         Vector3f point;
         if ( !( iss >> point ) )
             return tl::make_unexpected( "Not valid .pts format" );
         cloud.points.push_back( point );
-        ++i;
+        ++pointCount;
 
-        if ( callback && !( i & 0x3FF ) )
+        if ( callback && !( pointCount & 0x3FF ) )
         {
             const float progress = float( in.tellg() - posStart ) / streamSize;
             if ( !callback( progress ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
         }
     }
-    cloud.validPoints.resize( i - 1, true );
+    if ( isPolylineBlock )
+        return tl::make_unexpected( "Not valid .pts format" );
+
+    cloud.validPoints.resize( pointCount, true );
     return std::move( cloud );
 }
 

@@ -62,7 +62,6 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, const std::fil
 
 tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
 {
-    out << "BEGIN_Polyline\n";
     float pointsNum{ 0.f };
     auto contours = polyline.contours();
     for ( const auto& contour : contours )
@@ -71,6 +70,7 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& 
     int pointIndex = 0;
     for ( const auto& contour : contours )
     {
+        out << "BEGIN_Polyline\n";
         for ( auto p : contour )
         {
             out << p << "\n";
@@ -78,8 +78,8 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& 
             if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
                 return tl::make_unexpected( std::string( "Saving canceled" ) );
         }
+        out << "END_Polyline\n";
     }
-    out << "END_Polyline\n";
 
     if ( !out )
         return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );

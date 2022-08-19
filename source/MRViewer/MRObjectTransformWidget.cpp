@@ -275,6 +275,8 @@ bool ObjectTransformWidget::onMouseDown_( Viewer::MouseButton button, int )
         return false;
     if ( !controlsRoot_ )
         return false;
+    if ( !controlsRoot_->globalVisibilty( getViewerInstance().getHoveredViewportId() ) )
+        return false;
 
     if ( startModifyCallback_ )
         startModifyCallback_();
@@ -302,6 +304,8 @@ bool ObjectTransformWidget::onMouseUp_( Viewer::MouseButton button, int )
 bool ObjectTransformWidget::onMouseMove_( int, int )
 {
     if ( !controlsRoot_ )
+        return false;
+    if ( !controlsRoot_->globalVisibilty( getViewerInstance().getHoveredViewportId() ) )
         return false;
     if ( picked_ )
         activeMove_();

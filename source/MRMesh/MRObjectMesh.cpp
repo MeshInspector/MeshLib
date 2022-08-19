@@ -3,6 +3,8 @@
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRMeshIntersect.h"
+#include "MRStringConvert.h"
+#include "MRAABBTree.h"
 #include "MRLine3.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
@@ -76,6 +78,9 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         res.push_back( "area: " + std::to_string( totalArea() ) );
 
         boundingBoxToInfoLines_( res );
+
+        if ( auto tree = mesh_->getAABBTreeNotCreate() )
+            res.push_back( "AABB tree: " + bytesString( tree->heapBytes() ) );
     }
     else
         res.push_back( "no mesh" );

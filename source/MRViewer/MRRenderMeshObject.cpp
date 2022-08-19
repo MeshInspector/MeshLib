@@ -563,7 +563,8 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_corners_normals" )
-        const auto& cornerNormals = objMesh_->getCornerNormals();
+        const auto& creases = objMesh_->creases();
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
         vertNormalsBufferObj_.resize( 3 * numF );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
@@ -595,7 +596,7 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_faces_normals" )
-        const auto& faceNormals = objMesh_->getFacesNormals();
+        const auto faceNormals = computePerFaceNormals( *mesh );
         faceNormalsTexture_.resize( faceNormals.size() );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {

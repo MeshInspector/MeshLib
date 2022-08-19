@@ -152,20 +152,6 @@ Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
     return computePerVertNormals( *mesh_ );
 }
 
-Vector<MR::Vector3f, MR::FaceId> ObjectMeshHolder::computeFacesNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerFaceNormals( *mesh_ );
-}
-
-Vector<MR::TriangleCornerNormals, MR::FaceId> ObjectMeshHolder::computeCornerNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerCornerNormals( *mesh_, creases_.any() ? &creases_ : nullptr );
-}
-
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )
@@ -394,8 +380,6 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
-        + cornerNormalsCache_.heapBytes()
-        + facesNormalsCache_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }
@@ -461,28 +445,6 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
     for ( int i = 0; i < res.size(); ++i )
         res[i] = getVisualizePropertyMask( unsigned( i ) );
     return res;
-}
-
-const Vector<MR::Vector3f, MR::FaceId>& ObjectMeshHolder::getFacesNormals() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if ( dirty_ & DIRTY_FACES_NORMAL )
-    {
-        facesNormalsCache_ = computeFacesNormals_();
-        dirty_ &= ~DIRTY_FACES_NORMAL;
-    }
-    return facesNormalsCache_;
-}
-
-const Vector<MR::TriangleCornerNormals, MR::FaceId>& ObjectMeshHolder::getCornerNormals() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if ( dirty_ & DIRTY_CORNERS_NORMAL )
-    {
-        cornerNormalsCache_ = computeCornerNormals_();
-        dirty_ &= ~DIRTY_CORNERS_NORMAL;
-    }
-    return cornerNormalsCache_;
 }
 
 } //namespace MR

@@ -58,6 +58,9 @@ public:
 
     /// returns cached aabb-tree for this polyline, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePolyline<V>& getAABBTree() const;
+    /// returns cached aabb-tree for this polyline, but does not create it if it did not exist
+    const AABBTreePolyline<V> * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
+
     /// returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box<V> getBoundingBox() const;
     /// passes through all valid points and finds the minimal bounding box containing all of them

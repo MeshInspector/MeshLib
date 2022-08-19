@@ -26,6 +26,8 @@ public:
 
     /// deletes owned object
     MRMESH_API void reset();
+    /// returns existing owned object and does not create new one
+    const T * get() { return obj_.get(); }
     /// returns existing owned object or creates new one using creator function
     MRMESH_API const T & getOrCreate( const std::function<T()> & creator );
     /// returns the amount of memory this object occupies on heap

@@ -13,9 +13,6 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
-#include "MRMesh/MRVisualObject.h"
-#include "MRMesh/MRObjectMeshHolder.h"
-
 #define RESET_VECTOR( v ) v = decltype( v ){}
 
 namespace MR
@@ -207,28 +204,6 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( selectedEdgesPoints_ )
         + cornerNormalsCache_.heapBytes()
         + facesNormalsCache_.heapBytes();
-}
-
-const Vector<Vector3f, FaceId>& RenderMeshObject::getFacesNormals() const
-{
-    std::unique_lock lock( readCacheMutex_ );
-    if ( dirty_ & DIRTY_FACES_NORMAL )
-    {
-        facesNormalsCache_ = computeFacesNormals_();
-        dirty_ &= ~DIRTY_FACES_NORMAL;
-    }
-    return facesNormalsCache_;
-}
-
-const Vector<TriangleCornerNormals, FaceId>& RenderMeshObject::getCornerNormals() const
-{
-    std::unique_lock lock( readCacheMutex_ );
-    if ( dirty_ & DIRTY_CORNERS_NORMAL )
-    {
-        cornerNormalsCache_ = computeCornerNormals_();
-        dirty_ &= ~DIRTY_CORNERS_NORMAL;
-    }
-    return cornerNormalsCache_;
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
@@ -590,12 +565,16 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_corners_normals" )
-        const auto& cornerNormals = objMesh_->getCornerNormals();
+        if ( dirty_ & DIRTY_CORNERS_NORMAL )
+        {
+            cornerNormalsCache_ = computeCornerNormals_();
+            dirty_ &= ~DIRTY_CORNERS_NORMAL;
+        }
         vertNormalsBufferObj_.resize( 3 * numF );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
             auto ind = 3 * f;
-            const auto& cornerN = cornerNormals[f];
+            const auto& cornerN = cornerNormalsCache_[f];
             for ( int i = 0; i < 3; ++i )
                 vertNormalsBufferObj_[ind + i] = cornerN[i];
         } );
@@ -622,11 +601,15 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_faces_normals" )
-        const auto& faceNormals = objMesh_->getFacesNormals();
-        faceNormalsTexture_.resize( faceNormals.size() );
+        if ( dirty_ & DIRTY_FACES_NORMAL )
+        {
+            facesNormalsCache_ = computeFacesNormals_();
+            dirty_ &= ~DIRTY_FACES_NORMAL;
+        }
+        faceNormalsTexture_.resize( facesNormalsCache_.size() );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
-            const auto& norm = faceNormals[f];
+            const auto& norm = facesNormalsCache_[f];
             faceNormalsTexture_[f] = Vector4f{ norm.x,norm.y,norm.z,1.0f };
         } );
     }
@@ -804,18 +787,15 @@ void RenderMeshObject::resetBuffers_() const
 
 Vector<Vector3f, FaceId> RenderMeshObject::computeFacesNormals_() const
 {
-    if ( !objMesh_ || !objMesh_->getMesh() )
-        return {};
-    return computePerFaceNormals( *( objMesh_->getMesh() ) );
+    const auto& mesh = objMesh_->mesh();
+    return computePerFaceNormals( *mesh );
 }
 
 Vector<TriangleCornerNormals, FaceId> RenderMeshObject::computeCornerNormals_() const
 {
-    if ( !objMesh_ || !objMesh_->getMesh() )
-        return {};
-
-    const auto& creases = objMesh_->getCreases();
-    return computePerCornerNormals( *( objMesh_->getMesh() ), creases.any() ? &creases : nullptr );
+    const auto& mesh = objMesh_->mesh();
+    const auto& creases = objMesh_->creases();
+    return computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

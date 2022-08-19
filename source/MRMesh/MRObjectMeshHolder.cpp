@@ -13,7 +13,6 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRViewer/MRRenderMeshObject.h"
 #include <filesystem>
 
 namespace MR
@@ -153,8 +152,6 @@ Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
     return computePerVertNormals( *mesh_ );
 }
 
-
-
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )
@@ -176,16 +173,6 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
     default:
         return VisualObject::getVisualizePropertyMask( type );
     }
-}
-
-const Vector<Vector3f, FaceId>& ObjectMeshHolder::getFacesNormals() const
-{
-    return static_cast< RenderMeshObject* >( renderObj_.get() )->getFacesNormals();
-}
-
-const Vector<TriangleCornerNormals, FaceId>& ObjectMeshHolder::getCornerNormals() const
-{
-    return static_cast< RenderMeshObject* >( renderObj_.get() )->getCornerNormals();
 }
 
 void ObjectMeshHolder::setupRenderObject_() const
@@ -213,16 +200,6 @@ void ObjectMeshHolder::setDefaultColors_()
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
-}
-
-std::shared_ptr<Mesh> ObjectMeshHolder::getMesh() const
-{
-    return mesh_;
-}
-
-const UndirectedEdgeBitSet& ObjectMeshHolder::getCreases() const
-{
-    return creases_;
 }
 
 ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
@@ -402,7 +379,7 @@ size_t ObjectMeshHolder::heapBytes() const
     return VisualObject::heapBytes()
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
-        + creases_.heapBytes()      
+        + creases_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }
@@ -469,7 +446,5 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
         res[i] = getVisualizePropertyMask( unsigned( i ) );
     return res;
 }
-
-
 
 } //namespace MR

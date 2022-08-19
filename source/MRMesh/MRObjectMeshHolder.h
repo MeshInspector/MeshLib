@@ -80,9 +80,6 @@ public:
     /// returns mask of viewports where given property is set
     MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
 
-    MRMESH_API const Vector<Vector3f, FaceId>& getFacesNormals() const;
-    MRMESH_API const Vector<TriangleCornerNormals, FaceId>& getCornerNormals() const;
-
     const Vector<Color, FaceId>& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( Vector<Color, FaceId> facesColorMap )
     { facesColorMap_ = std::move( facesColorMap ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
@@ -136,8 +133,6 @@ protected:
     UndirectedEdgeBitSet selectedEdges_;
     UndirectedEdgeBitSet creases_;
 
-
-
     struct MeshStat
     {
         size_t numComponents = 0;
@@ -168,7 +163,6 @@ protected:
 
     MRMESH_API virtual Vector<Vector3f, VertId> computeVertsNormals_() const override;
 
-
     MRMESH_API virtual void setupRenderObject_() const override;
 
     MRMESH_API virtual void updateMeshStat_() const;
@@ -194,10 +188,6 @@ protected:
 private:
     /// this is private function to set default colors of this type (ObjectMeshHolder) in constructor only
     void setDefaultColors_();
-
-public:
-    MRMESH_API std::shared_ptr<Mesh> getMesh() const;
-    MRMESH_API const UndirectedEdgeBitSet& getCreases() const;
 };
 
 } // namespace MR

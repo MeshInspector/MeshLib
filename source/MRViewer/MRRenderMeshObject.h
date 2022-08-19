@@ -17,13 +17,10 @@ public:
 
     bool getMemorySavingMode() const { return memorySavingMode_; }
     void setMemorySavingMode( bool mode ) { memorySavingMode_ = mode; }
-    
-    virtual const Vector<Vector3f, FaceId>& getFacesNormals() const;
-    virtual const Vector<TriangleCornerNormals, FaceId>& getCornerNormals() const;
 
 private:
     const ObjectMeshHolder* objMesh_;
-    mutable std::mutex readCacheMutex_;
+
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
     mutable std::vector<Vector3f> vertPosBufferObj_;
     mutable std::vector<Vector3f> vertNormalsBufferObj_;
@@ -35,8 +32,6 @@ private:
     mutable std::vector<Vector4f> faceNormalsTexture_;
     mutable std::vector<Vector3f> borderHighlightPoints_;
     mutable std::vector<Vector3f> selectedEdgesPoints_;
-    mutable Vector<TriangleCornerNormals, FaceId> cornerNormalsCache_;
-    mutable Vector<Vector3f, FaceId> facesNormalsCache_;
 
     typedef unsigned int GLuint;
 
@@ -88,8 +83,11 @@ private:
     bool memorySavingMode_{ true };
     void resetBuffers_() const;
 
-    virtual Vector<Vector3f, FaceId> computeFacesNormals_() const;
-    virtual Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
+    mutable Vector<TriangleCornerNormals, FaceId> cornerNormalsCache_;
+    mutable Vector<Vector3f, FaceId> facesNormalsCache_;
+
+    Vector<Vector3f, FaceId> computeFacesNormals_() const;
+    Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;

@@ -47,7 +47,7 @@ static VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
 
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyContructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
 
     const AABBTree & tree = mp.mesh.getAABBTree();

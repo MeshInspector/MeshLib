@@ -16,7 +16,8 @@ namespace LinesSave
 const IOFilters Filters =
 {
     {"MrLines (.mrlines)", "*.mrlines"},
-    {"PTS (.pts)",        "*.pts"}
+    {"PTS (.pts)", "*.pts"},
+    {"Drawing exchange format (.dxf)", "*.dxf"}
 };
 
 tl::expected<void, std::string> toMrLines( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
@@ -89,6 +90,58 @@ tl::expected<void, std::string> toPts( const Polyline3& polyline, std::ostream& 
     return {};
 }
 
+tl::expected<void, std::string> toDxf( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toDxf( polyline, out, callback );
+}
+
+tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& out, ProgressCallback callback )
+{
+    out << "0\nSECTION\n";
+    out << "2\nENTITIES\n";
+
+    float pointsNum{ 0.f };
+    auto contours = polyline.contours();
+    for ( const auto& contour : contours )
+        pointsNum += contour.size();
+
+    int pointIndex = 0;
+    for ( const auto& contour : contours )
+    {
+        out << "0\nPOLYLINE\n";
+        out << "8\nPolyline\n";
+        int flags = 8;
+        if ( contour[0] == contour.back() )
+            flags += 1;
+        out << "70\n" << flags << "\n";
+        for ( auto p : contour )
+        {
+            out << "0\nVERTEX\n";
+            out << "8\nPolyline\n";
+            out << "70\n32\n";
+            out << "10\n" << p.x << "\n";
+            out << "20\n" << p.y << "\n";
+            out << "30\n" << p.z << "\n";
+            ++pointIndex;
+            if ( callback && !( pointIndex & 0x3FF ) && !callback( float( pointIndex ) / pointsNum ) )
+                return tl::make_unexpected( std::string( "Saving canceled" ) );
+        }
+        out << "0\nSEQEND\n";
+    }
+
+    out << "2\nENDSEC\n";
+    out << "0\nEOF\n";
+
+    if ( !out )
+        return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
+
+    return {};
+}
+
 tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
     auto ext = file.extension().u8string();
@@ -100,6 +153,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline,
         res = toMrLines( polyline, file, callback );
     if ( ext == u8".pts" )
         res = toPts( polyline, file, callback );
+    if ( ext == u8".dxf" )
+        res = toDxf( polyline, file, callback );
     return res;
 }
 
@@ -114,6 +169,8 @@ tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline,
         res = toMrLines( polyline, out, callback );
     if ( ext == ".pts" )
         res = toPts( polyline, out, callback );
+    if ( ext == ".dxf" )
+        res = toDxf( polyline, out, callback );
     return res;
 }
 

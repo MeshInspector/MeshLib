@@ -20,7 +20,10 @@ public:
     VertBitSet validPoints;
 
     /// returns cached aabb-tree for this point cloud, creating it if it did not exist in a thread-safe manner
-    const AABBTreePoints& getAABBTree() const;
+    MRMESH_API const AABBTreePoints& getAABBTree() const;
+    /// returns cached aabb-tree for this point cloud, but does not create it if it did not exist
+    const AABBTreePoints * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
+
     /// returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     MRMESH_API Box3f getBoundingBox() const;
     /// passes through all valid points and finds the minimal bounding box containing all of them;

@@ -224,6 +224,8 @@ struct [[nodiscard]] Mesh
 
     // returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;
+    /// returns cached aabb-tree for this mesh, but does not create it if it did not exist
+    const AABBTree * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
     // Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology
     MRMESH_API void invalidateCaches();

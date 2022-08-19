@@ -330,12 +330,11 @@ void PolylineTopology::addPartByMask( const PolylineTopology& from, const Undire
     VertId maxValidVert_;
     for ( auto ue : mask )
     {
-        auto e = EdgeId( ue );
-        if ( from.isLoneEdge( e ) )
+        if ( from.isLoneEdge( ue ) )
             continue;
-        auto fromVerts = { from.org( e ) ,from.dest( e ) };
-        for ( auto v : fromVerts )
+        for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
         {
+            auto v = from.org( e );
             if ( vmap[v].valid() )
                 continue;
             auto nv = addVertId();

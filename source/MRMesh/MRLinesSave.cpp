@@ -137,7 +137,7 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
     out << "0\nEOF\n";
 
     if ( !out )
-        return tl::make_unexpected( std::string( "Error saving in PTS-format" ) );
+        return tl::make_unexpected( std::string( "Error saving in DXF-format" ) );
 
     return {};
 }

@@ -1,7 +1,6 @@
 #pragma once
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
-#include "MRMesh/MRMeshNormals.h"
 
 namespace MR
 {
@@ -82,12 +81,6 @@ private:
 
     bool memorySavingMode_{ true };
     void resetBuffers_() const;
-
-    mutable Vector<TriangleCornerNormals, FaceId> cornerNormalsCache_;
-    mutable Vector<Vector3f, FaceId> facesNormalsCache_;
-
-    Vector<Vector3f, FaceId> computeFacesNormals_() const;
-    Vector<TriangleCornerNormals, FaceId> computeCornerNormals_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;

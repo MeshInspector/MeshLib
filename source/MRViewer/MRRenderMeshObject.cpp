@@ -201,9 +201,7 @@ size_t RenderMeshObject::heapBytes() const
         + MR::heapBytes( faceSelectionTexture_ )
         + MR::heapBytes( faceNormalsTexture_ )
         + MR::heapBytes( borderHighlightPoints_ )
-        + MR::heapBytes( selectedEdgesPoints_ )
-        + cornerNormalsCache_.heapBytes()
-        + facesNormalsCache_.heapBytes();
+        + MR::heapBytes( selectedEdgesPoints_ );
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
@@ -565,16 +563,13 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_corners_normals" )
-        if ( dirty_ & DIRTY_CORNERS_NORMAL )
-        {
-            cornerNormalsCache_ = computeCornerNormals_();
-            dirty_ &= ~DIRTY_CORNERS_NORMAL;
-        }
+        const auto& creases = objMesh_->creases();
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
         vertNormalsBufferObj_.resize( 3 * numF );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
             auto ind = 3 * f;
-            const auto& cornerN = cornerNormalsCache_[f];
+            const auto& cornerN = cornerNormals[f];
             for ( int i = 0; i < 3; ++i )
                 vertNormalsBufferObj_[ind + i] = cornerN[i];
         } );
@@ -601,15 +596,11 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_faces_normals" )
-        if ( dirty_ & DIRTY_FACES_NORMAL )
-        {
-            facesNormalsCache_ = computeFacesNormals_();
-            dirty_ &= ~DIRTY_FACES_NORMAL;
-        }
-        faceNormalsTexture_.resize( facesNormalsCache_.size() );
+        const auto faceNormals = computePerFaceNormals( *mesh );
+        faceNormalsTexture_.resize( faceNormals.size() );
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
-            const auto& norm = facesNormalsCache_[f];
+            const auto& norm = faceNormals[f];
             faceNormalsTexture_[f] = Vector4f{ norm.x,norm.y,norm.z,1.0f };
         } );
     }
@@ -783,19 +774,6 @@ void RenderMeshObject::resetBuffers_() const
     RESET_VECTOR( faceNormalsTexture_ );
     RESET_VECTOR( borderHighlightPoints_ );
     RESET_VECTOR( selectedEdgesPoints_ );
-}
-
-Vector<Vector3f, FaceId> RenderMeshObject::computeFacesNormals_() const
-{
-    const auto& mesh = objMesh_->mesh();
-    return computePerFaceNormals( *mesh );
-}
-
-Vector<TriangleCornerNormals, FaceId> RenderMeshObject::computeCornerNormals_() const
-{
-    const auto& mesh = objMesh_->mesh();
-    const auto& creases = objMesh_->creases();
-    return computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

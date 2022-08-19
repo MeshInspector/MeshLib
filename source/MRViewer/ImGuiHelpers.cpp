@@ -457,14 +457,12 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     return valueRef != valueOld;
 }
 
-bool Link( const char* label )
+bool Link( const char* label, uint32_t color )
 {
     auto window = GetCurrentContext()->CurrentWindow;
     assert( window );
     if ( !window )
         return false;
-
-    constexpr unsigned color = MR::Color( 60, 120, 255 ).getUInt32();
 
     auto linkSize = CalcTextSize( label );
 

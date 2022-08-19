@@ -12,7 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRAffineXfDecompose.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -249,13 +249,11 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
     Matrix3f rotation, scaling;
-    decomposeXf( xf, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling );
 
-    AffineXf3f unscaledXf;
-    unscaledXf.A = rotation;
-    unscaledXf.b = xf.b + xf.A * center_ - rotation * center_;
+    Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
+    controlsRoot_->setXf( xf * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( scaling.trace() / 3.f ), center_ ) );
 
-    controlsRoot_->setXf( unscaledXf );
     objScale_ = scaling;
 }
 
@@ -789,8 +787,7 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    if ( activeEditMode_ == TranslationMode || activeEditMode_ == RotationMode )
-        controlsRoot_->setXf( addXf * controlsRoot_->xf() );
+    setControlsXf( addXf * controlsRoot_->xf() );
     approvedChange_ = false;
 }
 

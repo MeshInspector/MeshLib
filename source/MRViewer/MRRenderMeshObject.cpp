@@ -16,6 +16,8 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 
+#define RESET_VECTOR( v ) v = decltype( v ){}
+
 namespace MR
 {
 
@@ -131,9 +133,19 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+    {
+        if ( dirty_ & DIRTY_BORDER_LINES )
+            updateBorderLinesBuffer_();
+        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+        dirty_ &= ~DIRTY_BORDER_LINES;
+    }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+    {
+        if ( dirty_ & DIRTY_EDGES_SELECTION )
+            updateSelectedEdgesBuffer_();
+        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+        dirty_ &= ~DIRTY_EDGES_SELECTION;
+    }
 
     if ( renderParams.alphaSort )
     {
@@ -142,6 +154,9 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
     }
+
+    if ( memorySavingMode_ )
+        resetBuffers_();
 }
 
 void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
@@ -173,6 +188,9 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     drawMesh_( true, parameters.viewportId, true );
+
+    if ( memorySavingMode_ )
+        resetBuffers_();
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -214,9 +232,9 @@ const Vector<TriangleCornerNormals, FaceId>& RenderMeshObject::getCornerNormals(
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
-    const Color& colorChar, unsigned dirtyValue ) const
+    GLuint count, const Color& colorChar, unsigned dirtyValue ) const
 {
-    if ( data.empty() )
+    if ( !count )
         return;
 
     // Send lines data to GL, install lines properties
@@ -253,11 +271,11 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, data.size() / 2 );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, count / 2 );
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, GLsizei( data.size() ) ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, count ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const
@@ -285,18 +303,19 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
         color[0], color[1], color[2], color[3] ) );
 
     // positions
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ && vertsCount_ != 0 );
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
+        updateMeshEdgesBuffer_();
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * edgesIndicesBufferObj_.size(), edgesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
         meshEdgesDirty_ = false;
     }
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgesIndicesBufferObj_.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, meshEdgesCount_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, 2 * int( edgesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, 2 * meshEdgesCount_, GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort ) const
@@ -304,16 +323,18 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ && vertsCount_ != 0 );
+
     bool needRefreshNormals = bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
-    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals );
-    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
-    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
+    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals, memorySavingMode_ && vertNormalsCount_ != 0 );
+    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, memorySavingMode_ && vertColorsCount_ != 0 );
+    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, memorySavingMode_ && vertUVCount_ != 0 );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_FACE )
+    if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        meshFacesDirty_ = false;
     }
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -412,12 +433,13 @@ void RenderMeshObject::bindMeshPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, memorySavingMode_ && vertsCount_ != 0 );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_FACE )
+    if ( meshFacesDirty_ )
     {
         GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        meshFacesDirty_ = false;
     }
 
     dirty_ &= ~DIRTY_POSITION;
@@ -444,9 +466,9 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     }
 
     if ( !picker )
-        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, facesIndicesBufferObj_.size() );
+        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, meshFacesCount_ );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( facesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * meshFacesCount_, GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -562,6 +584,7 @@ void RenderMeshObject::update_( ViewportId id ) const
             for ( int i = 0; i < 3; ++i )
                 vertPosBufferObj_[ind + i] = v[i];
         } );
+        vertsCount_ = vertPosBufferObj_.size();
     }
     // Normals
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
@@ -576,6 +599,7 @@ void RenderMeshObject::update_( ViewportId id ) const
             for ( int i = 0; i < 3; ++i )
                 vertNormalsBufferObj_[ind + i] = cornerN[i];
         } );
+        vertNormalsCount_ = vertNormalsBufferObj_.size();
     }
     if ( dirtyNormalFlag & DIRTY_VERTS_RENDER_NORMAL ) // vertNormalsBufferObj_ should be valid no matter what normals we use
     {
@@ -593,6 +617,7 @@ void RenderMeshObject::update_( ViewportId id ) const
                 vertNormalsBufferObj_[ind + i] = norm;
             }
         } );
+        vertNormalsCount_ = vertNormalsBufferObj_.size();
     }
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
@@ -621,48 +646,53 @@ void RenderMeshObject::update_( ViewportId id ) const
             for ( int i = 0; i < 3; ++i )
                 vertColorsBufferObj_[ind + i] = vertsColorMap[v[i]];
         } );
+        vertColorsCount_ = vertColorsBufferObj_.size();
     }
     // Face indices
     if ( dirty_ & DIRTY_FACE )
     {
+        meshFacesDirty_ = true;
         meshEdgesDirty_ = true;
-        facesIndicesBufferObj_.resize( numF );
-        edgesIndicesBufferObj_.resize( numF * 3 );
+        meshFacesCount_ = numF;
+        meshEdgesCount_ = numF * 3;
+
+        facesIndicesBufferObj_.resize( meshFacesCount_ );
         BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
         {
             auto ind = 3 * f;
             if ( f >= numF )
                 return;
             if ( !edgePerFace[f].valid() )
-            {
                 facesIndicesBufferObj_[f] = Vector3i();
-                for ( int i = 0; i < 3; ++i )
-                    edgesIndicesBufferObj_[ind + i] = Vector2i();
-            }
             else
-            {
                 facesIndicesBufferObj_[f] = Vector3i{ ind,ind + 1,ind + 2 };
-                for ( int i = 0; i < 3; ++i )
-                    edgesIndicesBufferObj_[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
-            }
         } );
+        // NOTE: mesh edges' buffer updating is delayed until it's used
     }
     // Texture coordinates
     if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
     }
-    if ( dirty_ & DIRTY_UV && uvCoords.size() >= numV )
+    if ( dirty_ & DIRTY_UV )
     {
-        vertUVBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        if ( uvCoords.size() >= numV )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                vertUVBufferObj_[ind + i] = uvCoords[v[i]];
-        } );
+            vertUVBufferObj_.resize( 3 * numF );
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    vertUVBufferObj_[ind + i] = uvCoords[v[i]];
+            } );
+            vertUVCount_ = vertUVBufferObj_.size();
+        }
+        else
+        {
+            vertUVCount_ = 0;
+        }
     }
 
     if ( dirty_ & DIRTY_SELECTION )
@@ -689,32 +719,87 @@ void RenderMeshObject::update_( ViewportId id ) const
     // meshgl_.dirty is cleared only after render of borders, and it will not render if border highlight is turned off
     if ( objDirty & DIRTY_BORDER_LINES )
     {
-        auto boundary = mesh->topology.findBoundary();
-        borderHighlightPoints_.clear();
-        for ( auto& b : boundary )
-        {
-            for ( auto& e : b )
-            {
-                borderHighlightPoints_.push_back( mesh->points[mesh->topology.org( e )] );
-                borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
-            }
-        }
+        // NOTE: border lines' buffer updating is delayed until it's used
     }
 
     if ( objDirty & DIRTY_EDGES_SELECTION )
-    {        
-        selectedEdgesPoints_.clear();
-        for ( auto e : objMesh_->getSelectedEdges() )
-        {
-            if ( mesh->topology.hasEdge( e ) )
-            {
-                selectedEdgesPoints_.push_back( mesh->orgPnt( e ) );
-                selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
-            }
-        }
+    {
+        // NOTE: selected edges' buffer updating is delayed until it's used
     }
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
+}
+
+void RenderMeshObject::updateMeshEdgesBuffer_() const
+{
+    auto mesh = objMesh_->mesh();
+    const auto& edgePerFace = mesh->topology.edgePerFace();
+
+    edgesIndicesBufferObj_.resize( meshEdgesCount_ );
+    BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        if ( f >= meshFacesCount_ )
+            return;
+        if ( !edgePerFace[f].valid() )
+        {
+            for ( int i = 0; i < 3; ++i )
+                edgesIndicesBufferObj_[ind + i] = Vector2i();
+        }
+        else
+        {
+            for ( int i = 0; i < 3; ++i )
+                edgesIndicesBufferObj_[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+        }
+    } );
+}
+
+void RenderMeshObject::updateBorderLinesBuffer_() const
+{
+    auto mesh = objMesh_->mesh();
+    auto boundary = mesh->topology.findBoundary();
+
+    borderHighlightPoints_.clear();
+    for ( auto& b : boundary )
+    {
+        for ( auto& e : b )
+        {
+            borderHighlightPoints_.push_back( mesh->points[mesh->topology.org( e )] );
+            borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
+        }
+    }
+    borderPointsCount_ = GLsizei( borderHighlightPoints_.size() );
+}
+
+void RenderMeshObject::updateSelectedEdgesBuffer_() const
+{
+    auto mesh = objMesh_->mesh();
+
+    selectedEdgesPoints_.clear();
+    for ( auto e : objMesh_->getSelectedEdges() )
+    {
+        if ( mesh->topology.hasEdge( e ) )
+        {
+            selectedEdgesPoints_.push_back( mesh->orgPnt( e ) );
+            selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
+        }
+    }
+    selectedPointsCount_ = GLsizei( selectedEdgesPoints_.size() );
+}
+
+void RenderMeshObject::resetBuffers_() const
+{
+    RESET_VECTOR( vertPosBufferObj_ );
+    if ( normalsBound_ )
+        RESET_VECTOR( vertNormalsBufferObj_ );
+    RESET_VECTOR( vertColorsBufferObj_ );
+    RESET_VECTOR( vertUVBufferObj_ );
+    RESET_VECTOR( facesIndicesBufferObj_ );
+    RESET_VECTOR( edgesIndicesBufferObj_ );
+    RESET_VECTOR( faceSelectionTexture_ );
+    RESET_VECTOR( faceNormalsTexture_ );
+    RESET_VECTOR( borderHighlightPoints_ );
+    RESET_VECTOR( selectedEdgesPoints_ );
 }
 
 Vector<Vector3f, FaceId> RenderMeshObject::computeFacesNormals_() const

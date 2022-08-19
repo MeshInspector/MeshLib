@@ -1,13 +1,55 @@
 #include "MRMeshDirMax.h"
 #include "MRAABBTree.h"
 #include "MRMesh.h"
+#include "MRTimer.h"
 #include <cfloat>
 
 namespace MR
 {
 
-VertId findDirMax( const Vector3f & dir, const MeshPart & mp )
+static VertId findDirMaxBruteForce( const Vector3f & dir, const MeshPart & mp )
 {
+    MR_TIMER
+    VertId res;
+    float furthestProj = -FLT_MAX;
+    if ( mp.region )
+    {
+        for ( auto f : *mp.region )
+        {
+            VertId vs[3];
+            mp.mesh.topology.getTriVerts( f, vs );
+            for ( auto v : vs )
+            {
+                auto proj = dot( mp.mesh.points[v], dir );
+                if ( proj > furthestProj )
+                {
+                    furthestProj = proj;
+                    res = v;
+                }
+            }
+        }
+    }
+    else
+    {
+        for ( auto v : mp.mesh.topology.getValidVerts() )
+        {
+            auto proj = dot( mp.mesh.points[v], dir );
+            if ( proj > furthestProj )
+            {
+                furthestProj = proj;
+                res = v;
+            }
+        }
+    }
+
+    return res;
+}
+
+VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
+{
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyContructed && !mp.mesh.getAABBTreeNotCreate() ) )
+        return findDirMaxBruteForce( dir, mp );
+
     const AABBTree & tree = mp.mesh.getAABBTree();
 
     VertId res;

@@ -113,7 +113,8 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
     for ( const auto& contour : contours )
     {
         out << "0\nPOLYLINE\n";
-        out << "8\nPolyline\n";
+        out << "8\n0\n";
+        out << "66\n1\n";
         int flags = 8;
         if ( contour[0] == contour.back() )
             flags += 1;
@@ -121,7 +122,7 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
         for ( auto p : contour )
         {
             out << "0\nVERTEX\n";
-            out << "8\nPolyline\n";
+            out << "8\n0\n";
             out << "70\n32\n";
             out << "10\n" << p.x << "\n";
             out << "20\n" << p.y << "\n";
@@ -133,7 +134,7 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
         out << "0\nSEQEND\n";
     }
 
-    out << "2\nENDSEC\n";
+    out << "0\nENDSEC\n";
     out << "0\nEOF\n";
 
     if ( !out )

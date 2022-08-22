@@ -49,6 +49,7 @@ class MRMESH_CLASS VoxelTag;
 
 template <typename T> class Id;
 template <typename T, typename I> class Vector;
+template <typename T> class Buffer;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;

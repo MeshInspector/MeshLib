@@ -2,12 +2,12 @@
 
 namespace MR
 {
-template<typename T>
+template<typename T, template<typename, typename...> class C, typename... args>
 GLint bindVertexAttribArray(
     const GLuint program_shader,
     const std::string& name,
     GLuint bufferID,
-    const std::vector<T>& V,
+    const C<T, args...>& V,
     int baseTypeElementsNumber,
     bool refresh,
     bool forceUse = false )

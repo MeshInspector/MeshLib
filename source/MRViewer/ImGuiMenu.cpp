@@ -1140,11 +1140,11 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - prevItemSpacingY + itemSpacingY );
 
         selectionBbox_ = Box3f{};
-        Box3f selectionWorldBox;
+        selectionWorldBox_ = {};
         for ( auto pObj : selectedVisualObjs )
         {
             selectionBbox_.include( pObj->getBoundingBox() );
-            selectionWorldBox.include( pObj->getWorldBox() );
+            selectionWorldBox_.include( pObj->getWorldBox() );
         }
         if ( selectionBbox_.valid() )
         {
@@ -1161,9 +1161,9 @@ float ImGuiMenu::drawSelectionInformation_()
             auto bsize = selectionBbox_.size();
             drawVec3( "Box size", bsize );
 
-            if ( selectionWorldBox.valid() )
+            if ( selectionWorldBox_.valid() )
             {
-                auto wbsize = selectionWorldBox.size();
+                auto wbsize = selectionWorldBox_.size();
                 const std::string bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z);
                 const std::string wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
                 if ( bsizeStr != wbsizeStr )
@@ -1530,10 +1530,9 @@ float ImGuiMenu::drawTransform_()
             const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
-            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed,
-                                                             std::numeric_limits<float>::lowest(),
-                                                             std::numeric_limits<float>::max(),
-                                                             "%.3f", 0, &tooltipsTranslation );
+            auto wbsize = selectionWorldBox_.size();
+            auto minSizeDim = std::min( { wbsize.x, wbsize.y, wbsize.z } );
+            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed, -0x10000 * minSizeDim, +0x10000 * minSizeDim, "%.3f", 0, &tooltipsTranslation );
             inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
 
             if ( xfHistUpdated_ )

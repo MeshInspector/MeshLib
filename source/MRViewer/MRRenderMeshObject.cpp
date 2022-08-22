@@ -193,14 +193,14 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
 size_t RenderMeshObject::heapBytes() const
 {
-    return MR::heapBytes( vertPosBufferObj_ ) 
-        + MR::heapBytes( vertNormalsBufferObj_ )
-        + MR::heapBytes( vertColorsBufferObj_ )
-        + MR::heapBytes( vertUVBufferObj_ )
-        + MR::heapBytes( facesIndicesBufferObj_ )
-        + MR::heapBytes( edgesIndicesBufferObj_ )
-        + MR::heapBytes( faceSelectionTexture_ )
-        + MR::heapBytes( faceNormalsTexture_ )
+    return vertPosBufferObj_.heapBytes()
+        + vertNormalsBufferObj_.heapBytes()
+        + vertColorsBufferObj_.heapBytes()
+        + vertUVBufferObj_.heapBytes()
+        + facesIndicesBufferObj_.heapBytes()
+        + edgesIndicesBufferObj_.heapBytes()
+        + faceSelectionTexture_.heapBytes()
+        + faceNormalsTexture_.heapBytes()
         + MR::heapBytes( borderHighlightPoints_ )
         + MR::heapBytes( selectedEdgesPoints_ );
 }

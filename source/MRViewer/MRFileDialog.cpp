@@ -3,6 +3,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 #include <clocale>
 
@@ -15,6 +16,47 @@
 #endif
 #ifndef __EMSCRIPTEN__
 #include <GLFW/glfw3native.h>
+#endif
+
+#ifdef __EMSCRIPTEN__
+namespace
+{
+static std::function<void( const std::vector<std::filesystem::path>& )> sDialogFilesCallback;
+}
+
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE int emsOpenFiles( int count, const char** filenames )
+{
+    if ( !sDialogFilesCallback )
+        return 1;
+    std::vector<std::filesystem::path> paths( count );
+    for ( int i = 0; i < count; ++i )
+    {
+        paths[i] = MR::pathFromUtf8( filenames[i] );
+    }
+    sDialogFilesCallback( paths );
+    sDialogFilesCallback = {};
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int emsSaveFile( const char* filename )
+{
+    if ( !sDialogFilesCallback )
+        return 1;
+
+    std::filesystem::path savePath = std::string( filename );
+    sDialogFilesCallback( { savePath } );
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( save_file( UTF8ToString( $0 ) ), filename );
+#pragma clang diagnostic pop
+    return 0;
+}
+
+}
+
 #endif
 
 namespace
@@ -304,6 +346,30 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     return {};
 }
 
+void openFileDialogAsync( std::function<void( const std::filesystem::path& )> callback, const FileParameters& params /*= {} */ )
+{
+    assert( callback );
+#ifndef __EMSCRIPTEN__
+    callback( openFileDialog( params ) );
+#else
+    sDialogFilesCallback = [callback] ( const std::filesystem::path& path )
+    {
+        callback( { path } );
+    };
+    std::string accumFilter = params.filters[0].extension.substr( 1 );
+    for ( int i = 1; i < params.filters.size(); ++i )
+    {
+        const auto& filter = params.filters[i];
+        accumFilter += ", ";
+        accumFilter += filter.extension.substr( 1 );
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( open_files_dialog_popup( UTF8ToString( $0 ), $1 ), accumFilter.c_str(), false );
+#pragma clang diagnostic pop
+#endif
+}
+
 std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params )
 {
     FileDialogParameters parameters{ params };
@@ -318,6 +384,27 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     results = gtkDialog( parameters );
 #endif
     return results;
+}
+
+void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem::path>& )> callback, const FileParameters& params /*= {} */ )
+{
+    assert( callback );
+#ifndef __EMSCRIPTEN__
+    callback( openFilesDialog( params ) );
+#else
+    sDialogFilesCallback = callback;
+    std::string accumFilter = params.filters[0].extension.substr( 1 );
+    for ( int i = 1; i < params.filters.size(); ++i )
+    {
+        const auto& filter = params.filters[i];
+        accumFilter += ", ";
+        accumFilter += filter.extension.substr( 1 );
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( open_files_dialog_popup( UTF8ToString( $0 ), $1 ), accumFilter.c_str(), true );
+#pragma clang diagnostic pop
+#endif
 }
 
 std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
@@ -378,6 +465,35 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     if ( results.size() == 1 )
         return results[0];
     return {};
+}
+
+void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> callback, const FileParameters& params /*= {} */ )
+{
+    assert( callback );
+#ifndef __EMSCRIPTEN__
+    callback( saveFileDialog( params ) );
+#else
+    sDialogFilesCallback = [callback] ( const std::filesystem::path& path )
+    {
+        callback( { path } );
+    };
+    auto filters = params.filters;
+    filters.erase( std::remove_if( filters.begin(), filters.end(), [] ( const auto& filter )
+    {
+        return filter.extension == "*.*";
+    } ), filters.end() );
+    std::string accumFilter = filters[0].extension.substr( 1 );
+    for ( int i = 1; i < filters.size(); ++i )
+    {
+        const auto& filter = filters[i];
+        accumFilter += ", ";
+        accumFilter += filter.extension.substr( 1 );
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( download_file_dialog_popup( UTF8ToString( $0 ), UTF8ToString( $1 ) ), params.fileName.c_str(), accumFilter.c_str() );
+#pragma clang diagnostic pop
+#endif
 }
 
 }

@@ -1,5 +1,6 @@
-var open_files_dialog_popup = function (extensions) {
-  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select File", 400, 150);
+var open_files_dialog_popup = function (extensions, multi) {
+  var labelString = multi ? "Select Files" : "Select File";
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', labelString, 400, 150);
 
   var file_selector_label = document.createElement('label');
   file_selector_label.setAttribute('for', 'FileSelectorTag');
@@ -14,7 +15,8 @@ var open_files_dialog_popup = function (extensions) {
   var file_selector = document.createElement('input');
   file_selector.setAttribute('type', 'file');
   file_selector.setAttribute('id', 'FileSelectorTag');
-  file_selector.setAttribute('multiple', null);
+  if (multi)
+    file_selector.setAttribute('multiple', null);
   file_selector.setAttribute('onchange', 'open_files(event)');
   file_selector.setAttribute('accept', extensions);
   file_selector.setAttribute('style', 'display: none;');
@@ -68,41 +70,12 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   btn_save.setAttribute('value', 'Save');
   btn_save.setAttribute('style', 'position: absolute;width: 100px;height: 28px;top: 194px;left: 50%;transform: translate(-50%, -50%);border-radius: 4px;color: #fff;font-size: 14px;font-weight: 600;border: none;');
   btn_save.setAttribute('class', 'button');
-  btn_save.setAttribute('onclick', 'Module.ccall(\'save_file\', \'number\', [\'string\'], [document.getElementById(\'download_name\').value + document.getElementById(\'download_ext\').value]),addKeyboardEvents(),document.getElementById(\'show_download_dialog\').remove()');
+  btn_save.setAttribute('onclick', 'Module.ccall(\'emsSaveFile\', \'number\', [\'string\'], [document.getElementById(\'download_name\').value + document.getElementById(\'download_ext\').value]),addKeyboardEvents(),document.getElementById(\'show_download_dialog\').remove()');
 
   popup.appendChild(name_label);
   popup.appendChild(name_selector);
   popup.appendChild(ext_label);
   popup.appendChild(list_item);
-  popup.appendChild(btn_save);
-
-  removeKeyboardEvents();
-  document.body.appendChild(overlay);
-}
-
-var download_scene_dialog_popup = function () {
-  var { overlay, popup } = createOverlayPopup('show_download_dialog', "Save Scene", 440, 190);
-
-  var name_label = document.createElement('label');
-  name_label.setAttribute('style', 'width: 144px;height: 20px;position: absolute;top: 94px;left: 62px;margin-left: 0px;font-size: 14px;color: #fff;');
-  name_label.innerHTML = 'Name';
-  name_label.setAttribute('class', 'unselectable');
-
-  var name_selector = document.createElement('input');
-  name_selector.setAttribute('type', 'text');
-  name_selector.setAttribute('id', 'download_name');
-  name_selector.setAttribute('style', 'position: absolute;top: 50%;transform: translate(20px, -50%);background-color: #000;border-radius: 4px;width: 200px;height: 28px;border: solid 1px #5f6369;color: #fff;');
-
-  name_label.appendChild(name_selector);
-
-  var btn_save = document.createElement('input');
-  btn_save.setAttribute('type', 'button');
-  btn_save.setAttribute('value', 'Save');
-  btn_save.setAttribute('style', 'position: absolute;width: 100px;height: 28px;top: 156px;left: 50%;transform: translate(-50%, -50%);border-radius: 4px;color: #fff;font-size: 14px;font-weight: 600;border: none;');
-  btn_save.setAttribute('onclick', 'Module.ccall(\'save_scene\', \'number\', [\'string\'], [document.getElementById(\'download_name\').value + \'.mru\']),addKeyboardEvents(),document.getElementById(\'show_download_dialog\').remove()');
-  btn_save.setAttribute('class', 'button');
-
-  popup.appendChild(name_label);
   popup.appendChild(btn_save);
 
   removeKeyboardEvents();
@@ -139,7 +112,7 @@ var open_files = function (e) {
       var data = e.target.result;
       FS.writeFile(path, new Uint8Array(data));
       if (++written === count) {
-        const res = Module.ccall('load_files', 'number', ['number', 'Int8Array'], [count, filenames]);
+        const res = Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, filenames]);
         for (var i = 0; i < filenamesArray.length; ++i) {
           _free(filenamesArray[i]);
         }

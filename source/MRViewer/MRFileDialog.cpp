@@ -352,9 +352,10 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #ifndef __EMSCRIPTEN__
     callback( openFileDialog( params ) );
 #else
-    sDialogFilesCallback = [callback] ( const std::filesystem::path& path )
+    sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
-        callback( { path } );
+        if ( !paths.empty() )
+            callback( paths[0] );
     };
     std::string accumFilter = params.filters[0].extension.substr( 1 );
     for ( int i = 1; i < params.filters.size(); ++i )
@@ -473,9 +474,10 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #ifndef __EMSCRIPTEN__
     callback( saveFileDialog( params ) );
 #else
-    sDialogFilesCallback = [callback] ( const std::filesystem::path& path )
+    sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
-        callback( { path } );
+        if ( !paths.empty() )
+            callback( paths[0] );
     };
     auto filters = params.filters;
     filters.erase( std::remove_if( filters.begin(), filters.end(), [] ( const auto& filter )

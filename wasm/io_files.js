@@ -135,19 +135,38 @@ var open_files = function (e) {
   return false;
 };
 
+var prevSize = 0;
 var save_file = function (filename) {
-  var mime = "application/octet-stream";
-  let content = FS.readFile(filename);
+  var checkPath = function (filename) {
+    if (!FS.analyzePath(filename).exists) {
+      setTimeout(() => {
+        checkPath(filename);
+      }, 0);
+      return;
+    }
+    var size = FS.stat(filename).size;
+    if (size === 0 || size !== prevSize) {
+      prevSize = size;
+      setTimeout(() => {
+        checkPath(filename);
+      }, 0);
+      return;
+    }
+    let content = FS.readFile(filename);
 
-  var a = document.createElement('a');
-  a.download = filename;
-  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-  a.style.display = 'none';
+    var a = document.createElement('a');
+    a.download = filename;
+    var mime = "application/octet-stream";
+    a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+    a.style.display = 'none';
 
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  }, 0);
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }, 0);
+  };
+  prevSize = 0;
+  checkPath(filename);
 };

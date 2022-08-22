@@ -396,11 +396,15 @@ void VisualObject::setDefaultColors_()
 
 IRenderObject::BufferMode VisualObject::getRenderBufferMode() const
 {
+    if ( !renderObj_ )
+        return IRenderObject::AllocationEfficient;
     return renderObj_->getBufferMode();
 }
 
 void VisualObject::setRenderBufferMode( IRenderObject::BufferMode bufferMode )
 {
+    if ( !renderObj_ )
+        return;
     renderObj_->setBufferMode( bufferMode );
 }
 

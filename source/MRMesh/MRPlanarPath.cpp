@@ -92,7 +92,7 @@ static float lineIsect( const Vector2f & b, const Vector2f & c, const Vector2f &
 }
 
 bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 
-    std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp )
+    std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp, std::vector<MeshEdgePoint>& cachePath )
 {
     MeshTriPoint stp( s );
     MeshTriPoint etp( e );
@@ -107,6 +107,7 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
     const auto ep = mesh.triPoint( e ) - vp;
     const auto dist0 = sp.length() + ep.length();
     const auto sz0 = outPath.size();
+    float distOneSide = FLT_MAX;
 
     EdgeId e0 = lastCommonEdge( mesh.topology, v, s );
     assert( e0 );
@@ -115,6 +116,7 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
     if ( e0 && e1 )
     {
         tmp.clear();
+        cachePath.clear();
         auto dp = mesh.destPnt( e0 ) - vp;
         tmp.push_back( Vector2f( 0, dp.length() ) );
         const Vector2f s2 = unfoldOnPlane( dp, sp, tmp.back(), false );
@@ -134,13 +136,13 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
         {
             // no zero-length edges were encountered
             int i = 0;
-            float dist = 0;
+            distOneSide = 0;
             for ( EdgeId ei = e0; i < tmp.size(); ei = mesh.topology.next( ei ), ++i )
             {
                 if ( !mesh.topology.left( ei ) )
                 {
                     // do not allow pass via hole space
-                    dist = FLT_MAX;
+                    distOneSide = FLT_MAX;
                     break;
                 }
                 auto & d = tmp[i];
@@ -148,21 +150,18 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
                 if ( x <= TriPointf::eps )
                 {
                     // passing via the same vertex
-                    dist = FLT_MAX;
+                    distOneSide = FLT_MAX;
                     break;
                 }
                 d *= x;
-                outPath.emplace_back( ei, x );
+                cachePath.emplace_back( ei, x );
                 if ( i == 0 )
-                    dist = ( d - s2 ).length();
+                    distOneSide = ( d - s2 ).length();
                 else
-                    dist += ( d - tmp[i-1] ).length();
+                    distOneSide += ( d - tmp[i-1] ).length();
                 if ( i + 1 == tmp.size() )
-                    dist += ( d - e2 ).length();
+                    distOneSide += ( d - e2 ).length();
             }
-            if ( dist < dist0 )
-                return true;
-            outPath.resize( sz0 );
         }
     }
 
@@ -218,8 +217,15 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
                 if ( i + 1 == tmp.size() )
                     dist += ( d - e2 ).length();
             }
-            if ( dist < dist0 )
+            if ( dist < dist0 || distOneSide < dist0 )
+            {
+                if ( distOneSide < dist )
+                {
+                    outPath.resize( sz0 );
+                    outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
+                }
                 return true;
+            }
             outPath.resize( sz0 );
         }
     }
@@ -526,6 +532,7 @@ void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<Mesh
         return;
     MR_TIMER;
 
+    std::vector<MeshEdgePoint> cacheOneSideUnfold;
     std::vector<MeshEdgePoint> newPath;
     newPath.reserve( path.size() );
     std::vector<Vector2f> tmp;
@@ -563,7 +570,7 @@ void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<Mesh
                 newPath.push_back( path[j] );
                 continue;
             }
-            if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp ) )
+            if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
             {
                 //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
                 //assert( fromSameTriangle( mesh.topology, prev, next ) );

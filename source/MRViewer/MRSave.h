@@ -6,7 +6,7 @@
 
 namespace MR
 {
-class Save : public MR::ViewerPlugin, public MultiListener<SaveListener>
+class [[deprecated]] Save : public MR::ViewerPlugin, public MultiListener<SaveListener>
 {
 public:
     MRVIEWER_API virtual void init( Viewer* _viewer ) override;

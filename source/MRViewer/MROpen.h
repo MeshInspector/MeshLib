@@ -7,11 +7,7 @@
 namespace MR
 {
 
-class Open : public MR::ViewerPlugin, public MultiListener<LoadListener
-#ifndef __EMSCRIPTEN__
-, DragDropListener
-#endif
->
+class [[deprecated]] Open : public MR::ViewerPlugin, public MultiListener<LoadListener, DragDropListener>
 {
 public:
     MRVIEWER_API virtual void init( Viewer* _viewer ) override;
@@ -19,9 +15,7 @@ public:
 
 protected:
     MRVIEWER_API virtual bool load_( const std::filesystem::path& filename ) override;
-#ifndef __EMSCRIPTEN__
     MRVIEWER_API virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
-#endif
 };
 
 }

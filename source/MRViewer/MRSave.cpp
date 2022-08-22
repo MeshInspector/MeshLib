@@ -124,8 +124,4 @@ void Save::shutdown()
     disconnect();
 }
 
-#ifdef __EMSCRIPTEN__
-MRVIEWER_PLUGIN_REGISTRATION(Save)
-#endif
-
 } //namespace MR

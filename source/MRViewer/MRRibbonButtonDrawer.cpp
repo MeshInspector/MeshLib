@@ -168,7 +168,60 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), clickSize * 0.5f );
 
-    auto res = ImGui::RadioButton( label, value, v_button );
+    auto drawCustomRadioButton = []( const char* label, int* v, int v_button )
+    {     
+        if ( !ImGui::GetCurrentContext() )
+            return false;
+
+        ImGuiContext& g = *ImGui::GetCurrentContext();
+        ImGuiWindow* window = g.CurrentWindow;
+        if ( !window || window->SkipItems )
+            return false;
+
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const ImGuiID id = window->GetID( label );
+        const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
+
+        const float square_sz = ImGui::GetFrameHeight();
+        const ImVec2 pos = window->DC.CursorPos;
+        const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
+        const ImRect total_bb( pos, ImVec2( pos.x + square_sz + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
+        ImGui::ItemSize( total_bb, style.FramePadding.y );
+        if ( !ImGui::ItemAdd( total_bb, id ) )
+            return false;
+
+        ImVec2 center = check_bb.GetCenter();
+        const float radius = ( square_sz - 1.0f ) * 0.5f;
+
+        bool hovered, held;
+        bool pressed = ImGui::ButtonBehavior( total_bb, id, &hovered, &held );
+        if ( pressed )
+            ImGui::MarkItemEdited( id );
+
+        ImGui::RenderNavHighlight( total_bb, id );
+        window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
+
+        const bool active = *v == v_button;
+        if ( active )
+        {
+            const float pad = ImMax( 1.0f, IM_FLOOR( square_sz * 0.3f ) );
+            window->DrawList->AddCircleFilled( center, radius - pad, ImGui::GetColorU32( ImGuiCol_CheckMark ), 16 );
+        }
+
+        if ( style.FrameBorderSize > 0.0f )
+        {
+            window->DrawList->AddCircle( ImVec2( center.x + 1, center.y + 1 ), radius, ImGui::GetColorU32( ImGuiCol_BorderShadow ), 16, style.FrameBorderSize );
+            window->DrawList->AddCircle( center, radius, ImGui::GetColorU32( ImGuiCol_Border ), 16, style.FrameBorderSize );
+        }
+
+        ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );
+        ImGui::RenderText( label_pos, label );
+
+        IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
+        return pressed;
+    };
+
+    auto res = drawCustomRadioButton( label, value, v_button );
 
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( 2 );

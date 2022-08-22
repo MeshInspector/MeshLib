@@ -230,6 +230,14 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
         }
     }
 
+    // in case of second side was not unfold successfully but first side was
+    if ( distOneSide < dist0 )
+    {
+        assert( outPath.size() == sz0 );
+        outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
+        return true;
+    }
+
     // failed to reduce path and avoid passing via the vertex
     outPath.push_back( MeshEdgePoint( mesh.topology.edgeWithOrg( v ), 0 ) );
     return false;

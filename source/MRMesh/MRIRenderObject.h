@@ -39,6 +39,17 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const = 0;
     /// returns the amount of memory this object occupies on heap
     virtual size_t heapBytes() const = 0;
+    /// the way the internal buffers are dealt with
+    enum BufferMode {
+        /// preserve the buffers to reduce re-allocation count
+        AllocationEfficient,
+        /// clear the buffers on every update to reduce memory consumption
+        MemoryEfficient,
+    };
+    /// returns internal buffer mode
+    virtual BufferMode getBufferMode() const { return AllocationEfficient; }
+    /// sets internal buffer mode
+    virtual void setBufferMode( BufferMode bufferMode ) {}
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

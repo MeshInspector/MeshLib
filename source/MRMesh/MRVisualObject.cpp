@@ -394,4 +394,14 @@ void VisualObject::setDefaultColors_()
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 }
 
+IRenderObject::BufferMode VisualObject::getRenderBufferMode() const
+{
+    return renderObj_->getBufferMode();
+}
+
+void VisualObject::setRenderBufferMode( IRenderObject::BufferMode bufferMode )
+{
+    renderObj_->setBufferMode( bufferMode );
+}
+
 } //namespace MR

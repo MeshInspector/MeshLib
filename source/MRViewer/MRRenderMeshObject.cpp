@@ -152,7 +152,7 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
     }
 
-    if ( memorySavingMode_ )
+    if ( bufferMode_ == MemoryEfficient )
         resetBuffers_();
 }
 
@@ -186,7 +186,7 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     drawMesh_( true, parameters.viewportId, true );
 
-    if ( memorySavingMode_ )
+    if ( bufferMode_ == MemoryEfficient )
         resetBuffers_();
 }
 

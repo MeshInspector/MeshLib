@@ -168,6 +168,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), clickSize * 0.5f );
 
+    //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
     auto drawCustomRadioButton = []( const char* label, int* v, int v_button )
     {     
         if ( !ImGui::GetCurrentContext() )

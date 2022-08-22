@@ -13,7 +13,7 @@ namespace MR
 /// given path s-v-e, tries to decrease its length by moving away from v
 /// \param outPath intermediate locations between s and e will be added here
 /// \param tmp elements will be temporary allocated here
-/// \param cachePath as far as we need to sides unfold, cache one to reduce allocations
+/// \param cachePath as far as we need two sides unfold, cache one to reduce allocations
 MRMESH_API bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & start, VertId v, const MeshTriPoint & end, 
     std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp, std::vector<MeshEdgePoint>& cachePath );
 

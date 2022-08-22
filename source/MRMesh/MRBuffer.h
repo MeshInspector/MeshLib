@@ -36,7 +36,14 @@ public:
         if ( newSize == 0 )
             clear();
         else if ( newSize != size_ )
+        {
+#if __cpp_lib_smart_ptr_for_overwrite >= 202002L
             data_ = std::make_unique_for_overwrite<T[]>( size_ = newSize );
+#else
+            // The array elements are value-initialized, so it is much slower - for older compilers
+            data_ = std::make_unique<T[]>( size_ = newSize );
+#endif
+        }
     }
 
     [[nodiscard]] const_reference operator[]( size_t i ) const

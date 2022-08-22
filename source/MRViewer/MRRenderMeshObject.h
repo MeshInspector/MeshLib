@@ -14,9 +14,6 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const override;
     virtual size_t heapBytes() const override;
 
-    virtual BufferMode getBufferMode() const override { return bufferMode_; }
-    virtual void setBufferMode( BufferMode bufferMode ) override { bufferMode_ = bufferMode; }
-
 private:
     const ObjectMeshHolder* objMesh_;
 
@@ -79,7 +76,6 @@ private:
     void updateBorderLinesBuffer_() const;
     void updateSelectedEdgesBuffer_() const;
 
-    BufferMode bufferMode_{ MemoryEfficient };
     void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL

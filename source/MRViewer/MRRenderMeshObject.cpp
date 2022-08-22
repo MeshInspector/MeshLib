@@ -24,6 +24,7 @@ RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
     assert( objMesh_ );
     if ( Viewer::constInstance()->isGLInitialized() )
         initBuffers_();
+    bufferMode_ = MemoryEfficient;
 }
 
 RenderMeshObject::~RenderMeshObject()

@@ -47,9 +47,12 @@ public:
         MemoryEfficient,
     };
     /// returns internal buffer mode
-    virtual BufferMode getBufferMode() const { return AllocationEfficient; }
+    BufferMode getBufferMode() const { return bufferMode_; }
     /// sets internal buffer mode
-    virtual void setBufferMode( BufferMode ) {}
+    void setBufferMode( BufferMode bufferMode ) { bufferMode_ = bufferMode; }
+
+protected:
+    BufferMode bufferMode_{ AllocationEfficient };
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

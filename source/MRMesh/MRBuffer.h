@@ -41,6 +41,7 @@ public:
             data_ = std::make_unique_for_overwrite<T[]>( size_ = newSize );
 #else
             // The array elements are value-initialized, so it is much slower - for older compilers
+#pragma message("No std::make_unique_for_overwrite is available")
             data_ = std::make_unique<T[]>( size_ = newSize );
 #endif
         }

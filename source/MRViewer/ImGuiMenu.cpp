@@ -77,6 +77,12 @@
 #include <fmt/chrono.h>
 #endif
 
+namespace
+{
+// translation multiplier that limits its maximum value depending on object size
+constexpr float cMaxTranslationMultiplier = 0x10000;
+}
+
 namespace MR
 {
 
@@ -1532,7 +1538,7 @@ float ImGuiMenu::drawTransform_()
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
             auto wbsize = selectionWorldBox_.size();
             auto minSizeDim = std::min( { wbsize.x, wbsize.y, wbsize.z } );
-            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed, -0x10000 * minSizeDim, +0x10000 * minSizeDim, "%.3f", 0, &tooltipsTranslation );
+            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
             inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
 
             if ( xfHistUpdated_ )

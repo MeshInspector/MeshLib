@@ -599,7 +599,9 @@ void RenderMeshObject::update_( ViewportId id ) const
         auto size = mesh->topology.lastValidFace() + 1;
         auto res = calcTextureRes( size, maxTexSize_ );
         assert( res.x * res.y >= size );
-        faceNormalsTexture_ = computePerFaceNormals4( *mesh, res.x * res.y );
+        faceNormalsTexture_.resize( res.x * res.y );
+
+        computePerFaceNormals4( *mesh, faceNormalsTexture_.data(), faceNormalsTexture_.size() );
     }
 
     ColoringType coloringType = objMesh_->getColoringType();

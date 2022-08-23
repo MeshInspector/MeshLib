@@ -1,6 +1,8 @@
 #pragma once
+
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRBuffer.h"
 
 namespace MR
 {
@@ -18,14 +20,14 @@ private:
     const ObjectMeshHolder* objMesh_;
 
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    mutable std::vector<Vector3f> vertPosBufferObj_;
-    mutable std::vector<Vector3f> vertNormalsBufferObj_;
-    mutable std::vector<Color> vertColorsBufferObj_;
-    mutable std::vector<UVCoord> vertUVBufferObj_;
-    mutable std::vector<Vector3i> facesIndicesBufferObj_;
-    mutable std::vector<Vector2i> edgesIndicesBufferObj_;
-    mutable std::vector<unsigned> faceSelectionTexture_;
-    mutable std::vector<Vector4f> faceNormalsTexture_;
+    mutable Buffer<Vector3f> vertPosBufferObj_;
+    mutable Buffer<Vector3f> vertNormalsBufferObj_;
+    mutable Buffer<Color> vertColorsBufferObj_;
+    mutable Buffer<UVCoord> vertUVBufferObj_;
+    mutable Buffer<Vector3i> facesIndicesBufferObj_;
+    mutable Buffer<Vector2i> edgesIndicesBufferObj_;
+    mutable Buffer<unsigned> faceSelectionTexture_;
+    mutable Buffer<Vector4f> faceNormalsTexture_;
     mutable std::vector<Vector3f> borderHighlightPoints_;
     mutable std::vector<Vector3f> selectedEdgesPoints_;
 

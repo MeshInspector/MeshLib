@@ -146,8 +146,10 @@ struct RemeshSettings
     FaceBitSet * region = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
+    /// callback to report algorithm progress and cancel it by user request
+    ProgressCallback progressCallback;
 };
 // Splits too long and eliminates too short edges from the mesh
-MRMESH_API void remesh( Mesh& mesh, const RemeshSettings & settings );
+MRMESH_API bool remesh( Mesh& mesh, const RemeshSettings & settings );
 
 } //namespace MR

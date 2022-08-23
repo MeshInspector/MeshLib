@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  ubuntu22-build-test:
+  ubuntu20-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:

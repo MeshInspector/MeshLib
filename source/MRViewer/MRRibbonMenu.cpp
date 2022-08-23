@@ -1688,7 +1688,7 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
     ImGui::SameLine();
 }
 
-void RibbonMenu::addRibbonItemShortcut_( std::string itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
+void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
 {
     auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
     if ( itemIt != RibbonSchemaHolder::schema().items.end() )

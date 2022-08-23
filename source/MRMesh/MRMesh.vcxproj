@@ -209,6 +209,7 @@
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRVector2.h" />
+    <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
@@ -422,6 +423,7 @@
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriangleIntersection.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
+    <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
     <ClCompile Include="MRVoxelGraphCut.cpp" />

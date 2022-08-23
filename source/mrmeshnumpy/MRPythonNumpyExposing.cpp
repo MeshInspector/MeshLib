@@ -5,6 +5,7 @@
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRVertexAttributeGradient.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
@@ -266,9 +267,55 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
         freeWhenDone ); // numpy array references this parent
 }
 
+// returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points
+pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
+{
+    using namespace MR;
+    int numVerts = mesh.topology.lastValidVert() + 1;
+
+    Vector<float, VertId> curv( numVerts );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+    {
+        curv[v] = mesh.discreteMeanCurvature( v );
+    } );
+
+    auto gradient = vertexAttributeGradient( mesh, curv );
+
+    // Allocate and initialize some data;
+    const int size = numVerts * 3;
+    double* data = new double[size];
+
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
+        [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int i = range.begin(); i < range.end(); ++i )
+        {
+            int ind = 3 * i;
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = gradient.vec_[i][vi];
+        }
+    } );
+
+    // Create a Python object that will free the allocated
+    // memory when destroyed:
+    pybind11::capsule freeWhenDone( data, [] ( void* f )
+    {
+        double* data = reinterpret_cast< double* >( f );
+        delete[] data;
+    } );
+
+    return pybind11::array_t<double>(
+        { numVerts, 3 }, // shape
+        { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
+        data, // the data pointer
+        freeWhenDone ); // numpy array references this parent
+}
+
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
     m.def( "getNumpyCurvature", &getNumpyCurvature );
+    m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient );
     m.def( "getNumpyFaces", &getNumpyFaces );
     m.def( "getNumpyVerts", &getNumpyVerts );
     m.def( "getNumpyBitSet", &getNumpyBitSet );

@@ -864,6 +864,9 @@
     <ClInclude Include="MRBuffer.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRVertexAttributeGradient.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1453,6 +1456,9 @@
     </ClCompile>
     <ClCompile Include="MRProgressReadWrite.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVertexAttributeGradient.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -187,8 +187,10 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     drawMesh_( true, parameters.viewportId, true );
 
-    if ( bufferMode_ == MemoryEfficient )
-        resetBuffers_();
+    // do not reset buffers on picker, not to reset buffers that is not used here
+    // TODO: rework rendering to have only one buffer and reset it right after it is sent to GPU (need to mix `update_` and `bind_`)
+    //if ( bufferMode_ == MemoryEfficient )
+    //    resetBuffers_();
 }
 
 size_t RenderMeshObject::heapBytes() const

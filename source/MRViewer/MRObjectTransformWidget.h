@@ -99,7 +99,7 @@ public:
     // Sets callback that will be called when widget gets addictive transform
     void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback; }
     // Sets callback that will be called when widget gets addictive transform
-    // The transform will not be applied to the widget if it was rejected by the callback
+    // The callback should return true to approve transform and false to reject it
     void setApproveXfCallback( std::function<bool( const AffineXf3f& )> callback ) { approveXfCallback_ = callback; }
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

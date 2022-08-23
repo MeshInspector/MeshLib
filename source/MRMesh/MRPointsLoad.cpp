@@ -21,8 +21,7 @@ const IOFilters Filters =
     {"ASC (.asc)",        "*.asc"},
     {"CTM (.ctm)",        "*.ctm"},
     {"OBJ (.obj)",        "*.obj"},
-    {"PLY (.ply)",        "*.ply"},
-    {"PTS (.pts)",        "*.pts"}
+    {"PLY (.ply)",        "*.ply"}
 };
 
 tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
@@ -196,72 +195,6 @@ tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Colo
     return std::move( res );
 }
 
-tl::expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file, ProgressCallback callback )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return fromPts( in, callback );
-}
-
-tl::expected<MR::PointCloud, std::string> fromPts( std::istream& in, ProgressCallback callback )
-{
-    std::string line;
-    int pointCount = 0;
-    PointCloud cloud;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
-
-    bool isPolylineBlock{ false };
-
-    while ( std::getline( in, line ) )
-    {
-        line.erase( std::find_if( line.rbegin(), line.rend(), [] ( unsigned char ch )
-        {
-            return !std::isspace( ch );
-        } ).base(), line.end() );
-        if ( !isPolylineBlock )
-        {
-            if ( line != "BEGIN_Polyline" )
-                return tl::make_unexpected( "Not valid .pts format" );
-            else
-            {
-                isPolylineBlock = true;
-                continue;
-            }
-        }
-        else if ( line == "END_Polyline" )
-        {
-            isPolylineBlock = false;
-            continue;
-        }
-
-        std::istringstream iss( line );
-        Vector3f point;
-        if ( !( iss >> point ) )
-            return tl::make_unexpected( "Not valid .pts format" );
-        cloud.points.push_back( point );
-        ++pointCount;
-
-        if ( callback && !( pointCount & 0x3FF ) )
-        {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ) );
-        }
-    }
-    if ( isPolylineBlock )
-        return tl::make_unexpected( "Not valid .pts format" );
-
-    cloud.validPoints.resize( pointCount, true );
-    return std::move( cloud );
-}
-
 tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -390,8 +323,6 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::fil
         res = MR::PointsLoad::fromPly( file, colors, callback );
     else if ( ext == u8".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
-    else if ( ext == u8".pts" )
-        res = MR::PointsLoad::fromPts( file, callback );
     else if ( ext == u8".obj" )
         res = MR::PointsLoad::fromObj( file, callback );
     else if ( ext == u8".asc" )
@@ -411,8 +342,6 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& 
         res = MR::PointsLoad::fromPly( in, colors, callback );
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( in, colors, callback );
-    else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( in, callback );
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )

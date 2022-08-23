@@ -57,6 +57,8 @@ private:
 
     GLuint facesNormalsTex_{ 0 };
 
+    int maxTexSize_{ 0 };
+
     void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
         GLuint count, const Color& color, unsigned dirtyValue ) const;
 

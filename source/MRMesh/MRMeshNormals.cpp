@@ -30,14 +30,14 @@ FaceNormals computePerFaceNormals( const Mesh & mesh )
     return res;
 }
 
-Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh )
+void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t size )
 {
     MR_TIMER
     FaceId lastValidFace = mesh.topology.lastValidFace();
+    size = std::min( size, size_t( lastValidFace + 1 ) );
 
     const auto & edgePerFace = mesh.topology.edgePerFace();
-    Buffer<Vector4f> res( lastValidFace + 1 );
-    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, lastValidFace + 1 ), [&]( const tbb::blocked_range<FaceId> & range )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{ 0 }, FaceId{ size } ), [&]( const tbb::blocked_range<FaceId> & range )
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
         {
@@ -45,11 +45,9 @@ Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh )
             if ( !e.valid() )
                 continue;
             const auto norm = mesh.leftNormal( e );
-            res[f] = Vector4f{ norm.x,norm.y,norm.z,1.0f };
+            faceNormals[f] = Vector4f{ norm.x, norm.y, norm.z, 1.0f };
         }
     } );
-
-    return res;
 }
 
 VertexNormals computePerVertNormals( const Mesh & mesh )

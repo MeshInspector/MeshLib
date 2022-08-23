@@ -30,13 +30,14 @@ FaceNormals computePerFaceNormals( const Mesh & mesh )
     return res;
 }
 
-Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh )
+Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh, size_t bufferSize )
 {
     MR_TIMER
     FaceId lastValidFace = mesh.topology.lastValidFace();
 
     const auto & edgePerFace = mesh.topology.edgePerFace();
-    Buffer<Vector4f> res( lastValidFace + 1 );
+    assert( bufferSize >= lastValidFace + 1 );
+    Buffer<Vector4f> res( bufferSize );
     tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, lastValidFace + 1 ), [&]( const tbb::blocked_range<FaceId> & range )
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )

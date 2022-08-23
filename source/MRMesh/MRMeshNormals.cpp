@@ -36,7 +36,10 @@ Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh, size_t bufferSize )
     FaceId lastValidFace = mesh.topology.lastValidFace();
 
     const auto & edgePerFace = mesh.topology.edgePerFace();
-    assert( bufferSize >= lastValidFace + 1 );
+    if ( bufferSize != 0 )
+        assert( bufferSize >= lastValidFace + 1 );
+    else
+        bufferSize = lastValidFace + 1;
     Buffer<Vector4f> res( bufferSize );
     tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, lastValidFace + 1 ), [&]( const tbb::blocked_range<FaceId> & range )
     {

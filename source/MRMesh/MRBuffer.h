@@ -25,7 +25,6 @@ public:
 
     Buffer() = default;
     explicit Buffer( size_t size ) { resize( size ); }
-    Buffer( std::vector<T> && vec ) : data_( std::move( data_ ) ), size_( std::move( size_ ) ) { }
 
     void clear() { data_.reset(); size_ = 0; }
 

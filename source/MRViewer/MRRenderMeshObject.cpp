@@ -597,13 +597,7 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_faces_normals" )
-        const auto faceNormals = computePerFaceNormals( *mesh );
-        faceNormalsTexture_.resize( faceNormals.size() );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            const auto& norm = faceNormals[f];
-            faceNormalsTexture_[f] = Vector4f{ norm.x,norm.y,norm.z,1.0f };
-        } );
+        faceNormalsTexture_ = computePerFaceNormals4( *mesh );
     }
 
     ColoringType coloringType = objMesh_->getColoringType();

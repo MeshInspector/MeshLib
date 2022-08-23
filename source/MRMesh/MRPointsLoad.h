@@ -32,10 +32,6 @@ MRMESH_API tl::expected<PointCloud, std::string> fromPly( const std::filesystem:
 MRMESH_API tl::expected<PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                           ProgressCallback callback = {} );
 
-/// loads from .pts file
-MRMESH_API tl::expected<PointCloud, std::string> fromPts( const std::filesystem::path& file, ProgressCallback callback = {} );
-MRMESH_API tl::expected<PointCloud, std::string> fromPts( std::istream& in, ProgressCallback callback = {} );
-
 /// loads from .obj file
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback = {} );
 MRMESH_API tl::expected<PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback = {} );

@@ -97,7 +97,9 @@ public:
     // Sets callback that will be called when modification of widget starts
     void setStartModifyCallback( std::function<void()> callback ) { startModifyCallback_ = callback; }
     // Sets callback that will be called when widget gets addictive transform
-    void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback;}
+    void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback; }
+    // Sets callback that will be called when widget gets addictive transform
+    // The transform will not be applied to the widget if it was rejected by the callback
     void setApplyXfCallback( std::function<bool( const AffineXf3f& )> callback ) { applyXfCallback_ = callback; }
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;

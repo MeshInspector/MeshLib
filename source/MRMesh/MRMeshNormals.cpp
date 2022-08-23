@@ -1,6 +1,8 @@
 #include "MRMeshNormals.h"
 #include "MRMesh.h"
 #include "MRRingIterator.h"
+#include "MRBuffer.h"
+#include "MRVector4.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -22,6 +24,28 @@ FaceNormals computePerFaceNormals( const Mesh & mesh )
             if ( !e.valid() )
                 continue;
             res[f] = mesh.leftNormal( e );
+        }
+    } );
+
+    return res;
+}
+
+Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh )
+{
+    MR_TIMER
+    FaceId lastValidFace = mesh.topology.lastValidFace();
+
+    const auto & edgePerFace = mesh.topology.edgePerFace();
+    Buffer<Vector4f> res( lastValidFace + 1 );
+    tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId{0}, lastValidFace + 1 ), [&]( const tbb::blocked_range<FaceId> & range )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            auto e = edgePerFace[f];
+            if ( !e.valid() )
+                continue;
+            const auto norm = mesh.leftNormal( e );
+            res[f] = Vector4f{ norm.x,norm.y,norm.z,1.0f };
         }
     } );
 

@@ -23,6 +23,9 @@ struct [[nodiscard]] MeshNormals
 /// returns a vector with face-normal in every element for valid mesh faces
 [[nodiscard]] MRMESH_API FaceNormals computePerFaceNormals( const Mesh & mesh );
 
+/// returns a buffer with face-normals as Vector4f for valid mesh faces
+[[nodiscard]] MRMESH_API Buffer<Vector4f> computePerFaceNormals4( const Mesh & mesh );
+
 /// returns a vector with vert-normal in every element for valid mesh vertices
 [[nodiscard]] MRMESH_API VertexNormals computePerVertNormals( const Mesh & mesh );
 

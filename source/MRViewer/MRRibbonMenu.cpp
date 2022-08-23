@@ -1688,6 +1688,23 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
     ImGui::SameLine();
 }
 
+void RibbonMenu::addRibbonItemShortcut_( std::string itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
+{
+    auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
+    if ( itemIt != RibbonSchemaHolder::schema().items.end() )
+    {
+        auto caption = itemIt->second.caption.empty() ? itemIt->first : itemIt->second.caption;
+        shortcutManager_->setShortcut( key, { category, caption,[item = itemIt->second.item, this]()
+        {
+            itemPressed_( item, getRequirements_( item ).empty() );
+        } } );
+    }
+#ifndef __EMSCRIPTEN__
+    else
+        assert( !"item not found" );
+#endif
+}
+
 void RibbonMenu::setupShortcuts_()
 {
     if ( !shortcutManager_ )
@@ -1772,39 +1789,17 @@ void RibbonMenu::setupShortcuts_()
         changeSelection( false,GLFW_MOD_SHIFT );
     } }  );
 
-    auto addShortcut = [this] ( std::string pluginName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
-    {
-        auto pluginIt = RibbonSchemaHolder::schema().items.find( pluginName );
-        if ( pluginIt != RibbonSchemaHolder::schema().items.end() )
-        {
-            auto caption = pluginIt->second.caption.empty() ? pluginIt->first : pluginIt->second.caption;
-            shortcutManager_->setShortcut( key, { category, caption, [item = pluginIt->second.item, this]()
-            {
-                itemPressed_( item, getRequirements_( item ).empty() );
-            } }  );
-        }
-#ifndef __EMSCRIPTEN__
-        else
-            assert( !"item not found" );
-#endif
-    };
-
-    addShortcut( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
-    addShortcut( "Undo", { GLFW_KEY_Z, GLFW_MOD_CONTROL }, ShortcutManager::Category::Edit );
-    addShortcut( "Redo", { GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutManager::Category::Edit );
-    addShortcut( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutManager::Category::View );
-    addShortcut( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
-    addShortcut( "Face Selector", { GLFW_KEY_W, GLFW_MOD_CONTROL }, ShortcutManager::Category::Selection );
-    addShortcut( "Clear Selections", { GLFW_KEY_T, GLFW_MOD_CONTROL }, ShortcutManager::Category::Selection );
-    addShortcut( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
-    addShortcut( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
-    addShortcut( "Save Scene As", { GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
-    addShortcut( "New", { GLFW_KEY_N, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
-    addShortcut( "Delete Selection", { GLFW_KEY_DELETE, 0 }, ShortcutManager::Category::Edit );
-    addShortcut( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutManager::Category::View );
-    addShortcut( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutManager::Category::View );
-    addShortcut( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
-    addShortcut( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Save Scene As", { GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "New", { GLFW_KEY_N, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutManager::Category::View );
+    addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

@@ -100,7 +100,7 @@ public:
     void setAddXfCallback( std::function<void( const AffineXf3f& )> callback ) { addXfCallback_ = callback; }
     // Sets callback that will be called when widget gets addictive transform
     // The transform will not be applied to the widget if it was rejected by the callback
-    void setApplyXfCallback( std::function<bool( const AffineXf3f& )> callback ) { applyXfCallback_ = callback; }
+    void setApproveXfCallback( std::function<bool( const AffineXf3f& )> callback ) { approveXfCallback_ = callback; }
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
@@ -176,7 +176,7 @@ private:
     std::function<void()> startModifyCallback_;
     std::function<void()> stopModifyCallback_;
     std::function<void( const AffineXf3f& )> addXfCallback_;
-    std::function<bool( const AffineXf3f& )> applyXfCallback_;
+    std::function<bool( const AffineXf3f& )> approveXfCallback_;
     bool approvedChange_ = true; // if controlsRoot_ xf changed without approve, user modification stops
     boost::signals2::connection xfValidatorConnection_;
 };

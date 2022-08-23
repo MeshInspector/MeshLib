@@ -788,15 +788,9 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     if ( addXf == AffineXf3f() )
         return;
 
+    if ( approveXfCallback_ && !approveXfCallback_( addXf ) )
+        return;
     approvedChange_ = true;
-    if ( applyXfCallback_ )
-    {
-        if ( !applyXfCallback_( addXf ) )
-        {
-            approvedChange_ = false;
-            return;
-        }
-    }
     if ( addXfCallback_ )
         addXfCallback_( addXf );
     setControlsXf( addXf * controlsRoot_->xf() );

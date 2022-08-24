@@ -318,8 +318,6 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
 
     auto res = ImGui::BeginCombo( label , showPreview ? options[*v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
-    if ( res )
-        res = res;    
     
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );

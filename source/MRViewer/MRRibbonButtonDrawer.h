@@ -57,7 +57,7 @@ public:
     /// draw gradient radio button
     MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
 
-    MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true );
+    MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {} );
 
     struct ButtonItemWidth
     {

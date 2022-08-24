@@ -303,8 +303,10 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
-bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview )
+bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips )
 {
+    assert( tooltips.empty() || tooltips.size() == options.size() );
+
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;
     const auto& style = ImGui::GetStyle();
@@ -317,8 +319,7 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
 
     auto res = ImGui::BeginCombo( label , showPreview ? options[*v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
     if ( res )
-        res = res;
-    
+        res = res;    
     
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
@@ -348,6 +349,10 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
         ImGui::PushID( (label + std::to_string( i )).c_str() );
         if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
             *v = i;
+        
+        if ( !tooltips.empty() )
+            ImGui::SetTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
+
         ImGui::PopID();        
     }
 

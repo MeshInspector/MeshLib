@@ -509,7 +509,7 @@ PaletteChanges Palette(
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
     {
-        ImGui::PushItemWidth( scaledWidth );
+        ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = -1;
         if ( RibbonButtonDrawer::CustomCombo( "Load palette preset", &presetIndex, presets, false ) )
         {
@@ -521,7 +521,6 @@ PaletteChanges Palette(
             changes = int( PaletteChanges::All );
             CloseCurrentPopup();
         }
-        ImGui::PopItemWidth();
     }
 
     bool fixZeroChanged = false;

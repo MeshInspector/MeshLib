@@ -569,7 +569,8 @@ PaletteChanges Palette(
     ImGui::PushItemWidth( scaledWidth );
     
     RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
-
+    ImGui::PopItemWidth();
+    ImGui::PushItemWidth( scaledWidth * 2.0f / 3.0f );
     float ranges[4];
     ranges[0] = params.ranges.front();
     ranges[3] = params.ranges.back();

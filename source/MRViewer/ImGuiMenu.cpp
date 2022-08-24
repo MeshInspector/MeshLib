@@ -1540,8 +1540,12 @@ float ImGuiMenu::drawTransform_()
             auto minSizeDim = wbsize.length();
             if ( minSizeDim == 0 )
                 minSizeDim = 1.f;
-            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
+            auto translation = xf.b;
+            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &translation.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
             inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
+
+            if ( resultTranslation.valueChanged )
+                xf.b = translation;
 
             if ( xfHistUpdated_ )
                 xfHistUpdated_ = !inputDeactivated;

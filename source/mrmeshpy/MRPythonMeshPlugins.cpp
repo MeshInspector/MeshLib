@@ -328,3 +328,5 @@ MR_ADD_PYTHON_FUNCTION( mrmeshpy, position_verts_smoothly, &positionVertsSmoothl
 
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, findMaxMeshDistanceSqOneWay, &findMaxDistanceSqOneWay, "returns the maximum of the distances from each B-mesh point to A-mesh" )
 MR_ADD_PYTHON_FUNCTION( mrmeshpy, findMaxMeshDistanceSq, &findMaxDistanceSq, "returns the maximum of the distances from each mesh point to another mesh in both directions" )
+
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, findDegenerateFaces, &findDegenerateFaces, "finds faces which aspect ratio >= criticalAspectRatio" )

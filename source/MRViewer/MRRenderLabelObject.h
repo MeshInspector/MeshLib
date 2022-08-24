@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
+#include "MRRenderGLHelpers.h"
 
 namespace MR
 {
@@ -22,20 +23,20 @@ private:
     typedef unsigned int GLuint;
 
     GLuint labelArrayObjId_{ 0 };
-    GLuint vertPosBufferObjId_{ 0 };
+    mutable GlBuffer vertPosBuffer_;
     GLuint facesIndicesBufferObjId_{ 0 };
 
     GLuint srcArrayObjId_{ 0 };
-    GLuint srcVertPosBufferObjId_{ 0 };
+    mutable GlBuffer srcVertPosBuffer_;
     GLuint srcIndicesBufferObjId_{ 0 };
     GLuint srcIndicesSelectionTexId_{ 0 };
 
     GLuint bgArrayObjId_{ 0 };
-    GLuint bgVertPosBufferObjId_{ 0 };
+    mutable GlBuffer bgVertPosBuffer_;
     GLuint bgFacesIndicesBufferObjId_{ 0 };
 
     GLuint llineArrayObjId_{ 0 };
-    GLuint llineVertPosBufferObjId_{ 0 };
+    mutable GlBuffer llineVertPosBuffer_;
     GLuint llineEdgesIndicesBufferObjId_{ 0 };
 
     void renderSourcePoint_( const RenderParams& renderParams ) const;

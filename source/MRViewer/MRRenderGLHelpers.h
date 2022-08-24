@@ -1,5 +1,8 @@
 #pragma once
 
+#include "MRGladGlfw.h"
+#include "MRGLMacro.h"
+#include "MRViewer.h"
 #include <cassert>
 
 namespace MR
@@ -26,18 +29,28 @@ public:
     {
         del();
         GL_EXEC( glGenBuffers( 1, &bufferID_ ) );
-        assert( bufferID_ != NO_BUF );
+        assert( valid() );
     }
 
     // deletes the buffer
     void del()
     {
-        if ( bufferID_ == NO_BUF )
+        if ( !valid() )
             return;
-        GL_EXEC( glDeleteBuffers( 1, &bufferID_ ) );
+        if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
+        {
+            GL_EXEC( glDeleteBuffers( 1, &bufferID_ ) );
+        }
         bufferID_ = NO_BUF;
         size_ = 0;
     }
+
+    // binds current buffer to OpenGL context
+    void bind() { assert( valid() ); GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, bufferID_ ) ); }
+
+    // creates GL data buffer using given data
+    template<typename T>
+    void loadData( const T * arr, size_t arrSize );
 
 private:
     /// another object takes control over the GL buffer
@@ -49,8 +62,11 @@ private:
 };
 
 template<typename T>
-void createArrayBufferData( const T * arr, size_t arrSize )
+void GlBuffer::loadData( const T * arr, size_t arrSize )
 {
+    if ( !valid() )
+        gen();
+    bind();
     GLint64 bufSize = sizeof( T ) * arrSize;
     auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
     if ( bufSize <= maxUploadSize )
@@ -70,13 +86,14 @@ void createArrayBufferData( const T * arr, size_t arrSize )
         }
         GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, remSize, (const char *)arr + remStart ) );
     }
+    size_ = size_t( bufSize );
 }
 
 template<typename T, template<typename, typename...> class C, typename... args>
 GLint bindVertexAttribArray(
     const GLuint program_shader,
     const std::string& name,
-    GLuint bufferID,
+    GlBuffer & buf,
     const C<T, args...>& V,
     int baseTypeElementsNumber,
     bool refresh,
@@ -88,12 +105,14 @@ GLint bindVertexAttribArray(
     if ( V.size() == 0 && !forceUse )
     {
         GL_EXEC( glDisableVertexAttribArray( id ) );
+        buf.del();
         return id;
     }
 
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, bufferID ) );
     if ( refresh )
-        createArrayBufferData( V.data(), V.size() );
+        buf.loadData( V.data(), V.size() );
+    else
+        buf.bind();
 
     // GL_FLOAT is left here consciously 
     if constexpr ( std::is_same_v<Color, T> )

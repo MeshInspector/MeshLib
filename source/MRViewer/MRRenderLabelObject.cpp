@@ -125,7 +125,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     GL_EXEC( glUseProgram( shader ) );
 
     const std::vector<Vector3f> point { objLabel_->getLabel().position };
-    bindVertexAttribArray( shader, "position", srcVertPosBufferObjId_, point, 3, dirtySrc_ );
+    bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point, 3, dirtySrc_ );
 
     constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, srcIndicesBufferObjId_ ) );
@@ -207,7 +207,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
         { box.min.x, box.max.y, 0.f },
         { box.max.x, box.max.y, 0.f },
     };
-    bindVertexAttribArray( shader, "position", bgVertPosBufferObjId_, corners, 3, dirtyBg_ );
+    bindVertexAttribArray( shader, "position", bgVertPosBuffer_, corners, 3, dirtyBg_ );
 
     constexpr std::array<Vector3i, 2> bgFacesIndicesBufferObj = {
         Vector3i{ 0, 1, 2 },
@@ -244,7 +244,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
         { box.min.x, box.max.y, 0.f },
         { box.max.x, box.max.y, 0.f },
     };
-    bindVertexAttribArray( shader, "position", llineVertPosBufferObjId_, leaderLineVertices, 3, dirtyLLine_ );
+    bindVertexAttribArray( shader, "position", llineVertPosBuffer_, leaderLineVertices, 3, dirtyLLine_ );
 
     std::array<Vector2i, 3> llineEdgesIndices {
         Vector2i{ 1, 2 },
@@ -333,7 +333,7 @@ void RenderLabelObject::bindLabel_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
     
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_FACE )
@@ -348,23 +348,19 @@ void RenderLabelObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &labelArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &srcArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &srcVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &srcIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &llineArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &llineVertPosBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
 
     dirty_ = DIRTY_ALL;
@@ -379,20 +375,16 @@ void RenderLabelObject::freeBuffers_()
         return;
 
     GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &srcArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &srcVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &srcIndicesBufferObjId_ ) );
     GL_EXEC( glDeleteTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &bgVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &llineArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &llineVertPosBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
 }
 

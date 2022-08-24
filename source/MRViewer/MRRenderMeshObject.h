@@ -3,6 +3,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
+#include "MRRenderGLHelpers.h"
 
 namespace MR
 {
@@ -42,10 +43,10 @@ private:
     GLuint meshArrayObjId_{ 0 };
     GLuint meshPickerArrayObjId_{ 0 };
 
-    GLuint vertPosBufferObjId_{ 0 };
-    GLuint vertUVBufferObjId_{ 0 };
-    GLuint vertNormalsBufferObjId_{ 0 };
-    GLuint vertColorsBufferObjId_{ 0 };
+    mutable GlBuffer vertPosBuffer_;
+    mutable GlBuffer vertUVBuffer_;
+    mutable GlBuffer vertNormalsBuffer_;
+    mutable GlBuffer vertColorsBuffer_;
 
     GLuint facesIndicesBufferObjId_{ 0 };
     GLuint edgesIndicesBufferObjId_{ 0 };

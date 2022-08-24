@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project (MRCommonPlugins CXX)
+
+file(GLOB_RECURSE SOURCES "*.cpp")
+file(GLOB_RECURSE HEADERS "*.h")
+
+
+file(GLOB UI_JSON "*.ui.json")
+file(GLOB ITEMS_JSON "*.items.json")
+IF(MR_EMSCRIPTEN)
+	file(COPY ${UI_JSON} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
+	file(COPY ${ITEMS_JSON} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
+	file(COPY "resource" DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
+ELSE() # MR_EMSCRIPTEN
+	file(COPY ${UI_JSON} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+	file(COPY ${ITEMS_JSON} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+	file(COPY "resource" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ENDIF() # MR_EMSCRIPTEN
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+IF(APPLE)
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		MRMesh
+		MRViewer
+		imgui
+		fmt
+		spdlog
+		glfw
+		jsoncpp
+		)
+ELSE()
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		MRMesh
+		MRViewer
+		imgui
+		)
+ENDIF()

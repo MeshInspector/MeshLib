@@ -1,0 +1,231 @@
+{
+	"Items": [
+		{
+			"Name": "New",
+			"Tooltip": "Remove all objects from scene.",
+			"Icon": "\uF021"
+		},
+		{
+			"Name": "Open files",
+			"Caption": "Open Files",
+			"Tooltip": "Select files from dialog and open them in viewer window.",
+			"Icon": "\uF15B"
+		},
+		{
+			"Name": "Open directory",
+			"Caption": "Open Directory",
+			"Tooltip": "Select root directory or directory with dcm scan slices in dialog and open it in viewer window.",
+			"Icon": "\uF07C"
+		},
+		{
+			"Name": "Open DICOMs",
+			"Tooltip": "Load all DICOM volumes from given directory and its subdirectories.",
+			"Icon": "\uF07C"
+		},
+		{
+			"Name": "Open RAW Voxels",
+			"Tooltip": "Load *.raw file with user specified parameters.",
+			"Icon": "\uF15B"
+		},
+		{
+			"Name": "Save object",
+			"Caption": "Export",
+			"Tooltip": "Save selected object to file.",
+			"Icon": "\uF0C6"
+		},
+		{
+			"Name": "Save selected",
+			"Caption": "Save Selected",
+			"Tooltip": "Save scene tree branches with selected objects to MRU format.",
+			"Icon": "\uF0C7"
+		},
+		{
+			"Name": "Save Scene",
+			"Tooltip": "Save MRU scene to the file from which it was opened.",
+			"Icon": "\uF0C7"
+		},
+		{
+			"Name": "Save Scene As",
+			"Tooltip": "Save all scene in file.",
+			"Icon": "\uF0C7"
+		},
+		{
+			"Name": "Capture screenshot",
+			"Caption": "Screenshot",
+			"Tooltip": "Saves screenshot of scene to file.",
+			"Icon": "\uF03E",
+			"DropList": [
+				{
+					"Name": "Capture UI screenshot"
+				},
+				{
+					"Name": "Screenshot to clipboard"
+				}
+			]
+		},
+		{
+			"Name": "Capture UI screenshot",
+			"Caption": "UI Screenshot",
+			"Tooltip": "Saves screenshot of viewer to file.",
+			"Icon": "\uF03E"
+		},
+		{
+			"Name": "Screenshot to clipboard",
+			"Caption": "Screenshot to Clipboard",
+			"Tooltip": "Copies screenshot of scene to clipboard",
+			"Icon": "\uF03E"
+		},
+		{
+			"Name": "Fit data",
+			"Caption": "Fit Data",
+			"Tooltip": "Changes current viewport settings to fit all visible objects in scene.",
+			"Icon": "\uF065",
+			"DropList": [
+				{
+					"Name": "Fit selected objects"
+				},
+				{
+					"Name": "Fit selected primitives"
+				}
+			]
+		},
+		{
+			"Name": "Fit selected objects",
+			"Caption": "Fit Selected Objects",
+			"Tooltip": "Changes current viewport settings to fit selected visible objects in scene.",
+			"Icon": "\uF066"
+		},
+		{
+			"Name": "Fit selected primitives",
+			"Caption": "Fit Selected Primitives",
+			"Tooltip": "Changes current viewport settings to fit selection.",
+			"Icon": "\uF05B"
+		},
+		{
+			"Name": "Camera",
+			"Tooltip": "Manually setup camera.",
+			"Icon": "\uF03D"
+		},
+		{
+			"Name": "Front View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF102"
+		},
+		{
+			"Name": "Top View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF107"
+		},
+		{
+			"Name": "Bottom View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF106"
+		},
+		{
+			"Name": "Left View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF105"
+		},
+		{
+			"Name": "Back View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF103"
+		},
+		{
+			"Name": "Right View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF104"
+		},
+		{
+			"Name": "Isometric View",
+			"Tooltip": "Set active viewport view.",
+			"Icon": "\uF1B2"
+		},
+		{
+			"Name": "Single Viewport",
+			"Tooltip": "Setup single viewport for whole window.",
+			"Icon": "\uF525"
+		},
+		{
+			"Name": "Horizontal Viewports",
+			"Tooltip": "Setup two horizontal viewports for whole window.",
+			"Icon": "\uF7A4"
+		},
+		{
+			"Name": "Vertical Viewports",
+			"Tooltip": "Setup two vertical viewports for whole window.",
+			"Icon": "\uF7A5"
+		},
+		{
+			"Name": "Quad Viewports",
+			"Tooltip": "Setup four equal viewports for whole window.",
+			"Icon": "\uF524"
+		},
+		{
+			"Name": "Add custom theme",
+			"Caption": "Add Custom Theme",
+			"Tooltip": "Customize and save color theme.",
+			"Icon": "\uF0D0"
+		},
+		{
+			"Name": "Viewer settings",
+			"Caption": "Viewer Settings",
+			"Tooltip": "Visualize settings for active viewport and common viewer settings.",
+			"Icon": "\uF013"
+		},
+		{
+			"Name": "Select objects",
+			"Caption": "Select Objects",
+			"Tooltip": "Selects objects by click on it in scene",
+			"Icon": "\uF245"
+		},
+		{
+			"Name": "Move object",
+			"Caption": "Move Object",
+			"Tooltip": "Move object by moving mouse in scene",
+			"Icon": "\uF256"
+		},
+		{
+			"Name": "Ribbon Scene Sort by name",
+			"Caption": "Sort by Name",
+			"Tooltip": "Select all objects in scene",
+			"Icon": "\uF15D"
+		},
+		{
+			"Name": "Ribbon Scene Select all",
+			"Caption": "Select All",
+			"Tooltip": "Select all objects in scene",
+			"Icon": "\uF205"
+		},
+		{
+			"Name": "Ribbon Scene Unselect all",
+			"Caption": "Unselect All",
+			"Tooltip": "Select all objects in scene",
+			"Icon": "\uF204"
+		},
+		{
+			"Name": "Ribbon Scene Show only previous",
+			"Caption": "Show Only Previous",
+			"Tooltip": "Select and show only previous",
+			"Icon": "\uF0AA"
+		},
+		{
+			"Name": "Ribbon Scene Show only next",
+			"Caption": "Show Only Next",
+			"Tooltip": "Select and show only next",
+			"Icon": "\uF0AB"
+		},
+		{
+			"Name": "Ribbon Scene Rename",
+			"Caption": "Rename",
+			"Tooltip": "Rename object",
+			"Icon": "\uF044"
+		},
+		{
+			"Name": "Ribbon Scene Remove selected objects",
+			"Caption": "Remove Selected",
+			"Tooltip": "Remove selected objects",
+			"Icon": "\uF2ED"
+		}
+	]
+}

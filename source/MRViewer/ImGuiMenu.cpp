@@ -1536,8 +1536,10 @@ float ImGuiMenu::drawTransform_()
             const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
-            auto wbsize = selectionWorldBox_.size();
-            auto minSizeDim = std::min( { wbsize.x, wbsize.y, wbsize.z } );
+            auto wbsize = selectionWorldBox_.valid() ? selectionWorldBox_.size() : Vector3f::diagonal( 1.f );
+            auto minSizeDim = wbsize.length();
+            if ( minSizeDim == 0 )
+                minSizeDim = 1.f;
             auto resultTranslation = ImGui::DragFloatValid3( "Translation", &xf.b.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
             inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
 

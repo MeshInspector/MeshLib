@@ -155,6 +155,7 @@ private:
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
 
+    AffineXf3f scaledXf_;
     Matrix3f objScale_;
 
     Vector3f prevScaling_;

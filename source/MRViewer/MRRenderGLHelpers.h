@@ -2,7 +2,8 @@
 
 #include "MRGladGlfw.h"
 #include "MRGLMacro.h"
-#include "MRViewer.h"
+#include "exports.h"
+#include "MRMesh/MRColor.h"
 #include <cassert>
 
 namespace MR
@@ -25,32 +26,18 @@ public:
     size_t size() const { return size_; }
 
     // generates new buffer
-    void gen()
-    {
-        del();
-        GL_EXEC( glGenBuffers( 1, &bufferID_ ) );
-        assert( valid() );
-    }
+    MRVIEWER_API void gen();
 
     // deletes the buffer
-    void del()
-    {
-        if ( !valid() )
-            return;
-        if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
-        {
-            GL_EXEC( glDeleteBuffers( 1, &bufferID_ ) );
-        }
-        bufferID_ = NO_BUF;
-        size_ = 0;
-    }
+    MRVIEWER_API void del();
 
     // binds current buffer to OpenGL context
-    void bind() { assert( valid() ); GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, bufferID_ ) ); }
+    MRVIEWER_API void bind();
 
     // creates GL data buffer using given data
+    MRVIEWER_API void loadData( const char * arr, size_t arrSize );
     template<typename T>
-    void loadData( const T * arr, size_t arrSize );
+    void loadData( const T * arr, size_t arrSize ) { loadData( (const char *)arr, sizeof( T ) * arrSize ); }
 
 private:
     /// another object takes control over the GL buffer
@@ -60,34 +47,6 @@ private:
     GLuint bufferID_ = NO_BUF;
     size_t size_ = 0;
 };
-
-template<typename T>
-void GlBuffer::loadData( const T * arr, size_t arrSize )
-{
-    if ( !valid() )
-        gen();
-    bind();
-    GLint64 bufSize = sizeof( T ) * arrSize;
-    auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
-    if ( bufSize <= maxUploadSize )
-    {
-        // buffers less than 4Gb are ok to load immediately
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, arr, GL_DYNAMIC_DRAW ) );
-    }
-    else
-    {
-        // buffers more than 4Gb are better to split on chunks to avoid strange errors from GL or drivers
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, nullptr, GL_DYNAMIC_DRAW ) );
-        GLint64 remStart = 0;
-        auto remSize = bufSize;
-        for ( ; remSize > maxUploadSize; remSize -= maxUploadSize, remStart += maxUploadSize )
-        {
-            GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, maxUploadSize, (const char *)arr + remStart ) );
-        }
-        GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, remSize, (const char *)arr + remStart ) );
-    }
-    size_ = size_t( bufSize );
-}
 
 template<typename T, template<typename, typename...> class C, typename... args>
 GLint bindVertexAttribArray(

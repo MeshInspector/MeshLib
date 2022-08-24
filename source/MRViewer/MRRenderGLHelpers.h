@@ -1,7 +1,52 @@
 #pragma once
 
+#include <cassert>
+
 namespace MR
 {
+
+// represents OpenGL buffer owner, and allows uploading data in it remembering buffer size
+class GlBuffer
+{
+    constexpr static GLuint NO_BUF = 0;
+public:
+    GlBuffer() = default;
+    GlBuffer( const GlBuffer & ) = delete;
+    GlBuffer( GlBuffer && r ) : bufferID_( r.bufferID_ ), size_( r.size_ ) { r.detach_(); }
+    ~GlBuffer() { del(); }
+
+    GlBuffer& operator =( const GlBuffer & ) = delete;
+    GlBuffer& operator =( GlBuffer && r ) { del(); bufferID_ = r.bufferID_; size_ = r.size_; r.detach_(); return * this; }
+
+    bool valid() const { return bufferID_ != NO_BUF; }
+    size_t size() const { return size_; }
+
+    // generates new buffer
+    void gen()
+    {
+        del();
+        GL_EXEC( glGenBuffers( 1, &bufferID_ ) );
+        assert( bufferID_ != NO_BUF );
+    }
+
+    // deletes the buffer
+    void del()
+    {
+        if ( bufferID_ == NO_BUF )
+            return;
+        GL_EXEC( glDeleteBuffers( 1, &bufferID_ ) );
+        bufferID_ = NO_BUF;
+        size_ = 0;
+    }
+
+private:
+    /// another object takes control over the GL buffer
+    void detach_() { bufferID_ = NO_BUF; size_ = 0; }
+
+private:
+    GLuint bufferID_ = NO_BUF;
+    size_t size_ = 0;
+};
 
 template<typename T>
 void createArrayBufferData( const T * arr, size_t arrSize )

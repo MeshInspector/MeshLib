@@ -24,7 +24,7 @@ public:
     ~File() { close(); }
 
     File& operator =( const File & ) = delete;
-    File& operator =( File && r ) { handle_ = r.handle_; r.detach(); return * this; }
+    File& operator =( File && r ) { close(); handle_ = r.handle_; r.detach(); return * this; }
 
     operator FILE *() const { return handle_; }
 

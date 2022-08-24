@@ -195,7 +195,7 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
 size_t RenderMeshObject::heapBytes() const
 {
-    return vertPosBufferObj_.heapBytes()
+    return bufferObj_.heapBytes()
         + vertNormalsBufferObj_.heapBytes()
         + vertColorsBufferObj_.heapBytes()
         + vertUVBufferObj_.heapBytes()
@@ -279,7 +279,11 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
         color[0], color[1], color[2], color[3] ) );
 
     // positions
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+    if ( elementDirty_[VERTEX_POSITIONS] )
+        loadBuffer_( VERTEX_POSITIONS );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
+    elementDirty_.reset( VERTEX_POSITIONS );
+
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
@@ -299,7 +303,11 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+
+    if ( elementDirty_[VERTEX_POSITIONS] )
+        loadBuffer_( VERTEX_POSITIONS );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
+    elementDirty_.reset( VERTEX_POSITIONS );
 
     bool needRefreshNormals = bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
     bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, needRefreshNormals, vertNormalsCount_ != 0 );
@@ -405,7 +413,11 @@ void RenderMeshObject::bindMeshPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+
+    if ( elementDirty_[PICKER_VERTEX_POSITIONS] )
+        loadBuffer_( PICKER_VERTEX_POSITIONS );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[PICKER_VERTEX_POSITIONS], elementCount_[PICKER_VERTEX_POSITIONS] != 0 );
+    elementDirty_.reset( PICKER_VERTEX_POSITIONS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )
@@ -547,17 +559,8 @@ void RenderMeshObject::update_( ViewportId id ) const
     // Vertex positions
     if ( dirty_ & DIRTY_POSITION )
     {
-        MR_NAMED_TIMER( "vertbased_dirty_positions" );
-        vertPosBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            Vector3f v[3];
-            mesh->getTriPoints( f, v[0], v[1], v[2] );
-            for ( int i = 0; i < 3; ++i )
-                vertPosBufferObj_[ind + i] = v[i];
-        } );
-        vertsCount_ = vertPosBufferObj_.size();
+        elementDirty_.set( VERTEX_POSITIONS );
+        elementDirty_.set( PICKER_VERTEX_POSITIONS );
     }
     // Normals
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
@@ -778,7 +781,6 @@ void RenderMeshObject::updateSelectedEdgesBuffer_() const
 
 void RenderMeshObject::resetBuffers_() const
 {
-    RESET_VECTOR( vertPosBufferObj_ );
     if ( normalsBound_ )
         RESET_VECTOR( vertNormalsBufferObj_ );
     RESET_VECTOR( vertColorsBufferObj_ );
@@ -789,6 +791,33 @@ void RenderMeshObject::resetBuffers_() const
     RESET_VECTOR( faceNormalsTexture_ );
     RESET_VECTOR( borderHighlightPoints_ );
     RESET_VECTOR( selectedEdgesPoints_ );
+}
+
+void RenderMeshObject::loadBuffer_( RenderMeshObject::BufferType type ) const
+{
+    const auto& mesh = objMesh_->mesh();
+
+    switch ( type )
+    {
+    case VERTEX_POSITIONS:
+    case PICKER_VERTEX_POSITIONS:
+    {
+        auto numF = mesh->topology.lastValidFace() + 1;
+        auto* buffer = prepareBuffer_<Vector3f>( type, 3 * numF );
+
+        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            Vector3f v[3];
+            mesh->getTriPoints( f, v[0], v[1], v[2] );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = v[i];
+        } );
+    }
+        break;
+    default:
+        break;
+    }
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

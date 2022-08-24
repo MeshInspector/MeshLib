@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRRenderGLHelpers.h"
+#include <bitset>
 
 namespace MR
 {
@@ -21,7 +22,6 @@ private:
     const ObjectMeshHolder* objMesh_;
 
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    mutable Buffer<Vector3f> vertPosBufferObj_;
     mutable Buffer<Vector3f> vertNormalsBufferObj_;
     mutable Buffer<Color> vertColorsBufferObj_;
     mutable Buffer<UVCoord> vertUVBufferObj_;
@@ -31,6 +31,39 @@ private:
     mutable Buffer<Vector4f> faceNormalsTexture_;
     mutable Buffer<Vector3f> borderHighlightPoints_;
     mutable Buffer<Vector3f> selectedEdgesPoints_;
+    enum BufferType {
+        VERTEX_POSITIONS,
+        PICKER_VERTEX_POSITIONS,
+        CORNER_NORMALS,
+        VERTEX_NORMALS,
+        FACE_NORMALS,
+        VERTEX_COLORMAPS,
+        FACES,
+        EDGES,
+        VERTEX_UVS,
+        FACE_SELECTION,
+        BORDER_LINES,
+        EDGE_SELECTION,
+
+        BUFFER_COUNT,
+    };
+    mutable Buffer<std::byte> bufferObj_;
+    mutable std::size_t elementSize_;
+    mutable std::array<std::size_t, BUFFER_COUNT> elementCount_;
+    mutable std::bitset<BUFFER_COUNT> elementDirty_;
+
+    template <typename T>
+    T* prepareBuffer_( BufferType type, std::size_t elementCount ) const
+    {
+        elementSize_ = sizeof(T);
+        elementCount_[type] = elementCount;
+        auto size = elementSize_ * elementCount_[type];
+        if ( bufferObj_.size() < size )
+            bufferObj_.resize( size );
+        return reinterpret_cast<T*>( bufferObj_.data() );
+    }
+
+    void loadBuffer_( BufferType type ) const;
 
     typedef unsigned int GLuint;
 
@@ -90,7 +123,6 @@ private:
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
     // store element counts separately because the buffers could be cleared
-    mutable size_t vertsCount_{ 0 };
     mutable size_t vertNormalsCount_{ 0 };
     mutable size_t vertColorsCount_{ 0 };
     mutable size_t vertUVCount_{ 0 };

@@ -303,6 +303,63 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
+bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips )
+{
+    assert( tooltips.empty() || tooltips.size() == options.size() );
+
+    auto context = ImGui::GetCurrentContext();
+    ImGuiWindow* window = context->CurrentWindow;
+    const auto& style = ImGui::GetStyle();
+    const ImVec2 pos = window->DC.CursorPos;
+    const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
+    if ( !showPreview )
+        ImGui::PushItemWidth( arrowSize );
+
+    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+
+    auto res = ImGui::BeginCombo( label , showPreview ? options[*v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
+    
+    const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
+    const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
+
+    auto renderCustomArrow = [] ( ImDrawList* draw_list, ImRect arrowBox, ImU32 col )
+    {
+        const float halfHeight = arrowBox.GetHeight() * 0.5f;
+        const float seventhHeight = arrowBox.GetHeight() / 7.0f;
+        const float sixthWidth = arrowBox.GetWidth() / 6.0f;
+            
+        const float thickness = ImMax( arrowBox.GetHeight() * 0.1f, 1.0f );
+        const ImVec2 pos = { arrowBox.Min.x, arrowBox.Min.y - thickness };
+        draw_list->PathLineTo( ImVec2( pos.x + sixthWidth, pos.y + halfHeight ) );
+        draw_list->PathLineTo( ImVec2( pos.x + 2 * sixthWidth, pos.y + halfHeight + seventhHeight ) );
+        draw_list->PathLineTo( ImVec2( pos.x + 3 * sixthWidth, pos.y + halfHeight ) );
+
+        draw_list->PathStroke( col, 0, thickness );
+    };
+
+    renderCustomArrow( window->DrawList, arrowBox, ImGui::GetColorU32( ImGuiCol_Text ) );    
+
+    if ( !res )
+        return false;
+    
+    for ( int i = 0; i < int(options.size()); ++i )
+    {
+        ImGui::PushID( (label + std::to_string( i )).c_str() );
+        if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
+            *v = i;
+        
+        if ( !tooltips.empty() )
+            ImGui::SetTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
+
+        ImGui::PopID();        
+    }
+
+    ImGui::EndCombo();
+    if ( !showPreview )
+        ImGui::PopItemWidth();
+    return true;
+}
+
 RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType )
 {
     ButtonItemWidth res;

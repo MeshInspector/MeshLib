@@ -510,21 +510,16 @@ PaletteChanges Palette(
     if ( !presets.empty() )
     {
         ImGui::SetNextItemWidth( scaledWidth );
-        if ( BeginCombo( "Load palette preset", nullptr, ImGuiComboFlags_NoPreview ) )
+        int presetIndex = -1;
+        if ( RibbonButtonDrawer::CustomCombo( "Load palette preset", &presetIndex, presets, false ) )
         {
-            for ( int i = 0; i < presets.size(); ++i )
-            {
-                bool constFalse = false;
-                if ( Selectable( presets[i].c_str(), &constFalse ) )
-                {
-                    PalettePresets::loadPreset( presets[i], palette );
-                    if ( fixZero )
-                        *fixZero = false;
-                    changes = int( PaletteChanges::All );
-                    CloseCurrentPopup();
-                }
-            }
-            EndCombo();
+            if ( presetIndex != -1 )
+                PalettePresets::loadPreset( presets[presetIndex], palette );
+
+            if ( fixZero )
+                *fixZero = false;
+            changes = int( PaletteChanges::All );
+            CloseCurrentPopup();
         }
     }
 
@@ -572,8 +567,10 @@ PaletteChanges Palette(
     int paletteRangeMode = params.ranges.size() == 2 ? 0 : 1;
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
-    ImGui::Combo( "Palette Type", &paletteRangeMode, "Even Space\0Central Zone\0\0" );
-
+    
+    RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
+    ImGui::PopItemWidth();
+    ImGui::PushItemWidth( scaledWidth * 2.0f / 3.0f );
     float ranges[4];
     ranges[0] = params.ranges.front();
     ranges[3] = params.ranges.back();

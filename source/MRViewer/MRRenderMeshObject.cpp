@@ -503,8 +503,14 @@ void RenderMeshObject::update_( ViewportId id ) const
     MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
     uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( id );
-    if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL && !objMesh_->creases().any() )
-        dirtyNormalFlag |= DIRTY_VERTS_RENDER_NORMAL; // vertNormalsBufferObj_ should be valid no matter what normals we use
+    if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
+    {
+        // vertNormalsBufferObj_ should be valid no matter what normals we use
+        if ( !objMesh_->creases().any() )
+            dirtyNormalFlag |= DIRTY_VERTS_RENDER_NORMAL;
+        else
+            dirtyNormalFlag |= DIRTY_CORNERS_RENDER_NORMAL;
+    }
     
     // purpose of `normalsBound_` flag:
     //     objDirty == DIRTY_FACES_RENDER_NORMAL

@@ -528,7 +528,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     MR_TIMER;
     MR_WRITER( mesh );
 
-    if ( !settings.progressCallback( 0.0f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 0.0f ) )
         return false;
 
     SubdivideSettings subs;
@@ -537,10 +537,11 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.useCurvature = settings.useCurvature;
     subs.region = settings.region;
-    subs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( arg * 0.5f ); };
+    if ( settings.progressCallback )
+        subs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( arg * 0.5f ); };
     subdivideMesh( mesh, subs );
 
-    if ( !settings.progressCallback( 0.5f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 0.5f ) )
         return false;
 
     DecimateSettings decs;
@@ -548,10 +549,11 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.maxError = settings.targetEdgeLen / 2;
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
-    decs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( 0.5f + arg * 0.5f ); };
+    if ( settings.progressCallback )
+        decs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( 0.5f + arg * 0.5f ); };
     decimateMesh( mesh, decs );
 
-    if ( !settings.progressCallback( 1.0f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )
         return false;
 
     return true;

@@ -146,7 +146,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{E036C72C-5AF6-4285-A079-F0FCB4D3BAB7}</ProjectGuid>
+    <ProjectGuid>{05930596-6226-42BA-A449-BDF2123C0F3F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MRCommonPlugins</RootNamespace>
   </PropertyGroup>

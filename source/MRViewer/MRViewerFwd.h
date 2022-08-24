@@ -24,6 +24,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class Viewer;
+struct LaunchParams;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;

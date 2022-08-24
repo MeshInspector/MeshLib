@@ -5,6 +5,7 @@
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
 #include "MRMesh/MRHistoryStore.h"
+#include "MRSplashWindow.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #if _WIN32
@@ -13,8 +14,23 @@
 #include <dlfcn.h>
 #endif
 
+#ifndef MR_PROJECT_NAME
+#define MR_PROJECT_NAME "MeshInspector"
+#endif
+
 namespace MR
 {
+
+void ViewerSetup::setupLaunchParams( LaunchParams& launchParams ) const
+{
+    launchParams.enableTransparentBackground = true;// default false, set true for MR and MRE
+    launchParams.name = std::string( MR_PROJECT_NAME );
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    launchParams.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+#endif
+    launchParams.showMRVersionInTitle = true;
+    MR::Viewer::parseLaunchParams( launchParams );
+}
 
 void ViewerSetup::setupBasePlugins( Viewer* viewer ) const
 {
@@ -84,6 +100,36 @@ void ViewerSetup::setupExtendedLibraries() const
         }
 #endif
     }
+}
+
+class ViewerSetupHolder
+{
+public:
+    static void registerViewerSetup( ViewerSetupConstructorLambda ctor )
+    {
+        instance_().ctor_ = ctor;
+    }
+    static ViewerSetupConstructorLambda getRegisteredLambda()
+    {
+        return instance_().ctor_;
+    }
+private:
+    static ViewerSetupHolder& instance_()
+    {
+        static ViewerSetupHolder holder;
+        return holder;
+    }
+    ViewerSetupConstructorLambda ctor_;
+};
+
+RegisterViewerSetupConstructor::RegisterViewerSetupConstructor( ViewerSetupConstructorLambda lambda )
+{
+    ViewerSetupHolder::registerViewerSetup( lambda );
+}
+
+std::unique_ptr<ViewerSetup> getRegisterViewerSetup()
+{
+    return ViewerSetupHolder::getRegisteredLambda()( );
 }
 
 }

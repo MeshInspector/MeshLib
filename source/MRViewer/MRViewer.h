@@ -39,43 +39,44 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 namespace MR
 {
 
+// This struct contains rules for viewer launch
+struct LaunchParams
+{
+    bool fullscreen{ false }; // if true starts fullscreen
+    int width{ 0 };
+    int height{ 0 };
+    enum WindowMode
+    {
+        Show, // Show window immediately
+        HideInit, // Show window after init
+        Hide, // Don't show window
+        TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
+        NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
+    } windowMode{ HideInit };
+    bool enableTransparentBackground{ false };
+    bool preferOpenGL3{ false };
+    bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    std::string name{ "MRViewer" }; // Window name
+    bool startEventLoop{ true }; // If false - does not start event loop
+    bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
+    bool console{ false }; // If true - shows developers console
+    int argc{ 0 }; // Pass argc
+    char** argv{ nullptr }; // Pass argv
+
+    bool showMRVersionInTitle{ false }; // if true - print version info in window title
+    bool isAnimating{ false }; // if true - calls render without system events
+    int animationMaxFps{ 30 }; // max fps if animating
+
+    std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
+};
+
 // GLFW-based mesh viewer
 class Viewer
 {
 public:
     using MouseButton = MR::MouseButton;
     using MouseMode = MR::MouseMode;
-
-    // This struct contains rules for viewer launch
-    struct LaunchParams
-    {
-        bool fullscreen{ false }; // if true starts fullscreen
-        int width{ 0 }; 
-        int height{ 0 };
-        enum WindowMode
-        {
-            Show, // Show window immediately
-            HideInit, // Show window after init
-            Hide, // Don't show window
-            TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
-            NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
-        } windowMode{ HideInit };
-        bool enableTransparentBackground{ false };
-        bool preferOpenGL3{ false };
-        bool developerFeatures{ false }; // If set shows some developer features useful for debugging
-        std::string name{"MRViewer"}; // Window name
-        bool startEventLoop{ true }; // If false - does not start event loop
-        bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
-        bool console{ false }; // If true - shows developers console
-        int argc{ 0 }; // Pass argc
-        char** argv{ nullptr }; // Pass argv
-
-        bool showMRVersionInTitle{ false }; // if true - print version info in window title
-        bool isAnimating{ false }; // if true - calls render without system events
-        int animationMaxFps{ 30 }; // max fps if animating
-
-        std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
-    };
+    using LaunchParams = MR::LaunchParams;
 
     // Accumulate launch params from cmd args
     MRVIEWER_API static void parseLaunchParams( LaunchParams& params );

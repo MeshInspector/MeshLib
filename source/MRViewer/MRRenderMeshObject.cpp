@@ -203,11 +203,11 @@ size_t RenderMeshObject::heapBytes() const
         + edgesIndicesBufferObj_.heapBytes()
         + faceSelectionTexture_.heapBytes()
         + faceNormalsTexture_.heapBytes()
-        + MR::heapBytes( borderHighlightPoints_ )
-        + MR::heapBytes( selectedEdgesPoints_ );
+        + borderHighlightPoints_.heapBytes()
+        + selectedEdgesPoints_.heapBytes();
 }
 
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Buffer<Vector3f>& data,
     GLuint count, const Color& colorChar, unsigned dirtyValue ) const
 {
     if ( !count )
@@ -736,15 +736,22 @@ void RenderMeshObject::updateBorderLinesBuffer_() const
     auto mesh = objMesh_->mesh();
     auto boundary = mesh->topology.findBoundary();
 
-    borderHighlightPoints_.clear();
+    size_t size = 0;
+    for ( const auto& b : boundary )
+        size += 2 * b.size();
+    borderHighlightPoints_.resize( size );
+
+    size_t cur = 0;
     for ( auto& b : boundary )
     {
         for ( auto& e : b )
         {
-            borderHighlightPoints_.push_back( mesh->points[mesh->topology.org( e )] );
-            borderHighlightPoints_.push_back( mesh->points[mesh->topology.dest( e )] );
+            borderHighlightPoints_[cur++] = mesh->points[mesh->topology.org( e )];
+            borderHighlightPoints_[cur++] = mesh->points[mesh->topology.dest( e )];
         }
     }
+    assert( cur == borderHighlightPoints_.size() );
+
     borderPointsCount_ = GLsizei( borderHighlightPoints_.size() );
 }
 
@@ -752,15 +759,20 @@ void RenderMeshObject::updateSelectedEdgesBuffer_() const
 {
     auto mesh = objMesh_->mesh();
 
-    selectedEdgesPoints_.clear();
-    for ( auto e : objMesh_->getSelectedEdges() )
+    auto selectedEdges = objMesh_->getSelectedEdges();
+    for ( auto e : selectedEdges )
+        if ( !mesh->topology.hasEdge( e ) )
+            selectedEdges.reset( e );
+    selectedEdgesPoints_.resize( 2 * selectedEdges.count() );
+
+    size_t cur = 0;
+    for ( auto e : selectedEdges )
     {
-        if ( mesh->topology.hasEdge( e ) )
-        {
-            selectedEdgesPoints_.push_back( mesh->orgPnt( e ) );
-            selectedEdgesPoints_.push_back( mesh->destPnt( e ) );
-        }
+        selectedEdgesPoints_[cur++] = mesh->orgPnt( e );
+        selectedEdgesPoints_[cur++] = mesh->destPnt( e );
     }
+    assert( cur == selectedEdgesPoints_.size() );
+
     selectedPointsCount_ = GLsizei( selectedEdgesPoints_.size() );
 }
 

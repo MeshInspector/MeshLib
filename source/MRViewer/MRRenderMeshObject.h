@@ -29,8 +29,8 @@ private:
     mutable Buffer<Vector2i> edgesIndicesBufferObj_;
     mutable Buffer<unsigned> faceSelectionTexture_;
     mutable Buffer<Vector4f> faceNormalsTexture_;
-    mutable std::vector<Vector3f> borderHighlightPoints_;
-    mutable std::vector<Vector3f> selectedEdgesPoints_;
+    mutable Buffer<Vector3f> borderHighlightPoints_;
+    mutable Buffer<Vector3f> selectedEdgesPoints_;
 
     typedef unsigned int GLuint;
 
@@ -60,7 +60,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Buffer<Vector3f>& data,
         GLuint count, const Color& color, unsigned dirtyValue ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;

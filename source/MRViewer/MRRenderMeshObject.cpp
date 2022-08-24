@@ -187,8 +187,10 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     drawMesh_( true, parameters.viewportId, true );
 
-    if ( bufferMode_ == MemoryEfficient )
-        resetBuffers_();
+    // do not reset buffers on picker, not to reset buffers that is not used here
+    // TODO: rework rendering to have only one buffer and reset it right after it is sent to GPU (need to mix `update_` and `bind_`)
+    //if ( bufferMode_ == MemoryEfficient )
+    //    resetBuffers_();
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -340,10 +342,6 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 
-    int maxTexSize = 0;
-    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
-    assert( maxTexSize > 0 );
-
     // Diffuse
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceColorsTex_ ) );
@@ -356,7 +354,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
         auto facesColorMap = objMesh_->getFacesColorMap();
-        auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize );
+        auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize_ );
         facesColorMap.resize( res.x * res.y );
         GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, res.x, res.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, facesColorMap.data() ) );
     }
@@ -374,8 +372,8 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceNormalsTexture_.size() ), maxTexSize );
-        faceNormalsTexture_.resize( res.x * res.y );
+        auto res = calcTextureRes( int( faceNormalsTexture_.size() ), maxTexSize_ );
+        assert( res.x * res.y == faceNormalsTexture_.size() );
         GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, res.x, res.y, 0, GL_RGBA, GL_FLOAT, faceNormalsTexture_.data() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
@@ -391,8 +389,8 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceSelectionTexture_.size() ), maxTexSize );
-        faceSelectionTexture_.resize( res.x * res.y );
+        auto res = calcTextureRes( int( faceSelectionTexture_.size() ), maxTexSize_ );
+        assert( res.x * res.y == faceSelectionTexture_.size() );
         GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelectionTexture_.data() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
@@ -474,6 +472,9 @@ void RenderMeshObject::initBuffers_()
 
     GL_EXEC( glGenVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &selectedEdgesBufferObjId_ ) );
+
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
+    assert( maxTexSize_ > 0 );
 
     dirty_ = DIRTY_ALL;
     normalsBound_ = false;
@@ -597,7 +598,12 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_faces_normals" )
-        faceNormalsTexture_ = computePerFaceNormals4( *mesh );
+        auto size = mesh->topology.lastValidFace() + 1;
+        auto res = calcTextureRes( size, maxTexSize_ );
+        assert( res.x * res.y >= size );
+        faceNormalsTexture_.resize( res.x * res.y );
+
+        computePerFaceNormals4( *mesh, faceNormalsTexture_.data(), faceNormalsTexture_.size() );
     }
 
     ColoringType coloringType = objMesh_->getColoringType();
@@ -666,7 +672,11 @@ void RenderMeshObject::update_( ViewportId id ) const
 
     if ( dirty_ & DIRTY_SELECTION )
     {
-        faceSelectionTexture_.resize( numF / 32 + 1 );
+        auto size = numF / 32 + 1;
+        auto res = calcTextureRes( size, maxTexSize_ );
+        assert( res.x * res.y >= size );
+        faceSelectionTexture_.resize( res.x * res.y );
+
         const auto& selection = objMesh_->getSelectedFaces().m_bits;
         const unsigned* selectionData = ( unsigned* )selection.data();
         tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )faceSelectionTexture_.size() ), [&] ( const tbb::blocked_range<int>& range )

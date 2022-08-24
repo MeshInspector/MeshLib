@@ -141,6 +141,8 @@ protected:
 
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;   
 
+    MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category );
+
     MRVIEWER_API virtual void setupShortcuts_() override;
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;

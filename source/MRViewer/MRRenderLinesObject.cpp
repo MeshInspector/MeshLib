@@ -154,10 +154,10 @@ void RenderLinesObject::bindLines_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, dirty_ & DIRTY_RENDER_NORMALS );
-    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
-    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, lineIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_FACE )
@@ -225,7 +225,7 @@ void RenderLinesObject::bindLinesPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, lineIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_FACE )
@@ -289,10 +289,6 @@ void RenderLinesObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertColorsBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertUVBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &lineIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &texture_ ) );
     
@@ -312,10 +308,6 @@ void RenderLinesObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &linesPickerArrayObjId_ ) );
 
-    GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertColorsBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertUVBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &lineIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteTextures( 1, &lineColorsTex_ ) );

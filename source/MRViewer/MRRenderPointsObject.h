@@ -1,5 +1,7 @@
 #pragma once
+
 #include "MRMesh/MRIRenderObject.h"
+#include "MRRenderGLHelpers.h"
 
 namespace MR
 {
@@ -23,9 +25,9 @@ private:
     GLuint pointsArrayObjId_{ 0 };
     GLuint pointsPickerArrayObjId_{ 0 };
 
-    GLuint vertPosBufferObjId_{ 0 };
-    GLuint vertNormalsBufferObjId_{ 0 };
-    GLuint vertColorsBufferObjId_{ 0 };
+    mutable GlBuffer vertPosBuffer_;
+    mutable GlBuffer vertNormalsBuffer_;
+    mutable GlBuffer vertColorsBuffer_;
 
     GLuint validIndicesBufferObjId_{ 0 };
 

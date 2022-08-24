@@ -158,6 +158,7 @@ ENDIF() # NOT MR_EMSCRIPTEN
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)

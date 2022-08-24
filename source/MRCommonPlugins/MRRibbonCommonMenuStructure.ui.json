@@ -1,0 +1,176 @@
+{
+	"Order": 0,
+	"Tabs": [
+		{
+			"Name": "Home",
+			"Groups": [
+				{
+					"Name": "New",
+					"List": [
+						{
+							"Name": "New"
+						}
+					]
+				},
+				{
+					"Name": "Files",
+					"List": [
+						{
+							"Name": "Open files"
+						},
+						{
+							"Name": "Open directory"
+						},
+						{
+							"Name": "Open DICOMs"
+						},
+						{
+							"Name": "Open RAW Voxels"
+						},
+						{
+							"Name": "Save Scene"
+						},
+						{
+							"Name": "Save Scene As"
+						},
+						{
+							"Name": "Save selected"
+						},
+						{
+							"Name": "Save object"
+						}
+					]
+				}
+			]
+		},
+		{
+			"Name": "View",
+			"Groups": [
+				{
+					"Name": "Basic",
+					"List": [
+						{
+							"Name": "Fit data"
+						},
+						{
+							"Name": "Select objects"
+						},
+						{
+							"Name": "Move object"
+						},
+						{
+							"Name": "Capture screenshot"
+						},
+						{
+							"Name": "Add custom theme"
+						},
+						{
+							"Name": "Viewer settings"
+						}
+					]
+				},
+				{
+					"Name": "Camera",
+					"List": [
+						{
+							"Name": "Camera"
+						},
+						{
+							"Name": "Front View"
+						},
+						{
+							"Name": "Back View"
+						},
+						{
+							"Name": "Top View"
+						},
+						{
+							"Name": "Bottom View"
+						},
+						{
+							"Name": "Left View"
+						},
+						{
+							"Name": "Right View"
+						},
+						{
+							"Name": "Isometric View"
+						}
+					]
+				},
+				{
+					"Name": "Viewport",
+					"List": [
+						{
+							"Name": "Single Viewport"
+						},
+						{
+							"Name": "Horizontal Viewports"
+						},
+						{
+							"Name": "Vertical Viewports"
+						},
+						{
+							"Name": "Quad Viewports"
+						}
+					]
+				}
+
+			]
+		}
+	],
+	"Quick Access": [
+		{
+			"Name": "Fit data"
+		},
+		{
+			"Name": "Select objects"
+		},
+		{
+			"Name": "Move object"
+		},
+		{
+			"Name": "Camera"
+		},
+		{
+			"Name": "Viewer settings"
+		}
+	],
+	"Header Quick Access": [
+		{
+			"Name": "Open files"
+		},
+		{
+			"Name": "Open directory"
+		},
+		{
+			"Name": "Save Scene"
+		},
+		{
+			"Name": "Save object"
+		}
+	],
+	"Scene Buttons": [
+		{
+			"Name": "Ribbon Scene Sort by name"
+		},
+		{
+			"Name": "Ribbon Scene Select all"
+		},
+		{
+			"Name": "Ribbon Scene Unselect all"
+		},
+		{
+			"Name": "Ribbon Scene Show only previous"
+		},
+		{
+			"Name": "Ribbon Scene Show only next"
+		},
+		{
+			"Name": "Ribbon Scene Rename"
+		},
+		{
+			"Name": "Ribbon Scene Remove selected objects"
+		}
+	]
+}

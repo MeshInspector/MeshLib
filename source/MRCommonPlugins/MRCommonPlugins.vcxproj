@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\MeshLib\source\.editorconfig" />
+    <CopyFileToFolders Include="MRRibbonCommonMenuStructure.items.json">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MRRibbonCommonMenuStructure.ui.json">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <Content Include="resource\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
+    <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
+    <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
+    <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
+    <ClCompile Include="ViewerButtons\MRIOFilesMenuItems.cpp" />
+    <ClCompile Include="ViewerButtons\MRRibbonSceneButtons.cpp" />
+    <ClCompile Include="ViewerButtons\MRSceneControlMenuItems.cpp" />
+    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />
+    <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
+    <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
+    <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
+    <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
+    <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
+    <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
+    <ClInclude Include="ViewerButtons\MRSceneControlMenuItems.h" />
+    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h" />
+    <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="resource\icons\X0_5\Add custom theme.png" />
+    <Image Include="resource\icons\X0_5\Back View.png" />
+    <Image Include="resource\icons\X0_5\Bottom View.png" />
+    <Image Include="resource\icons\X0_5\Camera.png" />
+    <Image Include="resource\icons\X0_5\Capture screenshot.png" />
+    <Image Include="resource\icons\X0_5\Fit data.png" />
+    <Image Include="resource\icons\X0_5\Front View.png" />
+    <Image Include="resource\icons\X0_5\Horizontal Viewports.png" />
+    <Image Include="resource\icons\X0_5\Isometric View.png" />
+    <Image Include="resource\icons\X0_5\Left View.png" />
+    <Image Include="resource\icons\X0_5\Move object.png" />
+    <Image Include="resource\icons\X0_5\New.png" />
+    <Image Include="resource\icons\X0_5\Open DICOMs.png" />
+    <Image Include="resource\icons\X0_5\Open directory.png" />
+    <Image Include="resource\icons\X0_5\Open files.png" />
+    <Image Include="resource\icons\X0_5\Open RAW Voxels.png" />
+    <Image Include="resource\icons\X0_5\Quad Viewports.png" />
+    <Image Include="resource\icons\X0_5\Right View.png" />
+    <Image Include="resource\icons\X0_5\Save object.png" />
+    <Image Include="resource\icons\X0_5\Save Scene As.png" />
+    <Image Include="resource\icons\X0_5\Save Scene.png" />
+    <Image Include="resource\icons\X0_5\Save selected.png" />
+    <Image Include="resource\icons\X0_5\save_object_16.png" />
+    <Image Include="resource\icons\X0_5\Select objects.png" />
+    <Image Include="resource\icons\X0_5\Single Viewport.png" />
+    <Image Include="resource\icons\X0_5\Top View.png" />
+    <Image Include="resource\icons\X0_5\Vertical Viewports.png" />
+    <Image Include="resource\icons\X0_5\Viewer settings.png" />
+    <Image Include="resource\icons\X1\Add custom theme.png" />
+    <Image Include="resource\icons\X1\Back View.png" />
+    <Image Include="resource\icons\X1\Bottom View.png" />
+    <Image Include="resource\icons\X1\Camera.png" />
+    <Image Include="resource\icons\X1\Capture screenshot.png" />
+    <Image Include="resource\icons\X1\Fit data.png" />
+    <Image Include="resource\icons\X1\Front View.png" />
+    <Image Include="resource\icons\X1\Horizontal Viewports.png" />
+    <Image Include="resource\icons\X1\Isometric View.png" />
+    <Image Include="resource\icons\X1\Left View.png" />
+    <Image Include="resource\icons\X1\Move object.png" />
+    <Image Include="resource\icons\X1\New.png" />
+    <Image Include="resource\icons\X1\Open DICOMs.png" />
+    <Image Include="resource\icons\X1\Open directory.png" />
+    <Image Include="resource\icons\X1\Open files.png" />
+    <Image Include="resource\icons\X1\Open RAW Voxels.png" />
+    <Image Include="resource\icons\X1\Quad Viewports.png" />
+    <Image Include="resource\icons\X1\Right View.png" />
+    <Image Include="resource\icons\X1\Save object.png" />
+    <Image Include="resource\icons\X1\Save Scene As.png" />
+    <Image Include="resource\icons\X1\Save Scene.png" />
+    <Image Include="resource\icons\X1\Save selected.png" />
+    <Image Include="resource\icons\X1\save_object_32.png" />
+    <Image Include="resource\icons\X1\Select objects.png" />
+    <Image Include="resource\icons\X1\Single Viewport.png" />
+    <Image Include="resource\icons\X1\Top View.png" />
+    <Image Include="resource\icons\X1\Vertical Viewports.png" />
+    <Image Include="resource\icons\X1\Viewer settings.png" />
+    <Image Include="resource\icons\X3\Add custom theme.png" />
+    <Image Include="resource\icons\X3\Back View.png" />
+    <Image Include="resource\icons\X3\Bottom View.png" />
+    <Image Include="resource\icons\X3\Camera.png" />
+    <Image Include="resource\icons\X3\Capture screenshot.png" />
+    <Image Include="resource\icons\X3\Fit data.png" />
+    <Image Include="resource\icons\X3\Front View.png" />
+    <Image Include="resource\icons\X3\Horizontal Viewports.png" />
+    <Image Include="resource\icons\X3\Isometric View.png" />
+    <Image Include="resource\icons\X3\Left View.png" />
+    <Image Include="resource\icons\X3\Move object.png" />
+    <Image Include="resource\icons\X3\New.png" />
+    <Image Include="resource\icons\X3\Open DICOMs.png" />
+    <Image Include="resource\icons\X3\Open directory.png" />
+    <Image Include="resource\icons\X3\Open files.png" />
+    <Image Include="resource\icons\X3\Open RAW Voxels.png" />
+    <Image Include="resource\icons\X3\Quad Viewports.png" />
+    <Image Include="resource\icons\X3\Right View.png" />
+    <Image Include="resource\icons\X3\Save object.png" />
+    <Image Include="resource\icons\X3\Save Scene As.png" />
+    <Image Include="resource\icons\X3\Save Scene.png" />
+    <Image Include="resource\icons\X3\Save selected.png" />
+    <Image Include="resource\icons\X3\save_object.png" />
+    <Image Include="resource\icons\X3\Select objects.png" />
+    <Image Include="resource\icons\X3\Single Viewport.png" />
+    <Image Include="resource\icons\X3\Top View.png" />
+    <Image Include="resource\icons\X3\Vertical Viewports.png" />
+    <Image Include="resource\icons\X3\Viewer settings.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\imgui\imgui.vcxproj">
+      <Project>{766f017f-ba42-484a-abb7-b667e7fa924c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
+      <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRViewer\MRViewer.vcxproj">
+      <Project>{cecb9185-ff38-461f-ba20-654399edc67e}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{E036C72C-5AF6-4285-A079-F0FCB4D3BAB7}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MRCommonPlugins</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <Import Project="$(ProjectDir)\..\common.props" />
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PrecompiledHeaderFile>$(SolutionDir)source\MRPch\MRPch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(SolutionDir)source\MRPch\MRPch.h</ForcedIncludeFiles>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

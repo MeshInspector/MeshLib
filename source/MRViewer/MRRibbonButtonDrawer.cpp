@@ -303,15 +303,24 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
-bool RibbonButtonDrawer::Combo( const std::string& label, const std::vector<std::string>& options, int& v, bool showPreview )
+bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview )
 {
-    ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImVec2 pos = window->DC.CursorPos;
-    auto res = ImGui::BeginCombo( label.c_str(), showPreview ? options[v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
-             
+    auto context = ImGui::GetCurrentContext();
+    ImGuiWindow* window = context->CurrentWindow;
     const auto& style = ImGui::GetStyle();
+    const ImVec2 pos = window->DC.CursorPos;
+    const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
+    if ( !showPreview )
+        ImGui::PushItemWidth( arrowSize );
+
+    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+
+    auto res = ImGui::BeginCombo( label , showPreview ? options[*v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
+    if ( res )
+        res = res;
     
-    const ImRect boundingBox( pos, { pos.x + window->DC.ItemWidth, pos.y + 2 * style.FramePadding.y + ImGui::GetTextLineHeight() } );
+    
+    const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
     auto renderCustomArrow = [] ( ImDrawList* draw_list, ImRect arrowBox, ImU32 col )
@@ -337,13 +346,14 @@ bool RibbonButtonDrawer::Combo( const std::string& label, const std::vector<std:
     for ( int i = 0; i < int(options.size()); ++i )
     {
         ImGui::PushID( (label + std::to_string( i )).c_str() );
-        if ( ImGui::Selectable( options[i].c_str(), v == i ) )
-            v = i;
+        if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
+            *v = i;
         ImGui::PopID();        
     }
 
     ImGui::EndCombo();
-
+    if ( !showPreview )
+        ImGui::PopItemWidth();
     return true;
 }
 

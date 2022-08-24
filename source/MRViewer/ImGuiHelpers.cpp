@@ -511,7 +511,7 @@ PaletteChanges Palette(
     {
         ImGui::PushItemWidth( scaledWidth );
         int presetIndex = -1;
-        if ( RibbonButtonDrawer::Combo( "Load palette preset", presets, presetIndex, false ) )
+        if ( RibbonButtonDrawer::CustomCombo( "Load palette preset", &presetIndex, presets, false ) )
         {
             if ( presetIndex != -1 )
                 PalettePresets::loadPreset( presets[presetIndex], palette );
@@ -569,7 +569,7 @@ PaletteChanges Palette(
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
     
-    RibbonButtonDrawer::Combo( "Palette Type", { "Even Space", "Central Zone" }, paletteRangeMode );
+    RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
 
     float ranges[4];
     ranges[0] = params.ranges.front();

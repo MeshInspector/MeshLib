@@ -51,7 +51,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         ImGui::SetNextItemWidth( 140.0f * menuScaling );
         auto rotMode = viewportParameters.rotationMode;
-        ImGui::Combo( "Rotation Mode", ( int* ) &rotMode, "Scene Center\000Pick/Scene Center\000Pick\0\0" );
+        RibbonButtonDrawer::CustomCombo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
         viewer->viewport().rotationCenterMode( rotMode );
 
         bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );
@@ -94,10 +94,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::Separator();
         ImGui::SetNextItemWidth( 125.0f * menuScaling );
         int selectedUserIdxBackup = selectedUserPreset_;
-        ImGui::Combo( "Color theme", &selectedUserPreset_, [&] ( int idx )->const char*
-        {
-            return userThemesPresets_[idx].c_str();
-        }, int( userThemesPresets_.size() ) );
+        RibbonButtonDrawer::CustomCombo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
         if ( selectedUserPreset_ != selectedUserIdxBackup )
         {
             if ( selectedUserPreset_ == 0 )

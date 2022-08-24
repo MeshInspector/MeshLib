@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRGladGlfw.h"
-#include "MRGLMacro.h"
 #include "exports.h"
 #include "MRMesh/MRColor.h"
 #include <cassert>
@@ -48,42 +47,44 @@ private:
     size_t size_ = 0;
 };
 
+struct BindVertexAttribArraySettings
+{
+    GLuint program_shader = 0;
+    const char * name = nullptr;
+    GlBuffer & buf;
+    const char * arr = nullptr;
+    size_t arrSize = 0;
+    int baseTypeElementsNumber = 0;
+    bool refresh = false;
+    bool forceUse = false;
+    bool isColor = false;
+};
+
+MRVIEWER_API GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings );
+
 template<typename T, template<typename, typename...> class C, typename... args>
-GLint bindVertexAttribArray(
+inline GLint bindVertexAttribArray(
     const GLuint program_shader,
-    const std::string& name,
+    const char * name,
     GlBuffer & buf,
     const C<T, args...>& V,
     int baseTypeElementsNumber,
     bool refresh,
     bool forceUse = false )
 {
-    GL_EXEC( GLint id = glGetAttribLocation( program_shader, name.c_str() ) );
-    if ( id < 0 )
-        return id;
-    if ( V.size() == 0 && !forceUse )
+    BindVertexAttribArraySettings settings =
     {
-        GL_EXEC( glDisableVertexAttribArray( id ) );
-        buf.del();
-        return id;
-    }
-
-    if ( refresh )
-        buf.loadData( V.data(), V.size() );
-    else
-        buf.bind();
-
-    // GL_FLOAT is left here consciously 
-    if constexpr ( std::is_same_v<Color, T> )
-    {
-        GL_EXEC( glVertexAttribPointer( id, baseTypeElementsNumber, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0 ) );
-    }
-    else
-    {
-        GL_EXEC( glVertexAttribPointer( id, baseTypeElementsNumber, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    }
-
-    GL_EXEC( glEnableVertexAttribArray( id ) );
-    return id;
+        .program_shader = program_shader,
+        .name = name,
+        .buf = buf,
+        .arr = (const char*)V.data(),
+        .arrSize = sizeof(T) * V.size(),
+        .baseTypeElementsNumber = baseTypeElementsNumber,
+        .refresh = refresh,
+        .forceUse = forceUse,
+        .isColor = std::is_same_v<Color, T>
+    };
+    return bindVertexAttribArray( settings );
 }
-}
+
+} //namespace MR

@@ -23,6 +23,9 @@ public:
     File( const std::filesystem::path & filename, const char * mode ) { open( filename, mode ); }
     ~File() { close(); }
 
+    File& operator =( const File & ) = delete;
+    File& operator =( File && r ) { close(); handle_ = r.handle_; r.detach(); return * this; }
+
     operator FILE *() const { return handle_; }
 
     MRMESH_API FILE * open( const std::filesystem::path & filename, const char * mode );

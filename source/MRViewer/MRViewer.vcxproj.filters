@@ -217,6 +217,9 @@
     <ClCompile Include="MRViewerIO.cpp">
       <Filter>IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderGLHelpers.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">

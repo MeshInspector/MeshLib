@@ -279,7 +279,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
         color[0], color[1], color[2], color[3] ) );
 
     // positions
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     if ( meshEdgesDirty_ )
     {
@@ -299,12 +299,12 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
 
     bool needRefreshNormals = bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
-    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, vertNormalsBufferObj_, 3, needRefreshNormals, vertNormalsCount_ != 0 );
-    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, vertColorsCount_ != 0 );
-    bindVertexAttribArray( shader, "texcoord", vertUVBufferObjId_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, vertUVCount_ != 0 );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, needRefreshNormals, vertNormalsCount_ != 0 );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, vertColorsCount_ != 0 );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, vertUVCount_ != 0 );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )
@@ -405,7 +405,7 @@ void RenderMeshObject::bindMeshPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION, vertsCount_ != 0 );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( meshFacesDirty_ )
@@ -450,10 +450,6 @@ void RenderMeshObject::initBuffers_()
     // Mesh: Vertex Array Object & Buffer objects
     GL_EXEC( glGenVertexArrays( 1, &meshArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertColorsBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertUVBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &edgesIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &texture_ ) );
@@ -489,10 +485,6 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &borderArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
 
-    GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertColorsBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertUVBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &edgesIndicesBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &borderBufferObjId_ ) );
@@ -511,8 +503,14 @@ void RenderMeshObject::update_( ViewportId id ) const
     MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
     uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( id );
-    if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL && !objMesh_->creases().any() )
-        dirtyNormalFlag |= DIRTY_VERTS_RENDER_NORMAL; // vertNormalsBufferObj_ should be valid no matter what normals we use
+    if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
+    {
+        // vertNormalsBufferObj_ should be valid no matter what normals we use
+        if ( !objMesh_->creases().any() )
+            dirtyNormalFlag |= DIRTY_VERTS_RENDER_NORMAL;
+        else
+            dirtyNormalFlag |= DIRTY_CORNERS_RENDER_NORMAL;
+    }
     
     // purpose of `normalsBound_` flag:
     //     objDirty == DIRTY_FACES_RENDER_NORMAL

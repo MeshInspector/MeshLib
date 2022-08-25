@@ -12,6 +12,13 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/ImGuiHelpers.h"
 
+namespace
+{
+// translation multiplier that limits its maximum value depending on object size
+// the constant duplicates value defined in ImGuiMenu implementation
+constexpr float cMaxTranslationMultiplier = 0x10000;
+}
+
 namespace MR
 {
 
@@ -128,7 +135,19 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
-        obj_->setXf( AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objXf_ );
+
+        auto xf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objXf_;
+        auto worldXf = obj_->parent() ? obj_->parent()->worldXf() * xf : xf;
+
+        auto wbsize = transformed( obj_->getBoundingBox(), worldXf ).size();
+        auto minSizeDim = wbsize.length();
+        if ( minSizeDim == 0 )
+            minSizeDim = 1.f;
+
+        for ( auto i = 0; i < 3; i++ )
+            xf.b[i] = std::clamp( xf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+
+        obj_->setXf( xf );
     }
 
     return true;

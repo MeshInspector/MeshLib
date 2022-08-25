@@ -248,6 +248,8 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
+    scaledXf_ = xf;
+
     Matrix3f rotation, scaling;
     decomposeMatrix3( xf.A, rotation, scaling );
 
@@ -793,7 +795,9 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    setControlsXf( addXf * controlsRoot_->xf() );
+    if ( activeEditMode_ == TranslationMode || activeEditMode_ == RotationMode )
+        setControlsXf( addXf * controlsRoot_->xf() );
+    scaledXf_ = addXf * scaledXf_;
     approvedChange_ = false;
 }
 
@@ -810,6 +814,9 @@ void ObjectTransformWidget::stopModify_()
             obj->setVisible( true );
 
     passiveMove_();
+
+    if ( activeEditMode_ == ScalingMode || activeEditMode_ == UniformScalingMode )
+        setControlsXf( scaledXf_ );
 
     if ( stopModifyCallback_ )
         stopModifyCallback_();

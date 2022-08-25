@@ -148,9 +148,9 @@ void RenderPointsObject::bindPoints_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBufferObjId_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
-    bindVertexAttribArray( shader, "K", vertColorsBufferObjId_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_POSITION )
@@ -187,7 +187,7 @@ void RenderPointsObject::bindPointsPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBufferObjId_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_POSITION )
@@ -201,9 +201,6 @@ void RenderPointsObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &vertColorsBufferObjId_ ) );
     GL_EXEC( glGenBuffers( 1, &validIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenTextures( 1, &vertSelectionTex_ ) );
@@ -220,9 +217,6 @@ void RenderPointsObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &pointsPickerArrayObjId_ ) );
 
-    GL_EXEC( glDeleteBuffers( 1, &vertPosBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertNormalsBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &vertColorsBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &validIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteTextures( 1, &vertSelectionTex_ ) );

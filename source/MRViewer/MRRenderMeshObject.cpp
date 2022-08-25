@@ -131,19 +131,9 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-    {
-        if ( elementDirty_[BORDER_LINES] )
-            loadBuffer_( BORDER_LINES );
         renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, BORDER_LINES, objMesh_->getBordersColor() );
-        elementDirty_.reset( BORDER_LINES );
-    }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-    {
-        if ( elementDirty_[EDGE_SELECTION] )
-            loadBuffer_( EDGE_SELECTION );
         renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, EDGE_SELECTION, objMesh_->getSelectedEdgesColor() );
-        elementDirty_.reset( EDGE_SELECTION );
-    }
 
     if ( renderParams.alphaSort )
     {
@@ -232,7 +222,9 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
     if ( elementDirty_[bufferType] )
     {
+        loadBuffer_( bufferType );
         GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * elementCount_[bufferType], bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        elementDirty_.reset( bufferType );
     }
     GL_EXEC( glBindVertexArray( vao ) );
 

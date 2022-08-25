@@ -1,0 +1,8 @@
+{
+	"Windows": [
+		"MRCommonPlugins"
+	],
+	"Linux": [
+		"MRCommonPlugins"
+	]
+}

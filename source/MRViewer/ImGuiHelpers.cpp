@@ -10,6 +10,7 @@
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
+#include "MRViewer/MRRibbonFontManager.h"
 
 namespace ImGui
 {
@@ -335,6 +336,115 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     return Begin( label, open, flags );
+}
+
+bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling )
+{
+    ImGuiWindow* window = FindWindowByName( label );
+    if ( !window )
+    {
+        float yPos = 0.0f;
+        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+        if ( menu )
+            yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
+        SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
+        window = FindWindowByName( label );
+    }
+    SetNextWindowSizeConstraints( ImVec2( width, -1.0f ), ImVec2( width, -1.0f ) );
+    auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoTitleBar;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+
+    if ( !Begin( label, open, flags ) )
+    {
+        *open = false;
+        ImGui::PopStyleVar( 2 );
+        return false;
+    }
+
+    ImGui::PopStyleVar( 2 );
+
+    const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
+
+    auto context = ImGui::GetCurrentContext();
+    window = context->CurrentWindow;
+    const auto& style = ImGui::GetStyle();
+    ImGui::SetCursorPos( { 0, 0 } );
+    
+    const ImVec2 pos = window->DC.CursorPos;
+    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+    auto iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
+    iconsFont->Scale = 0.7f;
+    ImGui::PushFont( iconsFont );
+
+    const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
+    const ImRect boundingBox( pos, { pos.x + width, pos.y + buttonSize } );
+    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+
+    ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
+    ImGui::PushStyleColor( ImGuiCol_Border, bgColor );   
+    ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
+    ImGui::SetNextItemWidth( buttonSize );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * scaling / 2.0f, MR::cDefaultItemSpacing * scaling } );
+    if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+    {
+        *collapsed = !*collapsed;        
+    }
+    
+    ImGui::PopFont();
+
+    ImGui::SameLine();
+    auto titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
+    titleFont->Scale =  1.1f;
+    ImGui::PushFont( titleFont );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - style.FramePadding.y * 0.75f );
+    ImGui::Text( label );
+    ImGui::PopStyleVar();
+    ImGui::PopFont();
+    titleFont->Scale = 1.0f;
+    
+    ImGui::SameLine();
+    ImGui::PushFont( iconsFont );
+    ImGui::SetNextItemWidth( buttonSize );    
+    ImGui::SetCursorPosX( width - buttonSize );
+
+    if ( ImGui::Button( "\xef\x80\x8d" ) ) //close button
+    {
+        *open = false;
+        ImGui::PopFont();
+        ImGui::PopStyleColor( 2 );
+        ImGui::End();
+        return false;
+    }
+    ImGui::PopFont();
+    iconsFont->Scale = 1.0f;
+
+    if ( *collapsed )
+    {
+        ImGui::PopStyleColor( 2 );
+        ImGui::End();
+        return false;
+    }
+
+    ImGui::PopStyleColor( 2 );
+    
+    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { MR::cDefaultWindowPaddingX * scaling / 3.0f, MR::cDefaultWindowPaddingY * scaling * 0.7f } );
+    ImGui::BeginTable( "ContentTable", 3, ImGuiTableFlags_SizingStretchProp );
+    ImGui::TableNextColumn();
+    ImGui::TableNextColumn();
+    
+   return true;
+}
+
+void EndCustomStatePlugin()
+{
+    TableNextColumn();
+    EndTable();
+    PopStyleVar();
+    End();
 }
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )

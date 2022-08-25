@@ -16,7 +16,8 @@ CameraOrientation::CameraOrientation():
 void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 340 * menuScaling;
-    ImGui::BeginStatePlugin( plugin_name.c_str(), &dialogIsOpen_, menuWidth );
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling ) )
+        return;
 
     if ( viewer->viewport_list.size() > 1 )
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
@@ -74,7 +75,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
 
     drawCameraPresets_( menuScaling );
 
-    ImGui::End();
+    ImGui::EndCustomStatePlugin();
 }
 
 bool CameraOrientation::onEnable_()

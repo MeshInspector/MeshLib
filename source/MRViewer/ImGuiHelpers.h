@@ -139,6 +139,12 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
+
+/// begin state plugin window with custom style
+MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling );
+/// end state plugin window with custom style
+MRVIEWER_API void EndCustomStatePlugin();
+
 /// starts modal window with no animation for background
 MRVIEWER_API bool BeginModalNoAnimation( const char* label, bool* open = nullptr, ImGuiWindowFlags flags = 0 );
 

@@ -19,7 +19,8 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 300.0f * menuScaling;
-    ImGui::BeginStatePlugin( plugin_name.c_str(), &dialogIsOpen_, menuWidth );
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling ) )
+        return;
 
     if ( RibbonButtonDrawer::GradientButton( "Quick Access Menu Settings", ImVec2( -1, 0 ) ) )
         ImGui::OpenPopup( "Quick Access Menu Settings" );
@@ -157,7 +158,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
     }
-    ImGui::End();
+    ImGui::EndCustomStatePlugin();
 }
 
 bool ViewerSettingsPlugin::onEnable_()

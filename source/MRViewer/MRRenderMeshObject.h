@@ -30,7 +30,7 @@ private:
     template <DirtyFlag dirtyFlag>
     using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
 
-    mutable std::array<std::size_t, sizeof( DirtyFlag )> elementCount_;
+    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> elementCount_;
 
     template <typename T>
     class BufferRef

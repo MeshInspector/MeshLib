@@ -159,11 +159,7 @@ void RenderLinesObject::bindLines_() const
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
     bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, lineIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_FACE )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * linesIndicesBufferObj_.size(), linesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-    }
+    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, texture_ ) );
@@ -227,11 +223,7 @@ void RenderLinesObject::bindLinesPicker_() const
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, lineIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_FACE )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * linesIndicesBufferObj_.size(), linesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-    }
+    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
 
     dirty_ &= ~DIRTY_POSITION;
     dirty_ &= ~DIRTY_FACE;
@@ -289,7 +281,6 @@ void RenderLinesObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &lineIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &texture_ ) );
     
     GL_EXEC( glGenTextures( 1, &lineColorsTex_ ) );
@@ -307,8 +298,6 @@ void RenderLinesObject::freeBuffers_()
         return;
     GL_EXEC( glDeleteVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &linesPickerArrayObjId_ ) );
-
-    GL_EXEC( glDeleteBuffers( 1, &lineIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteTextures( 1, &lineColorsTex_ ) );
     GL_EXEC( glDeleteTextures( 1, &texture_ ) );

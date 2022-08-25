@@ -155,6 +155,7 @@ private:
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
 
+    // store original object's scaled transform for proper controls' uniform scaling calculation
     AffineXf3f scaledXf_;
     Matrix3f objScale_;
 

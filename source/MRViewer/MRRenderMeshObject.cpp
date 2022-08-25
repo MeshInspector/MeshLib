@@ -203,7 +203,8 @@ size_t RenderMeshObject::heapBytes() const
 template <RenderMeshObject::BufferType bufferType>
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar ) const
 {
-    if ( !elementCount_[bufferType] )
+    auto count = elementCount_[bufferType];
+    if ( !count )
         return;
 
     // Send lines data to GL, install lines properties
@@ -240,11 +241,11 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, elementCount_[bufferType] / 2 );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, count / 2 );
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, elementCount_[bufferType] ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, count ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const

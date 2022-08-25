@@ -494,6 +494,8 @@ void RenderMeshObject::initBuffers_()
 
     dirty_ = DIRTY_ALL;
     normalsBound_ = false;
+
+    elementCount_.fill( 0 );
 }
 
 void RenderMeshObject::freeBuffers_()

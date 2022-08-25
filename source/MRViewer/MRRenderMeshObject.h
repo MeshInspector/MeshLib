@@ -22,19 +22,9 @@ private:
     const ObjectMeshHolder* objMesh_;
 
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    mutable Buffer<Vector3f> vertNormalsBufferObj_;
-    mutable Buffer<Color> vertColorsBufferObj_;
-    mutable Buffer<UVCoord> vertUVBufferObj_;
-    mutable Buffer<Vector3i> facesIndicesBufferObj_;
-    mutable Buffer<Vector2i> edgesIndicesBufferObj_;
-    mutable Buffer<unsigned> faceSelectionTexture_;
-    mutable Buffer<Vector4f> faceNormalsTexture_;
-    mutable Buffer<Vector3f> borderHighlightPoints_;
-    mutable Buffer<Vector3f> selectedEdgesPoints_;
     enum BufferType {
         VERTEX_POSITIONS,
         PICKER_VERTEX_POSITIONS,
-        CORNER_NORMALS,
         VERTEX_NORMALS,
         FACE_NORMALS,
         VERTEX_COLORMAPS,
@@ -93,8 +83,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Buffer<Vector3f>& data,
-        GLuint count, const Color& color, unsigned dirtyValue ) const;
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, BufferType bufferType, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
 
@@ -110,26 +99,15 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
-    void updateMeshEdgesBuffer_() const;
-    void updateBorderLinesBuffer_() const;
-    void updateSelectedEdgesBuffer_() const;
 
     void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable uint32_t dirty_;
-    mutable bool meshFacesDirty_{ false };
-    mutable bool meshEdgesDirty_{ false };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
-    // store element counts separately because the buffers could be cleared
-    mutable size_t vertNormalsCount_{ 0 };
-    mutable size_t vertColorsCount_{ 0 };
-    mutable size_t vertUVCount_{ 0 };
-    mutable int meshFacesCount_{ 0 };
-    mutable int meshEdgesCount_{ 0 };
-    mutable int borderPointsCount_{ 0 };
-    mutable int selectedPointsCount_{ 0 };
+    // ...
+    mutable bool hasVertNormals_{ false };
 };
 
 }

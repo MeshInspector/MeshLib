@@ -132,17 +132,17 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
     {
-        if ( dirty_ & DIRTY_BORDER_LINES )
-            updateBorderLinesBuffer_();
-        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, borderHighlightPoints_, borderPointsCount_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
-        dirty_ &= ~DIRTY_BORDER_LINES;
+        if ( elementDirty_[BORDER_LINES] )
+            loadBuffer_( BORDER_LINES );
+        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, BORDER_LINES, objMesh_->getBordersColor() );
+        elementDirty_.reset( BORDER_LINES );
     }
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
     {
-        if ( dirty_ & DIRTY_EDGES_SELECTION )
-            updateSelectedEdgesBuffer_();
-        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, selectedEdgesPoints_, selectedPointsCount_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
-        dirty_ &= ~DIRTY_EDGES_SELECTION;
+        if ( elementDirty_[EDGE_SELECTION] )
+            loadBuffer_( EDGE_SELECTION );
+        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, EDGE_SELECTION, objMesh_->getSelectedEdgesColor() );
+        elementDirty_.reset( EDGE_SELECTION );
     }
 
     if ( renderParams.alphaSort )
@@ -195,22 +195,12 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
 size_t RenderMeshObject::heapBytes() const
 {
-    return bufferObj_.heapBytes()
-        + vertNormalsBufferObj_.heapBytes()
-        + vertColorsBufferObj_.heapBytes()
-        + vertUVBufferObj_.heapBytes()
-        + facesIndicesBufferObj_.heapBytes()
-        + edgesIndicesBufferObj_.heapBytes()
-        + faceSelectionTexture_.heapBytes()
-        + faceNormalsTexture_.heapBytes()
-        + borderHighlightPoints_.heapBytes()
-        + selectedEdgesPoints_.heapBytes();
+    return bufferObj_.heapBytes();
 }
 
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Buffer<Vector3f>& data,
-    GLuint count, const Color& colorChar, unsigned dirtyValue ) const
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, BufferType bufferType, const Color& colorChar ) const
 {
-    if ( !count )
+    if ( !elementCount_[bufferType] )
         return;
 
     // Send lines data to GL, install lines properties
@@ -240,18 +230,17 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, vbo ) );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
-    if ( dirty_ & dirtyValue )
+    if ( elementDirty_[bufferType] )
     {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * data.size(), data.data(), GL_DYNAMIC_DRAW ) );
-        dirty_ ^= dirtyValue;
+        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, count / 2 );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, elementCount_[bufferType] / 2 );
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, count ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, elementCount_[bufferType] ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const
@@ -285,17 +274,17 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     elementDirty_.reset( VERTEX_POSITIONS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
-    if ( meshEdgesDirty_ )
+    if ( elementDirty_[EDGES] )
     {
-        updateMeshEdgesBuffer_();
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * edgesIndicesBufferObj_.size(), edgesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        meshEdgesDirty_ = false;
+        loadBuffer_( EDGES );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        elementDirty_.reset( EDGES );
     }
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, meshEdgesCount_ );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, elementCount_[EDGES] );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, 2 * meshEdgesCount_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, 2 * elementCount_[EDGES], GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort ) const
@@ -309,16 +298,27 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
     elementDirty_.reset( VERTEX_POSITIONS );
 
-    bool needRefreshNormals = bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) || bool( dirty_ & DIRTY_CORNERS_RENDER_NORMAL );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, needRefreshNormals, vertNormalsCount_ != 0 );
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP, vertColorsCount_ != 0 );
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV, vertUVCount_ != 0 );
+    if ( elementDirty_[VERTEX_NORMALS] )
+        loadBuffer_( VERTEX_NORMALS );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, bufferObj_, 3, elementDirty_[VERTEX_NORMALS], elementCount_[VERTEX_NORMALS] != 0 );
+    elementDirty_.reset( VERTEX_NORMALS );
+
+    if ( elementDirty_[VERTEX_COLORMAPS] )
+        loadBuffer_( VERTEX_COLORMAPS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, bufferObj_, 4, elementDirty_[VERTEX_COLORMAPS], elementCount_[VERTEX_COLORMAPS] != 0 );
+    elementDirty_.reset( VERTEX_COLORMAPS );
+
+    if ( elementDirty_[VERTEX_UVS] )
+        loadBuffer_( VERTEX_UVS );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, bufferObj_, 2, elementDirty_[VERTEX_UVS], elementCount_[VERTEX_UVS] != 0 );
+    elementDirty_.reset( VERTEX_UVS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( meshFacesDirty_ )
+    if ( elementDirty_[FACES] )
     {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        meshFacesDirty_ = false;
+        loadBuffer_( FACES );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        elementDirty_.reset( FACES );
     }
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -368,38 +368,45 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceColors" ), 1 ) );
 
-
     // Normals
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, facesNormalsTex_ ) );
-    if ( dirty_ & DIRTY_FACES_RENDER_NORMAL )
+    if ( elementDirty_[FACE_NORMALS] )
     {
+        loadBuffer_( FACE_NORMALS );
+
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceNormalsTexture_.size() ), maxTexSize_ );
-        assert( res.x * res.y == faceNormalsTexture_.size() );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, res.x, res.y, 0, GL_RGBA, GL_FLOAT, faceNormalsTexture_.data() ) );
+        auto res = calcTextureRes( int( elementCount_[FACE_NORMALS] ), maxTexSize_ );
+        assert( res.x * res.y == elementCount_[FACE_NORMALS] );
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, res.x, res.y, 0, GL_RGBA, GL_FLOAT, bufferObj_.data() ) );
+
+        elementDirty_.reset( FACE_NORMALS );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceSelectionTex_ ) );
-    if ( dirty_ & DIRTY_SELECTION )
+    if ( elementDirty_[FACE_SELECTION] )
     {
+        loadBuffer_( FACE_SELECTION );
+
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceSelectionTexture_.size() ), maxTexSize_ );
-        assert( res.x * res.y == faceSelectionTexture_.size() );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelectionTexture_.data() ) );
+        auto res = calcTextureRes( int( elementCount_[FACE_SELECTION] ), maxTexSize_ );
+        assert( res.x * res.y == elementCount_[FACE_SELECTION] );
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, bufferObj_.data() ) );
+
+        elementDirty_.reset( FACE_SELECTION );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
@@ -420,10 +427,11 @@ void RenderMeshObject::bindMeshPicker_() const
     elementDirty_.reset( PICKER_VERTEX_POSITIONS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( meshFacesDirty_ )
+    if ( elementDirty_[FACES] )
     {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-        meshFacesDirty_ = false;
+        loadBuffer_( FACES );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        elementDirty_.reset( FACES );
     }
 
     dirty_ &= ~DIRTY_POSITION;
@@ -450,9 +458,9 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     }
 
     if ( !picker )
-        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, meshFacesCount_ );
+        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, elementCount_[FACES] );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * meshFacesCount_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * elementCount_[FACES], GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -551,11 +559,6 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( normalsBound_ )
         dirty_ &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag ); // it does not affect copy, `dirtyNormalFlag` does
 
-    const auto& edgePerFace = mesh->topology.edgePerFace();
-    auto numF = mesh->topology.lastValidFace() + 1;
-    auto numV = mesh->topology.lastValidVert() + 1;
-
-    const auto& uvCoords = objMesh_->getUVCoords();
     // Vertex positions
     if ( dirty_ & DIRTY_POSITION )
     {
@@ -565,244 +568,73 @@ void RenderMeshObject::update_( ViewportId id ) const
     // Normals
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
     {
-        MR_NAMED_TIMER( "dirty_corners_normals" )
-        const auto& creases = objMesh_->creases();
-        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        vertNormalsBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            const auto& cornerN = cornerNormals[f];
-            for ( int i = 0; i < 3; ++i )
-                vertNormalsBufferObj_[ind + i] = cornerN[i];
-        } );
-        vertNormalsCount_ = vertNormalsBufferObj_.size();
+        elementDirty_.set( VERTEX_NORMALS );
+        hasVertNormals_ = false;
     }
     if ( dirtyNormalFlag & DIRTY_VERTS_RENDER_NORMAL ) // vertNormalsBufferObj_ should be valid no matter what normals we use
     {
-        MR_NAMED_TIMER( "dirty_vertices_normals" )
-        const auto& vertsNormals = objMesh_->getVertsNormals();
-        vertNormalsBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-            {
-                const auto& norm = vertsNormals[v[i]];
-                vertNormalsBufferObj_[ind + i] = norm;
-            }
-        } );
-        vertNormalsCount_ = vertNormalsBufferObj_.size();
+        elementDirty_.set( VERTEX_NORMALS );
+        hasVertNormals_ = true;
     }
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
-        MR_NAMED_TIMER( "dirty_faces_normals" )
-        auto size = mesh->topology.lastValidFace() + 1;
-        auto res = calcTextureRes( size, maxTexSize_ );
-        assert( res.x * res.y >= size );
-        faceNormalsTexture_.resize( res.x * res.y );
-
-        computePerFaceNormals4( *mesh, faceNormalsTexture_.data(), faceNormalsTexture_.size() );
+        elementDirty_.set( FACE_NORMALS );
     }
 
-    ColoringType coloringType = objMesh_->getColoringType();
     // Per-vertex material settings
-    if ( dirty_ & DIRTY_VERTS_COLORMAP && coloringType == ColoringType::VertsColorMap )
+    if ( dirty_ & DIRTY_VERTS_COLORMAP && objMesh_->getColoringType() == ColoringType::VertsColorMap )
     {
-        const auto& vertsColorMap = objMesh_->getVertsColorMap();
-        MR_NAMED_TIMER( "vert_colormap" );
-        vertColorsBufferObj_.resize( 3 * numF );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                vertColorsBufferObj_[ind + i] = vertsColorMap[v[i]];
-        } );
-        vertColorsCount_ = vertColorsBufferObj_.size();
+        elementDirty_.set( VERTEX_COLORMAPS );
     }
     // Face indices
     if ( dirty_ & DIRTY_FACE )
     {
-        meshFacesDirty_ = true;
-        meshEdgesDirty_ = true;
-        meshFacesCount_ = numF;
-        meshEdgesCount_ = numF * 3;
-
-        facesIndicesBufferObj_.resize( meshFacesCount_ );
-        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            if ( f >= numF )
-                return;
-            if ( !edgePerFace[f].valid() )
-                facesIndicesBufferObj_[f] = Vector3i();
-            else
-                facesIndicesBufferObj_[f] = Vector3i{ ind,ind + 1,ind + 2 };
-        } );
-        // NOTE: mesh edges' buffer updating is delayed until it's used
+        elementDirty_.set( FACES );
+        elementDirty_.set( EDGES );
     }
     // Texture coordinates
-    if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
-    {
-        assert( uvCoords.size() >= numV );
-    }
     if ( dirty_ & DIRTY_UV )
     {
-        if ( uvCoords.size() >= numV )
-        {
-            vertUVBufferObj_.resize( 3 * numF );
-            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-            {
-                auto ind = 3 * f;
-                VertId v[3];
-                mesh->topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                    vertUVBufferObj_[ind + i] = uvCoords[v[i]];
-            } );
-            vertUVCount_ = vertUVBufferObj_.size();
-        }
-        else
-        {
-            vertUVCount_ = 0;
-        }
+        elementDirty_.set( VERTEX_UVS );
     }
 
     if ( dirty_ & DIRTY_SELECTION )
     {
-        auto size = numF / 32 + 1;
-        auto res = calcTextureRes( size, maxTexSize_ );
-        assert( res.x * res.y >= size );
-        faceSelectionTexture_.resize( res.x * res.y );
-
-        const auto& selection = objMesh_->getSelectedFaces().m_bits;
-        const unsigned* selectionData = ( unsigned* )selection.data();
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )faceSelectionTexture_.size() ), [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int r = range.begin(); r < range.end(); ++r )
-            {
-                auto& block = faceSelectionTexture_[r];
-                if ( r / 2 >= selection.size() )
-                {
-                    block = 0;
-                    continue;
-                }
-                block = selectionData[r];
-            }
-        } );
+        elementDirty_.set( FACE_SELECTION );
     }
 
     // dirty_ instead of meshgl_.dirty because:
     // meshgl_.dirty is cleared only after render of borders, and it will not render if border highlight is turned off
     if ( objDirty & DIRTY_BORDER_LINES )
     {
-        // NOTE: border lines' buffer updating is delayed until it's used
+        elementDirty_.set( BORDER_LINES );
     }
 
     if ( objDirty & DIRTY_EDGES_SELECTION )
     {
-        // NOTE: selected edges' buffer updating is delayed until it's used
+        elementDirty_.set( EDGE_SELECTION );
     }
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-void RenderMeshObject::updateMeshEdgesBuffer_() const
-{
-    auto mesh = objMesh_->mesh();
-    const auto& edgePerFace = mesh->topology.edgePerFace();
-
-    edgesIndicesBufferObj_.resize( meshEdgesCount_ );
-    BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-    {
-        auto ind = 3 * f;
-        if ( f >= meshFacesCount_ )
-            return;
-        if ( !edgePerFace[f].valid() )
-        {
-            for ( int i = 0; i < 3; ++i )
-                edgesIndicesBufferObj_[ind + i] = Vector2i();
-        }
-        else
-        {
-            for ( int i = 0; i < 3; ++i )
-                edgesIndicesBufferObj_[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
-        }
-    } );
-}
-
-void RenderMeshObject::updateBorderLinesBuffer_() const
-{
-    auto mesh = objMesh_->mesh();
-    auto boundary = mesh->topology.findBoundary();
-
-    size_t size = 0;
-    for ( const auto& b : boundary )
-        size += 2 * b.size();
-    borderHighlightPoints_.resize( size );
-
-    size_t cur = 0;
-    for ( auto& b : boundary )
-    {
-        for ( auto& e : b )
-        {
-            borderHighlightPoints_[cur++] = mesh->points[mesh->topology.org( e )];
-            borderHighlightPoints_[cur++] = mesh->points[mesh->topology.dest( e )];
-        }
-    }
-    assert( cur == borderHighlightPoints_.size() );
-
-    borderPointsCount_ = GLsizei( borderHighlightPoints_.size() );
-}
-
-void RenderMeshObject::updateSelectedEdgesBuffer_() const
-{
-    auto mesh = objMesh_->mesh();
-
-    auto selectedEdges = objMesh_->getSelectedEdges();
-    for ( auto e : selectedEdges )
-        if ( !mesh->topology.hasEdge( e ) )
-            selectedEdges.reset( e );
-    selectedEdgesPoints_.resize( 2 * selectedEdges.count() );
-
-    size_t cur = 0;
-    for ( auto e : selectedEdges )
-    {
-        selectedEdgesPoints_[cur++] = mesh->orgPnt( e );
-        selectedEdgesPoints_[cur++] = mesh->destPnt( e );
-    }
-    assert( cur == selectedEdgesPoints_.size() );
-
-    selectedPointsCount_ = GLsizei( selectedEdgesPoints_.size() );
-}
-
 void RenderMeshObject::resetBuffers_() const
 {
-    if ( normalsBound_ )
-        RESET_VECTOR( vertNormalsBufferObj_ );
-    RESET_VECTOR( vertColorsBufferObj_ );
-    RESET_VECTOR( vertUVBufferObj_ );
-    RESET_VECTOR( facesIndicesBufferObj_ );
-    RESET_VECTOR( edgesIndicesBufferObj_ );
-    RESET_VECTOR( faceSelectionTexture_ );
-    RESET_VECTOR( faceNormalsTexture_ );
-    RESET_VECTOR( borderHighlightPoints_ );
-    RESET_VECTOR( selectedEdgesPoints_ );
+    bufferObj_.clear();
 }
 
 void RenderMeshObject::loadBuffer_( RenderMeshObject::BufferType type ) const
 {
     const auto& mesh = objMesh_->mesh();
+    auto numF = mesh->topology.lastValidFace() + 1;
 
     switch ( type )
     {
     case VERTEX_POSITIONS:
     case PICKER_VERTEX_POSITIONS:
     {
-        auto numF = mesh->topology.lastValidFace() + 1;
+        MR_NAMED_TIMER( "vertbased_dirty_positions" );
+
         auto* buffer = prepareBuffer_<Vector3f>( type, 3 * numF );
 
         BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
@@ -815,7 +647,198 @@ void RenderMeshObject::loadBuffer_( RenderMeshObject::BufferType type ) const
         } );
     }
         break;
-    default:
+    case VERTEX_NORMALS:
+    {
+        MR_NAMED_TIMER( "dirty_vertices_normals" )
+
+        auto* buffer = prepareBuffer_<Vector3f>( type, 3 * numF );
+
+        if ( hasVertNormals_ )
+        {
+            const auto& vertsNormals = objMesh_->getVertsNormals();
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                {
+                    const auto& norm = vertsNormals[v[i]];
+                    buffer[ind + i] = norm;
+                }
+            } );
+        }
+        else
+        {
+            const auto& creases = objMesh_->creases();
+            const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                const auto& cornerN = cornerNormals[f];
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
+            } );
+        }
+    }
+        break;
+    case FACE_NORMALS:
+    {
+        MR_NAMED_TIMER( "dirty_faces_normals" )
+
+        auto res = calcTextureRes( numF, maxTexSize_ );
+        assert( res.x * res.y >= numF );
+        auto* buffer = prepareBuffer_<Vector4f>( type, res.x * res.y );
+
+        computePerFaceNormals4( *mesh, buffer, elementCount_[type] );
+    }
+        break;
+    case VERTEX_COLORMAPS:
+    {
+        MR_NAMED_TIMER( "vert_colormap" );
+
+        auto* buffer = prepareBuffer_<Color>( type, 3 * numF );
+
+        const auto& vertsColorMap = objMesh_->getVertsColorMap();
+        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            VertId v[3];
+            mesh->topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = vertsColorMap[v[i]];
+        } );
+    }
+        break;
+    case FACES:
+    {
+        auto* buffer = prepareBuffer_<Vector3i>( type, numF );
+
+        const auto& edgePerFace = mesh->topology.edgePerFace();
+        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            if ( f >= numF )
+                return;
+            if ( !edgePerFace[f].valid() )
+                buffer[f] = Vector3i();
+            else
+                buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+        } );
+    }
+        break;
+    case EDGES:
+    {
+        auto* buffer = prepareBuffer_<Vector2i>( type, 3 * numF );
+
+        const auto& edgePerFace = mesh->topology.edgePerFace();
+        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            if ( f >= numF )
+                return;
+            if ( !edgePerFace[f].valid() )
+            {
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = Vector2i();
+            }
+            else
+            {
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+            }
+        } );
+    }
+        break;
+    case VERTEX_UVS:
+    {
+        auto numV = mesh->topology.lastValidVert() + 1;
+        const auto& uvCoords = objMesh_->getUVCoords();
+        if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
+        {
+            assert( uvCoords.size() >= numV );
+        }
+        if ( uvCoords.size() >= numV )
+        {
+            auto* buffer = prepareBuffer_<UVCoord>( type, 3 * numF );
+
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = uvCoords[v[i]];
+            } );
+        }
+        else
+        {
+            elementCount_[type] = 0;
+        }
+    }
+        break;
+    case FACE_SELECTION:
+    {
+        auto size = numF / 32 + 1;
+        auto res = calcTextureRes( size, maxTexSize_ );
+        assert( res.x * res.y >= size );
+        auto* buffer = prepareBuffer_<unsigned>( type, res.x * res.y );
+
+        const auto& selection = objMesh_->getSelectedFaces().m_bits;
+        const unsigned* selectionData = ( unsigned* )selection.data();
+        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )elementCount_[type] ), [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( int r = range.begin(); r < range.end(); ++r )
+            {
+                auto& block = buffer[r];
+                if ( r / 2 >= selection.size() )
+                {
+                    block = 0;
+                    continue;
+                }
+                block = selectionData[r];
+            }
+        } );
+    }
+        break;
+    case BORDER_LINES:
+    {
+        auto boundary = mesh->topology.findBoundary();
+        size_t size = 0;
+        for ( const auto& b : boundary )
+            size += 2 * b.size();
+        auto* buffer = prepareBuffer_<Vector3f>( type, size );
+
+        size_t cur = 0;
+        for ( auto& b : boundary )
+        {
+            for ( auto& e : b )
+            {
+                buffer[cur++] = mesh->points[mesh->topology.org( e )];
+                buffer[cur++] = mesh->points[mesh->topology.dest( e )];
+            }
+        }
+        assert( cur == elementCount_[type] );
+    }
+        break;
+    case EDGE_SELECTION:
+    {
+        auto selectedEdges = objMesh_->getSelectedEdges();
+        for ( auto e : selectedEdges )
+            if ( !mesh->topology.hasEdge( e ) )
+                selectedEdges.reset( e );
+        auto* buffer = prepareBuffer_<Vector3f>( type, 2 * selectedEdges.count() );
+
+        size_t cur = 0;
+        for ( auto e : selectedEdges )
+        {
+            buffer[cur++] = mesh->orgPnt( e );
+            buffer[cur++] = mesh->destPnt( e );
+        }
+        assert( cur == elementCount_[type] );
+    }
+        break;
+    case BUFFER_COUNT:
         break;
     }
 }

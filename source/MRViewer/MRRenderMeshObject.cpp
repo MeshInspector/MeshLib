@@ -275,12 +275,8 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     auto positions = loadBuffer_<VERTEX_POSITIONS>();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     auto edges = loadBuffer_<EDGES>();
-    if ( edges.dirty() )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * edges.size(), edges.data(), GL_DYNAMIC_DRAW ) );
-    }
+    edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, elementCount_[EDGES] );
 
@@ -307,11 +303,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.count() != 0 );
 
     auto faces = loadBuffer_<FACES>();
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( faces.dirty() )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * faces.size(), faces.data(), GL_DYNAMIC_DRAW ) );
-    }
+    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, texture_ ) );
@@ -411,11 +403,7 @@ void RenderMeshObject::bindMeshPicker_() const
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
     auto faces = loadBuffer_<FACES>();
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( faces.dirty() )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * faces.size(), faces.data(), GL_DYNAMIC_DRAW ) );
-    }
+    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     dirty_ &= ~DIRTY_POSITION;
     dirty_ &= ~DIRTY_FACE;
@@ -453,8 +441,6 @@ void RenderMeshObject::initBuffers_()
     // Mesh: Vertex Array Object & Buffer objects
     GL_EXEC( glGenVertexArrays( 1, &meshArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &edgesIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &texture_ ) );
 
     GL_EXEC( glGenTextures( 1, &faceColorsTex_ ) );
@@ -490,8 +476,6 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &borderArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
 
-    GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &edgesIndicesBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &borderBufferObjId_ ) );
     GL_EXEC( glDeleteBuffers( 1, &selectedEdgesBufferObjId_ ) );
 

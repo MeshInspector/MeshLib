@@ -152,11 +152,7 @@ void RenderPointsObject::bindPoints_() const
     bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_POSITION )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( VertId ) * validIndicesBufferObj_.size(), validIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-    }
+    validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_POSITION, validIndicesBufferObj_ );
 
     int maxTexSize = 0;
     GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
@@ -189,11 +185,7 @@ void RenderPointsObject::bindPointsPicker_() const
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_POSITION )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( VertId ) * validIndicesBufferObj_.size(), validIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-    }
+    validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_POSITION, validIndicesBufferObj_ );
     dirty_ &= ~DIRTY_POSITION;
 }
 
@@ -201,7 +193,6 @@ void RenderPointsObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &validIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenTextures( 1, &vertSelectionTex_ ) );
 
@@ -216,8 +207,6 @@ void RenderPointsObject::freeBuffers_()
         return;
     GL_EXEC( glDeleteVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &pointsPickerArrayObjId_ ) );
-
-    GL_EXEC( glDeleteBuffers( 1, &validIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteTextures( 1, &vertSelectionTex_ ) );
 }

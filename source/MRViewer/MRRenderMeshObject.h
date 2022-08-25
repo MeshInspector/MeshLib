@@ -87,8 +87,8 @@ private:
     mutable GlBuffer vertNormalsBuffer_;
     mutable GlBuffer vertColorsBuffer_;
 
-    GLuint facesIndicesBufferObjId_{ 0 };
-    GLuint edgesIndicesBufferObjId_{ 0 };
+    mutable GlBuffer facesIndicesBuffer_;
+    mutable GlBuffer edgesIndicesBuffer_;
     GLuint texture_{ 0 };
 
     GLuint faceSelectionTex_{ 0 };

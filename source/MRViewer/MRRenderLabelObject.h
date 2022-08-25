@@ -24,20 +24,20 @@ private:
 
     GLuint labelArrayObjId_{ 0 };
     mutable GlBuffer vertPosBuffer_;
-    GLuint facesIndicesBufferObjId_{ 0 };
+    mutable GlBuffer facesIndicesBuffer_;
 
     GLuint srcArrayObjId_{ 0 };
     mutable GlBuffer srcVertPosBuffer_;
-    GLuint srcIndicesBufferObjId_{ 0 };
+    mutable GlBuffer srcIndicesBuffer_;
     GLuint srcIndicesSelectionTexId_{ 0 };
 
     GLuint bgArrayObjId_{ 0 };
     mutable GlBuffer bgVertPosBuffer_;
-    GLuint bgFacesIndicesBufferObjId_{ 0 };
+    mutable GlBuffer bgFacesIndicesBuffer_;
 
     GLuint llineArrayObjId_{ 0 };
     mutable GlBuffer llineVertPosBuffer_;
-    GLuint llineEdgesIndicesBufferObjId_{ 0 };
+    mutable GlBuffer llineEdgesIndicesBuffer_;
 
     void renderSourcePoint_( const RenderParams& renderParams ) const;
     void renderBackground_( const RenderParams& renderParams ) const;

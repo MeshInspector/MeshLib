@@ -29,7 +29,7 @@ private:
     mutable GlBuffer vertNormalsBuffer_;
     mutable GlBuffer vertColorsBuffer_;
 
-    GLuint validIndicesBufferObjId_{ 0 };
+    mutable GlBuffer validIndicesBuffer_;
 
     GLuint vertSelectionTex_{ 0 };
 

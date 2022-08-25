@@ -5,6 +5,7 @@
 #include "MRMesh/MRBuffer.h"
 #include "MRRenderGLHelpers.h"
 #include <bitset>
+#include <optional>
 
 namespace MR
 {
@@ -38,22 +39,38 @@ private:
         BUFFER_COUNT,
     };
     mutable Buffer<std::byte> bufferObj_;
-    mutable std::size_t elementSize_;
+
+    template <BufferType>
+    struct ElementType;
+
     mutable std::array<std::size_t, BUFFER_COUNT> elementCount_;
     mutable std::bitset<BUFFER_COUNT> elementDirty_;
 
     template <typename T>
-    T* prepareBuffer_( BufferType type, std::size_t elementCount ) const
+    class BufferRef
     {
-        elementSize_ = sizeof(T);
-        elementCount_[type] = elementCount;
-        auto size = elementSize_ * elementCount_[type];
-        if ( bufferObj_.size() < size )
-            bufferObj_.resize( size );
-        return reinterpret_cast<T*>( bufferObj_.data() );
-    }
+        T* data_;
+        std::size_t count_;
+        std::optional<std::bitset<BUFFER_COUNT>::reference> dirtyFlag_;
 
-    void loadBuffer_( BufferType type ) const;
+    public:
+        BufferRef( T* data, std::size_t count, std::optional<std::bitset<BUFFER_COUNT>::reference> dirtyFlag ) noexcept;
+        BufferRef( BufferRef<T>&& other ) noexcept;
+        BufferRef( const BufferRef<T>& ) = delete;
+        ~BufferRef() { if ( dirtyFlag_ ) *dirtyFlag_ = false; }
+
+        T& operator []( std::size_t i ) const noexcept { return data_[i]; }
+        T* data() const noexcept { return data_; };
+        [[nodiscard]] std::size_t size() const noexcept { return data_ ? count_ : 0; }
+        [[nodiscard]] std::size_t count() const noexcept { return count_; }
+        [[nodiscard]] bool dirty() const noexcept { return bool( dirtyFlag_ ); }
+    };
+
+    template <BufferType type>
+    BufferRef<typename ElementType<type>::type> prepareBuffer_( std::size_t elementCount ) const;
+
+    template <BufferType type>
+    BufferRef<typename ElementType<type>::type> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -83,7 +100,8 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, BufferType bufferType, const Color& color ) const;
+    template <BufferType type>
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
 

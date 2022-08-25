@@ -6,6 +6,10 @@ project (MRTest CXX)
 
 add_executable(${PROJECT_NAME} MRTestApp.cpp)
 
+IF(MR_EMSCRIPTEN)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
+ENDIF()
+
 IF(NOT ${MR_FEDORA} AND NOT ${MR_UBUNTU22} AND NOT ${MR_EMSCRIPTEN})
  target_link_libraries(${PROJECT_NAME} PRIVATE
          MRMesh

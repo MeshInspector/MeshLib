@@ -232,7 +232,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
     if ( elementDirty_[bufferType] )
     {
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * elementCount_[bufferType], bufferObj_.data(), GL_DYNAMIC_DRAW ) );
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
@@ -277,7 +277,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     if ( elementDirty_[EDGES] )
     {
         loadBuffer_( EDGES );
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * elementCount_[EDGES], bufferObj_.data(), GL_DYNAMIC_DRAW ) );
         elementDirty_.reset( EDGES );
     }
 
@@ -317,7 +317,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     if ( elementDirty_[FACES] )
     {
         loadBuffer_( FACES );
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * elementCount_[FACES], bufferObj_.data(), GL_DYNAMIC_DRAW ) );
         elementDirty_.reset( FACES );
     }
 
@@ -430,7 +430,7 @@ void RenderMeshObject::bindMeshPicker_() const
     if ( elementDirty_[FACES] )
     {
         loadBuffer_( FACES );
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, bufferObj_.size(), bufferObj_.data(), GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * elementCount_[FACES], bufferObj_.data(), GL_DYNAMIC_DRAW ) );
         elementDirty_.reset( FACES );
     }
 

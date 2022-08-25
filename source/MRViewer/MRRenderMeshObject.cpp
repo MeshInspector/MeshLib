@@ -273,7 +273,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
 
     // positions
     auto positions = loadBuffer_<VERTEX_POSITIONS>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.count() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
     auto edges = loadBuffer_<EDGES>();
@@ -295,16 +295,16 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     GL_EXEC( glUseProgram( shader ) );
 
     auto positions = loadBuffer_<VERTEX_POSITIONS>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.count() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
     auto normals = loadBuffer_<VERTEX_NORMALS>();
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals.data(), normals.size(), 3, normals.dirty(), normals.count() != 0 );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.count() != 0 );
 
     auto colormaps = loadBuffer_<VERTEX_COLORMAPS>();
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps.data(), colormaps.size(), 4, colormaps.dirty(), colormaps.count() != 0 );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps, 4, colormaps.dirty(), colormaps.count() != 0 );
 
     auto uvs = loadBuffer_<VERTEX_UVS>();
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs.data(), uvs.size(), 2, uvs.dirty(), uvs.count() != 0 );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.count() != 0 );
 
     auto faces = loadBuffer_<FACES>();
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
@@ -408,7 +408,7 @@ void RenderMeshObject::bindMeshPicker_() const
     GL_EXEC( glUseProgram( shader ) );
 
     auto positions = loadBuffer_<PICKER_VERTEX_POSITIONS>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.count() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
     auto faces = loadBuffer_<FACES>();
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );

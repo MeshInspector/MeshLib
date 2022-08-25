@@ -148,12 +148,9 @@ void RenderPointsObject::bindPoints_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    const auto& points = objPoints_->pointCloud()->points.vec_;
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, points.data(), points.size(), 3, dirty_ & DIRTY_POSITION );
-    const auto& normals = objPoints_->getVertsNormals().vec_;
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals.data(), normals.size(), 3, dirty_ & DIRTY_RENDER_NORMALS );
-    const auto& colorMap = objPoints_->getVertsColorMap().vec_;
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colorMap.data(), colorMap.size(), 4, dirty_ & DIRTY_VERTS_COLORMAP );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_POSITION )
@@ -190,8 +187,7 @@ void RenderPointsObject::bindPointsPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    const auto& points = objPoints_->pointCloud()->points.vec_;
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, points.data(), points.size(), 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, validIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_POSITION )

@@ -125,7 +125,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     GL_EXEC( glUseProgram( shader ) );
 
     const std::vector<Vector3f> point { objLabel_->getLabel().position };
-    bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point.data(), point.size(), 3, dirtySrc_ );
+    bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point, 3, dirtySrc_ );
 
     constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, srcIndicesBufferObjId_ ) );
@@ -207,7 +207,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
         { box.min.x, box.max.y, 0.f },
         { box.max.x, box.max.y, 0.f },
     };
-    bindVertexAttribArray( shader, "position", bgVertPosBuffer_, corners.data(), corners.size(), 3, dirtyBg_ );
+    bindVertexAttribArray( shader, "position", bgVertPosBuffer_, corners, 3, dirtyBg_ );
 
     constexpr std::array<Vector3i, 2> bgFacesIndicesBufferObj = {
         Vector3i{ 0, 1, 2 },
@@ -244,7 +244,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
         { box.min.x, box.max.y, 0.f },
         { box.max.x, box.max.y, 0.f },
     };
-    bindVertexAttribArray( shader, "position", llineVertPosBuffer_, leaderLineVertices.data(), leaderLineVertices.size(), 3, dirtyLLine_ );
+    bindVertexAttribArray( shader, "position", llineVertPosBuffer_, leaderLineVertices, 3, dirtyLLine_ );
 
     std::array<Vector2i, 3> llineEdgesIndices {
         Vector2i{ 1, 2 },
@@ -333,8 +333,7 @@ void RenderLabelObject::bindLabel_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    const auto& points = objLabel_->labelRepresentingMesh()->points.vec_;
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, points.data(), points.size(), 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
     
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
     if ( dirty_ & DIRTY_FACE )

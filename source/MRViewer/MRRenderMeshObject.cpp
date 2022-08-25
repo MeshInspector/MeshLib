@@ -244,7 +244,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, count ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, int( count ) ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const
@@ -281,7 +281,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, elementCount_[EDGES] );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, 2 * elementCount_[EDGES], GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, int( 2 * elementCount_[EDGES] ), GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort ) const
@@ -431,7 +431,7 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     if ( !picker )
         getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, elementCount_[FACES] );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * elementCount_[FACES], GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * elementCount_[FACES] ), GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }

@@ -30,31 +30,31 @@ private:
     template <DirtyFlag dirtyFlag>
     using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
 
-    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> elementCount_;
+    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_;
 
     template <typename T>
     class BufferRef
     {
         T* data_;
-        std::size_t count_;
+        std::size_t glSize_;
         DirtyFlag* dirtyMask_;
         DirtyFlag dirtyFlag_;
 
     public:
-        BufferRef( T* data, std::size_t count, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept;
+        BufferRef( T* data, std::size_t glSize, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept;
         BufferRef( BufferRef<T>&& other ) noexcept;
         BufferRef( const BufferRef<T>& ) = delete;
         ~BufferRef() { if ( dirtyMask_ ) *dirtyMask_ ^= dirtyFlag_; }
 
         T& operator []( std::size_t i ) const noexcept { return data_[i]; }
         T* data() const noexcept { return data_; };
-        [[nodiscard]] std::size_t size() const noexcept { return data_ ? count_ : 0; }
-        [[nodiscard]] std::size_t count() const noexcept { return count_; }
+        [[nodiscard]] std::size_t size() const noexcept { return data_ ? glSize_ : 0; }
+        [[nodiscard]] std::size_t glSize() const noexcept { return glSize_; }
         [[nodiscard]] bool dirty() const noexcept { return dirtyMask_ && ( *dirtyMask_ & dirtyFlag_ ); }
     };
 
     template <DirtyFlag dirtyFlag>
-    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t elementCount ) const;
+    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize ) const;
 
     template <DirtyFlag dirtyFlag>
     BufferRef<BufferType<dirtyFlag>> loadBuffer_() const;

@@ -338,8 +338,11 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling )
+bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags )
 {
+    if ( *collapsed )
+        height = 0.0f;
+
     ImGuiWindow* window = FindWindowByName( label );
     if ( !window )
     {
@@ -348,17 +351,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
-        SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
-        window = FindWindowByName( label );
     }
-    SetNextWindowSizeConstraints( ImVec2( width, -1.0f ), ImVec2( width, -1.0f ) );
-    auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoTitleBar;
+
+    SetNextWindowSize( ImVec2( width, height ) );
+    const auto constriants = ( height == 0.0f ) ? ImVec2{ width, -1.0f } : ImVec2{ width, height };
+    SetNextWindowSizeConstraints( constriants, constriants );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
 
-    if ( !Begin( label, open, flags ) )
+    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar ) )
     {
         *open = false;
         ImGui::PopStyleVar( 2 );
@@ -411,6 +413,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::SetNextItemWidth( buttonSize );    
     ImGui::SetCursorPosX( width - buttonSize );
 
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 1.0f * scaling );
     if ( ImGui::Button( "\xef\x80\x8d" ) ) //close button
     {
         *open = false;
@@ -432,7 +435,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::PopStyleColor( 2 );
     
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { MR::cDefaultWindowPaddingX * scaling / 3.0f, MR::cDefaultWindowPaddingY * scaling * 0.7f } );
-    ImGui::BeginTable( "ContentTable", 3, ImGuiTableFlags_SizingStretchProp );
+
+    const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
+    const auto outerSize = ( height == 0.0f ) ? ImVec2 { 0, 0 } : ImVec2 { width, height };
+
+    ImGui::BeginTable( "ContentTable", 3, tableFlags, outerSize );
     ImGui::TableNextColumn();
     ImGui::TableNextColumn();
     

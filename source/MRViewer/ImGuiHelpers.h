@@ -141,7 +141,8 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
 
 /// begin state plugin window with custom style
-MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling );
+MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling, float height = 0.0f, 
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
 /// end state plugin window with custom style
 MRVIEWER_API void EndCustomStatePlugin();
 

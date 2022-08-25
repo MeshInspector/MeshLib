@@ -24,8 +24,8 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto menuWidth = 450.0f * menuScaling;
     auto menuHeight = 600.0f * menuScaling;
 
-    ImGui::SetNextWindowSize( ImVec2( menuWidth, menuHeight ), ImGuiCond_FirstUseEver );
-    ImGui::Begin( plugin_name.c_str(), &dialogIsOpen_ );
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling, menuHeight, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+        return;
 
     ImGui::Text( "Scene colors:" );
     for ( int i = 0; i < sceneColors_.size(); ++i )
@@ -90,7 +90,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
         ImGui::EndPopup();
     }
-    ImGui::End();
+    ImGui::EndCustomStatePlugin();
 }
 
 std::string AddCustomThemePlugin::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const

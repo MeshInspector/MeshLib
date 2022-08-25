@@ -31,7 +31,7 @@ ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
 project (MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
+add_compile_definitions(MR_PROJECT_NAME=\"MeshViewer\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -166,3 +166,4 @@ IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/meshconv ./meshconv)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)

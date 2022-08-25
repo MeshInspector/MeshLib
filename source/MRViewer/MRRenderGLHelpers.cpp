@@ -24,37 +24,45 @@ void GlBuffer::del()
     size_ = 0;
 }
 
-void GlBuffer::bind()
+void GlBuffer::bind( GLenum target )
 { 
     assert( valid() );
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, bufferID_ ) );
+    GL_EXEC( glBindBuffer( target, bufferID_ ) );
 }
 
-void GlBuffer::loadData( const char * arr, size_t arrSize )
+void GlBuffer::loadData( GLenum target, const char * arr, size_t arrSize )
 {
     if ( !valid() )
         gen();
-    bind();
+    bind( target );
     GLint64 bufSize = arrSize;
     auto maxUploadSize = ( GLint64( 1 ) << 32 ) - 4096; //4Gb - 4096, 4Gb is already too much
     if ( bufSize <= maxUploadSize )
     {
         // buffers less than 4Gb are ok to load immediately
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, arr, GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( target, bufSize, arr, GL_DYNAMIC_DRAW ) );
     }
     else
     {
         // buffers more than 4Gb are better to split on chunks to avoid strange errors from GL or drivers
-        GL_EXEC( glBufferData( GL_ARRAY_BUFFER, bufSize, nullptr, GL_DYNAMIC_DRAW ) );
+        GL_EXEC( glBufferData( target, bufSize, nullptr, GL_DYNAMIC_DRAW ) );
         GLint64 remStart = 0;
         auto remSize = bufSize;
         for ( ; remSize > maxUploadSize; remSize -= maxUploadSize, remStart += maxUploadSize )
         {
-            GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, maxUploadSize, arr + remStart ) );
+            GL_EXEC( glBufferSubData( target, remStart, maxUploadSize, arr + remStart ) );
         }
-        GL_EXEC( glBufferSubData( GL_ARRAY_BUFFER, remStart, remSize, arr + remStart ) );
+        GL_EXEC( glBufferSubData( target, remStart, remSize, arr + remStart ) );
     }
     size_ = arrSize;
+}
+
+void GlBuffer::loadDataOpt( GLenum target, bool refresh, const char * arr, size_t arrSize )
+{
+    if ( refresh )
+        loadData( target, arr, arrSize );
+    else
+        bind( target );
 }
 
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
@@ -69,10 +77,7 @@ GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
         return id;
     }
 
-    if ( settings.refresh )
-        settings.buf.loadData( settings.arr, settings.arrSize );
-    else
-        settings.buf.bind();
+    settings.buf.loadDataOpt( GL_ARRAY_BUFFER, settings.refresh, settings.arr, settings.arrSize );
 
     // GL_FLOAT is left here consciously 
     if ( settings.isColor )

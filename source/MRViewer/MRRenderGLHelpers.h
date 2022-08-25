@@ -31,12 +31,17 @@ public:
     MRVIEWER_API void del();
 
     // binds current buffer to OpenGL context
-    MRVIEWER_API void bind();
+    MRVIEWER_API void bind( GLenum target );
 
-    // creates GL data buffer using given data
-    MRVIEWER_API void loadData( const char * arr, size_t arrSize );
+    // creates GL data buffer using given data and binds it
+    MRVIEWER_API void loadData( GLenum target, const char * arr, size_t arrSize );
     template<typename T>
-    void loadData( const T * arr, size_t arrSize ) { loadData( (const char *)arr, sizeof( T ) * arrSize ); }
+    void loadData( GLenum target, const T * arr, size_t arrSize ) { loadData( target, (const char *)arr, sizeof( T ) * arrSize ); }
+
+    // binds current buffer to OpenGL context, optionally refreshing its data
+    MRVIEWER_API void loadDataOpt( GLenum target, bool refresh, const char * arr, size_t arrSize );
+    template<typename T>
+    void loadDataOpt( GLenum target, bool refresh, const T * arr, size_t arrSize ) { loadDataOpt( target, refresh, (const char *)arr, sizeof( T ) * arrSize ); }
 
 private:
     /// another object takes control over the GL buffer

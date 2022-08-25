@@ -19,7 +19,6 @@ namespace MR
 {
 
 template<> struct RenderMeshObject::ElementType<RenderMeshObject::VERTEX_POSITIONS> { using type = Vector3f; };
-template<> struct RenderMeshObject::ElementType<RenderMeshObject::PICKER_VERTEX_POSITIONS> { using type = Vector3f; };
 template<> struct RenderMeshObject::ElementType<RenderMeshObject::VERTEX_NORMALS> { using type = Vector3f; };
 template<> struct RenderMeshObject::ElementType<RenderMeshObject::FACE_NORMALS> { using type = Vector4f; };
 template<> struct RenderMeshObject::ElementType<RenderMeshObject::VERTEX_COLORMAPS> { using type = Color; };
@@ -408,7 +407,7 @@ void RenderMeshObject::bindMeshPicker_() const
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
-    auto positions = loadBuffer_<PICKER_VERTEX_POSITIONS>();
+    auto positions = loadBuffer_<VERTEX_POSITIONS>();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.count() != 0 );
 
     auto faces = loadBuffer_<FACES>();
@@ -549,7 +548,6 @@ void RenderMeshObject::update_( ViewportId id ) const
     if ( dirty_ & DIRTY_POSITION )
     {
         elementDirty_.set( VERTEX_POSITIONS );
-        elementDirty_.set( PICKER_VERTEX_POSITIONS );
     }
     // Normals
     if ( dirtyNormalFlag & DIRTY_CORNERS_RENDER_NORMAL )
@@ -633,7 +631,7 @@ RenderMeshObject::BufferRef<typename RenderMeshObject::ElementType<type>::type> 
     const auto& mesh = objMesh_->mesh();
     auto numF = mesh->topology.lastValidFace() + 1;
 
-    if constexpr ( type == VERTEX_POSITIONS || type == PICKER_VERTEX_POSITIONS )
+    if constexpr ( type == VERTEX_POSITIONS )
     {
         MR_NAMED_TIMER( "vertbased_dirty_positions" );
 

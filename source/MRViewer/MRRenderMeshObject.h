@@ -25,7 +25,6 @@ private:
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
     enum BufferType {
         VERTEX_POSITIONS,
-        PICKER_VERTEX_POSITIONS,
         VERTEX_NORMALS,
         FACE_NORMALS,
         VERTEX_COLORMAPS,

@@ -403,7 +403,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     titleFont->Scale =  1.1f;
     ImGui::PushFont( titleFont );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - style.FramePadding.y * 0.75f );
-    ImGui::Text( label );
+    ImGui::Text( "%s", label);
     ImGui::PopStyleVar();
     ImGui::PopFont();
     titleFont->Scale = 1.0f;

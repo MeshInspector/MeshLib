@@ -270,7 +270,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     // positions
     if ( elementDirty_[VERTEX_POSITIONS] )
         loadBuffer_( VERTEX_POSITIONS );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_.data(), elementSize_ * elementCount_[VERTEX_POSITIONS], 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
     elementDirty_.reset( VERTEX_POSITIONS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, edgesIndicesBufferObjId_ ) );
@@ -295,22 +295,22 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
 
     if ( elementDirty_[VERTEX_POSITIONS] )
         loadBuffer_( VERTEX_POSITIONS );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_.data(), elementSize_ * elementCount_[VERTEX_POSITIONS], 3, elementDirty_[VERTEX_POSITIONS], elementCount_[VERTEX_POSITIONS] != 0 );
     elementDirty_.reset( VERTEX_POSITIONS );
 
     if ( elementDirty_[VERTEX_NORMALS] )
         loadBuffer_( VERTEX_NORMALS );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, bufferObj_, 3, elementDirty_[VERTEX_NORMALS], elementCount_[VERTEX_NORMALS] != 0 );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, bufferObj_.data(), elementSize_ * elementCount_[VERTEX_NORMALS], 3, elementDirty_[VERTEX_NORMALS], elementCount_[VERTEX_NORMALS] != 0 );
     elementDirty_.reset( VERTEX_NORMALS );
 
     if ( elementDirty_[VERTEX_COLORMAPS] )
         loadBuffer_( VERTEX_COLORMAPS );
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, bufferObj_, 4, elementDirty_[VERTEX_COLORMAPS], elementCount_[VERTEX_COLORMAPS] != 0 );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, bufferObj_.data(), elementSize_ * elementCount_[VERTEX_COLORMAPS], 4, elementDirty_[VERTEX_COLORMAPS], elementCount_[VERTEX_COLORMAPS] != 0 );
     elementDirty_.reset( VERTEX_COLORMAPS );
 
     if ( elementDirty_[VERTEX_UVS] )
         loadBuffer_( VERTEX_UVS );
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, bufferObj_, 2, elementDirty_[VERTEX_UVS], elementCount_[VERTEX_UVS] != 0 );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, bufferObj_.data(), elementSize_ * elementCount_[VERTEX_UVS], 2, elementDirty_[VERTEX_UVS], elementCount_[VERTEX_UVS] != 0 );
     elementDirty_.reset( VERTEX_UVS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
@@ -423,7 +423,7 @@ void RenderMeshObject::bindMeshPicker_() const
 
     if ( elementDirty_[PICKER_VERTEX_POSITIONS] )
         loadBuffer_( PICKER_VERTEX_POSITIONS );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_, 3, elementDirty_[PICKER_VERTEX_POSITIONS], elementCount_[PICKER_VERTEX_POSITIONS] != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, bufferObj_.data(), elementSize_ * elementCount_[PICKER_VERTEX_POSITIONS], 3, elementDirty_[PICKER_VERTEX_POSITIONS], elementCount_[PICKER_VERTEX_POSITIONS] != 0 );
     elementDirty_.reset( PICKER_VERTEX_POSITIONS );
 
     GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );

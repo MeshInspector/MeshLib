@@ -128,11 +128,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point, 3, dirtySrc_ );
 
     constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, srcIndicesBufferObjId_ ) );
-    if ( dirtySrc_ )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( VertId ) * pointIndices.size(), pointIndices.data(), GL_DYNAMIC_DRAW ) );
-    }
+    srcIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirtySrc_, pointIndices );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -214,11 +210,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
         Vector3i{ 1, 2, 3 },
     };
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, bgFacesIndicesBufferObjId_ ) );
-    if ( dirtyBg_ )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * bgFacesIndicesBufferObj.size(), bgFacesIndicesBufferObj.data(), GL_DYNAMIC_DRAW ) );
-    }
+    bgFacesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirtyBg_, bgFacesIndicesBufferObj );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, bgFacesIndicesBufferObj.size() );
 
@@ -284,11 +276,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     }
     assert( llineEdgesIndicesSize <= llineEdgesIndices.size() );
 
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, llineEdgesIndicesBufferObjId_ ) );
-    if ( dirtyLLine_ )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector2i ) * llineEdgesIndicesSize, llineEdgesIndices.data(), GL_DYNAMIC_DRAW ) );
-    }
+    llineEdgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirtyLLine_, llineEdgesIndices.data(), llineEdgesIndicesSize );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -335,12 +323,7 @@ void RenderLabelObject::bindLabel_() const
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
     
-    GL_EXEC( glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, facesIndicesBufferObjId_ ) );
-    if ( dirty_ & DIRTY_FACE )
-    {
-        GL_EXEC( glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( Vector3i ) * facesIndicesBufferObj_.size(), facesIndicesBufferObj_.data(), GL_DYNAMIC_DRAW ) );
-    }
-
+    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, facesIndicesBufferObj_ );
     dirty_ &= ~DIRTY_MESH;
 }
 
@@ -348,20 +331,16 @@ void RenderLabelObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &labelArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &facesIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &srcArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &srcIndicesBufferObjId_ ) );
     GL_EXEC( glGenTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &llineArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
 
     dirty_ = DIRTY_ALL;
     dirtySrc_ = true;
@@ -375,24 +354,19 @@ void RenderLabelObject::freeBuffers_()
         return;
 
     GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &facesIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &srcArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &srcIndicesBufferObjId_ ) );
     GL_EXEC( glDeleteTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &bgFacesIndicesBufferObjId_ ) );
 
     GL_EXEC( glDeleteVertexArrays( 1, &llineArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &llineEdgesIndicesBufferObjId_ ) );
 }
 
 void RenderLabelObject::update_() const
 {
+    MR_TIMER
     auto mesh = objLabel_->labelRepresentingMesh();
-
-    MR_TIMER;
     auto objDirty = objLabel_->getDirtyFlags();
     dirty_ |= objDirty;
 

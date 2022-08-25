@@ -40,7 +40,7 @@ private:
     mutable GlBuffer vertNormalsBuffer_;
     mutable GlBuffer vertColorsBuffer_;
 
-    GLuint lineIndicesBufferObjId_{ 0 };
+    mutable GlBuffer lineIndicesBuffer_;
     GLuint texture_{ 0 };
 
     GLuint pointsSelectionTex_{ 0 };

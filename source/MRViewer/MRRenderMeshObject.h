@@ -4,8 +4,6 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRRenderGLHelpers.h"
-#include <bitset>
-#include <optional>
 
 namespace MR
 {
@@ -23,53 +21,43 @@ private:
     const ObjectMeshHolder* objMesh_;
 
     // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    enum BufferType {
-        VERTEX_POSITIONS,
-        VERTEX_NORMALS,
-        FACE_NORMALS,
-        VERTEX_COLORMAPS,
-        FACES,
-        EDGES,
-        VERTEX_UVS,
-        FACE_SELECTION,
-        BORDER_LINES,
-        EDGE_SELECTION,
-
-        BUFFER_COUNT,
-    };
     mutable Buffer<std::byte> bufferObj_;
 
-    template <BufferType>
-    struct ElementType;
+    using DirtyFlag = uint32_t;
 
-    mutable std::array<std::size_t, BUFFER_COUNT> elementCount_;
-    mutable std::bitset<BUFFER_COUNT> elementDirty_;
+    template <DirtyFlag>
+    struct BufferTypeHelper;
+    template <DirtyFlag dirtyFlag>
+    using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
+
+    mutable std::array<std::size_t, sizeof( DirtyFlag )> elementCount_;
 
     template <typename T>
     class BufferRef
     {
         T* data_;
         std::size_t count_;
-        std::optional<std::bitset<BUFFER_COUNT>::reference> dirtyFlag_;
+        DirtyFlag* dirtyMask_;
+        DirtyFlag dirtyFlag_;
 
     public:
-        BufferRef( T* data, std::size_t count, std::optional<std::bitset<BUFFER_COUNT>::reference> dirtyFlag ) noexcept;
+        BufferRef( T* data, std::size_t count, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept;
         BufferRef( BufferRef<T>&& other ) noexcept;
         BufferRef( const BufferRef<T>& ) = delete;
-        ~BufferRef() { if ( dirtyFlag_ ) *dirtyFlag_ = false; }
+        ~BufferRef() { if ( dirtyMask_ ) *dirtyMask_ ^= dirtyFlag_; }
 
         T& operator []( std::size_t i ) const noexcept { return data_[i]; }
         T* data() const noexcept { return data_; };
         [[nodiscard]] std::size_t size() const noexcept { return data_ ? count_ : 0; }
         [[nodiscard]] std::size_t count() const noexcept { return count_; }
-        [[nodiscard]] bool dirty() const noexcept { return bool( dirtyFlag_ ); }
+        [[nodiscard]] bool dirty() const noexcept { return dirtyMask_ && ( *dirtyMask_ & dirtyFlag_ ); }
     };
 
-    template <BufferType type>
-    BufferRef<typename ElementType<type>::type> prepareBuffer_( std::size_t elementCount ) const;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t elementCount ) const;
 
-    template <BufferType type>
-    BufferRef<typename ElementType<type>::type> loadBuffer_() const;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<BufferType<dirtyFlag>> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -99,7 +87,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    template <BufferType type>
+    template <DirtyFlag>
     void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
@@ -120,11 +108,9 @@ private:
     void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    mutable uint32_t dirty_;
+    mutable DirtyFlag dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
-    // Marks vertex normals' source
-    mutable bool hasVertNormals_{ false };
 };
 
 }

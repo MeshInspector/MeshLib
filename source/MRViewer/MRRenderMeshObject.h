@@ -124,7 +124,7 @@ private:
     mutable uint32_t dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
-    // ...
+    // Marks vertex normals' source
     mutable bool hasVertNormals_{ false };
 };
 

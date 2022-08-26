@@ -37,6 +37,8 @@ public:
     MRVIEWER_API void loadData( GLenum target, const char * arr, size_t arrSize );
     template<typename T>
     void loadData( GLenum target, const T * arr, size_t arrSize ) { loadData( target, (const char *)arr, sizeof( T ) * arrSize ); }
+    template<typename C>
+    void loadData( GLenum target, const C & cont ) { loadData( target, cont.data(), cont.size() ); }
 
     // binds current buffer to OpenGL context, optionally refreshing its data
     MRVIEWER_API void loadDataOpt( GLenum target, bool refresh, const char * arr, size_t arrSize );

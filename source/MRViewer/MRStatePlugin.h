@@ -107,6 +107,7 @@ protected:
 
     bool isEnabled_{false};
     bool dialogIsOpen_{false};
+    bool dialogIsCollapsed_{ false };
 
     StatePluginTabs tab_{StatePluginTabs::Other};
 };

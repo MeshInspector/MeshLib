@@ -382,7 +382,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const auto& style = ImGui::GetStyle();
     ImGui::SetCursorPos( { 0, 0 } );
     
-    const ImVec2 pos = { window->DC.CursorPos.x, window->DC.CursorPos.y };
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
     ImFont* iconsFont = nullptr;
     ImFont* titleFont = nullptr;
     if ( menu )

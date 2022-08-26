@@ -22,25 +22,25 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@tests
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@tests
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@tests
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@tests
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 

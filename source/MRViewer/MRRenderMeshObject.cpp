@@ -848,8 +848,6 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
 
         return buffer;
     }
-
-    assert( false );
 }
 
 template<RenderMeshObject::DirtyFlag dirtyFlag>

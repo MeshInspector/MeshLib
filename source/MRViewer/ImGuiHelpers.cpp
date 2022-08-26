@@ -340,7 +340,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
 
 bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags )
 {
-    if ( *collapsed )
+    if ( collapsed && *collapsed )
         height = 0.0f;
 
     ImGuiWindow* window = FindWindowByName( label );
@@ -358,7 +358,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     SetNextWindowSizeConstraints( constriants, constriants );
 
     //need no paddings if the window is collapsed
-    if ( *collapsed )
+    if ( collapsed && *collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
@@ -372,7 +372,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         return false;
     }
 
-    if ( *collapsed )
+    if ( collapsed && *collapsed )
         ImGui::PopStyleVar( 2 );
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
@@ -388,7 +388,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( menu )
     {
         iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
-        iconsFont->Scale = MR::cDefaultFontSize * scaling / iconsFont->FontSize;
+        iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
         ImGui::PushFont( iconsFont );
     }
     const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
@@ -404,7 +404,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
     ImGui::SetNextItemWidth( buttonSize );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * scaling / 2.0f, MR::cDefaultItemSpacing * scaling } );
-    if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+    if ( collapsed && ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
     {
         *collapsed = !*collapsed;        
     }
@@ -449,7 +449,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         iconsFont->Scale = 1.0f;
     }
 
-    if ( *collapsed )
+    if ( collapsed && *collapsed )
     {
         ImGui::PopStyleColor( 2 );
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );

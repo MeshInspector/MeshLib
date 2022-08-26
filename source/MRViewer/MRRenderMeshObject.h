@@ -31,6 +31,8 @@ private:
     using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
 
     mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_;
+    template <DirtyFlag>
+    std::size_t& getGLSize_() const;
 
     template <typename T>
     class BufferRef

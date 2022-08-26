@@ -16,6 +16,17 @@
 #define DIRTY_EDGE 0x40000
 static_assert( DIRTY_EDGE == MR::DIRTY_ALL + 1 );
 
+namespace
+{
+constexpr std::size_t highestBit( uint32_t v )
+{
+    std::size_t i;
+    for ( i = 0; v != 1; i++ )
+        v >>= 1;
+    return i;
+}
+}
+
 namespace MR
 {
 
@@ -204,7 +215,7 @@ size_t RenderMeshObject::heapBytes() const
 template <RenderMeshObject::DirtyFlag dirtyFlag>
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar ) const
 {
-    auto count = bufferGLSize_[dirtyFlag];
+    auto count = getGLSize_<dirtyFlag>();
     if ( !count )
         return;
 
@@ -280,10 +291,10 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     auto edges = loadBuffer_<DIRTY_EDGE>();
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, bufferGLSize_[DIRTY_EDGE] );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, getGLSize_<DIRTY_EDGE>() );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, int( 2 * bufferGLSize_[DIRTY_EDGE] ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, int( 2 * getGLSize_<DIRTY_EDGE>() ), GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort ) const
@@ -431,9 +442,9 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     }
 
     if ( !picker )
-        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, bufferGLSize_[DIRTY_FACE] );
+        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, getGLSize_<DIRTY_FACE>() );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * bufferGLSize_[DIRTY_FACE] ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * getGLSize_<DIRTY_FACE>() ), GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -548,8 +559,8 @@ template <RenderMeshObject::DirtyFlag dirtyFlag>
 RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::prepareBuffer_( std::size_t glSize ) const
 {
     using T = BufferType<dirtyFlag>;
-    bufferGLSize_[dirtyFlag] = glSize;
-    auto memSize = sizeof(T) * bufferGLSize_[dirtyFlag];
+    getGLSize_<dirtyFlag>() = glSize;
+    auto memSize = sizeof(T) * getGLSize_<dirtyFlag>();
     if ( bufferObj_.size() < memSize )
         bufferObj_.resize( memSize );
     return {
@@ -568,7 +579,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         // bufferObj_ should be valid no matter what normals we use
         if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
             return loadBuffer_<DIRTY_CORNERS_RENDER_NORMAL>();
-        return {nullptr, bufferGLSize_[dirtyFlag], nullptr, 0 };
+        return {nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
     }
 
     const auto& mesh = objMesh_->mesh();
@@ -727,7 +738,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         }
         else
         {
-            bufferGLSize_[dirtyFlag] = 0;
+            getGLSize_<dirtyFlag>() = 0;
             return { nullptr, 0, &dirty_, dirtyFlag };
         }
     }
@@ -740,7 +751,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
 
         const auto& selection = objMesh_->getSelectedFaces().m_bits;
         const unsigned* selectionData = ( unsigned* )selection.data();
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )bufferGLSize_[dirtyFlag] ), [&] ( const tbb::blocked_range<int>& range )
+        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )getGLSize_<dirtyFlag>() ), [&] ( const tbb::blocked_range<int>& range )
         {
             for ( int r = range.begin(); r < range.end(); ++r )
             {
@@ -773,7 +784,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
                 buffer[cur++] = mesh->points[mesh->topology.dest( e )];
             }
         }
-        assert( cur == bufferGLSize_[dirtyFlag] );
+        assert( cur == getGLSize_<dirtyFlag>() );
 
         return buffer;
     }
@@ -791,13 +802,21 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
             buffer[cur++] = mesh->orgPnt( e );
             buffer[cur++] = mesh->destPnt( e );
         }
-        assert( cur == bufferGLSize_[dirtyFlag] );
+        assert( cur == getGLSize_<dirtyFlag>() );
 
         return buffer;
     }
 
     assert( false );
     return { nullptr, 0, nullptr, 0 };
+}
+
+template<RenderMeshObject::DirtyFlag dirtyFlag>
+std::size_t &RenderMeshObject::getGLSize_() const
+{
+    constexpr auto i = highestBit( dirtyFlag );
+    assert( dirtyFlag == 1 << i );
+    return bufferGLSize_[i];
 }
 
 template<typename T>

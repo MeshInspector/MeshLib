@@ -46,7 +46,7 @@ private:
         BufferRef( T* data, std::size_t glSize, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept;
         BufferRef( BufferRef<T>&& other ) noexcept;
         BufferRef( const BufferRef<T>& ) = delete;
-        ~BufferRef() { if ( dirtyMask_ ) *dirtyMask_ ^= dirtyFlag_; }
+        ~BufferRef() { if ( dirtyMask_ ) *dirtyMask_ &= ~dirtyFlag_; }
 
         T& operator []( std::size_t i ) const noexcept { return data_[i]; }
         T* data() const noexcept { return data_; };

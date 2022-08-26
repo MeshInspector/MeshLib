@@ -76,7 +76,9 @@ public:
 
     T& operator []( std::size_t i ) const noexcept { return data_[i]; }
     T* data() const noexcept { return data_; };
+    /// returns actual buffer size
     [[nodiscard]] std::size_t size() const noexcept { return data_ ? glSize_ : 0; }
+    /// returns number of elements that are about to be loaded or already loaded to GL memory
     [[nodiscard]] std::size_t glSize() const noexcept { return glSize_; }
     [[nodiscard]] bool dirty() const noexcept { return dirtyMask_ && ( *dirtyMask_ & dirtyFlag_ ); }
 };

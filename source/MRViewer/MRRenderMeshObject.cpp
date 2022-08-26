@@ -42,6 +42,45 @@ template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_SELECTION> { using ty
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_BORDER_LINES> { using type = Vector3f; };
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_EDGES_SELECTION> { using type = Vector3f; };
 
+template <typename T>
+class RenderMeshObject::BufferRef
+{
+    T* data_;
+    std::size_t glSize_;
+    DirtyFlag* dirtyMask_;
+    DirtyFlag dirtyFlag_;
+
+public:
+    BufferRef( T* data, std::size_t glSize, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept
+        : data_( data )
+        , glSize_( glSize )
+        , dirtyMask_( dirtyMask )
+        , dirtyFlag_( dirtyFlag )
+    {
+        assert( !dirtyMask_ || ( *dirtyMask_ & dirtyFlag_ ) );
+    }
+    BufferRef( BufferRef<T>&& other ) noexcept
+        : data_( other.data_ )
+        , glSize_( other.glSize_ )
+        , dirtyMask_( other.dirtyMask_ )
+        , dirtyFlag_( other.dirtyFlag_ )
+    {
+        other.dirtyMask_ = nullptr;
+    }
+    BufferRef( const BufferRef<T>& ) = delete;
+    ~BufferRef()
+    {
+        if ( dirtyMask_ )
+            *dirtyMask_ &= ~dirtyFlag_;
+    }
+
+    T& operator []( std::size_t i ) const noexcept { return data_[i]; }
+    T* data() const noexcept { return data_; };
+    [[nodiscard]] std::size_t size() const noexcept { return data_ ? glSize_ : 0; }
+    [[nodiscard]] std::size_t glSize() const noexcept { return glSize_; }
+    [[nodiscard]] bool dirty() const noexcept { return dirtyMask_ && ( *dirtyMask_ & dirtyFlag_ ); }
+};
+
 RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
 {
     objMesh_ = dynamic_cast< const ObjectMeshHolder* >( &visObj );
@@ -817,26 +856,6 @@ std::size_t &RenderMeshObject::getGLSize_() const
     constexpr auto i = highestBit( dirtyFlag );
     assert( dirtyFlag == 1 << i );
     return bufferGLSize_[i];
-}
-
-template<typename T>
-RenderMeshObject::BufferRef<T>::BufferRef( T* data, std::size_t glSize, DirtyFlag* dirty, DirtyFlag dirtyFlag ) noexcept
-        : data_( data )
-        , glSize_( glSize )
-        , dirtyMask_( dirty )
-        , dirtyFlag_( dirtyFlag )
-{
-    assert( !dirtyMask_ || ( *dirty & dirtyFlag_ ) );
-}
-
-template<typename T>
-RenderMeshObject::BufferRef<T>::BufferRef( RenderMeshObject::BufferRef<T>&& other ) noexcept
-    : data_( other.data_ )
-    , glSize_( other.glSize_ )
-    , dirtyMask_( other.dirtyMask_ )
-    , dirtyFlag_( other.dirtyFlag_ )
-{
-    other.dirtyMask_ = nullptr;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

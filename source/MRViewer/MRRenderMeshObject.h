@@ -37,7 +37,7 @@ private:
     template <typename T>
     class BufferRef;
     template <DirtyFlag dirtyFlag>
-    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize ) const;
+    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
     template <DirtyFlag dirtyFlag>
     BufferRef<BufferType<dirtyFlag>> loadBuffer_() const;
 

@@ -31,7 +31,6 @@ namespace MR
 {
 
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_POSITION> { using type = Vector3f; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_CORNERS_RENDER_NORMAL> { using type = Vector3f; };
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_VERTS_RENDER_NORMAL> { using type = Vector3f; };
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_FACES_RENDER_NORMAL> { using type = Vector4f; };
 template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_VERTS_COLORMAP> { using type = Color; };
@@ -597,7 +596,7 @@ void RenderMeshObject::resetBuffers_() const
 }
 
 template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::prepareBuffer_( std::size_t glSize ) const
+RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset ) const
 {
     using T = BufferType<dirtyFlag>;
     getGLSize_<dirtyFlag>() = glSize;
@@ -608,21 +607,24 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         reinterpret_cast<T*>( bufferObj_.data() ),
         glSize,
         &dirty_,
-        dirtyFlag,
+        flagToReset,
     };
 }
 
 template <RenderMeshObject::DirtyFlag dirtyFlag>
 RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::loadBuffer_() const
 {
-    if ( !( dirty_ & dirtyFlag ) )
+    if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
     {
         // bufferObj_ should be valid no matter what normals we use
-        if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
-            return loadBuffer_<DIRTY_CORNERS_RENDER_NORMAL>();
-        else
+        if ( !( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) && !( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
             return { nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
-    };
+    }
+    else
+    {
+        if ( !( dirty_ & dirtyFlag ) )
+            return { nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
+    }
 
     const auto& mesh = objMesh_->mesh();
     auto numF = mesh->topology.lastValidFace() + 1;
@@ -646,42 +648,50 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
     }
     else if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
     {
-        MR_NAMED_TIMER( "dirty_vertices_normals" )
-
-        auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
-
-        const auto& vertsNormals = objMesh_->getVertsNormals();
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            mesh->topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
+            auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF, DIRTY_VERTS_RENDER_NORMAL );
+
+            MR_NAMED_TIMER( "dirty_vertices_normals" )
+
+            const auto &vertsNormals = objMesh_->getVertsNormals();
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&]( FaceId f )
             {
-                const auto& norm = vertsNormals[v[i]];
-                buffer[ind + i] = norm;
-            }
-        } );
+                auto ind = 3 * f;
+                VertId v[3];
+                mesh->topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                {
+                    const auto &norm = vertsNormals[v[i]];
+                    buffer[ind + i] = norm;
+                }
+            } );
 
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_CORNERS_RENDER_NORMAL )
-    {
-        MR_NAMED_TIMER( "dirty_corners_normals" )
-
-        auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
-
-        const auto& creases = objMesh_->creases();
-        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            return buffer;
+        }
+        else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
         {
-            auto ind = 3 * f;
-            const auto& cornerN = cornerNormals[f];
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = cornerN[i];
-        } );
+            MR_NAMED_TIMER( "dirty_corners_normals" )
 
-        return buffer;
+            auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF, DIRTY_CORNERS_RENDER_NORMAL );
+
+            const auto& creases = objMesh_->creases();
+            const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+            {
+                auto ind = 3 * f;
+                const auto& cornerN = cornerNormals[f];
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
+            } );
+
+            return buffer;
+        }
+        else
+        {
+            assert( false );
+            return { nullptr, 0, nullptr, 0 };
+        }
     }
     else if constexpr ( dirtyFlag == DIRTY_FACES_RENDER_NORMAL )
     {

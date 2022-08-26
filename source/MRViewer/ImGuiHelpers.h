@@ -140,8 +140,8 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
 
-/// begin state plugin window with custom style.  If you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
-// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
+/// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
+/// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling, float height = 0.0f, 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 /// end state plugin window with custom style

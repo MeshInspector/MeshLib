@@ -367,7 +367,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
-        if ( *collapsed )
+        if ( collapsed && *collapsed )
             ImGui::PopStyleVar( 2 );
         return false;
     }
@@ -404,11 +404,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
     ImGui::SetNextItemWidth( buttonSize );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * scaling / 2.0f, MR::cDefaultItemSpacing * scaling } );
-    if ( collapsed && ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+    if ( collapsed )
     {
-        *collapsed = !*collapsed;        
+        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+        {
+            *collapsed = !*collapsed;
+        }
+        ImGui::SameLine();
     }
-    ImGui::SameLine();
 
     if ( menu )
     {

@@ -199,16 +199,19 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
             const float pad = ImMax( 1.0f, IM_FLOOR( square_sz / 6.0f ) );
             auto renderCustomCheckmark = [] ( ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz )
             {
-                float thickness = ImMax( sz * 0.15f, 1.0f );
+                const float thickness = ImMax( sz * 0.15f, 1.0f );
                 sz -= thickness * 0.5f;
                 pos = ImVec2( pos.x + thickness * 0.25f, pos.y + thickness * 0.25f );
 
-                float half = sz * 0.5f;
-                float ninth = sz / 9.0f;
+                const float half = sz * 0.5f;
+                const float ninth = sz / 9.0f;
+                const ImVec2 anglePoint { pos.x + half, pos.y + sz - ninth };
+
                 draw_list->PathLineTo( ImVec2( pos.x + ninth, pos.y + half ) );
-                draw_list->PathLineTo( ImVec2( pos.x + half, pos.y + sz - ninth ) );
+                draw_list->PathLineTo( anglePoint );
                 draw_list->PathLineTo( ImVec2( pos.x + sz - ninth, pos.y + ninth * 2.0f ) );
                 draw_list->PathStroke( col, 0, thickness );
+                draw_list->AddCircle( anglePoint, thickness * 0.5f, col );
             };
             renderCustomCheckmark( window->DrawList, { check_bb.Min.x +  pad, check_bb.Min.y + pad }, check_col, square_sz - pad * 2.0f );
         }
@@ -339,12 +342,14 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
         const float sixthWidth = arrowBox.GetWidth() / 6.0f;
             
         const float thickness = ImMax( arrowBox.GetHeight() * 0.1f, 1.0f );
-        const ImVec2 pos = { arrowBox.Min.x, arrowBox.Min.y - thickness };
-        draw_list->PathLineTo( ImVec2( pos.x + sixthWidth, pos.y + halfHeight ) );
-        draw_list->PathLineTo( ImVec2( pos.x + 2 * sixthWidth, pos.y + halfHeight + seventhHeight ) );
-        draw_list->PathLineTo( ImVec2( pos.x + 3 * sixthWidth, pos.y + halfHeight ) );
+        const ImVec2 pos { arrowBox.Min.x, arrowBox.Min.y - thickness };
+        const ImVec2 anglePoint { pos.x + 2 * sixthWidth, pos.y + halfHeight + seventhHeight };
 
+        draw_list->PathLineTo( ImVec2( pos.x + sixthWidth, pos.y + halfHeight ) );       
+        draw_list->PathLineTo( anglePoint );
+        draw_list->PathLineTo( ImVec2( pos.x + 3 * sixthWidth, pos.y + halfHeight ) );        
         draw_list->PathStroke( col, 0, thickness );
+        draw_list->AddCircleFilled( anglePoint, thickness * 0.5f, col );
     };
 
     renderCustomArrow( window->DrawList, arrowBox, ImGui::GetColorU32( ImGuiCol_Text ) );    

@@ -344,10 +344,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         height = 0.0f;
 
     ImGuiWindow* window = FindWindowByName( label );
+    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
     if ( !window )
     {
-        float yPos = 0.0f;
-        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+        float yPos = 0.0f;       
         if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
@@ -357,17 +357,23 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const auto constriants = ( height == 0.0f ) ? ImVec2{ width, -1.0f } : ImVec2{ width, height };
     SetNextWindowSizeConstraints( constriants, constriants );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+    //need no paddings if the window is collapsed
+    if ( *collapsed )
+    {
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+    }
 
-    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
-        ImGui::PopStyleVar( 2 );
+        if ( *collapsed )
+            ImGui::PopStyleVar( 2 );
         return false;
     }
 
-    ImGui::PopStyleVar( 2 );
+    if ( *collapsed )
+        ImGui::PopStyleVar( 2 );
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
 
@@ -376,15 +382,22 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const auto& style = ImGui::GetStyle();
     ImGui::SetCursorPos( { 0, 0 } );
     
-    const ImVec2 pos = window->DC.CursorPos;
-    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-    auto iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
-    iconsFont->Scale = 0.7f;
-    ImGui::PushFont( iconsFont );
-
+    const ImVec2 pos = { window->DC.CursorPos.x, window->DC.CursorPos.y };
+    ImFont* iconsFont = nullptr;
+    ImFont* titleFont = nullptr;
+    if ( menu )
+    {
+        iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
+        iconsFont->Scale = MR::cDefaultFontSize * scaling / iconsFont->FontSize;
+        ImGui::PushFont( iconsFont );
+    }
     const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
-    const ImRect boundingBox( pos, { pos.x + width, pos.y + buttonSize } );
+    const float borderSize = style.WindowBorderSize * scaling;
+    const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + width - borderSize, pos.y + buttonSize - borderSize } );
+    
+    window->DrawList->PushClipRectFullScreen();
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+    window->DrawList->PopClipRect();
 
     ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );   
@@ -395,21 +408,28 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     {
         *collapsed = !*collapsed;        
     }
-    
-    ImGui::PopFont();
-
     ImGui::SameLine();
-    auto titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
-    titleFont->Scale =  1.1f;
-    ImGui::PushFont( titleFont );
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
+        titleFont->Scale = 1.1f;
+        ImGui::PushFont( titleFont );
+    }
+
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - style.FramePadding.y * 0.75f );
     ImGui::Text( "%s", label);
     ImGui::PopStyleVar();
-    ImGui::PopFont();
-    titleFont->Scale = 1.0f;
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        titleFont->Scale = 1.0f;
+        ImGui::PushFont( iconsFont );
+    }
     
-    ImGui::SameLine();
-    ImGui::PushFont( iconsFont );
+    ImGui::SameLine();    
     ImGui::SetNextItemWidth( buttonSize );    
     ImGui::SetCursorPosX( width - buttonSize );
 
@@ -422,25 +442,33 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::End();
         return false;
     }
-    ImGui::PopFont();
-    iconsFont->Scale = 1.0f;
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        iconsFont->Scale = 1.0f;
+    }
 
     if ( *collapsed )
     {
         ImGui::PopStyleColor( 2 );
+        const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
+
+        //ImGui doesn't draw bottom border if window is collapsed, so add it manually
+        window->DrawList->PushClipRectFullScreen();
+        window->DrawList->AddLine( { pos.x, pos.y + buttonSize - borderSize }, { pos.x + width, pos.y + buttonSize - borderSize }, borderColor, borderSize );
+        window->DrawList->PopClipRect();
+
         ImGui::End();
         return false;
     }
 
     ImGui::PopStyleColor( 2 );
     
-    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { MR::cDefaultWindowPaddingX * scaling / 3.0f, MR::cDefaultWindowPaddingY * scaling * 0.7f } );
-
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
-    const auto outerSize = ( height == 0.0f ) ? ImVec2 { 0, 0 } : ImVec2 { width, height };
+    const auto outerSize = ( height == 0.0f ) ? ImVec2 { 0, 0 } : ImVec2 { width - style.ScrollbarSize, height - style.WindowPadding.y };
 
-    ImGui::BeginTable( "ContentTable", 3, tableFlags, outerSize );
-    ImGui::TableNextColumn();
+    ImGui::BeginTable( "ContentTable", 1, tableFlags, outerSize );
     ImGui::TableNextColumn();
     
    return true;
@@ -448,9 +476,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
 
 void EndCustomStatePlugin()
 {
-    TableNextColumn();
     EndTable();
-    PopStyleVar();
     End();
 }
 

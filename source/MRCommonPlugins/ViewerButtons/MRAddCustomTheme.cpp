@@ -24,9 +24,10 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto menuWidth = 450.0f * menuScaling;
     auto menuHeight = 600.0f * menuScaling;
 
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling, menuHeight, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling, menuHeight ) )
         return;
 
+    ImGui::PushItemWidth( 220.0f * menuScaling );
     ImGui::Text( "Scene colors:" );
     for ( int i = 0; i < sceneColors_.size(); ++i )
         ImGui::ColorEdit4( SceneColors::getName( SceneColors::Type( i ) ), &sceneColors_[i].x );
@@ -90,6 +91,8 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
         ImGui::EndPopup();
     }
+
+    ImGui::PopItemWidth();
     ImGui::EndCustomStatePlugin();
 }
 

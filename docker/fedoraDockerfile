@@ -34,7 +34,7 @@ COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 ENV MR_STATE=DOCKER_BUILD
 
 RUN dnf -y update && \
-    dnf -y install git time python3-pip rpm-build && \
+    dnf -y install git time python3-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel && \
     ./scripts/install_dnf_requirements.sh && \
     dnf -y install 'dnf-command(config-manager)' && \
     dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && \

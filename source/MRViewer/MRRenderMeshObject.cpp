@@ -618,8 +618,8 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         // bufferObj_ should be valid no matter what normals we use
         if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
             return loadBuffer_<DIRTY_CORNERS_RENDER_NORMAL>();
-        return {nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
-    }
+        return { nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
+    };
 
     const auto& mesh = objMesh_->mesh();
     auto numF = mesh->topology.lastValidFace() + 1;

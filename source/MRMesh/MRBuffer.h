@@ -39,7 +39,7 @@ public:
 #if __cpp_lib_smart_ptr_for_overwrite >= 202002L
             data_ = std::make_unique_for_overwrite<T[]>( size_ = newSize );
 #else
-            data_ = std::make_unique<T[]>( new T[size_ = newSize] );
+            data_.reset( new T[size_ = newSize] );
 #endif
         }
     }

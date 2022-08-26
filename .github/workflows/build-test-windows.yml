@@ -28,6 +28,10 @@ jobs:
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
+      - name: Run Test
+        working-directory: source\x64\${{ matrix.config }}
+        run: .\MeshViewer.exe -tryHidden -noEventLoop
+
       - name: Unit Tests
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 

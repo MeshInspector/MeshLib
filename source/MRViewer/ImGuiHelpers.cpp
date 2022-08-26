@@ -10,6 +10,7 @@
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
+#include "MRViewer/MRRibbonFontManager.h"
 
 namespace ImGui
 {
@@ -335,6 +336,151 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     return Begin( label, open, flags );
+}
+
+bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags )
+{
+    if ( collapsed && *collapsed )
+        height = 0.0f;
+
+    ImGuiWindow* window = FindWindowByName( label );
+    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
+    if ( !window )
+    {
+        float yPos = 0.0f;       
+        if ( menu )
+            yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
+    }
+
+    SetNextWindowSize( ImVec2( width, height ) );
+    const auto constriants = ( height == 0.0f ) ? ImVec2{ width, -1.0f } : ImVec2{ width, height };
+    SetNextWindowSizeConstraints( constriants, constriants );
+
+    //need no paddings if the window is collapsed
+    if ( collapsed && *collapsed )
+    {
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+    }
+
+    if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
+    {
+        *open = false;
+        if ( collapsed && *collapsed )
+            ImGui::PopStyleVar( 2 );
+        return false;
+    }
+
+    if ( collapsed && *collapsed )
+        ImGui::PopStyleVar( 2 );
+
+    const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
+
+    auto context = ImGui::GetCurrentContext();
+    window = context->CurrentWindow;
+    const auto& style = ImGui::GetStyle();
+    ImGui::SetCursorPos( { 0, 0 } );
+    
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImFont* iconsFont = nullptr;
+    ImFont* titleFont = nullptr;
+    if ( menu )
+    {
+        iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
+        iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
+        ImGui::PushFont( iconsFont );
+    }
+    const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
+    const float borderSize = style.WindowBorderSize * scaling;
+    const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + width - borderSize, pos.y + buttonSize - borderSize } );
+    
+    window->DrawList->PushClipRectFullScreen();
+    window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
+    window->DrawList->PopClipRect();
+
+    ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
+    ImGui::PushStyleColor( ImGuiCol_Border, bgColor );   
+    ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
+    ImGui::SetNextItemWidth( buttonSize );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * scaling / 2.0f, MR::cDefaultItemSpacing * scaling } );
+    if ( collapsed )
+    {
+        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+        {
+            *collapsed = !*collapsed;
+        }
+        ImGui::SameLine();
+    }
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
+        titleFont->Scale = 1.1f;
+        ImGui::PushFont( titleFont );
+    }
+
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - style.FramePadding.y * 0.75f );
+    ImGui::Text( "%s", label);
+    ImGui::PopStyleVar();
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        titleFont->Scale = 1.0f;
+        ImGui::PushFont( iconsFont );
+    }
+    
+    ImGui::SameLine();    
+    ImGui::SetNextItemWidth( buttonSize );    
+    ImGui::SetCursorPosX( width - buttonSize );
+
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 1.0f * scaling );
+    if ( ImGui::Button( "\xef\x80\x8d" ) ) //close button
+    {
+        *open = false;
+        ImGui::PopFont();
+        ImGui::PopStyleColor( 2 );
+        ImGui::End();
+        return false;
+    }
+
+    if ( menu )
+    {
+        ImGui::PopFont();
+        iconsFont->Scale = 1.0f;
+    }
+
+    if ( collapsed && *collapsed )
+    {
+        ImGui::PopStyleColor( 2 );
+        const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
+
+        //ImGui doesn't draw bottom border if window is collapsed, so add it manually
+        window->DrawList->PushClipRectFullScreen();
+        window->DrawList->AddLine( { pos.x, pos.y + buttonSize - borderSize }, { pos.x + width, pos.y + buttonSize - borderSize }, borderColor, borderSize );
+        window->DrawList->PopClipRect();
+
+        ImGui::End();
+        return false;
+    }
+
+    ImGui::PopStyleColor( 2 );
+    
+    const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
+    const auto outerSize = ( height == 0.0f ) ? ImVec2 { 0, 0 } : ImVec2 { width - style.ScrollbarSize, height - style.WindowPadding.y };
+
+    ImGui::BeginTable( "ContentTable", 1, tableFlags, outerSize );
+    ImGui::TableNextColumn();
+    
+   return true;
+}
+
+void EndCustomStatePlugin()
+{
+    EndTable();
+    End();
 }
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )

@@ -12,19 +12,21 @@ There is a multitude of general purpose libraries which deal with 3D data. Some 
 The goal which we set when designing MeshLib was to value simplicity and performance while providing a wide gamut of useful computational algorithms. The library also supports the most important data structures today’s sensors can produce - pointcloud, mesh, volume and more. For example, mesh is represented by half-edge data structure and cannot be made non-manifold. Some applications may require non-manifoldness, but most practical scans can be represented as manifoldness meshes without an issue. 
 
 ## Some useful links
-[MeshInspector](https://github.com/MeshInspector/MeshInspector/) is a free application based on MeshLib
+* [MeshInspector](https://github.com/MeshInspector/MeshInspector/) is a free application based on MeshLib
 
-[MeshInspector web-browser version](https://demo.meshinspector.com/)
+* MeshInspector [online web-browser version](https://demo.meshinspector.com/)
 
-[Slides about MeshLib and MeshInspector](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
+* MeshLib and MeshInspector [slides](https://docs.google.com/presentation/d/1D0Ry6SE2J25PBtO_G9ZIp1cavoX2wyyY8jgvtjeayC4/edit?usp=sharing)
 
-[MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
+* Comparison [slides](https://docs.google.com/presentation/d/1Tw5ppmWoF-aRwuVqa6xdMSEjmEd5Y6O2ny7Gu8iQBos/edit?usp=sharing) of mesh operations with VTK library
 
-[Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+* MeshInspector [YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-[Email us](mailto:support@meshinspector.com)
+* MeshLib [documentation](https://meshinspector.github.io/MeshLib/html/index.html)
 
-[Contact us anonymously](https://meshinspector.github.io/ReportIssue/)
+* [Email us](mailto:support@meshinspector.com)
+
+* Contact us anonymously [form](https://meshinspector.github.io/ReportIssue/)
 
 ## Major features
 This list is not full and updating each day

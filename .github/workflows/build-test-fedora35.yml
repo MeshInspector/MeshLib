@@ -44,6 +44,9 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
+      - name: Run Tests
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 

@@ -111,6 +111,9 @@ jobs:
     container:
       image: ${{ matrix.image }}:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
+      credentials:
+        username: meshrus
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -151,6 +154,9 @@ jobs:
     container:
       image: meshrus/meshlib-fedora:${{needs.prepare-image.outputs.image_tag}}
       options: --user root
+      credentials:
+        username: meshrus
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -215,7 +221,7 @@ jobs:
 
   delete-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [upload-distributions]
     if: always()
     steps:

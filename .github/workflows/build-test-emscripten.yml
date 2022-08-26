@@ -14,6 +14,9 @@ jobs:
     container:
       image: meshrus/meshlib-emscripten:${{inputs.image_tag}}
       options: --user 1001
+      credentials:
+        username: meshrus
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       matrix:
         config: [Singlethreaded, Multithreaded]

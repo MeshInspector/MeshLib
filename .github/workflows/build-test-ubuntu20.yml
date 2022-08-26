@@ -14,6 +14,9 @@ jobs:
     container:
       image: meshrus/meshlib-ubuntu:${{inputs.image_tag}}
       options: --user root
+      credentials:
+        username: meshrus
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       matrix:
         config: [Debug, Release]

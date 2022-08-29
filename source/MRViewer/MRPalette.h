@@ -151,17 +151,21 @@ public:
     MRVIEWER_API static const std::vector<std::string>& getPresetNames();
     /// loads existing preset to given palette \n
     /// returns true if load was succeed
-    MRVIEWER_API static bool loadPreset( const std::string& name, Palette& palette );
+    MRVIEWER_API static bool loadPreset( int index, Palette& palette );
     /// saves given palette to preset with given name
     MRVIEWER_API static void savePreset( const std::string& name, const Palette& palette );
     /// returns path to presets folder
     MRVIEWER_API static std::filesystem::path getPalettePresetsFolder();
+    /// returns index of selected preset
+    MRVIEWER_API static int getSelectedIndex();
+
 private:
     PalettePresets();
     ~PalettePresets() = default;
 
     std::vector<std::string> names_;
-    
+    int selected_ = -1;
+
     void update_();
 
     static PalettePresets& instance_();

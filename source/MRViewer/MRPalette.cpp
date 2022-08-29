@@ -528,8 +528,11 @@ const std::vector<std::string>& PalettePresets::getPresetNames()
     return instance_().names_;
 }
 
-bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
+bool PalettePresets::loadPreset( int index, Palette& palette )
 {
+    assert( index >= 0 && index < instance_().names_.size() );
+    instance_().selected_ = index;
+
     std::error_code ec;
     auto path = getPalettePresetsFolder();
     if ( !std::filesystem::is_directory( path, ec ) )
@@ -540,6 +543,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
         return false;
     }
 
+    const auto& name = instance_().names_[index];
     path /= name + ".json";
     if ( !std::filesystem::is_regular_file( path, ec ) )
     {
@@ -592,6 +596,11 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
 std::filesystem::path PalettePresets::getPalettePresetsFolder()
 {
     return getUserConfigDir() / "PalettePresets";
+}
+
+MRVIEWER_API int PalettePresets::getSelectedIndex()
+{
+    return instance_().selected_;
 }
 
 PalettePresets::PalettePresets()

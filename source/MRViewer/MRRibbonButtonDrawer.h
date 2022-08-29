@@ -61,6 +61,11 @@ public:
 
     MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {} );
 
+
+    /// draw collapsig header with width same as other controls
+    /// flag ImGuiTreeNodeFlags_SpanFullWidth is forced
+    MRVIEWER_API static bool CollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0 );
+
     struct ButtonItemWidth
     {
         float baseWidth{ 0.0f };

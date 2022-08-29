@@ -387,6 +387,25 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     return true;
 }
 
+bool RibbonButtonDrawer::CollapsingHeader( const char* label, ImGuiTreeNodeFlags flags )
+{
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    const auto& style = ImGui::GetStyle();
+    ImGuiWindow* window = g.CurrentWindow;
+    if ( window->SkipItems )
+        return false;
+
+    window->WorkRect.Min.x += style.WindowPadding.x * 0.5f;
+    window->WorkRect.Max.x -= style.WindowPadding.x * 0.5f;    
+
+    auto res = ImGui::CollapsingHeader( label, flags | ImGuiTreeNodeFlags_SpanFullWidth );
+
+    window->WorkRect.Min.x -= style.WindowPadding.x * 0.5f;
+    window->WorkRect.Max.x += style.WindowPadding.x * 0.5f;
+
+    return res;
+}
+
 RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType )
 {
     ButtonItemWidth res;

@@ -37,7 +37,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
-    if ( ImGui::CollapsingHeader( "Current viewport options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( RibbonButtonDrawer::CollapsingHeader( "Current viewport options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 

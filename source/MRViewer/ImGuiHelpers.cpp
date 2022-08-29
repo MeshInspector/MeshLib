@@ -469,7 +469,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::PopStyleColor( 2 );
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
-    const auto outerSize = ( height == 0.0f ) ? ImVec2 { 0, 0 } : ImVec2 { width - style.ScrollbarSize, height - style.WindowPadding.y };
+    const auto outerSize = ( height == 0.0f ) ? ImVec2{ 0, 0 } : ImVec2{ width - style.ScrollbarSize, height - 2.0f * style.WindowPadding.y - 2.0f * style.FramePadding.y - ImGui::GetTextLineHeight() };
 
     ImGui::BeginTable( "ContentTable", 1, tableFlags, outerSize );
     ImGui::TableNextColumn();

@@ -21,7 +21,7 @@ public:
 private:
     const ObjectMeshHolder* objMesh_;
 
-    // memory buffer for objects that about to be loaded to GPU
+    // memory buffer for objects that about to be loaded to GPU, shared among different data types
     mutable RenderObjectBuffer bufferObj_;
 
     using DirtyFlag = uint32_t;
@@ -30,7 +30,7 @@ private:
     template <DirtyFlag>
     std::size_t& getGLSize_() const;
 
-    /// ...
+    // classes that helps to deduce data type from dirty flag value
     template <DirtyFlag dirtyFlag>
     struct RenderBufferType;
     template <DirtyFlag dirtyFlag>

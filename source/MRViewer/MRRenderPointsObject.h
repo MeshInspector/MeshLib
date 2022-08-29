@@ -19,7 +19,7 @@ public:
 private:
     const ObjectPointsHolder* objPoints_;
 
-    /// ...
+    // memory buffer for objects that about to be loaded to GPU, shared among different data types
     mutable RenderObjectBuffer bufferObj_;
     mutable int validIndicesSize_{ 0 };
     mutable int vertSelectionTextureSize_{ 0 };

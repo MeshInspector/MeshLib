@@ -24,7 +24,7 @@ public:
 private:
     const ObjectLinesHolder* objLines_ = nullptr;
 
-    /// ...
+    // memory buffer for objects that about to be loaded to GPU, shared among different data types
     mutable RenderObjectBuffer bufferObj_;
     mutable int vertPosSize_{ 0 };
     mutable int vertNormalsSize_{ 0 };

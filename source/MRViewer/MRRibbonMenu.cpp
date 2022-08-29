@@ -165,6 +165,7 @@ void RibbonMenu::shutdown()
         if ( item.second.item && item.second.item->isActive() )
             item.second.item->action();
     }
+    fontManager_.initFontManagerInstance( nullptr );
     ImGuiMenu::shutdown();
     RibbonIcons::free();
 }

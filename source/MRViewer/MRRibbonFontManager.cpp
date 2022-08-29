@@ -73,11 +73,6 @@ void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontMa
     getFontManagerInstance_() = ribbonFontManager;
 }
 
-void RibbonFontManager::shutdown()
-{
-    getFontManagerInstance_() = nullptr;
-}
-
 MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 {
     static RibbonFontManager* instance{ nullptr };

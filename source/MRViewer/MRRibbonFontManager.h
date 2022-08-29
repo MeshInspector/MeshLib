@@ -43,7 +43,6 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
-    void shutdown();
 private:
     std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
 

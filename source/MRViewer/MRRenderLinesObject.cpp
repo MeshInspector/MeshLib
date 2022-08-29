@@ -154,10 +154,10 @@ void RenderLinesObject::bindLines_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, dirty_ & DIRTY_RENDER_NORMALS );
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_.data(), vertPosBufferObj_.size(), 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_.data(), vertNormalsBufferObj_.size(), 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_.data(), vertColorsBufferObj_.size(), 4, dirty_ & DIRTY_VERTS_COLORMAP );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_.data(), vertUVBufferObj_.size(), 2, dirty_ & DIRTY_UV );
 
     lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
 
@@ -221,7 +221,7 @@ void RenderLinesObject::bindLinesPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_.data(), vertPosBufferObj_.size(), 3, dirty_ & DIRTY_POSITION );
 
     lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
 

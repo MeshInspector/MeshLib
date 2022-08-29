@@ -71,12 +71,13 @@ struct BindVertexAttribArraySettings
 
 MRVIEWER_API GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings );
 
-template<typename T, template<typename, typename...> class C, typename... args>
+template <typename T>
 inline GLint bindVertexAttribArray(
     const GLuint program_shader,
     const char * name,
     GlBuffer & buf,
-    const C<T, args...>& V,
+    const T* data,
+    size_t size,
     int baseTypeElementsNumber,
     bool refresh,
     bool forceUse = false )
@@ -86,8 +87,8 @@ inline GLint bindVertexAttribArray(
         .program_shader = program_shader,
         .name = name,
         .buf = buf,
-        .arr = (const char*)V.data(),
-        .arrSize = sizeof(T) * V.size(),
+        .arr = (const char*)data,
+        .arrSize = sizeof(T) * size,
         .baseTypeElementsNumber = baseTypeElementsNumber,
         .refresh = refresh,
         .forceUse = forceUse,

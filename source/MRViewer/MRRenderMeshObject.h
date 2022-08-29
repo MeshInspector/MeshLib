@@ -4,7 +4,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRRenderGLHelpers.h"
-#include "MRRenderObjectBuffer.h"
+#include "MRRenderHelpers.h"
 
 namespace MR
 {
@@ -24,16 +24,14 @@ private:
     // memory buffer for objects that about to be loaded to GPU
     mutable RenderObjectBuffer bufferObj_;
 
-    using DirtyFlag = RenderObjectBuffer::DirtyFlag;
-
-    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
-    template <DirtyFlag>
+    mutable std::array<std::size_t, 8 * sizeof( RenderDirtyFlag )> bufferGLSize_; // in bits
+    template <RenderDirtyFlag>
     std::size_t& getGLSize_() const;
 
-    template <DirtyFlag dirtyFlag>
-    RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
-    template <DirtyFlag dirtyFlag>
-    RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> loadBuffer_() const;
+    template <RenderDirtyFlag dirtyFlag>
+    RenderBufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, RenderDirtyFlag flagToReset = dirtyFlag ) const;
+    template <RenderDirtyFlag dirtyFlag>
+    RenderBufferRef<dirtyFlag> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -63,7 +61,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    template <DirtyFlag>
+    template <RenderDirtyFlag>
     void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
@@ -82,7 +80,7 @@ private:
     void update_( ViewportId id ) const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    mutable DirtyFlag dirty_;
+    mutable RenderDirtyFlag dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
 };

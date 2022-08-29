@@ -110,9 +110,9 @@ void RenderLabelObject::render( const RenderParams& renderParams )
     const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, facesIndicesBufferObj_.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( facesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
@@ -124,7 +124,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
 
-    const std::vector<Vector3f> point { objLabel_->getLabel().position };
+    const std::array<Vector3f, 1> point { objLabel_->getLabel().position };
     bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point, 3, dirtySrc_ );
 
     constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
@@ -197,11 +197,11 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
 
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / height );
-    const std::vector<Vector3f> corners {
-        { box.min.x, box.min.y, 0.f },
-        { box.max.x, box.min.y, 0.f },
-        { box.min.x, box.max.y, 0.f },
-        { box.max.x, box.max.y, 0.f },
+    const std::array<Vector3f, 4> corners {
+        Vector3f{ box.min.x, box.min.y, 0.f },
+        Vector3f{ box.max.x, box.min.y, 0.f },
+        Vector3f{ box.min.x, box.max.y, 0.f },
+        Vector3f{ box.max.x, box.max.y, 0.f },
     };
     bindVertexAttribArray( shader, "position", bgVertPosBuffer_, corners, 3, dirtyBg_ );
 
@@ -229,12 +229,12 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
     const auto shift = objLabel_->getPivotShift();
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / objLabel_->getFontHeight() );
-    const std::vector<Vector3f> leaderLineVertices {
-        { shift.x, shift.y, 0.f },
-        { box.min.x, box.min.y, 0.f },
-        { box.max.x, box.min.y, 0.f },
-        { box.min.x, box.max.y, 0.f },
-        { box.max.x, box.max.y, 0.f },
+    const std::array<Vector3f, 5> leaderLineVertices {
+        Vector3f{ shift.x, shift.y, 0.f },
+        Vector3f{ box.min.x, box.min.y, 0.f },
+        Vector3f{ box.max.x, box.min.y, 0.f },
+        Vector3f{ box.min.x, box.max.y, 0.f },
+        Vector3f{ box.max.x, box.max.y, 0.f },
     };
     bindVertexAttribArray( shader, "position", llineVertPosBuffer_, leaderLineVertices, 3, dirtyLLine_ );
 
@@ -313,7 +313,7 @@ void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned )
 
 size_t RenderLabelObject::heapBytes() const
 {
-    return MR::heapBytes( facesIndicesBufferObj_ );
+    return bufferObj_.heapBytes();
 }
 
 void RenderLabelObject::bindLabel_()
@@ -322,8 +322,9 @@ void RenderLabelObject::bindLabel_()
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
-    
-    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, facesIndicesBufferObj_ );
+
+    auto faceIndices = loadFaceIndicesBuffer_();
+    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faceIndices.dirty(), faceIndices );
     dirty_ &= ~DIRTY_MESH;
 }
 
@@ -365,23 +366,11 @@ void RenderLabelObject::freeBuffers_()
 
 void RenderLabelObject::update_()
 {
-    MR_TIMER
-    auto mesh = objLabel_->labelRepresentingMesh();
     auto objDirty = objLabel_->getDirtyFlags();
     dirty_ |= objDirty;
 
-    auto numF = mesh->topology.lastValidFace() + 1;
-    // Face indices
     if ( dirty_ & DIRTY_FACE )
     {
-        facesIndicesBufferObj_.resize( numF );
-        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            if ( f >= numF )
-                return;
-            mesh->topology.getTriVerts( f, ( VertId( & )[3] ) facesIndicesBufferObj_[int( f )] );
-        } );
-
         dirtyBg_ = true;
         dirtyLLine_ = true;
     }
@@ -412,6 +401,28 @@ void RenderLabelObject::update_()
     }
 
     objLabel_->resetDirty();
+}
+
+RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
+{
+    if ( !( dirty_ & DIRTY_FACE ) )
+        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+
+    MR_TIMER
+
+    const auto& mesh = objLabel_->labelRepresentingMesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+
+    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        if ( f >= numF )
+            return;
+        topology.getTriVerts( f, ( VertId( & )[3] ) buffer[int( f )] );
+    } );
+
+    return buffer;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLabel, RenderLabelObject )

@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshTexture.h>
 #include <MRMesh/MRId.h>
 #include "MRRenderGLHelpers.h"
+#include "MRRenderHelpers.h"
 
 namespace MR
 {
@@ -23,12 +24,19 @@ public:
 private:
     const ObjectLinesHolder* objLines_ = nullptr;
 
-    // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    std::vector<Vector3f> vertPosBufferObj_;
-    std::vector<Vector3f> vertNormalsBufferObj_;
-    std::vector<Color> vertColorsBufferObj_;
-    std::vector<UVCoord> vertUVBufferObj_;
-    std::vector<Vector2i> linesIndicesBufferObj_;
+    // memory buffer for objects that about to be loaded to GPU, shared among different data types
+    RenderObjectBuffer bufferObj_;
+    int vertPosSize_{ 0 };
+    int vertNormalsSize_{ 0 };
+    int vertColorsSize_{ 0 };
+    int vertUVSize_{ 0 };
+    int lineIndicesSize_{ 0 };
+
+    RenderBufferRef<Vector3f> loadVertPosBuffer_();
+    RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
+    RenderBufferRef<Color> loadVertColorsBuffer_();
+    RenderBufferRef<UVCoord> loadVertUVBuffer_();
+    RenderBufferRef<Vector2i> loadLineIndicesBuffer_();
 
     typedef unsigned int GLuint;
 

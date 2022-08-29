@@ -20,17 +20,26 @@ public:
 private:
     const ObjectMeshHolder* objMesh_;
 
-    // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
-    mutable Buffer<Vector3f> vertPosBufferObj_;
-    mutable Buffer<Vector3f> vertNormalsBufferObj_;
-    mutable Buffer<Color> vertColorsBufferObj_;
-    mutable Buffer<UVCoord> vertUVBufferObj_;
-    mutable Buffer<Vector3i> facesIndicesBufferObj_;
-    mutable Buffer<Vector2i> edgesIndicesBufferObj_;
-    mutable Buffer<unsigned> faceSelectionTexture_;
-    mutable Buffer<Vector4f> faceNormalsTexture_;
-    mutable std::vector<Vector3f> borderHighlightPoints_;
-    mutable std::vector<Vector3f> selectedEdgesPoints_;
+    // memory buffer for objects that about to be loaded to GPU
+    mutable Buffer<std::byte> bufferObj_;
+
+    using DirtyFlag = uint32_t;
+
+    template <DirtyFlag>
+    struct BufferTypeHelper;
+    template <DirtyFlag dirtyFlag>
+    using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
+
+    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
+    template <DirtyFlag>
+    std::size_t& getGLSize_() const;
+
+    template <typename T>
+    class BufferRef;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<BufferType<dirtyFlag>> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -60,8 +69,8 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const std::vector<Vector3f>& data,
-        GLuint count, const Color& color, unsigned dirtyValue ) const;
+    template <DirtyFlag>
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
 
@@ -77,27 +86,13 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
-    void updateMeshEdgesBuffer_() const;
-    void updateBorderLinesBuffer_() const;
-    void updateSelectedEdgesBuffer_() const;
 
     void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    mutable uint32_t dirty_;
-    mutable bool meshFacesDirty_{ false };
-    mutable bool meshEdgesDirty_{ false };
+    mutable DirtyFlag dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
-    // store element counts separately because the buffers could be cleared
-    mutable size_t vertsCount_{ 0 };
-    mutable size_t vertNormalsCount_{ 0 };
-    mutable size_t vertColorsCount_{ 0 };
-    mutable size_t vertUVCount_{ 0 };
-    mutable int meshFacesCount_{ 0 };
-    mutable int meshEdgesCount_{ 0 };
-    mutable int borderPointsCount_{ 0 };
-    mutable int selectedPointsCount_{ 0 };
 };
 
 }

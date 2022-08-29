@@ -110,9 +110,9 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
     const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, facesIndicesBufferObj_.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( facesIndicesBufferObj_.size() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
@@ -313,7 +313,7 @@ void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned ) const
 
 size_t RenderLabelObject::heapBytes() const
 {
-    return MR::heapBytes( facesIndicesBufferObj_ );
+    return bufferObj_.heapBytes();
 }
 
 void RenderLabelObject::bindLabel_() const
@@ -322,8 +322,9 @@ void RenderLabelObject::bindLabel_() const
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
-    
-    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, facesIndicesBufferObj_ );
+
+    auto faceIndices = loadFaceIndicesBuffer_();
+    facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faceIndices.dirty(), faceIndices );
     dirty_ &= ~DIRTY_MESH;
 }
 
@@ -365,23 +366,11 @@ void RenderLabelObject::freeBuffers_()
 
 void RenderLabelObject::update_() const
 {
-    MR_TIMER
-    auto mesh = objLabel_->labelRepresentingMesh();
     auto objDirty = objLabel_->getDirtyFlags();
     dirty_ |= objDirty;
 
-    auto numF = mesh->topology.lastValidFace() + 1;
-    // Face indices
     if ( dirty_ & DIRTY_FACE )
     {
-        facesIndicesBufferObj_.resize( numF );
-        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            if ( f >= numF )
-                return;
-            mesh->topology.getTriVerts( f, ( VertId( & )[3] ) facesIndicesBufferObj_[int( f )] );
-        } );
-
         dirtyBg_ = true;
         dirtyLLine_ = true;
     }
@@ -412,6 +401,28 @@ void RenderLabelObject::update_() const
     }
 
     objLabel_->resetDirty();
+}
+
+RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_FACE ) )
+        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+
+    MR_TIMER
+
+    const auto& mesh = objLabel_->labelRepresentingMesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+
+    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        if ( f >= numF )
+            return;
+        topology.getTriVerts( f, ( VertId( & )[3] ) buffer[int( f )] );
+    } );
+
+    return buffer;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLabel, RenderLabelObject )

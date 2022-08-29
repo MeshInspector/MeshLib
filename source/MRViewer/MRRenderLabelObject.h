@@ -2,6 +2,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRVector2.h"
 #include "MRRenderGLHelpers.h"
+#include "MRRenderHelpers.h"
 
 namespace MR
 {
@@ -19,7 +20,12 @@ public:
 private:
     const ObjectLabel* objLabel_;
 
-    mutable std::vector<Vector3i> facesIndicesBufferObj_;
+    /// ...
+    mutable RenderObjectBuffer bufferObj_;
+    mutable int faceIndicesSize_{ 0 };
+
+    RenderBufferRef<Vector3i> loadFaceIndicesBuffer_() const;
+
     typedef unsigned int GLuint;
 
     GLuint labelArrayObjId_{ 0 };

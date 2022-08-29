@@ -332,7 +332,7 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     const ImVec2 pos = window->DC.CursorPos;
     const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
     if ( !showPreview )
-        ImGui::PushItemWidth( arrowSize );
+        ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
     float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
 

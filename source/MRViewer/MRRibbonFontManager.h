@@ -11,8 +11,6 @@ class MRVIEWER_CLASS RibbonFontManager
 {
 public:
 
-    ~RibbonFontManager();
-
     // Font types used in current design
     enum class FontType
     {
@@ -41,9 +39,11 @@ public:
     /// (need to avoid dynamic cast menu to ribbon menu)
     static ImFont* getFontByTypeStatic( FontType type );
 
-    /// initialize access to instance of this class
+    /// initialize static holder for easier access to ribbon fonts
     /// (need to avoid dynamic cast menu to ribbon menu)
     void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
+
+    void shutdown();
 private:
     std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
 

@@ -11,11 +11,6 @@
 namespace MR
 {
 
-RibbonFontManager::~RibbonFontManager()
-{
-    getFontManagerInstance_() = nullptr;
-}
-
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 {
     fonts_ = {};
@@ -65,20 +60,6 @@ std::filesystem::path RibbonFontManager::getMenuFontPath() const
     return  GetFontsDirectory() / "NotoSans-Regular.ttf";
 }
 
-struct FontManagerStaticHodler
-{
-    FontManagerStaticHodler()
-    {
-        auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        if ( menu )
-            instance_ = &menu->getFontManager();
-    }
-   
-    const RibbonFontManager* getFontManagerInstance() { return instance_; };
-private:
-    const RibbonFontManager* instance_{ nullptr };
-};
-
 ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
 {
     RibbonFontManager* fontManager = getFontManagerInstance_();
@@ -89,9 +70,12 @@ ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
 
 void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontManager )
 {
-    RibbonFontManager*& fontManager = getFontManagerInstance_();
-    if ( !fontManager )
-        fontManager = ribbonFontManager;
+    getFontManagerInstance_() = ribbonFontManager;
+}
+
+void RibbonFontManager::shutdown()
+{
+    getFontManagerInstance_() = nullptr;
 }
 
 MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()

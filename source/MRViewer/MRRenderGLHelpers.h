@@ -96,4 +96,29 @@ inline GLint bindVertexAttribArray(
     return bindVertexAttribArray( settings );
 }
 
+template <typename T, std::size_t N>
+inline GLint bindVertexAttribArray(
+    const GLuint program_shader,
+    const char * name,
+    GlBuffer & buf,
+    const std::array<T, N>& V,
+    int baseTypeElementsNumber,
+    bool refresh,
+    bool forceUse = false )
+{
+    BindVertexAttribArraySettings settings =
+    {
+        .program_shader = program_shader,
+        .name = name,
+        .buf = buf,
+        .arr = (const char*)V.data(),
+        .arrSize = sizeof(T) * N,
+        .baseTypeElementsNumber = baseTypeElementsNumber,
+        .refresh = refresh,
+        .forceUse = forceUse,
+        .isColor = std::is_same_v<Color, T>
+    };
+    return bindVertexAttribArray( settings );
+}
+
 } //namespace MR

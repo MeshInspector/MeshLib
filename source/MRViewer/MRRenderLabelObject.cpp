@@ -124,7 +124,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
 
-    const std::vector<Vector3f> point { objLabel_->getLabel().position };
+    const std::array<Vector3f, 1> point { objLabel_->getLabel().position };
     bindVertexAttribArray( shader, "position", srcVertPosBuffer_, point, 3, dirtySrc_ );
 
     constexpr std::array<VertId, 1> pointIndices{ VertId( 0 ) };
@@ -197,11 +197,11 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
 
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / height );
-    const std::vector<Vector3f> corners {
-        { box.min.x, box.min.y, 0.f },
-        { box.max.x, box.min.y, 0.f },
-        { box.min.x, box.max.y, 0.f },
-        { box.max.x, box.max.y, 0.f },
+    const std::array<Vector3f, 4> corners {
+        Vector3f{ box.min.x, box.min.y, 0.f },
+        Vector3f{ box.max.x, box.min.y, 0.f },
+        Vector3f{ box.min.x, box.max.y, 0.f },
+        Vector3f{ box.max.x, box.max.y, 0.f },
     };
     bindVertexAttribArray( shader, "position", bgVertPosBuffer_, corners, 3, dirtyBg_ );
 
@@ -229,12 +229,12 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     const auto shift = objLabel_->getPivotShift();
     auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / objLabel_->getFontHeight() );
-    const std::vector<Vector3f> leaderLineVertices {
-        { shift.x, shift.y, 0.f },
-        { box.min.x, box.min.y, 0.f },
-        { box.max.x, box.min.y, 0.f },
-        { box.min.x, box.max.y, 0.f },
-        { box.max.x, box.max.y, 0.f },
+    const std::array<Vector3f, 5> leaderLineVertices {
+        Vector3f{ shift.x, shift.y, 0.f },
+        Vector3f{ box.min.x, box.min.y, 0.f },
+        Vector3f{ box.max.x, box.min.y, 0.f },
+        Vector3f{ box.min.x, box.max.y, 0.f },
+        Vector3f{ box.max.x, box.max.y, 0.f },
     };
     bindVertexAttribArray( shader, "position", llineVertPosBuffer_, leaderLineVertices, 3, dirtyLLine_ );
 

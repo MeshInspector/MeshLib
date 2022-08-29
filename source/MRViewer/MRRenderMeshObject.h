@@ -24,7 +24,7 @@ private:
     // memory buffer for objects that about to be loaded to GPU
     mutable RenderObjectBuffer bufferObj_;
 
-    using DirtyFlag = std::underlying_type_t<DirtyFlags>;
+    using DirtyFlag = uint32_t;
 
     mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
     template <DirtyFlag>

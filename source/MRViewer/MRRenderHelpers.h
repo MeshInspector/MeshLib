@@ -2,7 +2,6 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRVector2.h"
-#include "MRMesh/MRVisualObject.h"
 
 namespace MR
 {

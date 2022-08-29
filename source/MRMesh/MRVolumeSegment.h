@@ -18,6 +18,13 @@ class ObjectVoxels;
  * \{
  */
 
+/**
+ * \brief Creates mesh from voxels mask
+ * \param mask in space of whole volume
+ *  density inside mask is expected to be higher then outside
+ */
+MRMESH_API tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask );
+
  /**
   * \brief Parameters for volume segmentation
   * 

@@ -11,6 +11,76 @@
 namespace MR
 {
 
+tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask )
+{
+    if ( !volume.grid() )
+        return tl::make_unexpected( "Cannot create mesh from empty volume." );
+    if ( mask.none() )
+        return tl::make_unexpected( "Cannot create mesh from empty mask." );
+
+    const auto& indexer = volume.getVolumeIndexer();
+    auto expandedMask = mask;
+    expandVoxelsMask( expandedMask, indexer, 25 ); // 25 should be in params
+
+    auto accessor = volume.grid()->getConstAccessor();
+    double insideAvg = 0.0;
+    double outsideAvg = 0.0;
+    Box3i partBox;
+    for ( auto voxelId : expandedMask )
+    {
+        auto pos = indexer.toPos( voxelId );
+        partBox.include( pos );
+        if ( mask.test( voxelId ) )
+            insideAvg += double( accessor.getValue( { pos.x,pos.y,pos.z } ) );
+        else
+            outsideAvg += double( accessor.getValue( { pos.x,pos.y,pos.z } ) );
+    }
+    insideAvg /= double( mask.count() );
+    outsideAvg /= double( expandedMask.count() - mask.count() );
+    auto range = float( insideAvg - outsideAvg );
+
+    SimpleVolume voulmePart;
+    voulmePart.dims = partBox.size() + Vector3i::diagonal( 1 );
+
+    auto smallExpMask = mask;
+    auto smallShrMask = mask;
+    expandVoxelsMask( smallExpMask, indexer, 3 );
+    shrinkVoxelsMask( smallShrMask, indexer, 3 );
+
+
+    const int newDimX = voulmePart.dims.x;
+    const size_t newDimXY = size_t( newDimX ) * voulmePart.dims.y;
+    voulmePart.data.resize( newDimXY * voulmePart.dims.z );
+    for ( int z = partBox.min.z; z <= partBox.max.z; ++z )
+        for ( int y = partBox.min.y; y <= partBox.max.y; ++y )
+            for ( int x = partBox.min.x; x <= partBox.max.x; ++x )
+            {
+                auto voxId = indexer.toVoxelId( { x,y,z } );
+                if ( smallShrMask.test( voxId ) )
+                    voulmePart.data[x - partBox.min.x + ( y - partBox.min.y ) * newDimX + ( z - partBox.min.z ) * newDimXY] = 1.0f;
+                else if ( smallExpMask.test( voxId ) )
+                    voulmePart.data[x - partBox.min.x + ( y - partBox.min.y ) * newDimX + ( z - partBox.min.z ) * newDimXY] =
+                        std::clamp( ( accessor.getValue( { x,y,z } ) - float( outsideAvg ) ) / range, 0.0f, 1.0f );
+                else
+                    voulmePart.data[x - partBox.min.x + ( y - partBox.min.y ) * newDimX + ( z - partBox.min.z ) * newDimXY] = 0.0f;
+            }
+
+    auto voxelSize = volume.voxelSize();
+    auto grid = simpleVolumeToDenseGrid( voulmePart );
+    auto mesh = gridToMesh( grid, voxelSize, 0.5f ).value(); // no callback so cannot b stopped
+
+    for ( auto& p : mesh.points )
+    {
+        p = p + mult( Vector3f( partBox.min ), voxelSize );
+    }
+
+    if ( mesh.topology.numValidFaces() == 0 )
+        return tl::make_unexpected( "Failed to create segmented mesh" );
+
+    return mesh;
+
+}
+
 tl::expected<MR::Mesh, std::string> segmentVolume( const ObjectVoxels& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                    const VolumeSegmentationParameters& params )
 {

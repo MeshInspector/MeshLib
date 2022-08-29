@@ -20,7 +20,7 @@ public:
 private:
     const ObjectMeshHolder* objMesh_;
 
-    // need this to use per corner rendering (this is not simple copy of mesh vertices etc.)
+    // memory buffer for objects that about to be loaded to GPU
     mutable Buffer<std::byte> bufferObj_;
 
     using DirtyFlag = uint32_t;

@@ -74,6 +74,9 @@ public:
     const Box3i& getActiveBounds() const
     { return activeBox_; }
 
+    const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
+    void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
+
     /// VoxelId is numerical representation of voxel
     /// Coordinate is {x,y,z} indices of voxels in box (base dimensions space, NOT active dimensions)
     /// Point is local space coordinate of point in scene
@@ -122,6 +125,8 @@ private:
     void setDefaultColors_();
 
 protected:
+    VoxelBitSet selectedVoxels_;
+
     MRMESH_API ObjectVoxels( const ObjectVoxels& other );
 
     /// swaps this object with other

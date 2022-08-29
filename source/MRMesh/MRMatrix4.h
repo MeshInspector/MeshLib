@@ -39,6 +39,7 @@ struct Matrix4
     template <typename U>
     constexpr explicit Matrix4( const Matrix4<U> & m ) : x( m.x ), y( m.y ), z( m.z ), w( m.w ) { }
     static constexpr Matrix4 zero() noexcept { return Matrix4( Vector4<T>(), Vector4<T>(), Vector4<T>(), Vector4<T>() ); }
+    static constexpr Matrix4 identity() noexcept { return Matrix4(); }
     /// returns a matrix that scales uniformly
     static constexpr Matrix4 scale( T s ) noexcept { return Matrix4( { s, T(0), T(0), T(0) }, { T(0), s, T(0), T(0) }, { T(0), T(0), s, T(0) }, { T(0), T(0), T(0), s } ); }
 

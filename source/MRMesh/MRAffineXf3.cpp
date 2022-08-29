@@ -49,7 +49,7 @@ TEST(MRMesh, AffineXf3)
     ASSERT_NEAR( ( rot_XX * p0 + p0 ).length(), 0., 1e-15 );
 
     const auto m0 = Matrix3d::rotation( Vector3d::plusZ(), PI / 2 );
-    auto m1 = Matrix3d();
+    auto m1 = Matrix3d::identity();
     ASSERT_NEAR( ( Quaterniond::slerp( m0, m1, 0.0 ) - m0 ).norm(), 0., 1e-15 );
     ASSERT_NEAR( ( Quaterniond::slerp( m0, m1, 0.5 ) - Matrix3d::rotation( Vector3d::plusZ(), PI / 4 ) ).norm(), 0., 1e-15 );
     ASSERT_NEAR( ( Quaterniond::slerp( m0, m1, 1.0 ) - m1 ).norm(), 0., 1e-15 );

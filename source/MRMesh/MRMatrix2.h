@@ -24,6 +24,7 @@ struct Matrix2
     template <typename U>
     constexpr explicit Matrix2( const Matrix2<U> & m ) : x( m.x ), y( m.y ) { }
     static constexpr Matrix2 zero() noexcept { return Matrix2( Vector2<T>(), Vector2<T>() ); }
+    static constexpr Matrix2 identity() noexcept { return Matrix2(); }
     /// returns a matrix that scales uniformly
     static constexpr Matrix2 scale( T s ) noexcept { return Matrix2( { s, T(0) }, { T(0), s } ); }
     /// returns a matrix that has its own scale along each axis

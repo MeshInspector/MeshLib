@@ -25,6 +25,7 @@ struct Matrix3
     template <typename U>
     constexpr explicit Matrix3( const Matrix3<U> & m ) : x( m.x ), y( m.y ), z( m.z ) { }
     static constexpr Matrix3 zero() noexcept { return Matrix3( Vector3<T>(), Vector3<T>(), Vector3<T>() ); }
+    static constexpr Matrix3 identity() noexcept { return Matrix3(); }
     /// returns a matrix that scales uniformly
     static constexpr Matrix3 scale( T s ) noexcept { return Matrix3( { s, T(0), T(0) }, { T(0), s, T(0) }, { T(0), T(0), s } ); }
     /// returns a matrix that has its own scale along each axis

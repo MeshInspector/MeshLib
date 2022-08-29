@@ -96,9 +96,9 @@ void RenderLinesObject::render( const RenderParams& renderParams ) const
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 2 ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, linesIndicesBufferObj_.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, lineIndicesSize_ );
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
-    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )linesIndicesBufferObj_.size() * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
 
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
@@ -134,18 +134,14 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
-    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )linesIndicesBufferObj_.size() * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
 
     // Fedor: should not we draw points here as well?
 }
 
 size_t RenderLinesObject::heapBytes() const
 {
-    return MR::heapBytes( vertPosBufferObj_ )
-        + MR::heapBytes( vertNormalsBufferObj_ )
-        + MR::heapBytes( vertColorsBufferObj_ )
-        + MR::heapBytes( vertUVBufferObj_ )
-        + MR::heapBytes( linesIndicesBufferObj_ );
+    return bufferObj_.heapBytes();
 }
 
 void RenderLinesObject::bindLines_() const
@@ -154,12 +150,21 @@ void RenderLinesObject::bindLines_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, vertNormalsBufferObj_, 3, dirty_ & DIRTY_RENDER_NORMALS );
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, vertColorsBufferObj_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, vertUVBufferObj_, 2, dirty_ & DIRTY_UV );
 
-    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
+    auto positions = loadVertPosBuffer_();
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
+
+    auto normals = loadVertNormalsBuffer_();
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
+
+    auto colors = loadVertColorsBuffer_();
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colors, 4, colors.dirty(), colors.glSize() != 0 );
+
+    auto uvs = loadVertUVBuffer_();
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.glSize() != 0 );
+
+    auto lineIndices = loadLineIndicesBuffer_();
+    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, lineIndices.dirty(), lineIndices );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, texture_ ) );
@@ -221,9 +226,12 @@ void RenderLinesObject::bindLinesPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, vertPosBufferObj_, 3, dirty_ & DIRTY_POSITION );
 
-    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_FACE, linesIndicesBufferObj_ );
+    auto positions = loadVertPosBuffer_();
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
+
+    auto lineIndices = loadLineIndicesBuffer_();
+    lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, lineIndices.dirty(), lineIndices );
 
     dirty_ &= ~DIRTY_POSITION;
     dirty_ &= ~DIRTY_FACE;
@@ -266,7 +274,7 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams ) const
     const bool drawPoints = objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId );
     const bool smooth = objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, linesIndicesBufferObj_.size() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, lineIndicesSize_ );
     // function is executing if drawPoints == true or smooth == true => pointSize != 0
     const float pointSize = std::max( drawPoints * objLines_->getPointSize(), smooth * actualLineWidth() );
 #ifdef __EMSCRIPTEN__
@@ -274,7 +282,7 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams ) const
 #else
     GL_EXEC( glPointSize( pointSize ) );
 #endif
-    GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )linesIndicesBufferObj_.size() * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderLinesObject::initBuffers_()
@@ -306,121 +314,170 @@ void RenderLinesObject::freeBuffers_()
 
 void RenderLinesObject::update_() const
 {
-    auto polyline = objLines_->polyline();
-    const auto & topology = objLines_->polyline()->topology;
+    dirty_ |= objLines_->getDirtyFlags();
+    objLines_->resetDirty();
+}
 
-    MR_TIMER;
-    auto objDirty = objLines_->getDirtyFlags();
-    dirty_ |= objDirty;
+RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_POSITION ) )
+        return bufferObj_.prepareBuffer<Vector3f>( vertPosSize_, false );
 
-    auto numL = polyline->topology.lastNotLoneEdge() + 1;
+    MR_NAMED_TIMER( "vertbased_dirty_positions" );
+
+    const auto& polyline = objLines_->polyline();
+    const auto& topology = polyline->topology;
+    auto numL = topology.lastNotLoneEdge() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertPosSize_ = 2 * numL );
+
     auto undirEdgesSize = numL >> 1;
-    auto numV = polyline->topology.lastValidVert() + 1;
+    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
+        {
+            auto o = topology.org( UndirectedEdgeId( ue ) );
+            auto d = topology.dest( UndirectedEdgeId( ue ) );
+            if ( !o || !d )
+                continue;
+            buffer[2 * ue] = polyline->points[o];
+            buffer[2 * ue + 1] = polyline->points[d];
+        }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_RENDER_NORMALS ) )
+        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+
+    const auto& polyline = objLines_->polyline();
+    const auto& topology = polyline->topology;
+    auto numV = topology.lastValidVert() + 1;
+    const auto& vertsNormals = objLines_->getVertsNormals();
+    if ( vertsNormals.size() < numV )
+        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 0 );
+
+    MR_NAMED_TIMER( "dirty_vertices_normals" )
+
+    auto numL = topology.lastNotLoneEdge() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 2 * numL );
+
+    auto undirEdgesSize = numL >> 1;
+    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
+        {
+            auto o = topology.org( UndirectedEdgeId( ue ) );
+            auto d = topology.dest( UndirectedEdgeId( ue ) );
+            if ( !o || !d )
+                continue;
+            buffer[2 * ue] = vertsNormals[o];
+            buffer[2 * ue + 1] = vertsNormals[d];
+        }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
+        return bufferObj_.prepareBuffer<Color>( vertColorsSize_, false );
+
+    auto coloringType = objLines_->getColoringType();
+    if ( coloringType != ColoringType::VertsColorMap )
+        return bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 0 );
+
+    MR_NAMED_TIMER( "vert_colormap" );
+
+    const auto& polyline = objLines_->polyline();
+    const auto& topology = polyline->topology;
+    auto numL = topology.lastNotLoneEdge() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 2 * numL );
+
+    auto undirEdgesSize = numL >> 1;
+    const auto& vertsColorMap = objLines_->getVertsColorMap();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
+        {
+            auto o = topology.org( UndirectedEdgeId( ue ) );
+            auto d = topology.dest( UndirectedEdgeId( ue ) );
+            if ( !o || !d )
+                continue;
+            buffer[2 * ue] = vertsColorMap[o];
+            buffer[2 * ue + 1] = vertsColorMap[d];
+        }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_UV ) )
+        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_, false );
+
+    const auto& polyline = objLines_->polyline();
+    const auto& topology = polyline->topology;
+    auto numV = topology.lastValidVert() + 1;
 
     const auto& uvCoords = objLines_->getUVCoords();
-    // Vertex positions
-    if ( dirty_ & DIRTY_POSITION )
-    {
-        MR_NAMED_TIMER( "vertbased_dirty_positions" );
-        vertPosBufferObj_.resize( 2 * numL );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ),
-        [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
-            {
-                auto o = topology.org( UndirectedEdgeId( ue ) );
-                auto d = topology.dest( UndirectedEdgeId( ue ) );
-                if ( !o || !d )
-                    continue;
-                vertPosBufferObj_[2 * ue] = polyline->points[o];
-                vertPosBufferObj_[2 * ue + 1] = polyline->points[d];
-            }
-        } );
-    }
-    // Normals
-    const auto& vertsNormals = objLines_->getVertsNormals();
-    if ( dirty_ & DIRTY_RENDER_NORMALS && vertsNormals.size() >= numV )
-    {
-        MR_NAMED_TIMER( "dirty_vertices_normals" )
-        vertNormalsBufferObj_.resize( 2 * numL );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ),
-        [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
-            {
-                auto o = topology.org( UndirectedEdgeId( ue ) );
-                auto d = topology.dest( UndirectedEdgeId( ue ) );
-                if ( !o || !d )
-                    continue;
-                vertNormalsBufferObj_[2 * ue] = vertsNormals[o];
-                vertNormalsBufferObj_[2 * ue + 1] = vertsNormals[d];
-            }
-        } );
-    }
-
-    ColoringType coloringType = objLines_->getColoringType();
-    // Per-vertex material settings
-    if ( dirty_ & DIRTY_VERTS_COLORMAP && coloringType == ColoringType::VertsColorMap )
-    {
-        const auto& vertsColorMap = objLines_->getVertsColorMap();
-        MR_NAMED_TIMER( "vert_colormap" );
-        vertColorsBufferObj_.resize( 2 * numL );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ),
-        [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
-            {
-                auto o = topology.org( UndirectedEdgeId( ue ) );
-                auto d = topology.dest( UndirectedEdgeId( ue ) );
-                if ( !o || !d )
-                    continue;
-                vertColorsBufferObj_[2 * ue] = vertsColorMap[o];
-                vertColorsBufferObj_[2 * ue + 1] = vertsColorMap[d];
-            }
-        } );
-    }
-    // Face indices
-    if ( dirty_ & DIRTY_FACE )
-    {
-        linesIndicesBufferObj_.resize( undirEdgesSize );
-        auto lastValidEdge = ( numL - 1 ) / 2;
-        tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ),
-        [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
-            {
-                auto o = topology.org( UndirectedEdgeId( ue ) );
-                auto d = topology.dest( UndirectedEdgeId( ue ) );
-                if ( !o || !d )
-                    linesIndicesBufferObj_[ue] = Vector2i( 2 * lastValidEdge, 2 * lastValidEdge + 1 );
-                else
-                    linesIndicesBufferObj_[ue] = Vector2i{ 2 * ue, 2 * ue + 1 };
-            }
-        } );
-    }
-    // Texture coordinates
     if ( objLines_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
     }
-    if ( dirty_ & DIRTY_UV && uvCoords.size() >= numV )
+    if ( uvCoords.size() < numV )
+        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
+
+    auto numL = topology.lastNotLoneEdge() + 1;
+    auto buffer = bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 2 * numL );
+
+    auto undirEdgesSize = numL >> 1;
+    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
     {
-        vertUVBufferObj_.resize( 2 * numL );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ),
-        [&] ( const tbb::blocked_range<int>& range )
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
         {
-            for ( int ue = range.begin(); ue < range.end(); ++ue )
-            {
-                auto o = topology.org( UndirectedEdgeId( ue ) );
-                auto d = topology.dest( UndirectedEdgeId( ue ) );
-                if ( !o || !d )
-                    continue;
-                vertUVBufferObj_[2 * ue] = uvCoords[o];
-                vertUVBufferObj_[2 * ue + 1] = uvCoords[d];
-            }
-        } );
-    }
-    objLines_->resetDirty();
+            auto o = topology.org( UndirectedEdgeId( ue ) );
+            auto d = topology.dest( UndirectedEdgeId( ue ) );
+            if ( !o || !d )
+                continue;
+            buffer[2 * ue] = uvCoords[o];
+            buffer[2 * ue + 1] = uvCoords[d];
+        }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_() const
+{
+    if ( !( dirty_ & DIRTY_FACE ) )
+        return bufferObj_.prepareBuffer<Vector2i>( lineIndicesSize_, false );
+
+    const auto& polyline = objLines_->polyline();
+    const auto& topology = polyline->topology;
+    auto numL = topology.lastNotLoneEdge() + 1;
+    auto undirEdgesSize = numL >> 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector2i>( lineIndicesSize_ = undirEdgesSize );
+
+    auto lastValidEdge = ( numL - 1 ) / 2;
+    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int ue = range.begin(); ue < range.end(); ++ue )
+        {
+            auto o = topology.org( UndirectedEdgeId( ue ) );
+            auto d = topology.dest( UndirectedEdgeId( ue ) );
+            if ( !o || !d )
+                buffer[ue] = Vector2i( 2 * lastValidEdge, 2 * lastValidEdge + 1 );
+            else
+                buffer[ue] = Vector2i{ 2 * ue, 2 * ue + 1 };
+        }
+    } );
+
+    return buffer;
 }
 
 const Vector2f& GetAvailableLineWidthRange()

@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRIRenderObject.h"
 #include "MRRenderGLHelpers.h"
+#include "MRRenderHelpers.h"
 
 namespace MR
 {
@@ -18,8 +19,13 @@ public:
 private:
     const ObjectPointsHolder* objPoints_;
 
-    mutable std::vector<VertId> validIndicesBufferObj_;
-    mutable std::vector<unsigned> vertSelectionTexture_;
+    /// ...
+    mutable RenderObjectBuffer bufferObj_;
+    mutable int validIndicesSize_{ 0 };
+    mutable int vertSelectionTextureSize_{ 0 };
+
+    RenderBufferRef<VertId> loadValidIndicesBuffer_() const;
+    RenderBufferRef<unsigned> loadVertSelectionTextureBuffer_() const;
 
     typedef unsigned int GLuint;
     GLuint pointsArrayObjId_{ 0 };

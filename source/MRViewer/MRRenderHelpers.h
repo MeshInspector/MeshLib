@@ -64,10 +64,12 @@ public:
     template <typename T>
     RenderBufferRef<T> prepareBuffer( std::size_t glSize, bool dirty = true )
     {
-        auto memSize = sizeof( T ) * glSize;
-        if ( buffer_.size() < memSize )
-            buffer_.resize( memSize );
-
+        if ( dirty )
+        {
+            auto memSize = sizeof( T ) * glSize;
+            if ( buffer_.size() < memSize )
+                buffer_.resize( memSize );
+        }
         return { reinterpret_cast<T*>( buffer_.data() ), glSize, dirty };
     }
 

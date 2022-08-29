@@ -316,6 +316,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     serializeToJson( dimensions_, root["Dimensions"] );
     serializeToJson( activeBox_.min, root["MinCorner"] );
     serializeToJson( activeBox_.max, root["MaxCorner"] );
+    serializeToJson( selectedVoxels_, root["SelectionVoxels"] );
 
     root["IsoValue"] = isoValue_;
     root["Type"].append( ObjectVoxels::TypeName() );
@@ -343,6 +344,8 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["MinCorner"], activeBox_.min );
 
     deserializeFromJson( root["MaxCorner"], activeBox_.max );
+
+    deserializeFromJson( root["SelectionVoxels"], selectedVoxels_ );
 
     if ( root["IsoValue"].isNumeric() )
         isoValue_ = root["IsoValue"].asFloat();

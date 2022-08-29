@@ -41,7 +41,7 @@ RenderLabelObject::~RenderLabelObject()
     freeBuffers_();
 }
 
-void RenderLabelObject::render( const RenderParams& renderParams ) const
+void RenderLabelObject::render( const RenderParams& renderParams )
 {
     if ( !objLabel_->labelRepresentingMesh() )
         return;
@@ -117,7 +117,7 @@ void RenderLabelObject::render( const RenderParams& renderParams ) const
     GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
-void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) const
+void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
 
@@ -167,7 +167,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams ) c
     dirtySrc_ = false;
 }
 
-void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) const
+void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
 
@@ -219,7 +219,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams ) co
     dirtyBg_ = false;
 }
 
-void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) const
+void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
 
@@ -306,7 +306,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams ) co
     dirtyLLine_ = false;
 }
 
-void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned ) const
+void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned )
 {
     // no picker for labels
 }
@@ -316,7 +316,7 @@ size_t RenderLabelObject::heapBytes() const
     return MR::heapBytes( facesIndicesBufferObj_ );
 }
 
-void RenderLabelObject::bindLabel_() const
+void RenderLabelObject::bindLabel_()
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
@@ -363,7 +363,7 @@ void RenderLabelObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &llineArrayObjId_ ) );
 }
 
-void RenderLabelObject::update_() const
+void RenderLabelObject::update_()
 {
     MR_TIMER
     auto mesh = objLabel_->labelRepresentingMesh();

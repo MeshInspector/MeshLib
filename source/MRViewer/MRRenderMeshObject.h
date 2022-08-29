@@ -30,7 +30,7 @@ private:
     template <DirtyFlag dirtyFlag>
     using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
 
-    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_;
+    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
     template <DirtyFlag>
     std::size_t& getGLSize_() const;
 

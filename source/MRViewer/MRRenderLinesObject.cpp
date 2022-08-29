@@ -38,7 +38,7 @@ float RenderLinesObject::actualLineWidth() const
     return std::clamp( objLines_->getLineWidth(), range[0], range[1] );
 }
 
-void RenderLinesObject::render( const RenderParams& renderParams ) const
+void RenderLinesObject::render( const RenderParams& renderParams )
 {
     if ( !objLines_->polyline() )
         return;
@@ -105,7 +105,7 @@ void RenderLinesObject::render( const RenderParams& renderParams ) const
         drawPoints_( renderParams );
 }
 
-void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
+void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
     if ( !objLines_->polyline() )
         return;
@@ -148,7 +148,7 @@ size_t RenderLinesObject::heapBytes() const
         + MR::heapBytes( linesIndicesBufferObj_ );
 }
 
-void RenderLinesObject::bindLines_() const
+void RenderLinesObject::bindLines_()
 {
     MR_TIMER;
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
@@ -216,7 +216,7 @@ void RenderLinesObject::bindLines_() const
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
 }
 
-void RenderLinesObject::bindLinesPicker_() const
+void RenderLinesObject::bindLinesPicker_()
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
@@ -229,7 +229,7 @@ void RenderLinesObject::bindLinesPicker_() const
     dirty_ &= ~DIRTY_FACE;
 }
 
-void RenderLinesObject::drawPoints_( const RenderParams& renderParams ) const
+void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
@@ -304,7 +304,7 @@ void RenderLinesObject::freeBuffers_()
     GL_EXEC( glDeleteTextures( 1, &pointsSelectionTex_ ) );
 }
 
-void RenderLinesObject::update_() const
+void RenderLinesObject::update_()
 {
     auto polyline = objLines_->polyline();
     const auto & topology = objLines_->polyline()->topology;

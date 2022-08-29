@@ -35,8 +35,8 @@ public:
     // 1) bind data
     // 2) pass shaders arguments
     // 3) draw data
-    virtual void render( const RenderParams& params ) const = 0;
-    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const = 0;
+    virtual void render( const RenderParams& params ) = 0;
+    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) = 0;
     /// returns the amount of memory this object occupies on heap
     virtual size_t heapBytes() const = 0;
     /// the way the internal buffers are dealt with

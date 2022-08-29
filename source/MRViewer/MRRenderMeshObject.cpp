@@ -13,6 +13,9 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
+#define DIRTY_EDGE 0x40000
+static_assert( DIRTY_EDGE == MR::DIRTY_ALL + 1 );
+
 namespace
 {
 constexpr std::size_t highestBit( uint32_t v )
@@ -26,6 +29,17 @@ constexpr std::size_t highestBit( uint32_t v )
 
 namespace MR
 {
+
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_POSITION> { using type = Vector3f; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_VERTS_RENDER_NORMAL> { using type = Vector3f; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_FACES_RENDER_NORMAL> { using type = Vector4f; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_VERTS_COLORMAP> { using type = Color; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_FACE> { using type = Vector3i; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_EDGE> { using type = Vector2i; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_UV> { using type = UVCoord; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_SELECTION> { using type = unsigned; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_BORDER_LINES> { using type = Vector3f; };
+template<> struct RenderMeshObject::RenderBufferType<DIRTY_EDGES_SELECTION> { using type = Vector3f; };
 
 RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
 {
@@ -189,7 +203,7 @@ size_t RenderMeshObject::heapBytes() const
     return bufferObj_.heapBytes();
 }
 
-template <RenderDirtyFlag dirtyFlag>
+template <RenderMeshObject::DirtyFlag dirtyFlag>
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar ) const
 {
     auto count = getGLSize_<dirtyFlag>();
@@ -263,7 +277,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
 
     // positions
     auto positions = loadBuffer_<DIRTY_POSITION>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.glSize() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto edges = loadBuffer_<DIRTY_EDGE>();
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
@@ -281,16 +295,16 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     GL_EXEC( glUseProgram( shader ) );
 
     auto positions = loadBuffer_<DIRTY_POSITION>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.glSize() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto normals = loadBuffer_<DIRTY_VERTS_RENDER_NORMAL>();
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals.data(), normals.size(), 3, normals.dirty(), normals.glSize() != 0 );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
 
     auto colormaps = loadBuffer_<DIRTY_VERTS_COLORMAP>();
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps.data(), colormaps.size(), 4, colormaps.dirty(), colormaps.glSize() != 0 );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps, 4, colormaps.dirty(), colormaps.glSize() != 0 );
 
     auto uvs = loadBuffer_<DIRTY_UV>();
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs.data(), uvs.size(), 2, uvs.dirty(), uvs.glSize() != 0 );
+    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.glSize() != 0 );
 
     auto faces = loadBuffer_<DIRTY_FACE>();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
@@ -390,7 +404,7 @@ void RenderMeshObject::bindMeshPicker_() const
     GL_EXEC( glUseProgram( shader ) );
 
     auto positions = loadBuffer_<DIRTY_POSITION>();
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, positions.dirty(), positions.glSize() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto faces = loadBuffer_<DIRTY_FACE>();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
@@ -527,16 +541,16 @@ void RenderMeshObject::update_( ViewportId id ) const
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-template <RenderDirtyFlag dirtyFlag>
-RenderBufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::size_t glSize, RenderDirtyFlag flagToReset ) const
+template <RenderMeshObject::DirtyFlag dirtyFlag>
+RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset ) const
 {
     dirty_ &= ~flagToReset;
     getGLSize_<dirtyFlag>() = glSize;
-    return bufferObj_.prepareBuffer<dirtyFlag>( glSize );
+    return bufferObj_.prepareBuffer<typename RenderBufferType<dirtyFlag>::type>( glSize );
 }
 
-template <RenderDirtyFlag dirtyFlag>
-RenderBufferRef<dirtyFlag> RenderMeshObject::loadBuffer_() const
+template <RenderMeshObject::DirtyFlag dirtyFlag>
+RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::loadBuffer_() const
 {
     if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
     {
@@ -783,7 +797,7 @@ RenderBufferRef<dirtyFlag> RenderMeshObject::loadBuffer_() const
     }
 }
 
-template<RenderDirtyFlag dirtyFlag>
+template<RenderMeshObject::DirtyFlag dirtyFlag>
 std::size_t &RenderMeshObject::getGLSize_() const
 {
     constexpr auto i = highestBit( dirtyFlag );

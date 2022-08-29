@@ -24,14 +24,21 @@ private:
     // memory buffer for objects that about to be loaded to GPU
     mutable RenderObjectBuffer bufferObj_;
 
-    mutable std::array<std::size_t, 8 * sizeof( RenderDirtyFlag )> bufferGLSize_; // in bits
-    template <RenderDirtyFlag>
+    using DirtyFlag = std::underlying_type_t<DirtyFlags>;
+
+    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
+    template <DirtyFlag>
     std::size_t& getGLSize_() const;
 
-    template <RenderDirtyFlag dirtyFlag>
-    RenderBufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, RenderDirtyFlag flagToReset = dirtyFlag ) const;
-    template <RenderDirtyFlag dirtyFlag>
-    RenderBufferRef<dirtyFlag> loadBuffer_() const;
+    /// ...
+    template <DirtyFlag dirtyFlag>
+    struct RenderBufferType;
+    template <DirtyFlag dirtyFlag>
+    using BufferRef = RenderBufferRef<typename RenderBufferType<dirtyFlag>::type>;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
+    template <DirtyFlag dirtyFlag>
+    BufferRef<dirtyFlag> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -61,7 +68,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    template <RenderDirtyFlag>
+    template <DirtyFlag>
     void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
 
     void renderMeshEdges_( const RenderParams& parameters ) const;
@@ -80,7 +87,7 @@ private:
     void update_( ViewportId id ) const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    mutable RenderDirtyFlag dirty_;
+    mutable DirtyFlag dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     mutable bool normalsBound_{ false };
 };

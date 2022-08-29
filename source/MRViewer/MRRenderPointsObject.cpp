@@ -148,12 +148,9 @@ void RenderPointsObject::bindPoints_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    const auto& positions = objPoints_->pointCloud()->points.vec_;
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, dirty_ & DIRTY_POSITION );
-    const auto& normals = objPoints_->getVertsNormals().vec_;
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals.data(), normals.size(), 3, dirty_ & DIRTY_RENDER_NORMALS );
-    const auto& colormaps = objPoints_->getVertsColorMap().vec_;
-    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps.data(), colormaps.size(), 4, dirty_ & DIRTY_VERTS_COLORMAP );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_POSITION, validIndicesBufferObj_ );
 
@@ -186,8 +183,7 @@ void RenderPointsObject::bindPointsPicker_() const
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    const auto& positions = objPoints_->pointCloud()->points.vec_;
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions.data(), positions.size(), 3, dirty_ & DIRTY_POSITION );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
 
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, dirty_ & DIRTY_POSITION, validIndicesBufferObj_ );
     dirty_ &= ~DIRTY_POSITION;

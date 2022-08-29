@@ -38,9 +38,9 @@ private:
     template <DirtyFlag dirtyFlag>
     using BufferRef = RenderBufferRef<typename RenderBufferType<dirtyFlag>::type>;
     template <DirtyFlag dirtyFlag>
-    BufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
+    BufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag );
     template <DirtyFlag dirtyFlag>
-    BufferRef<dirtyFlag> loadBuffer_() const;
+    BufferRef<dirtyFlag> loadBuffer_();
 
     typedef unsigned int GLuint;
 

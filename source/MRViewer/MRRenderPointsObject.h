@@ -24,8 +24,8 @@ private:
     int validIndicesSize_{ 0 };
     int vertSelectionTextureSize_{ 0 };
 
-    RenderBufferRef<VertId> loadValidIndicesBuffer_() const;
-    RenderBufferRef<unsigned> loadVertSelectionTextureBuffer_() const;
+    RenderBufferRef<VertId> loadValidIndicesBuffer_();
+    RenderBufferRef<unsigned> loadVertSelectionTextureBuffer_();
 
     typedef unsigned int GLuint;
     GLuint pointsArrayObjId_{ 0 };

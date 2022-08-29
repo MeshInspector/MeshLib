@@ -542,7 +542,7 @@ void RenderMeshObject::update_( ViewportId id )
 }
 
 template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset ) const
+RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset )
 {
     dirty_ &= ~flagToReset;
     getGLSize_<dirtyFlag>() = glSize;
@@ -550,7 +550,7 @@ RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::si
 }
 
 template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::loadBuffer_() const
+RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::loadBuffer_()
 {
     if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
     {

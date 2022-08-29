@@ -32,11 +32,11 @@ private:
     int vertUVSize_{ 0 };
     int lineIndicesSize_{ 0 };
 
-    RenderBufferRef<Vector3f> loadVertPosBuffer_() const;
-    RenderBufferRef<Vector3f> loadVertNormalsBuffer_() const;
-    RenderBufferRef<Color> loadVertColorsBuffer_() const;
-    RenderBufferRef<UVCoord> loadVertUVBuffer_() const;
-    RenderBufferRef<Vector2i> loadLineIndicesBuffer_() const;
+    RenderBufferRef<Vector3f> loadVertPosBuffer_();
+    RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
+    RenderBufferRef<Color> loadVertColorsBuffer_();
+    RenderBufferRef<UVCoord> loadVertUVBuffer_();
+    RenderBufferRef<Vector2i> loadLineIndicesBuffer_();
 
     typedef unsigned int GLuint;
 

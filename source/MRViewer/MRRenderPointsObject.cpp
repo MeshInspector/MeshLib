@@ -219,7 +219,7 @@ void RenderPointsObject::update_()
     objPoints_->resetDirty();
 }
 
-RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_() const
+RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
     if ( !( dirty_ & DIRTY_POSITION ) )
         return bufferObj_.prepareBuffer<VertId>( validIndicesSize_, false );
@@ -244,7 +244,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_() const
     return buffer;
 }
 
-RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_() const
+RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     if ( !( dirty_ & DIRTY_SELECTION ) )
         return bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_, false );

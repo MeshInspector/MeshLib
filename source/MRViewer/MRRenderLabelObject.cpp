@@ -403,7 +403,7 @@ void RenderLabelObject::update_()
     objLabel_->resetDirty();
 }
 
-RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_() const
+RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
 {
     if ( !( dirty_ & DIRTY_FACE ) )
         return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );

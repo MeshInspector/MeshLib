@@ -24,7 +24,7 @@ private:
     RenderObjectBuffer bufferObj_;
     int faceIndicesSize_{ 0 };
 
-    RenderBufferRef<Vector3i> loadFaceIndicesBuffer_() const;
+    RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();
 
     typedef unsigned int GLuint;
 

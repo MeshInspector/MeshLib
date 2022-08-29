@@ -318,7 +318,7 @@ void RenderLinesObject::update_()
     objLines_->resetDirty();
 }
 
-RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_() const
+RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 {
     if ( !( dirty_ & DIRTY_POSITION ) )
         return bufferObj_.prepareBuffer<Vector3f>( vertPosSize_, false );
@@ -347,7 +347,7 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_() const
     return buffer;
 }
 
-RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_() const
+RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
 {
     if ( !( dirty_ & DIRTY_RENDER_NORMALS ) )
         return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
@@ -381,7 +381,7 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_() const
     return buffer;
 }
 
-RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_() const
+RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 {
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
         return bufferObj_.prepareBuffer<Color>( vertColorsSize_, false );
@@ -415,7 +415,7 @@ RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_() const
     return buffer;
 }
 
-RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_() const
+RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 {
     if ( !( dirty_ & DIRTY_UV ) )
         return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_, false );
@@ -452,7 +452,7 @@ RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_() const
     return buffer;
 }
 
-RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_() const
+RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_()
 {
     if ( !( dirty_ & DIRTY_FACE ) )
         return bufferObj_.prepareBuffer<Vector2i>( lineIndicesSize_, false );

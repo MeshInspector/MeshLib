@@ -225,7 +225,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
         return bufferObj_.prepareBuffer<VertId>( validIndicesSize_, false );
 
     const auto& points = objPoints_->pointCloud();
-    validIndicesSize_ = points->points.size();
+    validIndicesSize_ = (int)points->points.size();
     auto buffer = bufferObj_.prepareBuffer<VertId>( validIndicesSize_ );
 
     const auto& validPoints = points->validPoints;

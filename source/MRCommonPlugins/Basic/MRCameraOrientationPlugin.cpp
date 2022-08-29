@@ -89,7 +89,7 @@ bool CameraOrientation::onEnable_()
 
 void CameraOrientation::drawCameraPresets_( float scaling )
 {
-    if ( !RibbonButtonDrawer::CollapsingHeader( "Camera Presets" ) )
+    if ( !ImGui::CollapsingHeader( "Camera Presets" ) )
         return;
 
     const ImVec2 buttonSize = ImVec2( 60.f * scaling, 0.f );

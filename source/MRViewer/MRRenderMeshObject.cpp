@@ -13,9 +13,6 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
-#define DIRTY_EDGE 0x40000
-static_assert( DIRTY_EDGE == MR::DIRTY_ALL + 1 );
-
 namespace
 {
 constexpr std::size_t highestBit( uint32_t v )
@@ -29,58 +26,6 @@ constexpr std::size_t highestBit( uint32_t v )
 
 namespace MR
 {
-
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_POSITION> { using type = Vector3f; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_VERTS_RENDER_NORMAL> { using type = Vector3f; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_FACES_RENDER_NORMAL> { using type = Vector4f; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_VERTS_COLORMAP> { using type = Color; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_FACE> { using type = Vector3i; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_EDGE> { using type = Vector2i; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_UV> { using type = UVCoord; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_SELECTION> { using type = unsigned; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_BORDER_LINES> { using type = Vector3f; };
-template<> struct RenderMeshObject::BufferTypeHelper<DIRTY_EDGES_SELECTION> { using type = Vector3f; };
-
-template <typename T>
-class RenderMeshObject::BufferRef
-{
-    T* data_;
-    std::size_t glSize_;
-    DirtyFlag* dirtyMask_;
-    DirtyFlag dirtyFlag_;
-
-public:
-    BufferRef( T* data, std::size_t glSize, DirtyFlag* dirtyMask, DirtyFlag dirtyFlag ) noexcept
-        : data_( data )
-        , glSize_( glSize )
-        , dirtyMask_( dirtyMask )
-        , dirtyFlag_( dirtyFlag )
-    {
-        assert( !dirtyMask_ || ( *dirtyMask_ & dirtyFlag_ ) );
-    }
-    BufferRef( BufferRef<T>&& other ) noexcept
-        : data_( other.data_ )
-        , glSize_( other.glSize_ )
-        , dirtyMask_( other.dirtyMask_ )
-        , dirtyFlag_( other.dirtyFlag_ )
-    {
-        other.dirtyMask_ = nullptr;
-    }
-    BufferRef( const BufferRef<T>& ) = delete;
-    ~BufferRef()
-    {
-        if ( dirtyMask_ )
-            *dirtyMask_ &= ~dirtyFlag_;
-    }
-
-    T& operator []( std::size_t i ) const noexcept { return data_[i]; }
-    T* data() const noexcept { return data_; };
-    /// returns actual buffer size
-    [[nodiscard]] std::size_t size() const noexcept { return data_ ? glSize_ : 0; }
-    /// returns number of elements that are about to be loaded or already loaded to GL memory
-    [[nodiscard]] std::size_t glSize() const noexcept { return glSize_; }
-    [[nodiscard]] bool dirty() const noexcept { return dirtyMask_ && ( *dirtyMask_ & dirtyFlag_ ); }
-};
 
 RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
 {
@@ -206,9 +151,6 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
         GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
     }
-
-    if ( bufferMode_ == MemoryEfficient )
-        resetBuffers_();
 }
 
 void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
@@ -240,11 +182,6 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     drawMesh_( true, parameters.viewportId, true );
-
-    // do not reset buffers on picker, not to reset buffers that is not used here
-    // TODO: rework rendering to have only one buffer and reset it right after it is sent to GPU (need to mix `update_` and `bind_`)
-    //if ( bufferMode_ == MemoryEfficient )
-    //    resetBuffers_();
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -590,40 +527,27 @@ void RenderMeshObject::update_( ViewportId id ) const
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-void RenderMeshObject::resetBuffers_() const
+template <RenderObjectBuffer::DirtyFlag dirtyFlag>
+RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset ) const
 {
-    bufferObj_.clear();
-}
-
-template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset ) const
-{
-    using T = BufferType<dirtyFlag>;
+    dirty_ &= ~flagToReset;
     getGLSize_<dirtyFlag>() = glSize;
-    auto memSize = sizeof(T) * getGLSize_<dirtyFlag>();
-    if ( bufferObj_.size() < memSize )
-        bufferObj_.resize( memSize );
-    return {
-        reinterpret_cast<T*>( bufferObj_.data() ),
-        glSize,
-        &dirty_,
-        flagToReset,
-    };
+    return bufferObj_.prepareBuffer<dirtyFlag>( glSize );
 }
 
-template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshObject::loadBuffer_() const
+template <RenderObjectBuffer::DirtyFlag dirtyFlag>
+RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> RenderMeshObject::loadBuffer_() const
 {
     if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
     {
         // bufferObj_ should be valid no matter what normals we use
         if ( !( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) && !( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
-            return { nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
+            return { nullptr, getGLSize_<dirtyFlag>(), false };
     }
     else
     {
         if ( !( dirty_ & dirtyFlag ) )
-            return { nullptr, getGLSize_<dirtyFlag>(), nullptr, 0 };
+            return { nullptr, getGLSize_<dirtyFlag>(), false };
     }
 
     const auto& mesh = objMesh_->mesh();
@@ -690,7 +614,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         else
         {
             assert( false );
-            return { nullptr, 0, nullptr, 0 };
+            return { nullptr, 0, false };
         }
     }
     else if constexpr ( dirtyFlag == DIRTY_FACES_RENDER_NORMAL )
@@ -790,8 +714,7 @@ RenderMeshObject::BufferRef<RenderMeshObject::BufferType<dirtyFlag>> RenderMeshO
         }
         else
         {
-            getGLSize_<dirtyFlag>() = 0;
-            return { nullptr, 0, &dirty_, dirtyFlag };
+            return prepareBuffer_<dirtyFlag>( 0 );
         }
     }
     else if constexpr ( dirtyFlag == DIRTY_SELECTION )

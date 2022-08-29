@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRRenderGLHelpers.h"
+#include "MRRenderObjectBuffer.h"
 
 namespace MR
 {
@@ -21,25 +22,18 @@ private:
     const ObjectMeshHolder* objMesh_;
 
     // memory buffer for objects that about to be loaded to GPU
-    mutable Buffer<std::byte> bufferObj_;
+    mutable RenderObjectBuffer bufferObj_;
 
-    using DirtyFlag = uint32_t;
-
-    template <DirtyFlag>
-    struct BufferTypeHelper;
-    template <DirtyFlag dirtyFlag>
-    using BufferType = typename BufferTypeHelper<dirtyFlag>::type;
+    using DirtyFlag = RenderObjectBuffer::DirtyFlag;
 
     mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
     template <DirtyFlag>
     std::size_t& getGLSize_() const;
 
-    template <typename T>
-    class BufferRef;
     template <DirtyFlag dirtyFlag>
-    BufferRef<BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
+    RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag ) const;
     template <DirtyFlag dirtyFlag>
-    BufferRef<BufferType<dirtyFlag>> loadBuffer_() const;
+    RenderObjectBuffer::BufferRef<RenderObjectBuffer::BufferType<dirtyFlag>> loadBuffer_() const;
 
     typedef unsigned int GLuint;
 
@@ -86,8 +80,6 @@ private:
     void freeBuffers_();
 
     void update_( ViewportId id ) const;
-
-    void resetBuffers_() const;
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     mutable DirtyFlag dirty_;

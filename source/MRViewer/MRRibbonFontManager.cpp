@@ -4,6 +4,9 @@
 #include "MRMesh/MRSystem.h"
 #include "MRRibbonConstants.h"
 #include "imgui_fonts_droid_sans.h"
+#include "MRViewerInstance.h"
+#include "MRViewer.h"
+#include "MRRibbonMenu.h"
 
 namespace MR
 {
@@ -55,6 +58,25 @@ float RibbonFontManager::getFontSizeByType( FontType type ) const
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
     return  GetFontsDirectory() / "NotoSans-Regular.ttf";
+}
+
+ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
+{
+    RibbonFontManager* fontManager = getFontManagerInstance_();
+    if ( fontManager )
+        return fontManager->getFontByType( type );
+    return nullptr;
+}
+
+void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontManager )
+{
+    getFontManagerInstance_() = ribbonFontManager;
+}
+
+MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
+{
+    static RibbonFontManager* instance{ nullptr };
+    return instance;
 }
 
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float scaling )

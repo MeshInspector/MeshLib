@@ -395,7 +395,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const float borderSize = style.WindowBorderSize * scaling;
     const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + width - borderSize, pos.y + buttonSize - borderSize } );
     
-    window->DrawList->PushClipRectFullScreen();
+    window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
     window->DrawList->PopClipRect();
 
@@ -458,7 +458,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
 
         //ImGui doesn't draw bottom border if window is collapsed, so add it manually
-        window->DrawList->PushClipRectFullScreen();
+        window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
         window->DrawList->AddLine( { pos.x, pos.y + buttonSize - borderSize }, { pos.x + width, pos.y + buttonSize - borderSize }, borderColor, borderSize );
         window->DrawList->PopClipRect();
 
@@ -472,13 +472,17 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const auto outerSize = ( height == 0.0f ) ? ImVec2{ 0, 0 } : ImVec2{ width - style.ScrollbarSize, height - 2.0f * style.WindowPadding.y - 2.0f * style.FramePadding.y - ImGui::GetTextLineHeight() };
 
     ImGui::BeginTable( "ContentTable", 1, tableFlags, outerSize );
-    ImGui::TableNextColumn();
-    
+    ImGui::TableNextColumn();    
+    window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+
    return true;
 }
 
 void EndCustomStatePlugin()
 {
+    auto context = ImGui::GetCurrentContext();
+    auto window = context->CurrentWindow;
+    window->DrawList->PopClipRect();
     EndTable();
     End();
 }
@@ -657,7 +661,7 @@ PaletteChanges Palette(
     {
         ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = -1;
-        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets ) )
+        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, false ) )
         {
             if ( presetIndex != -1 )
                 PalettePresets::loadPreset( presets[presetIndex], palette );

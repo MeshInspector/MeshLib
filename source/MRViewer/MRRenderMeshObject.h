@@ -14,21 +14,23 @@ public:
     RenderMeshObject( const VisualObject& visObj );
     ~RenderMeshObject();
 
-    virtual void render( const RenderParams& params ) const override;
-    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) const override;
+    virtual void render( const RenderParams& params ) override;
+    virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
 
 private:
     const ObjectMeshHolder* objMesh_;
 
     // memory buffer for objects that about to be loaded to GPU, shared among different data types
-    mutable RenderObjectBuffer bufferObj_;
+    RenderObjectBuffer bufferObj_;
 
     using DirtyFlag = uint32_t;
 
-    mutable std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
+    std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
     template <DirtyFlag>
-    std::size_t& getGLSize_() const;
+    std::size_t& getGLSize_();
+    template <DirtyFlag>
+    std::size_t getGLSize_() const;
 
     // classes that helps to deduce data type from dirty flag value
     template <DirtyFlag dirtyFlag>
@@ -51,13 +53,13 @@ private:
     GLuint meshArrayObjId_{ 0 };
     GLuint meshPickerArrayObjId_{ 0 };
 
-    mutable GlBuffer vertPosBuffer_;
-    mutable GlBuffer vertUVBuffer_;
-    mutable GlBuffer vertNormalsBuffer_;
-    mutable GlBuffer vertColorsBuffer_;
+    GlBuffer vertPosBuffer_;
+    GlBuffer vertUVBuffer_;
+    GlBuffer vertNormalsBuffer_;
+    GlBuffer vertColorsBuffer_;
 
-    mutable GlBuffer facesIndicesBuffer_;
-    mutable GlBuffer edgesIndicesBuffer_;
+    GlBuffer facesIndicesBuffer_;
+    GlBuffer edgesIndicesBuffer_;
     GLuint texture_{ 0 };
 
     GLuint faceSelectionTex_{ 0 };
@@ -69,12 +71,12 @@ private:
     int maxTexSize_{ 0 };
 
     template <DirtyFlag>
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color ) const;
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color );
 
-    void renderMeshEdges_( const RenderParams& parameters ) const;
+    void renderMeshEdges_( const RenderParams& parameters );
 
-    void bindMesh_( bool alphaSort ) const;
-    void bindMeshPicker_() const;
+    void bindMesh_( bool alphaSort );
+    void bindMeshPicker_();
 
     void drawMesh_( bool solid, ViewportId viewportId, bool picker = false ) const;
 
@@ -84,12 +86,12 @@ private:
     // Release the OpenGL buffer objects
     void freeBuffers_();
 
-    void update_( ViewportId id ) const;
+    void update_( ViewportId id );
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    mutable DirtyFlag dirty_;
+    DirtyFlag dirty_;
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
-    mutable bool normalsBound_{ false };
+    bool normalsBound_{ false };
 };
 
 }

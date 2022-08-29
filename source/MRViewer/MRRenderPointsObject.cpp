@@ -28,7 +28,7 @@ RenderPointsObject::~RenderPointsObject()
     freeBuffers_();
 }
 
-void RenderPointsObject::render( const RenderParams& renderParams ) const
+void RenderPointsObject::render( const RenderParams& renderParams )
 {
     if ( !objPoints_->pointCloud() )
         return;
@@ -103,7 +103,7 @@ void RenderPointsObject::render( const RenderParams& renderParams ) const
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
 }
 
-void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
+void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
     if ( !objPoints_->pointCloud() )
         return;
@@ -143,7 +143,7 @@ size_t RenderPointsObject::heapBytes() const
     return bufferObj_.heapBytes();
 }
 
-void RenderPointsObject::bindPoints_() const
+void RenderPointsObject::bindPoints_()
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
@@ -179,7 +179,7 @@ void RenderPointsObject::bindPoints_() const
     dirty_ &= ~DIRTY_MESH;
 }
 
-void RenderPointsObject::bindPointsPicker_() const
+void RenderPointsObject::bindPointsPicker_()
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
@@ -213,7 +213,7 @@ void RenderPointsObject::freeBuffers_()
     GL_EXEC( glDeleteTextures( 1, &vertSelectionTex_ ) );
 }
 
-void RenderPointsObject::update_() const
+void RenderPointsObject::update_()
 {
     dirty_ |= objPoints_->getDirtyFlags();
     objPoints_->resetDirty();

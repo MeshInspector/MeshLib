@@ -55,7 +55,7 @@ RenderMeshObject::~RenderMeshObject()
     freeBuffers_();
 }
 
-void RenderMeshObject::render( const RenderParams& renderParams ) const
+void RenderMeshObject::render( const RenderParams& renderParams )
 {
     if ( !objMesh_->mesh() )
         return;
@@ -167,7 +167,7 @@ void RenderMeshObject::render( const RenderParams& renderParams ) const
     }
 }
 
-void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId ) const
+void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
     if ( !objMesh_->mesh() )
         return;
@@ -204,7 +204,7 @@ size_t RenderMeshObject::heapBytes() const
 }
 
 template <RenderMeshObject::DirtyFlag dirtyFlag>
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar ) const
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar )
 {
     auto count = getGLSize_<dirtyFlag>();
     if ( !count )
@@ -251,7 +251,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glDrawArrays( GL_LINES, 0, int( count ) ) );
 }
 
-void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) const
+void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
@@ -288,7 +288,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams ) cons
     GL_EXEC( glDrawElements( GL_LINES, int( 2 * getGLSize_<DIRTY_EDGE>() ), GL_UNSIGNED_INT, 0 ) );
 }
 
-void RenderMeshObject::bindMesh_( bool alphaSort ) const
+void RenderMeshObject::bindMesh_( bool alphaSort )
 {
     auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
@@ -397,7 +397,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort ) const
     normalsBound_ = true;
 }
 
-void RenderMeshObject::bindMeshPicker_() const
+void RenderMeshObject::bindMeshPicker_()
 {
     auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
@@ -489,7 +489,7 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteTextures( 1, &facesNormalsTex_ ) );
 }
 
-void RenderMeshObject::update_( ViewportId id ) const
+void RenderMeshObject::update_( ViewportId id )
 {
     auto mesh = objMesh_->mesh();
 
@@ -798,7 +798,15 @@ RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::loadBuffer_() const
 }
 
 template<RenderMeshObject::DirtyFlag dirtyFlag>
-std::size_t &RenderMeshObject::getGLSize_() const
+std::size_t &RenderMeshObject::getGLSize_()
+{
+    constexpr auto i = highestBit( dirtyFlag );
+    assert( dirtyFlag == 1 << i );
+    return bufferGLSize_[i];
+}
+
+template<RenderMeshObject::DirtyFlag dirtyFlag>
+std::size_t RenderMeshObject::getGLSize_() const
 {
     constexpr auto i = highestBit( dirtyFlag );
     assert( dirtyFlag == 1 << i );

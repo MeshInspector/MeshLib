@@ -660,11 +660,11 @@ PaletteChanges Palette(
     if ( !presets.empty() )
     {
         ImGui::SetNextItemWidth( scaledWidth );
-        int presetIndex = PalettePresets::getSelectedIndex();
+        int presetIndex = -1;
         if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets ) )
         {
             if ( presetIndex != -1 )
-                PalettePresets::loadPreset( presetIndex, palette );
+                PalettePresets::loadPreset( presets[presetIndex], palette );
 
             if ( fixZero )
                 *fixZero = false;

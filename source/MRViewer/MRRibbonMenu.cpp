@@ -142,6 +142,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         draw_helpers();
     };
 
+    fontManager_.initFontManagerInstance( &fontManager_ );
+
     buttonDrawer_.setMenu( this );
     buttonDrawer_.setFontMenager( &fontManager_ );
     buttonDrawer_.setShortcutManager( getShortcutManager().get() );

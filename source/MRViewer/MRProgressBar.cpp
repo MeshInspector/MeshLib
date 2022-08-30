@@ -69,7 +69,7 @@ void ProgressBar::setup( float scaling )
             }
         }
 #else
-        ImGui::Text( "Operation is in progress please wait..." );
+        ImGui::Text( "Operation is in progress, please wait..." );
 #endif
         if ( instance.finished_ )
         {

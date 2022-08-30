@@ -4,9 +4,9 @@ on:
   workflow_call:
     secrets:
       BUILD_MACHINE_TOKEN:
-        required: true
+        required: false
       DOCKERHUB_TOKEN:
-        required: true
+        required: false
     outputs:
       image_tag:
         description: "linux image for testing"

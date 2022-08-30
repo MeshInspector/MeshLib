@@ -1,4 +1,5 @@
 #pragma once
+#include "MRRenderHelpers.h"
 #include "MRMesh/MRLog.h"
 #include <array>
 
@@ -38,12 +39,14 @@ public:
     static void freeShader( ShaderType type );
     // Free all shaders from GL
     static void freeAllShaders();
+    // ...
+    static RenderObjectBuffer& getStaticGLBuffer();
 private:
     ShadersHolder();
     ~ShadersHolder();
 
     static ShadersHolder& instance_();
-    
+
     void createShader_( ShaderType type );
 
     std::array<GLuint, size_t( Count )> shadersIds_;

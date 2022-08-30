@@ -313,7 +313,7 @@ void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned )
 
 size_t RenderLabelObject::heapBytes() const
 {
-    return bufferObj_.heapBytes();
+    return 0;
 }
 
 void RenderLabelObject::bindLabel_()
@@ -405,15 +405,16 @@ void RenderLabelObject::update_()
 
 RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
-        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
 
     MR_TIMER
 
     const auto& mesh = objLabel_->labelRepresentingMesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+    auto buffer = glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
 
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
     {

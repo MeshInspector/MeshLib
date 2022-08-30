@@ -173,7 +173,7 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
 size_t RenderMeshObject::heapBytes() const
 {
-    return bufferObj_.heapBytes();
+    return 0;
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GlBuffer & vbo, const Color& colorChar, uint32_t dirtyFlag )
@@ -508,15 +508,16 @@ void RenderMeshObject::update_( ViewportId id )
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
-        return bufferObj_.prepareBuffer<Vector3f>( vertPosSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
     MR_NAMED_TIMER( "vertbased_dirty_positions" );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
 
     BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
     {
@@ -532,6 +533,8 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
@@ -540,7 +543,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     {
         MR_NAMED_TIMER( "dirty_vertices_normals" )
 
-        auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
         const auto& vertNormals = objMesh_->getVertsNormals();
         BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
@@ -561,7 +564,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     {
         MR_NAMED_TIMER( "dirty_corners_normals" )
 
-        auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
         const auto& creases = objMesh_->creases();
         const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
@@ -577,21 +580,22 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     }
     else
     {
-        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
     }
 }
 
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
-        return bufferObj_.prepareBuffer<Color>( vertColorsSize_, false );
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     MR_NAMED_TIMER( "vert_colormap" );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
+    auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
 
     const auto& vertsColorMap = objMesh_->getVertsColorMap();
     BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
@@ -608,8 +612,9 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 
 RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_UV ) )
-        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_, false );
+        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -623,7 +628,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     }
     if ( uvCoords.size() >= numV )
     {
-        auto buffer = bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
+        auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
 
         BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
         {
@@ -638,19 +643,20 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     }
     else
     {
-        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
+        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
     }
 }
 
 RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
-        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+    auto buffer = glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
 
     const auto& edgePerFace = topology.edgePerFace();
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
@@ -669,13 +675,14 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 
 RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !dirtyEdges_ )
-        return bufferObj_.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector2i>( edgeIndicesSize_ = 3 * numF );
+    auto buffer = glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_ = 3 * numF );
 
     const auto& edgePerFace = topology.edgePerFace();
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
@@ -700,8 +707,9 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 
 RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) )
-        return bufferObj_.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
+        return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -710,7 +718,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
     auto size = numF / 32 + 1;
     faceSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y >= size );
-    auto buffer = bufferObj_.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y );
 
     const auto& selection = objMesh_->getSelectedFaces().m_bits;
     const unsigned* selectionData = ( unsigned* )selection.data();
@@ -733,8 +741,9 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 
 RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) )
-        return bufferObj_.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
+        return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
 
     MR_NAMED_TIMER( "dirty_faces_normals" )
 
@@ -744,7 +753,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 
     faceNormalsTextureSize_ = calcTextureRes( numF, maxTexSize_ );
     assert( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y >= numF );
-    auto buffer = bufferObj_.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y );
+    auto buffer = glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y );
 
     computePerFaceNormals4( *mesh, buffer.data(), buffer.size() );
 
@@ -753,8 +762,9 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_BORDER_LINES ) )
-        return bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( borderHighlightPointsSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -762,7 +772,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
     borderHighlightPointsSize_ = 0;
     for ( const auto& b : boundary )
         borderHighlightPointsSize_ += 2 * (int)b.size();
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_ );
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( borderHighlightPointsSize_ );
 
     size_t cur = 0;
     for ( auto& b : boundary )
@@ -780,8 +790,9 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_EDGES_SELECTION ) )
-        return bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( selectedEdgePointsSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -789,7 +800,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
     for ( auto e : selectedEdges )
         if ( !topology.hasEdge( e ) )
             selectedEdges.reset( e );
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * (int)selectedEdges.count() );
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * (int)selectedEdges.count() );
 
     size_t cur = 0;
     for ( auto e : selectedEdges )

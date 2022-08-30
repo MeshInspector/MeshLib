@@ -140,7 +140,7 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
 
 size_t RenderPointsObject::heapBytes() const
 {
-    return bufferObj_.heapBytes();
+    return 0;
 }
 
 void RenderPointsObject::bindPoints_()
@@ -220,12 +220,13 @@ void RenderPointsObject::update_()
 
 RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
-        return bufferObj_.prepareBuffer<VertId>( validIndicesSize_, false );
+        return glBuffer.prepareBuffer<VertId>( validIndicesSize_, false );
 
     const auto& points = objPoints_->pointCloud();
     validIndicesSize_ = (int)points->points.size();
-    auto buffer = bufferObj_.prepareBuffer<VertId>( validIndicesSize_ );
+    auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
 
     const auto& validPoints = points->validPoints;
     auto firstValid = validPoints.find_first();
@@ -245,15 +246,16 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
 RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
+    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) )
-        return bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
+        return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
 
     const auto& points = objPoints_->pointCloud();
     const auto numV = points->validPoints.find_last() + 1;
     auto size = numV / 32 + 1;
     vertSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
-    auto buffer = bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
     const auto& selection = objPoints_->getSelectedPoints().m_bits;
     const unsigned* selectionData = (unsigned*) selection.data();

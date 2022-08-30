@@ -1241,4 +1241,10 @@ void main(void)
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );
 }
 
+RenderObjectBuffer &ShadersHolder::getStaticGLBuffer()
+{
+    static RenderObjectBuffer glBuffer;
+    return glBuffer;
+}
+
 }

@@ -48,10 +48,10 @@ private:
     typedef unsigned int GLuint;
 
     GLuint borderArrayObjId_{ 0 };
-    GLuint borderBufferObjId_{ 0 };
+    GlBuffer borderBuffer_;
 
     GLuint selectedEdgesArrayObjId_{ 0 };
-    GLuint selectedEdgesBufferObjId_{ 0 };
+    GlBuffer selectedEdgesBuffer_;
 
     GLuint meshArrayObjId_{ 0 };
     GLuint meshPickerArrayObjId_{ 0 };
@@ -73,7 +73,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color, uint32_t dirtyFlag );
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GlBuffer & vbo, const Color& color, uint32_t dirtyFlag );
 
     void renderMeshEdges_( const RenderParams& parameters );
 

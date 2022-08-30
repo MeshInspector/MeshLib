@@ -700,7 +700,7 @@ PaletteChanges Palette(
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f - menuScaling );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
         if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
         {

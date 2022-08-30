@@ -488,7 +488,7 @@ bool Viewport::allModelsInsideViewportRectangle() const
     return res.second && params_.cameraViewAngle > res.first;
 }
 
-Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>> objs, Space space, bool selectedPrimitives /*= false*/ ) const
+Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives /*= false*/ ) const
 {
     Box3f box;
     const AffineXf3f xfV = getViewXf_();

@@ -94,9 +94,6 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     }
     return angleRes;
 }
-
-constexpr float cMinScaleFactor = 1e-6f;
-constexpr float cMaxScaleFactor = 1e+6f;
 }
 
 namespace MR
@@ -631,16 +628,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         scale[int( ax )] = scaleFactor;
     prevScaling_ = newScaling;
 
-    auto resultScale = Matrix3f::scale( scale ) * objScale_;
-    for ( auto i = 0; i < 3; i++ )
-    {
-        if ( resultScale[i][i] < cMinScaleFactor || cMaxScaleFactor < resultScale[i][i] )
-        {
-            spdlog::warn( "Scale factor limits exceeded" );
-            return;
-        }
-    }
-    objScale_ = resultScale;
+    objScale_ = Matrix3f::scale( scale ) * objScale_;
 
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );

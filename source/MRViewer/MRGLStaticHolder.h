@@ -7,6 +7,7 @@ namespace MR
 {
 // This class holds all shaders that are used in the program
 // creates shader on access if it is needed
+// holds shared memory buffer for loading to GPU
 class GLStaticHolder
 {
 public:

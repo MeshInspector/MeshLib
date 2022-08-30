@@ -1243,8 +1243,7 @@ void main(void)
 
 RenderObjectBuffer &GLStaticHolder::getStaticGLBuffer()
 {
-    static RenderObjectBuffer glBuffer;
-    return glBuffer;
+    return instance_().glBuffer_;
 }
 
 }

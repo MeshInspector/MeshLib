@@ -53,5 +53,7 @@ private:
 
     // it is stored here to prolong its life till this destructor
     std::shared_ptr<spdlog::logger> logger_;
+
+    RenderObjectBuffer glBuffer_;
 };
 }

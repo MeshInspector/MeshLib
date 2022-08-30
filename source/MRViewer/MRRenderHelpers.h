@@ -61,9 +61,6 @@ private:
 // provides shared buffer for loading different types of data to GL memory
 class RenderObjectBuffer
 {
-    friend class GLStaticHolder;
-    RenderObjectBuffer() = default;
-
 public:
     template <typename T>
     RenderBufferRef<T> prepareBuffer( std::size_t glSize, bool dirty = true )

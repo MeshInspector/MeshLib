@@ -61,7 +61,7 @@ private:
 // provides shared buffer for loading different types of data to GL memory
 class RenderObjectBuffer
 {
-    friend class ShadersHolder;
+    friend class GLStaticHolder;
     RenderObjectBuffer() = default;
 
 public:

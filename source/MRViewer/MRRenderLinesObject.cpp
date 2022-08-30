@@ -7,7 +7,7 @@
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVector2.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
@@ -67,7 +67,7 @@ void RenderLinesObject::render( const RenderParams& renderParams )
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
     bindLines_();
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawLines );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -120,7 +120,7 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
 
     bindLinesPicker_();
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrixPtr ) );
@@ -147,7 +147,7 @@ size_t RenderLinesObject::heapBytes() const
 void RenderLinesObject::bindLines_()
 {
     MR_TIMER;
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawLines );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -223,7 +223,7 @@ void RenderLinesObject::bindLines_()
 
 void RenderLinesObject::bindLinesPicker_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -239,7 +239,7 @@ void RenderLinesObject::bindLinesPicker_()
 
 void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
 
     // Selection
@@ -320,7 +320,7 @@ void RenderLinesObject::update_()
 
 RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
@@ -350,7 +350,7 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 
 RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_RENDER_NORMALS ) )
         return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
@@ -385,7 +385,7 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
 
 RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
@@ -420,7 +420,7 @@ RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 
 RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_UV ) )
         return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
@@ -458,7 +458,7 @@ RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 
 RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
         return glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_, false );
 

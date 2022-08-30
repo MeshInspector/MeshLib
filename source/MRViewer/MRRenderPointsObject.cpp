@@ -6,7 +6,7 @@
 #include "MRGLMacro.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
@@ -59,7 +59,7 @@ void RenderPointsObject::render( const RenderParams& renderParams )
 
     // Send transformations to the GPU
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -118,7 +118,7 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
 
     bindPointsPicker_();
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrixPtr ) );
@@ -145,7 +145,7 @@ size_t RenderPointsObject::heapBytes() const
 
 void RenderPointsObject::bindPoints_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
@@ -176,7 +176,7 @@ void RenderPointsObject::bindPoints_()
 
 void RenderPointsObject::bindPointsPicker_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
@@ -220,7 +220,7 @@ void RenderPointsObject::update_()
 
 RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
         return glBuffer.prepareBuffer<VertId>( validIndicesSize_, false );
 
@@ -246,7 +246,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
 RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) )
         return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
 

@@ -9,7 +9,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolylineProject.h"

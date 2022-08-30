@@ -7,7 +7,7 @@ namespace MR
 {
 // This class holds all shaders that are used in the program
 // creates shader on access if it is needed
-class ShadersHolder
+class GLStaticHolder
 {
 public:
     typedef unsigned int GLuint;
@@ -42,10 +42,10 @@ public:
     // Memory buffer for objects that about to be loaded to GPU, shared among different data types
     static RenderObjectBuffer& getStaticGLBuffer();
 private:
-    ShadersHolder();
-    ~ShadersHolder();
+    GLStaticHolder();
+    ~GLStaticHolder();
 
-    static ShadersHolder& instance_();
+    static GLStaticHolder& instance_();
 
     void createShader_( ShaderType type );
 

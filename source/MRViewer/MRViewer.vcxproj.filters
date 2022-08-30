@@ -118,7 +118,7 @@
     <ClCompile Include="MRCreateShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="MRShadersHolder.cpp">
+    <ClCompile Include="MRGLStaticHolder.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="MRAlphaSortGL.cpp">
@@ -295,7 +295,7 @@
     <ClInclude Include="MRCreateShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="MRShadersHolder.h">
+    <ClInclude Include="MRGLStaticHolder.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="MRAlphaSortGL.h">

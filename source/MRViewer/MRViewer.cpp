@@ -24,7 +24,7 @@
 #include "MRAlphaSortGL.h"
 #include "MRGLMacro.h"
 #include "MRSetupViewer.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRViewerPlugin.h"
 #include "MRCommandLoop.h"
 #include "MRSplashWindow.h"
@@ -553,7 +553,7 @@ void Viewer::launchShut()
     globalBasisAxes.reset();
     globalHistoryStore_.reset();
 
-    ShadersHolder::freeAllShaders();
+    GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
 

@@ -1,7 +1,7 @@
 #include "MRImmediateGL.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRColor.h"
@@ -37,7 +37,7 @@ void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f
     // Send points data to GL, install points properties 
     GL_EXEC( glBindVertexArray( pointVAO ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::AdditionalPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
@@ -92,7 +92,7 @@ void drawLines( const std::vector<LineSegm3f>& lines, const std::vector<SegmEndC
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( lineVAO ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::AdditionalLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
@@ -143,7 +143,7 @@ void drawTris( const std::vector<Tri>& tris, const std::vector<TriCornerColors>&
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( quadVAO ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::AdditionalQuad );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalQuad );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );

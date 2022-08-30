@@ -5,7 +5,7 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
@@ -71,7 +71,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
     bindMesh_( renderParams.alphaSort );
 
-    auto shader = renderParams.alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
+    auto shader = renderParams.alphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::DrawMesh );
     // Send transformations to the GPU
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -155,7 +155,7 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
 
     bindMeshPicker_();
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrixPtr ) );
@@ -197,8 +197,8 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glBindVertexArray( vao ) );
 
     auto shader = renderParams.alphaSort ?
-        ShadersHolder::getShaderId( ShadersHolder::TransparentMeshBorder ) :
-        ShadersHolder::getShaderId( ShadersHolder::MeshBorder );
+        GLStaticHolder::getShaderId( GLStaticHolder::TransparentMeshBorder ) :
+        GLStaticHolder::getShaderId( GLStaticHolder::MeshBorder );
 
     GL_EXEC( glUseProgram( shader ) );
 
@@ -232,8 +232,8 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
 
     auto shader = renderParams.alphaSort ?
-        ShadersHolder::getShaderId( ShadersHolder::TransparentMeshBorder ) :
-        ShadersHolder::getShaderId( ShadersHolder::MeshBorder );
+        GLStaticHolder::getShaderId( GLStaticHolder::TransparentMeshBorder ) :
+        GLStaticHolder::getShaderId( GLStaticHolder::MeshBorder );
 
     GL_EXEC( glUseProgram( shader ) );
 
@@ -266,7 +266,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
 
 void RenderMeshObject::bindMesh_( bool alphaSort )
 {
-    auto shader = alphaSort ? ShadersHolder::getShaderId( ShadersHolder::TransparentMesh ) : ShadersHolder::getShaderId( ShadersHolder::DrawMesh );
+    auto shader = alphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::DrawMesh );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -371,7 +371,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
 
 void RenderMeshObject::bindMeshPicker_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -508,7 +508,7 @@ void RenderMeshObject::update_( ViewportId id )
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
@@ -533,7 +533,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -586,7 +586,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
@@ -612,7 +612,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 
 RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_UV ) )
         return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
@@ -649,7 +649,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 
 RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
         return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
 
@@ -675,7 +675,7 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 
 RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !dirtyEdges_ )
         return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
 
@@ -707,7 +707,7 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 
 RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) )
         return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
 
@@ -741,7 +741,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 
 RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) )
         return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
 
@@ -762,7 +762,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_BORDER_LINES ) )
         return glBuffer.prepareBuffer<Vector3f>( borderHighlightPointsSize_, false );
 
@@ -790,7 +790,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
 {
-    auto& glBuffer = ShadersHolder::getStaticGLBuffer();
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_EDGES_SELECTION ) )
         return glBuffer.prepareBuffer<Vector3f>( selectedEdgePointsSize_, false );
 

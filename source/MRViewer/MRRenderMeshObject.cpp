@@ -190,6 +190,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     default:
         break;
     }
+    dirty_ &= ~dirtyFlag;
     if ( !buffer.glSize() )
         return;
 
@@ -217,7 +218,6 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
 
     // positions
     bindVertexAttribArray( shader, "position", vbo, buffer, 3, buffer.dirty(), true );
-    dirty_ &= ~dirtyFlag;
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, buffer.glSize() / 2 );
 

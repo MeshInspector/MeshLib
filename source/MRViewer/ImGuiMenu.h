@@ -239,6 +239,7 @@ public:
   MRVIEWER_API bool getShowShortcuts() const;
 
 protected:
+    bool capturedMouse_{ false };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

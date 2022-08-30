@@ -519,15 +519,15 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
     auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
 
     BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            Vector3f v[3];
-            mesh->getTriPoints( f, v[0], v[1], v[2] );
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = v[i];
-        } );
+    {
+        auto ind = 3 * f;
+        Vector3f v[3];
+        mesh->getTriPoints( f, v[0], v[1], v[2] );
+        for ( int i = 0; i < 3; ++i )
+            buffer[ind + i] = v[i];
+    } );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
@@ -536,49 +536,49 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
 
-        if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
-        {
+    if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
+    {
         MR_NAMED_TIMER( "dirty_vertices_normals" )
 
         auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
         const auto& vertNormals = objMesh_->getVertsNormals();
         BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
-            {
-                auto ind = 3 * f;
-                VertId v[3];
-            topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                {
-                const auto &norm = vertNormals[v[i]];
-                    buffer[ind + i] = norm;
-                }
-            } );
-
-            return buffer;
-        }
-        else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
         {
-            MR_NAMED_TIMER( "dirty_corners_normals" )
+            auto ind = 3 * f;
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+            {
+                const auto &norm = vertNormals[v[i]];
+                buffer[ind + i] = norm;
+            }
+        } );
+
+        return buffer;
+    }
+    else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
+    {
+        MR_NAMED_TIMER( "dirty_corners_normals" )
 
         auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-            const auto& creases = objMesh_->creases();
-            const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+        const auto& creases = objMesh_->creases();
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
         BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
-            {
-                auto ind = 3 * f;
-                const auto& cornerN = cornerNormals[f];
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
-            } );
-
-            return buffer;
-        }
-        else
         {
+            auto ind = 3 * f;
+            const auto& cornerN = cornerNormals[f];
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = cornerN[i];
+        } );
+
+        return buffer;
+    }
+    else
+    {
         return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
-        }
+    }
 }
 
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
@@ -603,7 +603,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
             buffer[ind + i] = vertsColorMap[v[i]];
     } );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
@@ -654,17 +654,17 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 
     const auto& edgePerFace = topology.edgePerFace();
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            if ( f >= numF )
-                return;
-            if ( !edgePerFace[f].valid() )
-                buffer[f] = Vector3i();
-            else
-                buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
-        } );
+    {
+        auto ind = 3 * f;
+        if ( f >= numF )
+            return;
+        if ( !edgePerFace[f].valid() )
+            buffer[f] = Vector3i();
+        else
+            buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+    } );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
@@ -679,23 +679,23 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 
     const auto& edgePerFace = topology.edgePerFace();
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        if ( f >= numF )
+            return;
+        if ( !edgePerFace[f].valid() )
         {
-            auto ind = 3 * f;
-            if ( f >= numF )
-                return;
-            if ( !edgePerFace[f].valid() )
-            {
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = Vector2i();
-            }
-            else
-            {
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
-            }
-        } );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = Vector2i();
+        }
+        else
+        {
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+        }
+    } );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
@@ -707,28 +707,28 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
 
-        auto size = numF / 32 + 1;
+    auto size = numF / 32 + 1;
     faceSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y >= size );
     auto buffer = bufferObj_.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y );
 
-        const auto& selection = objMesh_->getSelectedFaces().m_bits;
-        const unsigned* selectionData = ( unsigned* )selection.data();
+    const auto& selection = objMesh_->getSelectedFaces().m_bits;
+    const unsigned* selectionData = ( unsigned* )selection.data();
     tbb::parallel_for( tbb::blocked_range<int>( 0, (int)buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
         {
-            for ( int r = range.begin(); r < range.end(); ++r )
+            auto& block = buffer[r];
+            if ( r / 2 >= selection.size() )
             {
-                auto& block = buffer[r];
-                if ( r / 2 >= selection.size() )
-                {
-                    block = 0;
-                    continue;
-                }
-                block = selectionData[r];
+                block = 0;
+                continue;
             }
-        } );
+            block = selectionData[r];
+        }
+    } );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
@@ -760,22 +760,22 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
     const auto& topology = mesh->topology;
     auto boundary = topology.findBoundary();
     borderHighlightPointsSize_ = 0;
-        for ( const auto& b : boundary )
+    for ( const auto& b : boundary )
         borderHighlightPointsSize_ += 2 * (int)b.size();
     auto buffer = bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_ );
 
-        size_t cur = 0;
-        for ( auto& b : boundary )
+    size_t cur = 0;
+    for ( auto& b : boundary )
+    {
+        for ( auto& e : b )
         {
-            for ( auto& e : b )
-            {
-                buffer[cur++] = mesh->points[mesh->topology.org( e )];
-                buffer[cur++] = mesh->points[mesh->topology.dest( e )];
-            }
+            buffer[cur++] = mesh->points[mesh->topology.org( e )];
+            buffer[cur++] = mesh->points[mesh->topology.dest( e )];
         }
+    }
     assert( cur == buffer.size() );
 
-        return buffer;
+    return buffer;
 }
 
 RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
@@ -785,21 +785,21 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
-        auto selectedEdges = objMesh_->getSelectedEdges();
-        for ( auto e : selectedEdges )
+    auto selectedEdges = objMesh_->getSelectedEdges();
+    for ( auto e : selectedEdges )
         if ( !topology.hasEdge( e ) )
-                selectedEdges.reset( e );
+            selectedEdges.reset( e );
     auto buffer = bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * (int)selectedEdges.count() );
 
-        size_t cur = 0;
-        for ( auto e : selectedEdges )
-        {
-            buffer[cur++] = mesh->orgPnt( e );
-            buffer[cur++] = mesh->destPnt( e );
-        }
+    size_t cur = 0;
+    for ( auto e : selectedEdges )
+    {
+        buffer[cur++] = mesh->orgPnt( e );
+        buffer[cur++] = mesh->destPnt( e );
+    }
     assert( cur == buffer.size() );
 
-        return buffer;
+    return buffer;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

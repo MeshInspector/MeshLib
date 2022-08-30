@@ -385,7 +385,17 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
     const auto safeZoom = params_.cameraZoom;
     params_.cameraZoom = 1;
 
-    Box3f box = calcBox_( fitParams.mode, params_.orthographic ? Space::CameraOrthographic : Space::World );
+
+    std::vector<std::shared_ptr<VisualObject>> allObj;
+    if ( fitParams.mode == FitMode::CustomObjectsList )
+        allObj = fitParams.objsList;
+    else
+    {
+        const auto type = fitParams.mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
+        allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
+    }
+
+    Box3f box = calcBox_( allObj, params_.orthographic ? Space::CameraOrthographic : Space::World, fitParams.mode == FitMode::SelectedPrimitives );
     if ( !box.valid() )
     {
         params_.cameraZoom = safeZoom;
@@ -478,15 +488,12 @@ bool Viewport::allModelsInsideViewportRectangle() const
     return res.second && params_.cameraViewAngle > res.first;
 }
 
-Box3f Viewport::calcBox_( FitMode mode, Space space ) const
+Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives /*= false*/ ) const
 {
     Box3f box;
-    const auto type = mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
-    const auto allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
-
     const AffineXf3f xfV = getViewXf_();
 
-    for( const auto& obj : allObj )
+    for( const auto& obj : objs )
     {
         if( obj->globalVisibilty( id ) )
         {
@@ -535,7 +542,7 @@ Box3f Viewport::calcBox_( FitMode mode, Space space ) const
                 continue;
             }
             VertBitSet myVerts;
-            if( mode == FitMode::SelectedPrimitives )
+            if ( selectedPrimitives )
             {
                 selectedVerts = nullptr;
                 if ( objMesh )
@@ -579,7 +586,10 @@ Box3f Viewport::calcBox_( FitMode mode, Space space ) const
 
 std::pair<float, bool> Viewport::getZoomFOVtoScreen_( Vector3f* cameraShift, FitMode mode ) const
 {
-    const auto box = calcBox_( mode, params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective );
+    const auto type = mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
+    const auto allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
+
+    const auto box = calcBox_( allObj, params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective, mode == FitMode::SelectedPrimitives );
     if ( !box.valid() )
         return std::make_pair( params_.cameraViewAngle, true );
 

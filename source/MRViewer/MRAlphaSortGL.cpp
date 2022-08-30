@@ -1,6 +1,6 @@
 #include "MRAlphaSortGL.h"
 #include "MRGLMacro.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
@@ -96,7 +96,7 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( transparency_quad_vao ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::TransparencyOverlayQuad );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::TransparencyOverlayQuad );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, transparency_quad_vbo ) );

@@ -21,8 +21,6 @@ public:
 private:
     const ObjectMeshHolder* objMesh_;
 
-    // memory buffer for objects that about to be loaded to GPU, shared among different data types
-    RenderObjectBuffer bufferObj_;
     int vertPosSize_{ 0 };
     int vertNormalsSize_{ 0 };
     int vertColorsSize_{ 0 };

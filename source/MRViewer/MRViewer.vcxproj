@@ -50,7 +50,7 @@
     <ClCompile Include="MRRenderPointsObject.cpp" />
     <ClCompile Include="MRImGuiImage.cpp" />
     <ClCompile Include="MRPalette.cpp" />
-    <ClCompile Include="MRShadersHolder.cpp" />
+    <ClCompile Include="MRGLStaticHolder.cpp" />
     <ClCompile Include="MRMenu.cpp" />
     <ClCompile Include="MRMeshModifier.cpp" />
     <ClCompile Include="MRViewer.cpp" />
@@ -111,7 +111,7 @@
     <ClInclude Include="MRRenderPointsObject.h" />
     <ClInclude Include="MRImGuiImage.h" />
     <ClInclude Include="MRPalette.h" />
-    <ClInclude Include="MRShadersHolder.h" />
+    <ClInclude Include="MRGLStaticHolder.h" />
     <ClInclude Include="MRMenu.h" />
     <ClInclude Include="MRMeshModifier.h" />
     <ClInclude Include="MRStatePluginAutoClose.h" />

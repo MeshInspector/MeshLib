@@ -1,4 +1,4 @@
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRCreateShader.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
@@ -11,9 +11,9 @@
 
 namespace
 {
-std::string getShaderName( MR::ShadersHolder::ShaderType type )
+std::string getShaderName( MR::GLStaticHolder::ShaderType type )
 {
-    const std::array<std::string, size_t( MR::ShadersHolder::Count )> names =
+    const std::array<std::string, size_t( MR::GLStaticHolder::Count )> names =
     {
         "Mesh shader",
         "Picker shader",
@@ -37,9 +37,9 @@ std::string getShaderName( MR::ShadersHolder::ShaderType type )
 namespace MR
 {
 
-unsigned ShadersHolder::getShaderId( ShaderType type )
+unsigned GLStaticHolder::getShaderId( ShaderType type )
 {
-    auto& instance = ShadersHolder::instance_();
+    auto& instance = GLStaticHolder::instance_();
     auto& id = instance.shadersIds_[type];
     if ( id == 0 )
     {
@@ -49,9 +49,9 @@ unsigned ShadersHolder::getShaderId( ShaderType type )
     return id;
 }
 
-void ShadersHolder::freeShader( ShaderType type )
+void GLStaticHolder::freeShader( ShaderType type )
 {
-    auto& instance = ShadersHolder::instance_();
+    auto& instance = GLStaticHolder::instance_();
     if ( instance.shadersIds_[type] == 0 )
         return;
 
@@ -59,33 +59,33 @@ void ShadersHolder::freeShader( ShaderType type )
     instance.shadersIds_[type] = 0;
 }
 
-void ShadersHolder::freeAllShaders()
+void GLStaticHolder::freeAllShaders()
 {
     for ( int i = 0; i < ShaderType::Count; ++i )
         freeShader( ShaderType( i ) );
 }
 
-ShadersHolder::ShadersHolder()
+GLStaticHolder::GLStaticHolder()
 {
     logger_ = Logger::instance().getSpdLogger();
     for ( int i = 0; i < ShaderType::Count; ++i )
         shadersIds_[i] = 0;
 }
 
-ShadersHolder::~ShadersHolder()
+GLStaticHolder::~GLStaticHolder()
 {
     for ( int i = 0; i < ShaderType::Count; ++i )
         if ( shadersIds_[i] != 0 )
             logger_->warn( "{} is not freed", getShaderName( ShaderType( i ) ) );
 }
 
-ShadersHolder& ShadersHolder::instance_()
+GLStaticHolder& GLStaticHolder::instance_()
 {
-    static ShadersHolder instance;
+    static GLStaticHolder instance;
     return instance;
 }
 
-void ShadersHolder::createShader_( ShaderType type )
+void GLStaticHolder::createShader_( ShaderType type )
 {
     std::string vertexShader;
     std::string fragmentShader;
@@ -1239,6 +1239,11 @@ void main(void)
         warns.push_back( 7050 );
 
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );
+}
+
+RenderObjectBuffer &GLStaticHolder::getStaticGLBuffer()
+{
+    return instance_().glBuffer_;
 }
 
 }

@@ -20,8 +20,6 @@ public:
 private:
     const ObjectLabel* objLabel_;
 
-    // memory buffer for objects that about to be loaded to GPU, shared among different data types
-    RenderObjectBuffer bufferObj_;
     int faceIndicesSize_{ 0 };
 
     RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();

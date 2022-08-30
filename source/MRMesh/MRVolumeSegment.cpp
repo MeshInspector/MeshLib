@@ -15,7 +15,7 @@ namespace MR
 tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
 {
     auto grid = simpleVolumeToDenseGrid( volumePart );
-    auto mesh = gridToMesh( grid, volumePart.voxelSize, 0.5f ).value(); // no callback so cannot b stopped
+    auto mesh = gridToMesh( grid, volumePart.voxelSize, 0.5f ).value(); // no callback so cannot be stopped
 
     auto minCorner = mult( Vector3f( shift ), volumePart.voxelSize );
     for ( auto& p : mesh.points )
@@ -66,12 +66,14 @@ std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( cons
     return { volumePart,volumePartMask,partBox.min };
 }
 
+// Mode of meshing
 enum class VolumeMaskMeshingMode
 {
-    Simple,
-    Smooth
+    Simple, // 1 inside, 0 outside, 0.5 iso
+    Smooth // 1 deep inside, (density - outsideAvgDensity)/(insideAvgDensity - outsideAvgDensity) on the edge, 0 - far outside, 0.5 iso
 };
 
+// changes volume part due to meshing mode
 void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, VolumeMaskMeshingMode mode )
 {
     if ( mode == VolumeMaskMeshingMode::Simple )

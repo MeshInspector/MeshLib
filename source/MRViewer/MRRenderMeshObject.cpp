@@ -352,9 +352,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceNormals.glSize() ), maxTexSize_ );
-        assert( res.x * res.y == faceNormals.glSize() );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, res.x, res.y, 0, GL_RGBA, GL_FLOAT, faceNormals.data() ) );
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, faceNormalsTextureSize_.x, faceNormalsTextureSize_.y, 0, GL_RGBA, GL_FLOAT, faceNormals.data() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
@@ -370,9 +368,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( int( faceSelection.glSize() ), maxTexSize_ );
-        assert( res.x * res.y == faceSelection.glSize() );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelection.data() ) );
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, faceSelectionTextureSize_.x, faceSelectionTextureSize_.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelection.data() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 

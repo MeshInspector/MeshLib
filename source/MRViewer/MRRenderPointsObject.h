@@ -22,7 +22,7 @@ private:
     // memory buffer for objects that about to be loaded to GPU, shared among different data types
     RenderObjectBuffer bufferObj_;
     int validIndicesSize_{ 0 };
-    int vertSelectionTextureSize_{ 0 };
+    Vector2i vertSelectionTextureSize_;
 
     RenderBufferRef<VertId> loadValidIndicesBuffer_();
     RenderBufferRef<unsigned> loadVertSelectionTextureBuffer_();
@@ -38,6 +38,8 @@ private:
     GlBuffer validIndicesBuffer_;
 
     GLuint vertSelectionTex_{ 0 };
+
+    int maxTexSize_{ 0 };
 
     void bindPoints_();
     void bindPointsPicker_();

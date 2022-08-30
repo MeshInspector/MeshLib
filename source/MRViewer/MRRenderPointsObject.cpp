@@ -155,10 +155,6 @@ void RenderPointsObject::bindPoints_()
     auto validIndices = loadValidIndicesBuffer_();
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );
 
-    int maxTexSize = 0;
-    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
-    assert( maxTexSize > 0 );
-
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, vertSelectionTex_ ) );
@@ -171,8 +167,7 @@ void RenderPointsObject::bindPoints_()
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 
-        auto res = calcTextureRes( vertSelectionTextureSize_, maxTexSize );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, res.x, res.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, vertSelectionTexture.data() ) );
+        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, vertSelectionTextureSize_.x, vertSelectionTextureSize_.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, vertSelectionTexture.data() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 
@@ -200,6 +195,10 @@ void RenderPointsObject::initBuffers_()
 
     GL_EXEC( glGenVertexArrays( 1, &pointsPickerArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
+
+    GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
+    assert( maxTexSize_ > 0 );
+
     dirty_ = DIRTY_ALL;
 }
 
@@ -247,16 +246,18 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     if ( !( dirty_ & DIRTY_SELECTION ) )
-        return bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_, false );
+        return bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
 
     const auto& points = objPoints_->pointCloud();
     const auto numV = points->validPoints.find_last() + 1;
-    vertSelectionTextureSize_ = numV / 32 + 1;
-    auto buffer = bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_ );
+    auto size = numV / 32 + 1;
+    vertSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
+    auto buffer = bufferObj_.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
     const auto& selection = objPoints_->getSelectedPoints().m_bits;
     const unsigned* selectionData = (unsigned*) selection.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, vertSelectionTextureSize_ ), [&]( const tbb::blocked_range<int>& range )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, buffer.size() ), [&]( const tbb::blocked_range<int>& range )
     {
         for ( int r = range.begin(); r < range.end(); ++r )
         {

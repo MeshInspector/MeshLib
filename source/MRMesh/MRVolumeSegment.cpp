@@ -11,6 +11,123 @@
 namespace MR
 {
 
+// creates mesh from simple volume as 0.5 iso-surface
+tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
+{
+    auto grid = simpleVolumeToDenseGrid( volumePart );
+    auto mesh = gridToMesh( grid, volumePart.voxelSize, 0.5f ).value(); // no callback so cannot be stopped
+
+    auto minCorner = mult( Vector3f( shift ), volumePart.voxelSize );
+    for ( auto& p : mesh.points )
+    {
+        p = p + minCorner;
+    }
+
+    if ( mesh.topology.numValidFaces() == 0 )
+        return tl::make_unexpected( "Failed to create mesh from mask" );
+
+    return mesh;
+}
+
+// returns block of volume and new mask in space of new block, and shift of block
+std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask, int expansion )
+{
+    assert( volume.grid() );
+    assert( mask.any() );
+
+    SimpleVolume volumePart;
+    volumePart.voxelSize = volume.voxelSize();
+    auto expandedMask = mask;
+    const auto& indexer = volume.getVolumeIndexer();
+    expandVoxelsMask( expandedMask, indexer, expansion );
+
+    Box3i partBox;
+    for ( auto voxelId : expandedMask )
+    {
+        auto pos = indexer.toPos( voxelId );
+        partBox.include( pos );
+    }
+
+    volumePart.dims = partBox.size() + Vector3i::diagonal( 1 );
+    const int newDimX = volumePart.dims.x;
+    const int newDimXY = newDimX * volumePart.dims.y;
+    volumePart.data.resize( newDimXY * volumePart.dims.z );
+
+    auto partIndexer = VolumeIndexer( volumePart.dims );
+    VoxelBitSet volumePartMask( volumePart.data.size() );
+    auto accessor = volume.grid()->getConstAccessor();
+    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    {
+        auto pos = partIndexer.toPos( i ) + partBox.min;
+        if ( mask.test( indexer.toVoxelId( pos ) ) )
+            volumePartMask.set( i );
+        volumePart.data[i] = accessor.getValue( { pos.x,pos.y,pos.z } );
+    }
+    return { volumePart,volumePartMask,partBox.min };
+}
+
+// Mode of meshing
+enum class VolumeMaskMeshingMode
+{
+    Simple, // 1 inside, 0 outside, 0.5 iso
+    Smooth // 1 deep inside, (density - outsideAvgDensity)/(insideAvgDensity - outsideAvgDensity) on the edge, 0 - far outside, 0.5 iso
+};
+
+// changes volume part due to meshing mode
+void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, VolumeMaskMeshingMode mode )
+{
+    if ( mode == VolumeMaskMeshingMode::Simple )
+    {
+        for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+        {
+            volumePart.data[i] = mask.test( i ) ? 1.0f : 0.0f;
+        }
+        return;
+    }
+    // else: mode == VolumeMaskMeshingMode::Smooth
+    double insideAvg = 0.0;
+    double outsideAvg = 0.0;
+    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    {
+        if ( mask.test( i ) )
+            insideAvg += volumePart.data[i];
+        else
+            outsideAvg += volumePart.data[i];
+    }
+    insideAvg /= double( mask.count() );
+    outsideAvg /= double( volumePart.data.size() - mask.count() );
+    auto range = float( insideAvg - outsideAvg );
+
+    auto partIndexer = VolumeIndexer( volumePart.dims );
+    auto smallExpMask = mask;
+    auto smallShrMask = mask;
+    expandVoxelsMask( smallExpMask, partIndexer, 3 );
+    shrinkVoxelsMask( smallShrMask, partIndexer, 3 );
+    for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
+    {
+        if ( smallShrMask.test( i ) )
+            volumePart.data[i] = 1.0f;
+        else if ( smallExpMask.test( i ) )
+            volumePart.data[i] = std::clamp( float( volumePart.data[i] - outsideAvg ) / range, 0.0f, 1.0f );
+        else
+            volumePart.data[i] = 0.0f;
+    }
+}
+
+tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask )
+{
+    if ( !volume.grid() )
+        return tl::make_unexpected( "Cannot create mesh from empty volume." );
+    if ( mask.none() )
+        return tl::make_unexpected( "Cannot create mesh from empty mask." );
+
+    auto [volumePart, partMask, minVoxel] = simpleVolumeFromVoxelsMask( volume, mask, 25 );
+
+    prepareVolumePart( volumePart, partMask, VolumeMaskMeshingMode::Smooth );
+
+    return meshFromSimpleVolume( volumePart, minVoxel );
+}
+
 tl::expected<MR::Mesh, std::string> segmentVolume( const ObjectVoxels& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                    const VolumeSegmentationParameters& params )
 {
@@ -94,38 +211,10 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
 
 tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
 {
-    auto newDims = volumePart_.dims;
-    auto newDimXY = newDims.x * newDims.y;
-    auto CoordToNewVoxelId = [&] ( const Vector3i& coord )->VoxelId
-    {
-        return VoxelId( coord.x + coord.y * newDims.x + coord.z * newDimXY );
-    };
-
     auto segmentBlockCopy = volumePart_;
-    // Prepare block for meshing
-    for ( int z = 0; z < newDims.z; ++z )
-        for ( int y = 0; y < newDims.y; ++y )
-            for ( int x = 0; x < newDims.x; ++x )
-            {
-                auto index = CoordToNewVoxelId( Vector3i( x, y, z ) );
-                segmentBlockCopy.data[index] = segmentation.test( index ) ? 1.0f : 0.0f;
-            }
-
-
-    auto voxelSize = volume_.voxelSize();
-    auto grid = simpleVolumeToDenseGrid( segmentBlockCopy );
-    auto mesh = gridToMesh( grid, voxelSize, 0.5f ).value(); // no callback so cannot b stopped
-
-
-    for ( auto& p : mesh.points )
-    {
-        p = p + mult( Vector3f( minVoxel_ ), voxelSize );
-    }
-
-    if ( mesh.topology.numValidFaces() == 0 )
-        return tl::make_unexpected( "Failed to create segmented mesh" );
-
-    return mesh;
+    segmentBlockCopy.voxelSize = volume_.voxelSize();
+    prepareVolumePart( segmentBlockCopy, segmentation, VolumeMaskMeshingMode::Simple );
+    return meshFromSimpleVolume( segmentBlockCopy, minVoxel_ );
 }
 
 const MR::Vector3i& VolumeSegmenter::getVolumePartDimensions() const

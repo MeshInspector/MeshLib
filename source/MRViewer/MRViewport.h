@@ -344,22 +344,18 @@ public:
     {
         Visible, // fit all visible objects
         SelectedPrimitives, // fit only selected primitives
-        SelectedObjects // fit only selected objects
+        SelectedObjects, // fit only selected objects
+        CustomObjectsList // fit only given objects (need additional objects list)
     };
     struct FitDataParams
     {
-        float factor{ 1.f }; // part of the screen for scene location
+        float factor{ 0.9f }; // part of the screen for scene location
         // snapView - to snap camera angle to closest canonical quaternion
         // orthographic view: camera moves a bit, fit FOV by the whole width or height
         // perspective view: camera is static, fit FOV to closest border.
         bool snapView{ false };
         FitMode mode{ FitMode::Visible }; // fit mode
-
-        FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible ) :
-            factor( factor_ ),
-            snapView( snapView_ ),
-            mode( mode_ )
-        {};
+        std::vector<std::shared_ptr<VisualObject>> objsList;
     };
     // call fitData and change FOV to match the screen size then
     MRVIEWER_API void preciseFitDataToScreenBorder( const FitDataParams& params = {} );
@@ -470,8 +466,8 @@ private:
         CameraPerspective   // (x/z, y/z, z), where (x, y, z) in camera space
     };
 
-    // finds the bounding box of all/selected visible objects in given space
-    Box3f calcBox_( FitMode mode, Space space ) const;
+    // finds the bounding box of given visible objects in given space
+    Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>> objs, Space space, bool selectedPrimitives = false ) const;
 
     // find maximum FOV angle allows to keep scene inside the screen
     // returns true if all models are inside the projection volume

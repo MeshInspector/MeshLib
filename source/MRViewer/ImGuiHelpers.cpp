@@ -392,11 +392,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PushFont( iconsFont );
     }
 
-    auto availWidth = ImGui::GetContentRegionAvail().x;
+    auto availWidth = window->Rect().GetWidth();
+    //auto availHeight = window->Rect().GetHeight();
 
     const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
     const float borderSize = style.WindowBorderSize * scaling;
-    const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + availWidth + style.WindowPadding.x - borderSize, pos.y + buttonSize - borderSize } );
+    const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + availWidth - borderSize, pos.y + buttonSize - borderSize } );
     
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
@@ -437,7 +438,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     ImGui::SameLine();    
     ImGui::SetNextItemWidth( buttonSize );    
-    ImGui::SetCursorPosX( availWidth + style.WindowPadding.x - 2 * borderSize - buttonSize );
+    ImGui::SetCursorPosX( availWidth - buttonSize );
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 1.0f * scaling );
     if ( ImGui::Button( "\xef\x80\x8d" ) ) //close button
@@ -462,7 +463,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
 
         //ImGui doesn't draw bottom border if window is collapsed, so add it manually
         window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
-        window->DrawList->AddLine( { pos.x, pos.y + buttonSize - borderSize }, { pos.x + availWidth, pos.y + buttonSize - borderSize }, borderColor, borderSize );
+        window->DrawList->AddLine( { pos.x, pos.y + buttonSize - borderSize }, { pos.x + width, pos.y + buttonSize - borderSize }, borderColor, borderSize );
         window->DrawList->PopClipRect();
 
         ImGui::End();
@@ -472,7 +473,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::PopStyleColor( 2 );
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
-    const auto outerSize = ( height == 0.0f ) ? ImVec2{ 0, 0 } : ImVec2{ availWidth - style.ScrollbarSize, height - 2.0f * style.WindowPadding.y - 2.0f * style.FramePadding.y - ImGui::GetTextLineHeight() };
+    const auto outerSize = ( height == 0.0f ) ? ImVec2{ -1, -1 } : ImVec2{ -1, -1};
 
     ImGui::BeginTable( "ContentTable", 1, tableFlags, outerSize );
     ImGui::TableNextColumn();    

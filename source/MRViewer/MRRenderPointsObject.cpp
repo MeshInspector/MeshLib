@@ -257,7 +257,7 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
     const auto& selection = objPoints_->getSelectedPoints().m_bits;
     const unsigned* selectionData = (unsigned*) selection.data();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, buffer.size() ), [&]( const tbb::blocked_range<int>& range )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)buffer.size() ), [&]( const tbb::blocked_range<int>& range )
     {
         for ( int r = range.begin(); r < range.end(); ++r )
         {

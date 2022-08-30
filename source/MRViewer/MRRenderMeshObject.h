@@ -23,24 +23,27 @@ private:
 
     // memory buffer for objects that about to be loaded to GPU, shared among different data types
     RenderObjectBuffer bufferObj_;
+    int vertPosSize_{ 0 };
+    int vertNormalsSize_{ 0 };
+    int vertColorsSize_{ 0 };
+    int vertUVSize_{ 0 };
+    int faceIndicesSize_{ 0 };
+    int edgeIndicesSize_{ 0 };
+    Vector2i faceSelectionTextureSize_;
+    Vector2i faceNormalsTextureSize_;
+    int borderHighlightPointsSize_{ 0 };
+    int selectedEdgePointsSize_{ 0 };
 
-    using DirtyFlag = uint32_t;
-
-    std::array<std::size_t, 8 * sizeof( DirtyFlag )> bufferGLSize_; // in bits
-    template <DirtyFlag>
-    std::size_t& getGLSize_();
-    template <DirtyFlag>
-    std::size_t getGLSize_() const;
-
-    // classes that helps to deduce data type from dirty flag value
-    template <DirtyFlag dirtyFlag>
-    struct RenderBufferType;
-    template <DirtyFlag dirtyFlag>
-    using BufferRef = RenderBufferRef<typename RenderBufferType<dirtyFlag>::type>;
-    template <DirtyFlag dirtyFlag>
-    BufferRef<dirtyFlag> prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset = dirtyFlag );
-    template <DirtyFlag dirtyFlag>
-    BufferRef<dirtyFlag> loadBuffer_();
+    RenderBufferRef<Vector3f> loadVertPosBuffer_();
+    RenderBufferRef<Vector3f> loadVertNormalsBuffer_();
+    RenderBufferRef<Color> loadVertColorsBuffer_();
+    RenderBufferRef<UVCoord> loadVertUVBuffer_();
+    RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();
+    RenderBufferRef<Vector2i> loadEdgeIndicesBuffer_();
+    RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
+    RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
+    RenderBufferRef<Vector3f> loadBorderHighlightPointsBuffer_();
+    RenderBufferRef<Vector3f> loadSelectedEdgePointsBuffer_();
 
     typedef unsigned int GLuint;
 
@@ -70,8 +73,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    template <DirtyFlag>
-    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color );
+    void renderEdges_( const RenderParams& parameters, GLuint vao, GLuint vbo, const Color& color, uint32_t dirtyFlag );
 
     void renderMeshEdges_( const RenderParams& parameters );
 
@@ -89,9 +91,11 @@ private:
     void update_( ViewportId id );
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    DirtyFlag dirty_;
+    uint32_t dirty_{ 0 };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     bool normalsBound_{ false };
+    // ...
+    bool dirtyEdges_{ false };
 };
 
 }

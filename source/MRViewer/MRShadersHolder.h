@@ -39,7 +39,7 @@ public:
     static void freeShader( ShaderType type );
     // Free all shaders from GL
     static void freeAllShaders();
-    // ...
+    // Memory buffer for objects that about to be loaded to GPU, shared among different data types
     static RenderObjectBuffer& getStaticGLBuffer();
 private:
     ShadersHolder();

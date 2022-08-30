@@ -1,10 +1,8 @@
 #include "MRRenderMeshObject.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRTimer.h"
-#include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRMesh/MRPlane3.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRShadersHolder.h"
@@ -189,6 +187,8 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     case DIRTY_EDGES_SELECTION:
         buffer = loadSelectedEdgePointsBuffer_();
         break;
+    default:
+        break;
     }
     if ( !buffer.glSize() )
         return;
@@ -218,7 +218,7 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     // positions
     GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, vbo ) );
-    GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
+    GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, nullptr ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
     if ( buffer.dirty() )
     {
@@ -269,7 +269,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, int( 2 * edgeIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, int( 2 * edgeIndicesSize_ ), GL_UNSIGNED_INT, nullptr ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort )
@@ -415,7 +415,7 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     if ( !picker )
         getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * faceIndicesSize_ ), GL_UNSIGNED_INT, nullptr ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -774,7 +774,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
     auto boundary = topology.findBoundary();
     borderHighlightPointsSize_ = 0;
     for ( const auto& b : boundary )
-        borderHighlightPointsSize_ += 2 * b.size();
+        borderHighlightPointsSize_ += 2 * (int)b.size();
     auto buffer = bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_ );
 
     size_t cur = 0;
@@ -802,7 +802,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
     for ( auto e : selectedEdges )
         if ( !topology.hasEdge( e ) )
             selectedEdges.reset( e );
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * selectedEdges.count() );
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * (int)selectedEdges.count() );
 
     size_t cur = 0;
     for ( auto e : selectedEdges )

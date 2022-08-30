@@ -91,7 +91,7 @@ private:
     void update_( ViewportId id );
 
     // Marks dirty buffers that need to be uploaded to OpenGL
-    uint32_t dirty_;
+    uint32_t dirty_{ 0 };
     // this is needed to fix case of missing normals bind (can happen if `renderPicker` before first `render` with flat shading)
     bool normalsBound_{ false };
     // ...

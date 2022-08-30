@@ -14,6 +14,8 @@ template <typename T>
 class RenderBufferRef
 {
 public:
+    RenderBufferRef() = default;
+
     RenderBufferRef( T* data, std::size_t glSize, bool dirty )
         : data_( data )
         , glSize_( glSize )
@@ -51,9 +53,9 @@ public:
     }
 
 private:
-    T* data_;
-    std::size_t glSize_;
-    bool dirty_;
+    T* data_{ nullptr };
+    std::size_t glSize_{ 0 };
+    bool dirty_{ false };
 };
 
 // provides shared buffer for loading different types of data to GL memory

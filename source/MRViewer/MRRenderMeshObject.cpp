@@ -13,33 +13,8 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
-#define DIRTY_EDGE 0x40000
-static_assert( DIRTY_EDGE == MR::DIRTY_ALL + 1 );
-
-namespace
-{
-constexpr std::size_t highestBit( uint32_t v )
-{
-    std::size_t i;
-    for ( i = 0; v != 1; i++ )
-        v >>= 1;
-    return i;
-}
-}
-
 namespace MR
 {
-
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_POSITION> { using type = Vector3f; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_VERTS_RENDER_NORMAL> { using type = Vector3f; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_FACES_RENDER_NORMAL> { using type = Vector4f; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_VERTS_COLORMAP> { using type = Color; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_FACE> { using type = Vector3i; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_EDGE> { using type = Vector2i; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_UV> { using type = UVCoord; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_SELECTION> { using type = unsigned; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_BORDER_LINES> { using type = Vector3f; };
-template<> struct RenderMeshObject::RenderBufferType<DIRTY_EDGES_SELECTION> { using type = Vector3f; };
 
 RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
 {
@@ -154,9 +129,9 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_<DIRTY_BORDER_LINES>( renderParams, borderArrayObjId_, borderBufferObjId_, objMesh_->getBordersColor() );
+        renderEdges_( renderParams, borderArrayObjId_, borderBufferObjId_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_<DIRTY_EDGES_SELECTION>( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, objMesh_->getSelectedEdgesColor() );
+        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBufferObjId_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
 
     if ( renderParams.alphaSort )
     {
@@ -203,11 +178,19 @@ size_t RenderMeshObject::heapBytes() const
     return bufferObj_.heapBytes();
 }
 
-template <RenderMeshObject::DirtyFlag dirtyFlag>
-void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar )
+void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GLuint vbo, const Color& colorChar, uint32_t dirtyFlag )
 {
-    auto count = getGLSize_<dirtyFlag>();
-    if ( !count )
+    RenderBufferRef<Vector3f> buffer;
+    switch ( dirtyFlag )
+    {
+    case DIRTY_BORDER_LINES:
+        buffer = loadBorderHighlightPointsBuffer_();
+        break;
+    case DIRTY_EDGES_SELECTION:
+        buffer = loadSelectedEdgePointsBuffer_();
+        break;
+    }
+    if ( !buffer.glSize() )
         return;
 
     // Send lines data to GL, install lines properties
@@ -237,18 +220,18 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, vbo ) );
     GL_EXEC( glVertexAttribPointer( positionId, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
-    auto buffer = loadBuffer_<dirtyFlag>();
     if ( buffer.dirty() )
     {
         GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( Vector3f ) * buffer.size(), buffer.data(), GL_DYNAMIC_DRAW ));
+        dirty_ &= ~dirtyFlag;
     }
     GL_EXEC( glBindVertexArray( vao ) );
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, count / 2 );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, buffer.glSize() / 2 );
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
-    GL_EXEC( glDrawArrays( GL_LINES, 0, int( count ) ) );
+    GL_EXEC( glDrawArrays( GL_LINES, 0, int( buffer.glSize() ) ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
@@ -276,16 +259,17 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
         color[0], color[1], color[2], color[3] ) );
 
     // positions
-    auto positions = loadBuffer_<DIRTY_POSITION>();
+    auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
-    auto edges = loadBuffer_<DIRTY_EDGE>();
+    auto edges = loadEdgeIndicesBuffer_();
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
+    dirtyEdges_ = false;
 
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, getGLSize_<DIRTY_EDGE>() );
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
-    GL_EXEC( glDrawElements( GL_LINES, int( 2 * getGLSize_<DIRTY_EDGE>() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_LINES, int( 2 * edgeIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort )
@@ -294,19 +278,19 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
-    auto positions = loadBuffer_<DIRTY_POSITION>();
+    auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
-    auto normals = loadBuffer_<DIRTY_VERTS_RENDER_NORMAL>();
+    auto normals = loadVertNormalsBuffer_();
     bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
 
-    auto colormaps = loadBuffer_<DIRTY_VERTS_COLORMAP>();
+    auto colormaps = loadVertColorsBuffer_();
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, colormaps, 4, colormaps.dirty(), colormaps.glSize() != 0 );
 
-    auto uvs = loadBuffer_<DIRTY_UV>();
+    auto uvs = loadVertUVBuffer_();
     bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.glSize() != 0 );
 
-    auto faces = loadBuffer_<DIRTY_FACE>();
+    auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
@@ -357,7 +341,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceColors" ), 1 ) );
 
     // Normals
-    auto faceNormals = loadBuffer_<DIRTY_FACES_RENDER_NORMAL>();
+    auto faceNormals = loadFaceNormalsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, facesNormalsTex_ ) );
     if ( faceNormals.dirty() )
@@ -375,7 +359,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
     // Selection
-    auto faceSelection = loadBuffer_<DIRTY_SELECTION>();
+    auto faceSelection = loadFaceSelectionTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceSelectionTex_ ) );
     if ( faceSelection.dirty() )
@@ -403,10 +387,10 @@ void RenderMeshObject::bindMeshPicker_()
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
-    auto positions = loadBuffer_<DIRTY_POSITION>();
+    auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
-    auto faces = loadBuffer_<DIRTY_FACE>();
+    auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     dirty_ &= ~DIRTY_POSITION;
@@ -433,9 +417,9 @@ void RenderMeshObject::drawMesh_( bool /*solid*/, ViewportId viewportId, bool pi
     }
 
     if ( !picker )
-        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, getGLSize_<DIRTY_FACE>() );
+        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
-    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * getGLSize_<DIRTY_FACE>() ), GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, int( 3 * faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 
     GL_EXEC( glDisable( GL_POLYGON_OFFSET_FILL ) );
 }
@@ -467,8 +451,6 @@ void RenderMeshObject::initBuffers_()
 
     dirty_ = DIRTY_ALL;
     normalsBound_ = false;
-
-    bufferGLSize_.fill( 0 );
 }
 
 void RenderMeshObject::freeBuffers_()
@@ -536,281 +518,305 @@ void RenderMeshObject::update_( ViewportId id )
         dirty_ &= ~DIRTY_VERTS_COLORMAP;
 
     if ( dirty_ & DIRTY_FACE )
-        dirty_ |= DIRTY_EDGE;
+        dirtyEdges_ = true;
 
     objMesh_->resetDirtyExeptMask( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
 }
 
-template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::prepareBuffer_( std::size_t glSize, DirtyFlag flagToReset )
+RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
-    dirty_ &= ~flagToReset;
-    getGLSize_<dirtyFlag>() = glSize;
-    return bufferObj_.prepareBuffer<typename RenderBufferType<dirtyFlag>::type>( glSize );
-}
+    if ( !( dirty_ & DIRTY_POSITION ) )
+        return bufferObj_.prepareBuffer<Vector3f>( vertPosSize_, false );
 
-template <RenderMeshObject::DirtyFlag dirtyFlag>
-RenderMeshObject::BufferRef<dirtyFlag> RenderMeshObject::loadBuffer_()
-{
-    if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
-    {
-        // bufferObj_ should be valid no matter what normals we use
-        if ( !( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) && !( dirty_ & DIRTY_CORNERS_RENDER_NORMAL ) )
-            return { nullptr, getGLSize_<dirtyFlag>(), false };
-    }
-    else
-    {
-        if ( !( dirty_ & dirtyFlag ) )
-            return { nullptr, getGLSize_<dirtyFlag>(), false };
-    }
+    MR_NAMED_TIMER( "vertbased_dirty_positions" );
 
     const auto& mesh = objMesh_->mesh();
-    auto numF = mesh->topology.lastValidFace() + 1;
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
 
-    if constexpr ( dirtyFlag == DIRTY_POSITION )
+    BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
     {
-        MR_NAMED_TIMER( "vertbased_dirty_positions" );
+        auto ind = 3 * f;
+        Vector3f v[3];
+        mesh->getTriPoints( f, v[0], v[1], v[2] );
+        for ( int i = 0; i < 3; ++i )
+            buffer[ind + i] = v[i];
+    } );
 
-        auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
+    return buffer;
+}
 
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            Vector3f v[3];
-            mesh->getTriPoints( f, v[0], v[1], v[2] );
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = v[i];
-        } );
+RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
+{
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
 
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_VERTS_RENDER_NORMAL )
+    if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
     {
-        if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
-        {
-            auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF, DIRTY_VERTS_RENDER_NORMAL );
+        MR_NAMED_TIMER( "dirty_vertices_normals" )
 
-            MR_NAMED_TIMER( "dirty_vertices_normals" )
+        auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-            const auto &vertsNormals = objMesh_->getVertsNormals();
-            BitSetParallelFor( mesh->topology.getValidFaces(), [&]( FaceId f )
-            {
-                auto ind = 3 * f;
-                VertId v[3];
-                mesh->topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                {
-                    const auto &norm = vertsNormals[v[i]];
-                    buffer[ind + i] = norm;
-                }
-            } );
-
-            return buffer;
-        }
-        else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
-        {
-            MR_NAMED_TIMER( "dirty_corners_normals" )
-
-            auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF, DIRTY_CORNERS_RENDER_NORMAL );
-
-            const auto& creases = objMesh_->creases();
-            const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-            {
-                auto ind = 3 * f;
-                const auto& cornerN = cornerNormals[f];
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
-            } );
-
-            return buffer;
-        }
-        else
-        {
-            assert( false );
-            return { nullptr, 0, false };
-        }
-    }
-    else if constexpr ( dirtyFlag == DIRTY_FACES_RENDER_NORMAL )
-    {
-        MR_NAMED_TIMER( "dirty_faces_normals" )
-
-        auto res = calcTextureRes( numF, maxTexSize_ );
-        assert( res.x * res.y >= numF );
-        auto buffer = prepareBuffer_<dirtyFlag>( res.x * res.y );
-
-        computePerFaceNormals4( *mesh, buffer.data(), buffer.size() );
-
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_VERTS_COLORMAP )
-    {
-        MR_NAMED_TIMER( "vert_colormap" );
-
-        auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
-
-        const auto& vertsColorMap = objMesh_->getVertsColorMap();
-        BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
+        const auto& vertNormals = objMesh_->getVertsNormals();
+        BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
         {
             auto ind = 3 * f;
             VertId v[3];
-            mesh->topology.getTriVerts( f, v );
+            topology.getTriVerts( f, v );
             for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = vertsColorMap[v[i]];
-        } );
-
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_FACE )
-    {
-        auto buffer = prepareBuffer_<dirtyFlag>( numF );
-
-        const auto& edgePerFace = mesh->topology.edgePerFace();
-        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            if ( f >= numF )
-                return;
-            if ( !edgePerFace[f].valid() )
-                buffer[f] = Vector3i();
-            else
-                buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
-        } );
-
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_EDGE )
-    {
-        auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
-
-        const auto& edgePerFace = mesh->topology.edgePerFace();
-        BitSetParallelForAll( mesh->topology.getValidFaces(), [&] ( FaceId f )
-        {
-            auto ind = 3 * f;
-            if ( f >= numF )
-                return;
-            if ( !edgePerFace[f].valid() )
             {
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = Vector2i();
-            }
-            else
-            {
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+                const auto &norm = vertNormals[v[i]];
+                buffer[ind + i] = norm;
             }
         } );
 
         return buffer;
     }
-    else if constexpr ( dirtyFlag == DIRTY_UV )
+    else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
     {
-        auto numV = mesh->topology.lastValidVert() + 1;
-        const auto& uvCoords = objMesh_->getUVCoords();
-        if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
-        {
-            assert( uvCoords.size() >= numV );
-        }
-        if ( uvCoords.size() >= numV )
-        {
-            auto buffer = prepareBuffer_<dirtyFlag>( 3 * numF );
+        MR_NAMED_TIMER( "dirty_corners_normals" )
 
-            BitSetParallelFor( mesh->topology.getValidFaces(), [&] ( FaceId f )
-            {
-                auto ind = 3 * f;
-                VertId v[3];
-                mesh->topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = uvCoords[v[i]];
-            } );
+        auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-            return buffer;
+        const auto& creases = objMesh_->creases();
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+        BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            const auto& cornerN = cornerNormals[f];
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = cornerN[i];
+        } );
+
+        return buffer;
+    }
+    else
+    {
+        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+    }
+}
+
+RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
+{
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
+        return bufferObj_.prepareBuffer<Color>( vertColorsSize_, false );
+
+    MR_NAMED_TIMER( "vert_colormap" );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
+
+    const auto& vertsColorMap = objMesh_->getVertsColorMap();
+    BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        VertId v[3];
+        topology.getTriVerts( f, v );
+        for ( int i = 0; i < 3; ++i )
+            buffer[ind + i] = vertsColorMap[v[i]];
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
+{
+    if ( !( dirty_ & DIRTY_UV ) )
+        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto numV = topology.lastValidVert() + 1;
+
+    const auto& uvCoords = objMesh_->getUVCoords();
+    if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
+    {
+        assert( uvCoords.size() >= numV );
+    }
+    if ( uvCoords.size() >= numV )
+    {
+        auto buffer = bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
+
+        BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+        {
+            auto ind = 3 * f;
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = uvCoords[v[i]];
+        } );
+
+        return buffer;
+    }
+    else
+    {
+        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
+    }
+}
+
+RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
+{
+    if ( !( dirty_ & DIRTY_FACE ) )
+        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+
+    const auto& edgePerFace = topology.edgePerFace();
+    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        if ( f >= numF )
+            return;
+        if ( !edgePerFace[f].valid() )
+            buffer[f] = Vector3i();
+        else
+            buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
+{
+    if ( !dirtyEdges_ )
+        return bufferObj_.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+    auto buffer = bufferObj_.prepareBuffer<Vector2i>( edgeIndicesSize_ = 3 * numF );
+
+    const auto& edgePerFace = topology.edgePerFace();
+    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    {
+        auto ind = 3 * f;
+        if ( f >= numF )
+            return;
+        if ( !edgePerFace[f].valid() )
+        {
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = Vector2i();
         }
         else
         {
-            return prepareBuffer_<dirtyFlag>( 0 );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
         }
-    }
-    else if constexpr ( dirtyFlag == DIRTY_SELECTION )
-    {
-        auto size = numF / 32 + 1;
-        auto res = calcTextureRes( size, maxTexSize_ );
-        assert( res.x * res.y >= size );
-        auto buffer = prepareBuffer_<dirtyFlag>( res.x * res.y );
+    } );
 
-        const auto& selection = objMesh_->getSelectedFaces().m_bits;
-        const unsigned* selectionData = ( unsigned* )selection.data();
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )getGLSize_<dirtyFlag>() ), [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int r = range.begin(); r < range.end(); ++r )
-            {
-                auto& block = buffer[r];
-                if ( r / 2 >= selection.size() )
-                {
-                    block = 0;
-                    continue;
-                }
-                block = selectionData[r];
-            }
-        } );
-
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_BORDER_LINES )
-    {
-        auto boundary = mesh->topology.findBoundary();
-        size_t size = 0;
-        for ( const auto& b : boundary )
-            size += 2 * b.size();
-        auto buffer = prepareBuffer_<dirtyFlag>( size );
-
-        size_t cur = 0;
-        for ( auto& b : boundary )
-        {
-            for ( auto& e : b )
-            {
-                buffer[cur++] = mesh->points[mesh->topology.org( e )];
-                buffer[cur++] = mesh->points[mesh->topology.dest( e )];
-            }
-        }
-        assert( cur == getGLSize_<dirtyFlag>() );
-
-        return buffer;
-    }
-    else if constexpr ( dirtyFlag == DIRTY_EDGES_SELECTION )
-    {
-        auto selectedEdges = objMesh_->getSelectedEdges();
-        for ( auto e : selectedEdges )
-            if ( !mesh->topology.hasEdge( e ) )
-                selectedEdges.reset( e );
-        auto buffer = prepareBuffer_<dirtyFlag>( 2 * selectedEdges.count() );
-
-        size_t cur = 0;
-        for ( auto e : selectedEdges )
-        {
-            buffer[cur++] = mesh->orgPnt( e );
-            buffer[cur++] = mesh->destPnt( e );
-        }
-        assert( cur == getGLSize_<dirtyFlag>() );
-
-        return buffer;
-    }
+    return buffer;
 }
 
-template<RenderMeshObject::DirtyFlag dirtyFlag>
-std::size_t &RenderMeshObject::getGLSize_()
+RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
-    constexpr auto i = highestBit( dirtyFlag );
-    assert( dirtyFlag == 1 << i );
-    return bufferGLSize_[i];
+    if ( !( dirty_ & DIRTY_SELECTION ) )
+        return bufferObj_.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+
+    auto size = numF / 32 + 1;
+    faceSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y >= size );
+    auto buffer = bufferObj_.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y );
+
+    const auto& selection = objMesh_->getSelectedFaces().m_bits;
+    const unsigned* selectionData = ( unsigned* )selection.data();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
+        {
+            auto& block = buffer[r];
+            if ( r / 2 >= selection.size() )
+            {
+                block = 0;
+                continue;
+            }
+            block = selectionData[r];
+        }
+    } );
+
+    return buffer;
 }
 
-template<RenderMeshObject::DirtyFlag dirtyFlag>
-std::size_t RenderMeshObject::getGLSize_() const
+RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
-    constexpr auto i = highestBit( dirtyFlag );
-    assert( dirtyFlag == 1 << i );
-    return bufferGLSize_[i];
+    if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) )
+        return bufferObj_.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
+
+    MR_NAMED_TIMER( "dirty_faces_normals" )
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+
+    faceNormalsTextureSize_ = calcTextureRes( numF, maxTexSize_ );
+    assert( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y >= numF );
+    auto buffer = bufferObj_.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y );
+
+    computePerFaceNormals4( *mesh, buffer.data(), buffer.size() );
+
+    return buffer;
+}
+
+RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
+{
+    if ( !( dirty_ & DIRTY_BORDER_LINES ) )
+        return bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto boundary = topology.findBoundary();
+    borderHighlightPointsSize_ = 0;
+    for ( const auto& b : boundary )
+        borderHighlightPointsSize_ += 2 * b.size();
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( borderHighlightPointsSize_ );
+
+    size_t cur = 0;
+    for ( auto& b : boundary )
+    {
+        for ( auto& e : b )
+        {
+            buffer[cur++] = mesh->points[mesh->topology.org( e )];
+            buffer[cur++] = mesh->points[mesh->topology.dest( e )];
+        }
+    }
+    assert( cur == buffer.size() );
+
+    return buffer;
+}
+
+RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
+{
+    if ( !( dirty_ & DIRTY_EDGES_SELECTION ) )
+        return bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto selectedEdges = objMesh_->getSelectedEdges();
+    for ( auto e : selectedEdges )
+        if ( !topology.hasEdge( e ) )
+            selectedEdges.reset( e );
+    auto buffer = bufferObj_.prepareBuffer<Vector3f>( selectedEdgePointsSize_ = 2 * selectedEdges.count() );
+
+    size_t cur = 0;
+    for ( auto e : selectedEdges )
+    {
+        buffer[cur++] = mesh->orgPnt( e );
+        buffer[cur++] = mesh->destPnt( e );
+    }
+    assert( cur == buffer.size() );
+
+    return buffer;
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )

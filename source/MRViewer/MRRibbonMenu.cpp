@@ -145,7 +145,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     fontManager_.initFontManagerInstance( &fontManager_ );
 
     buttonDrawer_.setMenu( this );
-    buttonDrawer_.setFontMenager( &fontManager_ );
     buttonDrawer_.setShortcutManager( getShortcutManager().get() );
     buttonDrawer_.setScaling( menu_scaling() );
     buttonDrawer_.setOnPressAction( [&] ( std::shared_ptr<RibbonMenuItem> item, bool available )

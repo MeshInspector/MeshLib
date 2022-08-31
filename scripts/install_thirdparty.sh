@@ -12,6 +12,8 @@ if [ "$MR_STATE" != "DOCKER_BUILD" ]; then
  if ! [[ $REPLY =~ ^[Yy]$ ]]; then
   exit 0
  fi
+else
+  MR_THIRDPARTY_DIR="."
 fi
 
 #install MR requirements

@@ -55,6 +55,6 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN sudo ./scripts/install_thirdparty.sh && \
+RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

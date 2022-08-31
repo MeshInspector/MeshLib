@@ -142,7 +142,20 @@ jobs:
           name: Distributives
           path: meshlib-${{matrix.os}}-dev.deb
           retention-days: 1
-          
+
+      - name: Create and fix Wheel
+        run: |
+          python3.8 -m pip install --upgrade pip
+          python3.8 -m venv ./env3.8
+          source ./env3.8/bin/activate
+          ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
+          deactivate
+
+      - name: Upload Wheel
+        run: |
+          pip install twine
+          twine upload --repository-url https://test.pypi.org/legacy/ ./scripts/wheel/meshlib/wheelhouse/*  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
+
   update-rpm-version:
     if: ${{ github.event_name == 'push' }}
     timeout-minutes: 10

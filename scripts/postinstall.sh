@@ -9,7 +9,7 @@ set -eo pipefail
 . /etc/lsb-release
 UBUNTU_MAJOR_VERSION=${DISTRIB_RELEASE%.*}
 
-PYTHON_VERSION="python3.9"
+PYTHON_VERSION="python3.8"
 if [ "$UBUNTU_MAJOR_VERSION" == "22" ]; then
   PYTHON_VERSION="python3.10"
 fi

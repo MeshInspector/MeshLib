@@ -139,8 +139,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         if ( ribbonMenu_ )
         {
-            RibbonButtonDrawer::GradientCheckbox( "Make visible on select", std::bind(&RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
-                             std::bind(&RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1) );
+            using namespace std::placeholders;
+            RibbonButtonDrawer::GradientCheckbox( "Make visible on select",
+                                                  std::bind( &RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, _1 ) );
+            RibbonButtonDrawer::GradientCheckbox( "Deselect on hide",
+                                                  std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, _1 ) );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );

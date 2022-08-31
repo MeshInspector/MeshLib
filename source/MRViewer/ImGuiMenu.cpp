@@ -875,8 +875,12 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
-            RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible );
-            object.setVisible( isVisible, viewer->viewport().id );
+            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
+            {
+                object.setVisible( isVisible, viewer->viewport().id );
+                if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
+                    object.select( false );
+            }
             ImGui::SameLine();
         }
         {
@@ -1195,7 +1199,14 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     if ( !selectedVisualObjs.empty() )
     {
         const auto& viewportid = viewer->viewport().id;
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Visibility", VisualizeMaskType::Visibility, viewportid );
+        if ( make_visualize_checkbox( selectedVisualObjs, "Visibility", VisualizeMaskType::Visibility, viewportid ) )
+        {
+            someChanges = true;
+            if ( deselectNewHiddenObjects_ )
+                for ( const auto& visObj : selectedVisualObjs )
+                    if ( !visObj->isVisible( viewer->getPresentViewports() ) )
+                        visObj->select( false );
+        }
     }
 
     bool hasLocked = false, hasUnlocked = false;

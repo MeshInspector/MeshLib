@@ -4,9 +4,17 @@ on:
     secrets:
       BUILD_MACHINE_TOKEN:
         required: true
+    inputs:
+      version-namespace:
+        required: false
+        type: string
+        default: ''
     outputs:
+      version:
+        description: "Version (with namespace)"
+        value: ${{ jobs.versioning-and-release-url.outputs.version }}
       version_tag:
-        description: "Version tag"
+        description: "Version tag (without namespace)"
         value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
       upload_url:
         description: "URL to draft release"
@@ -17,7 +25,8 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-20.04
     outputs:
-      version_tag: ${{ steps.version.outputs.version}}
+      version_tag: ${{ steps.version-tag.outputs.version_tag }}
+      version: ${{ steps.version.outputs.version }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Checkout
@@ -32,6 +41,14 @@ jobs:
           format: "v${major}.${minor}.${patch}.${increment}"
           short_tags: false
           bump_each_commit: false
+          namespace: ${{inputs.version-namespace}}
+
+      - name: Set version tag
+        id: version-tag
+        run: |
+          version_tag=${{steps.version.outputs.version}}
+          version_tag=${version_tag%%-*}
+          echo "::set-output name=version_tag::${version_tag}"
 
       - name: Create Release
         id: create_release

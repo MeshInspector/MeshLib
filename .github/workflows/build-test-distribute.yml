@@ -215,7 +215,7 @@ jobs:
 
   delete-artifacts:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [upload-distributions]
     if: always()
     steps:

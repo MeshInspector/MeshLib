@@ -30,7 +30,7 @@ public:
     /// get font by font type
     MRVIEWER_API ImFont* getFontByType( FontType type ) const;
     /// get font size by font type
-    MRVIEWER_API float getFontSizeByType( FontType type ) const;
+    static float getFontSizeByType( FontType type );
 
     /// get ribbon menu font path
     MRVIEWER_API std::filesystem::path getMenuFontPath() const;
@@ -41,7 +41,9 @@ public:
 
     /// initialize static holder for easier access to ribbon fonts
     /// (need to avoid dynamic cast menu to ribbon menu)
-    void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
+    static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
+
+    static bool istanceExists() { return getFontManagerInstance_(); };
 
 private:
     std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };

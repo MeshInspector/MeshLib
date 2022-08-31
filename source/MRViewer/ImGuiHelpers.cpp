@@ -383,11 +383,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::SetCursorPos( { 0, 0 } );
     
     const ImVec2 pos = ImGui::GetCursorScreenPos();
-    ImFont* iconsFont = nullptr;
-    ImFont* titleFont = nullptr;
-    if ( menu )
+    const bool rfmExists = RibbonFontManager::istanceExists();
+    ImFont* iconsFont = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );;
+    ImFont* titleFont = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
+    if ( rfmExists )
     {
-        iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
         iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
         ImGui::PushFont( iconsFont );
     }
@@ -413,10 +413,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::SameLine();
     }
 
-    if ( menu )
+    if ( rfmExists )
     {
         ImGui::PopFont();
-        titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
         titleFont->Scale = 1.1f;
         ImGui::PushFont( titleFont );
     }
@@ -425,7 +424,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::Text( "%s", label);
     ImGui::PopStyleVar();
 
-    if ( menu )
+    if ( rfmExists )
     {
         ImGui::PopFont();
         titleFont->Scale = 1.0f;
@@ -446,7 +445,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         return false;
     }
 
-    if ( menu )
+    if ( rfmExists )
     {
         ImGui::PopFont();
         iconsFont->Scale = 1.0f;

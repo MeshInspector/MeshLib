@@ -411,10 +411,9 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
     ImVec2 windowSize = ImGui::GetWindowSize();
     ImVec2 btnPos = ImVec2( windowSize.x - 30 * scaling, 10 * scaling );
     ImGui::SetCursorPos( btnPos );
-    auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-    if ( !menu )
+    auto font = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( !font )
         return;
-    auto font = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
     font->Scale = 0.6f;
     ImGui::PushFont( font );
     if ( ImGui::Button( "\xef\x80\x8d" ) )

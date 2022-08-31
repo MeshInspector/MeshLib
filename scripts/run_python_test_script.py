@@ -11,6 +11,8 @@ if platformSystem == 'Linux':
 		platformRelease = platform.freedesktop_os_release()
 		if platformRelease['VERSION_ID'].split(".")[0] == "22":
 			python_cmd = "python3.10 "
+		if platformRelease['VERSION_ID'].split(".")[0] == "20":
+			python_cmd = "python3.8 "
 elif platformSystem == 'Darwin':
 	python_cmd = "python3 "
 

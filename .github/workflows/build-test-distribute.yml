@@ -28,7 +28,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@pip-packaging
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]

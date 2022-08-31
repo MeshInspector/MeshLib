@@ -353,14 +353,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
     }
 
-    SetNextWindowSize( ImVec2( width, height ), ImGuiCond_FirstUseEver );
+    SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Appearing );
     //const auto constriants = ( height == 0.0f ) ? ImVec2{ width, -1.0f } : ImVec2{ width, height };
     //SetNextWindowSizeConstraints( constriants, constriants );
 
     //need no paddings if the window is collapsed
     if ( collapsed && *collapsed )
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
+        //ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 0, 0 } );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
     }
 
@@ -368,19 +368,19 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     {
         *open = false;
         if ( collapsed && *collapsed )
-            ImGui::PopStyleVar( 2 );
+            ImGui::PopStyleVar();
         return false;
     }
 
     if ( collapsed && *collapsed )
-        ImGui::PopStyleVar( 2 );
+        ImGui::PopStyleVar();
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
 
     auto context = ImGui::GetCurrentContext();
     window = context->CurrentWindow;
     const auto& style = ImGui::GetStyle();
-    ImGui::SetCursorPos( { 0, 0 } );
+   // ImGui::SetCursorPos( { 0, 0 } );
     
     const ImVec2 pos = ImGui::GetCursorScreenPos();
     ImFont* iconsFont = nullptr;
@@ -392,12 +392,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PushFont( iconsFont );
     }
 
-    auto availWidth = window->Rect().GetWidth();
+    //auto availWidth = window->Rect().GetWidth();
     //auto availHeight = window->Rect().GetHeight();
 
     const float buttonSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight() + 5.0f * scaling;
     const float borderSize = style.WindowBorderSize * scaling;
-    const ImRect boundingBox( { pos.x + borderSize, pos.y + borderSize }, { pos.x + availWidth - borderSize, pos.y + buttonSize - borderSize } );
+    const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + buttonSize + style.WindowPadding.y - borderSize } );
     
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
@@ -405,12 +405,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
 
     ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );   
-    ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
+    //ImGui::SetCursorPos( { MR::cDefaultItemSpacing * scaling * 2.0f/3.0f, 2.0f * scaling } );
     ImGui::SetNextItemWidth( buttonSize );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * scaling / 2.0f, MR::cDefaultItemSpacing * scaling } );
     if ( collapsed )
     {
-        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87" ) ) // minimize/maximize button
+        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
             *collapsed = !*collapsed;
         }
@@ -437,11 +437,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     }
     
     ImGui::SameLine();    
-    ImGui::SetNextItemWidth( buttonSize );    
-    ImGui::SetCursorPosX( availWidth - buttonSize );
 
+    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 1.0f * scaling );
-    if ( ImGui::Button( "\xef\x80\x8d" ) ) //close button
+    if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) ) //close button
     {
         *open = false;
         ImGui::PopFont();

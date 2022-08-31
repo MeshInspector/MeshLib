@@ -80,7 +80,7 @@
 namespace
 {
 // translation multiplier that limits its maximum value depending on object size
-constexpr float cMaxTranslationMultiplier = 0x10000;
+constexpr float cMaxTranslationMultiplier = 0xC00;
 }
 
 namespace MR

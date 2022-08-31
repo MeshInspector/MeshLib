@@ -656,6 +656,7 @@ PaletteChanges Palette(
     int changes = int( PaletteChanges::None );
     float scaledWidth = width * menuScaling;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
     {
@@ -831,7 +832,10 @@ PaletteChanges Palette(
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        PopStyleVar();
         return PaletteChanges( changes );
+    }
 
     static std::string curentPaletteName;
     ImGui::InputText( "Config name", curentPaletteName );
@@ -881,6 +885,7 @@ PaletteChanges Palette(
         ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();
+    PopStyleVar();
 
     return PaletteChanges( changes );
 }

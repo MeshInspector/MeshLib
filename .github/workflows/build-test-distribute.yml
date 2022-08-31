@@ -13,8 +13,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-env:
-  UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+#UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
 jobs:
   prepare-image:
@@ -35,33 +34,33 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@pip-packaging
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@pip-packaging
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora35-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@pip-packaging
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@pip-packaging
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@pip-packaging
     with:
-      UPLOAD_ARTIFACTS: ${{env.UPLOAD_ARTIFACTS}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

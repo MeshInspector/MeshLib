@@ -145,16 +145,17 @@ SplitCaptionInfo sAutoSplit( const std::string& str, float maxWidth,const ImFont
 
 void RibbonSchemaLoader::recalcItemSizes()
 {
-    auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    auto menu = getViewerInstance().getMenuPlugin();
     if ( !menu )
         return;
-    const auto& fontManager = menu->getFontManager();
+    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Small );
+    if ( !font )
+        return;
 
     const float cMaxTextWidth = 
-        fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons ) * 
+        RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons ) * 
         4 * menu->menu_scaling();
 
-    const auto* font = fontManager.getFontByType( RibbonFontManager::FontType::Small );
     auto& schema = RibbonSchemaHolder::schema();
     for ( auto& item : schema.items )
     {

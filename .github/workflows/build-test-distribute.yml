@@ -162,7 +162,7 @@ jobs:
           wget http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2
           tar xf patchelf-0.10.tar.bz2
           cd patchelf-0.10
-          ./configurel
+          ./configure
           make install
           cd ..
           python3 -m pip install --upgrade pip

@@ -169,13 +169,13 @@ jobs:
           ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
 
       - name: Upload Wheel to test.pypi
-        if: ${{ matrix.os == "Ubuntu20" && github.event_name == 'push'}}
+        if: ${{ matrix.os == "Ubuntu20" && github.event_name != 'push'}}
         run: |
           pip install twine
           twine upload --repository-url https://test.pypi.org/legacy/ ./scripts/wheel/meshlib/wheelhouse/*  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
 
       - name: Upload Wheel to pypi
-        if: ${{ matrix.os == "Ubuntu20" && github.event_name != 'push'}}
+        if: ${{ matrix.os == "Ubuntu20" && github.event_name == 'push'}}
         run: |
           pip install twine
           twine upload ./scripts/wheel/meshlib/wheelhouse/*  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}

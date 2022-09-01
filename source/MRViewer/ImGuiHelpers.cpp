@@ -409,10 +409,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     const float buttonSize = titleBarHeight - MR::cRibbonItemInterval * scaling;
     ImGui::SetCursorScreenPos( { window->Rect().Min.x + style.WindowPadding.x, window->Rect().Min.y  + closeButtonShift } );
     
-    ImFont* iconsFont = nullptr;
-    ImFont* titleFont = nullptr;
-    
-    iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    ImFont* titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
+
     if ( iconsFont )
     {
         iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
@@ -442,15 +441,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         }
         ImGui::SameLine();
     }
-
     
     if ( iconsFont )
         ImGui::PopFont();
 
-    titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
     if ( titleFont )
-        ImGui::PushFont( titleFont );
-    
+        ImGui::PushFont( titleFont );    
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.25f );
     ImGui::Text( "%s", label);    

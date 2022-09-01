@@ -214,6 +214,7 @@ public:
     size_t getFPS() const { return frameCounter_.fps; }
     long long getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec; }
 
+    // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
 
     // Sets minimum auto increment for force redraw frames after basic events (the smallest value is 2)

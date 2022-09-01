@@ -111,9 +111,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
     strategy:
+      fail-fast: false
       matrix:
         os: [ Ubuntu20, Ubuntu22 ]
-        fail-fast: false
         include:
           - os: Ubuntu20
             image: meshrus/meshlib-ubuntu

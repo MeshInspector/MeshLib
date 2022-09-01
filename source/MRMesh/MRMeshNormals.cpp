@@ -3,6 +3,7 @@
 #include "MRRingIterator.h"
 #include "MRBuffer.h"
 #include "MRVector4.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -50,21 +51,27 @@ void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t si
     } );
 }
 
-VertexNormals computePerVertNormals( const Mesh & mesh )
+VertNormals computePerVertNormals( const Mesh & mesh )
 {
     MR_TIMER
     VertId lastValidVert = mesh.topology.lastValidVert();
-
     std::vector<Vector3f> res( lastValidVert + 1 );
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId{0}, lastValidVert + 1 ), [&]( const tbb::blocked_range<VertId> & range )
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-        {
-            if ( mesh.topology.hasVert( v ) )
-                res[v] = mesh.normal( v );
-        }
+        res[v] = mesh.normal( v );
     } );
+    return res;
+}
 
+VertNormals computePerVertPseudoNormals( const Mesh & mesh )
+{
+    MR_TIMER
+    VertId lastValidVert = mesh.topology.lastValidVert();
+    std::vector<Vector3f> res( lastValidVert + 1 );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+    {
+        res[v] = mesh.pseudonormal( v );
+    } );
     return res;
 }
 

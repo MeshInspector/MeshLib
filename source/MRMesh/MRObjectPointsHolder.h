@@ -91,13 +91,6 @@ protected:
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
-    virtual Vector<Vector3f, VertId> computeVertsNormals_() const override
-    {
-        if ( points_ )
-            return points_->normals;
-        return {};
-    }
-
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
     MRMESH_API virtual Box3f computeBoundingBoxXf_() const override;
 

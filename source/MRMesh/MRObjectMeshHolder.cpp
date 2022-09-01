@@ -151,13 +151,6 @@ Box3f ObjectMeshHolder::computeBoundingBoxXf_() const
     return mesh_->computeBoundingBox( &tempXf );
 }
 
-Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerVertNormals( *mesh_ );
-}
-
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )
@@ -428,11 +421,11 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
 
     if ( creases_.any() )
     {
-        dirty_ |= DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL;
+        dirty_ |= DIRTY_CORNERS_RENDER_NORMAL;
     }
     else
     {
-        dirty_ |= DIRTY_VERTS_NORMAL | DIRTY_VERTS_RENDER_NORMAL;
+        dirty_ |= DIRTY_VERTS_RENDER_NORMAL;
     }
 }
 

@@ -13,6 +13,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "ImGuiMenu.h"
 #include <imgui.h>
 #include <assert.h>
 #include <fstream>
@@ -407,6 +408,9 @@ void ColorTheme::resetImGuiStyle()
     style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
+    
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        ImGui::GetStyle().ScaleAllSizes( menu->menu_scaling() );
 }
 
 }

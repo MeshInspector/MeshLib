@@ -330,8 +330,7 @@ void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
     {
-        ColorTheme::resetImGuiStyle();
-        ImGui::GetStyle().ScaleAllSizes( menu_scaling() );
+        ColorTheme::resetImGuiStyle(); // apply scaling inside
     } );
 }
 

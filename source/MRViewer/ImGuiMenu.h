@@ -73,6 +73,7 @@ protected:
   bool dragTrigger_ = false;
   bool clickTrigger_ = false;
   bool showNewSelectedObjects_{ true };
+  bool deselectNewHiddenObjects_{ false };
 
   struct SceneReorder
   {
@@ -220,6 +221,9 @@ public:
   void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
   // get show selected objects state (enable / disable)
   bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
+  void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
+  // get deselect hidden objects state (enable / disable)
+  bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 
   MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );

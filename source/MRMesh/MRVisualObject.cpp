@@ -132,9 +132,9 @@ void VisualObject::setLabelsColor( const Color& color )
 void VisualObject::setDirtyFlags( uint32_t mask )
 {
     if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     if ( mask & DIRTY_FACE )
-        mask |= DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
     // DIRTY_POSITION because we use corner rendering and need to update render verts
 
     dirty_ |= mask;

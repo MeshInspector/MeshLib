@@ -16,6 +16,7 @@
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshCollide.h"
+#include "MRMesh/MRMeshNormals.h"
 
 using namespace MR;
 

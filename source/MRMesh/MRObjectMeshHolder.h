@@ -161,8 +161,6 @@ protected:
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
     MRMESH_API virtual Box3f computeBoundingBoxXf_() const override;
 
-    MRMESH_API virtual Vector<Vector3f, VertId> computeVertsNormals_() const override;
-
     MRMESH_API virtual void setupRenderObject_() const override;
 
     MRMESH_API virtual void updateMeshStat_() const;

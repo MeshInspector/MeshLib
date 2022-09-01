@@ -6,7 +6,6 @@
 #include "MRColor.h"
 #include "MRPositionedText.h"
 #include "MRIRenderObject.h"
-#include "MRMeshNormals.h"
 
 namespace MR
 {
@@ -67,11 +66,7 @@ enum DirtyFlags
     DIRTY_BOUNDING_BOX_XF = 0x1000,
     DIRTY_BORDER_LINES = 0x2000,
     DIRTY_EDGES_SELECTION = 0x4000,
-    DIRTY_VERTS_NORMAL = 0x8000,   ///< object normals
-    DIRTY_FACES_NORMAL = 0x10000,   ///< object normals
-    DIRTY_CORNERS_NORMAL = 0x20000, ///< object normals
-    DIRTY_ALL_NORMALS = DIRTY_RENDER_NORMALS | DIRTY_VERTS_NORMAL | DIRTY_FACES_NORMAL | DIRTY_CORNERS_NORMAL,
-    DIRTY_CACHES = DIRTY_VERTS_NORMAL | DIRTY_FACES_NORMAL | DIRTY_CORNERS_NORMAL | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF,
+    DIRTY_CACHES = DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF,
     DIRTY_ALL = 0x3FFFF
 };
 
@@ -133,8 +128,6 @@ public:
     MRMESH_API Box3f getBoundingBox() const;
     void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
     MRMESH_API Box3f getBoundingBoxXf() const;
-
-    MRMESH_API const Vector<Vector3f, VertId>& getVertsNormals() const;
 
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
     {
@@ -243,16 +236,12 @@ protected:
     virtual Box3f computeBoundingBox_() const { return Box3f(); }
     virtual Box3f computeBoundingBoxXf_() const { return Box3f(); }
 
-    virtual Vector<Vector3f, VertId> computeVertsNormals_() const { return {}; }
-
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;
 
 private:
     mutable Box3f boundingBoxCache_;
     mutable Box3f boundingBoxCacheXf_;
-
-    mutable Vector<Vector3f, VertId> vertsNormalsCache_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

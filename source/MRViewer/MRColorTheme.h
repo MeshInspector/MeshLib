@@ -131,7 +131,7 @@ public:
     // Returns directory where user's custom themes are stored
     MRVIEWER_API static std::filesystem::path getUserThemesDirectory();
 
-    // Reset ImGui style sizes and colors
+    // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
 private:
     ColorTheme() = default;

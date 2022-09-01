@@ -159,7 +159,13 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y binutils 
+          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y binutils wget
+          wget http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2
+          tar xf patchelf-0.10.tar.bz2
+          cd patchelf-0.10
+          ./configure
+          make install
+          cd ..
           python3 -m pip install --upgrade pip
           ./scripts/wheel/create_wheel.sh ${{ matrix.manylinux }} ${{needs.versioning-and-release-url.outputs.version_tag}}
 

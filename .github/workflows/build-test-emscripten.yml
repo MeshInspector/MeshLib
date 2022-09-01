@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: meshrus/meshlib-emscripten:${{inputs.image_tag}}
-      options: --user 1001
+      options: --user root
     strategy:
       matrix:
         config: [Singlethreaded, Multithreaded]

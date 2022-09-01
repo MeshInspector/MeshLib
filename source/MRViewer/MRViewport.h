@@ -477,13 +477,15 @@ private:
     };
 
     // finds the bounding box of given visible objects in given space
-    // use only selected primitives of objects in calculation
+    // @param selectedPrimitives use only selected primitives of objects in calculation
     Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
 
-    // find maximum FOV angle allows to keep scene inside the screen
-    // returns true if all models are inside the projection volume
-    // cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
-    std::pair<float, bool> getZoomFOVtoScreen_(Vector3f* cameraShift = nullptr, FitMode mode = FitMode::Visible ) const;
+    // find maximum FOV angle allows to keep given visible objects inside the screen
+    // @returns true if all models are inside the projection volume
+    // @param selectedPrimitives use only selected primitives of objects in calculation
+    // @param cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
+    std::pair<float, bool> getZoomFOVtoScreen_( const std::vector<std::shared_ptr<VisualObject>>& objs,
+        bool selectedPrimitives = false, Vector3f* cameraShift = nullptr ) const;
 
     bool rotation_{ false };
     Vector3f rotationPivot_;

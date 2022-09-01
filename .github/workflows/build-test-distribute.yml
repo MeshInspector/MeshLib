@@ -176,7 +176,7 @@ jobs:
           twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
 
       - name: Upload Wheel to Distributive
-        if: ${{ matrix.os == "Ubuntu20" && github.event_name == 'push' }}
+        if: ${{ matrix.os == 'Ubuntu20' && github.event_name == 'push' }}
         uses: actions/upload-artifact@v2
         with:
           name: Distributives

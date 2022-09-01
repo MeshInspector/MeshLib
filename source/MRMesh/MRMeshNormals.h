@@ -11,13 +11,10 @@ namespace MR
 /// \ingroup MeshAlgorithmGroup
 /// \{
 
-using FaceNormals = Vector<Vector3f, FaceId>;
-using VertexNormals = Vector<Vector3f, VertId>;
-
 struct [[nodiscard]] MeshNormals
 {
     FaceNormals faceNormals;
-    VertexNormals vertNormals;
+    VertNormals vertNormals;
 };
 
 /// returns a vector with face-normal in every element for valid mesh faces
@@ -26,8 +23,12 @@ struct [[nodiscard]] MeshNormals
 /// fills buffer with face-normals as Vector4f for valid mesh faces
 MRMESH_API void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t size );
 
-/// returns a vector with vert-normal in every element for valid mesh vertices
-[[nodiscard]] MRMESH_API VertexNormals computePerVertNormals( const Mesh & mesh );
+/// returns a vector with vertex normals in every element for valid mesh vertices
+[[nodiscard]] MRMESH_API VertNormals computePerVertNormals( const Mesh & mesh );
+
+/// returns a vector with vertex pseudonormals in every element for valid mesh vertices
+/// see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
+[[nodiscard]] MRMESH_API VertNormals computePerVertPseudoNormals( const Mesh & mesh );
 
 /// computes both per-face and per-vertex normals more efficiently then just calling both previous functions
 [[nodiscard]] MRMESH_API MeshNormals computeMeshNormals( const Mesh & mesh );

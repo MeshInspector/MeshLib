@@ -142,8 +142,9 @@ MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width )
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
+/// if the plugin supports resizing, you must pass changedSize argument where are stored resized width and height
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling, float height = 0.0f, 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize, ImVec2* changedSize = nullptr );
 /// end state plugin window with custom style
 MRVIEWER_API void EndCustomStatePlugin();
 

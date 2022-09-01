@@ -15,7 +15,7 @@ on:
 jobs:
   versioning-and-release-url:
     timeout-minutes: 10
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       version_tag: ${{ steps.version.outputs.version}}
       upload_url: ${{ steps.create_release.outputs.upload_url }}

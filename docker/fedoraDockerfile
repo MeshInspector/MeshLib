@@ -41,6 +41,6 @@ RUN dnf -y update && \
     dnf -y install gh && \
     dnf clean all
 
-RUN sudo ./scripts/install_thirdparty.sh && \
+RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

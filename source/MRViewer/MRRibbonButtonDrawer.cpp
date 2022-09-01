@@ -452,18 +452,22 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     int colorChanged = pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
     bool pressed = ImGui::Button( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize );
 
-    ImFont* font = nullptr;
-    if ( fontManager_ ) {
-        auto& fontManager = *fontManager_;
-        font = fontManager_->getFontByType( RibbonFontManager::FontType::Icons );
-        if ( params.iconSize != 0 )
-            font->Scale = params.iconSize / fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-            font->Scale = cSmallIconSize / fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
+    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    float fontScale = 1.f;
+    if ( font ) {
+        const float iconSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
+        if ( iconSize )
+        {
+            if ( params.iconSize != 0 )
+                font->Scale = params.iconSize / iconSize;
+            else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+                font->Scale = cSmallIconSize / iconSize;
+        }
+        fontScale = font->Scale;
         ImGui::PushFont( font );
     }
 
-    auto imageRequiredSize = std::round( 32.0f * font->Scale * scaling_ );
+    auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needWhiteIcon = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
     auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
@@ -505,7 +509,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
         ImGui::Image( *imageIcon, iconRealSize, multColor );
     }
 
-    if ( fontManager_ )
+    if ( font )
     {
         ImGui::PopFont();
         font->Scale = 1.0f;
@@ -560,17 +564,16 @@ bool RibbonButtonDrawer::drawCustomStyledButton( const char* icon, const ImVec2&
     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
     ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
 
-    ImFont* font = nullptr;
-    if ( fontManager_ )
+    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( font )
     {
-        font = fontManager_->getFontByType( RibbonFontManager::FontType::Icons );
-        font->Scale = iconSize / fontManager_->getFontSizeByType( RibbonFontManager::FontType::Icons );
+        font->Scale = iconSize / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
         ImGui::PushFont( font );
     }
 
     bool pressed = ImGui::Button( icon, size );
 
-    if ( fontManager_ )
+    if ( font )
     {
         ImGui::PopFont();
         font->Scale = 1.0f;
@@ -620,15 +623,14 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     bool comboPressed = ImGui::Button( name.c_str(), itemSize ) && dropBtnEnabled;
 
-    ImFont* font = nullptr;
-    if ( fontManager_ )
+    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( font )
     {
-        auto& fontManager = *fontManager_;
-        font = fontManager.getFontByType( RibbonFontManager::FontType::Icons );
+        const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
         if ( params.sizeType == DrawButtonParams::SizeType::Big )
-            font->Scale = iconSize / fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
+            font->Scale = iconSize / fontSize;
         else
-            font->Scale = iconSize*1.5f / fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
+            font->Scale = iconSize * 1.5f / fontSize;
         ImGui::PushFont( font );
     }
     auto iconRealSize = ImGui::CalcTextSize( "\xef\x81\xb8" ); //down icon
@@ -639,7 +641,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
-    if ( fontManager_ )
+    if ( font )
     {
         ImGui::PopFont();
         font->Scale = 1.0f;

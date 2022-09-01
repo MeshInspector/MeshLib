@@ -344,7 +344,8 @@ public:
     {
         Visible, // fit all visible objects
         SelectedPrimitives, // fit only selected primitives
-        SelectedObjects // fit only selected objects
+        SelectedObjects, // fit only selected objects
+        CustomObjectsList // fit only given objects (need additional objects list)
     };
     struct FitDataParams
     {
@@ -354,11 +355,16 @@ public:
         // perspective view: camera is static, fit FOV to closest border.
         bool snapView{ false };
         FitMode mode{ FitMode::Visible }; // fit mode
+        std::vector<std::shared_ptr<VisualObject>> objsList; // custom objects list. used only with CustomObjectsList mode
 
-        FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible ) :
+        // need for fix Clang bug
+        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
+        FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible,
+            const std::vector<std::shared_ptr<VisualObject>>& objsList_ = {} ) :
             factor( factor_ ),
             snapView( snapView_ ),
-            mode( mode_ )
+            mode( mode_ ),
+            objsList( objsList_ )
         {};
     };
     // call fitData and change FOV to match the screen size then
@@ -470,13 +476,20 @@ private:
         CameraPerspective   // (x/z, y/z, z), where (x, y, z) in camera space
     };
 
-    // finds the bounding box of all/selected visible objects in given space
-    Box3f calcBox_( FitMode mode, Space space ) const;
+    /**
+     * @brief finds the bounding box of given visible objects in given space
+     * @param selectedPrimitives use only selected primitives of objects in calculation
+     */
+    Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
 
-    // find maximum FOV angle allows to keep scene inside the screen
-    // returns true if all models are inside the projection volume
-    // cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
-    std::pair<float, bool> getZoomFOVtoScreen_(Vector3f* cameraShift = nullptr, FitMode mode = FitMode::Visible ) const;
+    /**
+     * @brief find maximum FOV angle allows to keep given visible objects inside the screen
+     * @param selectedPrimitives use only selected primitives of objects in calculation
+     * @param cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
+     * @returns true if all models are inside the projection volume
+     */
+    std::pair<float, bool> getZoomFOVtoScreen_( const std::vector<std::shared_ptr<VisualObject>>& objs,
+        bool selectedPrimitives = false, Vector3f* cameraShift = nullptr ) const;
 
     bool rotation_{ false };
     Vector3f rotationPivot_;

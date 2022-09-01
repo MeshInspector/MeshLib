@@ -94,9 +94,6 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     }
     return angleRes;
 }
-
-constexpr float cMinScaleFactor = 1e-6f;
-constexpr float cMaxScaleFactor = 1e+6f;
 }
 
 namespace MR
@@ -254,7 +251,8 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
     decomposeMatrix3( xf.A, rotation, scaling );
 
     Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
-    controlsRoot_->setXf( xf * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( scaling.trace() / 3.f ), center_ ) );
+    auto maxScaling = std::max( { scaling.x.x, scaling.y.y, scaling.z.z } );
+    controlsRoot_->setXf( xf * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( maxScaling ), center_ ) );
 
     objScale_ = scaling;
 }
@@ -630,16 +628,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         scale[int( ax )] = scaleFactor;
     prevScaling_ = newScaling;
 
-    auto resultScale = Matrix3f::scale( scale ) * objScale_;
-    for ( auto i = 0; i < 3; i++ )
-    {
-        if ( resultScale[i][i] < cMinScaleFactor || cMaxScaleFactor < resultScale[i][i] )
-        {
-            spdlog::warn( "Scale factor limits exceeded" );
-            return;
-        }
-    }
-    objScale_ = resultScale;
+    objScale_ = Matrix3f::scale( scale ) * objScale_;
 
     auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
     addXf_( addXf );

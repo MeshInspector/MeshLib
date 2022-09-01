@@ -6,7 +6,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
@@ -43,9 +43,7 @@ RenderLabelObject::~RenderLabelObject()
 
 void RenderLabelObject::render( const RenderParams& renderParams )
 {
-    if ( !objLabel_->labelRepresentingMesh() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objLabel_->labelRepresentingMesh() || !Viewer::constInstance()->isGLInitialized() )
     {
         objLabel_->resetDirty();
         return;
@@ -86,7 +84,7 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 
     bindLabel_();
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );
 
     // Send transformations to the GPU
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
@@ -121,7 +119,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
 
     const std::array<Vector3f, 1> point { objLabel_->getLabel().position };
@@ -171,7 +169,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
@@ -223,7 +221,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
 {
     GL_EXEC( glBindVertexArray( llineArrayObjId_ ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );
     GL_EXEC( glUseProgram( shader ) );
 
     const auto shift = objLabel_->getPivotShift();
@@ -313,12 +311,12 @@ void RenderLabelObject::renderPicker( const BaseRenderParams&, unsigned )
 
 size_t RenderLabelObject::heapBytes() const
 {
-    return bufferObj_.heapBytes();
+    return 0;
 }
 
 void RenderLabelObject::bindLabel_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Labels );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
@@ -405,15 +403,16 @@ void RenderLabelObject::update_()
 
 RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
-        return bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
 
     MR_TIMER
 
     const auto& mesh = objLabel_->labelRepresentingMesh();
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
+    auto buffer = glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
 
     BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
     {

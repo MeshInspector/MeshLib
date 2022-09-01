@@ -24,7 +24,7 @@
 #include "MRAlphaSortGL.h"
 #include "MRGLMacro.h"
 #include "MRSetupViewer.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRViewerPlugin.h"
 #include "MRCommandLoop.h"
 #include "MRSplashWindow.h"
@@ -553,7 +553,7 @@ void Viewer::launchShut()
     globalBasisAxes.reset();
     globalHistoryStore_.reset();
 
-    ShadersHolder::freeAllShaders();
+    GLStaticHolder::freeAllShaders();
 
     alphaSorter_.reset();
 
@@ -1627,6 +1627,11 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     assert( !menuPlugin_ );
     assert( menu );
     menuPlugin_ = menu;
+}
+
+size_t Viewer::getStaticGLBufferSize() const
+{
+    return GLStaticHolder::getStaticGLBuffer().heapBytes();
 }
 
 void Viewer::FrameCounter::startDraw()

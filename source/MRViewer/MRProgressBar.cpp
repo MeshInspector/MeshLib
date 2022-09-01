@@ -39,6 +39,7 @@ void ProgressBar::setup( float scaling )
     instance.setupId_ = ImGui::GetID( buf );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
     {
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         if ( instance.taskCount_ > 1 )
         {
             snprintf( buf, bufSize, "%s (%d/%d)\n", instance.taskName_.c_str(), instance.currentTask_, instance.taskCount_ );
@@ -67,6 +68,9 @@ void ProgressBar::setup( float scaling )
                 ImGui::Text( "Canceling..." );
             }
         }
+#else
+        ImGui::Text( "Operation is in progress, please wait..." );
+#endif
         if ( instance.finished_ )
         {
             if ( instance.onFinish_ )
@@ -76,9 +80,6 @@ void ProgressBar::setup( float scaling )
             }
             ImGui::CloseCurrentPopup();
         }
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-        ImGui::TextWrapped( "Progress bar is not supported for single thread version, window can hang..." );
-#endif
         ImGui::EndPopup();
     }
 }

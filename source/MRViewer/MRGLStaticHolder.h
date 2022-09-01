@@ -1,4 +1,5 @@
 #pragma once
+#include "MRRenderHelpers.h"
 #include "MRMesh/MRLog.h"
 #include <array>
 
@@ -6,7 +7,8 @@ namespace MR
 {
 // This class holds all shaders that are used in the program
 // creates shader on access if it is needed
-class ShadersHolder
+// holds shared memory buffer for loading to GPU
+class GLStaticHolder
 {
 public:
     typedef unsigned int GLuint;
@@ -38,17 +40,21 @@ public:
     static void freeShader( ShaderType type );
     // Free all shaders from GL
     static void freeAllShaders();
+    // Memory buffer for objects that about to be loaded to GPU, shared among different data types
+    static RenderObjectBuffer& getStaticGLBuffer();
 private:
-    ShadersHolder();
-    ~ShadersHolder();
+    GLStaticHolder();
+    ~GLStaticHolder();
 
-    static ShadersHolder& instance_();
-    
+    static GLStaticHolder& instance_();
+
     void createShader_( ShaderType type );
 
     std::array<GLuint, size_t( Count )> shadersIds_;
 
     // it is stored here to prolong its life till this destructor
     std::shared_ptr<spdlog::logger> logger_;
+
+    RenderObjectBuffer glBuffer_;
 };
 }

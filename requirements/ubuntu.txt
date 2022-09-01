@@ -4,9 +4,9 @@ pkg-config
 gcc-10
 g++-10
 clang-11
-python3.9
+python3.8
 libtbb-dev
-libpython3.9-dev
+libpython3.8-dev
 libjsoncpp-dev
 libilmbase-dev
 libblosc-dev

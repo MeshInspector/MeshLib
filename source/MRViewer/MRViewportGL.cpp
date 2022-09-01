@@ -3,7 +3,7 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 
@@ -127,7 +127,7 @@ void ViewportGL::drawLines( const RenderParams& params ) const
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( add_line_vao ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::AdditionalLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
@@ -190,7 +190,7 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     GL_EXEC( glBindVertexArray( add_point_vao ) );
 
     // AdditionalPointsNoOffset exists for old intel gpu (Intel HD 4000)
-    auto shader = params.zOffset == 0.0f ? ShadersHolder::getShaderId( ShadersHolder::AdditionalPointsNoOffset ) : ShadersHolder::getShaderId( ShadersHolder::AdditionalPoints );
+    auto shader = params.zOffset == 0.0f ? GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPointsNoOffset ) : GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
@@ -255,7 +255,7 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
     // Send lines data to GL, install lines properties 
     GL_EXEC( glBindVertexArray( border_line_vao ) );
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::ViewportBorder );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::ViewportBorder );
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( GLint colorid = glGetUniformLocation( shader, "user_color" ) );

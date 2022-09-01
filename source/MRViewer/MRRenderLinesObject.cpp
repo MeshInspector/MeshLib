@@ -7,7 +7,7 @@
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVector2.h"
-#include "MRShadersHolder.h"
+#include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
@@ -40,9 +40,7 @@ float RenderLinesObject::actualLineWidth() const
 
 void RenderLinesObject::render( const RenderParams& renderParams )
 {
-    if ( !objLines_->polyline() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objLines_->polyline() || !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
         return;
@@ -67,7 +65,7 @@ void RenderLinesObject::render( const RenderParams& renderParams )
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
     bindLines_();
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawLines );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
@@ -83,7 +81,7 @@ void RenderLinesObject::render( const RenderParams& renderParams )
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), int( !objLines_->getVertsNormals().empty() ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 0 ) ); // what is a normal of 3d line?
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objLines_->getShininess() ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
@@ -120,7 +118,7 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
 
     bindLinesPicker_();
 
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, parameters.modelMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, parameters.viewMatrixPtr ) );
@@ -141,13 +139,13 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
 
 size_t RenderLinesObject::heapBytes() const
 {
-    return bufferObj_.heapBytes();
+    return 0;
 }
 
 void RenderLinesObject::bindLines_()
 {
     MR_TIMER;
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawLines );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawLines );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -223,7 +221,7 @@ void RenderLinesObject::bindLines_()
 
 void RenderLinesObject::bindLinesPicker_()
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::Picker );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -239,7 +237,7 @@ void RenderLinesObject::bindLinesPicker_()
 
 void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 {
-    auto shader = ShadersHolder::getShaderId( ShadersHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glUseProgram( shader ) );
 
     // Selection
@@ -320,15 +318,16 @@ void RenderLinesObject::update_()
 
 RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) )
-        return bufferObj_.prepareBuffer<Vector3f>( vertPosSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
     MR_NAMED_TIMER( "vertbased_dirty_positions" );
 
     const auto& polyline = objLines_->polyline();
     const auto& topology = polyline->topology;
     auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertPosSize_ = 2 * numL );
+    auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = 2 * numL );
 
     auto undirEdgesSize = numL >> 1;
     tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
@@ -349,53 +348,30 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 
 RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_RENDER_NORMALS ) )
-        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_, false );
+        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
-    const auto& polyline = objLines_->polyline();
-    const auto& topology = polyline->topology;
-    auto numV = topology.lastValidVert() + 1;
-    const auto& vertsNormals = objLines_->getVertsNormals();
-    if ( vertsNormals.size() < numV )
-        return bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 0 );
-
-    MR_NAMED_TIMER( "dirty_vertices_normals" )
-
-    auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector3f>( vertNormalsSize_ = 2 * numL );
-
-    auto undirEdgesSize = numL >> 1;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
-    {
-        for ( int ue = range.begin(); ue < range.end(); ++ue )
-        {
-            auto o = topology.org( UndirectedEdgeId( ue ) );
-            auto d = topology.dest( UndirectedEdgeId( ue ) );
-            if ( !o || !d )
-                continue;
-            buffer[2 * ue] = vertsNormals[o];
-            buffer[2 * ue + 1] = vertsNormals[d];
-        }
-    } );
-
-    return buffer;
+    // always 0!
+    return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 0 );
 }
 
 RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
-        return bufferObj_.prepareBuffer<Color>( vertColorsSize_, false );
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     auto coloringType = objLines_->getColoringType();
     if ( coloringType != ColoringType::VertsColorMap )
-        return bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 0 );
+        return glBuffer.prepareBuffer<Color>( vertColorsSize_ = 0 );
 
     MR_NAMED_TIMER( "vert_colormap" );
 
     const auto& polyline = objLines_->polyline();
     const auto& topology = polyline->topology;
     auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = bufferObj_.prepareBuffer<Color>( vertColorsSize_ = 2 * numL );
+    auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = 2 * numL );
 
     auto undirEdgesSize = numL >> 1;
     const auto& vertsColorMap = objLines_->getVertsColorMap();
@@ -417,8 +393,9 @@ RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 
 RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_UV ) )
-        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_, false );
+        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
     const auto& polyline = objLines_->polyline();
     const auto& topology = polyline->topology;
@@ -430,10 +407,10 @@ RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
         assert( uvCoords.size() >= numV );
     }
     if ( uvCoords.size() < numV )
-        return bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
+        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
 
     auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = bufferObj_.prepareBuffer<UVCoord>( vertUVSize_ = 2 * numL );
+    auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 2 * numL );
 
     auto undirEdgesSize = numL >> 1;
     tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
@@ -454,14 +431,15 @@ RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 
 RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_()
 {
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) )
-        return bufferObj_.prepareBuffer<Vector2i>( lineIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_, false );
 
     const auto& polyline = objLines_->polyline();
     const auto& topology = polyline->topology;
     auto numL = topology.lastNotLoneEdge() + 1;
     auto undirEdgesSize = numL >> 1;
-    auto buffer = bufferObj_.prepareBuffer<Vector2i>( lineIndicesSize_ = undirEdgesSize );
+    auto buffer = glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_ = undirEdgesSize );
 
     auto lastValidEdge = ( numL - 1 ) / 2;
     tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )

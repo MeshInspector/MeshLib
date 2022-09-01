@@ -476,14 +476,18 @@ private:
         CameraPerspective   // (x/z, y/z, z), where (x, y, z) in camera space
     };
 
-    // finds the bounding box of given visible objects in given space
-    // @param selectedPrimitives use only selected primitives of objects in calculation
+    /**
+     * @brief finds the bounding box of given visible objects in given space
+     * @param selectedPrimitives use only selected primitives of objects in calculation
+     */
     Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
 
-    // find maximum FOV angle allows to keep given visible objects inside the screen
-    // @returns true if all models are inside the projection volume
-    // @param selectedPrimitives use only selected primitives of objects in calculation
-    // @param cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
+    /**
+     * @brief find maximum FOV angle allows to keep given visible objects inside the screen
+     * @param selectedPrimitives use only selected primitives of objects in calculation
+     * @param cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
+     * @returns true if all models are inside the projection volume
+     */
     std::pair<float, bool> getZoomFOVtoScreen_( const std::vector<std::shared_ptr<VisualObject>>& objs,
         bool selectedPrimitives = false, Vector3f* cameraShift = nullptr ) const;
 

@@ -113,6 +113,7 @@ jobs:
     strategy:
       matrix:
         os: [ Ubuntu20, Ubuntu22 ]
+        fail-fast: false
         include:
           - os: Ubuntu20
             image: meshrus/meshlib-ubuntu
@@ -158,7 +159,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y python3.8-venv
+          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y python3-venv
           python3 -m pip install --upgrade pip
           python3 -m venv ./env
           source ./env/bin/activate
@@ -210,6 +211,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
+          sudo dnf -y install patchelf
           python3.9 -m pip install --upgrade pip
           python3.9 -m venv ./env3.9
           source ./env3.9/bin/activate

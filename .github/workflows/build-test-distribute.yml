@@ -120,7 +120,7 @@ jobs:
             manylinux: manylinux_2_31_x86_64
           - os: Ubuntu22
             image: meshrus/meshlib-ubuntu22
-            manylinux:  linux_x86_64
+            manylinux: manylinux_2_31_x86_64
 
     container:
       image: ${{ matrix.image }}:${{needs.prepare-image.outputs.image_tag}}
@@ -159,12 +159,8 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y python3-venv
           python3 -m pip install --upgrade pip
-          python3 -m venv ./env
-          source ./env/bin/activate
           ./scripts/wheel/create_wheel.sh ${{ matrix.manylinux }} ${{needs.versioning-and-release-url.outputs.version_tag}}
-          deactivate
 
       - name: Upload Wheel
         run: |
@@ -215,7 +211,7 @@ jobs:
           python3.9 -m pip install --upgrade pip
           python3.9 -m venv ./env3.9
           source ./env3.9/bin/activate
-          ./scripts/wheel/create_wheel.sh linux_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
+          ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
           deactivate
 
       - name: Upload Wheel

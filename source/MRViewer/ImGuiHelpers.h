@@ -192,6 +192,7 @@ enum class PaletteChanges
 MRVIEWER_API PaletteChanges Palette( 
     const char* label,
     MR::Palette& palette,
+    std::string& presetName,
     float width,
     float menuScaling,
     bool* fixZero = nullptr,

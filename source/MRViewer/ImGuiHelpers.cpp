@@ -644,6 +644,7 @@ bool Link( const char* label, uint32_t color )
 PaletteChanges Palette(
     const char* label, 
     MR::Palette& palette,
+    std::string& presetName,
     float width,
     float menuScaling,
     bool* fixZero,
@@ -660,12 +661,28 @@ PaletteChanges Palette(
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
     {
-        ImGui::SetNextItemWidth( scaledWidth );
-        int presetIndex = -1;
-        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, false ) )
+        int currentIndex = -1;
+        if ( !presetName.empty() )
         {
-            if ( presetIndex != -1 )
+            for ( int i = 0; i < presets.size(); i++ )
+            {
+                if ( presets[i] == presetName )
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+        }
+
+        ImGui::SetNextItemWidth( scaledWidth );
+        int presetIndex = currentIndex;
+        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, currentIndex != -1 ) )
+        {
+            if ( presetIndex != currentIndex )
+            {
                 PalettePresets::loadPreset( presets[presetIndex], palette );
+                presetName = presets[presetIndex];
+            }
 
             if ( fixZero )
                 *fixZero = false;
@@ -693,6 +710,7 @@ PaletteChanges Palette(
     {
         palette.setFilterType( isDiscrete ? MeshTexture::FilterType::Discrete : MeshTexture::FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
+        presetName.clear();
     }   
     ImGui::PopStyleVar();
 
@@ -708,6 +726,7 @@ PaletteChanges Palette(
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
             changes |= int( PaletteChanges::Texture );
+            presetName.clear();
         }
         ImGui::PopStyleVar();
     }
@@ -814,6 +833,7 @@ PaletteChanges Palette(
     if ( correctOreder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
     {
         changes |= int( PaletteChanges::Ranges );
+        presetName.clear();
         if ( paletteRangeMode == 0 )
             palette.setRangeMinMax( ranges[0], ranges[3] );
         else
@@ -837,20 +857,21 @@ PaletteChanges Palette(
         return PaletteChanges( changes );
     }
 
-    static std::string curentPaletteName;
-    ImGui::InputText( "Config name", curentPaletteName );
+    static std::string currentPaletteName;
+    ImGui::InputText( "Config name", currentPaletteName );
 
     const float btnWidth = 80.0f * ImGui::GetIO().DisplayFramebufferScale.x;
-    if ( ImGui::ButtonValid( "Save", !curentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
+    if ( ImGui::ButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
     {
         std::error_code ec;
-        if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( curentPaletteName + ".json" ), ec ) )
+        if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
         {
             OpenPopup( "Palette already exists##PaletteHelper" );
         }
         else
         {
-            PalettePresets::savePreset( curentPaletteName, palette );
+            PalettePresets::savePreset( currentPaletteName, palette );
+            presetName = currentPaletteName;
             ImGui::CloseCurrentPopup();
         }
     }
@@ -864,7 +885,8 @@ PaletteChanges Palette(
         auto p = GetStyle().FramePadding.x;
         if ( ImGui::Button( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
         {
-            PalettePresets::savePreset( curentPaletteName, palette );
+            PalettePresets::savePreset( currentPaletteName, palette );
+            presetName = currentPaletteName;
             closeTopPopup = true;
             ImGui::CloseCurrentPopup();
         }

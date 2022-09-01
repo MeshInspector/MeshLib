@@ -348,9 +348,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         height = titleBarHeight;
 
     ImGuiWindow* window = FindWindowByName( label );
-    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
     if ( !window )
     {
+        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
         float yPos = 0.0f;       
         if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
@@ -411,9 +411,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     ImFont* iconsFont = nullptr;
     ImFont* titleFont = nullptr;
-    if ( menu )
+    
+    iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
     {
-        iconsFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
         iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
         ImGui::PushFont( iconsFont );
     }
@@ -432,28 +433,33 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
             *collapsed = !*collapsed;
             ImGui::PopStyleVar( 2 );
             ImGui::PopStyleColor( 2 );
-            ImGui::PopFont();
+
+            if (iconsFont )
+                ImGui::PopFont();
+
             ImGui::End();
             return false;
         }
         ImGui::SameLine();
     }
 
-    if ( menu )
-    {
+    
+    if ( iconsFont )
         ImGui::PopFont();
-        titleFont = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::SemiBold );
+
+    titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
+    if ( titleFont )
         ImGui::PushFont( titleFont );
-    }
+    
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.25f );
     ImGui::Text( "%s", label);    
 
-    if ( menu )
-    {
+    if ( titleFont )
         ImGui::PopFont();
+
+    if ( iconsFont )
         ImGui::PushFont( iconsFont );
-    }
     
     ImGui::SameLine();    
 
@@ -462,18 +468,21 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) ) //close button
     {
         *open = false;
-        ImGui::PopFont();
+
+        if ( iconsFont )
+            ImGui::PopFont();
+
         ImGui::PopStyleColor( 2 );
         ImGui::PopStyleVar( 2 );
         ImGui::End();
         return false;
     }
 
-    if ( menu )
+    if ( iconsFont )
     {
         ImGui::PopFont();
         iconsFont->Scale = 1.0f;
-    }
+    }    
 
     ImGui::PopStyleVar( 2 );
 
@@ -679,6 +688,7 @@ PaletteChanges Palette(
     int changes = int( PaletteChanges::None );
     float scaledWidth = width * menuScaling;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     const auto& presets = PalettePresets::getPresetNames();
     if ( !presets.empty() )
     {
@@ -705,17 +715,17 @@ PaletteChanges Palette(
         ImGui::PopStyleVar( 2 );
     }
     bool isDiscrete = palette.getTexture().filter == MeshTexture::FilterType::Discrete;
-    
+
     const auto& params = palette.getParameters();
 
-    
+
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * menuScaling, cSeparateBlocksSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? MeshTexture::FilterType::Discrete : MeshTexture::FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
-    }   
+    }
     ImGui::PopStyleVar();
 
     if ( isDiscrete )
@@ -723,7 +733,7 @@ PaletteChanges Palette(
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f - menuScaling );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
         if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
         {
@@ -740,7 +750,7 @@ PaletteChanges Palette(
     int paletteRangeMode = params.ranges.size() == 2 ? 0 : 1;
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
-    
+
     RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     ImGui::PopItemWidth();
     ImGui::PushItemWidth( scaledWidth * 2.0f / 3.0f );
@@ -757,7 +767,7 @@ PaletteChanges Palette(
             ranges[2] = params.ranges[2];
         }
     }
-    
+
     bool rangesChanged = false;
     if ( paletteRangeMode == 0 )
     {
@@ -794,7 +804,7 @@ PaletteChanges Palette(
             if ( ranges[2] < 0.0f )
                 ranges[2] = 0.0f;
 
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing* menuScaling } );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min positive / Max negative", &ranges[2], speed, min, max, format );
             ImGui::PopStyleVar();
             if ( rangesChanged || fixZeroChanged )
@@ -802,9 +812,9 @@ PaletteChanges Palette(
         }
         else
         {
-            rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );            
-            rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );            
-            rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );            
+            rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );
+            rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );
+            rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= ImGui::DragFloatValid( "Min negative (blue)", &ranges[0], speed, min, max, format );
             ImGui::PopStyleVar();
@@ -841,7 +851,7 @@ PaletteChanges Palette(
         else
             palette.setRangeMinMaxNegPos( ranges[0], ranges[1], ranges[2], ranges[3] );
     }
-    
+
     std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
@@ -854,7 +864,10 @@ PaletteChanges Palette(
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        PopStyleVar();
         return PaletteChanges( changes );
+    }
 
     static std::string curentPaletteName;
     ImGui::InputText( "Config name", curentPaletteName );
@@ -876,7 +889,7 @@ PaletteChanges Palette(
 
     bool closeTopPopup = false;
     if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
-                                 ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
         ImGui::Text( "Palette preset with this name already exists, override?" );
         auto w = GetContentRegionAvail().x;
@@ -904,6 +917,7 @@ PaletteChanges Palette(
         ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();
+    PopStyleVar();
 
     return PaletteChanges( changes );
 }

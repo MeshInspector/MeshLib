@@ -161,7 +161,7 @@ jobs:
           sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y python3.8-venv
           python3 -m pip install --upgrade pip
           python3 -m venv ./env
-          source ./envbin/activate
+          source ./env/bin/activate
           ./scripts/wheel/create_wheel.sh ${{ matrix.manylinux }} ${{needs.versioning-and-release-url.outputs.version_tag}}
           deactivate
 

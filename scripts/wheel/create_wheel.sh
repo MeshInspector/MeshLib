@@ -30,7 +30,7 @@ sed -i "s/$VERSION_LINE_FIND/$VERSION_LINE/" ./setup.py
 pwd
 ls -al .
 ls -al ./meshlib
+python3 -m pip install auditwheel wheel setuptools
 python3 setup.py bdist_wheel
 ls -al ./dist
-python3 -m pip install auditwheel wheel setuptools
 python3 -m auditwheel repair --plat "${1}" ./dist/*.whl

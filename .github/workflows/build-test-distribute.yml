@@ -113,7 +113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ Ubuntu20, Ubuntu22 ]
+        os: [ 'Ubuntu20', 'Ubuntu22' ]
         include:
           - os: Ubuntu20
             image: meshrus/meshlib-ubuntu
@@ -156,29 +156,32 @@ jobs:
           retention-days: 1
 
       - name: Create and fix Wheel
-        if: ${{ matrix.os == "Ubuntu20" }}
+        if: ${{ matrix.os == 'Ubuntu20' }}
         run: |
           sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y binutils wget
           wget http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2
           tar xf patchelf-0.10.tar.bz2
           cd patchelf-0.10
-          ./configure
+          ./configurel
           make install
           cd ..
           python3 -m pip install --upgrade pip
           ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
+          mv ./scripts/wheel/meshlib/wheelhouse/*.whl ./
 
       - name: Upload Wheel to test.pypi
-        if: ${{ matrix.os == "Ubuntu20" && github.event_name != 'push'}}
+        if: ${{ matrix.os == 'Ubuntu20' && github.event_name != 'push'}}
         run: |
           pip install twine
-          twine upload --repository-url https://test.pypi.org/legacy/ ./scripts/wheel/meshlib/wheelhouse/*  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
+          twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
 
-      - name: Upload Wheel to pypi
-        if: ${{ matrix.os == "Ubuntu20" && github.event_name == 'push'}}
-        run: |
-          pip install twine
-          twine upload ./scripts/wheel/meshlib/wheelhouse/*  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
+      - name: Upload Wheel to Distributive
+        if: ${{ matrix.os == "Ubuntu20" && github.event_name == 'push' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
+          retention-days: 1
 
   update-rpm-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -248,7 +251,8 @@ jobs:
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
+                            meshlib-*.whl
 
   delete-artifacts:
     timeout-minutes: 15

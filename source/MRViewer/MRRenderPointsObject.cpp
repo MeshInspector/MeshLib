@@ -30,9 +30,7 @@ RenderPointsObject::~RenderPointsObject()
 
 void RenderPointsObject::render( const RenderParams& renderParams )
 {
-    if ( !objPoints_->pointCloud() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objPoints_->pointCloud() || !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
         return;

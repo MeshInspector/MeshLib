@@ -30,9 +30,7 @@ RenderMeshObject::~RenderMeshObject()
 
 void RenderMeshObject::render( const RenderParams& renderParams )
 {
-    if ( !objMesh_->mesh() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objMesh_->mesh() || !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
         return;

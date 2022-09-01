@@ -40,9 +40,7 @@ float RenderLinesObject::actualLineWidth() const
 
 void RenderLinesObject::render( const RenderParams& renderParams )
 {
-    if ( !objLines_->polyline() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objLines_->polyline() || !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
         return;

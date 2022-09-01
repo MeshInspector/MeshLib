@@ -159,7 +159,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          sudo apt-get update && sudo apt-get upgrade && sudo apt-get install -y binutils 
+          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y binutils 
           python3 -m pip install --upgrade pip
           ./scripts/wheel/create_wheel.sh ${{ matrix.manylinux }} ${{needs.versioning-and-release-url.outputs.version_tag}}
 

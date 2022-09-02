@@ -4,8 +4,10 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
 #include "MRViewer.h"
+#include "MRMesh/MRHistoryAction.h"
 #include <boost/signals2/signal.hpp>
 #include <functional>
+#include <string>
 
 namespace MR
 {
@@ -101,6 +103,50 @@ public:
     // Sets callback that will be called when widget gets addictive transform
     // The callback should return true to approve transform and false to reject it
     void setApproveXfCallback( std::function<bool( const AffineXf3f& )> callback ) { approveXfCallback_ = callback; }
+
+    // History action for TransformWidget
+    class ChangeXfAction : public HistoryAction
+    {
+    public:
+        ChangeXfAction( const std::string& name, ObjectTransformWidget& widget ) :
+            widget_{ widget },
+            name_{ name }
+        {
+            if ( widget_.controlsRoot_ )
+            {
+                xf_ = widget_.controlsRoot_->xf();
+                scaledXf_ = widget_.scaledXf_;
+            }
+        }
+
+        virtual std::string name() const override
+        {
+            return name_;
+        }
+
+        virtual void action( HistoryAction::Type ) override
+        {
+            if ( !widget_.controlsRoot_ )
+                return;
+            auto tmpXf = widget_.controlsRoot_->xf();
+            widget_.controlsRoot_->setXf( xf_ );
+            xf_ = tmpXf;
+
+            std::swap( scaledXf_, widget_.scaledXf_ );
+        }
+
+        [[nodiscard]] virtual size_t heapBytes() const override
+        {
+            return name_.capacity();
+        }
+
+    private:
+        ObjectTransformWidget& widget_;
+        AffineXf3f xf_;
+        AffineXf3f scaledXf_;
+        std::string name_;
+    };
+
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
@@ -115,6 +161,8 @@ private:
     void processTranslation_( Axis ax, bool press );
     void processRotation_( Axis ax, bool press );
 
+    void setControlsXf_( const AffineXf3f& xf, bool updateScaled );
+
     std::weak_ptr<Object> visibilityParent_;
     std::shared_ptr<ObjectMesh> currentObj_;
 
@@ -122,6 +170,7 @@ private:
 
     void setActiveLineFromPoints_( const std::vector<Vector3f>& points );
 
+    // undiformAddXf - for ActiveEditMode::ScalingMode only, to scale widget uniformly
     void addXf_( const AffineXf3f& addXf );
     void stopModify_();
 
@@ -156,8 +205,11 @@ private:
     ActiveEditMode activeEditMode_{ TranslationMode };
 
     // store original object's scaled transform for proper controls' uniform scaling calculation
+    Vector3f boxDiagonal_;
+    // same as controlsRoot_->xf() but with non uniform scaling applied
     AffineXf3f scaledXf_;
-    Matrix3f objScale_;
+    // this is needed for tooltip only
+    float currentScaling_;
 
     Vector3f prevScaling_;
     Vector3f startTranslation_;

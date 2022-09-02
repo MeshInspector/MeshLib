@@ -187,6 +187,7 @@ enum class PaletteChanges
 
 /// Helper palette widget, allows to change palette ranges and filter type \n
 /// can load and save palette preset.
+/// \param presetName stores the currently selected palette's preset name or empty string if the palette was edited by user
 /// \param fixZero if present shows checkbox to fix zero symmetrical palette
 /// \return mask of changes, if it has PaletteChanges::Texture bit - object requires texture update,
 /// if it has PaletteChanges::Ranges uv coordinates should be recalculated and updated in object

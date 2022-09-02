@@ -37,7 +37,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
-    if ( ImGui::CollapsingHeader( "Current viewport options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Current viewport options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
@@ -73,7 +73,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             backgroundColor_.w = -1.0f;
         viewer->viewport().setBackgroundColor( Color( backgroundColor ) );
 
-        if ( ImGui::CollapsingHeader( "Clipping plane" ) )
+        if ( RibbonButtonDrawer::CustomCollapsingHeader( "Clipping plane" ) )
         {
             auto plane = viewportParameters.clippingPlane;
             auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );
@@ -90,7 +90,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
     }
     ImGui::Separator();
-    if ( ImGui::CollapsingHeader( "Viewer options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Viewer options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::Separator();
         ImGui::SetNextItemWidth( 125.0f * menuScaling );

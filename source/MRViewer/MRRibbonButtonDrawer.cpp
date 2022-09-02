@@ -387,6 +387,81 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     return true;
 }
 
+bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags )
+{
+    const auto& style = ImGui::GetStyle();
+    auto pos = ImGui::GetCursorScreenPos();
+    pos.x += style.FramePadding.x;
+    pos.y += style.FramePadding.y;
+
+    auto res = ImGui::CollapsingHeader( label, flags );    
+    
+    const float height = ImGui::GetTextLineHeight();
+    const float width = ImGui::GetTextLineHeight();
+
+    const auto isActive = ImGui::IsItemActive();
+    const auto isHovered = ImGui::IsItemHovered();
+
+    const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
+    const auto headerColor = ImGui::GetStyleColorVec4( ( isActive ) ? ImGuiCol_HeaderActive : isHovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header );
+    const float alpha = headerColor.w;
+
+    const ImVec4 blendedHeaderColor
+    {
+        windowBgColor.x + ( headerColor.x - windowBgColor.x ) * alpha,
+        windowBgColor.y + ( headerColor.y - windowBgColor.y ) * alpha,
+        windowBgColor.z + ( headerColor.z - windowBgColor.z ) * alpha,
+        1.0f
+    };
+    
+    auto context = ImGui::GetCurrentContext();
+    auto window = context->CurrentWindow;
+    auto drawList = window->DrawList;
+
+    drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( headerColor ) );
+
+    auto renderCustomArrow = [] ( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
+    {
+        drawList->PathLineTo( startPoint );
+        drawList->PathLineTo( midPoint );
+        drawList->PathLineTo( endPoint );
+        drawList->PathStroke( col, 0, thickness );
+
+        const float radius = thickness * 0.5f;
+        drawList->AddCircleFilled( startPoint, radius, col );
+        drawList->AddCircleFilled( midPoint, radius, col );
+        drawList->AddCircleFilled( endPoint, radius, col );
+    };
+
+    const float thickness = ImMax( height * 0.2f, 1.0f );
+    if ( res )
+    {
+        const auto halfWidth = width * 0.5f;
+        const auto horIndent = height * 0.2f;
+        const auto vertIndent = height * 7.0f / 20.0f;
+
+        const ImVec2 startPoint { pos.x + horIndent, pos.y + vertIndent };
+        const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
+        const ImVec2 endPoint{ pos.x + width - horIndent, pos.y + vertIndent };
+
+        renderCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+    }
+    else
+    {
+        const auto halfHeight = height * 0.5f;
+        const auto horIndent = width * 7.0f / 20.0f;
+        const auto vertIndent = height * 0.2f;
+
+        const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
+        const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };
+        const ImVec2 endPoint{ pos.x + horIndent, pos.y + height - vertIndent };
+
+        renderCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+    }
+
+    return res;
+}
+
 RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType )
 {
     ButtonItemWidth res;

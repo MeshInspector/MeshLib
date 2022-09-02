@@ -11,6 +11,19 @@
 namespace MR
 {
 
+void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
+{
+    drawList->PathLineTo( startPoint );
+    drawList->PathLineTo( midPoint );
+    drawList->PathLineTo( endPoint );
+    drawList->PathStroke( col, 0, thickness );
+
+    const float radius = thickness * 0.5f;
+    drawList->AddCircleFilled( startPoint, radius, col );
+    drawList->AddCircleFilled( midPoint, radius, col );
+    drawList->AddCircleFilled( endPoint, radius, col );
+}
+
 void RibbonButtonDrawer::InitGradientTexture()
 {
     auto& texture = GetGradientTexture();
@@ -341,30 +354,18 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
 
-    auto renderCustomArrow = [] ( ImDrawList* draw_list, ImRect arrowBox, ImU32 col )
-    {
-        const float halfHeight = arrowBox.GetHeight() * 0.5f;
-        const float seventhHeight = arrowBox.GetHeight() / 7.0f;
-        const float sixthWidth = arrowBox.GetWidth() / 6.0f;
-            
-        const float thickness = ImMax( arrowBox.GetHeight() * 0.1f, 1.0f );
-        const ImVec2 pos { arrowBox.Min.x, arrowBox.Min.y - thickness };
-        const ImVec2 startPoint { pos.x + sixthWidth, pos.y + halfHeight };
-        const ImVec2 anglePoint { pos.x + 2 * sixthWidth, pos.y + halfHeight + seventhHeight };
-        const ImVec2 endPoint { pos.x + 3 * sixthWidth, pos.y + halfHeight };
+    const float halfHeight = arrowBox.GetHeight() * 0.5f;
+    const float seventhHeight = arrowBox.GetHeight() / 7.0f;
+    const float sixthWidth = arrowBox.GetWidth() / 6.0f;
 
-        draw_list->PathLineTo( startPoint );       
-        draw_list->PathLineTo( anglePoint );
-        draw_list->PathLineTo( endPoint );        
-        draw_list->PathStroke( col, 0, thickness );
+    const float thickness = ImMax( arrowBox.GetHeight() * 0.1f, 1.0f );
+    
+    const ImVec2 arrowPos{ arrowBox.Min.x, arrowBox.Min.y - thickness };
+    const ImVec2 startPoint{ arrowPos.x + sixthWidth, arrowPos.y + halfHeight };
+    const ImVec2 midPoint{ arrowPos.x + 2 * sixthWidth, arrowPos.y + halfHeight + seventhHeight };
+    const ImVec2 endPoint{ arrowPos.x + 3 * sixthWidth, arrowPos.y + halfHeight };
 
-        const float radius = thickness * 0.5f;
-        draw_list->AddCircleFilled( startPoint, radius, col );
-        draw_list->AddCircleFilled( anglePoint, radius, col );
-        draw_list->AddCircleFilled( endPoint, radius, col );
-    };
-
-    renderCustomArrow( window->DrawList, arrowBox, ImGui::GetColorU32( ImGuiCol_Text ) );    
+    DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
     if ( !res )
         return false;
@@ -420,19 +421,6 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 
-    auto renderCustomArrow = [] ( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
-    {
-        drawList->PathLineTo( startPoint );
-        drawList->PathLineTo( midPoint );
-        drawList->PathLineTo( endPoint );
-        drawList->PathStroke( col, 0, thickness );
-
-        const float radius = thickness * 0.5f;
-        drawList->AddCircleFilled( startPoint, radius, col );
-        drawList->AddCircleFilled( midPoint, radius, col );
-        drawList->AddCircleFilled( endPoint, radius, col );
-    };
-
     const float thickness = ImMax( height * 0.2f, 1.0f );
     if ( res )
     {
@@ -444,7 +432,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
         const ImVec2 endPoint{ pos.x + width - horIndent, pos.y + vertIndent };
 
-        renderCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+        DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
     }
     else
     {
@@ -456,7 +444,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };
         const ImVec2 endPoint{ pos.x + horIndent, pos.y + height - vertIndent };
 
-        renderCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+        DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
     }
 
     return res;

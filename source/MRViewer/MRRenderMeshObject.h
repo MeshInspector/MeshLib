@@ -61,13 +61,11 @@ private:
 
     GlBuffer facesIndicesBuffer_;
     GlBuffer edgesIndicesBuffer_;
-    GLuint texture_{ 0 };
 
-    GLuint faceSelectionTex_{ 0 };
-
-    GLuint faceColorsTex_{ 0 };
-
-    GLuint facesNormalsTex_{ 0 };
+    GlTexture2 texture_;
+    GlTexture2 faceSelectionTex_;
+    GlTexture2 faceColorsTex_;
+    GlTexture2 facesNormalsTex_;
 
     int maxTexSize_{ 0 };
 

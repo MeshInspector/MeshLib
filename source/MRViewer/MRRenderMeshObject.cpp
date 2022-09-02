@@ -286,16 +286,16 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
 
     const auto& texture = objMesh_->getTexture();
     GLint wrap;
-    switch ( texture.warp )
+    switch ( texture.wrap )
     {
     default:
-    case MeshTexture::WarpType::Clamp:
+    case MeshTexture::WrapType::Clamp:
         wrap = GL_CLAMP_TO_EDGE;
         break;
-    case MeshTexture::WarpType::Repeat:
+    case MeshTexture::WrapType::Repeat:
         wrap = GL_REPEAT;
         break;
-    case MeshTexture::WarpType::Mirror:
+    case MeshTexture::WrapType::Mirror:
         wrap = GL_MIRRORED_REPEAT;
         break;
     }

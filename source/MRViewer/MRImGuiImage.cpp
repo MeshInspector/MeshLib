@@ -39,17 +39,17 @@ void ImGuiImage::bind_()
 
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, id_ ) );
 
-    int warp{0};
-    switch ( texture_.warp )
+    int wrap{0};
+    switch ( texture_.wrap )
     {
-    case MeshTexture::WarpType::Clamp:
-        warp = GL_CLAMP_TO_EDGE;
+    case MeshTexture::WrapType::Clamp:
+        wrap = GL_CLAMP_TO_EDGE;
         break;
-    case MeshTexture::WarpType::Repeat:
-        warp = GL_REPEAT;
+    case MeshTexture::WrapType::Repeat:
+        wrap = GL_REPEAT;
         break;
-    case MeshTexture::WarpType::Mirror:
-        warp = GL_MIRRORED_REPEAT;
+    case MeshTexture::WrapType::Mirror:
+        wrap = GL_MIRRORED_REPEAT;
         break;
     default:
         break;
@@ -70,8 +70,8 @@ void ImGuiImage::bind_()
 
     GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
     GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
     GL_EXEC( glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 ) );
     GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture_.resolution.x, texture_.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_.pixels.data() ) );
 }

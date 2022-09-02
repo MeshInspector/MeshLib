@@ -169,23 +169,23 @@ void RenderLinesObject::bindLines_()
     if ( dirty_ & DIRTY_TEXTURE )
     {
         const auto& texture = objLines_->getTexture();
-        int warp;
-        switch ( texture.warp )
+        int wrap;
+        switch ( texture.wrap )
         {
         default:
-        case MeshTexture::WarpType::Clamp:
-            warp = GL_CLAMP_TO_EDGE;
+        case MeshTexture::WrapType::Clamp:
+            wrap = GL_CLAMP_TO_EDGE;
             break;
-        case MeshTexture::WarpType::Repeat:
-            warp = GL_REPEAT;
+        case MeshTexture::WrapType::Repeat:
+            wrap = GL_REPEAT;
             break;
-        case MeshTexture::WarpType::Mirror:
-            warp = GL_MIRRORED_REPEAT;
+        case MeshTexture::WrapType::Mirror:
+            wrap = GL_MIRRORED_REPEAT;
             break;
         }
         int filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp ) );
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
+        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
         GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );

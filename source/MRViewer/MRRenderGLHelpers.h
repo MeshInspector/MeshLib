@@ -22,6 +22,7 @@ public:
     GlBuffer& operator =( const GlBuffer & ) = delete;
     GlBuffer& operator =( GlBuffer && r ) { del(); bufferID_ = r.bufferID_; size_ = r.size_; r.detach_(); return * this; }
 
+    auto getId() const { return bufferID_; }
     bool valid() const { return bufferID_ != NO_BUF; }
     size_t size() const { return size_; }
 
@@ -70,6 +71,7 @@ public:
     GlTexture2& operator =( const GlTexture2 & ) = delete;
     GlTexture2& operator =( GlTexture2 && r ) { del(); textureID_ = r.textureID_; size_ = r.size_; r.detach_(); return * this; }
 
+    auto getId() const { return textureID_; }
     bool valid() const { return textureID_ != NO_TEX; }
     size_t size() const { return size_; }
 
@@ -80,7 +82,7 @@ public:
     MRVIEWER_API void del();
 
     // binds current texture to OpenGL context
-    MRVIEWER_API void bind( GLenum activeTex );
+    MRVIEWER_API void bind();
 
     struct Settings
     {
@@ -95,19 +97,19 @@ public:
     };
 
     // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( GLenum activeTex, const Settings & settings, const char * arr );
+    MRVIEWER_API void loadData( const Settings & settings, const char * arr );
     template<typename C>
-    void loadData( GLenum activeTex, const Settings & settings, const C & cont ) {
+    void loadData( const Settings & settings, const C & cont ) {
         assert( cont.size() >= settings.size() );
-        loadData( activeTex, settings, (const char *)cont.data() ); 
+        loadData( settings, (const char *)cont.data() ); 
     }
 
     // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( GLenum activeTex, bool refresh, const Settings & settings, const char * arr );
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings & settings, const char * arr );
     template<typename C>
-    void loadDataOpt( GLenum activeTex, bool refresh, const Settings & settings, const C & cont ) {
+    void loadDataOpt( bool refresh, const Settings & settings, const C & cont ) {
         assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( activeTex, refresh, settings, (const char *)cont.data() );
+        loadDataOpt( refresh, settings, (const char *)cont.data() );
     }
 
 private:

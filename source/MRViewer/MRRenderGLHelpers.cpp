@@ -84,18 +84,17 @@ void GlTexture2::del()
     size_ = 0;
 }
 
-void GlTexture2::bind( GLenum activeTex )
+void GlTexture2::bind()
 { 
     assert( valid() );
-    GL_EXEC( glActiveTexture( activeTex ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, textureID_ ) );
 }
 
-void GlTexture2::loadData( GLenum activeTex, const Settings & settings, const char * arr )
+void GlTexture2::loadData( const Settings & settings, const char * arr )
 {
     if ( !valid() )
         gen();
-    bind( activeTex );
+    bind();
 
     GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, settings.wrap ) );
     GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, settings.wrap ) );
@@ -107,12 +106,12 @@ void GlTexture2::loadData( GLenum activeTex, const Settings & settings, const ch
     size_ = settings.size();
 }
 
-void GlTexture2::loadDataOpt( GLenum activeTex, bool refresh, const Settings & settings, const char * arr )
+void GlTexture2::loadDataOpt( bool refresh, const Settings & settings, const char * arr )
 {
     if ( refresh )
-        loadData( activeTex, settings, arr );
+        loadData( settings, arr );
     else
-        bind( activeTex );
+        bind();
 }
 
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )

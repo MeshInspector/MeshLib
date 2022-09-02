@@ -207,7 +207,7 @@ jobs:
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-          gh release upload ${{needs.versioning-and-release-url.outputs.version}} \
+          gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \

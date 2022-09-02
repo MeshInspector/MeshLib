@@ -418,7 +418,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     auto window = context->CurrentWindow;
     auto drawList = window->DrawList;
 
-    drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( headerColor ) );
+    drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 
     auto renderCustomArrow = [] ( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
     {

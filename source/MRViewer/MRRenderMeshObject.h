@@ -63,7 +63,7 @@ private:
     GlBuffer edgesIndicesBuffer_;
     GLuint texture_{ 0 };
 
-    GLuint faceSelectionTex_{ 0 };
+    GlTexture2 faceSelectionTex_;
 
     GLuint faceColorsTex_{ 0 };
 

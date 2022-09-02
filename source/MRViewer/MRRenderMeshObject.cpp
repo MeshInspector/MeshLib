@@ -349,18 +349,9 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
 
     // Selection
     auto faceSelection = loadFaceSelectionTextureBuffer_();
-    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceSelectionTex_ ) );
-    if ( faceSelection.dirty() )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, faceSelectionTextureSize_.x, faceSelectionTextureSize_.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelection.data() ) );
-    }
+    faceSelectionTex_.loadDataOpt( GL_TEXTURE3, faceSelection.dirty(),
+        { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
+        faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
     dirty_ &= ~DIRTY_MESH;
@@ -422,8 +413,6 @@ void RenderMeshObject::initBuffers_()
 
     GL_EXEC( glGenTextures( 1, &facesNormalsTex_ ) );
 
-    GL_EXEC( glGenTextures( 1, &faceSelectionTex_ ) );
-
     GL_EXEC( glGenVertexArrays( 1, &meshPickerArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
 
@@ -449,7 +438,6 @@ void RenderMeshObject::freeBuffers_()
 
     GL_EXEC( glDeleteTextures( 1, &texture_ ) );
     GL_EXEC( glDeleteTextures( 1, &faceColorsTex_ ) );
-    GL_EXEC( glDeleteTextures( 1, &faceSelectionTex_ ) );
     GL_EXEC( glDeleteTextures( 1, &facesNormalsTex_ ) );
 }
 

@@ -3,6 +3,7 @@
 #include "MRGladGlfw.h"
 #include "exports.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRVector2.h"
 #include <cassert>
 
 namespace MR
@@ -53,6 +54,68 @@ private:
 
 private:
     GLuint bufferID_ = NO_BUF;
+    size_t size_ = 0;
+};
+
+// represents OpenGL 2D texture owner, and allows uploading data in it remembering texture size
+class GlTexture2
+{
+    constexpr static GLuint NO_TEX = 0;
+public:
+    GlTexture2() = default;
+    GlTexture2( const GlTexture2 & ) = delete;
+    GlTexture2( GlTexture2 && r ) : textureID_( r.textureID_ ), size_( r.size_ ) { r.detach_(); }
+    ~GlTexture2() { del(); }
+
+    GlTexture2& operator =( const GlTexture2 & ) = delete;
+    GlTexture2& operator =( GlTexture2 && r ) { del(); textureID_ = r.textureID_; size_ = r.size_; r.detach_(); return * this; }
+
+    bool valid() const { return textureID_ != NO_TEX; }
+    size_t size() const { return size_; }
+
+    // generates new texture
+    MRVIEWER_API void gen();
+
+    // deletes the texture
+    MRVIEWER_API void del();
+
+    // binds current texture to OpenGL context
+    MRVIEWER_API void bind( GLenum activeTex );
+
+    struct Settings
+    {
+        Vector2i resolution;
+        size_t size() const { return size_t( resolution.x ) * resolution.y; }
+
+        GLint internalFormat = GL_RGBA;
+        GLint format = GL_RGBA;
+        GLint type = GL_UNSIGNED_BYTE;
+        GLint wrap = GL_MIRRORED_REPEAT;
+        GLint filter = GL_NEAREST;
+    };
+
+    // creates GL data texture using given data and binds it
+    MRVIEWER_API void loadData( GLenum activeTex, const Settings & settings, const char * arr );
+    template<typename C>
+    void loadData( GLenum activeTex, const Settings & settings, const C & cont ) {
+        assert( cont.size() >= settings.size() );
+        loadData( activeTex, settings, (const char *)cont.data() ); 
+    }
+
+    // binds current texture to OpenGL context, optionally refreshing its data
+    MRVIEWER_API void loadDataOpt( GLenum activeTex, bool refresh, const Settings & settings, const char * arr );
+    template<typename C>
+    void loadDataOpt( GLenum activeTex, bool refresh, const Settings & settings, const C & cont ) {
+        assert( !refresh || cont.size() >= settings.size() );
+        loadDataOpt( activeTex, refresh, settings, (const char *)cont.data() );
+    }
+
+private:
+    /// another object takes control over the GL texture
+    void detach_() { textureID_ = NO_TEX; size_ = 0; }
+
+private:
+    GLuint textureID_ = NO_TEX;
     size_t size_ = 0;
 };
 

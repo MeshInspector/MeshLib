@@ -1220,7 +1220,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     }
     const bool mixedLocking = hasLocked && hasUnlocked;
     bool checked = hasLocked;
-    someChanges |= make_checkbox( "Lock Transform", checked, mixedLocking );
+    someChanges |= RibbonButtonDrawer::GradientCheckboxMixed( "Lock Transform", &checked, mixedLocking );
     if ( checked != hasLocked )
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
@@ -1621,26 +1621,11 @@ std::vector<Object*> ImGuiMenu::getPreSelection_( Object* meshclicked,
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
 
-bool ImGuiMenu::make_checkbox( const char* label, bool& checked, bool mixed )
-{
-    auto backUpCheckColor = ImGui::GetStyle().Colors[ImGuiCol_CheckMark];
-    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
-    if ( mixed )
-    {
-        ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = undefined;
-        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
-    }
-    const bool res = RibbonButtonDrawer::GradientCheckbox( label, &checked );
-    ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = backUpCheckColor;
-    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
-    return res;
-}
-
 bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
-    const bool res = make_checkbox( label, checked, !realRes.second && realRes.first );
+    const bool res = RibbonButtonDrawer::GradientCheckboxMixed( label, &checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
     {
         if ( invert )

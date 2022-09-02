@@ -46,6 +46,8 @@ public:
     MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient checkbox
     MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
+    /// draw gradient checkbox with mixed state
+    MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
     /// draw gradient checkbox
     template<typename Getter, typename Setter>
     static bool GradientCheckbox( const char* label, Getter get, Setter set )

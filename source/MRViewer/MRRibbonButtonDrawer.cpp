@@ -239,6 +239,23 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     return res;
 }
 
+bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, bool mixed )
+{
+    if ( mixed )
+    {
+        ImGuiContext& g = *ImGui::GetCurrentContext();
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
+        g.CurrentItemFlags |= ImGuiItemFlags_MixedValue;
+        const bool changed = GradientCheckbox( label, value );
+        g.CurrentItemFlags = backup_item_flags;
+        return changed;
+    }
+    else
+    {
+        return GradientCheckbox( label, value );
+    }
+}
+
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )
 {
     auto& texture = GetGradientTexture();

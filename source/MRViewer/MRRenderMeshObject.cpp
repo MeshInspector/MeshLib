@@ -300,36 +300,40 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         break;
     }
     GLint filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-    texture_.loadDataOpt( GL_TEXTURE0, dirty_ & DIRTY_TEXTURE,
-        { .resolution = texture.resolution, .internalFormat = GL_RGBA, .format = GL_RGBA, .type= GL_UNSIGNED_BYTE, .wrap = wrap, .filter = filter },
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
+        { .resolution = texture.resolution, .internalFormat = GL_RGBA, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE, .wrap = wrap, .filter = filter },
         texture.pixels );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 
     // Diffuse
+    GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
     if ( dirty_ & DIRTY_PRIMITIVE_COLORMAP )
     {
         // TODO: avoid copying if no need to resize, and avoid double copying if resize is needed
         auto facesColorMap = objMesh_->getFacesColorMap();
         auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize_ );
         facesColorMap.resize( res.x * res.y );
-        faceColorsTex_.loadData( GL_TEXTURE1, 
+        faceColorsTex_.loadData( 
             { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type= GL_UNSIGNED_BYTE },
             facesColorMap );
     }
     else
-        faceColorsTex_.bind( GL_TEXTURE1 );
+        faceColorsTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceColors" ), 1 ) );
 
     // Normals
     auto faceNormals = loadFaceNormalsTextureBuffer_();
-    facesNormalsTex_.loadDataOpt( GL_TEXTURE2, faceNormals.dirty(),
+    GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
+    facesNormalsTex_.loadDataOpt( faceNormals.dirty(),
         { .resolution = faceNormalsTextureSize_, .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type= GL_FLOAT },
         faceNormals );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
     // Selection
     auto faceSelection = loadFaceSelectionTextureBuffer_();
-    faceSelectionTex_.loadDataOpt( GL_TEXTURE3, faceSelection.dirty(),
+    GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
+    faceSelectionTex_.loadDataOpt( faceSelection.dirty(),
         { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );

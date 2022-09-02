@@ -6,6 +6,7 @@
 #include <MRMesh/MRBox.h>
 #include "MRMesh/MRVoxelPath.h"
 #include "MRMesh/MRMeshTexture.h"
+#include "MRRenderGLHelpers.h"
 
 namespace MR
 {
@@ -17,32 +18,25 @@ class ImGuiImage
 {
 public:
     MRVIEWER_API ImGuiImage();
-    ImGuiImage( const ImGuiImage& ) = delete;
-    ImGuiImage( ImGuiImage&& ) = delete;
-
-    ImGuiImage& operator=( const ImGuiImage& ) = delete;
-    ImGuiImage& operator=( ImGuiImage&& ) = delete;
-
     MRVIEWER_API virtual ~ImGuiImage();
 
     // Sets image to texture
     MRVIEWER_API void update( const MeshTexture& texture );
 
     // Returns void* for ImGui::Image( getImTextureId(), ... )
-    void* getImTextureId() const { return (void*) (intptr_t) id_; }
+    void* getImTextureId() const { return (void*) (intptr_t) glTex_.getId(); }
 
     // Returns gl texture id
-    unsigned getId() const { return id_; }
+    unsigned getId() const { return glTex_.getId(); }
 
     // Returns current MeshTexture
     const MeshTexture& getMeshTexture() const { return texture_; }
 
     int getImageWidth() const { return texture_.resolution.x; }
     int getImageHeight() const { return texture_.resolution.y; }
-private:
-    bool initialized_{ false };
-    unsigned id_{0};
 
+private:
+    GlTexture2 glTex_;
     MeshTexture texture_;
          
     void bind_();

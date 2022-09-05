@@ -100,15 +100,17 @@ public:
     /// this space to parent space transformation (to world space if no parent) for default viewport
     const AffineXf3f & xf() const { return xf_.get(); }
     MRMESH_API virtual void setXf( const AffineXf3f& xf );
-    /// this space to parent space transformation for specific viewport
-    const AffineXf3f & xf( ViewportId id ) const { return xf_.get( id ); }
+    /// this space to parent space transformation for specific viewport,
+    /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
+    const AffineXf3f & xf( ViewportId id, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
     MRMESH_API virtual void setXf( ViewportId id, const AffineXf3f& xf );
 
     /// this space to world space transformation for default viewport
     MRMESH_API AffineXf3f worldXf() const;
     MRMESH_API void setWorldXf( const AffineXf3f& xf );
     /// this space to world space transformation for specific viewport
-    MRMESH_API AffineXf3f worldXf( ViewportId id ) const;
+    /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)
+    MRMESH_API AffineXf3f worldXf( ViewportId id, bool * isDef = nullptr ) const;
     MRMESH_API void setWorldXf( ViewportId id, const AffineXf3f& xf );
 
     /// scale object size (all point positions)

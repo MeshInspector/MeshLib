@@ -119,13 +119,16 @@ void Object::setWorldXf( const AffineXf3f& worldxf )
     setXf( xf_.get() * worldXf().inverse() * worldxf );
 }
 
-AffineXf3f Object::worldXf( ViewportId id ) const
+AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 {
-    auto xf = xf_.get( id );
+    auto xf = xf_.get( id, isDef );
     auto parent = parent_;
     while ( parent )
     {
-        xf = parent->xf( id ) * xf;
+        bool parentDef = true;
+        xf = parent->xf( id, &parentDef ) * xf;
+        if ( isDef )
+            *isDef = *isDef && parentDef;
         parent = parent->parent();
     }
     return xf;

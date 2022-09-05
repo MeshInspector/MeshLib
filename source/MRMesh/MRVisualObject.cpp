@@ -165,13 +165,14 @@ Box3f VisualObject::getBoundingBox() const
 Box3f VisualObject::getBoundingBoxXf( ViewportId id ) const
 {
     std::unique_lock lock( readCacheMutex_.getMutex() );
-    Box3f & box = boundingBoxCacheXf_.get( id );
     if( dirty_ & DIRTY_BOUNDING_BOX_XF )
     {
-        box = computeBoundingBoxXf_( id );
+        auto box = computeBoundingBoxXf_( id ); //TODO check that bbox in id is default one
+        boundingBoxCacheXf_.set( box, id );
         dirty_ &= ~DIRTY_BOUNDING_BOX_XF;
+        return box;
     }
-    return box;
+    return boundingBoxCacheXf_.get( id );
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )

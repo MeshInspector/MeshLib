@@ -48,10 +48,6 @@ public:
             *isDef = true;
         return def_;
     }
-    T & get( ViewportId id, bool * isDef = nullptr )
-    { 
-        return const_cast<T&>( const_cast<const ViewportProperty<T>*>( this )->get( id, isDef ) );
-    }
     /// forgets specific property value for given viewport (or all viewports if !id)
     void reset( ViewportId id )
     {

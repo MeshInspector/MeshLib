@@ -97,7 +97,7 @@ void Object::setXf( const AffineXf3f& xf, ViewportId id )
         spdlog::warn( "Object transform is degenerate" );
         return;
     }
-    xf_.get( id ) = xf;
+    xf_.set( xf, id );
     propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }

@@ -44,6 +44,15 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
+      - name: Test Show
+        run: |
+          pwd
+          ls
+          ls ./build
+          ls ./build/Debug
+          ls ./build/Debug/MRMesh
+          ls ./build/${{matrix.config}}/
+
       #Save timing in artifact
       - name: Upload timing
         uses: actions/upload-artifact@v2

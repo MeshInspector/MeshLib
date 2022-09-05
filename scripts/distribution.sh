@@ -100,6 +100,10 @@ printf "app copy done\n"
 cp -r build/Release/bin/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
 printf "MR libs copy done\n"
 
+#copy python libs
+cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}/meshlib/"
+printf "python MR libs copy done\n"
+
 #copy verison file
 cp build/Release/bin/mr.version "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"

@@ -52,6 +52,10 @@ printf "app copy done\n"
 cp -r build/Release/bin/*.so "${MR_INSTALL_LIB_DIR}"
 printf "MR libs copy done\n"
 
+#copy python libs
+cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}/meshlib/"
+printf "python MR libs copy done\n"
+
 #copy verison file
 cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
@@ -92,10 +96,11 @@ if [ -d /usr/lib/python3.9 ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshpy.so /usr/lib/python3.9/site-packages/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshnumpy.so /usr/lib/python3.9/site-packages/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrviewerpy.so /usr/lib/python3.9/site-packages/mrviewerpy.so
- printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/mr<lib_name>py.so' for custom python installations\n"
+ sudo mkdir -p /usr/lib/python3.9/site-packages/meshlib/
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.9/site-packages/meshlib/mrviewerpy.so
+ printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 fi
 
 printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"

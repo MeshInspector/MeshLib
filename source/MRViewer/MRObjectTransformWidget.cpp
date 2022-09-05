@@ -105,8 +105,9 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
         reset();
 
     center_ = box.center();
+    boxDiagonal_ = box.size();
     if ( radius_ < 0.0f )
-        radius_ = box.diagonal() * 0.5f;
+        radius_ = boxDiagonal_.length() * 0.5f;
     if ( width_ < 0.0f )
         width_ = radius_ / 40.0f;
     // make x - arrow
@@ -124,7 +125,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
 
     SceneRoot::get().addChild( controlsRoot_ );
     SceneRoot::get().addChild( activeLine_ );
-    setControlsXf( worldXf );
+    setControlsXf_( worldXf, true );
 
     setTransformMode( MoveX | MoveY | MoveZ | RotX | RotY | RotZ );
 
@@ -245,16 +246,7 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
 {
-    scaledXf_ = xf;
-
-    Matrix3f rotation, scaling;
-    decomposeMatrix3( xf.A, rotation, scaling );
-
-    Vector3f invScaling { 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
-    auto maxScaling = std::max( { scaling.x.x, scaling.y.y, scaling.z.z } );
-    controlsRoot_->setXf( xf * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( maxScaling ), center_ ) );
-
-    objScale_ = scaling;
+    setControlsXf_( xf, true );
 }
 
 AffineXf3f ObjectTransformWidget::getControlsXf() const
@@ -376,7 +368,7 @@ void ObjectTransformWidget::draw_()
     case ScalingMode:
     case UniformScalingMode:
         if ( scaleTooltipCallback_ )
-            scaleTooltipCallback_( objScale_[currentIndex][currentIndex] );
+            scaleTooltipCallback_( currentScaling_ );
         break;
     case RotationMode:
         if ( rotateTooltipCallback_ )
@@ -616,22 +608,33 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
         line.p, line.p + line.d
     );
+    auto centerTransformed = xf( center_ );
 
     if ( press )
+    {
         prevScaling_ = newScaling;
+        currentScaling_ = 1.0f;
+    }
 
-    auto scaleFactor = ( newScaling - xf( center_ ) ).length() / ( prevScaling_ - xf( center_ ) ).length();
-    auto scale = Vector3f::diagonal( 1.f );
-    if ( activeEditMode_ == UniformScalingMode )
-        scale *= scaleFactor;
-    else
-        scale[int( ax )] = scaleFactor;
+    auto scaleFactor = ( newScaling - centerTransformed ).length() / ( prevScaling_ - centerTransformed ).length();
+    currentScaling_ *= scaleFactor;
     prevScaling_ = newScaling;
 
-    objScale_ = Matrix3f::scale( scale ) * objScale_;
-
-    auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
-    addXf_( addXf );
+    if ( activeEditMode_ == UniformScalingMode )
+    {
+        auto uniScale = Vector3f::diagonal( scaleFactor );
+        auto uniScaleXf = AffineXf3f::xfAround( Matrix3f::scale( uniScale ), centerTransformed );
+        addXf_( uniScaleXf );
+    }
+    else if ( activeEditMode_ == ScalingMode )
+    {
+        auto scale = Vector3f::diagonal( 1.f );
+        scale[int( ax )] = scaleFactor;
+        auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
+        addXf_( addXf );
+    }
+    else
+        assert( false );
 }
 
 void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
@@ -682,10 +685,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
 
     if ( press )
         startRotXf_ = prevXf;
-    auto addXf =
-        AffineXf3f::translation( centerTransformed ) *
-        AffineXf3f::linear( Matrix3f::rotation( prevXf.A * baseAxis[ax], angle - startAngle_ ) ) *
-        AffineXf3f::translation( -centerTransformed );
+    auto addXf = AffineXf3f::xfAround( Matrix3f::rotation( prevXf.A * baseAxis[ax], angle - startAngle_ ), centerTransformed );
 
     addXf_( addXf );
     accumAngle_ += ( angle - startAngle_ );
@@ -738,6 +738,26 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     setActiveLineFromPoints_( activePoints );
 }
 
+
+void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateScaled )
+{
+    if ( updateScaled )
+        scaledXf_ = xf;
+    Matrix3f rotation, scaling;
+    decomposeMatrix3( scaledXf_.A, rotation, scaling );
+
+    auto scaledBoxDiagonal = mult( scaledXf_.A.toScale(), boxDiagonal_ );
+    float uniformScaling = scaledBoxDiagonal.length() / boxDiagonal_.length();
+    spdlog::info( uniformScaling );
+
+    AffineXf3f recalcXf = scaledXf_;
+    recalcXf.A = rotation * Matrix3f::scale( uniformScaling );
+
+    approvedChange_ = true;
+    controlsRoot_->setXf( recalcXf );
+    approvedChange_ = false;
+}
+
 void ObjectTransformWidget::updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask )
 {
     for ( int i = 0; i < 3; ++i )
@@ -784,9 +804,10 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     approvedChange_ = true;
     if ( addXfCallback_ )
         addXfCallback_( addXf );
-    if ( activeEditMode_ == TranslationMode || activeEditMode_ == RotationMode )
-        setControlsXf( addXf * controlsRoot_->xf() );
+
     scaledXf_ = addXf * scaledXf_;
+    setControlsXf_( scaledXf_, false );
+
     approvedChange_ = false;
 }
 
@@ -803,9 +824,6 @@ void ObjectTransformWidget::stopModify_()
             obj->setVisible( true );
 
     passiveMove_();
-
-    if ( activeEditMode_ == ScalingMode || activeEditMode_ == UniformScalingMode )
-        setControlsXf( scaledXf_ );
 
     if ( stopModifyCallback_ )
         stopModifyCallback_();

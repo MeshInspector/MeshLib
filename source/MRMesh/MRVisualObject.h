@@ -127,6 +127,7 @@ public:
 
     MRMESH_API Box3f getBoundingBox() const;
     void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
+    void setXf( ViewportId id, const AffineXf3f& xf ) override { Object::setXf( id, xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
     MRMESH_API Box3f getBoundingBoxXf() const;
 
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 

@@ -76,21 +76,35 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
 
 void Object::setXf( const AffineXf3f& xf )
 {
-    if ( xf_ == xf )
+    if ( xf_.get() == xf )
         return;
     if ( xf.A.det() == 0 )
     {
         spdlog::warn( "Object transform is degenerate" );
         return;
     }
-    xf_ = xf;
+    xf_.get() = xf;
+    propagateWorldXfChangedSignal_();
+    needRedraw_ = true;
+}
+
+void Object::setXf( ViewportId id, const AffineXf3f& xf )
+{
+    if ( xf_.get( id ) == xf )
+        return;
+    if ( xf.A.det() == 0 )
+    {
+        spdlog::warn( "Object transform is degenerate" );
+        return;
+    }
+    xf_.get( id ) = xf;
     propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
 AffineXf3f Object::worldXf() const
 {
-    auto xf = xf_;
+    auto xf = xf_.get();
     auto parent = parent_;
     while ( parent )
     {
@@ -102,7 +116,24 @@ AffineXf3f Object::worldXf() const
 
 void Object::setWorldXf( const AffineXf3f& worldxf )
 {
-    setXf( xf_ * worldXf().inverse() * worldxf );
+    setXf( xf_.get() * worldXf().inverse() * worldxf );
+}
+
+AffineXf3f Object::worldXf( ViewportId id ) const
+{
+    auto xf = xf_.get( id );
+    auto parent = parent_;
+    while ( parent )
+    {
+        xf = parent->xf( id ) * xf;
+        parent = parent->parent();
+    }
+    return xf;
+}
+
+void Object::setWorldXf( ViewportId id, const AffineXf3f& worldxf )
+{
+    setXf( xf_.get( id ) * worldXf( id ).inverse() * worldxf );
 }
 
 void Object::applyScale( float )
@@ -350,7 +381,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["Locked"] = locked_;
 
     // xf
-    serializeToJson( xf_, root["XF"] );
+    serializeToJson( xf_.get(), root["XF"] );
 
     // Type
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
@@ -377,7 +408,7 @@ void Object::deserializeFields_( const Json::Value& root )
     if ( root["Selected"].isBool() )
         selected_ = root["Selected"].asBool();
     if ( !root["XF"].isNull() )
-        deserializeFromJson( root["XF"], xf_ );
+        deserializeFromJson( root["XF"], xf_.get() );
     if ( root["Locked"].isBool() )
         locked_ = root["Locked"].asBool();
 }

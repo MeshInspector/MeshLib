@@ -212,6 +212,7 @@
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
+    <ClInclude Include="MRViewportProperty.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
     <ClInclude Include="MRVoxelPath.h" />

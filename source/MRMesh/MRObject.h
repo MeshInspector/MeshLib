@@ -5,7 +5,7 @@
 #include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRBitSet.h"
-#include "MRViewportId.h"
+#include "MRViewportProperty.h"
 #include "MRProgressCallback.h"
 #include <boost/signals2/signal.hpp>
 #include <tl/expected.hpp>
@@ -97,13 +97,19 @@ public:
     template <typename T>
     std::shared_ptr<T> find( const std::string_view & name ) { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>( name ) ); }
 
-    /// this space to parent space transformation (to world space if no parent)
-    const AffineXf3f & xf() const { return xf_; }
+    /// this space to parent space transformation (to world space if no parent) for default viewport
+    const AffineXf3f & xf() const { return xf_.get(); }
     MRMESH_API virtual void setXf( const AffineXf3f& xf );
+    /// this space to parent space transformation for specific viewport
+    const AffineXf3f & xf( ViewportId id ) const { return xf_.get( id ); }
+    MRMESH_API virtual void setXf( ViewportId id, const AffineXf3f& xf );
 
-    /// this space to world space transformation
+    /// this space to world space transformation for default viewport
     MRMESH_API AffineXf3f worldXf() const;
     MRMESH_API void setWorldXf( const AffineXf3f& xf );
+    /// this space to world space transformation for specific viewport
+    MRMESH_API AffineXf3f worldXf( ViewportId id ) const;
+    MRMESH_API void setWorldXf( ViewportId id, const AffineXf3f& xf );
 
     /// scale object size (all point positions)
     MRMESH_API virtual void applyScale( float scaleFactor );
@@ -246,7 +252,7 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
-    AffineXf3f xf_;
+    ViewportProperty<AffineXf3f> xf_;
     mutable MutexOwner readCacheMutex_;
     ViewportMask visibilityMask_ = ViewportMask::all();
     bool locked_ = false;

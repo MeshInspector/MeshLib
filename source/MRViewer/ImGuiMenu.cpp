@@ -1984,7 +1984,7 @@ void ImGuiMenu::draw_mr_menu()
     // Mesh
     ProgressBar::setup( menu_scaling() );
     const auto& viewportParameters = viewer->viewport().getParameters();
-    if ( RibbonButtonDrawer::CustomCollapsingHeader( "Main", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( drawCollapsingHeader_( "Main", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         draw_history_block_();
         float w = ImGui::GetContentRegionAvail().x;

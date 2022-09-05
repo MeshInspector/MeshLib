@@ -375,6 +375,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( collapsed && *collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+        ImGui::SetNextWindowSizeConstraints( { width, titleBarHeight }, { width, titleBarHeight } );
     }
 
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )

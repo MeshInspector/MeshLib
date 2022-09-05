@@ -500,7 +500,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
 
-    ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } );
+    if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
+    {
+        ImGui::End();
+        return false;
+    }
     ImGui::TableNextColumn();    
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
 

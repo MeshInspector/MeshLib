@@ -44,6 +44,13 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
+      #Save timing in artifact
+      - name: Upload timing
+        uses: actions/upload-artifact@v3
+        with:
+          name: ubuntu20_timings
+          path: ./build/Debug/MRMesh/compile_timings.txt
+
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 

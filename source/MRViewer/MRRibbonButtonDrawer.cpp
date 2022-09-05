@@ -438,12 +438,12 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 
-    const float thickness = ImMax( height * 0.2f, 1.0f );
+    const float thickness = ImMax( height * 0.15f, 1.0f );
     if ( res )
     {
         const auto halfWidth = width * 0.5f;
-        const auto horIndent = height * 0.2f;
-        const auto vertIndent = height * 7.0f / 20.0f;
+        const auto horIndent = height * 0.3f;
+        const auto vertIndent = height * 8.0f / 20.0f;
 
         const ImVec2 startPoint { pos.x + horIndent, pos.y + vertIndent };
         const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
@@ -454,8 +454,8 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     else
     {
         const auto halfHeight = height * 0.5f;
-        const auto horIndent = width * 7.0f / 20.0f;
-        const auto vertIndent = height * 0.2f;
+        const auto horIndent = width * 8.0f / 20.0f;
+        const auto vertIndent = height * 0.3f;
 
         const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
         const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };

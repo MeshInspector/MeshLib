@@ -201,6 +201,8 @@ public:
   // override this to customize prefix for objects in scene
   MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
   {}
+  // override this to customize appearance of collapsing headers
+  MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0);
 
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );

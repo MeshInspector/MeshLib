@@ -97,21 +97,16 @@ public:
     template <typename T>
     std::shared_ptr<T> find( const std::string_view & name ) { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>( name ) ); }
 
-    /// this space to parent space transformation (to world space if no parent) for default viewport
-    const AffineXf3f & xf() const { return xf_.get(); }
-    MRMESH_API virtual void setXf( const AffineXf3f& xf );
-    /// this space to parent space transformation for specific viewport,
+    /// this space to parent space transformation (to world space if no parent) for default or given viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
-    const AffineXf3f & xf( ViewportId id, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
-    MRMESH_API virtual void setXf( ViewportId id, const AffineXf3f& xf );
+    const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
+    MRMESH_API virtual void setXf( const AffineXf3f& xf );
+    MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id );
 
-    /// this space to world space transformation for default viewport
-    MRMESH_API AffineXf3f worldXf() const;
-    MRMESH_API void setWorldXf( const AffineXf3f& xf );
-    /// this space to world space transformation for specific viewport
+    /// this space to world space transformation for default or specific viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)
-    MRMESH_API AffineXf3f worldXf( ViewportId id, bool * isDef = nullptr ) const;
-    MRMESH_API void setWorldXf( ViewportId id, const AffineXf3f& xf );
+    MRMESH_API AffineXf3f worldXf( ViewportId id = {}, bool * isDef = nullptr ) const;
+    MRMESH_API void setWorldXf( const AffineXf3f& xf, ViewportId id = {} );
 
     /// scale object size (all point positions)
     MRMESH_API virtual void applyScale( float scaleFactor );

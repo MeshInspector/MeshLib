@@ -176,15 +176,15 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-Box3f ObjectPointsHolder::computeBoundingBoxXf_() const
+Box3f ObjectPointsHolder::computeBoundingBoxXf_( ViewportId id ) const
 {
     if ( !points_ )
         return {};
     tbb::enumerable_thread_specific<Box3f> threadData;
-    auto wXf = worldXf();
-    BitSetParallelFor( points_->validPoints, [&] ( VertId id )
+    auto wXf = worldXf( id );
+    BitSetParallelFor( points_->validPoints, [&] ( VertId v )
     {
-        threadData.local().include( wXf( points_->points[id] ) );
+        threadData.local().include( wXf( points_->points[v] ) );
     } );
     Box3f bb;
     for ( const auto& b : threadData )

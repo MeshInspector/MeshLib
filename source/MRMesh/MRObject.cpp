@@ -88,7 +88,7 @@ void Object::setXf( const AffineXf3f& xf )
     needRedraw_ = true;
 }
 
-void Object::setXf( ViewportId id, const AffineXf3f& xf )
+void Object::setXf( const AffineXf3f& xf, ViewportId id )
 {
     if ( xf_.get( id ) == xf )
         return;
@@ -100,23 +100,6 @@ void Object::setXf( ViewportId id, const AffineXf3f& xf )
     xf_.get( id ) = xf;
     propagateWorldXfChangedSignal_();
     needRedraw_ = true;
-}
-
-AffineXf3f Object::worldXf() const
-{
-    auto xf = xf_.get();
-    auto parent = parent_;
-    while ( parent )
-    {
-        xf = parent->xf() * xf;
-        parent = parent->parent();
-    }
-    return xf;
-}
-
-void Object::setWorldXf( const AffineXf3f& worldxf )
-{
-    setXf( xf_.get() * worldXf().inverse() * worldxf );
 }
 
 AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
@@ -134,7 +117,7 @@ AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
     return xf;
 }
 
-void Object::setWorldXf( ViewportId id, const AffineXf3f& worldxf )
+void Object::setWorldXf( const AffineXf3f& worldxf, ViewportId id )
 {
     setXf( xf_.get( id ) * worldXf( id ).inverse() * worldxf );
 }

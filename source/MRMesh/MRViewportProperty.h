@@ -22,19 +22,27 @@ public:
     const T & get() const { return def_; }
           T & get()       { return def_; }
 
-    /// sets specific property value for given viewport
-    void set( ViewportId id, T v ) { assert( id ); map_[id] = std::move( v ); }
+    /// sets specific property value for given viewport (or default value if !id)
+    void set( T v, ViewportId id )
+    { 
+        if ( id )
+            map_[id] = std::move( v );
+        else
+            def_ = std::move( v );
+    }
     /// gets property value for given viewport: specific if available otherwise default one;
     /// \param isDef receives true if this viewport does not have specific value and default one is returned
     const T & get( ViewportId id, bool * isDef = nullptr ) const
     { 
-        assert( id );
-        auto it = map_.find( id );
-        if ( it != map_.end() )
+        if ( id )
         {
-            if ( isDef )
-                *isDef = false;
-            return it->second;
+            auto it = map_.find( id );
+            if ( it != map_.end() )
+            {
+                if ( isDef )
+                    *isDef = false;
+                return it->second;
+            }
         }
         if ( isDef )
             *isDef = true;
@@ -44,8 +52,14 @@ public:
     { 
         return const_cast<T&>( const_cast<const ViewportProperty<T>*>( this )->get( id, isDef ) );
     }
-    /// forgets specific property value for given viewport
-    void reset( ViewportId id ) { assert( id ); map_.erase( id ); }
+    /// forgets specific property value for given viewport (or all viewports if !id)
+    void reset( ViewportId id )
+    {
+        if ( id )
+            map_.erase( id );
+        else
+            map_.clear();
+    }
     /// forgets specific property value for all viewports
     void reset() { map_.clear(); }
 

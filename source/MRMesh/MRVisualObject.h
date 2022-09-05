@@ -125,10 +125,13 @@ public:
 
     MRMESH_API void resetDirty() const;
 
-    MRMESH_API Box3f getBoundingBox() const;
     void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
-    void setXf( ViewportId id, const AffineXf3f& xf ) override { Object::setXf( id, xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
-    MRMESH_API Box3f getBoundingBoxXf() const;
+    void setXf( const AffineXf3f& xf, ViewportId id ) override { Object::setXf( xf, id ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
+
+    /// returns object bounding box in its local space
+    MRMESH_API Box3f getBoundingBox() const;
+    /// returns object bounding box in world space using default transformations or transformations from given viewport
+    MRMESH_API Box3f getBoundingBoxXf( ViewportId id = {} ) const;
 
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
     {
@@ -235,14 +238,14 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     virtual Box3f computeBoundingBox_() const { return Box3f(); }
-    virtual Box3f computeBoundingBoxXf_() const { return Box3f(); }
+    virtual Box3f computeBoundingBoxXf_( ViewportId ) const { return Box3f(); }
 
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;
 
 private:
     mutable Box3f boundingBoxCache_;
-    mutable Box3f boundingBoxCacheXf_;
+    mutable ViewportProperty<Box3f> boundingBoxCacheXf_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

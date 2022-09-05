@@ -7,8 +7,8 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRImGuiImage.h"
 #include "MRPch/MRSpdlog.h"
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 #include "imgui_fonts_droid_sans.h"
 #include "MRGladGlfw.h"
 #include "ImGuiHelpers.h"

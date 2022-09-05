@@ -905,12 +905,12 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str()),
+        isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
-                                    ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
+                                    ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
         makeDragDropSource_( selected );
         makeDragDropTarget_( object, false, false, 0 );

@@ -46,10 +46,11 @@ jobs:
 
       #Save timing in artifact
       - name: Upload timing
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
-          name: ubuntu20_timings
-          path: ./build/Debug/MRMesh/compile_timings.txt
+          name: ubuntu20_timings${{matrix.config}}
+          path: ./build/${{matrix.config}}/MRMesh/compile_timings.txt
+          retention-days: 1
 
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop

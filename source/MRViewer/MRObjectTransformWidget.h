@@ -75,6 +75,7 @@ public:
 
     // Changes controls xf (controls will affect object in basis of new xf)
     // note that rotation is applied around 0 coordinate in world space, so use xfAround to process rotation around user defined center
+    // non-uniform scale will be converted to uniform one based on initial box diagonal
     MRVIEWER_API void setControlsXf( const AffineXf3f& xf );
     MRVIEWER_API AffineXf3f getControlsXf() const;
 
@@ -204,12 +205,13 @@ private:
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
 
-    // store original object's scaled transform for proper controls' uniform scaling calculation
+    // Initial box diagonal vector (before transformation), 
+    // it is needed to correctly convert non-uniform scaling to uniform one and apply it to this widget
     Vector3f boxDiagonal_;
     // same as controlsRoot_->xf() but with non uniform scaling applied
     AffineXf3f scaledXf_;
     // this is needed for tooltip only
-    float currentScaling_;
+    float currentScaling_ = 1.0f;
 
     Vector3f prevScaling_;
     Vector3f startTranslation_;

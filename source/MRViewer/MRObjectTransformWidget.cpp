@@ -134,7 +134,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     xfValidatorConnection_ = controlsRoot_->worldXfChangedSignal.connect( [&] ()
     {
         if ( !approvedChange_ && picked_ )
-                stopModify_();
+            stopModify_();
     } );
 }
 

@@ -2128,4 +2128,9 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
     }
 }
 
+bool RibbonMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags )
+{
+    return RibbonButtonDrawer::CustomCollapsingHeader( label, flags );
+}
+
 }

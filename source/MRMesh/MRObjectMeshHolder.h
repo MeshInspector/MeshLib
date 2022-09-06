@@ -112,7 +112,7 @@ public:
     MRMESH_API bool isMeshClosed() const;
     /// returns cached bounding box of this mesh object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
     /// returns cached information about the number of selected faces in the mesh
     MRMESH_API size_t numSelectedFaces() const;
     /// returns cached information about the number of selected undirected edges in the mesh
@@ -143,7 +143,7 @@ protected:
     mutable std::optional<bool> meshIsClosed_;
     mutable std::optional<size_t> numSelectedFaces_, numSelectedEdges_, numCreaseEdges_;
     mutable std::optional<double> totalArea_;
-    mutable XfBasedCache<Box3f> worldBox_;
+    mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
     MRMESH_API ObjectMeshHolder( const ObjectMeshHolder& other );
 

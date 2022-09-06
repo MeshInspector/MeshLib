@@ -22,13 +22,15 @@ public:
     const T & get() const { return def_; }
           T & get()       { return def_; }
 
+    /// returns direct access to value associated with given viewport (or default value if !id)
+    T & operator[]( ViewportId id )
+    {
+        return id ? map_[id] : def_;
+    }
     /// sets specific property value for given viewport (or default value if !id)
     void set( T v, ViewportId id )
     { 
-        if ( id )
-            map_[id] = std::move( v );
-        else
-            def_ = std::move( v );
+        (*this)[id] = std::move( v );
     }
     /// gets property value for given viewport: specific if available otherwise default one;
     /// \param isDef receives true if this viewport does not have specific value and default one is returned

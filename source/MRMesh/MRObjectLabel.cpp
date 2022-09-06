@@ -191,12 +191,12 @@ void ObjectLabel::updatePivotShift_()
     }
 }
 
-Box3f ObjectLabel::getWorldBox() const
+Box3f ObjectLabel::getWorldBox( ViewportId id ) const
 {
     if ( !mesh_ )
         return {};
     Box3f box;
-    box.include( worldXf()( label_.position ) );
+    box.include( worldXf( id )( label_.position ) );
     return box;
 }
 

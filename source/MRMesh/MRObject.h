@@ -207,8 +207,8 @@ public:
     /// requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
     MRMESH_API void swap( Object& other );
 
-    /// returns bounding box of this object in world coordinates
-    virtual Box3f getWorldBox() const { return {}; } ///empty box
+    /// returns bounding box of this object in world coordinates for default or specific viewport
+    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
     /// returns bounding box of this object and all children visible in given viewports in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
 

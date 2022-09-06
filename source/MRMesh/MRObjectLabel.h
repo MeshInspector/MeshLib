@@ -105,7 +105,7 @@ public:
 
     /// returns cached bounding box of this label object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
 
     /// returns mesh that represents current label
     const std::shared_ptr<Mesh>& labelRepresentingMesh() const { return mesh_; }

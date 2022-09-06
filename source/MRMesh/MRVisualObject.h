@@ -237,7 +237,6 @@ protected:
 
 private:
     mutable Box3f boundingBoxCache_;
-    mutable Box3f boundingBoxCacheXf_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

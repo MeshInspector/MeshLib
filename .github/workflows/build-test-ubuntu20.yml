@@ -48,18 +48,25 @@ jobs:
         run: |
           inFolder=./build/${{matrix.config}}/
           outFolder=./build/${{matrix.config}}/${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}/Timings
-          mkdir -p $outFolder/MRMesh
-          mv $inFolder/MRMesh/compile_timings.txt $outFolder/MRMesh/
-          mv $inFolder/MRMesh/link_timings.txt $outFolder/MRMesh/
-          tar -cvf Ubuntu20_${{matrix.config}}_timings.zip $outFolder
-
+          mkdir $outFolder
+          folderList=(MRCommonPlugins mrviewerpy MRTest MRViewerApp MRViewer mrmeshpy meshconv mrmeshnumpy MRMesh)
+          for folder in ${folderList}
+          do
+            mkdir $outFolder/$folder
+            cp $inFolder/$folder/compile_timings.txt $outFolder/$folder/compile_timings.txt
+            cp $inFolder/$folder/link_timings.txt $outFolder/$folder/link_timings.txt
+          done
+          currentWd=`pwd`
+          cd $outFolder/..
+          zip Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings.zip $outFolder
+          cd $currentWd
 
       #Save timing in artifact
       - name: Upload timing
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu20_${{matrix.config}}_timings
-          path: Ubuntu20_${{matrix.config}}_timings.zip
+          name: Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings
+          path: Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings.zip
           retention-days: 1
 
       - name: Run Tests

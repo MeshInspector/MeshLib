@@ -912,6 +912,9 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                                     ImGuiTreeNodeFlags_Framed |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
+        ImGui::PopStyleColor( isSelected ? 2 : 1 );
+        ImGui::PopStyleVar();
+
         makeDragDropSource_( selected );
         makeDragDropTarget_( object, false, false, 0 );
 
@@ -958,8 +961,6 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         }
 
-        ImGui::PopStyleColor( isSelected ? 2 : 1 );
-        ImGui::PopStyleVar();
 
         if ( isSelected )
             drawSceneContextMenu_( selected );

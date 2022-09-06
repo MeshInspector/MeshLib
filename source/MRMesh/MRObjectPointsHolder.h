@@ -92,7 +92,6 @@ protected:
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
-    MRMESH_API virtual Box3f computeBoundingBoxXf_() const override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 

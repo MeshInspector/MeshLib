@@ -176,22 +176,6 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-Box3f ObjectPointsHolder::computeBoundingBoxXf_() const
-{
-    if ( !points_ )
-        return {};
-    tbb::enumerable_thread_specific<Box3f> threadData;
-    auto wXf = worldXf();
-    BitSetParallelFor( points_->validPoints, [&] ( VertId id )
-    {
-        threadData.local().include( wXf( points_->points[id] ) );
-    } );
-    Box3f bb;
-    for ( const auto& b : threadData )
-        bb.include( b );
-    return bb;
-}
-
 tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )

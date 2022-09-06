@@ -118,15 +118,19 @@ void ObjectPointsHolder::setPointSize( float size )
     needRedraw_ = true;
 }
 
-Box3f ObjectPointsHolder::getWorldBox() const
+Box3f ObjectPointsHolder::getWorldBox( ViewportId id ) const
 {
     if ( !points_ )
         return {};
-    const auto worldXf = this->worldXf();
-    if ( auto v = worldBox_.get( worldXf ) )
+    bool isDef = true;
+    const auto worldXf = this->worldXf( id, &isDef );
+    if ( isDef )
+        id = {};
+    auto & cache = worldBox_[id];
+    if ( auto v = cache.get( worldXf ) )
         return *v;
     const auto box = points_->computeBoundingBox( &worldXf );
-    worldBox_.set( worldXf, box );
+    cache.set( worldXf, box );
     return box;
 }
 

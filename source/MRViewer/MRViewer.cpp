@@ -902,7 +902,7 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
 {
     if ( !obj.isVisible( vp.id ) )
         return;
-    auto xfCopy = parentXf * obj.xf();
+    auto xfCopy = parentXf * obj.xf( vp.id );
     auto visObj = obj.asType<VisualObject>();
     if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
     {

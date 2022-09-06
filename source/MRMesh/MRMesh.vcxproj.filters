@@ -870,6 +870,9 @@
     <ClInclude Include="MRChangeVoxelSelectionAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRViewportProperty.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

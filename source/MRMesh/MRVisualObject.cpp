@@ -309,9 +309,9 @@ void VisualObject::deserializeFields_( const Json::Value& root )
     dirty_ = DIRTY_ALL;
 }
 
-Box3f VisualObject::getWorldBox() const
+Box3f VisualObject::getWorldBox( ViewportId id ) const
 {
-    return transformed( getBoundingBox(), worldXf() );
+    return transformed( getBoundingBox(), worldXf( id ) );
 }
 
 size_t VisualObject::heapBytes() const

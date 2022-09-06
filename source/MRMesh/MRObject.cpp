@@ -74,35 +74,46 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
     return {}; // not found among recognized children
 }
 
-void Object::setXf( const AffineXf3f& xf )
+void Object::setXf( const AffineXf3f& xf, ViewportId id )
 {
-    if ( xf_ == xf )
+    if ( xf_.get( id ) == xf )
         return;
     if ( xf.A.det() == 0 )
     {
         spdlog::warn( "Object transform is degenerate" );
         return;
     }
-    xf_ = xf;
+    xf_.set( xf, id );
     propagateWorldXfChangedSignal_();
     needRedraw_ = true;
 }
 
-AffineXf3f Object::worldXf() const
+void Object::resetXf( ViewportId id )
 {
-    auto xf = xf_;
+    if ( !xf_.reset( id ) )
+        return;
+    propagateWorldXfChangedSignal_();
+    needRedraw_ = true;
+}
+
+AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
+{
+    auto xf = xf_.get( id, isDef );
     auto parent = parent_;
     while ( parent )
     {
-        xf = parent->xf() * xf;
+        bool parentDef = true;
+        xf = parent->xf( id, &parentDef ) * xf;
+        if ( isDef )
+            *isDef = *isDef && parentDef;
         parent = parent->parent();
     }
     return xf;
 }
 
-void Object::setWorldXf( const AffineXf3f& worldxf )
+void Object::setWorldXf( const AffineXf3f& worldxf, ViewportId id )
 {
-    setXf( xf_ * worldXf().inverse() * worldxf );
+    setXf( xf_.get( id ) * worldXf( id ).inverse() * worldxf );
 }
 
 void Object::applyScale( float )
@@ -350,7 +361,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["Locked"] = locked_;
 
     // xf
-    serializeToJson( xf_, root["XF"] );
+    serializeToJson( xf_.get(), root["XF"] );
 
     // Type
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
@@ -377,7 +388,7 @@ void Object::deserializeFields_( const Json::Value& root )
     if ( root["Selected"].isBool() )
         selected_ = root["Selected"].asBool();
     if ( !root["XF"].isNull() )
-        deserializeFromJson( root["XF"], xf_ );
+        deserializeFromJson( root["XF"], xf_.get() );
     if ( root["Locked"].isBool() )
         locked_ = root["Locked"].asBool();
 }
@@ -566,12 +577,12 @@ void Object::swap( Object& other )
     swapSignals_( other );
 }
 
-Box3f Object::getWorldTreeBox( ViewportMask viewportMask ) const
+Box3f Object::getWorldTreeBox( ViewportId id ) const
 {
-    Box3f res = getWorldBox();
+    Box3f res = getWorldBox( id );
     for ( const auto & c : children_ )
-        if ( c && !c->isAncillary() && c->isVisible( viewportMask ) )
-            res.include( c->getWorldTreeBox() );
+        if ( c && !c->isAncillary() && c->isVisible( id ) )
+            res.include( c->getWorldTreeBox( id ) );
     return res;
 }
 

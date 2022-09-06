@@ -191,19 +191,19 @@ void ObjectLabel::updatePivotShift_()
     }
 }
 
-Box3f ObjectLabel::getWorldBox() const
+Box3f ObjectLabel::getWorldBox( ViewportId id ) const
 {
     if ( !mesh_ )
         return {};
     Box3f box;
-    box.include( worldXf()( label_.position ) );
+    box.include( worldXf( id )( label_.position ) );
     return box;
 }
 
 size_t ObjectLabel::heapBytes() const
 {
     return VisualObject::heapBytes() +
-        sizeof( std::filesystem::path::value_type ) * pathToFont_.native().capacity() +
+        sizeof( pathToFont_ ) * pathToFont_.native().capacity() +
         label_.text.capacity() +
         MR::heapBytes( mesh_ );
 }

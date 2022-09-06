@@ -64,7 +64,7 @@ public:
 
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
@@ -84,7 +84,7 @@ protected:
     MRMESH_API virtual void setupRenderObject_() const override;
 
     mutable std::optional<float> totalLength_;
-    mutable XfBasedCache<Box3f> worldBox_;
+    mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
     Vector<Color, UndirectedEdgeId> linesColorMap_;
 

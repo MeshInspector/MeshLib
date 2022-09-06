@@ -48,16 +48,26 @@ public:
             *isDef = true;
         return def_;
     }
-    /// forgets specific property value for given viewport (or all viewports if !id)
-    void reset( ViewportId id )
+    /// forgets specific property value for given viewport (or all viewports if !id);
+    /// returns true if any specific value was removed
+    bool reset( ViewportId id )
     {
         if ( id )
-            map_.erase( id );
-        else
-            map_.clear();
+            return map_.erase( id ) > 0;
+        if ( map_.empty() )
+            return false;
+        map_.clear();
+        return true;
     }
-    /// forgets specific property value for all viewports
-    void reset() { map_.clear(); }
+    /// forgets specific property value for all viewports;
+    /// returns true if any specific value was removed
+    bool reset()
+    {
+        if ( map_.empty() )
+            return false;
+        map_.clear();
+        return true;
+    }
 
 private:
     T def_{};

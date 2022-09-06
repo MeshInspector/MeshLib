@@ -88,6 +88,14 @@ void Object::setXf( const AffineXf3f& xf, ViewportId id )
     needRedraw_ = true;
 }
 
+void Object::resetXf( ViewportId id )
+{
+    if ( !xf_.reset( id ) )
+        return;
+    propagateWorldXfChangedSignal_();
+    needRedraw_ = true;
+}
+
 AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 {
     auto xf = xf_.get( id, isDef );

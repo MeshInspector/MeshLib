@@ -101,6 +101,8 @@ public:
     /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
     const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
     MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} );
+    /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
+    MRMESH_API virtual void resetXf( ViewportId id = {} );
 
     /// this space to world space transformation for default or specific viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)

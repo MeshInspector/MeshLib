@@ -57,13 +57,18 @@ jobs:
           done
 
       #Save timing in artifact
-      - name: Upload Timings
+      - name: Upload Compile Timings
         uses: actions/upload-artifact@v3
         with:
           name: Timing_Logs
-          path: |
-            compile_timings_ubuntu22_${{matrix.config}}_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
-            link_timings_ubuntu22_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
+          path: compile_timings_ubuntu22_${{matrix.config}}_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
+          retention-days: 1
+
+      - name: Upload Link Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: link_timings_ubuntu22_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
           retention-days: 1
 
       - name: Run Tests

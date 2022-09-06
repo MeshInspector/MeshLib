@@ -48,7 +48,7 @@ jobs:
         run: |
           inFolder=./build/${{matrix.config}}/
           outFolder=./build/${{matrix.config}}/${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}/Timings
-          mkdir $outFolder
+          mkdir -p $outFolder
           folderList=(MRCommonPlugins mrviewerpy MRTest MRViewerApp MRViewer mrmeshpy meshconv mrmeshnumpy MRMesh)
           for folder in ${folderList}
           do

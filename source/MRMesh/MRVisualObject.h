@@ -63,10 +63,9 @@ enum DirtyFlags
     DIRTY_FACES_COLORMAP = DIRTY_PRIMITIVE_COLORMAP,
     DIRTY_MESH = 0x07FF,
     DIRTY_BOUNDING_BOX = 0x0800,
-    DIRTY_BOUNDING_BOX_XF = 0x1000,
     DIRTY_BORDER_LINES = 0x2000,
     DIRTY_EDGES_SELECTION = 0x4000,
-    DIRTY_CACHES = DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF,
+    DIRTY_CACHES = DIRTY_BOUNDING_BOX,
     DIRTY_ALL = 0x3FFFF
 };
 
@@ -126,8 +125,6 @@ public:
     MRMESH_API void resetDirty() const;
 
     MRMESH_API Box3f getBoundingBox() const;
-    void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
-    MRMESH_API Box3f getBoundingBoxXf() const;
 
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
     {
@@ -234,7 +231,6 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     virtual Box3f computeBoundingBox_() const { return Box3f(); }
-    virtual Box3f computeBoundingBoxXf_() const { return Box3f(); }
 
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;

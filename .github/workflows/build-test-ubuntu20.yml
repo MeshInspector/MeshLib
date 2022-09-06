@@ -17,9 +17,9 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-        compiler: [Сlang 11, GCC 10]
+        compiler: [Clang 11, GCC 10]
         include:
-          - compiler: Сlang 11
+          - compiler: Clang 11
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
           - compiler: GCC 10
@@ -46,13 +46,12 @@ jobs:
 
       - name: Collect Timings
         run: |
-          echo ${{ fromJSON('["OFF", "ON"]')[matrix.compiler == 'Сlang 11'] }}
-          echo ${{ fromJSON('["OFF", "ON"]')[matrix.compiler == 'GCC 10'] }}
-          mkdir -p ./build/${{matrix.config}}/${{matrix.compiler}}/timings
-          mkdir ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh
-          mv ./build/${{matrix.config}}/MRMesh/compile_timings.txt ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh/
-          mv ./build/${{matrix.config}}/MRMesh/link_timings.txt ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh/
-          tar -cvf Ubuntu20_${{matrix.config}}_timings.zip ./build/${{matrix.config}}/${{matrix.compiler}}/timings/
+          inFolder=./build/${{matrix.config}}/
+          outFolder=./build/${{matrix.config}}/${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}/Timings
+          mkdir -p $outFolder/MRMesh
+          mv $inFolder/MRMesh/compile_timings.txt $outFolder/MRMesh/
+          mv $inFolder/MRMesh/link_timings.txt $outFolder/MRMesh/
+          tar -cvf Ubuntu20_${{matrix.config}}_timings.zip $outFolder
 
 
       #Save timing in artifact

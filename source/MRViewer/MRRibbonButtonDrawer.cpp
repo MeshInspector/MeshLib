@@ -421,7 +421,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
 
     const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
-    const auto headerColor = ImGui::GetStyleColorVec4( ( isActive ) ? ImGuiCol_HeaderActive : isHovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header );
+    const auto headerColor = ImGui::GetStyleColorVec4( ( isActive && isHovered ) ? ImGuiCol_HeaderActive : isHovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header );
     const float alpha = headerColor.w;
 
     const ImVec4 blendedHeaderColor

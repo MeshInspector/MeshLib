@@ -44,6 +44,28 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
+      - name: Collect Timings
+        run: |
+          compilerName=${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}
+          for file in `find ./build/${{matrix.config}}/*/  -name compile_timings.txt`
+          do
+            cat $file >> compile_timings_ubuntu22_${{matrix.config}}_$compilerName.txt
+          done
+          for file in `find ./build/${{matrix.config}}/*/  -name link_timings.txt`
+          do
+            cat $file >> link_timings_ubuntu22_${{matrix.config}}_$compilerName.txt
+          done
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: |
+            compile_timings_ubuntu22_${{matrix.config}}_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
+            link_timings_ubuntu22_${{matrix.config}}_${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}.txt
+          retention-days: 1
+
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 

@@ -970,7 +970,10 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         bool infoOpen = false;
         auto lines = object.getInfoLines();
         if ( hasRealChildren && !lines.empty() )
-            infoOpen = ImGui::TreeNodeEx( "Info: ", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+        {
+            auto infoId = std::string("Info: ##") + std::to_string(counter);
+            infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+        }
 
         if ( infoOpen || !hasRealChildren )
         {
@@ -993,12 +996,13 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         if ( hasRealChildren )
         {
-            if ( infoOpen )
-                ImGui::TreePop();
-
             auto children = object.children();
             for ( const auto& child : children )
+            {
+                ImGui::Indent();
                 draw_object_recurse_( *child, selected, all, counter );
+                ImGui::Unindent();
+            }
 
             makeDragDropTarget_( object, false, true, 0 );
         }

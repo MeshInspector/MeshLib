@@ -398,21 +398,19 @@ int Viewer::launchInit_( const LaunchParams& params )
             return( -1 );
         }
         glInitialized_ = true;
-#ifndef NDEBUG
 #ifndef __EMSCRIPTEN__
-        spdlog::debug( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
+        spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
 #endif
         int major, minor, rev;
         major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
         minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
         rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
-        spdlog::debug( "OpenGL version received: {}.{}.{}", major, minor, rev );
+        spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
         if ( glInitialized_ )
         {
-            spdlog::debug( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
-            spdlog::debug( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+            spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
+            spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
         }
-#endif
         if ( params.showMRVersionInTitle )
         {
             defaultWindowTitle = params.name + " (" + GetMRVersionString() + ")";
@@ -471,7 +469,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     }
 
     if ( menuPlugin_ )
+    {
+        spdlog::info( "Init menu plugin." );
         menuPlugin_->init( this );
+    }
     init_();
     // it is replaced here because some plugins can rise modal window, and scroll event sometimes can pass over it
     if ( window )
@@ -536,7 +537,10 @@ void Viewer::launchShut()
     }
 
     if ( settingsMng_ )
+    {
+        spdlog::info( "Save user settings." );
         settingsMng_->saveSettings( *this );
+    }
 
     for ( auto& viewport : viewport_list )
         viewport.shut();
@@ -575,7 +579,10 @@ void Viewer::init_()
 
     auto& mainViewport = viewport();
     if ( settingsMng_ )
+    {
+        spdlog::info( "Load user settings." );
         settingsMng_->loadSettings( *this );
+    }
     mainViewport.init();
 }
 

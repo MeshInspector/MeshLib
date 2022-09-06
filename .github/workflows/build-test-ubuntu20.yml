@@ -44,21 +44,23 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
-      - name: Test Show
+      - name: Collect Timings
         run: |
-          pwd
-          ls
-          ls ./build
-          ls ./build/Debug
-          ls ./build/Debug/MRMesh
-          ls ./build/${{matrix.config}}/
+          echo ${{ fromJSON('["OFF", "ON"]')[matrix.compiler == 'Сlang 11'] }}
+          echo ${{ fromJSON('["OFF", "ON"]')[matrix.compiler == 'GCC 10'] }}
+          mkdir -p ./build/${{matrix.config}}/${{matrix.compiler}}/timings
+          mkdir ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh
+          mv ./build/${{matrix.config}}/MRMesh/compile_timings.txt ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh/
+          mv ./build/${{matrix.config}}/MRMesh/link_timings.txt ./build/${{matrix.config}}/${{matrix.compiler}}/timings/MRMesh/
+          tar -cvf Ubuntu20_${{matrix.config}}_timings.zip ./build/${{matrix.config}}/${{matrix.compiler}}/timings/
+
 
       #Save timing in artifact
       - name: Upload timing
         uses: actions/upload-artifact@v2
         with:
-          name: ubuntu20_timings${{matrix.config}}
-          path: ./build/${{matrix.config}}/MRMesh/compile_timings.txt
+          name: Ubuntu20_${{matrix.config}}_timings
+          path: Ubuntu20_${{matrix.config}}_timings.zip
           retention-days: 1
 
       - name: Run Tests

@@ -222,14 +222,6 @@ Box3f ObjectLinesHolder::computeBoundingBox_() const
     return polyline_->computeBoundingBox();
 }
 
-Box3f ObjectLinesHolder::computeBoundingBoxXf_( ViewportId id ) const
-{
-    if ( !polyline_ )
-        return Box3f();
-    const auto wXf = worldXf( id );
-    return polyline_->computeBoundingBox( &wXf );
-}
-
 void ObjectLinesHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )

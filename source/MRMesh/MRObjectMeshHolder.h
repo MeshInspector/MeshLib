@@ -159,7 +159,6 @@ protected:
     MRMESH_API tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
-    MRMESH_API virtual Box3f computeBoundingBoxXf_( ViewportId ) const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
 

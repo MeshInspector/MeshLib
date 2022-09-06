@@ -372,9 +372,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     else
         SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Always );
 
+    auto context = ImGui::GetCurrentContext();
     if ( collapsed && *collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
+        ImGui::SetNextWindowSizeConstraints( { context->NextWindowData.SizeVal.x, titleBarHeight }, { context->NextWindowData.SizeVal.x, titleBarHeight } );
+        flags |= ImGuiWindowFlags_NoResize;
     }
 
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
@@ -386,7 +389,6 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         return false;
     }
 
-    auto context = ImGui::GetCurrentContext();
     window = context->CurrentWindow;
 
     if ( changedSize && collapsed && !*collapsed )
@@ -499,7 +501,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
 
-    ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } );
+    if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
+    {
+        ImGui::End();
+        return false;
+    }
     ImGui::TableNextColumn();    
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
 

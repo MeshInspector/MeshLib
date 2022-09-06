@@ -143,14 +143,6 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
     return mesh_->computeBoundingBox();
 }
 
-Box3f ObjectMeshHolder::computeBoundingBoxXf_( ViewportId id ) const
-{
-    if ( !mesh_ )
-        return Box3f();
-    const auto tempXf = worldXf( id );
-    return mesh_->computeBoundingBox( &tempXf );
-}
-
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )

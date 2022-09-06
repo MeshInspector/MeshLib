@@ -418,7 +418,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     const float width = ImGui::GetTextLineHeight();
 
     const auto isActive = ImGui::IsItemActive();
-    const auto isHovered = ImGui::IsItemHovered();
+    const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
 
     const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
     const auto headerColor = ImGui::GetStyleColorVec4( ( isActive ) ? ImGuiCol_HeaderActive : isHovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header );
@@ -442,8 +442,8 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( res )
     {
         const auto halfWidth = width * 0.5f;
-        const auto horIndent = height * 0.3f;
-        const auto vertIndent = height * 8.0f / 20.0f;
+        const auto horIndent = height * 0.25f;
+        const auto vertIndent = height * 7.5f / 20.0f;
 
         const ImVec2 startPoint { pos.x + horIndent, pos.y + vertIndent };
         const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
@@ -454,8 +454,8 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     else
     {
         const auto halfHeight = height * 0.5f;
-        const auto horIndent = width * 8.0f / 20.0f;
-        const auto vertIndent = height * 0.3f;
+        const auto horIndent = width * 7.5f / 20.0f;
+        const auto vertIndent = height * 0.25f;
 
         const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
         const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };

@@ -80,7 +80,6 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
-    MRMESH_API virtual Box3f computeBoundingBoxXf_( ViewportId ) const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
 

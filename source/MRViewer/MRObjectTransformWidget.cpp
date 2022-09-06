@@ -746,15 +746,12 @@ void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateSca
     Matrix3f rotation, scaling;
     decomposeMatrix3( scaledXf_.A, rotation, scaling );
 
-    auto scaledBoxDiagonal = mult( scaledXf_.A.toScale(), boxDiagonal_ );
+    auto scaledBoxDiagonal = scaledXf_.A * boxDiagonal_;
     float uniformScaling = scaledBoxDiagonal.length() / boxDiagonal_.length();
-    spdlog::info( uniformScaling );
-
-    AffineXf3f recalcXf = scaledXf_;
-    recalcXf.A = rotation * Matrix3f::scale( uniformScaling );
+    Vector3f invScaling{ 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
 
     approvedChange_ = true;
-    controlsRoot_->setXf( recalcXf );
+    controlsRoot_->setXf( scaledXf_ * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), center_ ) );
     approvedChange_ = false;
 }
 

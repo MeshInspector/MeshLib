@@ -450,7 +450,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( titleFont )
         ImGui::PushFont( titleFont );    
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.25f );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.2f );
     ImGui::Text( "%s", label);    
 
     if ( titleFont )

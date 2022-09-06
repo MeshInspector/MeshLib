@@ -86,6 +86,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
         CommandLoop::appendCommand( [&viewer, size]
         {
+            spdlog::info( "Resize window: {} {}", size.x, size.y );
             viewer.resize( size.x, size.y );
         } );
     }
@@ -111,7 +112,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
                         posIsOk = monBox.contains( pos );
                     }
                     if ( posIsOk )
+                    {
+                        spdlog::info( "Set window pos: {} {}", pos.x, pos.y );
                         glfwSetWindowPos( viewer.window, pos.x, pos.y );
+                    }
                 }
             } );
         }
@@ -124,9 +128,15 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             if ( !viewer.window )
                 return;
             if ( maximized )
+            {
+                spdlog::info( "Maximize window." );
                 glfwMaximizeWindow( viewer.window );
+            }
             else
+            {
+                spdlog::info( "Restore window." );
                 glfwRestoreWindow( viewer.window );
+            }
         } );
     }
 #endif
@@ -142,6 +152,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             // as far as scene size is clamped by window size in each frame
             CommandLoop::appendCommand( [ribbonMenu, sceneSize]
             {
+                spdlog::info( "Set menu plugin scene window size: {} {}", sceneSize.x, sceneSize.y );
                 ribbonMenu->setSceneSize( sceneSize );
             } );
         }
@@ -156,6 +167,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
     if ( !ColorTheme::isInitialized() )
     {
+        spdlog::warn( "Color theme was not setup successfully, try setup default dark theme." );
         // most likely we loaded some bad user theme file
         // setup default in this case
         ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );

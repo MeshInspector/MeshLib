@@ -175,6 +175,7 @@ void ColorTheme::serializeCurrentToJson( Json::Value& root )
 
 void ColorTheme::apply()
 {
+    spdlog::info( "Apply color theme." );
     assert( ColorTheme::isInitialized() );
 
     const auto& instance = ColorTheme::instance_();
@@ -269,6 +270,7 @@ void ColorTheme::setupByTypeName( Type type, const std::string& name )
 
 void ColorTheme::setupDefaultDark()
 {
+    spdlog::info( "Setup dark color theme." );
     instance_().type_ = Type::Default;
     instance_().themeName_ = getPresetName( Preset::Dark );
     setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json" );
@@ -276,6 +278,7 @@ void ColorTheme::setupDefaultDark()
 
 void ColorTheme::setupDefaultLight()
 {
+    spdlog::info( "Setup light color theme." );
     instance_().type_ = Type::Default;
     instance_().themeName_ = getPresetName( Preset::Light );
     setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json" );
@@ -283,6 +286,7 @@ void ColorTheme::setupDefaultLight()
 
 void ColorTheme::setupUserTheme( const std::string& themeName )
 {
+    spdlog::info( "Setup user color theme: {}", themeName );
     instance_().type_ = Type::User;
     instance_().themeName_ = themeName;
     setupFromFile( getUserThemesDirectory() / ( themeName + ".json" ) );

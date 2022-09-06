@@ -372,10 +372,12 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     else
         SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Always );
 
+    auto context = ImGui::GetCurrentContext();
     if ( collapsed && *collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
-        ImGui::SetNextWindowSizeConstraints( { width, titleBarHeight }, { width, titleBarHeight } );
+        ImGui::SetNextWindowSizeConstraints( { context->NextWindowData.SizeVal.x, titleBarHeight }, { context->NextWindowData.SizeVal.x, titleBarHeight } );
+        flags |= ImGuiWindowFlags_NoResize;
     }
 
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
@@ -387,7 +389,6 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         return false;
     }
 
-    auto context = ImGui::GetCurrentContext();
     window = context->CurrentWindow;
 
     if ( changedSize && collapsed && !*collapsed )

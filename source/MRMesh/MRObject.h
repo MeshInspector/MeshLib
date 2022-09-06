@@ -209,8 +209,8 @@ public:
 
     /// returns bounding box of this object in world coordinates for default or specific viewport
     virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
-    /// returns bounding box of this object and all children visible in given viewports in world coordinates
-    MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
+    /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
+    MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;

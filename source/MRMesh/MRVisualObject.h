@@ -125,8 +125,7 @@ public:
 
     MRMESH_API void resetDirty() const;
 
-    void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
-    void setXf( const AffineXf3f& xf, ViewportId id ) override { Object::setXf( xf, id ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
+    void setXf( const AffineXf3f& xf, ViewportId id = {} ) override { Object::setXf( xf, id ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
 
     /// returns object bounding box in its local space
     MRMESH_API Box3f getBoundingBox() const;

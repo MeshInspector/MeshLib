@@ -74,20 +74,6 @@ std::shared_ptr<const Object> Object::find( const std::string_view & name ) cons
     return {}; // not found among recognized children
 }
 
-void Object::setXf( const AffineXf3f& xf )
-{
-    if ( xf_.get() == xf )
-        return;
-    if ( xf.A.det() == 0 )
-    {
-        spdlog::warn( "Object transform is degenerate" );
-        return;
-    }
-    xf_.get() = xf;
-    propagateWorldXfChangedSignal_();
-    needRedraw_ = true;
-}
-
 void Object::setXf( const AffineXf3f& xf, ViewportId id )
 {
     if ( xf_.get( id ) == xf )

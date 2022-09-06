@@ -46,27 +46,24 @@ jobs:
 
       - name: Collect Timings
         run: |
-          inFolder=./build/${{matrix.config}}/
-          outFolder=./build/${{matrix.config}}/${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}/Timings
-          mkdir -p $outFolder
-          folderList=(MRCommonPlugins mrviewerpy MRTest MRViewerApp MRViewer mrmeshpy meshconv mrmeshnumpy MRMesh)
-          for folder in ${folderList[*]}
+          compilerName=${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}
+          for file in `find ./build/${{matrix.config}}/*/  -name compile_timings.txt`
           do
-            mkdir $outFolder/$folder
-            cp $inFolder/$folder/compile_timings.txt $outFolder/$folder/compile_timings.txt
-            cp $inFolder/$folder/link_timings.txt $outFolder/$folder/link_timings.txt
+            cat $file >> compile_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
           done
-          currentWd=`pwd`
-          cd $outFolder/..
-          zip Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings.zip $outFolder
-          cd $currentWd
+          for file in `find ./build/${{matrix.config}}/*/  -name link_timings.txt`
+          do
+            cat $file >> link_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
+          done
 
       #Save timing in artifact
-      - name: Upload timing
+      - name: Upload Timings
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings
-          path: Ubuntu20_${{matrix.config}}_${{ fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10'] }}_timings.zip
+          name: Timing_Logs
+          path: |
+            compile_timings_ubuntu20_${{matrix.config}}_${{matrix.config}}_${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}.txt
+            link_timings_ubuntu20_${{matrix.config}}_${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}.txt
           retention-days: 1
 
       - name: Run Tests

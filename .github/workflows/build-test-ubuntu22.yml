@@ -51,12 +51,12 @@ jobs:
           for file in `find ./build/${{matrix.config}}/*/ -name compile_timings.txt`
           do
             echo $file
-            cat $file >> time_log/compile_timings_ubuntu22_${{matrix.config}}_$compilerName.txt
+            cat $file >> time_log/compile_timings_ubuntu22_${{matrix.config}}_$compilerName.csv
           done
           for file in `find ./build/${{matrix.config}}/*/ -name link_timings.txt`
           do
             echo $file
-            cat $file >> time_log/link_timings_ubuntu22_${{matrix.config}}_$compilerName.txt
+            cat $file >> time_log/link_timings_ubuntu22_${{matrix.config}}_$compilerName.csv
           done
 
       #Save timing in artifact

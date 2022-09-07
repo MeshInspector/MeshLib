@@ -53,10 +53,10 @@ jobs:
             echo $file
             cat $file >> time_log/compile_timings_fedora35_${{matrix.config}}_$compilerName.txt
           done
-          for file in `find ./build/${{matrix.config}}/*/ -name link_timings.txt`
+          for file in `find ./build/${{matrix.config}}/*/ -name link_timings.csv`
           do
             echo $file
-            cat $file >> time_log/link_timings_fedora35_${{matrix.config}}_$compilerName.txt
+            cat $file >> time_log/link_timings_fedora35_${{matrix.config}}_$compilerName.csv
           done
 
       #Save timing in artifact

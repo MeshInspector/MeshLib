@@ -253,10 +253,7 @@ jobs:
           name: Timing_Logs
 
       - name: Generate Timing Logs Archive
-        run: |
-          ls
-          ls -l time_log/
-          zip time_log.zip time_log/
+        run: zip time_log.zip *.csv
 
       - name: Upload Timing Logs Archive
         uses: actions/upload-artifact@v3

@@ -45,19 +45,7 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Collect Timings
-        run: |
-          mkdir -p time_log
-          compilerName=${{fromJSON('["Clang_14", "GCC_12"]')[matrix.compiler == 'GCC 12']}}
-          for file in `find ./build/${{matrix.config}}/*/ -name compile_timings.txt`
-          do
-            echo $file
-            cat $file >> time_log/compile_timings_ubuntu22_${{matrix.config}}_$compilerName.csv
-          done
-          for file in `find ./build/${{matrix.config}}/*/ -name link_timings.txt`
-          do
-            echo $file
-            cat $file >> time_log/link_timings_ubuntu22_${{matrix.config}}_$compilerName.csv
-          done
+        run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings

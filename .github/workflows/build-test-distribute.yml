@@ -255,13 +255,13 @@ jobs:
           name: Timing_Logs
 
       - name: Generate Timing Logs Archive
-        run: tar -cvzf time_log.zip ./*.csv
+        run: tar -cvzf time_log.tar.gz ./*.csv
 
       - name: Upload Timing Logs Archive
         uses: actions/upload-artifact@v3
         with:
-          name: time_log.zip
-          path: time_log.zip
+          name: time_log
+          path: time_log.tar.gz
 
       - name: Delete Timing Logs Source
         uses: geekyeggo/delete-artifact@v1

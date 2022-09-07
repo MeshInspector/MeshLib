@@ -45,19 +45,7 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Collect Timings
-        run: |
-          mkdir -p time_log
-          compilerName=${{fromJSON('["Clang_13", "GCC_11"]')[matrix.compiler == 'GCC 11']}}
-          for file in `find ./build/${{matrix.config}}/*/ -name compile_timings.txt`
-          do
-            echo $file
-            cat $file >> time_log/compile_timings_fedora35_${{matrix.config}}_$compilerName.txt
-          done
-          for file in `find ./build/${{matrix.config}}/*/ -name link_timings.csv`
-          do
-            echo $file
-            cat $file >> time_log/link_timings_fedora35_${{matrix.config}}_$compilerName.csv
-          done
+        run: ./scripts/devops/collect_timing_logs.sh fedora35 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings

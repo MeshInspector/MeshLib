@@ -62,7 +62,7 @@ jobs:
         with:
           name: Timing_Logs
           path: |
-            compile_timings_fedora35_${{matrix.config}}_${{matrix.config}}_${{fromJSON('["Clang_13", "GCC_11"]')[matrix.compiler == 'GCC 11']}}.txt
+            compile_timings_fedora35_${{matrix.config}}_${{fromJSON('["Clang_13", "GCC_11"]')[matrix.compiler == 'GCC 11']}}.txt
             link_timings_fedora35_${{matrix.config}}_${{fromJSON('["Clang_13", "GCC_11"]')[matrix.compiler == 'GCC 11']}}.txt
           retention-days: 1
 

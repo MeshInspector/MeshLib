@@ -10,20 +10,10 @@ namespace MR
 
 ImGuiImage::ImGuiImage()
 {
-    if ( !getViewerInstance().isGLInitialized() )
-        return;
-    GL_EXEC( glGenTextures( 1, &id_ ) );
-    initialized_ = true;
 }
 
 ImGuiImage::~ImGuiImage()
 {
-    if ( !getViewerInstance().isGLInitialized() || !loadGL() )
-        return;
-    if ( initialized_ )
-    {
-        GL_EXEC( glDeleteTextures( 1, &id_ ) );
-    }
 }
 
 void ImGuiImage::update( const MeshTexture& texture )
@@ -34,46 +24,16 @@ void ImGuiImage::update( const MeshTexture& texture )
 
 void ImGuiImage::bind_()
 {
-    if ( !initialized_ )
-        return;
-
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, id_ ) );
-
-    int warp{0};
-    switch ( texture_.warp )
-    {
-    case MeshTexture::WarpType::Clamp:
-        warp = GL_CLAMP_TO_EDGE;
-        break;
-    case MeshTexture::WarpType::Repeat:
-        warp = GL_REPEAT;
-        break;
-    case MeshTexture::WarpType::Mirror:
-        warp = GL_MIRRORED_REPEAT;
-        break;
-    default:
-        break;
-    }
-
-    int filter{0};
-    switch ( texture_.filter )
-    {
-    case MeshTexture::FilterType::Discrete:
-        filter = GL_NEAREST;
-        break;
-    case MeshTexture::FilterType::Linear:
-        filter = GL_LINEAR;
-        break;
-    default:
-        break;
-    }
-
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp ) );
-    GL_EXEC( glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture_.resolution.x, texture_.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_.pixels.data() ) );
+    glTex_.loadData(
+        { 
+            .resolution = texture_.resolution, 
+            .internalFormat = GL_RGBA, 
+            .format = GL_RGBA, 
+            .type = GL_UNSIGNED_BYTE, 
+            .wrap = texture_.wrap, 
+            .filter = texture_.filter
+        },
+        texture_.pixels );
 }
 
 #ifndef __EMSCRIPTEN__

@@ -118,15 +118,19 @@ void ObjectPointsHolder::setPointSize( float size )
     needRedraw_ = true;
 }
 
-Box3f ObjectPointsHolder::getWorldBox() const
+Box3f ObjectPointsHolder::getWorldBox( ViewportId id ) const
 {
     if ( !points_ )
         return {};
-    const auto worldXf = this->worldXf();
-    if ( auto v = worldBox_.get( worldXf ) )
+    bool isDef = true;
+    const auto worldXf = this->worldXf( id, &isDef );
+    if ( isDef )
+        id = {};
+    auto & cache = worldBox_[id];
+    if ( auto v = cache.get( worldXf ) )
         return *v;
     const auto box = points_->computeBoundingBox( &worldXf );
-    worldBox_.set( worldXf, box );
+    cache.set( worldXf, box );
     return box;
 }
 
@@ -169,22 +173,6 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     BitSetParallelFor( points_->validPoints, [&] ( VertId id )
     {
         threadData.local().include( points_->points[id] );
-    } );
-    Box3f bb;
-    for ( const auto& b : threadData )
-        bb.include( b );
-    return bb;
-}
-
-Box3f ObjectPointsHolder::computeBoundingBoxXf_() const
-{
-    if ( !points_ )
-        return {};
-    tbb::enumerable_thread_specific<Box3f> threadData;
-    auto wXf = worldXf();
-    BitSetParallelFor( points_->validPoints, [&] ( VertId id )
-    {
-        threadData.local().include( wXf( points_->points[id] ) );
     } );
     Box3f bb;
     for ( const auto& b : threadData )

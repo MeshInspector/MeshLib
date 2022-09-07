@@ -143,14 +143,6 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
     return mesh_->computeBoundingBox();
 }
 
-Box3f ObjectMeshHolder::computeBoundingBoxXf_() const
-{
-    if ( !mesh_ )
-        return Box3f();
-    const auto tempXf = worldXf();
-    return mesh_->computeBoundingBox( &tempXf );
-}
-
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
 {
     switch ( MeshVisualizePropertyType::Type( type ) )
@@ -329,15 +321,19 @@ bool ObjectMeshHolder::isMeshClosed() const
     return *meshIsClosed_;
 }
 
-Box3f ObjectMeshHolder::getWorldBox() const
+Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
 {
     if ( !mesh_ )
         return {};
-    const auto worldXf = this->worldXf();
-    if ( auto v = worldBox_.get( worldXf ) )
+    bool isDef = true;
+    const auto worldXf = this->worldXf( id, &isDef );
+    if ( isDef )
+        id = {};
+    auto & cache = worldBox_[id];
+    if ( auto v = cache.get( worldXf ) )
         return *v;
     const auto box = mesh_->computeBoundingBox( &worldXf );
-    worldBox_.set( worldXf, box );
+    cache.set( worldXf, box );
     return box;
 }
 

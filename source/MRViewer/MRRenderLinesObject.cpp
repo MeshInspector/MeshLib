@@ -164,55 +164,39 @@ void RenderLinesObject::bindLines_()
     auto lineIndices = loadLineIndicesBuffer_();
     lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, lineIndices.dirty(), lineIndices );
 
+    const auto& texture = objLines_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, texture_ ) );
-    if ( dirty_ & DIRTY_TEXTURE )
-    {
-        const auto& texture = objLines_->getTexture();
-        int warp;
-        switch ( texture.warp )
-        {
-        default:
-        case MeshTexture::WarpType::Clamp:
-            warp = GL_CLAMP_TO_EDGE;
-            break;
-        case MeshTexture::WarpType::Repeat:
-            warp = GL_REPEAT;
-            break;
-        case MeshTexture::WarpType::Mirror:
-            warp = GL_MIRRORED_REPEAT;
-            break;
-        }
-        int filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture.resolution.x, texture.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.pixels.data() ) );
-    }
+    texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
+        { 
+            .resolution = texture.resolution,
+            .internalFormat = GL_RGBA,
+            .format = GL_RGBA,
+            .type = GL_UNSIGNED_BYTE,
+            .wrap = texture.wrap,
+            .filter = texture.filter
+        },
+        texture.pixels );
+
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 
     // Diffuse
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, lineColorsTex_ ) );
     if ( dirty_ & DIRTY_PRIMITIVE_COLORMAP )
     {
         int maxTexSize = 0;
         GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize ) );
         assert( maxTexSize > 0 );
 
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
+        // TODO: avoid copying if no need to resize, and avoid double copying if resize is needed
         auto linesColorMap = objLines_->getLinesColorMap();
         auto res = calcTextureRes( int( linesColorMap.size() ), maxTexSize );
         linesColorMap.resize( res.x * res.y );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, res.x, res.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, linesColorMap.data() ) );
+        lineColorsTex_.loadData( 
+            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type= GL_UNSIGNED_BYTE },
+            linesColorMap );
     }
+    else
+        lineColorsTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "lineColors" ), 1 ) );
 
     dirty_ &= ~DIRTY_MESH;
@@ -242,7 +226,10 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, pointsSelectionTex_ ) ); // bind empty texture
+    // bind empty texture
+    if ( !pointsSelectionTex_.valid() )
+        pointsSelectionTex_.gen();
+    pointsSelectionTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
@@ -287,15 +274,10 @@ void RenderLinesObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( linesArrayObjId_ ) );
-    GL_EXEC( glGenTextures( 1, &texture_ ) );
     
-    GL_EXEC( glGenTextures( 1, &lineColorsTex_ ) );
-    GL_EXEC( glGenTextures( 1, &pointsSelectionTex_ ) );
-
     GL_EXEC( glGenVertexArrays( 1, &linesPickerArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( linesPickerArrayObjId_ ) );
     dirty_ = DIRTY_ALL;
-
 }
 
 void RenderLinesObject::freeBuffers_()
@@ -304,10 +286,6 @@ void RenderLinesObject::freeBuffers_()
         return;
     GL_EXEC( glDeleteVertexArrays( 1, &linesArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &linesPickerArrayObjId_ ) );
-
-    GL_EXEC( glDeleteTextures( 1, &lineColorsTex_ ) );
-    GL_EXEC( glDeleteTextures( 1, &texture_ ) );
-    GL_EXEC( glDeleteTextures( 1, &pointsSelectionTex_ ) );
 }
 
 void RenderLinesObject::update_()

@@ -132,7 +132,7 @@ void VisualObject::setLabelsColor( const Color& color )
 void VisualObject::setDirtyFlags( uint32_t mask )
 {
     if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     if ( mask & DIRTY_FACE )
         mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
     // DIRTY_POSITION because we use corner rendering and need to update render verts
@@ -160,17 +160,6 @@ Box3f VisualObject::getBoundingBox() const
         dirty_ &= ~DIRTY_BOUNDING_BOX;
     }
     return boundingBoxCache_;
-}
-
-Box3f VisualObject::getBoundingBoxXf() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if( dirty_ & DIRTY_BOUNDING_BOX_XF )
-    {
-        boundingBoxCacheXf_ = computeBoundingBoxXf_();
-        dirty_ &= ~DIRTY_BOUNDING_BOX_XF;
-    }
-    return boundingBoxCacheXf_;
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
@@ -320,9 +309,9 @@ void VisualObject::deserializeFields_( const Json::Value& root )
     dirty_ = DIRTY_ALL;
 }
 
-Box3f VisualObject::getWorldBox() const
+Box3f VisualObject::getWorldBox( ViewportId id ) const
 {
-    return transformed( getBoundingBox(), worldXf() );
+    return transformed( getBoundingBox(), worldXf( id ) );
 }
 
 size_t VisualObject::heapBytes() const

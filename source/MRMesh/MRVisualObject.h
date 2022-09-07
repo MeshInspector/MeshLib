@@ -63,10 +63,9 @@ enum DirtyFlags
     DIRTY_FACES_COLORMAP = DIRTY_PRIMITIVE_COLORMAP,
     DIRTY_MESH = 0x07FF,
     DIRTY_BOUNDING_BOX = 0x0800,
-    DIRTY_BOUNDING_BOX_XF = 0x1000,
     DIRTY_BORDER_LINES = 0x2000,
     DIRTY_EDGES_SELECTION = 0x4000,
-    DIRTY_CACHES = DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF,
+    DIRTY_CACHES = DIRTY_BOUNDING_BOX,
     DIRTY_ALL = 0x3FFFF
 };
 
@@ -126,8 +125,6 @@ public:
     MRMESH_API void resetDirty() const;
 
     MRMESH_API Box3f getBoundingBox() const;
-    void setXf( const AffineXf3f& xf ) override { Object::setXf( xf ); setDirtyFlags( DIRTY_BOUNDING_BOX_XF ); };
-    MRMESH_API Box3f getBoundingBoxXf() const;
 
     virtual bool getRedrawFlag( ViewportMask viewportMask ) const override 
     {
@@ -175,7 +172,7 @@ public:
 
     /// returns bounding box of this object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
 
     /// this ctor is public only for std::make_shared used inside clone()
     VisualObject( ProtectedStruct, const VisualObject& obj ) : VisualObject( obj ) {}
@@ -234,14 +231,12 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     virtual Box3f computeBoundingBox_() const { return Box3f(); }
-    virtual Box3f computeBoundingBoxXf_() const { return Box3f(); }
 
     /// adds information about bounding box in res
     MRMESH_API void boundingBoxToInfoLines_( std::vector<std::string> & res ) const;
 
 private:
     mutable Box3f boundingBoxCache_;
-    mutable Box3f boundingBoxCacheXf_;
 
     /// this is private function to set default colors of this type (Visual Object) in constructor only
     void setDefaultColors_();

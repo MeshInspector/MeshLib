@@ -65,7 +65,7 @@ void Palette::resetLabels()
 {
     if ( useCustomLabels_ )
         updateCustomLabels_();
-    else if ( texture_.filter == MeshTexture::FilterType::Linear )
+    else if ( texture_.filter == FilterType::Linear )
         setZeroCentredLabels_();
     else
         setUniformLabels_();
@@ -126,14 +126,14 @@ bool Palette::loadFromJson( const Json::Value& root )
         return false;
 
     const auto& filter = root["Filter"];
-    MeshTexture::FilterType filterValue;
+    FilterType filterValue;
     if ( filter.isString() )
     {
         std::string str = filter.asString();
         if ( str == "Linear" )
-            filterValue = MeshTexture::FilterType::Linear;
+            filterValue = FilterType::Linear;
         else if ( str == "Discrete" )
-            filterValue = MeshTexture::FilterType::Discrete;
+            filterValue = FilterType::Discrete;
         else
             return false;
     }
@@ -164,7 +164,7 @@ void Palette::saveCurrentToJson( Json::Value& root ) const
 
     root["Discretization"] = parameters_.discretization;
 
-    std::string str = texture_.filter == MeshTexture::FilterType::Linear ? "Linear" : "Discrete";
+    std::string str = texture_.filter == FilterType::Linear ? "Linear" : "Discrete";
     root["Filter"] = str;
 }
 
@@ -253,7 +253,7 @@ void Palette::setUniformLabels_()
 
     if ( parameters_.ranges.size() == 2 )
     {
-        const int num = texture_.filter == MeshTexture::FilterType::Linear ? 5 : parameters_.discretization + 1;
+        const int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
         labels_.resize( num );
 
         for ( int i = 0; i < num; ++i )
@@ -264,10 +264,10 @@ void Palette::setUniformLabels_()
     }
     else
     {
-        const int num = texture_.filter == MeshTexture::FilterType::Linear ? 3 : parameters_.discretization + 1;
+        const int num = texture_.filter == FilterType::Linear ? 3 : parameters_.discretization + 1;
         labels_.resize( num * 2 );
 
-        if ( texture_.filter == MeshTexture::FilterType::Linear )
+        if ( texture_.filter == FilterType::Linear )
         {
             for ( int i = 0; i < num; ++i )
             {
@@ -305,7 +305,7 @@ void Palette::setDiscretizationNumber( int discretization )
     updateDiscretizatedColors_();
 }
 
-void Palette::setFilterType( MeshTexture::FilterType type )
+void Palette::setFilterType( FilterType type )
 {
     texture_.filter = type;
     updateDiscretizatedColors_();
@@ -358,7 +358,7 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     }
 
     std::vector<Color>& colors = texture_.pixels;
-    if ( texture_.filter == MeshTexture::FilterType::Discrete )
+    if ( texture_.filter == FilterType::Discrete )
     {
         auto yStep = actualSize.y / colors.size();
         for ( int i = 0; i < colors.size(); i++ )
@@ -372,7 +372,7 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
         }
     }
 
-    if ( texture_.filter == MeshTexture::FilterType::Linear )
+    if ( texture_.filter == FilterType::Linear )
     {
         auto yStep = actualSize.y / ( colors.size() - 1 );
         for ( int i = 0; i + 1 < colors.size(); i++ )
@@ -401,17 +401,17 @@ Color Palette::getColor( float val )
 
     float dIdx = val * ( colors.size() - 1 );
 
-    if ( texture_.filter == MeshTexture::FilterType::Discrete )
+    if ( texture_.filter == FilterType::Discrete )
         return colors[int( round( dIdx ) )];
 
-    if ( texture_.filter == MeshTexture::FilterType::Linear )
+    if ( texture_.filter == FilterType::Linear )
     {
         int dId = int( trunc( dIdx ) );
         float c = dIdx - dId;
         return  ( 1 - c ) * colors[dId] + c * colors[dId + 1];
     }
 
-    // unknown MeshTexture::FilterType
+    // unknown FilterType
     return Color();
 }
 
@@ -446,7 +446,7 @@ const Palette::Parameters& Palette::getParameters() const
 void Palette::updateDiscretizatedColors_()
 {
     std::vector<Color>& colors = texture_.pixels;
-    if (texture_.filter == MeshTexture::FilterType::Linear)
+    if (texture_.filter == FilterType::Linear)
     {
         colors = parameters_.baseColors;
         texture_.resolution = { 1, int( colors.size() ) };

@@ -142,8 +142,9 @@ MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width )
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
+/// if the plugin supports resizing, you must pass changedSize argument where are stored resized width and height
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling, float height = 0.0f, 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize, ImVec2* changedSize = nullptr );
 /// end state plugin window with custom style
 MRVIEWER_API void EndCustomStatePlugin();
 
@@ -186,12 +187,14 @@ enum class PaletteChanges
 
 /// Helper palette widget, allows to change palette ranges and filter type \n
 /// can load and save palette preset.
+/// \param presetName stores the currently selected palette's preset name or empty string if the palette was edited by user
 /// \param fixZero if present shows checkbox to fix zero symmetrical palette
 /// \return mask of changes, if it has PaletteChanges::Texture bit - object requires texture update,
 /// if it has PaletteChanges::Ranges uv coordinates should be recalculated and updated in object
 MRVIEWER_API PaletteChanges Palette( 
     const char* label,
     MR::Palette& palette,
+    std::string& presetName,
     float width,
     float menuScaling,
     bool* fixZero = nullptr,

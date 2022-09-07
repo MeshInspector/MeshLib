@@ -88,15 +88,19 @@ void ObjectLinesHolder::swapBase_( Object& other )
         assert( false );
 }
 
-Box3f ObjectLinesHolder::getWorldBox() const
+Box3f ObjectLinesHolder::getWorldBox( ViewportId id ) const
 {
     if ( !polyline_ )
         return {};
-    const auto worldXf = this->worldXf();
-    if ( auto v = worldBox_.get( worldXf ) )
+    bool isDef = true;
+    const auto worldXf = this->worldXf( id, &isDef );
+    if ( isDef )
+        id = {};
+    auto & cache = worldBox_[id];
+    if ( auto v = cache.get( worldXf ) )
         return *v;
     const auto box = polyline_->computeBoundingBox( &worldXf );
-    worldBox_.set( worldXf, box );
+    cache.set( worldXf, box );
     return box;
 }
 
@@ -220,14 +224,6 @@ Box3f ObjectLinesHolder::computeBoundingBox_() const
     if ( !polyline_ )
         return Box3f();
     return polyline_->computeBoundingBox();
-}
-
-Box3f ObjectLinesHolder::computeBoundingBoxXf_() const
-{
-    if ( !polyline_ )
-        return Box3f();
-    const auto wXf = worldXf();
-    return polyline_->computeBoundingBox( &wXf );
 }
 
 void ObjectLinesHolder::setupRenderObject_() const

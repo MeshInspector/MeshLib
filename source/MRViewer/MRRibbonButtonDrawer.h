@@ -46,6 +46,8 @@ public:
     MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient checkbox
     MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
+    /// draw gradient checkbox with mixed state
+    MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
     /// draw gradient checkbox
     template<typename Getter, typename Setter>
     static bool GradientCheckbox( const char* label, Getter get, Setter set )
@@ -58,7 +60,11 @@ public:
     /// draw gradient radio button
     MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
 
+    /// draw custom combo box
     MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {} );
+
+    /// draw custom collapsing header
+    MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0 );
 
     struct ButtonItemWidth
     {

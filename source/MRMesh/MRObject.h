@@ -5,7 +5,7 @@
 #include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRBitSet.h"
-#include "MRViewportId.h"
+#include "MRViewportProperty.h"
 #include "MRProgressCallback.h"
 #include <boost/signals2/signal.hpp>
 #include <tl/expected.hpp>
@@ -97,13 +97,17 @@ public:
     template <typename T>
     std::shared_ptr<T> find( const std::string_view & name ) { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>( name ) ); }
 
-    /// this space to parent space transformation (to world space if no parent)
-    const AffineXf3f & xf() const { return xf_; }
-    MRMESH_API virtual void setXf( const AffineXf3f& xf );
+    /// this space to parent space transformation (to world space if no parent) for default or given viewport
+    /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
+    const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
+    MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} );
+    /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
+    MRMESH_API virtual void resetXf( ViewportId id = {} );
 
-    /// this space to world space transformation
-    MRMESH_API AffineXf3f worldXf() const;
-    MRMESH_API void setWorldXf( const AffineXf3f& xf );
+    /// this space to world space transformation for default or specific viewport
+    /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)
+    MRMESH_API AffineXf3f worldXf( ViewportId id = {}, bool * isDef = nullptr ) const;
+    MRMESH_API void setWorldXf( const AffineXf3f& xf, ViewportId id = {} );
 
     /// scale object size (all point positions)
     MRMESH_API virtual void applyScale( float scaleFactor );
@@ -203,10 +207,10 @@ public:
     /// requires implementation of `swapBase_` and `swapSignals_` (if type has signals)
     MRMESH_API void swap( Object& other );
 
-    /// returns bounding box of this object in world coordinates
-    virtual Box3f getWorldBox() const { return {}; } ///empty box
-    /// returns bounding box of this object and all children visible in given viewports in world coordinates
-    MRMESH_API Box3f getWorldTreeBox( ViewportMask viewportMask = ViewportMask::any() ) const;
+    /// returns bounding box of this object in world coordinates for default or specific viewport
+    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
+    /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
+    MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
@@ -246,7 +250,7 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
-    AffineXf3f xf_;
+    ViewportProperty<AffineXf3f> xf_;
     mutable MutexOwner readCacheMutex_;
     ViewportMask visibilityMask_ = ViewportMask::all();
     bool locked_ = false;

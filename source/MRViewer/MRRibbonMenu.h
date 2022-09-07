@@ -150,6 +150,9 @@ protected:
     MRVIEWER_API virtual void readMenuItemsStructure_();
 
     std::vector<std::shared_ptr<const Object>> selectedObjectsCache_;
+
+    MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
+
 private:
     void changeTab_( int newTab );
 

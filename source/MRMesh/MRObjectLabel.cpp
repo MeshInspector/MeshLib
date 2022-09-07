@@ -71,15 +71,6 @@ Box3f ObjectLabel::computeBoundingBox_() const
     return box;
 }
 
-Box3f ObjectLabel::computeBoundingBoxXf_() const
-{
-    if ( !mesh_ )
-        return {};
-    Box3f box;
-    box.include( worldXf()( label_.position ) );
-    return box;
-}
-
 tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
@@ -200,15 +191,19 @@ void ObjectLabel::updatePivotShift_()
     }
 }
 
-Box3f ObjectLabel::getWorldBox() const
+Box3f ObjectLabel::getWorldBox( ViewportId id ) const
 {
-    return computeBoundingBoxXf_();
+    if ( !mesh_ )
+        return {};
+    Box3f box;
+    box.include( worldXf( id )( label_.position ) );
+    return box;
 }
 
 size_t ObjectLabel::heapBytes() const
 {
     return VisualObject::heapBytes() +
-        sizeof( std::filesystem::path::value_type ) * pathToFont_.native().capacity() +
+        sizeof( pathToFont_ ) * pathToFont_.native().capacity() +
         label_.text.capacity() +
         MR::heapBytes( mesh_ );
 }

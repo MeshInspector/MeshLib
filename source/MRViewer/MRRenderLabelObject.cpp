@@ -140,17 +140,10 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
 
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, srcIndicesSelectionTexId_ ) );
-    if ( dirtySrc_ )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-        unsigned selTexture = 0;
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, 1, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, &selTexture ) );
-    }
+    unsigned selTexture = 0;
+    srcIndicesSelectionTex_.loadDataOpt( dirtySrc_,
+        { .resolution = {1, 1}, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
+        (const char*)&selTexture );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::PointElementsNum, pointIndices.size() );
@@ -333,7 +326,6 @@ void RenderLabelObject::initBuffers_()
 
     GL_EXEC( glGenVertexArrays( 1, &srcArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
-    GL_EXEC( glGenTextures( 1, &srcIndicesSelectionTexId_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &bgArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( bgArrayObjId_ ) );
@@ -353,12 +345,8 @@ void RenderLabelObject::freeBuffers_()
         return;
 
     GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );
-
     GL_EXEC( glDeleteVertexArrays( 1, &srcArrayObjId_ ) );
-    GL_EXEC( glDeleteTextures( 1, &srcIndicesSelectionTexId_ ) );
-
     GL_EXEC( glDeleteVertexArrays( 1, &bgArrayObjId_ ) );
-
     GL_EXEC( glDeleteVertexArrays( 1, &llineArrayObjId_ ) );
 }
 

@@ -201,11 +201,12 @@ public:
   // override this to customize prefix for objects in scene
   MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
   {}
+  // override this to customize appearance of collapsing headers
+  MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0);
 
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
-  bool make_checkbox( const char* label, bool& checked, bool mixed );
   bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,

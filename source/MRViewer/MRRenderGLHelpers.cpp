@@ -65,6 +65,71 @@ void GlBuffer::loadDataOpt( GLenum target, bool refresh, const char * arr, size_
         bind( target );
 }
 
+void GlTexture2::gen()
+{
+    del();
+    GL_EXEC( glGenTextures( 1, &textureID_ ) );
+    assert( valid() );
+}
+
+void GlTexture2::del()
+{
+    if ( !valid() )
+        return;
+    if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
+    {
+        GL_EXEC( glDeleteTextures( 1, &textureID_ ) );
+    }
+    textureID_ = NO_TEX;
+    size_ = 0;
+}
+
+void GlTexture2::bind()
+{ 
+    assert( valid() );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, textureID_ ) );
+}
+
+void GlTexture2::loadData( const Settings & settings, const char * arr )
+{
+    if ( !valid() )
+        gen();
+    bind();
+
+    GLint wrap = GL_MIRRORED_REPEAT;
+    switch ( settings.wrap )
+    {
+    default:
+    case WrapType::Clamp:
+        wrap = GL_CLAMP_TO_EDGE;
+        break;
+    case WrapType::Repeat:
+        wrap = GL_REPEAT;
+        break;
+    case WrapType::Mirror:
+        wrap = GL_MIRRORED_REPEAT;
+        break;
+    }
+    GLint filter = settings.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
+
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
+    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
+
+    size_ = settings.size();
+}
+
+void GlTexture2::loadDataOpt( bool refresh, const Settings & settings, const char * arr )
+{
+    if ( refresh )
+        loadData( settings, arr );
+    else
+        bind();
+}
+
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
 {
     GL_EXEC( GLint id = glGetAttribLocation( settings.program_shader, settings.name ) );

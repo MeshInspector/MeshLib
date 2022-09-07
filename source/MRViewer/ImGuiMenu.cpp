@@ -8,8 +8,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
 #include "MRMeshViewer.h"
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 #include "imgui_fonts_droid_sans.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRVisualObject.h"
@@ -784,7 +784,7 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
 
     drawGeneralOptions_( selectedObjs );
 
-    if ( allHaveVisualisation && ImGui::CollapsingHeader( "Draw Options" ) )
+    if ( allHaveVisualisation && drawCollapsingHeader_( "Draw Options" ) )
     {
         drawDrawOptionsCheckboxes_( selectedVisualObjs );
         drawDrawOptionsColors_( selectedVisualObjs );
@@ -905,12 +905,15 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = ImGui::TreeNodeEx( ( object.name() + "##" + counterStr ).c_str(),
+        isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+
+        ImGui::PopStyleColor( isSelected ? 2 : 1 );
+        ImGui::PopStyleVar();
 
         makeDragDropSource_( selected );
         makeDragDropTarget_( object, false, false, 0 );
@@ -958,8 +961,6 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         }
 
-        ImGui::PopStyleColor( isSelected ? 2 : 1 );
-        ImGui::PopStyleVar();
 
         if ( isSelected )
             drawSceneContextMenu_( selected );
@@ -970,7 +971,10 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         bool infoOpen = false;
         auto lines = object.getInfoLines();
         if ( hasRealChildren && !lines.empty() )
-            infoOpen = ImGui::TreeNodeEx( "Info: ", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+        {
+            auto infoId = std::string("Info: ##") + std::to_string(counter);
+            infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+        }
 
         if ( infoOpen || !hasRealChildren )
         {
@@ -993,16 +997,16 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         if ( hasRealChildren )
         {
-            if ( infoOpen )
-                ImGui::TreePop();
-
             auto children = object.children();
             for ( const auto& child : children )
+            {
+                ImGui::Indent();
                 draw_object_recurse_( *child, selected, all, counter );
+                ImGui::Unindent();
+            }
 
             makeDragDropTarget_( object, false, true, 0 );
         }
-        ImGui::TreePop();
     }
 }
 
@@ -1013,7 +1017,7 @@ float ImGuiMenu::drawSelectionInformation_()
     auto& style = ImGui::GetStyle();
 
     float resultHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
-    if ( ImGui::CollapsingHeader( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
 
@@ -1220,7 +1224,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     }
     const bool mixedLocking = hasLocked && hasUnlocked;
     bool checked = hasLocked;
-    someChanges |= make_checkbox( "Lock Transform", checked, mixedLocking );
+    someChanges |= RibbonButtonDrawer::GradientCheckboxMixed( "Lock Transform", &checked, mixedLocking );
     if ( checked != hasLocked )
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
@@ -1462,7 +1466,7 @@ float ImGuiMenu::drawTransform_()
     {
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
         bool openedContext = false;
-        if ( ImGui::CollapsingHeader( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             openedContext = drawTransformContextMenu_( selected[0] );
             const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
@@ -1618,29 +1622,19 @@ std::vector<Object*> ImGuiMenu::getPreSelection_( Object* meshclicked,
     return res;
 }
 
+bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags )
+{
+    return ImGui::CollapsingHeader( label, flags );
+}
+
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
-
-bool ImGuiMenu::make_checkbox( const char* label, bool& checked, bool mixed )
-{
-    auto backUpCheckColor = ImGui::GetStyle().Colors[ImGuiCol_CheckMark];
-    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
-    if ( mixed )
-    {
-        ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = undefined;
-        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
-    }
-    const bool res = RibbonButtonDrawer::GradientCheckbox( label, &checked );
-    ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = backUpCheckColor;
-    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
-    return res;
-}
 
 bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
-    const bool res = make_checkbox( label, checked, !realRes.second && realRes.first );
+    const bool res = RibbonButtonDrawer::GradientCheckboxMixed( label, &checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
     {
         if ( invert )
@@ -1995,7 +1989,7 @@ void ImGuiMenu::draw_mr_menu()
     // Mesh
     ProgressBar::setup( menu_scaling() );
     const auto& viewportParameters = viewer->viewport().getParameters();
-    if ( ImGui::CollapsingHeader( "Main", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( drawCollapsingHeader_( "Main", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         draw_history_block_();
         float w = ImGui::GetContentRegionAvail().x;
@@ -2117,7 +2111,7 @@ void ImGuiMenu::draw_mr_menu()
     }
 
     // Viewing options
-    if ( ImGui::CollapsingHeader( "Viewing Options", ImGuiTreeNodeFlags_DefaultOpen ) )
+    if ( drawCollapsingHeader_( "Viewing Options", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::PushItemWidth( 80 * menu_scaling() );
         auto fov = viewportParameters.cameraViewAngle;
@@ -2176,7 +2170,7 @@ void ImGuiMenu::draw_mr_menu()
             viewer->enableAlphaSort( alphaBoxVal );
     }
 
-    if ( ImGui::CollapsingHeader( "Viewports" ) )
+    if ( drawCollapsingHeader_( "Viewports" ) )
     {
         auto configBackup = viewportConfig_;
         ImGui::RadioButton( "Single", ( int* )&viewportConfig_, ViewportConfigurations::Single );
@@ -2264,7 +2258,7 @@ void ImGuiMenu::draw_mr_menu()
         }
     }
 
-    if ( ImGui::CollapsingHeader( "Clipping plane" ) )
+    if ( drawCollapsingHeader_( "Clipping plane" ) )
     {
         auto plane = viewportParameters.clippingPlane;
         auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );

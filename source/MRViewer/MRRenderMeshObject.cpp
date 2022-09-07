@@ -284,83 +284,50 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
+    const auto& texture = objMesh_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, texture_ ) );
-    if ( dirty_ & DIRTY_TEXTURE )
-    {
-        const auto& texture = objMesh_->getTexture();
-        int warp;
-        switch ( texture.warp )
-        {
-        default:
-        case MeshTexture::WarpType::Clamp:
-            warp = GL_CLAMP_TO_EDGE;
-            break;
-        case MeshTexture::WarpType::Repeat:
-            warp = GL_REPEAT;
-            break;
-        case MeshTexture::WarpType::Mirror:
-            warp = GL_MIRRORED_REPEAT;
-            break;
-        }
-        int filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, warp ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, warp ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture.resolution.x, texture.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.pixels.data() ) );
-    }
+    texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
+        { 
+            .resolution = texture.resolution,
+            .internalFormat = GL_RGBA,
+            .format = GL_RGBA,
+            .type = GL_UNSIGNED_BYTE,
+            .wrap = texture.wrap,
+            .filter = texture.filter
+        },
+        texture.pixels );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 
     // Diffuse
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceColorsTex_ ) );
     if ( dirty_ & DIRTY_PRIMITIVE_COLORMAP )
     {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
+        // TODO: avoid copying if no need to resize, and avoid double copying if resize is needed
         auto facesColorMap = objMesh_->getFacesColorMap();
         auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize_ );
         facesColorMap.resize( res.x * res.y );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, res.x, res.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, facesColorMap.data() ) );
+        faceColorsTex_.loadData( 
+            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type= GL_UNSIGNED_BYTE },
+            facesColorMap );
     }
+    else
+        faceColorsTex_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceColors" ), 1 ) );
 
     // Normals
     auto faceNormals = loadFaceNormalsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, facesNormalsTex_ ) );
-    if ( faceNormals.dirty() )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, faceNormalsTextureSize_.x, faceNormalsTextureSize_.y, 0, GL_RGBA, GL_FLOAT, faceNormals.data() ) );
-    }
+    facesNormalsTex_.loadDataOpt( faceNormals.dirty(),
+        { .resolution = faceNormalsTextureSize_, .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type= GL_FLOAT },
+        faceNormals );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
     // Selection
     auto faceSelection = loadFaceSelectionTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, faceSelectionTex_ ) );
-    if ( faceSelection.dirty() )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, faceSelectionTextureSize_.x, faceSelectionTextureSize_.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, faceSelection.data() ) );
-    }
+    faceSelectionTex_.loadDataOpt( faceSelection.dirty(),
+        { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
+        faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
     dirty_ &= ~DIRTY_MESH;
@@ -416,13 +383,6 @@ void RenderMeshObject::initBuffers_()
     // Mesh: Vertex Array Object & Buffer objects
     GL_EXEC( glGenVertexArrays( 1, &meshArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( meshArrayObjId_ ) );
-    GL_EXEC( glGenTextures( 1, &texture_ ) );
-
-    GL_EXEC( glGenTextures( 1, &faceColorsTex_ ) );
-
-    GL_EXEC( glGenTextures( 1, &facesNormalsTex_ ) );
-
-    GL_EXEC( glGenTextures( 1, &faceSelectionTex_ ) );
 
     GL_EXEC( glGenVertexArrays( 1, &meshPickerArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( meshPickerArrayObjId_ ) );
@@ -446,11 +406,6 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &meshPickerArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &borderArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
-
-    GL_EXEC( glDeleteTextures( 1, &texture_ ) );
-    GL_EXEC( glDeleteTextures( 1, &faceColorsTex_ ) );
-    GL_EXEC( glDeleteTextures( 1, &faceSelectionTex_ ) );
-    GL_EXEC( glDeleteTextures( 1, &facesNormalsTex_ ) );
 }
 
 void RenderMeshObject::update_( ViewportId id )

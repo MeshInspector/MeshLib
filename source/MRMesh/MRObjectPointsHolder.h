@@ -64,7 +64,7 @@ public:
 
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
-    MRMESH_API virtual Box3f getWorldBox() const override;
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;
     /// returns cached information about the number of valid points
     MRMESH_API size_t numValidPoints() const;
     /// returns cached information about the number of selected points
@@ -81,7 +81,7 @@ protected:
     ViewportMask showSelectedVertices_ = ViewportMask::all();
 
     std::shared_ptr<PointCloud> points_;
-    mutable XfBasedCache<Box3f> worldBox_;
+    mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 
     /// size of point in pixels
     float pointSize_{ 5.0f };
@@ -92,7 +92,6 @@ protected:
     MRMESH_API virtual void swapBase_( Object& other ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
-    MRMESH_API virtual Box3f computeBoundingBoxXf_() const override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 

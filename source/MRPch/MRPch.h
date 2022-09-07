@@ -23,6 +23,7 @@
 #include <boost/signals2/signal.hpp>
 #pragma warning(pop)
 
+#ifndef __EMSCRIPTEN__
 #pragma warning(push)
 #pragma warning(disable: 4515)
 #include <gdcmImageReader.h>
@@ -30,6 +31,8 @@
 #pragma warning(pop)
 
 #include "MROpenvdb.h"
+#endif
+
 #include "MRJson.h"
 #include "MRSpdlog.h"
 #include "MRSuppressWarning.h"
@@ -64,10 +67,13 @@
 #include <cpr/cpr.h>
 #pragma warning(pop)
 
+#ifndef __EMSCRIPTEN__
 #include <libpng16/png.h>
+#endif
 
 #include "OpenCTM/openctm.h"
 
+#ifndef __EMSCRIPTEN__
 #pragma warning(push)
 #pragma warning(disable:4189) //'has_args': local variable is initialized but not referenced
 #pragma warning(disable:4191) //'reinterpret_cast': unsafe conversion from 'PyObject *(__cdecl *)(PyObject *,PyObject *,PyObject *)' to 'void (__cdecl *)(void)'
@@ -79,6 +85,7 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
 #pragma warning(pop)
+#endif
 
 #include <algorithm>
 #include <array>

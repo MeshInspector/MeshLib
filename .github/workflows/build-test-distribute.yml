@@ -52,11 +52,12 @@ jobs:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
+    if: ${{ false }}
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
-    needs: [windows-build-test, ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
+    needs: [ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

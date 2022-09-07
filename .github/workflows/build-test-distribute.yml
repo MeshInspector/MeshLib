@@ -213,7 +213,7 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
-  delete-artifacts:
+  update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
     needs: [upload-distributions]
@@ -244,6 +244,30 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: RpmReleaseBinArchive
+          failOnError: false
+
+      # generate timing logs archive
+      - name: Download Timing Logs Archive
+        uses: actions/download-artifact@v3
+        with:
+          name: Timing_Logs
+
+      - name: Generate Timing Logs Archive
+        run: |
+          ls
+          ls -l time_log/
+          zip time_log.zip time_log/
+
+      - name: Upload Timing Logs Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: time_log.zip
+          path: time_log.zip
+
+      - name: Delete Timing Logs Source
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Timing_Logs
           failOnError: false
 
       # Distributives

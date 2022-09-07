@@ -46,28 +46,25 @@ jobs:
 
       - name: Collect Timings
         run: |
+          mkdir -p time_log
           compilerName=${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}
           for file in `find ./build/${{matrix.config}}/*/ -name compile_timings.txt`
           do
             echo $file
-            cat $file >> compile_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
+            cat $file >> time_log/compile_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
           done
           for file in `find ./build/${{matrix.config}}/*/ -name link_timings.txt`
           do
             echo $file
-            cat $file >> link_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
+            cat $file >> time_log/link_timings_ubuntu20_${{matrix.config}}_$compilerName.txt
           done
-          ls -l
 
       #Save timing in artifact
       - name: Upload Timings
         uses: actions/upload-artifact@v3
         with:
           name: Timing_Logs
-          path: |
-            compile_timings_ubuntu20_${{matrix.config}}_${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}.txt
-            link_timings_ubuntu20_${{matrix.config}}_${{fromJSON('["Clang_11", "GCC_10"]')[matrix.compiler == 'GCC 10']}}.txt
-          retention-days: 1
+          path: time_log/*
 
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop

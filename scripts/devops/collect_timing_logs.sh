@@ -1,4 +1,5 @@
 #!/bin/bash
+# script to collect compile timing logs
 
 if [[ $# != 4 ]]
 then

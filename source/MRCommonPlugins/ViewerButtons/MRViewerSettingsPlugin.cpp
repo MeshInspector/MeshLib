@@ -124,11 +124,11 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( item != RibbonSchemaHolder::schema().items.end() )
         {
             ImGui::SameLine();
-            if ( ImGui::ButtonValid( "Add",
-                                     item->second.item->isAvailable(
-                                         getAllObjectsInTree<const Object>( &SceneRoot::get(),
-                                                                            ObjectSelectivityType::Selected ) ).empty(),
-                                     ImVec2( -1, 0 ) ) )
+            if ( RibbonButtonDrawer::GradientButtonValid( "Add",
+                item->second.item->isAvailable(
+                    getAllObjectsInTree<const Object>( &SceneRoot::get(),
+                        ObjectSelectivityType::Selected ) ).empty(),
+                ImVec2( -1, ImGui::GetFrameHeight() ) ) )
             {
                 item->second.item->action();
             }

@@ -57,7 +57,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     RibbonButtonDrawer::GradientCheckbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
-    if ( ImGui::Button( "Apply & Save", ImVec2( -1, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Apply & Save", ImVec2( -1, 0 ) ) )
     {
         std::error_code ec;
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( themeName_ + ".json" );

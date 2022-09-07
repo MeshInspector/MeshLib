@@ -33,7 +33,7 @@ private:
     GLuint srcArrayObjId_{ 0 };
     GlBuffer srcVertPosBuffer_;
     GlBuffer srcIndicesBuffer_;
-    GLuint srcIndicesSelectionTexId_{ 0 };
+    GlTexture2 srcIndicesSelectionTex_;
 
     GLuint bgArrayObjId_{ 0 };
     GlBuffer bgVertPosBuffer_;

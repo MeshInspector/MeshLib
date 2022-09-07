@@ -32,10 +32,9 @@ private:
     GlBuffer vertPosBuffer_;
     GlBuffer vertNormalsBuffer_;
     GlBuffer vertColorsBuffer_;
-
     GlBuffer validIndicesBuffer_;
 
-    GLuint vertSelectionTex_{ 0 };
+    GlTexture2 vertSelectionTex_;
 
     int maxTexSize_{ 0 };
 

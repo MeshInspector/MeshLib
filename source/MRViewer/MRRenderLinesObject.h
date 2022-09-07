@@ -45,12 +45,11 @@ private:
     GlBuffer vertUVBuffer_;
     GlBuffer vertNormalsBuffer_;
     GlBuffer vertColorsBuffer_;
-
     GlBuffer lineIndicesBuffer_;
-    GLuint texture_{ 0 };
 
-    GLuint pointsSelectionTex_{ 0 };
-    GLuint lineColorsTex_{ 0 };
+    GlTexture2 texture_;
+    GlTexture2 pointsSelectionTex_;
+    GlTexture2 lineColorsTex_;
 
     void bindLines_();
     void bindLinesPicker_();

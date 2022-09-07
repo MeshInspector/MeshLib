@@ -155,18 +155,15 @@ void RenderPointsObject::bindPoints_()
 
     // Selection
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, vertSelectionTex_ ) );
     auto vertSelectionTexture = loadVertSelectionTextureBuffer_();
-    if ( vertSelectionTexture.dirty() )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ) );
-        GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ) );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_R32UI, vertSelectionTextureSize_.x, vertSelectionTextureSize_.y, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, vertSelectionTexture.data() ) );
-    }
+    vertSelectionTex_.loadDataOpt( vertSelectionTexture.dirty(),
+        { 
+            .resolution = vertSelectionTextureSize_,
+            .internalFormat = GL_R32UI,
+            .format = GL_RED_INTEGER,
+            .type = GL_UNSIGNED_INT
+        },
+        vertSelectionTexture );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 
     dirty_ &= ~DIRTY_MESH;
@@ -189,8 +186,6 @@ void RenderPointsObject::initBuffers_()
     GL_EXEC( glGenVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
 
-    GL_EXEC( glGenTextures( 1, &vertSelectionTex_ ) );
-
     GL_EXEC( glGenVertexArrays( 1, &pointsPickerArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
 
@@ -206,8 +201,6 @@ void RenderPointsObject::freeBuffers_()
         return;
     GL_EXEC( glDeleteVertexArrays( 1, &pointsArrayObjId_ ) );
     GL_EXEC( glDeleteVertexArrays( 1, &pointsPickerArrayObjId_ ) );
-
-    GL_EXEC( glDeleteTextures( 1, &vertSelectionTex_ ) );
 }
 
 void RenderPointsObject::update_()

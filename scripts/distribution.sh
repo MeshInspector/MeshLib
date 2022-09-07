@@ -37,6 +37,7 @@ PYTHON_DIR="/usr/lib/python3"
 mkdir -p distr/meshlib-dev/DEBIAN
 mkdir -p "distr/meshlib-dev${MR_INSTALL_BIN_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
+mkdir -p "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}"

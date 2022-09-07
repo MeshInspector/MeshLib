@@ -34,6 +34,7 @@ PYTHON_DIR="$RPM_BUILD_ROOT/usr/lib/python3"
 #mkdirs
 mkdir -p "${MR_INSTALL_BIN_DIR}"
 mkdir -p "${MR_INSTALL_LIB_DIR}"
+mkdir -p "${MR_INSTALL_PYLIB_DIR}"
 mkdir -p "${MR_INSTALL_RES_DIR}"
 mkdir -p "${MR_INSTALL_FONTS_DIR}"
 mkdir -p "${MR_INSTALL_INCLUDE_DIR}"

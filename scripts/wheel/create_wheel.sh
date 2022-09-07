@@ -10,7 +10,7 @@ rm -rf ./scripts/wheel/meshlib
 mkdir -p ./scripts/wheel/meshlib/meshlib/
 
 # Copy python libs
-cp ./build/Release/bin/mr*.so ./scripts/wheel/meshlib/meshlib/
+cp ./build/Release/bin/meshlib/mr*.so ./scripts/wheel/meshlib/meshlib/
 
 cd ./scripts/wheel/meshlib || return
 cp ../setup.py .

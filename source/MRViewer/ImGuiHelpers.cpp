@@ -340,10 +340,10 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
 
 bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags, ImVec2* changedSize )
 {
-    const float closeButtonShift = 1.0f * scaling;
     const auto& style = ImGui::GetStyle();    
 
-    const float titleBarHeight = 2 * MR::cRibbonItemInterval * scaling + ImGui::GetTextLineHeight() + closeButtonShift;
+    const float borderSize = style.WindowBorderSize * scaling;
+    const float titleBarHeight = 2 * MR::cRibbonItemInterval * scaling + ImGui::GetTextLineHeight() + 2 * borderSize;
     if ( collapsed && *collapsed )
         height = titleBarHeight;
 
@@ -401,15 +401,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PopStyleVar();
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
-  
 
     ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { MR::cRibbonItemInterval * scaling * 0.5f,  MR::cRibbonItemInterval * scaling * 0.5f } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f,  0.0f } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * scaling );
     
-    const float buttonSize = titleBarHeight - MR::cRibbonItemInterval * scaling;
-    ImGui::SetCursorScreenPos( { window->Rect().Min.x + style.WindowPadding.x, window->Rect().Min.y  + closeButtonShift } );
+    const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * scaling - 2 * borderSize;
+    const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
+    ImGui::SetCursorScreenPos( { window->Rect().Min.x + buttonOffset, window->Rect().Min.y + buttonOffset } );
     
     ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
     ImFont* titleFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
@@ -420,24 +421,23 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PushFont( iconsFont );
     }
     
-    const float borderSize = style.WindowBorderSize * scaling;
-    const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight + closeButtonShift } );
+    const ImRect boundingBox( { window->Rect().Min.x + borderSize, window->Rect().Min.y + borderSize }, { window->Rect().Max.x - borderSize, window->Rect().Min.y + titleBarHeight - borderSize } );
     
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
-    window->DrawList->PopClipRect();
     
     if ( collapsed )
     {
         if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
             *collapsed = !*collapsed;
-            ImGui::PopStyleVar( 2 );
+            ImGui::PopStyleVar( 3 );
             ImGui::PopStyleColor( 2 );
 
             if (iconsFont )
                 ImGui::PopFont();
 
+            window->DrawList->PopClipRect();
             ImGui::End();
             return false;
         }
@@ -448,10 +448,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PopFont();
 
     if ( titleFont )
-        ImGui::PushFont( titleFont );    
+    {
+        ImGui::PushFont( titleFont );
+        ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
+    }
+    else
+        ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.2f );
-    ImGui::Text( "%s", label);    
+    ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
     if ( titleFont )
         ImGui::PopFont();
@@ -461,8 +465,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     ImGui::SameLine();    
 
-    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - buttonSize );
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + closeButtonShift );
+    ImGui::SetCursorScreenPos( { window->Rect().Max.x - ( buttonSize + buttonOffset ), window->Rect().Min.y + buttonOffset } );
     if ( ImGui::Button( "\xef\x80\x8d", { buttonSize, buttonSize } ) ) //close button
     {
         *open = false;
@@ -471,7 +474,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
             ImGui::PopFont();
 
         ImGui::PopStyleColor( 2 );
-        ImGui::PopStyleVar( 2 );
+        ImGui::PopStyleVar( 3 );
+        window->DrawList->PopClipRect();
         ImGui::End();
         return false;
     }
@@ -482,7 +486,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         iconsFont->Scale = 1.0f;
     }    
 
-    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleVar( 3 );
 
     if ( collapsed && *collapsed )
     {
@@ -490,14 +494,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
 
         //ImGui doesn't draw bottom border if window is collapsed, so add it manually
-        window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
         window->DrawList->AddLine( { window->Rect().Min.x, window->Rect().Max.y - borderSize }, { window->Rect().Max.x, window->Rect().Max.y - borderSize }, borderColor, borderSize );
-        window->DrawList->PopClipRect();    
+        window->DrawList->PopClipRect();
         ImGui::End();
         return false;
     }
 
     ImGui::PopStyleColor( 2 );
+    window->DrawList->PopClipRect();
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
 

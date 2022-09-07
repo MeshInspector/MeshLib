@@ -262,6 +262,7 @@ jobs:
         with:
           name: time_log
           path: time_log.tar.gz
+          retention-days: 1
 
       - name: Delete Timing Logs Source
         uses: geekyeggo/delete-artifact@v1

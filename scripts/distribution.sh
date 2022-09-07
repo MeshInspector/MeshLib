@@ -28,6 +28,7 @@ MR_LIB_DIR="lib/"
 MR_BIN_DIR="build/Release/bin/"
 MR_INSTALL_BIN_DIR="/usr/local/bin/"
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib/"
+MR_INSTALL_PYLIB_DIR="/usr/local/lib/MeshLib/meshlib/"
 MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib/"
 MR_INSTALL_THIRDPARTY_INCLUDE_DIR="/usr/local/include/"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib/"
@@ -101,7 +102,7 @@ cp -r build/Release/bin/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
 printf "MR libs copy done\n"
 
 #copy python libs
-cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}/meshlib/"
+cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
 printf "python MR libs copy done\n"
 
 #copy verison file

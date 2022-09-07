@@ -24,37 +24,15 @@ void ImGuiImage::update( const MeshTexture& texture )
 
 void ImGuiImage::bind_()
 {
-    int wrap{0};
-    switch ( texture_.wrap )
-    {
-    case MeshTexture::WrapType::Clamp:
-        wrap = GL_CLAMP_TO_EDGE;
-        break;
-    case MeshTexture::WrapType::Repeat:
-        wrap = GL_REPEAT;
-        break;
-    case MeshTexture::WrapType::Mirror:
-        wrap = GL_MIRRORED_REPEAT;
-        break;
-    default:
-        break;
-    }
-
-    int filter{0};
-    switch ( texture_.filter )
-    {
-    case MeshTexture::FilterType::Discrete:
-        filter = GL_NEAREST;
-        break;
-    case MeshTexture::FilterType::Linear:
-        filter = GL_LINEAR;
-        break;
-    default:
-        break;
-    }
-
     glTex_.loadData(
-        { .resolution = texture_.resolution, .internalFormat = GL_RGBA, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE, .wrap = wrap, .filter = filter },
+        { 
+            .resolution = texture_.resolution, 
+            .internalFormat = GL_RGBA, 
+            .format = GL_RGBA, 
+            .type = GL_UNSIGNED_BYTE, 
+            .wrap = texture_.wrap, 
+            .filter = texture_.filter
+        },
         texture_.pixels );
 }
 

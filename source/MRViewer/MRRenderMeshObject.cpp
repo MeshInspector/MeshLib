@@ -285,24 +285,16 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     const auto& texture = objMesh_->getTexture();
-    GLint wrap;
-    switch ( texture.wrap )
-    {
-    default:
-    case MeshTexture::WrapType::Clamp:
-        wrap = GL_CLAMP_TO_EDGE;
-        break;
-    case MeshTexture::WrapType::Repeat:
-        wrap = GL_REPEAT;
-        break;
-    case MeshTexture::WrapType::Mirror:
-        wrap = GL_MIRRORED_REPEAT;
-        break;
-    }
-    GLint filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
-        { .resolution = texture.resolution, .internalFormat = GL_RGBA, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE, .wrap = wrap, .filter = filter },
+        { 
+            .resolution = texture.resolution,
+            .internalFormat = GL_RGBA,
+            .format = GL_RGBA,
+            .type = GL_UNSIGNED_BYTE,
+            .wrap = texture.wrap,
+            .filter = texture.filter
+        },
         texture.pixels );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 

@@ -733,7 +733,7 @@ PaletteChanges Palette(
         fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
         ImGui::PopStyleVar( 2 );
     }
-    bool isDiscrete = palette.getTexture().filter == MeshTexture::FilterType::Discrete;
+    bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
     const auto& params = palette.getParameters();
 
@@ -742,7 +742,7 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
     {
-        palette.setFilterType( isDiscrete ? MeshTexture::FilterType::Discrete : MeshTexture::FilterType::Linear );
+        palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
         presetName.clear();
     }   

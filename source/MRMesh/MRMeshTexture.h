@@ -11,18 +11,8 @@ namespace MR
 
 struct MeshTexture : Image
 {
-    enum class FilterType
-    {
-        Linear,
-        Discrete
-    } filter = FilterType::Discrete;
-
-    enum class WrapType
-    {
-        Repeat,
-        Mirror,
-        Clamp
-    } wrap = WrapType::Clamp;
+    FilterType filter = FilterType::Discrete;
+    WrapType wrap = WrapType::Clamp;
 };
 
 /// Coordinates on texture 

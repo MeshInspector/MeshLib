@@ -325,6 +325,19 @@ using VertColorMapAggregator = ColorMapAggregator<VertTag>;
 using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
 using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
+enum class FilterType : char
+{
+    Linear,
+    Discrete
+};
+
+enum class WrapType : char
+{
+    Repeat,
+    Mirror,
+    Clamp
+};
+
 template <typename T>
 constexpr inline T sqr( T x ) noexcept { return x * x; }
 

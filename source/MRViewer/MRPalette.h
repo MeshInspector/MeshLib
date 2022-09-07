@@ -56,8 +56,7 @@ public:
     // set number of different colors for discrete palette
     MRVIEWER_API void setDiscretizationNumber( int discretization );
     // set palette type (linear / discrete)
-    MRVIEWER_API void setFilterType( MeshTexture::FilterType type );
-
+    MRVIEWER_API void setFilterType( FilterType type );
 
     // Discrete: bar consists of single colored rectangles for each initial color
     // Linear (default): color is changing from one to another during initial color list

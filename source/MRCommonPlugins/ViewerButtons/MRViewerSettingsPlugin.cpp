@@ -139,8 +139,12 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         if ( ribbonMenu_ )
         {
-            RibbonButtonDrawer::GradientCheckbox( "Make visible on select", std::bind(&RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
-                             std::bind(&RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1) );
+            RibbonButtonDrawer::GradientCheckbox( "Make visible on select",
+                                                  std::bind( &RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1 ) );
+            RibbonButtonDrawer::GradientCheckbox( "Deselect on hide",
+                                                  std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
+                                                  std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
@@ -411,10 +415,9 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
     ImVec2 windowSize = ImGui::GetWindowSize();
     ImVec2 btnPos = ImVec2( windowSize.x - 30 * scaling, 10 * scaling );
     ImGui::SetCursorPos( btnPos );
-    auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-    if ( !menu )
+    auto font = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( !font )
         return;
-    auto font = menu->getFontManager().getFontByType( MR::RibbonFontManager::FontType::Icons );
     font->Scale = 0.6f;
     ImGui::PushFont( font );
     if ( ImGui::Button( "\xef\x80\x8d" ) )

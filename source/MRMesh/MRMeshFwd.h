@@ -239,6 +239,8 @@ using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
+using VertNormals = Vector<Vector3f, VertId>;
+using FaceNormals = Vector<Vector3f, FaceId>;
 
 template <typename K>
 using HashSet = phmap::flat_hash_set<K>;

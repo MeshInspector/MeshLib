@@ -64,6 +64,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>mrmeshnumpy</TargetName>
     <TargetExt>.pyd</TargetExt>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\meshlib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>mrmeshnumpy</TargetName>

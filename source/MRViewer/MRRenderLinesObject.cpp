@@ -40,9 +40,7 @@ float RenderLinesObject::actualLineWidth() const
 
 void RenderLinesObject::render( const RenderParams& renderParams )
 {
-    if ( !objLines_->polyline() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objLines_->polyline() || !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
         return;
@@ -83,7 +81,7 @@ void RenderLinesObject::render( const RenderParams& renderParams )
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), int( !objLines_->getVertsNormals().empty() ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 0 ) ); // what is a normal of 3d line?
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objLines_->getShininess() ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
@@ -354,33 +352,8 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
     if ( !( dirty_ & DIRTY_RENDER_NORMALS ) )
         return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
-    const auto& polyline = objLines_->polyline();
-    const auto& topology = polyline->topology;
-    auto numV = topology.lastValidVert() + 1;
-    const auto& vertsNormals = objLines_->getVertsNormals();
-    if ( vertsNormals.size() < numV )
-        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 0 );
-
-    MR_NAMED_TIMER( "dirty_vertices_normals" )
-
-    auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 2 * numL );
-
-    auto undirEdgesSize = numL >> 1;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
-    {
-        for ( int ue = range.begin(); ue < range.end(); ++ue )
-        {
-            auto o = topology.org( UndirectedEdgeId( ue ) );
-            auto d = topology.dest( UndirectedEdgeId( ue ) );
-            if ( !o || !d )
-                continue;
-            buffer[2 * ue] = vertsNormals[o];
-            buffer[2 * ue + 1] = vertsNormals[d];
-        }
-    } );
-
-    return buffer;
+    // always 0!
+    return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 0 );
 }
 
 RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()

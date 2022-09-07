@@ -3,8 +3,9 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRGLMacro.h"
+#include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
@@ -30,9 +31,7 @@ RenderMeshObject::~RenderMeshObject()
 
 void RenderMeshObject::render( const RenderParams& renderParams )
 {
-    if ( !objMesh_->mesh() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objMesh_->mesh() || !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
         return;
@@ -545,7 +544,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
-        const auto& vertNormals = objMesh_->getVertsNormals();
+        const auto vertNormals = computePerVertNormals( *mesh );
         BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
         {
             auto ind = 3 * f;

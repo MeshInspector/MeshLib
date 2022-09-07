@@ -43,9 +43,7 @@ RenderLabelObject::~RenderLabelObject()
 
 void RenderLabelObject::render( const RenderParams& renderParams )
 {
-    if ( !objLabel_->labelRepresentingMesh() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objLabel_->labelRepresentingMesh() || !Viewer::constInstance()->isGLInitialized() )
     {
         objLabel_->resetDirty();
         return;

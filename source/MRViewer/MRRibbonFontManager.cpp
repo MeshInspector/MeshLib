@@ -32,7 +32,7 @@ ImFont* RibbonFontManager::getFontByType( FontType type ) const
     return fonts_[int( type )];
 }
 
-float RibbonFontManager::getFontSizeByType( FontType type ) const
+float RibbonFontManager::getFontSizeByType( FontType type )
 {
     switch ( type )
     {

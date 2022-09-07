@@ -132,9 +132,9 @@ void VisualObject::setLabelsColor( const Color& color )
 void VisualObject::setDirtyFlags( uint32_t mask )
 {
     if ( mask & DIRTY_POSITION )
-        mask |= DIRTY_ALL_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BOUNDING_BOX | DIRTY_BOUNDING_BOX_XF | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION;
     if ( mask & DIRTY_FACE )
-        mask |= DIRTY_ALL_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
+        mask |= DIRTY_RENDER_NORMALS | DIRTY_BORDER_LINES | DIRTY_EDGES_SELECTION | DIRTY_POSITION;
     // DIRTY_POSITION because we use corner rendering and need to update render verts
 
     dirty_ |= mask;
@@ -171,17 +171,6 @@ Box3f VisualObject::getBoundingBoxXf() const
         dirty_ &= ~DIRTY_BOUNDING_BOX_XF;
     }
     return boundingBoxCacheXf_;
-}
-
-const Vector<MR::Vector3f, MR::VertId>& VisualObject::getVertsNormals() const
-{
-    std::unique_lock lock( readCacheMutex_.getMutex() );
-    if ( dirty_ & DIRTY_VERTS_NORMAL )
-    {
-        vertsNormalsCache_ = computeVertsNormals_();
-        dirty_ &= ~DIRTY_VERTS_NORMAL;
-    }
-    return vertsNormalsCache_;
 }
 
 void VisualObject::setPickable( bool on, ViewportMask viewportMask /*= ViewportMask::all() */ )
@@ -343,7 +332,6 @@ size_t VisualObject::heapBytes() const
         + texture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + MR::heapBytes( labels_ )
-        + vertsNormalsCache_.heapBytes()
         + MR::heapBytes( renderObj_ );
 }
 

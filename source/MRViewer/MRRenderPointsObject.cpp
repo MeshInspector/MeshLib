@@ -30,9 +30,7 @@ RenderPointsObject::~RenderPointsObject()
 
 void RenderPointsObject::render( const RenderParams& renderParams )
 {
-    if ( !objPoints_->pointCloud() )
-        return;
-    if ( !Viewer::constInstance()->isGLInitialized() )
+    if ( !objPoints_->pointCloud() || !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
         return;
@@ -149,7 +147,7 @@ void RenderPointsObject::bindPoints_()
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->getVertsNormals().vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->pointCloud()->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
     auto validIndices = loadValidIndicesBuffer_();

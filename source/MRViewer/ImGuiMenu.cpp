@@ -330,8 +330,7 @@ void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
     {
-        ColorTheme::resetImGuiStyle();
-        ImGui::GetStyle().ScaleAllSizes( menu_scaling() );
+        ColorTheme::resetImGuiStyle(); // apply scaling inside
     } );
 }
 
@@ -584,7 +583,7 @@ void ImGuiMenu::draw_helpers()
     {
         const auto style = ImGui::GetStyle();
         const float fpsWindowWidth = 300 * menu_scaling();
-        int numLines = 4 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 4 - for: prev frame time, swapped frames, total frames, fps;
+        int numLines = 5 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 5 - for: GL buffer size, prev frame time, swapped frames, total frames, fps;
         // TextHeight +1 for button, ItemSpacing +2 for separators
         const float fpsWindowHeight = ( style.WindowPadding.y * 2 +
                                         ImGui::GetTextLineHeight() * ( numLines + 2 ) +
@@ -602,6 +601,8 @@ void ImGuiMenu::draw_helpers()
         for ( int i = 0; i<int( Viewer::EventType::Count ); ++i )
             ImGui::Text( "%s: %zu", cEventCounterNames[i], viewer->getEventsCount( Viewer::EventType( i ) ) );
         ImGui::Separator();
+        auto glBufferSizeStr = bytesString( viewer->getStaticGLBufferSize() );
+        ImGui::Text( "GL memory buffer: %s", glBufferSizeStr.c_str() );
         auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
         if ( prevFrameTime > frameTimeMillisecThreshold_ )
             ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
@@ -875,8 +876,12 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
-            RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible );
-            object.setVisible( isVisible, viewer->viewport().id );
+            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
+            {
+                object.setVisible( isVisible, viewer->viewport().id );
+                if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
+                    object.select( false );
+            }
             ImGui::SameLine();
         }
         {
@@ -1195,7 +1200,14 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     if ( !selectedVisualObjs.empty() )
     {
         const auto& viewportid = viewer->viewport().id;
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Visibility", VisualizeMaskType::Visibility, viewportid );
+        if ( make_visualize_checkbox( selectedVisualObjs, "Visibility", VisualizeMaskType::Visibility, viewportid ) )
+        {
+            someChanges = true;
+            if ( deselectNewHiddenObjects_ )
+                for ( const auto& visObj : selectedVisualObjs )
+                    if ( !visObj->isVisible( viewer->getPresentViewports() ) )
+                        visObj->select( false );
+        }
     }
 
     bool hasLocked = false, hasUnlocked = false;

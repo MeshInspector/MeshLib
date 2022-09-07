@@ -9,7 +9,6 @@ namespace MR
 struct MenuItemInfo;
 class RibbonMenu;
 class ShortcutManager;
-class RibbonFontManager;
 class ImGuiImage;
 
 struct DrawButtonParams
@@ -80,7 +79,6 @@ public:
     void setGetterRequirements( std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getterRequirements ) { getRequirements_ = getterRequirements; };
 
     void setMenu( RibbonMenu* menu ) { menu_ = menu; };
-    void setFontMenager( const RibbonFontManager* fontManager ) { fontManager_ = fontManager; };
     void setShortcutManager( const ShortcutManager* shortcutManager ) { shortcutManager_ = shortcutManager; };
     void setScaling( float scaling ) { scaling_ = scaling; };
 
@@ -95,7 +93,6 @@ private:
     std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, bool ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;
-    const RibbonFontManager* fontManager_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
     float scaling_ = 1.f;
 };

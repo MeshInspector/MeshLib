@@ -214,6 +214,9 @@ public:
     size_t getFPS() const { return frameCounter_.fps; }
     long long getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec; }
 
+    // Returns memory amount used by shared GL memory buffer
+    MRVIEWER_API size_t getStaticGLBufferSize() const;
+
     // Sets minimum auto increment for force redraw frames after basic events (the smallest value is 2)
     MRVIEWER_API void setMinimumForceRedrawFramesAfterEvents( int minimumIncrement );
     // if true only last frame of force redraw after events will be swapped, otherwise each will be swapped

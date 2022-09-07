@@ -65,6 +65,8 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowLines"] = showEdges_.value();
     root["ShowBordersHighlight"] = showBordersHighlight_.value();
     root["ShowSelectedEdges"] = showSelectedEdges_.value();
+    root["ShowSelectedFaces"] = showSelectedFaces_.value();
+    root["OnlyOddFragments"] = onlyOddFragments_.value();
     root["FaceBased"] = !flatShading_.empty();
     root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
 
@@ -91,10 +93,14 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         showFaces_ = ViewportMask{ root["ShowFaces"].asUInt() };
     if ( root["ShowLines"].isUInt() )
         showEdges_ = ViewportMask{ root["ShowLines"].asUInt() };
-    if ( root["ShowBorderHighlight"].isUInt() )
-        showBordersHighlight_ = ViewportMask{ root["ShowBorderHighlight"].asUInt() };
+    if ( root["ShowBordersHighlight"].isUInt() )
+        showBordersHighlight_ = ViewportMask{ root["ShowBordersHighlight"].asUInt() };
     if ( root["ShowSelectedEdges"].isUInt() )
         showSelectedEdges_ = ViewportMask{ root["ShowSelectedEdges"].asUInt() };
+    if ( root["ShowSelectedFaces"].isUInt() )
+        showSelectedFaces_ = ViewportMask{ root["ShowSelectedFaces"].asUInt() };
+    if ( root["OnlyOddFragments"].isUInt() )
+        onlyOddFragments_ = ViewportMask{ root["OnlyOddFragments"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
         flatShading_ = root["FaceBased"].asBool() ? ViewportMask::all() : ViewportMask{};
     if ( root["ColoringType"].isString() )
@@ -143,13 +149,6 @@ Box3f ObjectMeshHolder::computeBoundingBoxXf_() const
         return Box3f();
     const auto tempXf = worldXf();
     return mesh_->computeBoundingBox( &tempXf );
-}
-
-Vector<MR::Vector3f, MR::VertId> ObjectMeshHolder::computeVertsNormals_() const
-{
-    if ( !mesh_ )
-        return {};
-    return computePerVertNormals( *mesh_ );
 }
 
 const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
@@ -422,11 +421,11 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
 
     if ( creases_.any() )
     {
-        dirty_ |= DIRTY_CORNERS_NORMAL | DIRTY_CORNERS_RENDER_NORMAL;
+        dirty_ |= DIRTY_CORNERS_RENDER_NORMAL;
     }
     else
     {
-        dirty_ |= DIRTY_VERTS_NORMAL | DIRTY_VERTS_RENDER_NORMAL;
+        dirty_ |= DIRTY_VERTS_RENDER_NORMAL;
     }
 }
 

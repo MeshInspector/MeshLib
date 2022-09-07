@@ -33,8 +33,16 @@ elif platformSystem == 'Darwin':
 if platformSystem == "Windows":
 	import glob
 	import shutil
+
 	dest_dir = os.path.join(os.getcwd(), "meshlib")
+	if not os.path.exists(dest_dir):
+		print("Creating " + str(dest_dir))
+		os.makedirs(dest_dir)
+	print("Copying files...")
 	for file in glob.glob(r'*.dll'):
+		print(file)
+		shutil.copy(file, dest_dir)
+	for file in glob.glob(r'*py*'):
 		print(file)
 		shutil.copy(file, dest_dir)
 

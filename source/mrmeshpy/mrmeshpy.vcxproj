@@ -79,7 +79,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.pyd</TargetExt>
     <TargetName>$(ProjectName)</TargetName>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\meshlib\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.pyd</TargetExt>

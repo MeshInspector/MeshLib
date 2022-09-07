@@ -96,10 +96,26 @@ void GlTexture2::loadData( const Settings & settings, const char * arr )
         gen();
     bind();
 
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, settings.wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, settings.wrap ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, settings.filter ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, settings.filter ) );
+    GLint wrap = GL_MIRRORED_REPEAT;
+    switch ( settings.wrap )
+    {
+    default:
+    case WrapType::Clamp:
+        wrap = GL_CLAMP_TO_EDGE;
+        break;
+    case WrapType::Repeat:
+        wrap = GL_REPEAT;
+        break;
+    case WrapType::Mirror:
+        wrap = GL_MIRRORED_REPEAT;
+        break;
+    }
+    GLint filter = settings.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
+
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ) );
     GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
     GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
 

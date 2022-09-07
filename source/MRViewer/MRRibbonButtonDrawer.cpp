@@ -35,7 +35,7 @@ void RibbonButtonDrawer::InitGradientTexture()
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradientStart ),
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradientEnd )
     };
-    data.filter = MeshTexture::FilterType::Linear;
+    data.filter = FilterType::Linear;
     texture->update( data );
 }
 

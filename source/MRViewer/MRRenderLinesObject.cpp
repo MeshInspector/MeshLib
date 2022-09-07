@@ -173,17 +173,17 @@ void RenderLinesObject::bindLines_()
         switch ( texture.wrap )
         {
         default:
-        case MeshTexture::WrapType::Clamp:
+        case WrapType::Clamp:
             wrap = GL_CLAMP_TO_EDGE;
             break;
-        case MeshTexture::WrapType::Repeat:
+        case WrapType::Repeat:
             wrap = GL_REPEAT;
             break;
-        case MeshTexture::WrapType::Mirror:
+        case WrapType::Mirror:
             wrap = GL_MIRRORED_REPEAT;
             break;
         }
-        int filter = texture.filter == MeshTexture::FilterType::Linear ? GL_LINEAR : GL_NEAREST;
+        int filter = texture.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap ) );
         GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ) );

@@ -128,7 +128,7 @@ void RibbonIcons::load_( IconType type )
             icons.white = std::make_unique<ImGuiImage>();
             MeshTexture whiteTexture = { std::move( *image ) };
             if ( sz != int( Sizes::X0_5 ) )
-                whiteTexture.filter = MeshTexture::FilterType::Linear;
+                whiteTexture.filter = FilterType::Linear;
 
             if ( ribbonIconType )
                 icons.colored->update( whiteTexture );

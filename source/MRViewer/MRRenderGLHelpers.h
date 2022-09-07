@@ -92,8 +92,8 @@ public:
         GLint internalFormat = GL_RGBA;
         GLint format = GL_RGBA;
         GLint type = GL_UNSIGNED_BYTE;
-        GLint wrap = GL_MIRRORED_REPEAT;
-        GLint filter = GL_NEAREST;
+        WrapType wrap = WrapType::Mirror;
+        FilterType filter = FilterType::Discrete;
     };
 
     // creates GL data texture using given data and binds it

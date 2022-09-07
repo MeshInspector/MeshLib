@@ -180,7 +180,7 @@ void DefaultSplashWindow::postInit_()
         return;
     }
     splashImage_ = std::make_shared<ImGuiImage>();
-    splashImage_->update( { imgRes.value(),MeshTexture::FilterType::Linear } );
+    splashImage_->update( { imgRes.value(),FilterType::Linear } );
 
     versionStr_ = GetMRVersionString();
 }

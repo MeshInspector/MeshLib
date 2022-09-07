@@ -21,6 +21,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
+    if: ${{ false }}
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:

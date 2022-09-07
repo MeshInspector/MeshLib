@@ -169,17 +169,11 @@ jobs:
           ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
           mv ./scripts/wheel/meshlib/wheelhouse/*.whl ./
 
-      - name: Upload Wheel to test.pypi
-        if: ${{ matrix.os == 'Ubuntu20' && github.event_name != 'push'}}
-        run: |
-          pip install twine
-          twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
-
-      - name: Upload Wheel to Distributive
+      - name: Upload Wheel to Artifacts
         if: ${{ matrix.os == 'Ubuntu20' }}
         uses: actions/upload-artifact@v2
         with:
-          name: Distributives
+          name: Wheelhouse
           path: meshlib-*.whl
           retention-days: 1
 
@@ -254,10 +248,17 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
                             meshlib-*.whl
 
+  upload-wheels:
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@pip-packaging
+    with:
+      deploy_type: "test"
+
   delete-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs: [upload-distributions]
+    needs: [upload-distributions, upload-wheels]
     if: always()
     steps:
         # all Windows
@@ -292,4 +293,10 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: Distributives
+          failOnError: false
+
+      - name: Delete Fedora Developer Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Wheelhouse
           failOnError: false

@@ -1,0 +1,65 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Upload python wheels to pypi
+
+# Controls when the action will run.
+on:
+  release:
+    types: [ published ]
+  workflow_call:
+    inputs:
+      deploy_type:
+        required: false
+        type: string
+        default: "test"
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: Deploy type
+        required: true
+        type: string
+        default: "prod"
+
+
+jobs:
+  aws-deployment:
+    timeout-minutes: 20
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set Deploy Type
+        id: set-deploy-type
+        run: |
+          if [ "${{github.event.inputs.deploy_type}}" == "prod" ] || [ "${{inputs.deploy_type}}" == "prod" ] || [ "${{github.event_name}}" == "release" ]; then
+            deploy_type="prod"
+          else
+            deploy_type="test"
+          fi
+          echo "deploy_type=${deploy_type}" >> $GITHUB_ENV
+
+      - name: Download Wheels from Release
+        if: ${{ env.deploy_type == 'prod' }}
+        uses: robinraju/release-downloader@v1.3
+        with:
+          repository: MeshInspector/MeshInspectorCode
+          latest: true
+          fileName: "meshlib-*.whl"
+          out-file-path: ""
+
+      - name: Download Wheels Artifacts
+        if: ${{ env.deploy_type == 'test' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: Wheelhouse
+
+      - name: Install twine
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install twine
+
+      - name: Upload to Production PyPi
+        if: ${{ env.deploy_type == 'prod' }}
+        run: twine upload ./meshlib-*.whl  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
+
+      - name: Upload to Test PyPi
+        if: ${{ env.deploy_type == 'test' }}
+        run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl  -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}

@@ -365,11 +365,14 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
         ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
 
     float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
-
-    auto res = ImGui::BeginCombo( label , showPreview ? options[*v].c_str() : nullptr, ImGuiComboFlags_NoArrowButton );
-    
-    const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y +  arrowSize } );
+    const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
     const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
+
+    auto res = ImGui::BeginCombo( label, nullptr, ImGuiComboFlags_NoArrowButton);
+    if ( showPreview )
+    {
+        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, options[*v].data(), nullptr, nullptr );
+    }
 
     const float halfHeight = arrowBox.GetHeight() * 0.5f;
     const float seventhHeight = arrowBox.GetHeight() / 7.0f;

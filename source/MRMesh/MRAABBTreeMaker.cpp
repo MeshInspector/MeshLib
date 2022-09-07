@@ -8,9 +8,8 @@
 #include <stack>
 #include <thread>
 
-
-#if FMT_VERSION >= 90000
-    template <> struct fmt::formatter<std::thread::id> : ostream_formatter{};
+#if __has_include(<fmt/std.h>)
+#include <fmt/std.h> // This formats `std::thread::id`.
 #endif
 
 namespace MR
@@ -62,7 +61,7 @@ int AABBTreeMaker<T>::particionLeaves( BoxT & box, int firstLeaf, int lastLeaf )
     const int splitDim = int( std::max_element( begin( boxDiag ), end( boxDiag ) ) - begin( boxDiag ) );
 
     int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
-    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf, 
+    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf,
         [&]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
         {
             return a.box.min[splitDim] < b.box.min[splitDim];
@@ -164,7 +163,7 @@ TEST(MRMesh, TBBTask)
     tbb::task_group group;
     std::atomic<bool> sameThread;
     group.run( [mainThreadId, &sameThread]
-    { 
+    {
         const auto taskThreadId = std::this_thread::get_id();
         spdlog::info( "Task in thread {}", taskThreadId );
         sameThread = mainThreadId == taskThreadId;

@@ -118,8 +118,12 @@ tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float
 
     std::vector<EdgeId> newHoles;
     newHoles.reserve( contours.size() );
-    for ( const auto& cont : contours )
+    for ( auto& cont : contours )
+    {
+        if ( cont.size() == 2 )
+            cont.push_back( cont.back() );
         newHoles.push_back( mesh.addSeparateEdgeLoop( cont ) );
+    }
 
     for ( auto h : newHoles )
         makeDegenerateBandAroundHole( mesh, h );

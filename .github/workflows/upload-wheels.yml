@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
-          image: meshrus/meshlib-ubuntu:${{inputs.image_tag}}
+          image: meshrus/meshlib-ubuntu:latest
           options: --user root
     steps:
       - name: Set Deploy Type

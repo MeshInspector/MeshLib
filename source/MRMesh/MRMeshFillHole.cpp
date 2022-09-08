@@ -559,6 +559,19 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         }
     }
 
+    if ( params.stopBeforeBadTriangulation )
+    {
+        if ( finConn.a == -1 || finConn.b == -1 || finConn.weight > BadTriangulationMetric )
+        {
+            *params.stopBeforeBadTriangulation = true;
+            return;
+        }
+        else
+        {
+            *params.stopBeforeBadTriangulation = false;
+        }
+    }
+
     if ( params.makeDegenerateBand )
     {
         a = a0 = makeDegenerateBandAroundHole( mesh, a0, params.outNewFaces );
@@ -574,7 +587,6 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         fillHoleTrivially( mesh, a0, params.outNewFaces );
         return;
     }
-
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );

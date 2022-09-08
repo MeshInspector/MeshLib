@@ -1258,14 +1258,53 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
+// Very simple metric for cut mesh holes, only fines for normal flip and area
+FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
+{
+    auto norm = Vector3d();
+    for ( auto e : leftRing( mesh.topology, e0 ) )
+    {
+        norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    }
+    norm = norm.normalized();
+
+    FillHoleMetric metric;
+    metric.triangleMetric = [&mesh, norm] ( VertId a, VertId b, VertId c )
+    {
+        Vector3d aP = Vector3d( mesh.points[a] );
+        Vector3d bP = Vector3d( mesh.points[b] );
+        Vector3d cP = Vector3d( mesh.points[c] );
+
+        auto faceNorm = cross( bP - aP, cP - aP );
+        if ( dot( norm, faceNorm ) < 0.0 )
+            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
+
+        return faceNorm.length(); // area
+    };
+    return metric;
+}
+
 void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
 {
     assert( oldFace.valid() );
+    bool stopOnBad{ false };
+    FillHoleParams params;
+    params.metric = getPlaneNormalizedFillMetric( mesh, e );
+    params.stopBeforeBadTriangulation = &stopOnBad;
+
     if ( !new2OldMap )
-        return fillHole( mesh, e, { getPlaneNormalizedFillMetric( mesh,e ) } );
+    {
+        fillHole( mesh, e, params );
+        if ( stopOnBad )
+            fillHole( mesh, e, { getCutMeshMetric( mesh,e ) } );
+        return;
+    }
 
     FaceBitSet newFaces;
-    fillHole( mesh, e, { getPlaneNormalizedFillMetric( mesh,e ), &newFaces} );
+    params.outNewFaces = &newFaces;
+    fillHole( mesh, e, params );
+    if ( stopOnBad )
+        fillHole( mesh, e, { getCutMeshMetric( mesh,e ),&newFaces } );
     for ( auto f : newFaces )
         new2OldMap->autoResizeAt( f ) = oldFace;
 }

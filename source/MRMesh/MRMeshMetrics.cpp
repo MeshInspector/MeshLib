@@ -9,15 +9,14 @@
 
 namespace 
 {
-// Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it
-// e10 - real metrics to have weight in triangulation, if it would be more than e15+ some metrics will be less than double precision
-constexpr double BadTriangulationMetric = 1e10;
 // This constant modifier was born empirically
 constexpr double TriangleAreaModifier = 1e2;
 }
 
 namespace MR
 {
+
+const double BadTriangulationMetric = 1e10;
 
 FillHoleMetric getCircumscribedMetric( const Mesh& mesh )
 {

@@ -21,7 +21,6 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   windows-build-test:
-    if: ${{ false }}
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:
@@ -29,19 +28,19 @@ jobs:
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@i1040_export_compile_timings
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@i1040_export_compile_timings
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@i1040_export_compile_timings
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
@@ -52,12 +51,11 @@ jobs:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
 
   macos-build-test:
-    if: ${{ false }}
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' }}
-    needs: [ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
+    needs: [windows-build-test, ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}

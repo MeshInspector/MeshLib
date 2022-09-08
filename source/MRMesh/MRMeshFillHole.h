@@ -54,6 +54,13 @@ struct FillHoleParams
       * must be 2 or larger
       */
     int maxPolygonSubdivisions{ 20 };
+
+    /** Input/output value, if it is present: 
+      * returns true if triangulation was bad and do not actually fill hole, 
+      * if triangulation is ok returns false; 
+      * if it is not present fill hole trivially in case of bad triangulation, (or leaves bad triangulation, depending on metric)
+      */
+    bool* stopBeforeBadTriangulation{ nullptr };
 };
 
 /** \struct MR::StitchHolesParams

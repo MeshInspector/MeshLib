@@ -14,6 +14,10 @@ using FillTriangleMetric = std::function<double( VertId, VertId, VertId )>;
 using FillEdgeMetric = std::function<double( VertId, VertId, VertId, VertId )>;
 using FillCombineMetric = std::function<double( double, double )>;
 
+/// Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it
+/// e10 - real metrics to have weight in triangulation, if it would be more than e15+ some metrics will be less than double precision
+MRMESH_API extern const double BadTriangulationMetric;
+
 /** \struct MR::FillHoleMetric
   * \brief Holds metrics for fillHole and buildCylinderBetweenTwoHoles triangulation\n
   * 

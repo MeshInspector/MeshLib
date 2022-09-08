@@ -20,9 +20,9 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-        compiler: [Сlang 13, GCC 11]
+        compiler: [Clang 13, GCC 11]
         include:
-          - compiler: Сlang 13
+          - compiler: Clang 13
             cxx-compiler: /usr/bin/clang++-13
             c-compiler: /usr/bin/clang-13
           - compiler: GCC 11
@@ -46,6 +46,16 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh fedora35 ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: time_log/
 
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop

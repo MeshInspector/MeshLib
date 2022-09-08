@@ -254,7 +254,7 @@ jobs:
     with:
       deploy_type: "test"
 
-  delete-artifacts:
+  update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
     needs: [ upload-distributions, upload-wheels ]
@@ -285,6 +285,28 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: RpmReleaseBinArchive
+          failOnError: false
+
+      # generate timing logs archive
+      - name: Download Timing Logs Archive
+        uses: actions/download-artifact@v3
+        with:
+          name: Timing_Logs
+
+      - name: Generate Timing Logs Archive
+        run: tar -cvzf time_log.tar.gz ./*.csv
+
+      - name: Upload Timing Logs Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: time_log
+          path: time_log.tar.gz
+          retention-days: 1
+
+      - name: Delete Timing Logs Source
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Timing_Logs
           failOnError: false
 
       # Distributives

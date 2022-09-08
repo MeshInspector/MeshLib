@@ -55,7 +55,7 @@ cp -r build/Release/bin/*.so "${MR_INSTALL_LIB_DIR}"
 printf "MR libs copy done\n"
 
 #copy python libs
-cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}/meshlib/"
+cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
 printf "python MR libs copy done\n"
 
 #copy verison file

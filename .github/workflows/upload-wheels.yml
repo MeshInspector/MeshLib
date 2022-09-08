@@ -22,9 +22,12 @@ on:
 
 
 jobs:
-  aws-deployment:
+  upload-wheels:
     timeout-minutes: 20
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+          image: meshrus/meshlib-ubuntu:${{inputs.image_tag}}
+          options: --user root
     steps:
       - name: Set Deploy Type
         id: set-deploy-type

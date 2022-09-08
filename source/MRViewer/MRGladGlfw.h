@@ -6,6 +6,9 @@
 #include <glad/glad.h>
 #endif
 #include <GLFW/glfw3.h>
+#ifdef _WIN32
+#undef APIENTRY
+#endif
 
 namespace MR {
 

@@ -158,8 +158,7 @@ jobs:
       - name: Create and fix Wheel
         if: ${{ matrix.os == 'Ubuntu20' }}
         run: |
-          sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y binutils wget
-          wget http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2
+          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
           tar xf patchelf-0.10.tar.bz2
           cd patchelf-0.10
           ./configure

@@ -17,9 +17,9 @@ jobs:
     strategy:
       matrix:
         config: [ Debug, Release ]
-        compiler: [ Сlang 14, GCC 12 ]
+        compiler: [ Clang 14, GCC 12 ]
         include:
-          - compiler: Сlang 14
+          - compiler: Clang 14
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
           - compiler: GCC 12
@@ -43,6 +43,16 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: time_log/
 
       - name: Run Tests
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop

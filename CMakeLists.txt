@@ -25,8 +25,8 @@ IF(APPLE)
 ELSE()
  # uncomment to print compile time of each translation unit,
  # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
- #set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\"")
- #set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\"")
+ set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
+ set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
 ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 

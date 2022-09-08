@@ -244,8 +244,7 @@ jobs:
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
-                            meshlib-*.whl
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
 
   upload-wheels:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -253,6 +252,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@pip-packaging
     with:
       deploy_type: "test"
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15

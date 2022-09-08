@@ -104,6 +104,11 @@ public:
     /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
     MRMESH_API virtual void resetXf( ViewportId id = {} );
 
+    /// returns xfs for all viewports, combined into a single object
+    const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
+    /// modifies xfs for all viewports at once
+    virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf ) { xf_ = std::move( xf ); }
+
     /// this space to world space transformation for default or specific viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as worldXf() returns)
     MRMESH_API AffineXf3f worldXf( ViewportId id = {}, bool * isDef = nullptr ) const;
@@ -169,7 +174,7 @@ public:
     /// gets object visibility as bitmask of viewports
     ViewportMask visibilityMask() const { return visibilityMask_; }
 
-    /// this method virtual because others data model types could have dirty flags or something 
+    /// this method virtual because others data model types could have dirty flags or something
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
 

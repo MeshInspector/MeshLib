@@ -176,6 +176,14 @@ jobs:
           path: meshlib-*.whl
           retention-days: 1
 
+      - name: Upload Wheel to Distributive
+        if: ${{ matrix.os == 'Ubuntu20' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
+          retention-days: 1
+
   update-rpm-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     timeout-minutes: 10
@@ -244,7 +252,8 @@ jobs:
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
+                            meshlib-*.whl
 
   upload-wheels:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

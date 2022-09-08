@@ -43,7 +43,7 @@ jobs:
         if: ${{ env.deploy_type == 'prod' }}
         uses: robinraju/release-downloader@v1.3
         with:
-          repository: MeshInspector/MeshInspectorCode
+          repository: MeshInspector/MeshLib
           latest: true
           fileName: "meshlib-*.whl"
           out-file-path: ""

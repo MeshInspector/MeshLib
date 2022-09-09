@@ -131,7 +131,6 @@ protected:
   {
       float relativeMousePos{ 0.0f };
       float absLinePosRatio{ 0.0f };
-      ScrollPositionPreservation& operator=( const ScrollPositionPreservation& ) = default;
   } prevScrollInfo_;
   // true to fix scroll position in next frame
   bool nextFrameFixScroll_{ false };

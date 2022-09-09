@@ -41,20 +41,6 @@ public:
     virtual size_t heapBytes() const = 0;
     /// returns the amount of memory this object allocated in OpenGL
     virtual size_t glBytes() const = 0;
-    /// the way the internal buffers are dealt with
-    enum BufferMode {
-        /// preserve the buffers to reduce re-allocation count
-        AllocationEfficient,
-        /// clear the buffers on every update to reduce memory consumption
-        MemoryEfficient,
-    };
-    /// returns internal buffer mode
-    BufferMode getBufferMode() const { return bufferMode_; }
-    /// sets internal buffer mode
-    void setBufferMode( BufferMode bufferMode ) { bufferMode_ = bufferMode; }
-
-protected:
-    BufferMode bufferMode_{ AllocationEfficient };
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

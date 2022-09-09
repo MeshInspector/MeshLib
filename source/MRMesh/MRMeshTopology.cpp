@@ -31,6 +31,8 @@ EdgeId MeshTopology::makeEdge()
 bool MeshTopology::isLoneEdge( EdgeId a ) const
 {
     assert( a.valid() );
+    if ( a >= edges_.size() )
+        return true;
     auto & adata = edges_[a];
     if ( adata.left.valid() || adata.org.valid() || adata.next != a || adata.prev != a )
         return false;

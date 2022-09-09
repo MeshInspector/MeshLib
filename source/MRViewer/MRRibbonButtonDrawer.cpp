@@ -87,14 +87,9 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
     return res;
 }
 
-bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label )
+bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size )
 {
-    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
-    const ImGuiStyle& style = ImGui::GetStyle();
-    auto framePadding = style.FramePadding;
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-        framePadding.y *= menu->menu_scaling();
-    return GradientButton( label, ImVec2( 0, labelSize.y + framePadding.y * 2.0f ) );
+    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ) );
 }
 
 bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )

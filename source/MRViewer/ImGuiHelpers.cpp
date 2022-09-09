@@ -505,11 +505,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     
     const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
 
+    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0,0 } );
+    ImGui::SetCursorPosY( titleBarHeight + style.WindowPadding.y - borderSize );
     if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
     {
+        ImGui::PopStyleVar();
         ImGui::End();
         return false;
     }
+    ImGui::PopStyleVar();
+
     ImGui::TableNextColumn();    
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
 

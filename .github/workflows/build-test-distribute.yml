@@ -13,6 +13,8 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+#UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+
 jobs:
   prepare-image:
     uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
@@ -25,43 +27,52 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora35-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
     needs: [ prepare-image ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
+    with:
+      UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   versioning-and-release-url:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [windows-build-test, ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
     uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
+    with:
+      version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   update-win-version:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     timeout-minutes: 15
     runs-on: windows-2019
     needs: [versioning-and-release-url]
@@ -95,13 +106,14 @@ jobs:
           retention-days: 1
           
   update-deb-version:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
     strategy:
+      fail-fast: false
       matrix:
-        os: [ Ubuntu20, Ubuntu22 ]
+        os: [ 'Ubuntu20', 'Ubuntu22' ]
         include:
           - os: Ubuntu20
             image: meshrus/meshlib-ubuntu
@@ -142,9 +154,38 @@ jobs:
           name: Distributives
           path: meshlib-${{matrix.os}}-dev.deb
           retention-days: 1
-          
+
+      - name: Create and fix Wheel
+        if: ${{ matrix.os == 'Ubuntu20' }}
+        run: |
+          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
+          tar xf patchelf-0.10.tar.bz2
+          cd patchelf-0.10
+          ./configure
+          make install
+          cd ..
+          python3 -m pip install --upgrade pip
+          ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{needs.versioning-and-release-url.outputs.version_tag}}
+          mv ./scripts/wheel/meshlib/wheelhouse/*.whl ./
+
+      - name: Upload Wheel to Artifacts
+        if: ${{ matrix.os == 'Ubuntu20' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Wheelhouse
+          path: meshlib-*.whl
+          retention-days: 1
+
+      - name: Upload Wheel to Distributive
+        if: ${{ matrix.os == 'Ubuntu20' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
+          retention-days: 1
+
   update-rpm-version:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, prepare-image]
@@ -182,7 +223,7 @@ jobs:
           retention-days: 1
 
   upload-distributions:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
@@ -207,16 +248,25 @@ jobs:
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-          gh release upload ${{needs.versioning-and-release-url.outputs.version_tag}} \
+          gh release upload ${{needs.versioning-and-release-url.outputs.version}} \
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
+                            meshlib-*.whl
+
+  upload-wheels:
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
+    uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@master
+    with:
+      deploy_type: "test"
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs: [upload-distributions]
+    needs: [ upload-distributions, upload-wheels ]
     if: always()
     steps:
         # all Windows
@@ -246,6 +296,19 @@ jobs:
           name: RpmReleaseBinArchive
           failOnError: false
 
+      # Distributives
+      - name: Delete Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Distributives
+          failOnError: false
+
+      - name: Delete Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Wheelhouse
+          failOnError: false
+
       # generate timing logs archive
       - name: Download Timing Logs Archive
         uses: actions/download-artifact@v3
@@ -266,11 +329,4 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: Timing_Logs
-          failOnError: false
-
-      # Distributives
-      - name: Delete Fedora Developer Distribution
-        uses: geekyeggo/delete-artifact@v1
-        with:
-          name: Distributives
           failOnError: false

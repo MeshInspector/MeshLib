@@ -14,7 +14,7 @@
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 {
-    pybind11::module_::import( "mrmeshpy" );
+    pybind11::module_::import( "meshlib.mrmeshpy" );
 } )
 
 void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )

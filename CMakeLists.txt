@@ -64,7 +64,7 @@ SET(MR_FEDORA FALSE)
 IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
-  set(CMAKE_INSTALL_RPATH "@loader_path;${THIRDPARTY_LIB_DIR}")
+  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../;@loader_path/meshlib;${THIRDPARTY_LIB_DIR}")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 ELSE()
  # set platform dependent flags

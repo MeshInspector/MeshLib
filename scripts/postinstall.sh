@@ -21,10 +21,11 @@ if [ -d /usr/lib/${PYTHON_VERSION} ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrmeshnumpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/mrviewerpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/mrviewerpy.so
- printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/dist-packages/mr<lib_name>py.so' for custom python installations\n"
+ sudo mkdir -p /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrmeshpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrviewerpy.so
+ printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/meshlib/mr<lib_name>py.so /<pathToPython>/dist-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 else
  printf "\r${PYTHON_VERSION} was not found!                  \n"
 fi

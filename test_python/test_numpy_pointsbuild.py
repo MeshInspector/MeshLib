@@ -1,5 +1,5 @@
 from helper import *
-import mrmeshnumpy
+from meshlib import mrmeshnumpy
 import numpy as np
 import unittest as ut
 import pytest

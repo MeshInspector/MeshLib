@@ -283,7 +283,6 @@ Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const
             auto d1 = edgeVector( topology.next( e ) );
             auto angle = MR::angle( d0, d1 );
             auto n = cross( d0, d1 );
-            assert( n.lengthSq() > 0.0f );
             sum += angle * n.normalized();
         }
     }

@@ -6,6 +6,7 @@
 #include "MRObjectMesh.h"
 #include "MRTimer.h"
 #include "MRHeapBytes.h"
+#include "MRStringConvert.h"
 #include <filesystem>
 #include <tl/expected.hpp>
 #include "MRPch/MRJson.h"
@@ -322,6 +323,14 @@ size_t VisualObject::heapBytes() const
         + uvCoordinates_.heapBytes()
         + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
+}
+
+std::vector<std::string> VisualObject::getInfoLines() const
+{
+    auto res = Object::getInfoLines();
+    if ( renderObj_ )
+        res.push_back( "GL mem: " + bytesString( renderObj_->glBytes() ) );
+    return res;
 }
 
 void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) const

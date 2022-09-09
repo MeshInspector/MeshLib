@@ -179,6 +179,7 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+    MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
 
 protected:
 

@@ -17,6 +17,7 @@ public:
     virtual void render( const RenderParams& params ) override;
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
+    virtual size_t glBytes() const override;
 
 private:
     const ObjectMeshHolder* objMesh_;

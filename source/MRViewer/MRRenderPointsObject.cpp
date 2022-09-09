@@ -141,6 +141,15 @@ size_t RenderPointsObject::heapBytes() const
     return 0;
 }
 
+size_t RenderPointsObject::glBytes() const
+{
+    return vertPosBuffer_.size()
+        + vertNormalsBuffer_.size()
+        + vertColorsBuffer_.size()
+        + validIndicesBuffer_.size()
+        + vertSelectionTex_.size();
+}
+
 void RenderPointsObject::bindPoints_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );

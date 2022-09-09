@@ -24,48 +24,48 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu20-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora35-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
     with:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   versioning-and-release-url:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [windows-build-test, ubuntu20-build-test, ubuntu22-build-test, fedora35-build-test]
-    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     with:
       version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
     secrets:
@@ -296,6 +296,19 @@ jobs:
           name: RpmReleaseBinArchive
           failOnError: false
 
+      # Distributives
+      - name: Delete Distribution
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Distributives
+          failOnError: false
+
+      - name: Delete Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Wheelhouse
+          failOnError: false
+
       # generate timing logs archive
       - name: Download Timing Logs Archive
         uses: actions/download-artifact@v3
@@ -316,17 +329,4 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: Timing_Logs
-          failOnError: false
-
-      # Distributives
-      - name: Delete Fedora Developer Distribution
-        uses: geekyeggo/delete-artifact@v1
-        with:
-          name: Distributives
-          failOnError: false
-
-      - name: Delete Fedora Developer Distribution
-        uses: geekyeggo/delete-artifact@v1
-        with:
-          name: Wheelhouse
           failOnError: false

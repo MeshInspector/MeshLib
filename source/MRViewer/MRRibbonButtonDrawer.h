@@ -41,7 +41,7 @@ public:
     /// draw gradient button
     MRVIEWER_API static bool GradientButton( const char* label, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient button with the ordinary button size
-    MRVIEWER_API static bool GradientButtonCommonSize( const char* label );
+    MRVIEWER_API static bool GradientButtonCommonSize( const char* label, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient button, which can be disabled (valid = false)
     MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient checkbox

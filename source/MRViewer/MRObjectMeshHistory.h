@@ -9,6 +9,10 @@ namespace MR
 
 /// removes deleted edges from edge selection and from creases and adds history records for that;
 /// it is a good idea to make SCOPED_HISTORY before calling this function
-MRVIEWER_API void clearObjectMeshWithHistory( const std::shared_ptr<ObjectMesh>& objMesh );
+MRVIEWER_API void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh );
+
+/// removes all edges from edge selection and from creases and adds history records for that;
+/// it is a good idea to make SCOPED_HISTORY before calling this function
+MRVIEWER_API void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh );
 
 } //namespace MR

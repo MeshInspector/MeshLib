@@ -8,7 +8,7 @@
 namespace MR
 {
 
-void clearObjectMeshWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
+void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 {
     MR_TIMER
     if ( !objMesh || !objMesh->mesh() )
@@ -26,6 +26,21 @@ void clearObjectMeshWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     topology.excludeLoneEdges( creases );
     Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
     objMesh->setCreases( std::move( creases ) );
+}
+
+void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
+{
+    MR_TIMER
+    if ( !objMesh )
+        return;
+
+    // remove all edges from the selection
+    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
+    objMesh->selectEdges( {} );
+
+    // remove all edges from creases
+    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
+    objMesh->setCreases( {} );
 }
 
 } //namespace MR

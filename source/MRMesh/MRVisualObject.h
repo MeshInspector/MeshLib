@@ -167,9 +167,6 @@ public:
     /// is object has visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }
 
-    MRMESH_API IRenderObject::BufferMode getRenderBufferMode() const;
-    MRMESH_API void setRenderBufferMode( IRenderObject::BufferMode bufferMode );
-
     /// returns bounding box of this object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
     MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const override;

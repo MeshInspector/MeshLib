@@ -99,16 +99,6 @@ tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float
 {
     MR_TIMER;
 
-    float voxelSize = params.voxelSize;
-    // Compute voxel size if needed
-    if ( voxelSize <= 0.0f )
-    {
-        auto bb = polyline.computeBoundingBox();
-        auto size = bb.size();
-        auto maxDim = std::max( { size.x,size.y,size.z } );
-        voxelSize = maxDim * std::cbrt( 1.0f / autoVoxelNumber );
-    }
-
     Mesh mesh;
     auto contours = polyline.topology.convertToContours<Vector3f>(
         [&points = polyline.points]( VertId v )
@@ -118,8 +108,12 @@ tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float
 
     std::vector<EdgeId> newHoles;
     newHoles.reserve( contours.size() );
-    for ( const auto& cont : contours )
+    for ( auto& cont : contours )
+    {
+        if ( cont[0] != cont.back() )
+            cont.insert( cont.end(), cont.rbegin(), cont.rend() );
         newHoles.push_back( mesh.addSeparateEdgeLoop( cont ) );
+    }
 
     for ( auto h : newHoles )
         makeDegenerateBandAroundHole( mesh, h );

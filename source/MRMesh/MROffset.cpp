@@ -99,16 +99,6 @@ tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float
 {
     MR_TIMER;
 
-    float voxelSize = params.voxelSize;
-    // Compute voxel size if needed
-    if ( voxelSize <= 0.0f )
-    {
-        auto bb = polyline.computeBoundingBox();
-        auto size = bb.size();
-        auto maxDim = std::max( { size.x,size.y,size.z } );
-        voxelSize = maxDim * std::cbrt( 1.0f / autoVoxelNumber );
-    }
-
     Mesh mesh;
     auto contours = polyline.topology.convertToContours<Vector3f>(
         [&points = polyline.points]( VertId v )
@@ -120,8 +110,8 @@ tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float
     newHoles.reserve( contours.size() );
     for ( auto& cont : contours )
     {
-        if ( cont.size() == 2 )
-            cont.push_back( cont.back() );
+        if ( cont[0] != cont.back() )
+            cont.insert( cont.end(), cont.rbegin(), cont.rend() );
         newHoles.push_back( mesh.addSeparateEdgeLoop( cont ) );
     }
 

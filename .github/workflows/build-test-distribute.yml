@@ -258,7 +258,7 @@ jobs:
   upload-wheels:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [versioning-and-release-url, update-win-version, update-deb-version, update-rpm-version]
-    uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@pip-packaging
+    uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@master
     with:
       deploy_type: "test"
     secrets: inherit

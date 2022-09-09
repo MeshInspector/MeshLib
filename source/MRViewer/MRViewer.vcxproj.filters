@@ -220,6 +220,9 @@
     <ClCompile Include="MRRenderGLHelpers.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRPlaneVisualizer.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -415,6 +418,9 @@
     </ClInclude>
     <ClInclude Include="MRViewerIO.h">
       <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPlaneVisualizer.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

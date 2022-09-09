@@ -39,6 +39,8 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) = 0;
     /// returns the amount of memory this object occupies on heap
     virtual size_t heapBytes() const = 0;
+    /// returns the amount of memory this object allocated in OpenGL
+    virtual size_t glBytes() const = 0;
     /// the way the internal buffers are dealt with
     enum BufferMode {
         /// preserve the buffers to reduce re-allocation count

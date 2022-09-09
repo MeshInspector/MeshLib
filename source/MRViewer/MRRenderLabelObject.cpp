@@ -307,6 +307,19 @@ size_t RenderLabelObject::heapBytes() const
     return 0;
 }
 
+size_t RenderLabelObject::glBytes() const
+{
+    return vertPosBuffer_.size()
+        + facesIndicesBuffer_.size()
+        + srcVertPosBuffer_.size()
+        + srcIndicesBuffer_.size()
+        + srcIndicesSelectionTex_.size()
+        + bgVertPosBuffer_.size()
+        + bgFacesIndicesBuffer_.size()
+        + llineVertPosBuffer_.size()
+        + llineEdgesIndicesBuffer_.size();
+}
+
 void RenderLabelObject::bindLabel_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );

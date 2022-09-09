@@ -175,6 +175,22 @@ size_t RenderMeshObject::heapBytes() const
     return 0;
 }
 
+size_t RenderMeshObject::glBytes() const
+{
+    return borderBuffer_.size()
+        + selectedEdgesBuffer_.size()
+        + vertPosBuffer_.size()
+        + vertUVBuffer_.size()
+        + vertNormalsBuffer_.size()
+        + vertColorsBuffer_.size()
+        + edgesIndicesBuffer_.size()
+        + facesIndicesBuffer_.size()
+        + texture_.size()
+        + faceSelectionTex_.size()
+        + faceSelectionTex_.size()
+        + facesNormalsTex_.size();
+}
+
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GlBuffer & vbo, const Color& colorChar, uint32_t dirtyFlag )
 {
     RenderBufferRef<Vector3f> buffer;

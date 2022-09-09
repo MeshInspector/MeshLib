@@ -142,6 +142,18 @@ size_t RenderLinesObject::heapBytes() const
     return 0;
 }
 
+size_t RenderLinesObject::glBytes() const
+{
+    return vertPosBuffer_.size()
+        + vertUVBuffer_.size()
+        + vertNormalsBuffer_.size()
+        + vertColorsBuffer_.size()
+        + lineIndicesBuffer_.size()
+        + texture_.size()
+        + pointsSelectionTex_.size()
+        + lineColorsTex_.size();
+}
+
 void RenderLinesObject::bindLines_()
 {
     MR_TIMER;

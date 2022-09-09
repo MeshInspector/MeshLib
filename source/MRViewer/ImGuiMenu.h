@@ -125,6 +125,23 @@ protected:
       Quad // left lower vp, left upper vp, right lower vp, right upper vp
   } viewportConfig_{ Single };
 
+  // Drag objects servant data
+  // struct to handle changed scene window size scroll
+  struct ScrollPositionPreservation
+  {
+      float relativeMousePos{ 0.0f };
+      float absLinePosRatio{ 0.0f };
+      ScrollPositionPreservation& operator=( const ScrollPositionPreservation& ) = default;
+  } prevScrollInfo_;
+  // true to fix scroll position in next frame
+  bool nextFrameFixScroll_{ false };
+  // flag to know if we are dragging objects now or not
+  bool dragObjectsMode_{ false };
+  // flag to correctly update scroll on transform window appearing
+  bool selectionChangedToSingleObj_{ false };
+  // this function should be called after BeginChild("Meshes") (child window with scene tree)
+  MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 

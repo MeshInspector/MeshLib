@@ -72,6 +72,7 @@
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "imgui_internal.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -733,11 +734,11 @@ void ImGuiMenu::draw_scene_list_content( const std::vector<std::shared_ptr<Objec
     // it can be cleaned but it is inconsistent, so this mesh is untouchable
     int uniqueCounter = 0;
     ImGui::BeginChild( "Meshes", ImVec2( -1, -1 ), true );
+    updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
         draw_object_recurse_( *child, selected, all, uniqueCounter );
     makeDragDropTarget_( SceneRoot::get(), false, true, uniqueCounter + 1 );
-    //ImGui::SetWindowSize( ImVec2(size.x,0) );
     ImGui::EndChild();
     sceneOpenCommands_.clear();
 
@@ -835,7 +836,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
         auto width = ImGui::GetContentRegionAvail().x;
         ImGui::ColorButton( ( "##InternalDragDropArea" + std::to_string( counter ) ).c_str(),
             ImVec4( 0, 0, 0, 0 ),
-            0, ImVec2( width, 4.0f ) );
+            0, ImVec2( width, 4 * menu_scaling() ) );
     }
     if ( ImGui::BeginDragDropTarget() )
     {
@@ -845,7 +846,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
             auto width = ImGui::GetContentRegionAvail().x;
             ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + std::to_string( counter ) ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
-                0, ImVec2( width, 4.0f ) );
+                0, ImVec2( width, 4 * menu_scaling() ) );
         }
         if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "_TREENODE" ) )
         {
@@ -998,14 +999,13 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         if ( hasRealChildren )
         {
             auto children = object.children();
+            ImGui::Indent();
             for ( const auto& child : children )
             {
-                ImGui::Indent();
                 draw_object_recurse_( *child, selected, all, counter );
-                ImGui::Unindent();
             }
-
             makeDragDropTarget_( object, false, true, 0 );
+            ImGui::Unindent();
         }
     }
 }
@@ -1464,6 +1464,11 @@ float ImGuiMenu::drawTransform_()
     float resultHeight_ = 0.f;
     if ( selected.size() == 1 && !selected[0]->isLocked() )
     {
+        if ( !selectionChangedToSingleObj_ )
+        {
+            selectionChangedToSingleObj_ = true;
+            nextFrameFixScroll_ = true;
+        }
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
         bool openedContext = false;
         if ( drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -1525,7 +1530,7 @@ float ImGuiMenu::drawTransform_()
                 ImGui::EndTooltip();
             }
 
-            if ( resultRotation.valueChanged && ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+            if ( resultRotation.valueChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
             {
                 // resolve singularity
                 constexpr float cZenithEps = 0.01f;
@@ -1578,7 +1583,12 @@ float ImGuiMenu::drawTransform_()
                 openedContext = drawTransformContextMenu_( selected[0] );
         }
         if ( !openedContext )
-            drawTransformContextMenu_( selected[0] );        
+            drawTransformContextMenu_( selected[0] );
+    }
+    else
+    {
+        if ( selectionChangedToSingleObj_ )
+            selectionChangedToSingleObj_ = false;
     }
 
     return resultHeight_;
@@ -1821,6 +1831,57 @@ Vector4f ImGuiMenu::getStoredColor_( const std::string& str, const Color& defaul
     if ( !storedColor_ || storedColor_->first != str )
         return Vector4f( defaultColor );
     return storedColor_->second;
+}
+
+void ImGuiMenu::updateSceneWindowScrollIfNeeded_()
+{
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    if ( !window )
+        return;
+
+    ScrollPositionPreservation scrollInfo;
+    scrollInfo.relativeMousePos = ImGui::GetMousePos().y - window->Pos.y;
+    scrollInfo.absLinePosRatio = window->ContentSize.y == 0.0f ? 0.0f : ( scrollInfo.relativeMousePos + window->Scroll.y ) / window->ContentSize.y;
+
+    if ( nextFrameFixScroll_ )
+    {
+        nextFrameFixScroll_ = false;
+        window->Scroll.y = std::clamp( prevScrollInfo_.absLinePosRatio * window->ContentSize.y - prevScrollInfo_.relativeMousePos, 0.0f, window->ScrollMax.y );
+    }
+    else if ( dragObjectsMode_ )
+    {
+        float relativeMousePosRatio = window->Size.y == 0.0f ? 0.0f : scrollInfo.relativeMousePos / window->Size.y;
+        float shift = 0.0f;
+        if ( relativeMousePosRatio < 0.05f )
+            shift = ( relativeMousePosRatio - 0.05f ) * 25.0f - 1.0f;
+        else if ( relativeMousePosRatio > 0.95f )
+            shift = ( relativeMousePosRatio - 0.95f ) * 25.0f + 1.0f;
+
+        auto newScroll = std::clamp( window->Scroll.y + shift, 0.0f, window->ScrollMax.y );
+        if ( newScroll != window->Scroll.y )
+        {
+            window->Scroll.y = newScroll;
+            getViewerInstance().incrementForceRedrawFrames();
+        }
+    }
+
+    const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();
+    bool dragModeNow = payloadCheck && std::string_view( payloadCheck->DataType ) == "_TREENODE";
+    if ( dragModeNow && !dragObjectsMode_ )
+    {
+        dragObjectsMode_ = true;
+        nextFrameFixScroll_ = true;
+        getViewerInstance().incrementForceRedrawFrames( 2, true );
+    }
+    else if ( !dragModeNow && dragObjectsMode_ )
+    {
+        dragObjectsMode_ = false;
+        nextFrameFixScroll_ = true;
+        getViewerInstance().incrementForceRedrawFrames( 2, true );
+    }
+
+    if ( !nextFrameFixScroll_ )
+        prevScrollInfo_ = scrollInfo;
 }
 
 void ImGuiMenu::draw_custom_plugins()

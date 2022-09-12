@@ -55,12 +55,17 @@ MRMESH_API void addLeftBand( const MeshTopology & topology, const EdgeLoop & loo
 
 /// builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+/// same, but constructs the path from both start and finish, which is faster for long paths
+[[nodiscard]] MRMESH_API EdgePath buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
 
 /// builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen = FLT_MAX );
 
 /// builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology & topology, const EdgeMetric & metric,
+    VertId start, VertId finish, float maxPathMetric = FLT_MAX );
+/// same, but constructs the path from both start and finish, which is faster for long paths
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
 
 /// builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned

@@ -267,10 +267,10 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto edges = loadEdgeIndicesBuffer_();
-    dirtyEdges_ = false;
-    if ( edgesIndicesBuffer_.size() == 0 )
+    if ( dirtyEdges_ && edges.size() == 0 )
         return;
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
+    dirtyEdges_ = false;
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 

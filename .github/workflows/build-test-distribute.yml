@@ -104,6 +104,27 @@ jobs:
           name: Distributives
           path: MeshLibDist.zip
           retention-days: 1
+
+      - name: Create and fix Wheel
+        run: |
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip install wheel setuptools delvewheel
+          py -3.10 .\scripts\wheel\create_wheel.py -v ${{needs.versioning-and-release-url.outputs.version_tag}}
+          Move-Item -Path .\scripts\wheel\meshlib\wheelhouse\*.whl -Destination .\
+
+      - name: Upload Wheel to Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Wheelhouse
+          path: meshlib-*.whl
+          retention-days: 1
+
+      - name: Upload Wheel to Distributive
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
+          retention-days: 1
           
   update-deb-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

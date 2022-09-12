@@ -9,9 +9,13 @@ WHEEL_SRC_DIR = os.path.join(os.getcwd(), "scripts/wheel/meshlib/meshlib/")
 WHEEL_ROOT_DIR = os.path.join(os.getcwd(), "scripts/wheel/meshlib/")
 WHEEL_SCRIPT_DIR = os.path.join(os.getcwd(), "scripts/wheel/")
 
+PYLIB_PATH = {"Windows": r'./source/x64/Release/*.pyd',
+              "Linux": r'./build/Release/bin/meshlib/mr*.so',
+              "Darwin": r'./build/Release/bin/meshlib/mr*.so'}
+
 
 def prepare_workspace():
-    if not os.path.isdir(os.path.join(os.getcwd(),"scripts")):
+    if not os.path.isdir(os.path.join(os.getcwd(), "scripts")):
         print("Please run this script from MeshLib root")
         sys.exit(1)
 
@@ -26,16 +30,10 @@ def prepare_workspace():
     open(os.path.join(WHEEL_SRC_DIR, "__init__.py"), "w").close()
 
 
-def copy_linux_src():
-    print("Copying files...")
-    for file in glob.glob(r'./build/Release/bin/meshlib/mr*.so'):
-        print(file)
-        shutil.copy(file, WHEEL_SRC_DIR)
-
-
-def copy_windows_src():
-    print("Copying files...")
-    for file in glob.glob(r'./source/x64/Release/*.pyd'):
+def copy_src():
+    platform_system = platform.system()
+    print("Copying {} files...".format(platform_system))
+    for file in glob.glob(PYLIB_PATH[platform_system]):
         print(file)
         shutil.copy(file, WHEEL_SRC_DIR)
 
@@ -51,14 +49,14 @@ def setup_wheel_info(args):
             if "version=" in line:
                 line = line.replace("$", args.version)
             elif "package_data=" in line:
-                if platform_system == "Windpows":
+                if platform_system == "Windows":
                     line = line.replace("$", "pyd")
                 else:
                     line = line.replace("$", "so")
             elif "Programming Language ::" in line or "python_requires=" in line:
                 line = line.replace("$", str(sys.version_info[0]) + "." + str(sys.version_info[1]))
             elif "Operating System ::" in line:
-                if platform_system == "Windpows":
+                if platform_system == "Windows":
                     line = line.replace("$", "Microsoft :: Windows :: Windows 10")
                 elif platform_system == "Linux":
                     line = line.replace("$", "POSIX :: Linux")
@@ -80,5 +78,5 @@ def parse_args():
 
 args = parse_args()
 prepare_workspace()
-copy_linux_src()
+copy_src()
 setup_wheel_info(args)

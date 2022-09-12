@@ -178,16 +178,19 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
             if ( res.face.valid() )
             {
                 const auto& mesh = meshObj->mesh();
-                if ( !mesh || !mesh->topology.hasFace( res.face ) )
+                if ( mesh && !mesh->topology.hasFace( res.face ) )
                 {
                     assert( false );
                     continue;
                 }
 
-                res.point = unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) );
-                Vector3f a, b, c;
-                mesh->getTriPoints( res.face, a, b, c );
-                res.point = closestPointInTriangle( renderVector[pickRes.geomId]->worldXf().inverse()( res.point ), a, b, c ).first;
+                res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+                if ( mesh )
+                {
+                    Vector3f a, b, c;
+                    mesh->getTriPoints( res.face, a, b, c );
+                    res.point = closestPointInTriangle( res.point, a, b, c ).first;
+                }
             }
         }
         if ( auto parent = renderVector[pickRes.geomId]->parent() )

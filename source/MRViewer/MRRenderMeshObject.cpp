@@ -136,8 +136,6 @@ void RenderMeshObject::render( const RenderParams& renderParams )
         GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
     }
-
-    objMesh_->resetDirty();
 }
 
 void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
@@ -167,7 +165,6 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     drawMesh_( true, parameters.viewportId, true );
-    objMesh_->resetDirty();
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -270,8 +267,10 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto edges = loadEdgeIndicesBuffer_();
-    edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
     dirtyEdges_ = false;
+    if ( edgesIndicesBuffer_.size() == 0 )
+        return;
+    edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 
@@ -426,10 +425,6 @@ void RenderMeshObject::freeBuffers_()
 
 void RenderMeshObject::update_( ViewportId id )
 {
-    auto mesh = objMesh_->mesh();
-    if ( !mesh )
-        return;
-
     MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
     uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( id );

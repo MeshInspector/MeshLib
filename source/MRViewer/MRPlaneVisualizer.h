@@ -7,26 +7,27 @@ namespace MR
 {
 struct PlaneVisualizer
 {
-    std::vector<std::shared_ptr<ObjectMeshHolder>> objects_;
+    std::vector<std::shared_ptr<ObjectMeshHolder>> objects;
 
-    std::shared_ptr<ObjectMesh> planeObj_;
-    Plane3f plane_;
-    Box3f objectsBox_;
+    std::shared_ptr<ObjectMesh> planeObj;
+    Plane3f plane;
+    Box3f objectsBox;
 
-    AffineXf3f lastPlaneTransform_;
-    Vector3f cameraUp3Old_;
+    AffineXf3f lastPlaneTransform;
+    Vector3f cameraUp3Old;
 
-    bool planeIsDefined_ = true;
-    std::shared_ptr<ObjectLines> frameBorder_;
+    bool planeIsDefined = true;
+    std::shared_ptr<ObjectLines> frameBorder;
 
-    bool showPlane_ = true;
-    bool pressed_ = false;
+    bool showPlane = true;
+    bool pressed = false;
 
-    ImVec2 startMousePos_;
-    ImVec2 endMousePos_;
+    ImVec2 startMousePos;
+    ImVec2 endMousePos;
 
-    bool importPlaneMode_{ false };
-    std::vector<boost::signals2::connection> xfChangedConnections_;  
+    bool importPlaneMode = false;
+    bool clipByPlane = false;
+    std::vector<boost::signals2::connection> xfChangedConnections;
 
 
     MRVIEWER_API PlaneVisualizer();

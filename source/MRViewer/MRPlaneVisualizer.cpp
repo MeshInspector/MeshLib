@@ -11,19 +11,19 @@ namespace MR
 
 PlaneVisualizer::PlaneVisualizer()
 {   
-    objects_ = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( objects_.empty() )
+    objects = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    if ( objects.empty() )
         return;
 
     Box3f box = Box3f();
-    xfChangedConnections_.reserve( objects_.size() );
+    xfChangedConnections.reserve( objects.size() );
 
-    for ( const auto& i : objects_ )
+    for ( const auto& i : objects )
     {
         if ( i )
             box.include( i->getWorldBox() );
 
-        xfChangedConnections_.push_back( i->worldXfChangedSignal.connect( [this]
+        xfChangedConnections.push_back( i->worldXfChangedSignal.connect( [this]
         {
             updatePlane( false );
         } ) );
@@ -35,33 +35,35 @@ PlaneVisualizer::PlaneVisualizer()
 
 PlaneVisualizer::~PlaneVisualizer()
 {
-    if ( planeObj_ )
-        planeObj_->detachFromParent();
-    //for ( const auto& obj : objects_ )
-      //  obj->setVisualizeProperty( true, VisualizeMaskType::ClippedByPlane, viewer->viewport().id );
-    if ( frameBorder_ )
-        frameBorder_->detachFromParent();    
+    if ( planeObj )
+        planeObj->detachFromParent();
 
-    for ( auto& connection : xfChangedConnections_ )
+    for ( const auto& obj : objects )
+        obj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, Viewer::instance()->viewport().id );
+
+    if ( frameBorder )
+        frameBorder->detachFromParent();    
+
+    for ( auto& connection : xfChangedConnections )
         connection.disconnect();
 }
 
 void PlaneVisualizer::setupPlane()
 {
-    plane_ = Plane3f( Vector3f::plusX(), 0.0f );
+    plane = Plane3f( Vector3f::plusX(), 0.0f );
 
     std::shared_ptr<Mesh> planeMesh = std::make_shared<Mesh>( makePlane() );
-    planeObj_ = std::make_shared<ObjectMesh>();
-    planeObj_->setName( "PlaneObjectClipPlugin" );
-    planeObj_->setMesh( planeMesh );
-    planeObj_->setAncillary( true );
-    planeObj_->setFrontColor( Color( Vector4f::diagonal( 0.3f ) ), false );
-    planeObj_->setBackColor( Color( Vector4f::diagonal( 0.3f ) ) );
-    planeObj_->setVisible( false );
+    planeObj = std::make_shared<ObjectMesh>();
+    planeObj->setName( "PlaneObjectClipPlugin" );
+    planeObj->setMesh( planeMesh );
+    planeObj->setAncillary( true );
+    planeObj->setFrontColor( Color( Vector4f::diagonal( 0.3f ) ), false );
+    planeObj->setBackColor( Color( Vector4f::diagonal( 0.3f ) ) );
+    planeObj->setVisible( false );
 
     updatePlane();
 
-    SceneRoot::get().addChild( planeObj_ );
+    SceneRoot::get().addChild( planeObj );
 }
 
 void PlaneVisualizer::updatePlane( bool updateCameraRotation /*= true*/ )
@@ -69,86 +71,90 @@ void PlaneVisualizer::updatePlane( bool updateCameraRotation /*= true*/ )
     auto viewer = Viewer::instance();
 
     updateXfs();
-    plane_ = plane_.normalized();
-    //viewer->viewport().setClippingPlane( plane_ );
+    plane = plane.normalized();
+    if ( clipByPlane )
+        viewer->viewport().setClippingPlane( plane );
 
-    auto trans1 = AffineXf3f::translation( plane_.project( objectsBox_.center() ) );
-    auto rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), plane_.n ) );
-    auto scale1 = AffineXf3f::linear( Matrix3f::scale( objectsBox_.diagonal() ) );
+    auto trans1 = AffineXf3f::translation( plane.project( objectsBox.center() ) );
+    auto rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), plane.n ) );
+    auto scale1 = AffineXf3f::linear( Matrix3f::scale( objectsBox.diagonal() ) );
     AffineXf3f transform = trans1 * rot1 * scale1;
     if ( updateCameraRotation )
-        cameraUp3Old_ = viewer->viewport().getUpDirection();
-    Vector3f cameraUp3 = cameraUp3Old_;
+        cameraUp3Old = viewer->viewport().getUpDirection();
+    Vector3f cameraUp3 = cameraUp3Old;
     auto rot2 = Matrix3f::rotation( transform.A * Vector3f::plusY(),
-                                    plane_.project( transform( Vector3f() ) + cameraUp3 ) - transform( Vector3f() ) );
+                                    plane.project( transform( Vector3f() ) + cameraUp3 ) - transform( Vector3f() ) );
 
-    lastPlaneTransform_ = trans1 * AffineXf3f::linear( rot2 ) * rot1;
-    transform = lastPlaneTransform_ * scale1;
-    planeObj_->setXf( transform );
+    lastPlaneTransform = trans1 * AffineXf3f::linear( rot2 ) * rot1;
+    transform = lastPlaneTransform * scale1;
+    planeObj->setXf( transform );
 }
 
 void PlaneVisualizer::updateXfs()
 {
-    std::vector<AffineXf3f> objectsWorldXf( objects_.size() );
-    objectsBox_ = Box3f();
-    for ( int i = 0; i < objects_.size(); ++i )
+    std::vector<AffineXf3f> objectsWorldXf( objects.size() );
+    objectsBox = Box3f();
+    for ( int i = 0; i < objects.size(); ++i )
     {
-        auto& obj = objects_[i];
+        auto& obj = objects[i];
         auto& xf = objectsWorldXf[i];
         xf = obj->worldXf();
         auto box = obj->getBoundingBox();
-        objectsBox_.include( xf( box.min ) );
-        objectsBox_.include( xf( box.max ) );
+        objectsBox.include( xf( box.min ) );
+        objectsBox.include( xf( box.max ) );
     }
 }
 
 void PlaneVisualizer::definePlane()
 {
-    if ( planeIsDefined_ )
+    if ( planeIsDefined )
         return;
 
-    planeIsDefined_ = true;
-    planeObj_->setVisible( true );
+    planeIsDefined = true;
+    planeObj->setVisible( true );
 
-    frameBorder_->setVisible( true );
+    frameBorder->setVisible( true );
 
-    // for ( const auto& obj : objects_ )
-        // obj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, viewer->viewport().id );
+    if ( clipByPlane )
+        for ( const auto& obj : objects )
+            obj->setVisualizeProperty( true, VisualizeMaskType::ClippedByPlane, Viewer::instance()->viewport().id );
 }
 
 void PlaneVisualizer::undefinePlane()
 {
-    if ( !planeIsDefined_ )
+    if ( !planeIsDefined )
         return;
-    if ( planeObj_ )
-        planeObj_->setVisible( false );
-    if ( frameBorder_ )
-        frameBorder_->setVisible( false );
-    //for ( const auto& obj : objects_ )
-//obj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, viewer->viewport().id );
-    planeIsDefined_ = false;
+    if ( planeObj )
+        planeObj->setVisible( false );
+    if ( frameBorder )
+        frameBorder->setVisible( false );
+
+    for ( const auto& obj : objects )
+        obj->setVisualizeProperty( false, VisualizeMaskType::ClippedByPlane, Viewer::instance()->viewport().id );
+
+    planeIsDefined = false;
 }
 
 void PlaneVisualizer::setupFrameBorder()
 {
-    frameBorder_ = std::make_shared<ObjectLines>();
-    frameBorder_->setName( "FrameBorderClipPlugin" );
-    frameBorder_->setAncillary( true );
+    frameBorder = std::make_shared<ObjectLines>();
+    frameBorder->setName( "FrameBorderClipPlugin" );
+    frameBorder->setAncillary( true );
     const Polyline3 polyline( { { Vector2f( 0.5f, 0.5f ), Vector2f( 0.5f, -0.5f ), Vector2f( -0.5f, -0.5f ), Vector2f( -0.5f, 0.5f ), Vector2f( 0.5f, 0.5f ) } } );
-    frameBorder_->setPolyline( std::make_shared<Polyline3>( polyline ) );
-    frameBorder_->setLinesColorMap( Vector<Color, UndirectedEdgeId>{ 8, Color::yellow() } );
-    frameBorder_->setColoringType( ColoringType::LinesColorMap );
-    frameBorder_->setVisible( false );
+    frameBorder->setPolyline( std::make_shared<Polyline3>( polyline ) );
+    frameBorder->setLinesColorMap( Vector<Color, UndirectedEdgeId>{ 8, Color::yellow() } );
+    frameBorder->setColoringType( ColoringType::LinesColorMap );
+    frameBorder->setVisible( false );
 
-    SceneRoot::get().addChild( frameBorder_ );
+    SceneRoot::get().addChild( frameBorder );
 }
 
 void PlaneVisualizer::updateFrameBorder()
 {
-    if ( !objectsBox_.valid() || !frameBorder_ )
+    if ( !objectsBox.valid() || !frameBorder )
         return;
 
-    const AffineXf3f boxScale = AffineXf3f::linear( Matrix3f::scale( objectsBox_.diagonal() ) );
-    frameBorder_->setXf( lastPlaneTransform_ * boxScale );
+    const AffineXf3f boxScale = AffineXf3f::linear( Matrix3f::scale( objectsBox.diagonal() ) );
+    frameBorder->setXf( lastPlaneTransform * boxScale );
 }
 }

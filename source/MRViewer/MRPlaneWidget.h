@@ -19,9 +19,8 @@ class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, M
     Vector2f startMousePos_;
     Vector2f endMousePos_;
 
+    std::shared_ptr<ObjectLines> line_;
 public:
-    MRVIEWER_API PlaneWidget( const Plane3f& plane, const Box3f& box, OnPlaneUpdateCallback = nullptr );
-    MRVIEWER_API ~PlaneWidget();
     
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
     MRVIEWER_API void updateBox( const Box3f& box, bool updateCameraRotation = true );

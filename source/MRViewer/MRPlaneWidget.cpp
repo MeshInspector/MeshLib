@@ -10,18 +10,6 @@
 namespace MR
 {
 
-PlaneWidget::PlaneWidget( const Plane3f& plane, const Box3f& box, OnPlaneUpdateCallback onPlaneUpdate )
-: plane_(plane),
-box_(box),
-onPlaneUpdate_( onPlaneUpdate )
-{ 
-}
-
-PlaneWidget::~PlaneWidget()
-{    
-    undefinePlane();
-}
-
 void PlaneWidget::updatePlane( const Plane3f& plane, bool updateCameraRotation )
 {
     plane_ = plane;
@@ -79,6 +67,9 @@ void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
 
 void PlaneWidget::updateWidget_( bool updateCameraRotation )
 {
+    if ( !planeObj_ )
+        return;
+
     auto viewer = Viewer::instance();
     plane_ = plane_.normalized();
 
@@ -105,6 +96,17 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     const auto& mousePos = Viewer::instance()->mouseController.getMousePos();
     startMousePos_ = endMousePos_ = Vector2f( float( mousePos.x ), float( mousePos.y ) );
     pressed_ = true;
+
+    line_ = std::make_shared<ObjectLines>();
+    line_->setName( "PlaneLine" );
+    line_->setAncillary( true );
+    const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
+    line_->setPolyline( std::make_shared<Polyline3>( polyline ) );
+    line_->setLinesColorMap( Vector<Color, UndirectedEdgeId>{ 8, Color::yellow() } );
+    line_->setColoringType( ColoringType::LinesColorMap );
+
+    SceneRoot::get().addChild( line_ );
+
     return true;
 }
 
@@ -112,6 +114,9 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
 {
     if ( !pressed_ )
         return false;
+
+    line_->detachFromParent();
+    line_.reset();
 
     pressed_ = false;
 
@@ -144,9 +149,8 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
 
     endMousePos_ = Vector2f( ( float )mouse_x, ( float )mouse_y );
     
-    ImGuiContext& g = *ImGui::GetCurrentContext();
-    ImGuiWindow* window = g.CurrentWindow;
-    window->DrawList->AddLine( ImVec2( startMousePos_.x, startMousePos_.y ), ImVec2( endMousePos_.x, endMousePos_.y ), ImGui::GetColorU32( ImGuiCol_Text ) );
+    const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
+    line_->setPolyline( std::make_shared<Polyline3>( polyline ) );    
 
     return true;
 }

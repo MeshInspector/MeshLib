@@ -27,7 +27,7 @@ public:
     // updates plane, triggers callback if it is specidied
     // if updateCameraRotation is true, plane transform will be updated with respect of camera up direction
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
-    // updates box which is used to calculate size of the plane
+    // updates box which is used to calculate size and position of the visualized plane part
     // if updateCameraRotation is true, plane transform will be updated with respect of camera up direction
     MRVIEWER_API void updateBox( const Box3f& box, bool updateCameraRotation = true );
     // defines plane, adds plane object to scene

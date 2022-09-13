@@ -61,7 +61,7 @@ static EdgePath positivePath(
 
         return edgeMetric( e );
     };
-    append( res, buildSmallestMetricPath( mesh.topology, planeMetric, start, finish ) );
+    append( res, buildSmallestMetricPathBiDir( mesh.topology, planeMetric, start, finish ) );
 
     if ( midPlane.distance( mesh.orgPnt( e1 ) ) < 0 )
         res.push_back( e1.sym() );

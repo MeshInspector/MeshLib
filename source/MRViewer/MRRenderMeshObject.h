@@ -85,7 +85,7 @@ private:
     // Release the OpenGL buffer objects
     void freeBuffers_();
 
-    void update_( ViewportId id );
+    void update_( ViewportMask mask );
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     uint32_t dirty_{ 0 };

@@ -190,7 +190,7 @@ size_t RenderMeshObject::glBytes() const
 
 void RenderMeshObject::forceBindAll()
 {
-    update_( ViewportId{ 1 } );
+    update_( ViewportMask::all() );
     bindMesh_( false ); 
     auto edges = loadEdgeIndicesBuffer_();
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
@@ -431,11 +431,11 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
 }
 
-void RenderMeshObject::update_( ViewportId id )
+void RenderMeshObject::update_( ViewportMask mask )
 {
     MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
-    uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( id );
+    uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( mask );
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         // vertNormalsBufferObj_ should be valid no matter what normals we use

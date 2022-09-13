@@ -177,7 +177,7 @@ void ObjectLabel::buildMesh_()
 
     updatePivotShift_();
 
-    // we can always clear cpu model for labels always
+    // we can always clear cpu model for labels
     bindAllVisualization();
     mesh_.reset();
 }

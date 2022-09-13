@@ -1022,6 +1022,9 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show plane", &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );     
     }
+
+    if ( planeBackUp != plane )
+        planeWidget.updatePlane( plane, plane.n != planeBackUp.n );
 }
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )

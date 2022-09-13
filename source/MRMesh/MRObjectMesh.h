@@ -46,7 +46,7 @@ public:
 
     /// signal about mesh changing, triggered in setDirtyFlag
     using MeshChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
-    MeshChangedSignal meshChangedSignal;   
+    MeshChangedSignal meshChangedSignal;
 
 protected:
     MRMESH_API ObjectMesh( const ObjectMesh& other );

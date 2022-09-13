@@ -361,6 +361,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
+#ifndef MRMESH_NO_DICOM
     auto res = VoxelsLoad::loadRaw( path.u8string() + u8".raw", progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
@@ -370,6 +371,9 @@ tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::file
         return tl::make_unexpected( "No grid loaded" );
 
     return {};
+#else
+    return tl::make_unexpected( "No DICOM support" );
+#endif
 }
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const

@@ -8,6 +8,7 @@ option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
 option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
+option(MRMESH_NO_DICOM "Disable DICOM image support" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -50,14 +51,21 @@ IF(NOT MR_EMSCRIPTEN)
 	ELSE()
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${PYTHON_LIB})
 	ENDIF()
+
+	IF(MRMESH_NO_DICOM)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_DICOM)
+	ELSE()
+		find_package(GDCM CONFIG REQUIRED)
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_DICOM)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(GDCM CONFIG REQUIRED)
   find_package(Freetype REQUIRED)
   include_directories(${FREETYPE_INCLUDE_DIRS})
   find_package(Boost COMPONENTS REQUIRED )
@@ -95,7 +103,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    zip
 		    freetype
 		    pthread
-		    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		    Boost::boost
 		    jsoncpp
 		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
@@ -131,7 +138,6 @@ ELSE()
 		zip
 		freetype
 		pthread
-		gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		Boost::boost
 		jsoncpp
 		turbojpeg

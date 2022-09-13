@@ -204,6 +204,11 @@ public:
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all(), float fill = 0.6f, bool snapView = true );
 
+    // Calls fitBox for single/each viewport in viewer
+    // fill = 0.6 parameter means that scene will 0.6 of screen,
+    // snapView - to snap camera angle to closest canonical quaternion
+    MRVIEWER_API void fitBoxViewport( const Box3f& box, MR::ViewportMask vpList = MR::ViewportMask::all(), float fill = 0.6f, bool snapView = true );
+
     // Calls fitData and change FOV to match the screen size then
     // params - params fit data
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all(),

@@ -1369,6 +1369,17 @@ void Viewer::fitDataViewport( MR::ViewportMask vpList, float fill, bool snapView
     }
 }
 
+void Viewer::fitBoxViewport( const Box3f& box, MR::ViewportMask vpList /*= MR::ViewportMask::all()*/, float fill /*= 0.6f*/, bool snapView /*= true */ )
+{
+    for ( auto& viewport : viewport_list )
+    {
+        if ( viewport.id.value() & vpList.value() )
+        {
+            viewport.fitBox( box, fill, snapView );
+        }
+    }
+}
+
 void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const Viewport::FitDataParams& params )
 {
     for( auto& viewport : viewport_list )

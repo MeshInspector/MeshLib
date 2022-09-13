@@ -163,15 +163,17 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                     continue;
                 res.point = pc->points[vid];
             }
+            else
+            {
+                res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            }
         }
         else if ( auto linesObj = renderVector[pickRes.geomId]->asType<ObjectLinesHolder>() )
         {
+            res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            UndirectedEdgeId ue{ int( pickRes.primId ) };
             if ( auto pl = linesObj->polyline() )
-            {
-                res.point = unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) );
-                UndirectedEdgeId ue{ int( pickRes.primId ) };
-                res.point = closestPointOnLineSegm( renderVector[pickRes.geomId]->worldXf().inverse()( res.point ), { pl->orgPnt( ue ), pl->destPnt( ue ) } );
-            }
+                res.point = closestPointOnLineSegm( res.point, { pl->orgPnt( ue ), pl->destPnt( ue ) } );
         }
         else if ( auto meshObj = renderVector[pickRes.geomId]->asType<ObjectMeshHolder>() )
         {

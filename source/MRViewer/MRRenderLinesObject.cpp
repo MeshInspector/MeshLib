@@ -40,7 +40,7 @@ float RenderLinesObject::actualLineWidth() const
 
 void RenderLinesObject::render( const RenderParams& renderParams )
 {
-    if ( !objLines_->polyline() || !Viewer::constInstance()->isGLInitialized() )
+    if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
         return;
@@ -105,8 +105,6 @@ void RenderLinesObject::render( const RenderParams& renderParams )
 
 void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
-    if ( !objLines_->polyline() )
-        return;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
@@ -152,6 +150,12 @@ size_t RenderLinesObject::glBytes() const
         + texture_.size()
         + pointsSelectionTex_.size()
         + lineColorsTex_.size();
+}
+
+void RenderLinesObject::forceBindAll()
+{
+    update_();
+    bindLines_();
 }
 
 void RenderLinesObject::bindLines_()
@@ -309,7 +313,7 @@ void RenderLinesObject::update_()
 RenderBufferRef<Vector3f> RenderLinesObject::loadVertPosBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_POSITION ) )
+    if ( !( dirty_ & DIRTY_POSITION ) || !objLines_->polyline() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
     MR_NAMED_TIMER( "vertbased_dirty_positions" );
@@ -349,7 +353,7 @@ RenderBufferRef<Vector3f> RenderLinesObject::loadVertNormalsBuffer_()
 RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objLines_->polyline() )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     auto coloringType = objLines_->getColoringType();
@@ -384,7 +388,7 @@ RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
 RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_UV ) )
+    if ( !( dirty_ & DIRTY_UV ) || !objLines_->polyline() )
         return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
     const auto& polyline = objLines_->polyline();
@@ -422,7 +426,7 @@ RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
 RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_FACE ) )
+    if ( !( dirty_ & DIRTY_FACE ) || !objLines_->polyline() )
         return glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_, false );
 
     const auto& polyline = objLines_->polyline();

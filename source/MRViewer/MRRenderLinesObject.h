@@ -18,7 +18,7 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
-
+    virtual void forceBindAll() override;
     // requested line width clamped to the range of hardware supported values
     float actualLineWidth() const;
 

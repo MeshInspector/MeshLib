@@ -188,6 +188,16 @@ size_t RenderMeshObject::glBytes() const
         + facesNormalsTex_.size();
 }
 
+void RenderMeshObject::forceBindAll()
+{
+    update_( ViewportId{ 1 } );
+    bindMesh_( false ); 
+    auto edges = loadEdgeIndicesBuffer_();
+    edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
+    auto buffer = loadBorderHighlightPointsBuffer_();
+    borderBuffer_.loadDataOpt( GL_ARRAY_BUFFER, buffer.dirty(), buffer.data(), buffer.size() );
+}
+
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GlBuffer & vbo, const Color& colorChar, uint32_t dirtyFlag )
 {
     RenderBufferRef<Vector3f> buffer;
@@ -267,8 +277,6 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     auto edges = loadEdgeIndicesBuffer_();
-    if ( dirtyEdges_ && edges.size() == 0 )
-        return;
     edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
     dirtyEdges_ = false;
 

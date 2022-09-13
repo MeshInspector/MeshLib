@@ -176,6 +176,10 @@ void ObjectLabel::buildMesh_()
     setDirtyFlags( DIRTY_POSITION | DIRTY_FACE );
 
     updatePivotShift_();
+
+    // we can always clear cpu model for labels always
+    bindAllVisualization();
+    mesh_.reset();
 }
 
 void ObjectLabel::updatePivotShift_()

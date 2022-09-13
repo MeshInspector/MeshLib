@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PYTHON
 #include "MRPython.h"
 #include <vector>
 #include <string>

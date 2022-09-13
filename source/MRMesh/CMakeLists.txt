@@ -7,6 +7,7 @@ project(MRMesh CXX)
 option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
 option(MRMESH_NO_CPR "Disable CPR tests" OFF)
+option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -43,9 +44,16 @@ IF(NOT MR_EMSCRIPTEN)
 			target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDES})
 		ENDIF()
 	ENDIF()
+
+	IF(MRMESH_NO_PYTHON)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${PYTHON_LIB})
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
@@ -90,7 +98,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		    Boost::boost
 		    jsoncpp
-		    ${PYTHON_LIB}
 		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		    png
 		    fmt
@@ -127,7 +134,6 @@ ELSE()
 		gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		Boost::boost
 		jsoncpp
-		${PYTHON_LIB}
 		turbojpeg
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)

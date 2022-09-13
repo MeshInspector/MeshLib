@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PYTHON
 #include "MRMeshFwd.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>

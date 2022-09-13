@@ -12,7 +12,6 @@
 #include "OpenCTM/openctm.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
-#include "MRViewer/MRProgressBar.h"
 #include <array>
 #include <future>
 

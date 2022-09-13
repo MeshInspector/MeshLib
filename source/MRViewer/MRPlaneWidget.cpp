@@ -1,4 +1,5 @@
 #include "MRPlaneWidget.h"
+#include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMeshHolder.h"
@@ -96,7 +97,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
     auto viewer = Viewer::instance();
     const auto& mousePos = viewer->mouseController.getMousePos();
-    startMousePos_ = endMousePos_ = Vector2f( float( mousePos.x ), float( mousePos.y ) );
+    startMousePos_ = endMousePos_ = Vector2f( float ( mousePos.x ), float ( mousePos.y ) );
     pressed_ = true;
 
     line_ = std::make_shared<ObjectLines>();
@@ -134,11 +135,11 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
 
     auto viewer = Viewer::instance();
     auto& viewport = viewer->viewport();
-    auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto start = viewport.unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
+    auto viewportStart = viewer->screenToViewport( to3dim( startMousePos_ ), viewer->viewport().id );
+    auto start = viewport.unprojectFromViewportSpace( viewportStart );
 
-    auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto stop = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
+    auto viewportStop = viewer->screenToViewport( to3dim( endMousePos_ ), viewer->viewport().id );
+    auto stop = viewport.unprojectFromViewportSpace( viewportStop );
     auto stopFar = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
 
     auto prevNorm = plane_.n;
@@ -158,11 +159,11 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
     
     auto viewer = Viewer::instance();
     auto& viewport = viewer->viewport();
-    auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewport.id );
-    auto start = viewport.unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
+    auto viewportStart = viewer->screenToViewport( to3dim( startMousePos_ ), viewport.id );
+    auto start = viewport.unprojectFromViewportSpace( viewportStart );
 
-    auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewport.id );
-    auto stop = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
+    auto viewportStop = viewer->screenToViewport( to3dim( endMousePos_ ), viewport.id );
+    auto stop = viewport.unprojectFromViewportSpace( viewportStop );
     const Polyline3 polyline( { { start, stop } } );
    
     line_->setPolyline( std::make_shared<Polyline3>( polyline ) );    

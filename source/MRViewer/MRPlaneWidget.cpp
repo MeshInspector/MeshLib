@@ -94,7 +94,8 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left || mod != 0 )
         return false;
 
-    const auto& mousePos = Viewer::instance()->mouseController.getMousePos();
+    auto viewer = Viewer::instance();
+    const auto& mousePos = viewer->mouseController.getMousePos();
     startMousePos_ = endMousePos_ = Vector2f( float( mousePos.x ), float( mousePos.y ) );
     pressed_ = true;
 
@@ -107,7 +108,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     line_->setFrontColor( lineColor, false );
     line_->setBackColor( lineColor );
 
-    auto currentViewportId = Viewer::instance()->getHoveredViewportId();
+    auto currentViewportId = viewer->viewport().id;
     line_->setVisualizeProperty( false, VisualizeMaskType::DepthTest, currentViewportId );
     line_->setVisibilityMask( currentViewportId );
 
@@ -129,16 +130,17 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     ImVec2 dir;
     dir.x = endMousePos_.x - startMousePos_.x;
     dir.y = endMousePos_.y - startMousePos_.y;
-    if ( sqr( dir.x ) + sqr( dir.y ) < sqr( 50 ) )
-        return false; // if less then 50 pixes were in line
+    if ( ( endMousePos_ - startMousePos_ ).lengthSq() < 50 * 50 )
+        return false;
 
     auto viewer = Viewer::instance();
+    auto& viewport = viewer->viewport();
     auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto start = viewer->viewport().unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
+    auto start = viewport.unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
 
     auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto stop = viewer->viewport().unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
-    auto stopFar = viewer->viewport().unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
+    auto stop = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
+    auto stopFar = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
 
     auto prevNorm = plane_.n;
     plane_ = Plane3f::fromDirAndPt( cross( stopFar - stop, stop - start ).normalized(), start );
@@ -156,11 +158,12 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
     endMousePos_ = Vector2f( ( float )mouse_x, ( float )mouse_y );
     
     auto viewer = Viewer::instance();
-    auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto start = viewer->viewport().unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
+    auto& viewport = viewer->viewport();
+    auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewport.id );
+    auto start = viewport.unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
 
-    auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewer->viewport().id );
-    auto stop = viewer->viewport().unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
+    auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewport.id );
+    auto stop = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
     const Polyline3 polyline( { { start, stop } } );
    
     line_->setPolyline( std::make_shared<Polyline3>( polyline ) );    

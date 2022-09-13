@@ -1,5 +1,5 @@
 #include "MRPlaneWidget.h"
-#include "MRColorTheme.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRMesh/MRMakePlane.h"
@@ -103,7 +103,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     line_->setAncillary( true );
     const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
     
-    const auto lineColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+    const auto lineColor = SceneColors::get( SceneColors::Type::Labels );
     line_->setFrontColor( lineColor, false );
     line_->setBackColor( lineColor );
 

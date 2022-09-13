@@ -24,9 +24,11 @@ class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, M
     std::shared_ptr<ObjectLines> line_;
 public:
     
-    //updates plane, calls //returns plane if it is specified
+    //updates plane, triggers callback if it is specidied
+    // if updateCameraRotation is true, plane transform will be updated with respect of camera up direction
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
-    //updates box
+    // updates box which is used to calculate size of the plane
+    // if updateCameraRotation is true, plane transform will be updated with respect of camera up direction
     MRVIEWER_API void updateBox( const Box3f& box, bool updateCameraRotation = true );
     //defines plane, adds plane object to scene
     MRVIEWER_API void definePlane();
@@ -37,7 +39,8 @@ public:
     MRVIEWER_API const Plane3f& getPlane() const;
     //returns plane object
     MRVIEWER_API const std::shared_ptr<ObjectMesh>& getPlaneObject() const;
-    //specifies callback //returns plane
+    //specifies callback onPlaneUpdate_
+    // it is triggered when the method updatePlane is called
     MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
 
 private:

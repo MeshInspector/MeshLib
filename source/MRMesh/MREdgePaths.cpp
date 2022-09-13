@@ -166,6 +166,10 @@ public:
     bool done() const { return nextSteps_.empty(); }
     // returns path length till the next candidate vertex or maximum float value if all vertices have been reached
     float doneDistance() const { return nextSteps_.empty() ? FLT_MAX : nextSteps_.top().metric; }
+    // gives read access to the map from vertex to path to it
+    const VertPathInfoMap & vertPathInfoMap() const { return vertPathInfoMap_; }
+    // returns one element from the map (or nullptr if the element is missing)
+    const VertPathInfo * getVertInfo( VertId v ) const;
 
     // returns the path in the forest from given vertex to one of start vertices
     std::vector<EdgeId> getPathBack( VertId backpathStart ) const;
@@ -211,6 +215,12 @@ void EdgePathsBuilder::addStartRegion( const VertBitSet & region, float startMet
             vi.metric = startMetric;
         }
     }
+}
+
+const VertPathInfo * EdgePathsBuilder::getVertInfo( VertId v ) const
+{
+    auto it = vertPathInfoMap_.find( v );
+    return ( it != vertPathInfoMap_.end() ) ? &it->second : nullptr;
 }
 
 std::vector<EdgeId> EdgePathsBuilder::getPathBack( VertId v ) const
@@ -279,8 +289,8 @@ auto EdgePathsBuilder::growOneEdge() -> VertPathInfo
     return {};
 }
 
-// internal version with inited builder
-EdgePath buildSmallestMetricPath( const MeshTopology& topology, VertId start, EdgePathsBuilder& b, float maxPathMetric )
+// internal version with pre-initialized builder
+static EdgePath buildSmallestMetricPath( const MeshTopology& topology, VertId start, EdgePathsBuilder& b, float maxPathMetric )
 {
     for ( ;;)
     {
@@ -321,9 +331,96 @@ std::vector<EdgeId> buildSmallestMetricPath(
     return buildSmallestMetricPath( topology, start, b, maxPathMetric );
 }
 
+std::vector<EdgeId> buildSmallestMetricPathBiDir(
+    const MeshTopology & topology, const EdgeMetric & metric,
+    VertId start, VertId finish, float maxPathMetric )
+{
+    MR_TIMER
+
+    EdgePathsBuilder bs( topology, metric );
+    bs.addStart( topology.edgeWithOrg( start ), 0 );
+    EdgePathsBuilder bf( topology, metric );
+    bf.addStart( topology.edgeWithOrg( finish ), 0 );
+
+    VertId join;
+    float joinPathMetric = maxPathMetric;
+    for (;;)
+    {
+        auto ds = bs.doneDistance();
+        auto df = bf.doneDistance();
+        if ( join && joinPathMetric <= ds + df )
+            break;
+        if ( ds <= df )
+        {
+            if ( ds >= FLT_MAX )
+                break;
+            auto c = bs.growOneEdge();
+            auto v = topology.org( c.back );
+            if ( auto info = bf.getVertInfo( v ) )
+            {
+                auto newMetric = c.metric + info->metric;
+                if ( newMetric < joinPathMetric )
+                {
+                    join = v;
+                    joinPathMetric = newMetric;
+                }
+            }
+        }
+        else
+        {
+            auto c = bf.growOneEdge();
+            auto v = topology.org( c.back );
+            if ( auto info = bs.getVertInfo( v ) )
+            {
+                auto newMetric = c.metric + info->metric;
+                if ( newMetric < joinPathMetric )
+                {
+                    join = v;
+                    joinPathMetric = newMetric;
+                }
+            }
+        }
+    }
+
+    std::vector<EdgeId> res;
+    if ( join )
+    {
+        //check not finally reached vertices
+        auto ds = bs.doneDistance();
+        for ( const auto & [v, c] : bs.vertPathInfoMap() )
+        {
+            if ( c.metric < ds )
+                continue;
+            if ( auto info = bf.getVertInfo( v ) )
+            {
+                auto newMetric = c.metric + info->metric;
+                if ( newMetric < joinPathMetric )
+                {
+                    join = v;
+                    joinPathMetric = newMetric;
+                }
+            }
+        }
+
+        res = bs.getPathBack( join );
+        reverse( res );
+        auto tail = bf.getPathBack( join );
+        res.insert( res.end(), tail.begin(), tail.end() );
+        assert( isEdgePath( topology, res ) );
+        assert( topology.org( res.front() ) == start );
+        assert( topology.dest( res.back() ) == finish );
+    }
+    return res;
+}
+
 std::vector<EdgeId> buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
 {
     return buildSmallestMetricPath( mesh.topology, edgeLengthMetric( mesh ), start, finish, maxPathLen );
+}
+
+std::vector<EdgeId> buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
+{
+    return buildSmallestMetricPathBiDir( mesh.topology, edgeLengthMetric( mesh ), start, finish, maxPathLen );
 }
 
 EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen /*= FLT_MAX */ )

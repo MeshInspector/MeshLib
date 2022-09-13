@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_CPR
 #include <cpr/cpr.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"

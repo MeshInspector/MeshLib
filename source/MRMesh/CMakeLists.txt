@@ -6,6 +6,7 @@ project(MRMesh CXX)
 
 option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
+option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -27,8 +28,24 @@ IF(NOT MR_EMSCRIPTEN)
 	ELSE()
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES podofo)
 	ENDIF()
+
+	IF(MRMESH_NO_CPR)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES podofo)
+
+		IF(NOT APPLE)
+			set(CPR_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/cpr)
+			target_include_directories(${PROJECT_NAME} PUBLIC ${CPR_DIR}/include)
+			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/cpr/cpr_generated_includes)
+
+			set(CURL_INCLUDES ${THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)
+			target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDES})
+		ENDIF()
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
@@ -73,7 +90,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		    Boost::boost
 		    jsoncpp
-		    cpr
 		    ${PYTHON_LIB}
 		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		    png
@@ -95,14 +111,8 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
-	set(CPR_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/cpr)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${CPR_DIR}/include)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/cpr/cpr_generated_includes)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
-
-	set(CURL_INCLUDES ${THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDES})
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		openvdb
@@ -117,7 +127,6 @@ ELSE()
 		gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
 		Boost::boost
 		jsoncpp
-		cpr
 		${PYTHON_LIB}
 		turbojpeg
 		${MRMESH_OPTIONAL_DEPENDENCIES}

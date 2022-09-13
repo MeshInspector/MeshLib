@@ -427,7 +427,7 @@ RenderBufferRef<Vector2i> RenderLinesObject::loadLineIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) || !objLines_->polyline() )
-        return glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector2i>( lineIndicesSize_, !lineIndicesBuffer_.valid() );
 
     const auto& polyline = objLines_->polyline();
     const auto& topology = polyline->topology;

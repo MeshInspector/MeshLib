@@ -628,7 +628,7 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -654,7 +654,7 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !dirtyEdges_ || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, !edgesIndicesBuffer_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;

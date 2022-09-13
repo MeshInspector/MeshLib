@@ -23,7 +23,7 @@
     <ClCompile Include="MRObjectMeshHistory.cpp" />
     <ClCompile Include="MRObjectTransformWidget.cpp" />
     <ClCompile Include="MRPickHoleBorderElement.cpp" />
-    <ClCompile Include="MRPlaneVisualizer.cpp" />
+    <ClCompile Include="MRPlaneWidget.cpp" />
     <ClCompile Include="MRRenderGLHelpers.cpp" />
     <ClCompile Include="MRRenderHelpers.cpp" />
     <ClCompile Include="MRRenderLabelObject.cpp" />
@@ -83,7 +83,7 @@
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />
     <ClInclude Include="MRPickHoleBorderElement.h" />
-    <ClInclude Include="MRPlaneVisualizer.h" />
+    <ClInclude Include="MRPlaneWidget.h" />
     <ClInclude Include="MRRenderHelpers.h" />
     <ClInclude Include="MRRenderLabelObject.h" />
     <ClInclude Include="MRRibbonButtonDrawer.h" />

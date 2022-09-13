@@ -138,22 +138,6 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectMesh::TypeName() );
 }
 
-void ObjectMesh::Mirror( const Plane3f& plane )
-{
-    const auto xf = worldXf();
-    const auto inverseXf = xf.inverse();
-   
-    for ( auto& p : mesh_->points )
-    {
-        auto pCopy = xf( p );
-        pCopy += 2.0f * ( plane.project( pCopy ) - pCopy );
-        p = inverseXf( pCopy );
-    }
-
-    mesh_->topology.flipOrientation();
-    setDirtyFlags( DIRTY_FACE );    
-}
-
 TEST(MRMesh, DataModel)
 {
     Object root;

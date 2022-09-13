@@ -238,7 +238,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
-        return glBuffer.prepareBuffer<VertId>( validIndicesSize_, false );
+        return glBuffer.prepareBuffer<VertId>( validIndicesSize_, !validIndicesBuffer_.valid() );
 
     const auto& points = objPoints_->pointCloud();
     validIndicesSize_ = (int)points->points.size();

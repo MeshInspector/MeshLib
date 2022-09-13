@@ -417,7 +417,7 @@ RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_FACE ) || !objLabel_->labelRepresentingMesh() )
-        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );
 
     MR_TIMER
 

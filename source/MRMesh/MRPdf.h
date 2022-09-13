@@ -1,5 +1,5 @@
 #pragma once
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PDF
 #include "MRMeshFwd.h"
 #include <filesystem>
 

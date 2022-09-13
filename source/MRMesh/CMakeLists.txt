@@ -4,6 +4,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRMesh CXX)
 
+option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
+option(MRMESH_NO_PDF "Disable PDF support" OFF)
+
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
@@ -13,12 +16,19 @@ include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MR_EMSCRIPTEN)
-	option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 	IF(MRMESH_NO_CLIPBOARD)
 		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CLIPBOARD)
 	ELSE()
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
 	ENDIF()
+
+	IF(MRMESH_NO_PDF)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES podofo)
+	ENDIF()
+ELSE()
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
@@ -65,7 +75,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    cpr
 		    ${PYTHON_LIB}
-		    podofo
 		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
 		    png
 		    fmt
@@ -110,7 +119,6 @@ ELSE()
 		jsoncpp
 		cpr
 		${PYTHON_LIB}
-		podofo
 		turbojpeg
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)

@@ -768,6 +768,17 @@ Vector3f Mesh::findCenterFromBBox() const
     return computeBoundingBox().center();
 }
 
+void Mesh::mirror( const Plane3f& plane )
+{
+    for ( auto& p : points )
+    {
+        p += 2.0f * ( plane.project( p ) - p );
+    }
+
+    topology.flipOrientation();
+    invalidateCaches();
+}
+
 TEST( MRMesh, BasicExport )
 {
     Mesh mesh = makeCube();

@@ -22,6 +22,7 @@ namespace MR
 {
 class Palette;
 class ImGuiImage;
+class PlaneWidget;
 }
 
 // Extend ImGui by populating its namespace directly
@@ -202,6 +203,11 @@ MRVIEWER_API PaletteChanges Palette(
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),
     const char* format = "%.3f" );
+
+/// Helper plane widget, allows to draw specified plain in the scene \n
+/// can import plane from the scene, draw it with mouse? or adjust with controls
+/// planeWidget stores the plane widget params
+MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling );
 
 
 /// draw image with Y-direction inversed up-down

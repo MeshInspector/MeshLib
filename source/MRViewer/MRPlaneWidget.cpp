@@ -67,6 +67,21 @@ void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
     onPlaneUpdate_ = callback;
 }
 
+Box3f PlaneWidget::box()
+{
+    return box_;
+}
+
+bool PlaneWidget::importPlaneMode()
+{
+    return importPlaneMode_;
+}
+
+void PlaneWidget::setImportPlaneMode( bool val )
+{
+    importPlaneMode_ = val;
+}
+
 void PlaneWidget::updateWidget_( bool updateCameraRotation )
 {
     if ( !planeObj_ )

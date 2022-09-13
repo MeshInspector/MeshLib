@@ -22,6 +22,8 @@ class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, M
     Vector2f endMousePos_;
 
     std::shared_ptr<ObjectLines> line_;
+
+    bool importPlaneMode_ = false;
 public:
     
     // updates plane, triggers callback if it is specidied
@@ -42,6 +44,13 @@ public:
     // specifies callback onPlaneUpdate_
     // it is triggered when the method updatePlane is called
     MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
+
+    // returns box which is used to calculate size and position of the visualized plane part
+    MRVIEWER_API Box3f box();
+    // returns the flag importPlaneMode_, if it is true you can use a plain object from the scene
+    MRVIEWER_API bool importPlaneMode();
+    // sets the flag importPlaneMode_, if it is true you can use a plain object from the scene
+    MRVIEWER_API void setImportPlaneMode( bool val );
 
 private:
     MRVIEWER_API void updateWidget_( bool updateCameraRotation = true );

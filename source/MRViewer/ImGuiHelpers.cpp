@@ -11,6 +11,7 @@
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
 #include "MRViewer/MRRibbonFontManager.h"
+#include "MRViewer/MRPlaneWidget.h"
 
 namespace ImGui
 {
@@ -953,6 +954,74 @@ PaletteChanges Palette(
     PopStyleVar();
 
     return PaletteChanges( changes );
+}
+
+void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
+{
+    auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
+    {
+        planeWidget.definePlane();
+        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().center() ) );
+    };
+
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ" ) )
+        setDefaultPlane( MR::Vector3f::plusX() );
+    ImGui::SameLine();
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ" ) )
+        setDefaultPlane( MR::Vector3f::plusY() );
+    ImGui::SameLine();
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY" ) )
+        setDefaultPlane( MR::Vector3f::plusZ() );
+    ImGui::SameLine();
+    const bool importPlaneModeOld = planeWidget.importPlaneMode();
+    if ( importPlaneModeOld )
+        ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import plane" ) )
+    {
+        spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
+        planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
+    }
+    else if ( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) && importPlaneModeOld == planeWidget.importPlaneMode() )
+    {
+        spdlog::info( "false" );
+        planeWidget.setImportPlaneMode( false );
+    }
+    if ( importPlaneModeOld )
+        ImGui::PopStyleColor();
+
+    if ( planeWidget.importPlaneMode() )
+        ImGui::Text( "%s", "Click on the plane object in scene to import its parameters" );
+    else
+        ImGui::Text( "%s", "Clip object to get cross section" );
+
+    auto planeBackUp = planeWidget.getPlane();
+    auto plane = planeWidget.getPlane();
+
+    ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
+    ImGui::PushButtonRepeat( true );
+    if ( ImGui::ArrowButton( "##left", ImGuiDir_Left ) )
+        plane.d -= 0.01F;
+    ImGui::SameLine();
+    if ( ImGui::ArrowButton( "##right", ImGuiDir_Right ) )
+        plane.d += 0.01F;
+    ImGui::SameLine();
+    ImGui::PopButtonRepeat();
+    ImGui::SetNextItemWidth( menuScaling * 100 );
+
+    float dragspeed = planeWidget.box().diagonal() * 1e-3f;
+    ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
+
+    ImGui::SameLine();
+    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", ImVec2( -1, 0 ) ) )
+        plane = -plane;
+
+    auto planeObj = planeWidget.getPlaneObject();
+    if ( planeObj )
+    {
+        bool showPlane = planeWidget.getPlaneObject()->isVisible();
+        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show plane", &showPlane ) )
+            planeWidget.getPlaneObject()->setVisible( showPlane );     
+    }
 }
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )

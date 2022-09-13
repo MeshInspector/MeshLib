@@ -5,6 +5,8 @@
 
 namespace MR
 {
+// Visual widget to draw a plane
+// present in scene (ancillary), subscribes to viewer events
 class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
 {
     std::shared_ptr<ObjectMesh> planeObj_;
@@ -22,15 +24,20 @@ class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, M
     std::shared_ptr<ObjectLines> line_;
 public:
     
+    //updates plane, calls //returns plane if it is specified
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
+    //updates box
     MRVIEWER_API void updateBox( const Box3f& box, bool updateCameraRotation = true );
-
+    //defines plane, adds plane object to scene
     MRVIEWER_API void definePlane();
-
+    //undefines plane, removes PlaneObject from scene
     MRVIEWER_API void undefinePlane();
 
+    //returns plane
     MRVIEWER_API const Plane3f& getPlane() const;
+    //returns plane object
     MRVIEWER_API const std::shared_ptr<ObjectMesh>& getPlaneObject() const;
+    //specifies callback //returns plane
     MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
 
 private:

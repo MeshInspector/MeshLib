@@ -2,6 +2,7 @@
 #include "MRMeshIntersect.h"
 #include "MRBox.h"
 #include "MRImageSave.h"
+#include "MRImageLoad.h"
 #include "MRImage.h"
 #include "MRTriangleIntersection.h"
 #include "MRLine3.h"
@@ -239,6 +240,26 @@ tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, c
     return ImageSave::toAnySupportedFormat( { pixels, { int( dm.resX() ), int( dm.resY() ) } }, filename );
 }
 
+
+tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename )
+{
+    auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
+    if ( !resLoad.has_value() )
+        return tl::make_unexpected( resLoad.error() );
+    const auto& image = *resLoad;
+    DistanceMap dm( image.resolution.x, image.resolution.y );
+    const auto& pixels = image.pixels;
+    for ( int i = 0; i < image.pixels.size() ; ++i )
+    {
+        if ( pixels[i] == Color::black() )
+            continue;
+        assert( pixels[i].r == pixels[i].g );
+        assert( pixels[i].g == pixels[i].b );
+        dm.set(i, pixels[i].r);
+    }
+
+    return dm;
+}
 
 template <typename T = float>
 DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params )

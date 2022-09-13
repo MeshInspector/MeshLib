@@ -266,6 +266,11 @@ MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMap
 /// close: 1.0 (white)
 MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename );
 
+/// load distance map from image in scales of gray:
+/// far: 0.3 (dark-gray)
+/// close: 1.0 (white)
+MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename );
+
 /// \}
 
 } // namespace MR

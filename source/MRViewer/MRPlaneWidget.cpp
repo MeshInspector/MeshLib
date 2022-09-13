@@ -1,4 +1,5 @@
 #include "MRPlaneWidget.h"
+#include "MRColorTheme.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRMesh/MRMakePlane.h"
@@ -68,7 +69,7 @@ void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
 void PlaneWidget::updateWidget_( bool updateCameraRotation )
 {
     if ( !planeObj_ )
-        return;
+        definePlane();
 
     auto viewer = Viewer::instance();
     plane_ = plane_.normalized();
@@ -101,9 +102,14 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     line_->setName( "PlaneLine" );
     line_->setAncillary( true );
     const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
-    line_->setPolyline( std::make_shared<Polyline3>( polyline ) );
-    line_->setLinesColorMap( Vector<Color, UndirectedEdgeId>{ 8, Color::yellow() } );
-    line_->setColoringType( ColoringType::LinesColorMap );
+    
+    const auto lineColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
+    line_->setFrontColor( lineColor, false );
+    line_->setBackColor( lineColor );
+
+    auto currentViewportId = Viewer::instance()->getHoveredViewportId();
+    line_->setVisualizeProperty( false, VisualizeMaskType::DepthTest, currentViewportId );
+    line_->setVisibilityMask( currentViewportId );
 
     SceneRoot::get().addChild( line_ );
 
@@ -149,7 +155,14 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
 
     endMousePos_ = Vector2f( ( float )mouse_x, ( float )mouse_y );
     
-    const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
+    auto viewer = Viewer::instance();
+    auto viewportStart = viewer->screenToViewport( Vector3f( float( startMousePos_.x ), float( startMousePos_.y ), 0.f ), viewer->viewport().id );
+    auto start = viewer->viewport().unprojectFromViewportSpace( { viewportStart.x, viewportStart.y, 0.0f } );
+
+    auto viewportStop = viewer->screenToViewport( Vector3f( float( endMousePos_.x ), float( endMousePos_.y ), 0.f ), viewer->viewport().id );
+    auto stop = viewer->viewport().unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 0.0f } );
+    const Polyline3 polyline( { { start, stop } } );
+   
     line_->setPolyline( std::make_shared<Polyline3>( polyline ) );    
 
     return true;

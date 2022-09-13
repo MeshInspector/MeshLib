@@ -617,16 +617,14 @@ std::pair<float, bool> Viewport::getZoomFOVtoScreen_( const std::vector<std::sha
     }
 }
 
-void Viewport::fitData( float fill, bool snapView )
+void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool snapView /*= true */ )
 {
-    updateSceneBox_();
-
-    if ( !sceneBox_.valid() )
+    sceneBox_ = newSceneBox;
+    if ( !newSceneBox.valid() )
     {
         setRotationPivot_( Vector3f() );
         return;
     }
-
     auto sceneCenter = sceneBox_.center();
     setRotationPivot_( sceneCenter );
     params_.cameraTranslation = -sceneCenter;
@@ -637,14 +635,20 @@ void Viewport::fitData( float fill, bool snapView )
     if ( params_.objectScale == 0.0f )
         params_.objectScale = 1.0f;
 
-    auto tanFOV = tan(0.5f * params_.cameraViewAngle / 180.f * PI_F);
-    auto factor = params_.orthographic ? 1.f / (cameraEye - cameraCenter).length() : 1.f;
+    auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
+    auto factor = params_.orthographic ? 1.f / ( cameraEye - cameraCenter ).length() : 1.f;
     params_.cameraZoom = factor * fill / ( params_.objectScale * tanFOV );
 
     if ( snapView )
         params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
 
     needRedraw_ = true;
+}
+
+void Viewport::fitData( float fill, bool snapView )
+{
+    updateSceneBox_();
+    fitBox( sceneBox_, fill, snapView );
 }
 
 // ================================================================

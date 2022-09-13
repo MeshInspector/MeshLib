@@ -339,6 +339,11 @@ public:
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitData( float fill = 1.0f, bool snapView = true );
 
+    // set scene box by given one and fit camera to it
+    // fill = 0.5 parameter means that scene will 0.5 of screen
+    // snapView - to snap camera angle to closest canonical quaternion
+    MRVIEWER_API void fitBox( const Box3f& newSceneBox, float fill = 1.0f, bool snapView = true );
+
     // Fit mode ( types of objects for which the fit is applied )
     enum class FitMode
     {

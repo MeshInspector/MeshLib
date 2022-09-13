@@ -5,15 +5,42 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
+#include "imgui_internal.h"
 
 namespace MR
 {
 
-PlaneWidget::PlaneWidget( const Plane3f& plane, const Box3f& box, std::function<void( const Plane3f& )> onPlaneUpdate )
+PlaneWidget::PlaneWidget( const Plane3f& plane, const Box3f& box, OnPlaneUpdateCallback onPlaneUpdate )
 : plane_(plane),
 box_(box),
 onPlaneUpdate_( onPlaneUpdate )
 { 
+}
+
+PlaneWidget::~PlaneWidget()
+{    
+    undefinePlane();
+}
+
+void PlaneWidget::updatePlane( const Plane3f& plane, bool updateCameraRotation )
+{
+    plane_ = plane;
+    updateWidget_( updateCameraRotation );
+    if ( onPlaneUpdate_ )
+        onPlaneUpdate_();
+}
+
+void PlaneWidget::updateBox( const Box3f& box, bool updateCameraRotation )
+{
+    box_ = box;
+    updateWidget_( updateCameraRotation );
+}
+
+void PlaneWidget::definePlane()
+{
+    if ( planeObj_ )
+        return;
+
     std::shared_ptr<Mesh> planeMesh = std::make_shared<Mesh>( makePlane() );
     planeObj_ = std::make_shared<ObjectMesh>();
     planeObj_->setName( "PlaneObject" );
@@ -26,23 +53,28 @@ onPlaneUpdate_( onPlaneUpdate )
     updateWidget_();
 }
 
-PlaneWidget::~PlaneWidget()
-{    
+void PlaneWidget::undefinePlane()
+{
+    if ( !planeObj_ )
+        return;
+    
     planeObj_->detachFromParent();
+    planeObj_.reset();    
 }
 
-void PlaneWidget::updatePlane( const Plane3f& plane, bool updateCameraRotation )
+const Plane3f& PlaneWidget::getPlane() const
 {
-    plane_ = plane;
-    updateWidget_( updateCameraRotation );
-    if ( onPlaneUpdate_ )
-        onPlaneUpdate_( plane );
+    return plane_;
 }
 
-void PlaneWidget::updateBox( const Box3f& box, bool updateCameraRotation )
+const std::shared_ptr<ObjectMesh>& PlaneWidget::getPlaneObject() const
 {
-    box_ = box;
-    updateWidget_( updateCameraRotation );
+    return planeObj_;
+}
+
+void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
+{
+    onPlaneUpdate_ = callback;
 }
 
 void PlaneWidget::updateWidget_( bool updateCameraRotation )
@@ -71,7 +103,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     const auto& mousePos = Viewer::instance()->mouseController.getMousePos();
-    startMousePos_ = endMousePos_ = ImVec2( float( mousePos.x ), float( mousePos.y ) );
+    startMousePos_ = endMousePos_ = Vector2f( float( mousePos.x ), float( mousePos.y ) );
     pressed_ = true;
     return true;
 }
@@ -110,7 +142,11 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
     if ( !pressed_ )
         return false;
 
-    endMousePos_ = ImVec2( ( float )mouse_x, ( float )mouse_y );
+    endMousePos_ = Vector2f( ( float )mouse_x, ( float )mouse_y );
+    
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DrawList->AddLine( ImVec2( startMousePos_.x, startMousePos_.y ), ImVec2( endMousePos_.x, endMousePos_.y ), ImGui::GetColorU32( ImGuiCol_Text ) );
 
     return true;
 }

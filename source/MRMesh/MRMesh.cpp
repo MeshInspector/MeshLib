@@ -776,6 +776,7 @@ void Mesh::mirror( const Plane3f& plane )
     }
 
     topology.flipOrientation();
+    invalidateCaches();
 }
 
 TEST( MRMesh, BasicExport )

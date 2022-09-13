@@ -12,18 +12,27 @@ class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, M
     Box3f box_;
     Vector3f cameraUp3Old_;
     
-    std::function<void( const Plane3f& )> onPlaneUpdate_;
+    using OnPlaneUpdateCallback = std::function<void()>;
+    OnPlaneUpdateCallback onPlaneUpdate_;
 
     bool pressed_ = false;
-    ImVec2 startMousePos_;
-    ImVec2 endMousePos_;
+    Vector2f startMousePos_;
+    Vector2f endMousePos_;
 
 public:
-    MRVIEWER_API PlaneWidget( const Plane3f& plane, const Box3f& box, std::function<void( const Plane3f& )> = nullptr );
+    MRVIEWER_API PlaneWidget( const Plane3f& plane, const Box3f& box, OnPlaneUpdateCallback = nullptr );
     MRVIEWER_API ~PlaneWidget();
     
     MRVIEWER_API void updatePlane( const Plane3f& plane, bool updateCameraRotation = true );
     MRVIEWER_API void updateBox( const Box3f& box, bool updateCameraRotation = true );
+
+    MRVIEWER_API void definePlane();
+
+    MRVIEWER_API void undefinePlane();
+
+    MRVIEWER_API const Plane3f& getPlane() const;
+    MRVIEWER_API const std::shared_ptr<ObjectMesh>& getPlaneObject() const;
+    MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
 
 private:
     MRVIEWER_API void updateWidget_( bool updateCameraRotation = true );

@@ -30,7 +30,7 @@ RenderPointsObject::~RenderPointsObject()
 
 void RenderPointsObject::render( const RenderParams& renderParams )
 {
-    if ( !objPoints_->pointCloud() || !Viewer::constInstance()->isGLInitialized() )
+    if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
         return;
@@ -72,7 +72,7 @@ void RenderPointsObject::render( const RenderParams& renderParams )
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), int( !objPoints_->pointCloud()->normals.empty() ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), int( hasNormalsBackup_ ) ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objPoints_->getShininess() ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
@@ -103,8 +103,6 @@ void RenderPointsObject::render( const RenderParams& renderParams )
 
 void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
-    if ( !objPoints_->pointCloud() )
-        return;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
@@ -150,13 +148,28 @@ size_t RenderPointsObject::glBytes() const
         + vertSelectionTex_.size();
 }
 
+void RenderPointsObject::forceBindAll()
+{
+    update_();
+    bindPoints_();
+}
+
 void RenderPointsObject::bindPoints_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
-    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, objPoints_->pointCloud()->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+    if ( auto pointCloud = objPoints_->pointCloud() )
+    {
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
+        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, pointCloud->normals.vec_, 3, dirty_ & DIRTY_RENDER_NORMALS );
+        hasNormalsBackup_ = !pointCloud->normals.empty();
+    }
+    else
+    {
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
+        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, std::vector<Vector3f>{}, 3, false, true );
+    }
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
     auto validIndices = loadValidIndicesBuffer_();
@@ -183,7 +196,10 @@ void RenderPointsObject::bindPointsPicker_()
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Picker );
     GL_EXEC( glBindVertexArray( pointsPickerArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, objPoints_->pointCloud()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    if ( auto pointCloud = objPoints_->pointCloud() )
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    else
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
 
     auto validIndices = loadValidIndicesBuffer_();
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );
@@ -221,7 +237,7 @@ void RenderPointsObject::update_()
 RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_POSITION ) )
+    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
         return glBuffer.prepareBuffer<VertId>( validIndicesSize_, false );
 
     const auto& points = objPoints_->pointCloud();
@@ -247,7 +263,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_SELECTION ) )
+    if ( !( dirty_ & DIRTY_SELECTION ) || !objPoints_->pointCloud() )
         return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
 
     const auto& points = objPoints_->pointCloud();

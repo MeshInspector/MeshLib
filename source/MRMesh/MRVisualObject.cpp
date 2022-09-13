@@ -219,6 +219,15 @@ void VisualObject::renderForPicker( const BaseRenderParams& params, unsigned id)
     renderObj_->renderPicker( params, id );
 }
 
+void VisualObject::bindAllVisualization() const
+{
+    setupRenderObject_();
+    if ( !renderObj_ )
+        return;
+
+    renderObj_->forceBindAll();
+}
+
 void VisualObject::swapBase_( Object& other )
 {    
     if ( auto otherVis = other.asType<VisualObject>() )

@@ -43,7 +43,7 @@ RenderLabelObject::~RenderLabelObject()
 
 void RenderLabelObject::render( const RenderParams& renderParams )
 {
-    if ( !objLabel_->labelRepresentingMesh() || !Viewer::constInstance()->isGLInitialized() )
+    if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLabel_->resetDirty();
         return;
@@ -186,7 +186,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
     const auto mainColor = Vector4f( objLabel_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
+    auto box = meshBox_;
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / height );
     const std::array<Vector3f, 4> corners {
         Vector3f{ box.min.x, box.min.y, 0.f },
@@ -218,7 +218,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
     GL_EXEC( glUseProgram( shader ) );
 
     const auto shift = objLabel_->getPivotShift();
-    auto box = objLabel_->labelRepresentingMesh()->getBoundingBox();
+    auto box = meshBox_;
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / objLabel_->getFontHeight() );
     const std::array<Vector3f, 5> leaderLineVertices {
         Vector3f{ shift.x, shift.y, 0.f },
@@ -320,12 +320,21 @@ size_t RenderLabelObject::glBytes() const
         + llineEdgesIndicesBuffer_.size();
 }
 
+void RenderLabelObject::forceBindAll()
+{
+    update_();
+    bindLabel_();
+}
+
 void RenderLabelObject::bindLabel_()
 {
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Labels );
     GL_EXEC( glBindVertexArray( labelArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
-    bindVertexAttribArray( shader, "position", vertPosBuffer_, objLabel_->labelRepresentingMesh()->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    if ( auto mesh = objLabel_->labelRepresentingMesh() )
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, mesh->points.vec_, 3, dirty_ & DIRTY_POSITION );
+    else
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
 
     auto faceIndices = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faceIndices.dirty(), faceIndices );
@@ -372,6 +381,8 @@ void RenderLabelObject::update_()
     {
         dirtyBg_ = true;
         dirtyLLine_ = true;
+        if ( auto mesh = objLabel_->labelRepresentingMesh() )
+            meshBox_ = mesh->getBoundingBox();
     }
 
     const auto position = objLabel_->getLabel().position;
@@ -405,7 +416,7 @@ void RenderLabelObject::update_()
 RenderBufferRef<Vector3i> RenderLabelObject::loadFaceIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_FACE ) )
+    if ( !( dirty_ & DIRTY_FACE ) || !objLabel_->labelRepresentingMesh() )
         return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
 
     MR_TIMER

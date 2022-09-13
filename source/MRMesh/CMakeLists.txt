@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project (MRMesh CXX)
+project(MRMesh CXX)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -10,6 +10,17 @@ file(GLOB HEADERS "*.h")
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+set(MRMESH_OPTIONAL_DEPENDENCIES "")
+
+IF(NOT MR_EMSCRIPTEN)
+	option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
+	IF(MRMESH_NO_CLIPBOARD)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CLIPBOARD)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
+	ENDIF()
+ENDIF()
+
 IF(NOT MR_EMSCRIPTEN)
   find_package(GDCM CONFIG REQUIRED)
   find_package(Freetype REQUIRED)
@@ -59,7 +70,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    png
 		    fmt
 		    tbb
-			clip
+			${MRMESH_OPTIONAL_DEPENDENCIES}
 			${COCOA_LIBRARY}
 		)
 	ELSE()
@@ -99,6 +110,6 @@ ELSE()
 		${PYTHON_LIB}
 		podofo
 		turbojpeg
-		clip
+		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 ENDIF()

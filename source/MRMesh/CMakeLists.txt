@@ -97,7 +97,9 @@ ELSE()
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		openvdb
-		OpenCTM tl::expected
+		OpenCTM
+		tl::expected
+		fmt
 		spdlog
 		gtest gtest_main
 		zip

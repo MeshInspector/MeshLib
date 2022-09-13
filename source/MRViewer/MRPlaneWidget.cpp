@@ -102,7 +102,6 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     line_ = std::make_shared<ObjectLines>();
     line_->setName( "PlaneLine" );
     line_->setAncillary( true );
-    const Polyline3 polyline( { { startMousePos_, endMousePos_ } } );
     
     const auto lineColor = SceneColors::get( SceneColors::Type::Labels );
     line_->setFrontColor( lineColor, false );

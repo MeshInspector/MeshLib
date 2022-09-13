@@ -205,7 +205,7 @@ MRVIEWER_API PaletteChanges Palette(
     const char* format = "%.3f" );
 
 /// Helper plane widget, allows to draw specified plain in the scene \n
-/// can import plane from the scene, draw it with mouse? or adjust with controls
+/// can import plane from the scene, draw it with mouse or adjust with controls
 /// planeWidget stores the plane widget params
 MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling );
 

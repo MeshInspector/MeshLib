@@ -991,24 +991,23 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     if ( planeWidget.importPlaneMode() )
         ImGui::Text( "%s", "Click on the plane object in scene to import its parameters" );
-    else
-        ImGui::Text( "%s", "Clip object to get cross section" );
 
     auto planeBackUp = planeWidget.getPlane();
     auto plane = planeWidget.getPlane();
 
+    float dragspeed = planeWidget.box().diagonal() * 1e-3f;
     ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
     if ( ImGui::ArrowButton( "##left", ImGuiDir_Left ) )
-        plane.d -= 0.01F;
+        plane.d -= dragspeed;
     ImGui::SameLine();
     if ( ImGui::ArrowButton( "##right", ImGuiDir_Right ) )
-        plane.d += 0.01F;
+        plane.d += dragspeed;
     ImGui::SameLine();
     ImGui::PopButtonRepeat();
     ImGui::SetNextItemWidth( menuScaling * 100 );
 
-    float dragspeed = planeWidget.box().diagonal() * 1e-3f;
+    
     ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
 
     ImGui::SameLine();

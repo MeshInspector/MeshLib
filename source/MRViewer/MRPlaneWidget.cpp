@@ -7,6 +7,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
+#include "MRMesh/MRPlaneObject.h"
 #include "imgui_internal.h"
 
 namespace MR
@@ -67,12 +68,12 @@ void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
     onPlaneUpdate_ = callback;
 }
 
-Box3f PlaneWidget::box()
+const Box3f& PlaneWidget::box() const
 {
     return box_;
 }
 
-bool PlaneWidget::importPlaneMode()
+bool PlaneWidget::importPlaneMode() const
 {
     return importPlaneMode_;
 }
@@ -111,6 +112,25 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     auto viewer = Viewer::instance();
+
+    if ( importPlaneMode_ )
+    {
+        const auto [obj, point] = viewer->viewport().pick_render_object();
+        if ( !obj )
+            return false;
+        auto planeObj = std::dynamic_pointer_cast< PlaneObject >( obj );
+        if ( !planeObj )
+            return false;
+
+        plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
+        definePlane();
+        updatePlane( plane_ );
+
+        importPlaneMode_ = false;
+        return true;
+    }
+
+    
     const auto& mousePos = viewer->mouseController.getMousePos();
     startMousePos_ = endMousePos_ = Vector2f( float ( mousePos.x ), float ( mousePos.y ) );
     pressed_ = true;

@@ -46,9 +46,9 @@ public:
     MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
 
     // returns box which is used to calculate size and position of the visualized plane part
-    MRVIEWER_API Box3f box();
+    MRVIEWER_API const Box3f& box() const;
     // returns the flag importPlaneMode_, if it is true you can use a plain object from the scene
-    MRVIEWER_API bool importPlaneMode();
+    MRVIEWER_API bool importPlaneMode() const;
     // sets the flag importPlaneMode_, if it is true you can use a plain object from the scene
     MRVIEWER_API void setImportPlaneMode( bool val );
 

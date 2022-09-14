@@ -6,6 +6,9 @@ on:
       image_tag:
         required: true
         type: string
+      version:
+        required: true
+        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -58,7 +61,7 @@ jobs:
         run: |
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip install wheel setuptools delvewheel
-          py -3.10 .\scripts\wheel\create_wheel.py -v ${{needs.versioning-and-release-url.outputs.version_tag}}
+          py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
           cd .\scripts\wheel\meshlib
           python3 setup.py bdist_wheel
           cd ..\..\..

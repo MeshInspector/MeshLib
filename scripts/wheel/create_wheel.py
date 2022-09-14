@@ -61,7 +61,7 @@ def setup_wheel_info(args):
                 elif platform_system == "Linux":
                     line = line.replace("$", "POSIX :: Linux")
                 elif platform_system == "Darwin":
-                    line = line.replace("$", "MacOS :: MacOS 10")
+                    line = line.replace("$", "MacOS")
 
             output.write(line)
 

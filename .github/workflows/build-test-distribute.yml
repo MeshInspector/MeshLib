@@ -35,6 +35,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@pip-packages
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu20-build-test:
@@ -42,7 +43,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@pip-packages
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
@@ -50,7 +51,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@pip-packages
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora35-build-test:
@@ -58,7 +59,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@pip-packages
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
-      version: ${{needs.versioning-and-release-url.outputs.version}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
@@ -72,7 +73,7 @@ jobs:
     needs: [ versioning-and-release-url ]
     uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@pip-packages
     with:
-      version: ${{needs.versioning-and-release-url.outputs.version}}
+      version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   update-win-version:

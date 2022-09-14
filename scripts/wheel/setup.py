@@ -9,7 +9,7 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 
 setuptools.setup(
     name="meshlib",
-    version='',
+    version='$',
     author="MeshLib Team",
     author_email="support@meshinspector.com",
     description="3d processing library",
@@ -18,15 +18,15 @@ setuptools.setup(
     url="https://github.com/MeshInspector/MeshLib",
     license_files=('LICENSE',),
     packages=['meshlib'],
-    package_data={'meshlib': ['mrmeshnumpy.so', 'mrmeshpy.so', 'mrviewerpy.so']},
+    package_data={'meshlib': ['mrmeshnumpy.$', 'mrmeshpy.$', 'mrviewerpy.$']},
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: $",
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
-        "Operating System :: POSIX :: Linux",
+        "Operating System :: $",
     ],
-    python_requires='',
+    python_requires='==$.*',
     install_requires=[
         'numpy>=1.21.0',
         'pytest>=7.1.0',

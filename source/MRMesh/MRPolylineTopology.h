@@ -98,8 +98,11 @@ public:
     /// returns all vertices incident to path edges
     [[nodiscard]] MRMESH_API VertBitSet getPathVertices( const EdgePath & path ) const;
 
-    /// split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned)
-    MRMESH_API VertId splitEdge( EdgeId e );
+    /// split given edge on two parts:
+    /// dest(returned-edge) = org(e) - newly created vertex,
+    /// org(returned-edge) = org(e-before-split),
+    /// dest(e) = dest(e-before-split)
+    MRMESH_API EdgeId splitEdge( EdgeId e );
 
     /// adds polyline in this topology passing progressively via vertices *[vs, vs+num);
     /// if vs[0] == vs[num-1] then a closed polyline is created;

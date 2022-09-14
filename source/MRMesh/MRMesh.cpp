@@ -602,11 +602,11 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
     invalidateCaches();
 }
 
-VertId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region )
+EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region )
 {
-    VertId newv = topology.splitEdge( e, region );
-    points.autoResizeAt( newv ) = newVertPos;
-    return newv;
+    EdgeId newe = topology.splitEdge( e, region );
+    points.autoResizeAt( topology.org( e ) ) = newVertPos;
+    return newe;
 }
 
 VertId Mesh::splitFace( FaceId f, FaceBitSet * region )
@@ -815,7 +815,9 @@ TEST(MRMesh, SplitEdge)
 
     auto e02 = mesh.topology.findEdge( VertId{0}, VertId{2} );
     EXPECT_TRUE( e02.valid() );
-    VertId v02 = mesh.splitEdge( e02, &region );
+    auto ex = mesh.splitEdge( e02, &region );
+    VertId v02 = mesh.topology.org( e02 );
+    EXPECT_EQ( mesh.topology.dest( ex ), v02 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 5 );
     EXPECT_EQ( mesh.points.size(), 5 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
@@ -825,7 +827,9 @@ TEST(MRMesh, SplitEdge)
 
     auto e01 = mesh.topology.findEdge( VertId{0}, VertId{1} );
     EXPECT_TRUE( e01.valid() );
-    VertId v01 = mesh.splitEdge( e01, &region );
+    auto ey = mesh.splitEdge( e01, &region );
+    VertId v01 =  mesh.topology.org( e01 );
+    EXPECT_EQ( mesh.topology.dest( ey ), v01 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
     EXPECT_EQ( mesh.points.size(), 6 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 5 );
@@ -847,7 +851,9 @@ TEST(MRMesh, SplitEdge1)
     EXPECT_EQ( mesh.points.size(), 2 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(1) ); // 1*2 = 2 half-edges in total
 
-    VertId v01 = mesh.splitEdge( e01 );
+    auto ey = mesh.splitEdge( e01 );
+    VertId v01 =  mesh.topology.org( e01 );
+    EXPECT_EQ( mesh.topology.dest( ey ), v01 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
     EXPECT_EQ( mesh.points.size(), 3 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(3) ); // 2*2 = 4 half-edges in total

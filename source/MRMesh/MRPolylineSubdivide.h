@@ -27,6 +27,8 @@ struct PolylineSubdivideSettings
     bool useCurvature = false;
     /// this function is called each time a new vertex has been created
     std::function<void(VertId)> onVertCreated;
+    /// this function is called each time edge (e) is split into (e1->e)
+    std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback = {};
 };

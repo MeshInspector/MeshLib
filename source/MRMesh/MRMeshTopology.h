@@ -201,10 +201,13 @@ public:
     /// rotates the edge counter-clockwise inside the quadrangle
     MRMESH_API void flipEdge( EdgeId e );
 
-    /// split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned)
-    /// \details left and right faces if valid are also subdivide by new edge each;
-    /// if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
-    MRMESH_API VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    /// split given edge on two parts:
+    /// dest(returned-edge) = org(e) - newly created vertex,
+    /// org(returned-edge) = org(e-before-split),
+    /// dest(e) = dest(e-before-split)
+    /// \details left and right faces of given edge if valid are also subdivided on two parts each;
+    /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
+    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
 
     /// split given triangle on three triangles, introducing new vertex (which is returned) inside original triangle and connecting it to its vertices
     /// \details if region is given, then it must include (f) and new faces will be added there as well

@@ -41,30 +41,29 @@ void pythonSetMeshToSelected( Mesh mesh )
     selected[0]->setDirtyFlags( DIRTY_ALL );
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_selected_mesh, pythonGetSelectedMesh, "gets mesh from selected ObjectMesh" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, getSelectedMesh, pythonGetSelectedMesh, "copy selected mesh from scene tree" )
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, set_mesh_to_selected, pythonSetMeshToSelected, "sets mesh to selected ObjectMesh" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, expand_verts, ( void( * )( const MeshTopology&, VertBitSet&, int ) )& expand, "expand vert bit set" )
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, shrink_verts, ( void( * )( const MeshTopology&, VertBitSet&, int ) )& shrink, "shrink vert bit set" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, expand_faces, ( void( * )( const MeshTopology&, FaceBitSet&, int ) )& expand, "expand face bit set" )
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, shrink_faces, ( void( * )( const MeshTopology&, FaceBitSet&, int ) )& shrink, "shrink face bit set" )
+MR_ADD_PYTHON_FUNCTION( mrmeshpy, setMeshToSelected, pythonSetMeshToSelected, "add mesh to scene tree and select it" )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::MeshTopology>( m, "MeshTopology" ).
         def( pybind11::init<>() ).
-        def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy ).
-        def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy ).
-        def( "org", &MR::MeshTopology::org ).
-        def( "dest", &MR::MeshTopology::dest ).
-        def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces ).
-        def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges ).
-        def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts ).
-        def( "findBoundary", &MR::MeshTopology::findBoundary ).
-        def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges ).
-        def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts );
+        def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
+        def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
+        def( "org", &MR::MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
+        def( "dest", &MR::MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
+        def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
+        def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
+        def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
+        def( "findBoundary", &MR::MeshTopology::findBoundary, pybind11::arg( "region" ) = nullptr,
+            "returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;\n"
+            "unlike findRegionBoundary this method returns loops in opposite orientation" ).
+        def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
+        def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts,
+            pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
+            "gets 3 vertices of given triangular face;\n"
+            "the vertices are returned in counter-clockwise order if look from mesh outside" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
@@ -97,9 +96,27 @@ MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilde
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
 {
+    pybind11::class_<MR::MeshBuilder::BuildSettings>( m, "MeshBuilderSettings" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "region", &MR::MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
+        def_readwrite( "shiftFaceId", &MR::MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
+        def_readwrite( "allowNonManifoldEdge", &MR::MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
+
+    pybind11::class_<MR::Triangulation>( m, "Triangulation" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &Triangulation::vec_ );
+
+    pybind11::class_<MR::MeshBuilder::BuildSettings>( m, "MeshBuilderSettings" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "region", &MR::MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
+        def_readwrite( "shiftFaceId", &MR::MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
+        def_readwrite( "allowNonManifoldEdge", &MR::MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
+
     m.def( "topologyFromTriangles",
-        (MeshTopology(*)( const Triangulation &, const MeshBuilder::BuildSettings & )) &topologyFromTriangles,
-        "constructs topology from given triangulation" );
+        ( MeshTopology( * )( const Triangulation&, const MeshBuilder::BuildSettings& ) )& topologyFromTriangles,
+        pybind11::arg( "triangulation" ), pybind11::arg( "settings" ) = MeshBuilder::BuildSettings{},
+        "construct mesh topology from a set of triangles with given ids;\n"
+        "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vecMeshBuilderTri, MR::MeshBuilder::Triangle )
@@ -113,28 +130,38 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::Mesh>( m, "Mesh" ).
         def( pybind11::init<>() ).
-        def( "computeBoundingBox", ( Box3f( MR::Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& MR::Mesh::computeBoundingBox ).
-        def( "getBoundingBox", &MR::Mesh::getBoundingBox ).
-        def( "area", ( double( MR::Mesh::* )( const FaceBitSet* fs )const )& MR::Mesh::area, pybind11::arg( "fs" ) = nullptr ).
-        def( "volume", &MR::Mesh::volume, pybind11::arg( "region" ) = nullptr ).
-        def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false ).
-        def( "discreteMeanCurvature", &MR::Mesh::discreteMeanCurvature ).
+        def( "computeBoundingBox", ( Box3f( MR::Mesh::* )( const FaceBitSet*, const AffineXf3f* ) const )& MR::Mesh::computeBoundingBox,
+            pybind11::arg( "region" ) = nullptr, pybind11::arg( "toWorld" ) = nullptr,
+            "passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them\n"
+            "if toWorld transformation is given then returns minimal bounding box in world space" ).
+        def( "getBoundingBox", &MR::Mesh::getBoundingBox,
+            "returns the bounding box containing all valid vertices (implemented via getAABBTree())\n"
+            "this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision" ).
+        def( "area", ( double( MR::Mesh::* )( const FaceBitSet* fs )const )& MR::Mesh::area, pybind11::arg( "fs" ) = nullptr, "this version returns the area of whole mesh if argument is nullptr" ).
+        def( "volume", &MR::Mesh::volume, pybind11::arg( "region" ) = nullptr,
+            "returns volume of closed mesh region, if region is not closed DBL_MAX is returned\n"
+            "if region is nullptr - whole mesh is region" ).
+        def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
+            "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
+            "optionally returns mappings: old.id -> new.id" ).
+        def( "discreteMeanCurvature", &MR::Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
+            "computes discrete mean curvature in given vertex measures in length^-1;\n"
+            "0 for planar regions, positive for convex surface, negative for concave surface" ).
         def_readwrite( "topology", &MR::Mesh::topology ).
         def_readwrite( "points", &MR::Mesh::points ).
-        def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint ).
-        def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint ).
-        def( "invalidateCaches", &MR::Mesh::invalidateCaches ).
-        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) ) &MR::Mesh::transform );
+        def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint, pybind11::arg( "p" ), "returns interpolated coordinates of given point" ).
+        def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint, pybind11::arg( "ep" ), "returns a point on the edge: origin point for f=0 and destination point for f=1" ).
+        def( "invalidateCaches", &MR::Mesh::invalidateCaches, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
+        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) )& MR::Mesh::transform, pybind11::arg( "xf" ), "applies given transformation to all valid mesh vertices" );
 
-    m.def( "copyMesh", &pythonCopyMeshFunction );
+    m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::MeshPart>( m, "MeshPart" ).
-        def( pybind11::init<const Mesh&>() ).
-        def( pybind11::init<const Mesh&, const FaceBitSet*>() ).
-        def_readwrite( "region", &MR::MeshPart::region );
+    pybind11::class_<MR::MeshPart>( m, "MeshPart", "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)" ).
+        def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
+        def_readwrite( "region", &MR::MeshPart::region, "nullptr here means whole mesh" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
@@ -142,50 +169,56 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
 {
-    m.def( "getIncidentVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getIncidentVerts );
-    m.def( "getInnerVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getInnerVerts );
+    m.def( "getIncidentVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getIncidentVerts,
+        pybind11::arg( "topology" ), pybind11::arg( "faces" ), "composes the set of all vertices incident to given faces" );
+    m.def( "getInnerVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getInnerVerts,
+        pybind11::arg( "topology" ), pybind11::arg( "faces" ), "composes the set of all vertices with all their faces in given set" );
 
-    m.def( "getIncidentFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getIncidentFaces );
-    m.def( "getInnerFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getInnerFaces );
+    m.def( "getIncidentFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getIncidentFaces,
+        pybind11::arg( "topology" ), pybind11::arg( "verts" ), "composes the set of all faces incident to given vertices" );
+    m.def( "getInnerFaces", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::VertBitSet& ) )& MR::getInnerFaces,
+        pybind11::arg( "topology" ), pybind11::arg( "verts" ), "composes the set of all faces with all their vertices in given set" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<MR::MeshComponents::FaceIncidence>( m, "FaceIncidence" ).
-        value( "PerEdge", MR::MeshComponents::FaceIncidence::PerEdge ).
-        value( "PerVertex", MR::MeshComponents::FaceIncidence::PerVertex );
+    pybind11::enum_<MR::MeshComponents::FaceIncidence>( m, "FaceIncidence", "Face incidence type" ).
+        value( "PerEdge", MR::MeshComponents::FaceIncidence::PerEdge, "face can have neighbor only via edge" ).
+        value( "PerVertex", MR::MeshComponents::FaceIncidence::PerVertex, "face can have neighbor via vertex" );
 
-    m.def( "get_mesh_components_verts", &MR::MeshComponents::getAllComponentsVerts,
+    m.def( "getAllComponentsVerts", &MR::MeshComponents::getAllComponentsVerts,
         pybind11::arg( "mesh" ),
         pybind11::arg( "region" ) = nullptr,
-        "get all vertices componensts of the mesh" );
+        "gets all connected components of mesh part" );
 
-    m.def( "get_mesh_components_face", &MR::MeshComponents::getAllComponents,
+    m.def( "getAllComponents", &MR::MeshComponents::getAllComponents,
         pybind11::arg( "meshPart" ),
         pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
-        "get all faces componensts of the mesh" );
+        "gets all connected components of mesh part" );
 
-    m.def( "get_faces_component", &MR::MeshComponents::getComponent,
+    m.def( "getComponent", &MR::MeshComponents::getComponent,
         pybind11::arg( "meshPart" ),
         pybind11::arg( "faceId" ),
         pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
-        "get component of given face id" );
+        "returns one connected component containing given face,\n"
+        "not effective to call more than once, if several components are needed use getAllComponents" );
 
-    m.def( "get_verts_component", &MR::MeshComponents::getComponentVerts,
+    m.def( "getComponentVerts", &MR::MeshComponents::getComponentVerts,
         pybind11::arg( "mesh" ),
         pybind11::arg( "vertId" ),
         pybind11::arg( "region" ) = nullptr,
-        "get component of given vert id" );
+        "returns one connected component containing given vertex,\n"
+        "not effective to call more than once, if several components are needed use getAllComponentsVerts" );
 
-    m.def( "get_largest_faces_component", &MR::MeshComponents::getLargestComponent,
+    m.def( "getLargestComponent", &MR::MeshComponents::getLargestComponent,
         pybind11::arg( "meshPart" ),
         pybind11::arg( "incidence" ) = MR::MeshComponents::FaceIncidence::PerEdge,
-        "get largest faces component" );
+        "returns largest by surface area component" );
 
-    m.def( "get_largest_verts_component", &MR::MeshComponents::getLargestComponentVerts,
+    m.def( "getLargestComponentVerts", &MR::MeshComponents::getLargestComponentVerts,
         pybind11::arg( "mesh" ),
         pybind11::arg( "region" ) = nullptr,
-        "get largest vertices component" );
+        "returns largest by number of elements component" );
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, MR::Mesh )

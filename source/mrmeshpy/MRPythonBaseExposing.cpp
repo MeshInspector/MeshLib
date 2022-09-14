@@ -14,6 +14,7 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRFillContour.h"
+#include "MRMesh/MRExpandShrink.h"
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
@@ -281,6 +282,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) )& MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all faces within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all faces within given number of hops (stars) from the initial region boundary" );
 
     m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::dilateRegionByMetric,
        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),

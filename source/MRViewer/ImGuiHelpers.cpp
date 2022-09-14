@@ -992,6 +992,9 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     if ( planeWidget.importPlaneMode() )
         ImGui::Text( "%s", "Click on the plane object in scene to import its parameters" );
 
+    if ( !planeWidget.getPlaneObject() )
+        return;
+
     auto planeBackUp = planeWidget.getPlane();
     auto plane = planeWidget.getPlane();
 

@@ -24,7 +24,8 @@ void PlaneWidget::updatePlane( const Plane3f& plane, bool updateCameraRotation )
 void PlaneWidget::updateBox( const Box3f& box, bool updateCameraRotation )
 {
     box_ = box;
-    updateWidget_( updateCameraRotation );
+    if ( planeObj_ )
+        updateWidget_( updateCameraRotation );
 }
 
 void PlaneWidget::definePlane()
@@ -37,8 +38,9 @@ void PlaneWidget::definePlane()
     planeObj_->setName( "PlaneObject" );
     planeObj_->setMesh( planeMesh );
     planeObj_->setAncillary( true );
-    planeObj_->setFrontColor( Color( Vector4f::diagonal( 0.3f ) ), false );
-    planeObj_->setBackColor( Color( Vector4f::diagonal( 0.3f ) ) );
+    planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
+    planeObj_->setBordersColor( SceneColors::get( SceneColors::Type::Labels ) );
+    planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
     SceneRoot::get().addChild( planeObj_ );
 
     updateWidget_();
@@ -63,7 +65,7 @@ const std::shared_ptr<ObjectMesh>& PlaneWidget::getPlaneObject() const
     return planeObj_;
 }
 
-void PlaneWidget::setOnPlaneUpdateCalback( OnPlaneUpdateCallback callback )
+void PlaneWidget::setOnPlaneUpdateCallback( OnPlaneUpdateCallback callback )
 {
     onPlaneUpdate_ = callback;
 }

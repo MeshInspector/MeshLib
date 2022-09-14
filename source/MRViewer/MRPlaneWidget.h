@@ -43,7 +43,7 @@ public:
     MRVIEWER_API const std::shared_ptr<ObjectMesh>& getPlaneObject() const;
     // specifies callback onPlaneUpdate_
     // it is triggered when the method updatePlane is called
-    MRVIEWER_API void setOnPlaneUpdateCalback( OnPlaneUpdateCallback  callback );
+    MRVIEWER_API void setOnPlaneUpdateCallback( OnPlaneUpdateCallback  callback );
 
     // returns box which is used to calculate size and position of the visualized plane part
     MRVIEWER_API const Box3f& box() const;

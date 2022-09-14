@@ -97,7 +97,12 @@ jobs:
           make install
           cd ..
           python3 -m pip install --upgrade pip
-          ./scripts/wheel/create_wheel.sh manylinux_2_31_x86_64 ${{inputs.version}}
+          python3 -m pip install auditwheel wheel setuptools
+          python3 ./scripts/wheel/create_wheel.py -v ${{inputs.version}}
+          cd ./scripts/wheel/meshlib
+          python3 setup.py bdist_wheel
+          python3 -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
+          cd ../../..
           mv ./scripts/wheel/meshlib/wheelhouse/*.whl ./
 
       - name: Upload Wheel to Artifacts

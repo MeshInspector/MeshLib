@@ -67,14 +67,19 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py
 
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+      - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
-        run: tar -cvf Ubuntu22${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+        env:
+          MESHRUS_BUILD_RELEASE: ON
+          MESHRUS_BUILD_DEBUG: OFF
+        run: |
+          ./scripts/distribution.sh ${{inputs.version}}
+          mv ./distr/meshlib-dev.deb meshlib-ubuntu22-dev.deb
 
-      - name: Upload Ubuntu Binaries Archive
+      - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu22${{matrix.config}}BinArchive
-          path: Ubuntu22${{matrix.config}}Bin.tar
+          name: Distributives
+          path: meshlib-ubuntu22-dev.deb
           retention-days: 1

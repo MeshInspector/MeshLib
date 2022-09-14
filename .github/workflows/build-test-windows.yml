@@ -62,7 +62,8 @@ jobs:
           docker exec meshlib-win py -3.10 -m pip install --upgrade pip
           docker exec meshlib-win py -3.10 -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win python3 setup.py bdist_wheel
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\ meshlib-win dir
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -3.10 setup.py bdist_wheel
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir meshlib
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win $WheelFile = ( Get-ChildItem -Name .\scripts\wheel\meshlib\dist\*.whl )

@@ -7,7 +7,7 @@ def test_signedDistance():
     torus = mrmesh.make_torus(2, 1, 10, 10, None)
     torus2 = mrmesh.make_torus(2, 1.2, 10, 10, None)
 
-    xf = mrmesh.AffineXf3()
+    xf = mrmesh.AffineXf3f()
 
     res = mrmesh.find_signed_distance(torus, torus2, xf)
     resRevert = mrmesh.find_signed_distance(torus2, torus, xf)

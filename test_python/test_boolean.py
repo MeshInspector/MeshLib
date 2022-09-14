@@ -8,12 +8,12 @@ def test_boolean():
 
     torus = mrmesh.make_torus(2, 1, 10, 10, None)
 
-    transVector = mrmesh.Vector3()
+    transVector = mrmesh.Vector3f()
     transVector.x=0.5
     transVector.y=1
     transVector.z=1
 
-    diffXf = mrmesh.AffineXf3.translation(transVector)
+    diffXf = mrmesh.AffineXf3f.translation(transVector)
 
     torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
     torus2.transform(diffXf)

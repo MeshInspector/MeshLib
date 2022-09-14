@@ -9,6 +9,7 @@ option(MRMESH_NO_PDF "Disable PDF support" OFF)
 option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
 option(MRMESH_NO_DICOM "Disable DICOM image support" OFF)
+option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -17,6 +18,12 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 set(MRMESH_OPTIONAL_DEPENDENCIES "")
+
+IF(MRMESH_NO_OPENCTM)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_OPENCTM)
+ELSE()
+	list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenCTM)
+ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
 	IF(MRMESH_NO_CLIPBOARD)
@@ -97,7 +104,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    OpenVDB
-		    OpenCTM
 		    spdlog
 		    gtest gtest_main
 		    zip
@@ -114,13 +120,13 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		)
 	ELSE()
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
-	        OpenCTM
 	        gtest gtest_main
 	        zip
 	        freetype
 	        pthread
 	        jsoncpp
 	        tbb
+			${MRMESH_OPTIONAL_DEPENDENCIES}
 	    )
 	ENDIF()
 ELSE()
@@ -130,7 +136,6 @@ ELSE()
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		openvdb
-		OpenCTM
 		tl::expected
 		fmt
 		spdlog

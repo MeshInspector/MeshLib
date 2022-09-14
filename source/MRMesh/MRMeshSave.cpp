@@ -3,8 +3,11 @@
 #include "MRTimer.h"
 #include "MRColor.h"
 #include "MRStringConvert.h"
-#include "OpenCTM/openctm.h"
 #include "MRProgressReadWrite.h"
+
+#ifndef MRMESH_NO_OPENCTM
+#include "OpenCTM/openctm.h"
+#endif
 
 namespace MR
 {
@@ -19,7 +22,9 @@ const IOFilters Filters =
     {"OFF (.off)",        "*.off"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
-    {"CTM (.ctm)",        "*.ctm"}
+#ifndef MRMESH_NO_OPENCTM
+    {"CTM (.ctm)",        "*.ctm"},
+#endif
 };
 
 tl::expected<void, std::string> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, ProgressCallback callback )
@@ -296,16 +301,21 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
 tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
+#ifndef MRMESH_NO_OPENCTM
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toCtm( mesh, out, options, colors, callback );
+#else
+    return tl::make_unexpected( "This build has no OpenCTM support" );
+#endif
 }
 
 tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
+#ifndef MRMESH_NO_OPENCTM
     MR_TIMER
 
     class ScopedCtmConext 
@@ -451,6 +461,9 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
     if ( callback )
         callback( 1.f );
     return {};
+#else
+    return tl::make_unexpected( "This build has no OpenCTM support" );
+#endif
 }
 
 tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
@@ -469,8 +482,10 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
         res = MR::MeshSave::toBinaryStl( mesh, file, callback );
     else if ( ext == u8".ply" )
         res = MR::MeshSave::toPly( mesh, file, colors, callback );
+#ifndef MRMESH_NO_OPENCTM
     else if ( ext == u8".ctm" )
         res = MR::MeshSave::toCtm( mesh, file, {}, colors, callback );
+#endif
     else if ( ext == u8".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, file, callback );
     return res;
@@ -492,8 +507,10 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, std::ost
         res = MR::MeshSave::toBinaryStl( mesh, out, callback );
     else if ( ext == ".ply" )
         res = MR::MeshSave::toPly( mesh, out, colors, callback );
+#ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::MeshSave::toCtm( mesh, out, {}, colors, callback );
+#endif
     else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, out, callback );
     return res;

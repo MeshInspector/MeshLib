@@ -9,11 +9,14 @@
 #include "MRStringConvert.h"
 #include "MRMeshLoadObj.h"
 #include "MRColor.h"
-#include "OpenCTM/openctm.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 #include <array>
 #include <future>
+
+#ifndef MRMESH_NO_OPENCTM
+#include "OpenCTM/openctm.h"
+#endif
 
 namespace MR
 {
@@ -463,15 +466,20 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
 
 tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
+#ifndef MRMESH_NO_OPENCTM
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return fromCtm( in, colors, callback );
+#else
+    return tl::make_unexpected( "This build has no OpenCTM support" );
+#endif
 }
 
 tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
+#ifndef MRMESH_NO_OPENCTM
     MR_TIMER
 
     class ScopedCtmConext 
@@ -557,6 +565,9 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     mesh.topology = MeshBuilder::fromTriangles( t );
 
     return mesh;
+#else
+    return tl::make_unexpected( "This build has no OpenCTM support" );
+#endif
 }
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
@@ -613,7 +624,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
+#ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
+#endif
 
 } //namespace MeshLoad
 

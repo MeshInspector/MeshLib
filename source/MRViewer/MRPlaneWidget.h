@@ -7,7 +7,7 @@ namespace MR
 {
 // Visual widget to draw a plane
 // present in scene (ancillary), subscribes to viewer events
-class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
+MRVIEWER_CLASS class PlaneWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener>
 {
     std::shared_ptr<ObjectMesh> planeObj_;
     Plane3f plane_;

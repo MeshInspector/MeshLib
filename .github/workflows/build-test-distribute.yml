@@ -109,31 +109,6 @@ jobs:
           path: MeshLibDist.zip
           retention-days: 1
 
-      - name: Create and fix Wheel
-        run: |
-          py -3.10 -m pip install --upgrade pip
-          py -3.10 -m pip install wheel setuptools delvewheel
-          py -3.10 .\scripts\wheel\create_wheel.py -v ${{needs.versioning-and-release-url.outputs.version_tag}}
-          cd .\scripts\wheel\meshlib
-          python3 setup.py bdist_wheel
-          cd ..\..\..
-          dir /b scripts\wheel\meshlib\dist\*.whl > msg.txt
-          set /p msg= < msg.txt
-          delvewheel repair --add-path source\x64\Release --extract-dir . scripts\wheel\meshlib\dist\%msg%
-
-      - name: Upload Wheel to Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Wheelhouse
-          path: meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload Wheel to Distributive
-        uses: actions/upload-artifact@v2
-        with:
-          name: Distributives
-          path: meshlib-*.whl
-          retention-days: 1
 
   upload-distributions:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

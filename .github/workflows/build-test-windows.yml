@@ -52,3 +52,31 @@ jobs:
           name: WindowsArchive
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
+
+      - name: Create and fix Wheel
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        run: |
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip install wheel setuptools delvewheel
+          py -3.10 .\scripts\wheel\create_wheel.py -v ${{needs.versioning-and-release-url.outputs.version_tag}}
+          cd .\scripts\wheel\meshlib
+          python3 setup.py bdist_wheel
+          cd ..\..\..
+          $WheelFile = ( Get-ChildItem -Name .\scripts\wheel\meshlib\dist\*.whl )
+          delvewheel repair --add-path source\x64\Release --extract-dir . scripts\wheel\meshlib\dist\$WheelFile
+
+      - name: Upload Wheel to Artifacts
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Wheelhouse
+          path: meshlib-*.whl
+          retention-days: 1
+
+      - name: Upload Wheel to Distributive
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
+          retention-days: 1

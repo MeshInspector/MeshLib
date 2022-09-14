@@ -607,13 +607,13 @@ auto MeshTopology::translate_( EdgeId i, const FaceMap & fmap, const VertMap & v
 
     for ( auto n = from.next; ; n = next( n ) )
     {
-        if ( to.next = mapEdge( emap, n ) )
+        if ( (  to.next = mapEdge( emap, n ) ) )
             break;
     }
 
     for ( auto p = from.prev; ; p = prev( p ) )
     {
-        if ( to.prev = mapEdge( emap, p ) )
+        if ( ( to.prev = mapEdge( emap, p ) ) )
             break;
     }
 
@@ -621,7 +621,7 @@ auto MeshTopology::translate_( EdgeId i, const FaceMap & fmap, const VertMap & v
         std::swap( to.prev, to.next );
 
     if ( from.org.valid() )
-        to.org  = vmap[from.org];
+        to.org = vmap[from.org];
 
     auto fromFace = flipOrientation ? edges_[i.sym()].left : from.left;
     if ( fromFace )
@@ -637,20 +637,20 @@ auto MeshTopology::translate_( EdgeId i, const FaceHashMap & fmap, const VertHas
 
     for ( auto n = from.next; ; n = next( n ) )
     {
-        if ( to.next = mapEdge( emap, n ) )
+        if ( ( to.next = mapEdge( emap, n ) ) )
             break;
     }
 
     for ( auto p = from.prev; ; p = prev( p ) )
     {
-        if ( to.prev = mapEdge( emap, p ) )
+        if ( ( to.prev = mapEdge( emap, p ) ) )
             break;
     }
 
     if ( flipOrientation )
         std::swap( to.prev, to.next );
 
-    to.org  = getAt( vmap, from.org );
+    to.org = getAt( vmap, from.org );
 
     auto fromFace = flipOrientation ? edges_[i.sym()].left : from.left;
     to.left = getAt( fmap, fromFace );

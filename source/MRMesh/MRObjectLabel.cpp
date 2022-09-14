@@ -1,3 +1,4 @@
+#ifndef MRMESH_NO_LABEL
 #include "MRObjectLabel.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
@@ -297,3 +298,4 @@ void ObjectLabel::setLeaderLineColor( const Color &color )
 }
 
 }
+#endif

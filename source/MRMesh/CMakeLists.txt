@@ -11,6 +11,8 @@ option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
 option(MRMESH_NO_DICOM "Disable DICOM image support" OFF)
 option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
 option(MRMESH_NO_LABEL "Disable support of label objects" OFF)
+option(MRMESH_NO_JPEG "Disable JPEG support" OFF)
+option(MRMESH_NO_PNG "Disable PNG support" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -74,11 +76,29 @@ IF(NOT MR_EMSCRIPTEN)
 		include_directories(${FREETYPE_INCLUDE_DIRS})
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES freetype)
 	ENDIF()
+
+	IF(MRMESH_NO_JPEG)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_JPEG)
+	ELSE()
+		IF(APPLE)
+			target_include_directories(${PROJECT_NAME} PUBLIC ${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
+		ELSE()
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES turbojpeg)
+		ENDIF()
+	ENDIF()
+
+	IF(MRMESH_NO_PNG)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PNG)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES png)
+	ENDIF()
 ELSE()
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_DICOM)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_JPEG)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
@@ -103,8 +123,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 
 	target_include_directories(
 		${PROJECT_NAME} PUBLIC
-		${MESHLIB_THIRDPARTY_INCLUDE_DIR}/expected/include
-		${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
+		${MESHLIB_THIRDPARTY_INCLUDE_DIR}/expected/include)
 
 	IF (NOT MR_EMSCRIPTEN)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
@@ -117,8 +136,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    pthread
 		    Boost::boost
 		    jsoncpp
-		    ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib
-		    png
 		    fmt
 		    tbb
 			${MRMESH_OPTIONAL_DEPENDENCIES}
@@ -150,7 +167,6 @@ ELSE()
 		pthread
 		Boost::boost
 		jsoncpp
-		turbojpeg
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 ENDIF()

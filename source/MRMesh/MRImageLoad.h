@@ -18,8 +18,10 @@ namespace ImageLoad
 
 MRMESH_API extern const IOFilters Filters;
 
+#ifndef MRMESH_NO_PNG
 /// loads from .png format
 MRMESH_API tl::expected<Image, std::string> fromPng( const std::filesystem::path& path );
+#endif
 
 /// detects the format from file extension and loads image from it
 MRMESH_API tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& path );

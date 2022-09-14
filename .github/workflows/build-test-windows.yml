@@ -64,7 +64,7 @@ jobs:
           docker exec meshlib-win py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win python3 setup.py bdist_wheel
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win meshlib
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir meshlib
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win $WheelFile = ( Get-ChildItem -Name .\scripts\wheel\meshlib\dist\*.whl )
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win delvewheel repair --add-path source\x64\Release --extract-dir . scripts\wheel\meshlib\dist\$WheelFile
 

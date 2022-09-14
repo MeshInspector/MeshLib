@@ -6,6 +6,7 @@
 #include "MRDistanceMapParams.h"
 #include "MRPolyline2.h"
 #include "MRHeapBytes.h"
+#include "MRImage.h"
 #include <tl/expected.hpp>
 #include <filesystem>
 #include <vector>
@@ -261,10 +262,17 @@ MRMESH_API Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline
 /// converts distance map back to the mesh fragment with presented params
 MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct );
 
-/// saves distance map to image in scales of gray:
+/// saves distance map to monochrome image in scales of gray:
 /// far: 0.3 (dark-gray)
 /// close: 1.0 (white)
+/// invalid (infinity): 0.0 (black)
 MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename );
+
+/// load distance map from monochrome image in scales of gray:
+MRMESH_API tl::expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image );
+
+/// load distance map from monochrome image file
+MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename );
 
 /// \}
 

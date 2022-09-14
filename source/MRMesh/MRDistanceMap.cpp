@@ -2,6 +2,7 @@
 #include "MRMeshIntersect.h"
 #include "MRBox.h"
 #include "MRImageSave.h"
+#include "MRImageLoad.h"
 #include "MRImage.h"
 #include "MRTriangleIntersection.h"
 #include "MRLine3.h"
@@ -239,6 +240,31 @@ tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, c
     return ImageSave::toAnySupportedFormat( { pixels, { int( dm.resX() ), int( dm.resY() ) } }, filename );
 }
 
+
+tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image )
+{
+    DistanceMap dm( image.resolution.x, image.resolution.y );
+    const auto& pixels = image.pixels;
+    for ( int i = 0; i < image.pixels.size(); ++i )
+    {
+        const bool monochrome = pixels[i].r == pixels[i].g && pixels[i].g == pixels[i].b;
+        assert( monochrome );
+        if ( !monochrome )
+            return tl::make_unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
+        if ( pixels[i].r < 0.3f )
+            continue;
+        dm.set( i, ( pixels[i].r - 0.3f ) / 0.7f );
+    }
+    return dm;
+}
+
+tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename )
+{
+    auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
+    if ( !resLoad.has_value() )
+        return tl::make_unexpected( resLoad.error() );
+    return convertImageToDistanceMap( *resLoad );
+}
 
 template <typename T = float>
 DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params )

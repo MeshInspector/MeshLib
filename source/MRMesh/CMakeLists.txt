@@ -179,6 +179,7 @@ ELSE()
 		pthread
 		Boost::boost
 		jsoncpp
+		tbb
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 ENDIF()

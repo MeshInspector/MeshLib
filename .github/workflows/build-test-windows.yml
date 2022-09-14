@@ -32,6 +32,8 @@ jobs:
       - name: Build
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
+          docker exec meshlib-win dir
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts meshlib-win dir
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Run Test
@@ -62,7 +64,10 @@ jobs:
           docker exec meshlib-win py -3.10 -m pip install --upgrade pip
           docker exec meshlib-win py -3.10 -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\ meshlib-win dir
+          docker exec meshlib-win dir
+          docker exec -w C:\workspace\MeshLib\MeshLib\ meshlib-win dir
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts meshlib-win dir
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel meshlib-win dir
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -3.10 setup.py bdist_wheel
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win dir meshlib

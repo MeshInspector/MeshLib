@@ -684,7 +684,7 @@ void MeshTopology::flipEdge( EdgeId e )
         edgePerFace_[r] = e.sym();
 }
 
-VertId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
+EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
 {
     FaceId l = left( e );
     if ( l.valid() )
@@ -755,7 +755,7 @@ VertId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
     // allocate id from new vertex
     VertId newv = addVertId();
     setOrg( e, newv );
-    return newv;
+    return e0;
 }
 
 VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region )

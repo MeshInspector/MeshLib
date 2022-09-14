@@ -242,7 +242,7 @@ VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const
     return res;
 }
 
-VertId PolylineTopology::splitEdge( EdgeId e )
+EdgeId PolylineTopology::splitEdge( EdgeId e )
 {
     // disconnect edge e from its origin
     EdgeId eNext = next( e );
@@ -269,7 +269,7 @@ VertId PolylineTopology::splitEdge( EdgeId e )
     // allocate id from new vertex
     VertId newv = addVertId();
     setOrg( e, newv );
-    return newv;
+    return e0;
 }
 
 EdgeId PolylineTopology::makePolyline( const VertId * vs, size_t num )

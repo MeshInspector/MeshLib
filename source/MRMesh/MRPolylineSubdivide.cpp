@@ -132,7 +132,8 @@ int subdividePolylineT( Polyline<V> & polyline, const PolylineSubdivideSettings 
                 newVertPos = 0.5f * ( po + pd + sign * std::tan( angle( no, nd ) / 4 ) * b.length() * ( no + nd ).normalized()  );
             }
         }
-        const auto newVertId = polyline.splitEdge( e, newVertPos );
+        const auto e1 = polyline.splitEdge( e, newVertPos );
+        const auto newVertId = polyline.topology.org( e );
 
         if ( settings.region )
             settings.region->autoResizeSet( newVertId );
@@ -140,6 +141,8 @@ int subdividePolylineT( Polyline<V> & polyline, const PolylineSubdivideSettings 
             settings.newVerts->autoResizeSet( newVertId );
         if ( settings.onVertCreated )
             settings.onVertCreated( newVertId );
+        if ( settings.onEdgeSplit )
+            settings.onEdgeSplit( e1, e );
         ++splitsDone;
         assert( e != polyline.topology.next( e ) );
         addInQueue( e.undirected() );

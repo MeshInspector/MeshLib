@@ -186,12 +186,15 @@ struct [[nodiscard]] Mesh
     // note that first and last edge should have no left face
     MRMESH_API void attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vector3f>& contourPoints );
 
-    // split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned);
-    // left and right faces if valid are also subdivide by new edge each;
-    // if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
-    MRMESH_API VertId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr );
+    // split given edge on two parts:
+    // dest(returned-edge) = org(e) - newly created vertex,
+    // org(returned-edge) = org(e-before-split),
+    // dest(e) = dest(e-before-split)
+    // \details left and right faces of given edge if valid are also subdivided on two parts each;
+    // if left or right faces of the original edge were in the region, then include new parts of these faces in the region
+    MRMESH_API EdgeId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr );
     // same, but split given edge on two equal parts
-    VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr ) { return splitEdge( e, edgeCenter( e ), region ); }
+    EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr ) { return splitEdge( e, edgeCenter( e ), region ); }
 
     // split given triangle on three triangles, introducing new vertex (which is returned) in the centroid of original triangle and connecting it to its vertices;
     // if region is given, then it must include (f) and new faces will be added there as well

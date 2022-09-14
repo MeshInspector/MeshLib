@@ -220,7 +220,7 @@ public:
     /// please call rotateTriangles() first
     /// \param outFmap,outVmap,outEmap (optionally) returns mappings: from.id -> this.id
     MRMESH_API void addPart( const MeshTopology & from,
-        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// the same but copies only portion of (from) specified by fromFaces,
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
@@ -236,7 +236,7 @@ public:
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
     /// \param rearrangeTriangles if true then calls rotateTriangles() 
     /// and selects the order of triangles according to the order of their vertices
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
@@ -291,8 +291,8 @@ private:
             { return !( *this == b ); }
     };
     /// translates all fields in the record for this edge given maps
-    HalfEdgeRecord translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const EdgeMap & emap, bool flipOrientation ) const;
-    HalfEdgeRecord translate_( EdgeId i, const FaceHashMap & fmap, const VertHashMap & vmap, const EdgeHashMap & emap, bool flipOrientation ) const;
+    HalfEdgeRecord translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
+    HalfEdgeRecord translate_( EdgeId i, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;
@@ -308,6 +308,27 @@ private:
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 };
+
+inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )
+{
+    EdgeId res = map[ src.undirected() ];
+    if ( res && src.odd() )
+        res = res.sym();
+    return res;
+}
+
+inline EdgeId mapEdge( const WholeEdgeHashMap & map, EdgeId src )
+{
+    EdgeId res;
+    auto it = map.find( src.undirected() );
+    if ( it != map.end() )
+    {
+        res = it->second;
+        if ( src.odd() )
+            res = res.sym();
+    }
+    return res;
+}
 
 MRMESH_API void loadMeshDll();
 

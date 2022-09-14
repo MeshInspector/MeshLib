@@ -618,7 +618,7 @@ VertId Mesh::splitFace( FaceId f, FaceBitSet * region )
 }
 
 void Mesh::addPart( const Mesh & from,
-    FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap, bool rearrangeTriangles )
+    FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
 
@@ -665,7 +665,7 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     invalidateCaches();
 }
 
-void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap, bool rearrangeTriangles )
+void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
 

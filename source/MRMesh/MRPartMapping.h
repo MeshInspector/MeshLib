@@ -12,29 +12,29 @@ struct PartMapping
     // hash maps are used to minimize memory consumption when only a small portion of source mesh is copied
     FaceHashMap * src2tgtFaces = nullptr;
     VertHashMap * src2tgtVerts = nullptr;
-    EdgeHashMap * src2tgtEdges = nullptr;
+    WholeEdgeHashMap * src2tgtEdges = nullptr;
     // this.id -> from.id
     FaceMap * tgt2srcFaces = nullptr;
     VertMap * tgt2srcVerts = nullptr;
-    EdgeMap * tgt2srcEdges = nullptr;
+    WholeEdgeMap * tgt2srcEdges = nullptr;
 };
 
 // the class to convert mappings from new HashMap format to old Vector format
 class HashToVectorMappingConverter
 {
 public:
-    MRMESH_API HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap );
+    MRMESH_API HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap );
     const PartMapping & getPartMapping() const { return map_; }
     MRMESH_API ~HashToVectorMappingConverter(); //conversion takes place here
 
 private:
     FaceMap * outFmap_ = nullptr;
     VertMap * outVmap_ = nullptr;
-    EdgeMap * outEmap_ = nullptr;
+    WholeEdgeMap * outEmap_ = nullptr;
     PartMapping map_;
     FaceHashMap src2tgtFaces_;
     VertHashMap src2tgtVerts_;
-    EdgeHashMap src2tgtEdges_;
+    WholeEdgeHashMap src2tgtEdges_;
 };
 
 }

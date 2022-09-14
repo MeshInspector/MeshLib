@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRBoolean.h"
 #include "MRMesh.h"
 #include "MRObjectMesh.h"

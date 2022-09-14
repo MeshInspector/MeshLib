@@ -1,5 +1,5 @@
 #pragma once
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 
 #include "MRMeshFwd.h"

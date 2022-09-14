@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRPartialOffset.h"
 #include "MRMesh.h"
 #include "MRMeshBoolean.h"

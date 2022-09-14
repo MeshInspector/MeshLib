@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRVDBConversions.h"
 #include "MRFloatGrid.h"
 #include "MRMesh.h"

@@ -1,5 +1,5 @@
 #pragma once
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include <tl/expected.hpp>

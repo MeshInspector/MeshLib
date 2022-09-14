@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRVolumeSegment.h" 
 #include "MRVoxelPath.h"
 #include "MRObjectVoxels.h"

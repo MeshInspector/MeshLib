@@ -13,6 +13,7 @@ option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
 option(MRMESH_NO_LABEL "Disable support of label objects" OFF)
 option(MRMESH_NO_JPEG "Disable JPEG support" OFF)
 option(MRMESH_NO_PNG "Disable PNG support" OFF)
+option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -93,12 +94,28 @@ IF(NOT MR_EMSCRIPTEN)
 	ELSE()
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES png)
 	ENDIF()
+
+	IF(MRMESH_NO_VOXEL)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_VOXEL)
+	ELSE()
+		IF(APPLE)
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenVDB)
+		ELSE()
+			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
+			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
+			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES openvdb)
+		ENDIF()
+	ENDIF()
 ELSE()
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PDF)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_CPR)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_PYTHON)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_DICOM)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_JPEG)
+	target_compile_definitions(${PROJECT_NAME}
+		PRIVATE
+			MRMESH_NO_PDF
+			MRMESH_NO_CPR
+			MRMESH_NO_PYTHON
+			MRMESH_NO_DICOM
+			MRMESH_NO_JPEG
+			MRMESH_NO_VOXEL
+	)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
@@ -129,7 +146,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
 
 		target_link_libraries(${PROJECT_NAME} PRIVATE
-		    OpenVDB
 		    spdlog
 		    gtest gtest_main
 		    zip
@@ -154,11 +170,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 	ENDIF()
 ELSE()
 	find_package(tl-expected REQUIRED)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
-
 	target_link_libraries(${PROJECT_NAME} PRIVATE
-		openvdb
 		tl::expected
 		fmt
 		spdlog

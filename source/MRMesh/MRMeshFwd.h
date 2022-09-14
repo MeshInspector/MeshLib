@@ -289,7 +289,6 @@ class ObjectMeshHolder;
 class ObjectMesh;
 class ObjectPointsHolder;
 class ObjectPoints;
-class ObjectVoxels;
 class ObjectLinesHolder;
 class ObjectLines;
 class ObjectDistanceMap;
@@ -301,8 +300,12 @@ class PlaneObject;
 class SphereObject;
 struct SimpleVolume;
 
+#ifndef MRMESH_NO_VOXEL
+class ObjectVoxels;
+
 struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
+#endif
 
 class HistoryAction;
 class MRMESH_CLASS HistoryStore;

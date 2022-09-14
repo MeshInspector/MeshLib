@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_VOXEL
 #include "MRVoxelsSave.h"
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"

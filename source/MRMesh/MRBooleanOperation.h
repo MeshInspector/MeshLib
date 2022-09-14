@@ -74,7 +74,7 @@ struct BooleanResultMapper
         /// "after cut" faces to "after stitch" faces (1-1)
         FaceMap cut2newFaces;
         /// "origin" edges to "after stitch" edges (1-1)
-        EdgeMap old2newEdges;
+        WholeEdgeMap old2newEdges;
         /// "origin" vertices to "after stitch" vertices (1-1)
         VertMap old2newVerts;
         /// old topology indexes are valid if true

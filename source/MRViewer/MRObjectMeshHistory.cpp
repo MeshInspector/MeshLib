@@ -43,16 +43,16 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     objMesh->setCreases( {} );
 }
 
-[[nodiscard]] static UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const EdgeMap & map )
+[[nodiscard]] static UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEdgeMap & map )
 {
     UndirectedEdgeBitSet res;
-    for ( EdgeId b : src )
+    for ( auto b : src )
         if ( auto mapped = map[b] )
             res.autoResizeSet( mapped.undirected() );
     return res;
 }
 
-void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const EdgeMap & emap )
+void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )
 {
     MR_TIMER
     if ( !objMesh )

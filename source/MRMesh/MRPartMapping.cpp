@@ -4,7 +4,7 @@
 namespace MR
 {
 
-HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, EdgeMap * outEmap )
+HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology & srcTopology, FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap )
     : outFmap_( outFmap ), outVmap_( outVmap ), outEmap_( outEmap )
 {
     if ( outFmap )
@@ -23,7 +23,7 @@ HashToVectorMappingConverter::HashToVectorMappingConverter( const MeshTopology &
     {
         map_.src2tgtEdges = &src2tgtEdges_;
         outEmap->clear();
-        outEmap->resize( (int)srcTopology.lastNotLoneEdge() + 1 );
+        outEmap->resize( srcTopology.undirectedEdgeSize() );
     }
 }
 

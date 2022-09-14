@@ -200,7 +200,7 @@ struct [[nodiscard]] Mesh
     // appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
     MRMESH_API void addPart( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
-        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     // the same but copies only portion of (from) specified by fromFaces
     MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
     // this version has more parameters:
@@ -213,7 +213,7 @@ struct [[nodiscard]] Mesh
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed

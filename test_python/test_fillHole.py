@@ -8,7 +8,7 @@ def test_fillHole():
     faceBitSetToDelete.resize(5, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)
 
-    mrmesh.delete_faces(torus.topology, faceBitSetToDelete)
+    torus.topology.deleteFaces(faceBitSetToDelete)
     
     holes = torus.topology.findHoleRepresentiveEdges()
        

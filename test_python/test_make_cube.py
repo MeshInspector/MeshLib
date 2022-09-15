@@ -18,7 +18,7 @@ def test_makeCube():
 
     xf = mrmesh.AffineXf3f()
     cube1 = cube
-    pairs = mrmesh.find_colliding_faces(cube1, cube2, None, False)
+    pairs = mrmesh.findCollidingTriangles(mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False)
 
     #at least 100 triangles should collide for that transforms
     assert (len(pairs) < 23)

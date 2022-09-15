@@ -76,10 +76,9 @@ class MeshICP
 {
 public:
     // xf parameters should represent current transformations of meshes
-    // initMeshXf transform from the local mesh basis to the global. 
-    // refMeshXf transform from the local refMesh basis to the global
-    // calculateTransform returns new mesh transformation to the global frame, which matches refMesh in the global frame
-    // bitset allows to take exact set of vertices from the mesh
+    // fltMeshXf transform from the local floatingMesh basis to the global
+    // refMeshXf transform from the local referenceMesh basis to the global
+    // floatingMeshBitSet allows to take exact set of vertices from the mesh
     MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
         const VertBitSet& floatingMeshBitSet);
     MRMESH_API MeshICP(const MeshPart& floatingMesh, const MeshPart& referenceMesh, const AffineXf3f& fltMeshXf, const AffineXf3f& refMeshXf,
@@ -106,7 +105,7 @@ public:
     const std::vector<VertPair>& getVertPairs() const { return vertPairs_; } // used to visualize generated points pairs
     MRMESH_API std::pair<float, float> getDistLimitsSq() const; // finds squared minimum and maximum pairs distances
 
-    //returns new xf transformation for the floating mesh, which allows to match reference mesh
+    // returns new xf transformation for the floating mesh, which allows to match reference mesh
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:

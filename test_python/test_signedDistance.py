@@ -9,8 +9,8 @@ def test_signedDistance():
 
     xf = mrmesh.AffineXf3f()
 
-    res = mrmesh.find_signed_distance(torus, torus2, xf)
-    resRevert = mrmesh.find_signed_distance(torus2, torus, xf)
+    res = mrmesh.findSignedDistance(mrmesh.MeshPart(torus), mrmesh.MeshPart(torus2), xf)
+    resRevert = mrmesh.findSignedDistance(mrmesh.MeshPart(torus2),mrmesh.MeshPart( torus), xf)
 
 # probably, we need negative comparison
     assert (res.signedDist == resRevert.signedDist)

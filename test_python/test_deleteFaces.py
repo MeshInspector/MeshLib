@@ -11,7 +11,7 @@ def test_delete_faces():
     faceBitSetToDelete.resize(5, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)
     oldFaceBS = torus.topology.getValidFaces()
-    mrmesh.delete_faces(torus.topology, faceBitSetToDelete)
+    torus.topology.deleteFaces(faceBitSetToDelete)
     
     deletedBitSet = oldFaceBS - torus.topology.getValidFaces()
   

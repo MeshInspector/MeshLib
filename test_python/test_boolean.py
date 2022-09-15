@@ -4,7 +4,7 @@ import pytest
 
 def test_boolean():
     torusIntersected = mrmesh.makeTorusWithSelfIntersections(2, 1, 10, 10, None)
-    mrmesh.fix_self_intersections(torusIntersected, 0.1)
+    mrmesh.fixSelfIntersections(torusIntersected, 0.1)
 
     torus = mrmesh.makeTorus(2, 1, 10, 10, None)
 
@@ -18,22 +18,18 @@ def test_boolean():
     torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
     torus2.transform(diffXf)
 
-    torus1 = torus
-    p = torus1.points.vec.size()
-    mrmesh.boolean_sub(torus1, torus2, 0.05)
-    p_sub = torus1.points.vec.size()
+    p = torus.points.vec.size()
 
-    torus1 = torus
-    mrmesh.boolean_union(torus1, torus2, 0.05)
-    p_union = torus1.points.vec.size()
+    torusS = mrmesh.voxelBooleanSubtract(torus, torus2, 0.05)
+    p_sub = torusS.points.vec.size()
 
-    torus1 = torus
-    mrmesh.boolean_intersect(torus1, torus2, 0.05)
-    p_intersect = torus1.points.vec.size()
+    torusU = mrmesh.voxelBooleanUnite(torus, torus2, 0.05)
+    p_union = torusU.points.vec.size()
+
+    torusI = mrmesh.voxelBooleanIntersect(torus, torus2, 0.05)
+    p_intersect = torusI.points.vec.size()
 
     assert( p == 100)
-
-    import math
-    assert( math.isclose( p_sub, p_intersect, rel_tol=1e-2) )
-    assert( math.isclose( p_sub / p, 400, abs_tol=100) )
-    assert( math.isclose( p_sub / p_union, 0.7, rel_tol=0.2) )
+    assert( p_sub == 43132)
+    assert( p_union == 63114)
+    assert( p_intersect == 23006)

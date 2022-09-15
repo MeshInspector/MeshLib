@@ -209,7 +209,7 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& to
     } );
 }
 
-tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 3.9e-3f*/ )
+tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold, 0.f, 1.f );
     auto size = dm.numPoints();
@@ -242,7 +242,7 @@ tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, c
 }
 
 
-tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 3.9e-3f*/ )
+tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold, 0.f, 1.f );
     DistanceMap dm( image.resolution.x, image.resolution.y );
@@ -260,7 +260,7 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
     return dm;
 }
 
-tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 3.9e-3f*/ )
+tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
     if ( !resLoad.has_value() )

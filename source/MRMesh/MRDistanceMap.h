@@ -267,15 +267,15 @@ MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMap
 /// minimum (close): 1.0 (white)
 /// maximum (far): threshold
 /// invalid (infinity): 0.0 (black)
-MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 3.9e-3f ); // 3.9e-3 ~= 1/255
+MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image in scales of gray:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-MRMESH_API tl::expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 3.9e-3f ); // 3.9e-3 ~= 1/255
+MRMESH_API tl::expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image file
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 3.9e-3f ); // 3.9e-3 ~= 1/255
+MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// \}
 

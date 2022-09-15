@@ -70,6 +70,7 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         worldBox_.reset();
+        worldBox_.get().reset();
         if ( points_ )
             points_->invalidateCaches();
     }

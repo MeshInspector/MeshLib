@@ -24,7 +24,7 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@win-runners
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

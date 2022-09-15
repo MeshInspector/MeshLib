@@ -294,8 +294,14 @@ private:
             { return !( *this == b ); }
     };
     /// translates all fields in the record for this edge given maps
-    HalfEdgeRecord translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
-    HalfEdgeRecord translate_( EdgeId i, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
+    void translateNoFlip_( HalfEdgeRecord & r,
+        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const;
+    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
+    void translateNoFlip_( HalfEdgeRecord & r,
+        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const;
+    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;

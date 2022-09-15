@@ -16,6 +16,8 @@ struct DeloneSettings
     float maxAngleChange = NoAngleChangeLimit;
     /// Region on mesh to be processed, it is constant and not updated,
     const FaceBitSet* region = nullptr;
+    /// Edges specified by this bit-set will never be flipped
+    const UndirectedEdgeBitSet* notFlippable = nullptr;
 };
 
 /// \defgroup MeshDeloneGroup Mesh Delone

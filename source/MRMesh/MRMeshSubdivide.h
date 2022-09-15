@@ -23,6 +23,8 @@ struct SubdivideSettings
     float maxAngleChangeAfterFlip = 10;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Edges specified by this bit-set will never be flipped
+    const UndirectedEdgeBitSet* notFlippable = nullptr;
     /// New vertices appeared during subdivision will be added here
     VertBitSet * newVerts = nullptr;
     /// If false do not touch border edges (cannot subdivide lone faces)\n

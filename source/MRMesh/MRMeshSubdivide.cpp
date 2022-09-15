@@ -126,7 +126,8 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
             .maxAngleChange = settings.maxAngleChangeAfterFlip,
-            .region = settings.region } );
+            .region = settings.region,
+            .notFlippable = settings.notFlippable } );
         for ( auto ei : orgRing( mesh.topology, e ) )
             addInQueue( ei.undirected() );
     }

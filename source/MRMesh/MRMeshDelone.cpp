@@ -114,7 +114,8 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+            if ( ( settings.notFlippable && settings.notFlippable->test( e ) )
+                || checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
                 continue;
 
             mesh.topology.flipEdge( e );
@@ -133,7 +134,8 @@ void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings
     for (;;)
     {
         auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid() 
+        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid()
+            || ( settings.notFlippable && settings.notFlippable->test( testEdge.undirected() ) )
             || checkDeloneQuadrangleInMesh( mesh, testEdge, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
         {
             e = mesh.topology.next( e );

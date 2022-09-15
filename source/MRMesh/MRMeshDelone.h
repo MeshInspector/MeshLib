@@ -10,16 +10,12 @@ constexpr int NoAngleChangeLimit = 10;
 
 struct DeloneSettings
 {
-    /// Maximal iteration count
-    int numIters = 1;
     /// Maximal allowed surface deviation during every individual flip
-    float maxDeviationAfterFlip = 0.0f;   
+    float maxDeviationAfterFlip = 0.0f;
     /// Maximal allowed angle change    
     float maxAngleChange = NoAngleChangeLimit;
     /// Region on mesh to be processed, it is constant and not updated,
     const FaceBitSet* region = nullptr;
-    /// Callback to report algorithm progress and cancel it by user request
-    ProgressCallback progressCallback;
 };
 
 /// \defgroup MeshDeloneGroup Mesh Delone
@@ -44,11 +40,12 @@ MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, flo
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,
 /// \return the number of flips done
-MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings );
+/// \param numIters Maximal iteration count
+/// \param progressCallback Callback to report algorithm progress and cancel it by user request
+MRMESH_API int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings = {}, int numIters = 1, ProgressCallback progressCallback = {} );
 
 /// improves mesh triangulation in a ring of vertices with common origin and represented by edge e
-MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, float maxAngleChange = NoAngleChangeLimit,
-    const FaceBitSet * region = nullptr );
+MRMESH_API void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings = {} );
 
 /// \}
 

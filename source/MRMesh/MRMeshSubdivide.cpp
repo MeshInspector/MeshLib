@@ -123,7 +123,10 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
         ++splitsDone;
-        makeDeloneOriginRing( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChangeAfterFlip, settings.region );
+        makeDeloneOriginRing( mesh, e, {
+            .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
+            .maxAngleChange = settings.maxAngleChangeAfterFlip,
+            .region = settings.region } );
         for ( auto ei : orgRing( mesh.topology, e ) )
             addInQueue( ei.undirected() );
     }

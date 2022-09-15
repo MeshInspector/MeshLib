@@ -65,7 +65,6 @@ public:
     /// returns true if any specific value was removed
     bool reset()
     {
-        def_ = {};
         if ( map_.empty() )
             return false;
         map_.clear();

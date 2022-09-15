@@ -402,6 +402,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         worldBox_.reset();
+        worldBox_.set( {} );
         totalArea_.reset();
         if ( mesh_ )
             mesh_->invalidateCaches();

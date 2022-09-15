@@ -600,62 +600,74 @@ void MeshTopology::deleteFaces( const FaceBitSet& fs )
         deleteFace( f );
 }
 
-auto MeshTopology::translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const -> HalfEdgeRecord
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const
 {
-    const HalfEdgeRecord & from = edges_[i];
-    HalfEdgeRecord to;
-
-    for ( auto n = from.next; ; n = next( n ) )
+    for ( auto n = r.next; ; n = next( n ) )
     {
-        if ( (  to.next = mapEdge( emap, n ) ) )
+        if ( (  r.next = mapEdge( emap, n ) ) )
             break;
     }
 
-    for ( auto p = from.prev; ; p = prev( p ) )
+    for ( auto p = r.prev; ; p = prev( p ) )
     {
-        if ( ( to.prev = mapEdge( emap, p ) ) )
+        if ( ( r.prev = mapEdge( emap, p ) ) )
             break;
     }
 
-    if ( flipOrientation )
-        std::swap( to.prev, to.next );
+    if ( r.org.valid() )
+        r.org = vmap[r.org];
 
-    if ( from.org.valid() )
-        to.org = vmap[from.org];
-
-    auto fromFace = flipOrientation ? edges_[i.sym()].left : from.left;
-    if ( fromFace )
-        to.left = fmap[fromFace];
-
-    return to;
+    if ( r.left.valid() )
+        r.left = fmap[r.left];
 }
 
-auto MeshTopology::translate_( EdgeId i, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const -> HalfEdgeRecord
+void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+    const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const
 {
-    const HalfEdgeRecord & from = edges_[i];
-    HalfEdgeRecord to;
-
-    for ( auto n = from.next; ; n = next( n ) )
-    {
-        if ( ( to.next = mapEdge( emap, n ) ) )
-            break;
-    }
-
-    for ( auto p = from.prev; ; p = prev( p ) )
-    {
-        if ( ( to.prev = mapEdge( emap, p ) ) )
-            break;
-    }
+    translateNoFlip_( r, fmap, vmap, emap );
+    translateNoFlip_( rsym, fmap, vmap, emap );
 
     if ( flipOrientation )
-        std::swap( to.prev, to.next );
+    {
+        std::swap( r.prev, r.next );
+        std::swap( rsym.prev, rsym.next );
+        std::swap( r.left, rsym.left );
+    }
+}
 
-    to.org = getAt( vmap, from.org );
+void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const
+{
+    for ( auto n = r.next; ; n = next( n ) )
+    {
+        if ( (  r.next = mapEdge( emap, n ) ) )
+            break;
+    }
 
-    auto fromFace = flipOrientation ? edges_[i.sym()].left : from.left;
-    to.left = getAt( fmap, fromFace );
+    for ( auto p = r.prev; ; p = prev( p ) )
+    {
+        if ( ( r.prev = mapEdge( emap, p ) ) )
+            break;
+    }
 
-    return to;
+    if ( r.org.valid() )
+        r.org = getAt( vmap, r.org );
+
+    if ( r.left.valid() )
+        r.left = getAt( fmap, r.left );
+}
+
+void MeshTopology::translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+    const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const
+{
+    translateNoFlip_( r, fmap, vmap, emap );
+    translateNoFlip_( rsym, fmap, vmap, emap );
+
+    if ( flipOrientation )
+    {
+        std::swap( r.prev, r.next );
+        std::swap( rsym.prev, rsym.next );
+        std::swap( r.left, rsym.left );
+    }
 }
 
 void MeshTopology::flipEdge( EdgeId e )
@@ -833,11 +845,14 @@ void MeshTopology::addPart( const MeshTopology & from,
     // in all maps: from index -> to index
     WholeEdgeMap emap;
     emap.resize( from.undirectedEdgeSize() );
+    EdgeId firstNewEdge = edges_.endId();
     for ( UndirectedEdgeId i{ 0 }; i < emap.size(); ++i )
     {
         if ( from.isLoneEdge( i ) )
             continue;
-        emap[i] = makeEdge();
+        emap[i] = edges_.endId();
+        edges_.push_back( from.edges_[ EdgeId( i ) ] );
+        edges_.push_back( from.edges_[ EdgeId( i ).sym() ] );
     }
 
     VertMap vmap;
@@ -906,15 +921,15 @@ void MeshTopology::addPart( const MeshTopology & from,
     numValidFaces_ += from.numValidFaces_;
 
     // translate edge records
-    for ( UndirectedEdgeId i{ 0 }; i < emap.size(); ++i )
+    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
-        if ( !emap[i].valid() )
-            continue;
-        EdgeId efrom = i;
-        EdgeId eto = emap[i];
-        edges_[eto] = from.translate_( efrom, fmap, vmap, emap, false );
-        edges_[eto.sym()] = from.translate_( efrom.sym(), fmap, vmap, emap, false );
-    }
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            EdgeId e{ ue };
+            from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, false );
+        }
+    } );
 
     if ( outFmap )
         *outFmap = std::move( fmap );
@@ -1127,6 +1142,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
         map.tgt2srcFaces->resize( faceSize() );
 
     // first pass: fill maps
+    EdgeId firstNewEdge = edges_.endId();
     for ( auto f : fromFaces )
     {
         auto efrom = from.edgePerFace_[f];
@@ -1135,14 +1151,15 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
             const UndirectedEdgeId ue = e.undirected();
             if ( emap.find( ue ) == emap.end() )
             {
-                if ( auto e1 = findExistingEdge( ue ) )
+                if ( auto e1 = findExistingEdge( e ) )
                 {
-                    assert( e1 );
-                    emap[ue] = e1;
+                    emap[ue] = e.even() ? e1 : e1.sym();
                 }
                 else
                 {
-                    emap[ue] = makeEdge();
+                    emap[ue] = edges_.endId();
+                    edges_.push_back( from.edges_[EdgeId{ue}] );
+                    edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
                     if ( map.tgt2srcEdges )
                     {
                         map.tgt2srcEdges ->push_back( ue );
@@ -1237,16 +1254,15 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     }
 
     // second pass: translate edge records
-    for ( const auto & [ fromUEdge, thisEdge ] : emap )
+    tbb::parallel_for( tbb::blocked_range( firstNewEdge.undirected(), edges_.endId().undirected() ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
-        assert( fromUEdge );
-        assert( thisEdge );
-        if ( findExistingEdge( fromUEdge ) )
-            continue;
-        EdgeId fromEdge = fromUEdge;
-        edges_[thisEdge] = from.translate_( fromEdge, fmap, vmap, emap, flipOrientation );
-        edges_[thisEdge.sym()] = from.translate_( fromEdge.sym(), fmap, vmap, emap, flipOrientation );
-    }
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            EdgeId e{ ue };
+            from.translate_( edges_[e], edges_[e.sym()], fmap, vmap, emap, flipOrientation );
+        }
+    } );
 
     // update near stitch edges
     for ( const auto& [ePr, eNx] : prevNextEdges )

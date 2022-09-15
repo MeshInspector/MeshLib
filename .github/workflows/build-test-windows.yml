@@ -63,7 +63,7 @@ jobs:
           docker exec meshlib-win py -3.10 -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
           docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -3.10 setup.py bdist_wheel --plat-name=win-amd64 --python-tag=cp310
-          docker exec meshlib-win $WheelFile = ( Get-ChildItem -Name scripts\wheel\meshlib\dist\*.whl ); delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
+          docker exec meshlib-win powershell -Command $WheelFile = ( Get-ChildItem -Name scripts\wheel\meshlib\dist\*.whl ); delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload Wheel to Artifacts
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}

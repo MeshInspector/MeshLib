@@ -40,11 +40,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         pybind11::arg("meshA"), pybind11::arg( "meshB" ), pybind11::arg( "operation" ),
         pybind11::arg("rigidB2A") = nullptr, pybind11::arg( "mapper" ) = nullptr,
         "Makes new mesh - result of boolean operation on mesh `A` and mesh `B`\n"
-        "\tmeshA Input mesh `A`\n"
-        "\tmeshB Input mesh `B`\n"
-        "\toperation CSG operation to perform\n"
-        "\trigidB2A Transform from mesh `B` space to mesh `A` space\n"
-        "\tmapper Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology\n\n"
+        "\tmeshA - Input mesh `A`\n"
+        "\tmeshB - Input mesh `B`\n"
+        "\toperation - CSG operation to perform\n"
+        "\trigidB2A - Transform from mesh `B` space to mesh `A` space\n"
+        "\tmapper - Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology\n\n"
         "note: Input meshes should have no self-intersections in intersecting zone\n"
         "note: If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)" );
 } )

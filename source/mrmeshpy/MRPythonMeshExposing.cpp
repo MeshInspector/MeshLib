@@ -96,12 +96,6 @@ MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilde
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::MeshBuilder::BuildSettings>( m, "MeshBuilderSettings" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "region", &MR::MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
-        def_readwrite( "shiftFaceId", &MR::MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
-        def_readwrite( "allowNonManifoldEdge", &MR::MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
-
     pybind11::class_<MR::Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
@@ -223,60 +217,49 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorMesh, MR::Mesh )
 
-void pythonSetFillHolePlaneMetric( MR::FillHoleParams& params, const Mesh& mesh, EdgeId e )
-{
-    params.metric = getPlaneFillMetric( mesh, e );
-}
-
-void pythonSetFillHoleEdgeLengthMetric( MR::FillHoleParams& params, const Mesh& mesh )
-{
-    params.metric = getEdgeLengthFillMetric( mesh );
-}
-
-void pythonSetFillHoleCircumscribedMetric( MR::FillHoleParams& params, const Mesh& mesh )
-{
-    params.metric = getCircumscribedMetric( mesh );
-}
-
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::FillHoleParams::MultipleEdgesResolveMode>( m, "FillHoleParamsMultipleEdgesResolveMode" ).
-        value( "None", MR::FillHoleParams::MultipleEdgesResolveMode::None ).
-        value( "Simple", MR::FillHoleParams::MultipleEdgesResolveMode::Simple ).
-        value( "Strong", MR::FillHoleParams::MultipleEdgesResolveMode::Strong );
+        value( "None", MR::FillHoleParams::MultipleEdgesResolveMode::None, "do not avoid multiple edges" ).
+        value( "Simple", MR::FillHoleParams::MultipleEdgesResolveMode::Simple, "avoid creating edges that already exist in topology (default)" ).
+        value( "Strong", MR::FillHoleParams::MultipleEdgesResolveMode::Strong,
+            "makes additional efforts to avoid creating multiple edges,\n"
+            "in some rare cases it is not possible (cases with extremely bad topology),\n"
+            "if you faced one try to use duplicateMultiHoleVertices before fillHole" );
 
-    pybind11::class_<MR::FillHoleParams>( m, "FillHoleParams" ).
+    pybind11::class_<MR::FillHoleMetric>( m, "FillHoleMetric", "This is struct used as optimization metric of fillHole and buildCylinderBetweenTwoHoles functions" ).
+        def( pybind11::init<>() );
+
+    m.def( "getPlaneFillMetric", &MR::getPlaneFillMetric, pybind11::arg( "mesh" ), pybind11::arg( "e" ),
+        "Same as getCircumscribedFillMetric, but with extra penalty for the triangles having\n"
+        "normals looking in the opposite side of plane containing left of (e)." );
+    
+    m.def( "getEdgeLengthFillMetric", &MR::getEdgeLengthFillMetric, pybind11::arg( "mesh" ),
+        "Simple metric minimizing the sum of all edge lengths" );
+    
+    m.def( "getCircumscribedMetric", &MR::getCircumscribedMetric, pybind11::arg( "mesh" ),
+        "This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.\n"
+        "It is rather fast to calculate, and it results in typically good triangulations." );
+
+    pybind11::class_<MR::FillHoleParams>( m, "FillHoleParams", "Structure has some options to control fillHole" ).
         def( pybind11::init<>() ).
+        def_readwrite( "metric", &MR::FillHoleParams::metric, "Specifies triangulation metric\n""default for fillHole: getCircumscribedFillMetric" ).
         def_readwrite( "multipleEdgesResolveMode", &MR::FillHoleParams::multipleEdgesResolveMode ).
-        def_readwrite( "makeDegenerateBand", &MR::FillHoleParams::makeDegenerateBand ).
-        def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces );
+        def_readwrite( "makeDegenerateBand", &MR::FillHoleParams::makeDegenerateBand,
+            "If true creates degenerate faces band around hole to have sharp angle visualization\n"
+            "warning: This flag bad for result topology, most likely you do not need it" ).
+        def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" ).
+        def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces, "If not nullptr accumulate new faces" );
 
-    m.def( "set_fill_hole_metric_plane", pythonSetFillHolePlaneMetric, "set plane metric to fill hole parameters" );
-    m.def( "set_fill_hole_metric_edge_length", pythonSetFillHoleEdgeLengthMetric, "set edge length metric to fill hole parameters" );
-    m.def( "set_fill_hole_metric_circumscribed", pythonSetFillHoleCircumscribedMetric, "set circumscribed metric to fill hole parameters" );
-    m.def( "fill_hole", MR::fillHole, "fills hole represented by edge" );
+    m.def( "fillHole", &MR::fillHole,
+        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "params" ) = MR::FillHoleParams{},
+        "Fills given hole represented by one of its edges (having no valid left face),\n"
+        "uses fillHoleTrivially if cannot fill hole without multiple edges,\n"
+        "default metric: CircumscribedFillMetric\n"
+        "\tmesh - mesh with hole\n"
+        "\ta - EdgeId which represents hole\n"
+        "\tparams - parameters of hole filling" );
 } )
-
-std::vector<Vector3f> pythonComputePerVertNormals( const Mesh& mesh )
-{
-    auto res = computePerVertNormals( mesh );
-    return res.vec_;
-}
-
-std::vector<Vector3f> pythonComputePerFaceNormals( const Mesh& mesh )
-{
-    auto res = computePerFaceNormals( mesh );
-    return res.vec_;
-}
-
-std::vector<Mesh> pythonGetMeshComponents( const Mesh& mesh )
-{
-    auto components = MeshComponents::getAllComponents( mesh, MeshComponents::FaceIncidence::PerVertex );
-    std::vector<Mesh> res( components.size() );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i].addPartByMask( mesh, components[i] );
-    return res;
-}
 
 Mesh pythonMergeMehses( const pybind11::list& meshes )
 {
@@ -306,31 +289,61 @@ MR::FaceBitSet getFacesByMinEdgeLength( const MR::Mesh& mesh, float minLength )
     return resultFaces;
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, getFacesByMinEdgeLength, getFacesByMinEdgeLength, "return faces with at least one edge longer than min edge length" )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
+{
+    m.def( "computePerVertNormals", &MR::computePerVertNormals, pybind11::arg( "mesh" ), "returns a vector with vertex normals in every element for valid mesh vertices" );
+    m.def( "computePerFaceNormals", &MR::computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
+    m.def( "mergeMehses", &pythonMergeMehses, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
+    m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
+    m.def( "buildBottom", &MR::buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ), pybind11::arg( "outNewFaces" ) = nullptr,
+        "adds cylindrical extension of given hole represented by one of its edges (having no valid left face)\n"
+        "by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;\n"
+        "return: the edge of new hole opposite to input edge (a)" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, merge_meshes, pythonMergeMehses, "merge python list of meshes to one mesh" )
+    m.def( "makeCube", &MR::makeCube, pybind11::arg( "size" ) = MR::Vector3f::diagonal( 1 ), pybind11::arg( "base" ) = MR::Vector3f::diagonal( -0.5f ),
+        "Base is \"lower\" corner of the cube coordinates" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, compute_per_vert_normals, pythonComputePerVertNormals, "returns vector that contains normal for each valid vert" )
+    m.def( "makeTorus", &MR::makeTorus,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "Z is symmetry axis of this torus\n"
+        "points - optional out points of main circle" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, compute_per_face_normals, pythonComputePerFaceNormals, "returns vector that contains normal for each valid face" )
+    m.def( "makeOuterHalfTorus", &MR::makeOuterHalfTorus,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "creates torus without inner half faces\n"
+        "main application - testing fillHole and Stitch" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, build_bottom, MR::buildBottom, "prolongs hole represented by edge to lowest point by dir, returns new EdgeId corresponding givven one" )
+    m.def( "makeTorusWithUndercut", &MR::makeTorusWithUndercut,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadiusInner" ) = 0.1f, pybind11::arg( "secondaryRadiusOuter" ) = 0.2f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "creates torus with inner protruding half as undercut\n"
+        "main application - testing fixUndercuts" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, get_mesh_components, pythonGetMeshComponents, "find all disconnecteds components of mesh, return them as vector of meshes" )
+    m.def( "makeTorusWithSpikes", &MR::makeTorusWithSpikes,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadiusInner" ) = 0.1f, pybind11::arg( "secondaryRadiusOuter" ) = 0.2f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "creates torus with some handed-up points\n"
+        "main application - testing fixSpikes and Relax" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_cube, MR::makeCube, "creates simple cube mesh" )
+    m.def( "makeTorusWithComponents", &MR::makeTorusWithComponents,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "creates torus with empty sectors\n"
+        "main application - testing Components" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_torus, MR::makeTorus, "creates simple torus mesh" )
+    m.def( "makeTorusWithSelfIntersections", &MR::makeTorusWithSelfIntersections,
+        pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
+        pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
+        pybind11::arg( "points" ) = nullptr,
+        "creates torus with empty sectors\n"
+        "main application - testing Components" );
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_outer_half_test_torus, MR::makeOuterHalfTorus, "creates spetial torus without inner faces" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_undercut_test_torus, MR::makeTorusWithUndercut, "creates spetial torus with undercut" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_spikes_test_torus, MR::makeTorusWithSpikes, "creates spetial torus with some spikes" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_components_test_torus, MR::makeTorusWithComponents, "creates spetial torus without some segments" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, make_selfintersect_test_torus, MR::makeTorusWithSelfIntersections, "creates spetial torus with self-intersections" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, find_self_colliding_faces, MR::findSelfCollidingTrianglesBS, "fins FaceBitSet of self-intersections on mesh")
-
+    m.def( "findSelfCollidingTrianglesBS", &MR::findSelfCollidingTrianglesBS, pybind11::arg( "mp" ), "finds union of all self-intersecting faces" );
+} )

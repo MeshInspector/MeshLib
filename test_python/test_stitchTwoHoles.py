@@ -2,8 +2,8 @@ from helper import *
 import pytest
 
 def test_stitch_TwoHoles():
-    torus = mrmesh.make_outer_half_test_torus(2, 1, 10, 10, None)
-    torus2 = mrmesh.make_outer_half_test_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeOuterHalfTorus(2, 1, 10, 10, None)
+    torus2 = mrmesh.makeOuterHalfTorus(2, 1, 10, 10, None)
     torusAutostitchTwo = torus
 
     holes = torus.topology.findHoleRepresentiveEdges()

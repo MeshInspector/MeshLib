@@ -99,11 +99,8 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
         for ( int i = 0; i < result.resolution.y; ++i )
             ptrs[result.resolution.y - i - 1] = ( unsigned char* )( rawPixels.data() + result.resolution.x * i );
         png_read_image( png.pngPtr, ptrs.data() );
-        auto& pixels = result.pixels;
         for ( size_t i = 0; i < result.pixels.size(); ++i )
-        {
-            pixels[i] = Color( rawPixels[i] );
-        }
+            result.pixels[i] = Color( rawPixels[i] );
     }
     else
         return tl::make_unexpected( "Unsupported png color type" );

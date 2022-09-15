@@ -122,6 +122,7 @@ jobs:
       - fedora35-build-test
       - emscripten-build-test
       - macos-build-test
+      - versioning-and-release-url
     steps:
       - name: Checkout
         uses: actions/checkout@v2

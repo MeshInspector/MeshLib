@@ -57,7 +57,7 @@ def setup_wheel_info(args):
                 line = line.replace("$", str(sys.version_info[0]) + "." + str(sys.version_info[1]))
             elif "Operating System ::" in line:
                 if platform_system == "Windows":
-                    line = line.replace("$", "Microsoft :: Windows :: Windows 10")
+                    line = line.replace("$", "Microsoft :: Windows")
                 elif platform_system == "Linux":
                     line = line.replace("$", "POSIX :: Linux")
                 elif platform_system == "Darwin":

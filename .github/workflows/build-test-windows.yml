@@ -62,15 +62,15 @@ jobs:
           docker exec meshlib-win py -3.10 -m pip install --upgrade pip
           docker exec meshlib-win py -3.10 -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -3.10 .\scripts\wheel\create_wheel.py -v ${{inputs.version}}
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -3.10 setup.py bdist_wheel
-          docker exec meshlib-win $WheelFile = ( Get-ChildItem -Name .\scripts\wheel\meshlib\dist\*.whl ); delvewheel repair --add-path source\x64\Release --extract-dir . scripts\wheel\meshlib\dist\$WheelFile
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -3.10 setup.py bdist_wheel --plat-name=win-amd64 --python-tag=cp310
+          docker exec meshlib-win $WheelFile = ( Get-ChildItem -Name scripts\wheel\meshlib\dist\*.whl ); delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload Wheel to Artifacts
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v2
         with:
           name: Wheelhouse
-          path: meshlib-*.whl
+          path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
       - name: Upload Wheel to Distributive
@@ -78,5 +78,5 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Distributives
-          path: meshlib-*.whl
+          path: wheelhouse\meshlib-*.whl
           retention-days: 1

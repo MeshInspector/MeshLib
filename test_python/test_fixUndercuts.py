@@ -2,7 +2,7 @@ from helper import *
 import pytest
 
 def test_fixUndercuts():
-    torus = mrmesh.make_undercut_test_torus(2, 1, 1.5, 10, 10, None)
+    torus = mrmesh.makeTorusWithUndercut(2, 1, 1.5, 10, 10, None)
 
     dir = mrmesh.Vector3f()
     dir.x = 0

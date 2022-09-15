@@ -3,10 +3,10 @@ import pytest
 
 
 def test_boolean():
-    torusIntersected = mrmesh.make_selfintersect_test_torus(2, 1, 10, 10, None)
+    torusIntersected = mrmesh.makeTorusWithSelfIntersections(2, 1, 10, 10, None)
     mrmesh.fix_self_intersections(torusIntersected, 0.1)
 
-    torus = mrmesh.make_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
 
     transVector = mrmesh.Vector3f()
     transVector.x=0.5
@@ -15,7 +15,7 @@ def test_boolean():
 
     diffXf = mrmesh.AffineXf3f.translation(transVector)
 
-    torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
+    torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
     torus2.transform(diffXf)
 
     torus1 = torus

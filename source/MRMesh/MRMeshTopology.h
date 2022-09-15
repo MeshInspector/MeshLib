@@ -106,7 +106,7 @@ public:
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
-     /// returns cached set of all valid vertices
+    /// returns cached set of all valid vertices
     [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }

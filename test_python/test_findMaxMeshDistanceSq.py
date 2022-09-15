@@ -2,8 +2,8 @@ from helper import *
 import pytest
 
 def test_findMaxMeshDistanceSq():
-    torus = mrmesh.make_torus(2, 1, 10, 10, None)
-    torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
 
     transVector = mrmesh.Vector3f()
     transVector.x = 40

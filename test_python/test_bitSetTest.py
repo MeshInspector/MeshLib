@@ -3,9 +3,9 @@ import pytest
 
 
 def test_bitSetTest():
-    torus = mrmesh.make_components_test_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorusWithComponents(2, 1, 10, 10, None)
 
-    components = mrmesh.get_mesh_components_verts(torus, None)
+    components = mrmesh.getAllComponentsVerts(torus, None)
 
     assert(len(components) == 5)
     assert(components[0].count() != 0)

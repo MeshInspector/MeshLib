@@ -1,13 +1,13 @@
 from helper import *
 import pytest
 
-def test_make_cube():
+def test_makeCube():
     size = mrmesh.Vector3f.diagonal( 2 )
     pos1 = mrmesh.Vector3f.diagonal( 1 )
     pos2 = mrmesh.Vector3f.diagonal( 3 )
 
-    cube = mrmesh.make_cube(size, pos1)
-    cube2 = mrmesh.make_cube(size, pos2)
+    cube = mrmesh.makeCube(size, pos1)
+    cube2 = mrmesh.makeCube(size, pos2)
 
     transVector = mrmesh.Vector3f()
     transVector.x = 0.5

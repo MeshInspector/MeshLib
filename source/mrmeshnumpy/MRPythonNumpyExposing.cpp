@@ -6,6 +6,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVertexAttributeGradient.h"
+#include "MRPch/MRSpdlog.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {

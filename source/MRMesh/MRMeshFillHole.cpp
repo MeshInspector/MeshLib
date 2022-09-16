@@ -479,15 +479,6 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
     return newEdge;
 }
 
-struct FillHoleItem
-{
-    // if not-negative number then it is edgeid;
-    // otherwise it refers to the edge created recently
-    int edgeCode1, edgeCode2;
-};
-
-using FillHolePlan = std::vector<FillHoleItem>;
-
 void executeFillHolePlan( MeshTopology & topology, FillHolePlan & plan, FaceBitSet * outNewFaces )
 {
     auto getEdge = [&]( int code )
@@ -678,6 +669,9 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     };
 
     auto plan = getFillHolePlan( mesh, a0, params );
+    if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
+        return;
+
     if ( plan.empty() )
         fillHoleTrivially( mesh, a0, params.outNewFaces );
     else

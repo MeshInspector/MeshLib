@@ -95,8 +95,14 @@ MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilde
     return MR::MeshBuilder::fromTriangles( t, s );
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
+    pybind11::class_<MR::ThreeVertIds>( m, "ThreeVertIds" ).
+        def( pybind11::init( [] ( MR::VertId v0, MR::VertId v1, MR::VertId v2 )->MR::ThreeVertIds
+    {
+        return { v0, v1, v2 };
+    } ) );
+
     pybind11::class_<MR::Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
@@ -114,7 +120,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vecMeshBuilderTri, MR::MeshBuilder::Triangle )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, MR::ThreeVertIds )
 
 MR::Mesh pythonCopyMeshFunction( const MR::Mesh& mesh )
 {

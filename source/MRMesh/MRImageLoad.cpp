@@ -86,18 +86,30 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
       &interlace,
       &compression,
       &filter
-    );
-    if ( colorType != PNG_COLOR_TYPE_RGBA )
-        return tl::make_unexpected( "Unsupported png color type" );
+    );  
 
     result.resolution = Vector2i{ int( w ),int( h ) };
     result.pixels.resize( result.resolution.x * result.resolution.y );
 
     std::vector<unsigned char*> ptrs( result.resolution.y );
-    for ( int i = 0; i < result.resolution.y; ++i )
-        ptrs[result.resolution.y - i - 1] = ( unsigned char* )( result.pixels.data() + result.resolution.x * i );
+    if ( colorType == PNG_COLOR_TYPE_RGBA )
+    {
+        for ( int i = 0; i < result.resolution.y; ++i )
+            ptrs[result.resolution.y - i - 1] = ( unsigned char* )( result.pixels.data() + result.resolution.x * i );
+        png_read_image( png.pngPtr, ptrs.data() );
+    }
+    else if ( colorType == PNG_COLOR_TYPE_RGB )
+    {
+        std::vector<Vector3<unsigned char>> rawPixels( result.resolution.x * result.resolution.y );
+        for ( int i = 0; i < result.resolution.y; ++i )
+            ptrs[result.resolution.y - i - 1] = ( unsigned char* )( rawPixels.data() + result.resolution.x * i );
+        png_read_image( png.pngPtr, ptrs.data() );
+        for ( size_t i = 0; i < result.pixels.size(); ++i )
+            result.pixels[i] = Color( rawPixels[i] );
+    }
+    else
+        return tl::make_unexpected( "Unsupported png color type" );
 
-    png_read_image( png.pngPtr, ptrs.data() );
     png_read_end( png.pngPtr, NULL );
     return result;
 }

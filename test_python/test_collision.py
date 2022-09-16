@@ -3,17 +3,17 @@ import pytest
 
 
 def test_col():
-    torus = mrmesh.make_torus(2, 1, 10, 10, None)
-    torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
 
-    transVector = mrmesh.Vector3()
+    transVector = mrmesh.Vector3f()
     transVector.x = 0.5
     transVector.y = 1
     transVector.z = 1
-    diffXf = mrmesh.AffineXf3.translation(transVector)
+    diffXf = mrmesh.AffineXf3f.translation(transVector)
     torus2.transform(diffXf)
 
-    xf = mrmesh.AffineXf3()
+    xf = mrmesh.AffineXf3f()
     torus1 = torus
     pairs = mrmesh.find_colliding_faces(torus1, torus2, None, False)
 

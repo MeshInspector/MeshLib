@@ -70,10 +70,13 @@ public:
     /// applies given transformation to all valid polyline vertices
     MRMESH_API void transform( const AffineXf<V> & xf );
 
-    /// split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned)
-    MRMESH_API VertId splitEdge( EdgeId e, const V & newVertPos );
+    /// split given edge on two parts:
+    /// dest(returned-edge) = org(e) - newly created vertex,
+    /// org(returned-edge) = org(e-before-split),
+    /// dest(e) = dest(e-before-split)
+    MRMESH_API EdgeId splitEdge( EdgeId e, const V & newVertPos );
     // same, but split given edge on two equal parts
-    VertId splitEdge( EdgeId e ) { return splitEdge( e, edgeCenter( e ) ); }
+    EdgeId splitEdge( EdgeId e ) { return splitEdge( e, edgeCenter( e ) ); }
 
     /// Invalidates caches (e.g. aabb-tree) after a change in polyline
     void invalidateCaches() { AABBTreeOwner_.reset(); };

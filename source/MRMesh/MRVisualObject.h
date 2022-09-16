@@ -163,6 +163,9 @@ public:
 
     MRMESH_API virtual void render( const RenderParams& ) const;
     MRMESH_API virtual void renderForPicker( const BaseRenderParams&, unsigned ) const;
+    // Binds all graphical data to GPU and allows to clear this object CPU representation to free memory
+    // note that object without CPU model is not really valid and the model will be lost on serialization, also some caches will lost with CPU model
+    MRMESH_API virtual void bindAllVisualization() const;
 
     /// is object has visual representation (faces, edges, etc.)
     virtual bool hasVisualRepresentation() const { return false; }

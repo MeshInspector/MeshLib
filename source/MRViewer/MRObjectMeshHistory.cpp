@@ -43,4 +43,30 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     objMesh->setCreases( {} );
 }
 
+[[nodiscard]] static UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const WholeEdgeMap & map )
+{
+    UndirectedEdgeBitSet res;
+    for ( auto b : src )
+        if ( auto mapped = map[b] )
+            res.autoResizeSet( mapped.undirected() );
+    return res;
+}
+
+void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )
+{
+    MR_TIMER
+    if ( !objMesh )
+        return;
+
+    // update edges in the selection
+    auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
+    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
+    objMesh->selectEdges( selEdges );
+
+    // update edges in the creases
+    auto creases = getMapping( objMesh->creases(), emap );
+    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
+    objMesh->setCreases( std::move( creases ) );
+}
+
 } //namespace MR

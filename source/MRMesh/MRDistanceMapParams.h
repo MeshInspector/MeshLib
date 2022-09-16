@@ -145,14 +145,14 @@ struct DistanceMapToWorld
     /// vector in world space of pixel x positive direction
     /// length is equal to pixel size
     /// \note typically it should be orthogonal to `pixelYVec`
-    Vector3f pixelXVec;
+    Vector3f pixelXVec{ Vector3f::plusX() };
     /// vector in world space of pixel y positive direction
     /// length is equal to pixel size
     /// \note typically it should be orthogonal to `pixelXVec`
-    Vector3f pixelYVec;
+    Vector3f pixelYVec{ Vector3f::plusY() };
     /// vector of depth direction
     /// \note typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane
-    Vector3f direction;
+    Vector3f direction{ Vector3f::plusZ() };
 };
 
 /// \}

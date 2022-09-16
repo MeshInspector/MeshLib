@@ -30,7 +30,7 @@ RenderMeshObject::~RenderMeshObject()
 
 void RenderMeshObject::render( const RenderParams& renderParams )
 {
-    if ( !objMesh_->mesh() || !Viewer::constInstance()->isGLInitialized() )
+    if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
         return;
@@ -140,8 +140,6 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
 void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
 {
-    if ( !objMesh_->mesh() )
-        return;
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
@@ -188,6 +186,16 @@ size_t RenderMeshObject::glBytes() const
         + faceSelectionTex_.size()
         + faceSelectionTex_.size()
         + facesNormalsTex_.size();
+}
+
+void RenderMeshObject::forceBindAll()
+{
+    update_( ViewportMask::all() );
+    bindMesh_( false ); 
+    auto edges = loadEdgeIndicesBuffer_();
+    edgesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, edges.dirty(), edges );
+    auto buffer = loadBorderHighlightPointsBuffer_();
+    borderBuffer_.loadDataOpt( GL_ARRAY_BUFFER, buffer.dirty(), buffer.data(), buffer.size() );
 }
 
 void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint vao, GlBuffer & vbo, const Color& colorChar, uint32_t dirtyFlag )
@@ -423,13 +431,11 @@ void RenderMeshObject::freeBuffers_()
     GL_EXEC( glDeleteVertexArrays( 1, &selectedEdgesArrayObjId_ ) );
 }
 
-void RenderMeshObject::update_( ViewportId id )
+void RenderMeshObject::update_( ViewportMask mask )
 {
-    auto mesh = objMesh_->mesh();
-
     MR_TIMER;
     auto objDirty = objMesh_->getDirtyFlags();
-    uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( id );
+    uint32_t dirtyNormalFlag = objMesh_->getNeededNormalsRenderDirtyValue( mask );
     if ( dirtyNormalFlag & DIRTY_FACES_RENDER_NORMAL )
     {
         // vertNormalsBufferObj_ should be valid no matter what normals we use
@@ -478,7 +484,7 @@ void RenderMeshObject::update_( ViewportId id )
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_POSITION ) )
+    if ( !( dirty_ & DIRTY_POSITION ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
     MR_NAMED_TIMER( "vertbased_dirty_positions" );
@@ -503,6 +509,8 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
 RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -556,7 +564,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) )
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     MR_NAMED_TIMER( "vert_colormap" );
@@ -582,7 +590,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
 RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_UV ) )
+    if ( !( dirty_ & DIRTY_UV ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
 
     const auto& mesh = objMesh_->mesh();
@@ -619,8 +627,8 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
 RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_FACE ) )
-        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, false );
+    if ( !( dirty_ & DIRTY_FACE ) || !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_, !facesIndicesBuffer_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -645,8 +653,8 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
 RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !dirtyEdges_ )
-        return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, false );
+    if ( !dirtyEdges_ || !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_, !edgesIndicesBuffer_.valid() );
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
@@ -677,7 +685,7 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
 RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_SELECTION ) )
+    if ( !( dirty_ & DIRTY_SELECTION ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y, false );
 
     const auto& mesh = objMesh_->mesh();
@@ -711,7 +719,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
 RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) )
+    if ( !( dirty_ & DIRTY_FACES_RENDER_NORMAL ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y, false );
 
     MR_NAMED_TIMER( "dirty_faces_normals" )
@@ -732,7 +740,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_BORDER_LINES ) )
+    if ( !( dirty_ & DIRTY_BORDER_LINES ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( borderHighlightPointsSize_, false );
 
     const auto& mesh = objMesh_->mesh();
@@ -760,7 +768,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 RenderBufferRef<Vector3f> RenderMeshObject::loadSelectedEdgePointsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_EDGES_SELECTION ) )
+    if ( !( dirty_ & DIRTY_EDGES_SELECTION ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<Vector3f>( selectedEdgePointsSize_, false );
 
     const auto& mesh = objMesh_->mesh();

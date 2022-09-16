@@ -59,6 +59,7 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask )
     {
         totalLength_.reset();
         worldBox_.reset();
+        worldBox_.get().reset();
         if ( polyline_ )
             polyline_->invalidateCaches();
     }

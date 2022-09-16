@@ -186,12 +186,15 @@ struct [[nodiscard]] Mesh
     // note that first and last edge should have no left face
     MRMESH_API void attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vector3f>& contourPoints );
 
-    // split given edge on two parts, with e pointing on the second part with the same destination vertex but new origin vertex (which is returned);
-    // left and right faces if valid are also subdivide by new edge each;
-    // if left or right faces of the original edge were in the region, then includes new parts of these faces in the region
-    MRMESH_API VertId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr );
+    // split given edge on two parts:
+    // dest(returned-edge) = org(e) - newly created vertex,
+    // org(returned-edge) = org(e-before-split),
+    // dest(e) = dest(e-before-split)
+    // \details left and right faces of given edge if valid are also subdivided on two parts each;
+    // if left or right faces of the original edge were in the region, then include new parts of these faces in the region
+    MRMESH_API EdgeId splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region = nullptr );
     // same, but split given edge on two equal parts
-    VertId splitEdge( EdgeId e, FaceBitSet * region = nullptr ) { return splitEdge( e, edgeCenter( e ), region ); }
+    EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr ) { return splitEdge( e, edgeCenter( e ), region ); }
 
     // split given triangle on three triangles, introducing new vertex (which is returned) in the centroid of original triangle and connecting it to its vertices;
     // if region is given, then it must include (f) and new faces will be added there as well
@@ -200,7 +203,7 @@ struct [[nodiscard]] Mesh
     // appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
     MRMESH_API void addPart( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
-        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+        FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     // the same but copies only portion of (from) specified by fromFaces
     MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
     // this version has more parameters:
@@ -213,7 +216,7 @@ struct [[nodiscard]] Mesh
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, EdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed
@@ -232,6 +235,9 @@ struct [[nodiscard]] Mesh
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+
+    /// reflects the mesh from a given plane
+    MRMESH_API void mirror( const Plane3f& plane );
 
 private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;

@@ -16,7 +16,7 @@ public:
     virtual void renderPicker( const BaseRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
-
+    virtual void forceBindAll() override;
 private:
     const ObjectPointsHolder* objPoints_;
 
@@ -49,6 +49,8 @@ private:
     void freeBuffers_();
 
     void update_();
+
+    bool hasNormalsBackup_{ false };
 
     // Marks dirty buffers that need to be uploaded to OpenGL
     uint32_t dirty_;

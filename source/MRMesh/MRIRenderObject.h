@@ -41,6 +41,8 @@ public:
     virtual size_t heapBytes() const = 0;
     /// returns the amount of memory this object allocated in OpenGL
     virtual size_t glBytes() const = 0;
+    /// binds all data for this render object, not to bind ever again (until object becomes dirty)
+    virtual void forceBindAll() {}
 };
 
 MRMESH_API std::unique_ptr<IRenderObject> createRenderObject( const VisualObject& visObj, const std::type_index& type );

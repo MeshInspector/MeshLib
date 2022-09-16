@@ -244,11 +244,11 @@ void Polyline<V>::transform( const AffineXf<V> & xf )
 }
 
 template<typename V>
-VertId Polyline<V>::splitEdge( EdgeId e, const V & newVertPos )
+EdgeId Polyline<V>::splitEdge( EdgeId e, const V & newVertPos )
 {
-    VertId newv = topology.splitEdge( e );
-    points.autoResizeAt( newv ) = newVertPos;
-    return newv;
+    EdgeId newe = topology.splitEdge( e );
+    points.autoResizeAt( topology.org( e ) ) = newVertPos;
+    return newe;
 }
 
 template<typename V>
@@ -347,7 +347,9 @@ TEST( MRMesh, PolylineSplitEdge )
 
     auto e01 = polyline.topology.findEdge( 0_v, 1_v );
     EXPECT_TRUE( e01.valid() );
-    VertId v01 = polyline.splitEdge( e01 );
+    auto ex = polyline.splitEdge( e01 );
+    VertId v01 = polyline.topology.org( e01 );
+    EXPECT_EQ( polyline.topology.dest( ex ), v01 );
     EXPECT_EQ( polyline.topology.numValidVerts(), 3 );
     EXPECT_EQ( polyline.points.size(), 3 );
     EXPECT_EQ( polyline.topology.lastNotLoneEdge(), EdgeId(3) ); // 2*2 = 4 half-edges in total

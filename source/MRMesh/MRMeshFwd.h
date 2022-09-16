@@ -238,6 +238,8 @@ using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
+///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
+using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
@@ -259,6 +261,9 @@ using ParallelHashMap = phmap::parallel_flat_hash_map<K, V>;
 using FaceHashMap = HashMap<FaceId, FaceId>;
 using VertHashMap = HashMap<VertId, VertId>;
 using EdgeHashMap = HashMap<EdgeId, EdgeId>;
+using UndirectedEdgeHashMap = HashMap<UndirectedEdgeId, UndirectedEdgeId>;
+///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
+using WholeEdgeHashMap = HashMap<UndirectedEdgeId, EdgeId>;
 
 template <typename I> class UnionFind;
 template <typename T, typename I, typename P> class Heap;

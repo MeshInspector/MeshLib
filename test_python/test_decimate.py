@@ -6,19 +6,19 @@ def isEqualVector3(a, b):
     return diff.length() < 1.e-6
 
 
-size = mrmesh.Vector3.diagonal( 2 )
-pos1 = mrmesh.Vector3.diagonal( 0 )
-pos2 = mrmesh.Vector3.diagonal( -1 )
-pos3 = mrmesh.Vector3.diagonal( 1 )
+size = mrmesh.Vector3f.diagonal( 2 )
+pos1 = mrmesh.Vector3f.diagonal( 0 )
+pos2 = mrmesh.Vector3f.diagonal( -1 )
+pos3 = mrmesh.Vector3f.diagonal( 1 )
 
 
 # TEST 1
 
 def test_decimate1():
-    mesh = mrmesh.make_cube(size, pos1)
+    mesh = mrmesh.makeCube(size, pos1)
     settings = mrmesh.DecimateSettings()
 
-    result = mrmesh.decimate( mesh, settings )
+    result = mrmesh.decimateMesh( mesh, settings )
 
     assert( result.vertsDeleted == 0 )
     assert( result.facesDeleted == 0 )
@@ -31,8 +31,8 @@ def test_decimate1():
 
 # TEST 2
 def test_decimate2():
-    meshA = mrmesh.make_cube(size, pos1)
-    meshB = mrmesh.make_cube(size, pos2)
+    meshA = mrmesh.makeCube(size, pos1)
+    meshB = mrmesh.makeCube(size, pos2)
 
     bOperation = mrmesh.BooleanOperation.Intersection
     bResMapper = mrmesh.BooleanResultMapper()
@@ -41,10 +41,10 @@ def test_decimate2():
     mesh = bResult.mesh
     settings = mrmesh.DecimateSettings()
 
-    result = mrmesh.decimate( mesh, settings )
+    result = mrmesh.decimateMesh( mesh, settings )
 
-    assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3() ).min , pos1 ) )
-    assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3() ).max , pos3 ) )
+    assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3f() ).min , pos1 ) )
+    assert( isEqualVector3( mesh.computeBoundingBox(mesh.topology.getValidFaces(), mrmesh.AffineXf3f() ).max , pos3 ) )
 
     assert( result.vertsDeleted == 6 )
     assert( result.facesDeleted == 12 )

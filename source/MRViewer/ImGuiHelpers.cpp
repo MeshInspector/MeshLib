@@ -963,20 +963,24 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         planeWidget.definePlane();
         planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().center() ) );
     };
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ" ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
+
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine();
+
     const bool importPlaneModeOld = planeWidget.importPlaneMode();
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import plane" ) )
+
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f * menuScaling, 0 } ) )
     {
         spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
@@ -994,7 +998,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     if ( !planeWidget.getPlaneObject() )
     {
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar( 2 );
         return;
     }
 
@@ -1004,6 +1008,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto plane = planeWidget.getPlane();
 
     float dragspeed = planeWidget.box().diagonal() * 1e-3f;
+    ImGui::SetNextItemWidth( 200.0f * menuScaling );
     ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
 
@@ -1014,12 +1019,15 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         ImGui::PushFont( iconsFont );
     }
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x84" ) )
+    const float arrowButtonSize = 2.0f * MR::cInputPadding * menuScaling + ImGui::GetTextLineHeight();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling * 0.5f, MR::cDefaultWindowPaddingY * menuScaling } );
+    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x84", { arrowButtonSize, arrowButtonSize } ) )
         plane.d -= dragspeed;
+    
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x85" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
         plane.d += dragspeed;
-
+    ImGui::PopStyleVar();
     if ( iconsFont )
     {
         iconsFont->Scale = 1.0f;
@@ -1028,22 +1036,23 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     ImGui::SameLine();
     ImGui::PopButtonRepeat();
-    ImGui::SetNextItemWidth( menuScaling * 100 );
 
+    ImGui::SetNextItemWidth( 80.0f * menuScaling );
     ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
 
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", ImVec2( -1, 0 ) ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", { 60.0f * menuScaling, 0 } ) )
         plane = -plane;
 
     ImGui::PopStyleVar();
+    ImGui::Separator();
 
     auto planeObj = planeWidget.getPlaneObject();
     if ( planeObj )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show plane", &showPlane ) )
+        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show Plane", &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );     
         ImGui::PopStyleVar();
     }
@@ -1051,7 +1060,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     if ( planeBackUp != plane )
         planeWidget.updatePlane( plane, plane.n != planeBackUp.n );
     
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar( 2 );
 }
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )

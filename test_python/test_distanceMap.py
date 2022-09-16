@@ -22,7 +22,7 @@ def test_distanceMap():
     params.orgPoint.y = -(R1+R2)
     params.orgPoint.z = -R2
 
-    map = mrmesh.compute_distance_map(torus, params)
+    map = mrmesh.computeDistanceMapD(mrmesh.MeshPart(torus), params)
     #mrmesh.save_mesh(torus, "c:/temp/torus.mrmesh")
 
     assert (map.isValid(0,0) == False)

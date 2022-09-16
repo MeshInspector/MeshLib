@@ -301,7 +301,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "maxValue", &MR::MeshToDistanceMapParams::maxValue, "Using of this parameter depends on useDistanceLimits" ).
         def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
 
-    pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld" ).
+    pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
         def( "toWorld", &MR::DistanceMapToWorld::toWorld, pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "depth" ),
             "Get world coordinate by depth map info.\n"
@@ -309,12 +309,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             "y - float Y coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
             "depth - value in distance map, represent depth in world" ).
         def_readwrite( "orgPoint", &MR::DistanceMapToWorld::orgPoint, "World coordinates of distance map origin corner" ).
-        def_readwrite( "pixelXVec", &MR::DistanceMapToWorld::pixelXVec, "Vector in world space of pixel x positive direction."
-            "Length is equal to pixel size. Typically it should be orthogonal to `pixelYVec`." ).
-        def_readwrite( "pixelYVec", &MR::DistanceMapToWorld::pixelYVec, "Vector in world space of pixel y positive direction."
-            "Length is equal to pixel size. Typically it should be orthogonal to `pixelXVec`." ).
+        def_readwrite( "pixelXVec", &MR::DistanceMapToWorld::pixelXVec, "Vector in world space of pixel x positive direction.\n"
+            "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelYVec`." ).
+        def_readwrite( "pixelYVec", &MR::DistanceMapToWorld::pixelYVec, "Vector in world space of pixel y positive direction.\n"
+            "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelXVec`." ).
         def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
-            "Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
+            "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
 
     m.def( "computeDistanceMapD", &MR::computeDistanceMapD, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "computes distance map for presented projection parameters\n"
@@ -325,7 +325,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "converts distance map back to the mesh fragment with presented params" );
 
-    m.def( "saveDistanceMapToImage", &saveDistanceMapToImageSimple, 
+    m.def( "saveDistanceMapToImage", &MR::saveDistanceMapToImageSimple,
         pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
         "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -333,12 +333,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 
-    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImageSimple,
+    m.def( "loadDistanceMapFromImage", &MR::loadDistanceMapFromImageSimple,
         pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
 
-    m.def( "distanceMapTo2DIsoPolyline", &distanceMapTo2DIsoPolyline,
+    m.def( "distanceMapTo2DIsoPolyline", &MR::distanceMapTo2DIsoPolyline,
         pybind11::arg( "dm" ), pybind11::arg( "isoValue" ),
         "converts distance map to 2d iso-lines:\n"
         "iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );

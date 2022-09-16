@@ -18,9 +18,8 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
     {
         pybind11::module_::import( "meshlib.mrmeshpy" );
     }
-    catch ( const pybind11::error_already_set& pythonErr )
+    catch ( const pybind11::error_already_set& )
     {
-        spdlog::warn( pythonErr.what() );
         pybind11::module_::import( "mrmeshpy" );
     }
 } )

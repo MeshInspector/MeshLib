@@ -3,10 +3,10 @@ import pytest
 
 def test_pointCloudTriangulation():
     torusMesh = mrmesh.makeTorus(2,1,32,32,None)
-    torusPointCloud = mrmesh.mesh_to_points(torusMesh, True, None)
+    torusPointCloud = mrmesh.meshToPointCloud(torusMesh, True, None)
 
     params = mrmesh.TriangulationParameters()
-    restored = mrmesh.triangulate_point_cloud(torusPointCloud, params)
+    restored = mrmesh.triangulatePointCloud(torusPointCloud, params)
 
     assert( len(restored.points.vec) == 1024 )
     assert( restored.topology.getValidVerts().count() == 1024 )

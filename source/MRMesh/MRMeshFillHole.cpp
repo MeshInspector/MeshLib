@@ -674,15 +674,14 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         if ( params.outNewFaces )
             params.outNewFaces->autoResizeSet( newFaceId );
         mesh.topology.setLeft( a, newFaceId );
+        return;
     };
 
     auto plan = getFillHolePlan( mesh, a0, params );
     if ( plan.empty() )
-    {
         fillHoleTrivially( mesh, a0, params.outNewFaces );
-        return;
-    }
-    executeFillHolePlan( mesh.topology, plan, params.outNewFaces );
+    else
+        executeFillHolePlan( mesh.topology, plan, params.outNewFaces );
 }
 
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )

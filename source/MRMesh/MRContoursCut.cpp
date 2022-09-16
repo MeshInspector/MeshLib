@@ -1601,7 +1601,26 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );
     if ( !params.forceFillAfterBadCut && res.fbsWithCountourIntersections.count() > 0 )
         return res;
-    // fill contours
+
+    // find one edge for every hole to fill
+    phmap::flat_hash_set<EdgeId> allHoleEdges;
+    struct HoleDesc
+    {
+        EdgeId e;
+        FaceId oldf;
+    };
+    std::vector<HoleDesc> holeRepresentativeEdges;
+    auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
+    {
+        if ( allHoleEdges.count( e ) )
+            return;
+        holeRepresentativeEdges.push_back( { e, oldf } );
+        for ( auto ei : leftRing( mesh.topology, e ) )
+        {
+            [[maybe_unused]] auto it = allHoleEdges.insert( ei );
+            assert( it.second );
+        }
+    };
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1612,10 +1631,15 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             if ( !oldf.valid() || res.fbsWithCountourIntersections.test( oldf ) )
                 continue;
             if ( oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid() )
-                triangulateContour( mesh, path[edgeId], oldf, params.new2OldMap );
+                addHoleDesc( path[edgeId], oldf );
             if ( oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid() )
-                triangulateContour( mesh, path[edgeId].sym(), oldf, params.new2OldMap );
+                addHoleDesc( path[edgeId].sym(), oldf );
         }
+    }
+    // fill contours
+    for ( const auto & hd : holeRepresentativeEdges )
+    {
+        triangulateContour( mesh, hd.e, hd.oldf, params.new2OldMap );
     }
     res.resultCut = std::move( preRes.paths );
 

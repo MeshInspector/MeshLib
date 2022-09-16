@@ -305,13 +305,12 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
     dirty_ |= DIRTY_SELECTION;
 }
 
-void ObjectMeshHolder::selectEdges( const UndirectedEdgeBitSet& newSelection )
+void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
 {
-    selectedEdges_ = newSelection;
+    selectedEdges_ = std::move( newSelection );
     numSelectedEdges_.reset();
     dirty_ |= DIRTY_EDGES_SELECTION;
 }
-
 
 bool ObjectMeshHolder::isMeshClosed() const
 {

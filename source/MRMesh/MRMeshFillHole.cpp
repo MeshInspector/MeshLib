@@ -457,6 +457,29 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
     return true;
 }
 
+// returns new edge connecting org(a) and org(b),
+// if left or right of new edge is triangular region then makes new faceids
+static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+{
+    auto newFace = [&]()
+    {
+        auto res = topology.addFaceId();
+        if ( outNewFaces )
+            outNewFaces->autoResizeSet( res );
+        return res;
+    };
+
+    EdgeId newEdge = topology.makeEdge();
+    topology.splice( a, newEdge );
+    topology.splice( b, newEdge.sym() );
+    if ( topology.isLeftTri( newEdge ) )
+        topology.setLeft( newEdge, newFace() );
+    if ( topology.isLeftTri( newEdge.sym() ) )
+        topology.setLeft( newEdge.sym(), newFace() );
+    return newEdge;
+}
+
+
 // Sub cubic complexity
 void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
@@ -467,9 +490,9 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     }
     MR_TIMER;
     MR_WRITER( mesh );
+    assert( !mesh.topology.left( a0 ) );
     if ( mesh.topology.left( a0 ) )
         return;
-    assert( !mesh.topology.left( a0 ) );
     auto newFace = [&]()
     {
         auto res = mesh.topology.addFaceId();
@@ -604,21 +627,15 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            EdgeId newEdge = mesh.topology.makeEdge();
-            mesh.topology.splice( edgeMap[curConn.first.prevA], newEdge );
-            mesh.topology.splice( edgeMap[curConn.first.a], newEdge.sym() );
+            EdgeId newEdge = makeNewEdge( mesh.topology, edgeMap[curConn.first.prevA], edgeMap[curConn.first.a], params.outNewFaces );
             newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdge} );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            EdgeId newEdge = mesh.topology.makeEdge();
-            mesh.topology.splice( curConn.second, newEdge );
-            mesh.topology.splice( edgeMap[curConn.first.prevA], newEdge.sym() );
+            EdgeId newEdge = makeNewEdge( mesh.topology, curConn.second, edgeMap[curConn.first.prevA], params.outNewFaces );
             newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdge} );
         }
-
-        mesh.topology.setLeft( curConn.second, newFace() );
     }
 }
 

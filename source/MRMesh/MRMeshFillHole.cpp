@@ -637,28 +637,31 @@ VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nul
     };
 
     Vector3d sum;
-    std::vector<EdgeId> bdEdges;
+    int holeDegree = 0;
     for ( EdgeId e : leftRing( mesh.topology, a ) )
     {
-        bdEdges.push_back( e );
         sum += Vector3d{ mesh.orgPnt( e ) };
+        ++holeDegree;
     }
-    const Vector3f centerPos{ sum / double( bdEdges.size() ) };
+    const Vector3f centerPos{ sum / double( holeDegree ) };
     const VertId centerVert = mesh.addPoint( centerPos );
 
-    // from boundary org( bdEdges[0] ) to center point
+    // from boundary org( a ) to center point
     const EdgeId e0 = mesh.topology.makeEdge();
-    mesh.topology.splice( bdEdges[0], e0 );
+    mesh.topology.splice( a, e0 );
 
     EdgeId elast = e0;
-    for ( int i = 1; i < bdEdges.size(); ++i )
+    auto bdi = mesh.topology.prev( a.sym() );
+    for ( int i = 1; i < holeDegree; ++i )
     {
+        auto bdi1 = mesh.topology.prev( bdi.sym() );
         EdgeId ei = mesh.topology.makeEdge();
-        mesh.topology.splice( bdEdges[i], ei );
+        mesh.topology.splice( bdi, ei );
         mesh.topology.splice( elast.sym(), ei.sym() );
         assert( mesh.topology.isLeftTri( ei ) );
         mesh.topology.setLeft( ei, addFaceId() );
         elast = ei;
+        bdi = bdi1;
     }
     // and last face
     assert( mesh.topology.isLeftTri( e0 ) );

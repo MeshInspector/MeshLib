@@ -11,6 +11,9 @@
 #ifndef _MSC_VER
 #include <cpuid.h>
 #endif
+#ifdef __MINGW32__
+#include <windows.h>
+#endif
 
 #else
 

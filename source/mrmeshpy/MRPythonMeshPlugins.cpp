@@ -251,9 +251,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
 } )
 
 
-void saveDistanceMapToImageSimple( const DistanceMap& dm, const std::string& filename )
+void saveDistanceMapToImageSimple( const DistanceMap& dm, const std::string& filename, float trashold )
 {
-    saveDistanceMapToImage( dm, filename );
+    saveDistanceMapToImage( dm, filename, trashold );
 }
 
 // Distance Map
@@ -297,10 +297,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "MeshPart - input 3d model\n"
         "general call. You could customize params manually" );
 
-    m.def( "saveDistanceMapToImage", &saveDistanceMapToImageSimple, pybind11::arg( "distMap" ), pybind11::arg( "filename" ),
+    m.def( "saveDistanceMapToImage", &saveDistanceMapToImageSimple, 
+        pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
-        "far: 0.3 (dark-gray)\n"
-        "close: 1.0 (white)\n"
+        "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
+        "minimum (close): 1.0 (white)\n"
+        "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 } )
 

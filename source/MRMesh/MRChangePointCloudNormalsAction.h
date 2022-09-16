@@ -45,7 +45,7 @@ public:
     static void setObjectDirty( const std::shared_ptr<ObjectPoints>& obj )
     {
         if ( obj )
-            obj->setDirtyFlags( DIRTY_ALL );
+            obj->setDirtyFlags( DIRTY_RENDER_NORMALS );
     }
 
     [[nodiscard]] virtual size_t heapBytes() const override

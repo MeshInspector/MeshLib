@@ -14,7 +14,14 @@
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 {
-    pybind11::module_::import( "meshlib.mrmeshpy" );
+    try
+    {
+        pybind11::module_::import( "meshlib.mrmeshpy" );
+    }
+    catch ( const pybind11::error_already_set& )
+    {
+        pybind11::module_::import( "mrmeshpy" );
+    }
 } )
 
 void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
@@ -45,8 +52,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         value( "Hide", MR::Viewer::LaunchParams::WindowMode::Hide, "Don't show window" ).
         value( "HideInit", MR::Viewer::LaunchParams::WindowMode::HideInit, "Show window after init" ).
         value( "Show", MR::Viewer::LaunchParams::WindowMode::Show, "Show window immediately" ).
-        value( "Show", MR::Viewer::LaunchParams::WindowMode::TryHidden, "Launches in \"Hide\" mode if OpenGL is present and \"NoWindow\" if it is not" ).
-        value( "Show", MR::Viewer::LaunchParams::WindowMode::NoWindow, "Don't initialize GL window (don't call GL functions)(force `isAnimating`)" );
+        value( "TryHidden", MR::Viewer::LaunchParams::WindowMode::TryHidden, "Launches in \"Hide\" mode if OpenGL is present and \"NoWindow\" if it is not" ).
+        value( "NoWindow", MR::Viewer::LaunchParams::WindowMode::NoWindow, "Don't initialize GL window (don't call GL functions)(force `isAnimating`)" );
 
     pybind11::class_<MR::Viewer::LaunchParams>( m, "ViewerLaunchParams", "This struct contains rules for viewer launch" ).
         def( pybind11::init<>() ).

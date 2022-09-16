@@ -9,7 +9,14 @@
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
-    pybind11::module_::import( "meshlib.mrmeshpy" );
+    try
+    {
+        pybind11::module_::import( "meshlib.mrmeshpy" );
+    }
+    catch ( const pybind11::error_already_set& )
+    {
+        pybind11::module_::import( "mrmeshpy" );
+    }
 } )
 
 

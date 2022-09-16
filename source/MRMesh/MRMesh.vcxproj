@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRBuffer.h" />
+    <ClInclude Include="MRChangePointCloudNormalsAction.h" />
     <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeLabelAction.h" />
     <ClInclude Include="MRChangePointCloudAction.h" />

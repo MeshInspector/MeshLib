@@ -324,8 +324,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 
     m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "converts distance map back to the mesh fragment with presented params" );
-
-    m.def( "saveDistanceMapToImage", &MR::saveDistanceMapToImageSimple,
+    
+    m.def( "saveDistanceMapToImage", &saveDistanceMapToImageSimple,
         pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
         "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -333,7 +333,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 
-    m.def( "loadDistanceMapFromImage", &MR::loadDistanceMapFromImageSimple,
+    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImageSimple,
         pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );

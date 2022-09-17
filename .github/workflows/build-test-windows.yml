@@ -57,4 +57,5 @@ jobs:
           retention-days: 1
   
       - name: Remove container
+        if: always()
         run: docker rm -f meshlib-win

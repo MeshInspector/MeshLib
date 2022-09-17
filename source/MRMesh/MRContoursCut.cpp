@@ -1284,29 +1284,35 @@ FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
     return metric;
 }
 
-void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
+FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 {
-    assert( oldFace.valid() );
+    MR_TIMER
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
     params.stopBeforeBadTriangulation = &stopOnBad;
 
-    if ( !new2OldMap )
-    {
-        fillHole( mesh, e, params );
-        if ( stopOnBad )
-            fillHole( mesh, e, { getCutMeshMetric( mesh,e ) } );
-        return;
-    }
-
-    FaceBitSet newFaces;
-    params.outNewFaces = &newFaces;
-    fillHole( mesh, e, params );
+    auto res = getFillHolePlan( mesh, e, params );
     if ( stopOnBad )
-        fillHole( mesh, e, { getCutMeshMetric( mesh,e ),&newFaces } );
-    for ( auto f : newFaces )
-        new2OldMap->autoResizeAt( f ) = oldFace;
+        res = getFillHolePlan( mesh, e, { getCutMeshMetric( mesh,e ) } );
+    return res;
+}
+
+void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, FaceId oldFace, FaceMap* new2OldMap )
+{
+    MR_TIMER
+    assert( oldFace.valid() );
+    FaceBitSet newFaces;
+    executeFillHolePlan( mesh, e, plan, new2OldMap ? &newFaces : nullptr );
+    if ( new2OldMap )
+        for ( auto f : newFaces )
+            new2OldMap->autoResizeAt( f ) = oldFace;
+}
+
+void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
+{
+    auto plan = getTriangulateContourPlan( mesh, e );
+    executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap );
 }
 
 /* this function triangulate holes where first and last edge are the same but sym
@@ -1608,6 +1614,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     {
         EdgeId e;
         FaceId oldf;
+        FillHolePlan plan;
     };
     std::vector<HoleDesc> holeRepresentativeEdges;
     auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
@@ -1636,10 +1643,20 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
                 addHoleDesc( path[edgeId].sym(), oldf );
         }
     }
-    // fill contours
-    for ( const auto & hd : holeRepresentativeEdges )
+    // prepare in parallel the plan to fill every contour
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, holeRepresentativeEdges.size() ),
+        [&]( const tbb::blocked_range<size_t>& range )
     {
-        triangulateContour( mesh, hd.e, hd.oldf, params.new2OldMap );
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            auto & hd = holeRepresentativeEdges[i];
+            hd.plan = getTriangulateContourPlan( mesh, hd.e );
+        }
+    } );
+    // fill contours
+    for ( auto & hd : holeRepresentativeEdges )
+    {
+        executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap );
     }
     res.resultCut = std::move( preRes.paths );
 

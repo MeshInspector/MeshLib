@@ -479,8 +479,14 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
     return newEdge;
 }
 
-void executeFillHolePlan( MeshTopology & topology, FillHolePlan & plan, FaceBitSet * outNewFaces )
+void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
 {
+    if ( plan.empty() )
+    {
+        fillHoleTrivially( mesh, a0, outNewFaces );
+        return;
+    }
+    MR_TIMER
     auto getEdge = [&]( int code )
     {
         if ( code >= 0 )
@@ -491,7 +497,7 @@ void executeFillHolePlan( MeshTopology & topology, FillHolePlan & plan, FaceBitS
     {
         EdgeId a = getEdge( plan[i].edgeCode1 );
         EdgeId b = getEdge( plan[i].edgeCode2 );
-        EdgeId c = makeNewEdge( topology, a, b, outNewFaces );
+        EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
         plan[i].edgeCode1 = (int)c;
     }
 }
@@ -672,10 +678,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
         return;
 
-    if ( plan.empty() )
-        fillHoleTrivially( mesh, a0, params.outNewFaces );
-    else
-        executeFillHolePlan( mesh.topology, plan, params.outNewFaces );
+    executeFillHolePlan( mesh, a0, plan, params.outNewFaces );
 }
 
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )

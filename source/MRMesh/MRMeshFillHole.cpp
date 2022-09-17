@@ -483,7 +483,15 @@ void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSe
 {
     if ( plan.empty() )
     {
-        fillHoleTrivially( mesh, a0, outNewFaces );
+        if ( mesh.topology.isLeftTri( a0 ) )
+        {
+            auto newFaceId = mesh.topology.addFaceId();
+            if ( outNewFaces )
+                outNewFaces->autoResizeSet( newFaceId );
+            mesh.topology.setLeft( a0, newFaceId );
+        }
+        else
+            fillHoleTrivially( mesh, a0, outNewFaces );
         return;
     }
     MR_TIMER
@@ -506,6 +514,8 @@ void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSe
 FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
     FillHolePlan res;
+    if ( params.stopBeforeBadTriangulation )
+        *params.stopBeforeBadTriangulation = false;
     if ( params.maxPolygonSubdivisions < 2 )
     {
         assert( false );
@@ -599,10 +609,6 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
             *params.stopBeforeBadTriangulation = true;
             return res;
         }
-        else
-        {
-            *params.stopBeforeBadTriangulation = false;
-        }
     }
 
     if ( finConn.a == -1 || finConn.b == -1 )
@@ -664,15 +670,6 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         for ( unsigned i = 0; i < loopEdgesCounter; ++i )
             a = mesh.topology.prev( a.sym() );
     }
-
-    if ( loopEdgesCounter == 3 )
-    {
-        auto newFaceId = mesh.topology.addFaceId();
-        if ( params.outNewFaces )
-            params.outNewFaces->autoResizeSet( newFaceId );
-        mesh.topology.setLeft( a, newFaceId );
-        return;
-    };
 
     auto plan = getFillHolePlan( mesh, a0, params );
     if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )

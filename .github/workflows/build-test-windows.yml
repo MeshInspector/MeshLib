@@ -55,3 +55,6 @@ jobs:
           name: WindowsArchive
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
+  
+      - name: Remove container
+        run: docker rm -f meshlib-win

@@ -18,6 +18,9 @@ jobs:
       matrix:
         config: [Debug, Release]
     steps:
+      - name: Clear workspace
+        run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+
       - name: Checkout
         uses: actions/checkout@v2
         with:

@@ -479,27 +479,52 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
     return newEdge;
 }
 
+void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
+{
+    if ( plan.empty() )
+    {
+        if ( mesh.topology.isLeftTri( a0 ) )
+        {
+            auto newFaceId = mesh.topology.addFaceId();
+            if ( outNewFaces )
+                outNewFaces->autoResizeSet( newFaceId );
+            mesh.topology.setLeft( a0, newFaceId );
+        }
+        else
+            fillHoleTrivially( mesh, a0, outNewFaces );
+        return;
+    }
+    MR_TIMER
+    auto getEdge = [&]( int code )
+    {
+        if ( code >= 0 )
+            return EdgeId( code );
+        return EdgeId( plan[ -(code+1) ].edgeCode1 );
+    };
+    for ( int i = 0; i < plan.size(); ++i )
+    {
+        EdgeId a = getEdge( plan[i].edgeCode1 );
+        EdgeId b = getEdge( plan[i].edgeCode2 );
+        EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
+        plan[i].edgeCode1 = (int)c;
+    }
+}
 
 // Sub cubic complexity
-void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
+FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
+    FillHolePlan res;
+    if ( params.stopBeforeBadTriangulation )
+        *params.stopBeforeBadTriangulation = false;
     if ( params.maxPolygonSubdivisions < 2 )
     {
         assert( false );
-        return;
+        return res;
     }
     MR_TIMER;
-    MR_WRITER( mesh );
     assert( !mesh.topology.left( a0 ) );
     if ( mesh.topology.left( a0 ) )
-        return;
-    auto newFace = [&]()
-    {
-        auto res = mesh.topology.addFaceId();
-        if ( params.outNewFaces )
-            params.outNewFaces->autoResizeSet( res );
         return res;
-    };
 
     unsigned loopEdgesCounter = 0;
     EdgeId a = a0;
@@ -509,14 +534,9 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         ++loopEdgesCounter;
     } while ( a != a0 );
 
-    if ( loopEdgesCounter < 3 )
-        return;
+    if ( loopEdgesCounter <= 3 )
+        return res;
 
-    if ( loopEdgesCounter == 3)
-    {
-        mesh.topology.setLeft( a, newFace() );
-        return;
-    }
     // Fill EdgeMaps
     std::vector<EdgeId> edgeMap( loopEdgesCounter );
     a = a0;
@@ -587,36 +607,19 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         if ( finConn.a == -1 || finConn.b == -1 || finConn.weight > BadTriangulationMetric )
         {
             *params.stopBeforeBadTriangulation = true;
-            return;
-        }
-        else
-        {
-            *params.stopBeforeBadTriangulation = false;
-        }
-    }
-
-    if ( params.makeDegenerateBand )
-    {
-        a = a0 = makeDegenerateBandAroundHole( mesh, a0, params.outNewFaces );
-        for ( unsigned i = 0; i < loopEdgesCounter; ++i )
-        {
-            edgeMap[i] = a;
-            a = mesh.topology.prev( a.sym() );
+            return res;
         }
     }
 
     if ( finConn.a == -1 || finConn.b == -1 )
-    {
-        fillHoleTrivially( mesh, a0, params.outNewFaces );
-        return;
-    }
+        return res;
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );
     fictiveLastConn.prevA = finConn.b;
-    std::queue<std::pair<WeightedConn, EdgeId>> newEdgesQueue;
-    newEdgesQueue.push( {fictiveLastConn,edgeMap[fictiveLastConn.b]} );
-    std::pair<WeightedConn, EdgeId> curConn;
+    std::queue<std::pair<WeightedConn, int>> newEdgesQueue;
+    newEdgesQueue.push( {fictiveLastConn,(int)edgeMap[fictiveLastConn.b]} );
+    std::pair<WeightedConn, int> curConn;
     while ( !newEdgesQueue.empty() )
     {
         curConn = std::move( newEdgesQueue.front() );
@@ -627,16 +630,52 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            EdgeId newEdge = makeNewEdge( mesh.topology, edgeMap[curConn.first.prevA], edgeMap[curConn.first.a], params.outNewFaces );
-            newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdge} );
+            auto newEdgeCode = -int( res.size() + 1 );
+            res.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
+            newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdgeCode} );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            EdgeId newEdge = makeNewEdge( mesh.topology, curConn.second, edgeMap[curConn.first.prevA], params.outNewFaces );
-            newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdge} );
+            auto newEdgeCode = -int( res.size() + 1 );
+            res.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
+            newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdgeCode} );
         }
     }
+    return res;
+}
+
+void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
+{
+    MR_TIMER;
+    MR_WRITER( mesh );
+    assert( !mesh.topology.left( a0 ) );
+    if ( mesh.topology.left( a0 ) )
+        return;
+
+    unsigned loopEdgesCounter = 0;
+    EdgeId a = a0;
+    do
+    {
+        a = mesh.topology.prev( a.sym() );
+        ++loopEdgesCounter;
+    } while ( a != a0 );
+
+    if ( loopEdgesCounter < 3 )
+        return;
+
+    if ( params.makeDegenerateBand )
+    {
+        a = a0 = makeDegenerateBandAroundHole( mesh, a0, params.outNewFaces );
+        for ( unsigned i = 0; i < loopEdgesCounter; ++i )
+            a = mesh.topology.prev( a.sym() );
+    }
+
+    auto plan = getFillHolePlan( mesh, a0, params );
+    if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
+        return;
+
+    executeFillHolePlan( mesh, a0, plan, params.outNewFaces );
 }
 
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )

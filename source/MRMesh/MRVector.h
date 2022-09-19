@@ -68,6 +68,16 @@ public:
         vec_.resize( newSize );
     }
 
+    /// sets elements [pos, pos+len) to given value, adjusting the size of the vector to include new elements
+    void autoResizeSet( I pos, size_t len, T val )
+    {
+        if ( pos + len > size() )
+            resizeWithReserve( pos + len );
+        for ( size_t i = 0; i < len; ++i )
+            vec_[ pos + i ] = val;
+    }
+    void autoResizeSet( I i, T val ) { autoResizeSet( i, 1, val ); }
+
     /// this accessor automatically adjusts the size of the vector
     [[nodiscard]] reference autoResizeAt( I i )
     {

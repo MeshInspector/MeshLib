@@ -3,7 +3,7 @@
 #include "MRPolyline.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
-#include "MRPlane3.h"
+
 namespace MR
 {
 

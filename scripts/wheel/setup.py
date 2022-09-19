@@ -18,17 +18,13 @@ if '--version' in sys.argv:
 
 PY_VERSION=str(sys.version_info[0]) + "." + str(sys.version_info[1])
 LIBS_EXTENSION = ""
-SYSTEM = ""
 
 if platform_system == "Windows":
     LIBS_EXTENSION = "pyd"
-    SYSTEM = "Microsoft :: Windows"
 elif platform_system == "Linux":
     LIBS_EXTENSION = "so"
-    SYSTEM = "POSIX :: Linux"
 elif platform_system == "Darwin":
     LIBS_EXTENSION = "so"
-    SYSTEM = "MacOS"
 
 here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the readme file
@@ -48,12 +44,15 @@ setuptools.setup(
     package_data={'meshlib': ['mrmeshnumpy.{ext}', 'mrmeshpy.{ext}', 'mrviewerpy.{ext}'.format(ext=LIBS_EXTENSION)]},
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: {}".format(PY_VERSION),
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.10',
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
-        "Operating System :: {}".format(SYSTEM),
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS",
     ],
-    python_requires='=={}.*'.format(PY_VERSION),
+    python_requires='>=3.8',
     install_requires=[
         'numpy>=1.21.0',
         'pytest>=7.1.0',

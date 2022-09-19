@@ -128,10 +128,10 @@ void pythonAddPointCloudToScene( const MR::PointCloud& points, const std::string
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
 {
-    m.def( "add_mesh_to_scene", &pythonAddMeshToScene, "add mesh to scene" );
-    m.def( "add_point_cloud_to_scene", &pythonAddPointCloudToScene, "add point cloud to scene" );
-    m.def( "clear_scene", &pythonClearScene, "remove all models" );
-    m.def( "select_by_name", &pythonSelectName, "select only models with that name, unselect others" );
-    m.def( "select_by_type", &pythonSelectType, "string typeName: {\"Meshes\", \"Points\", \"Voxels\"}\nselect only models with that name, unselect others" );
-    m.def( "unselect_all", &pythonUnselect, "unselect all models" );
+    m.def( "addMeshToScene", &pythonAddMeshToScene, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "add given mesh to scene tree" );
+    m.def( "addPointCloudToScene", &pythonAddPointCloudToScene, pybind11::arg( "points" ), pybind11::arg( "name" ), "add given point cloud to scene tree" );
+    m.def( "clearScene", &pythonClearScene, "remove all objects from scene tree" );
+    m.def( "selectByName", &pythonSelectName, pybind11::arg( "objectName" ), "select objects in scene tree with given name, unselect others" );
+    m.def( "selectByType", &pythonSelectType, pybind11::arg( "typeName" ), "string typeName: {\"Meshes\", \"Points\", \"Voxels\"}\nobjects in scene tree with given type, unselect others" );
+    m.def( "unselectAll", &pythonUnselect, "unselect all objects in scene tree" );
 } )

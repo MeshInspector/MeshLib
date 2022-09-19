@@ -6,6 +6,7 @@
 #include "MRDistanceMapParams.h"
 #include "MRPolyline2.h"
 #include "MRHeapBytes.h"
+#include "MRImage.h"
 #include <tl/expected.hpp>
 #include <filesystem>
 #include <vector>
@@ -261,10 +262,20 @@ MRMESH_API Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline
 /// converts distance map back to the mesh fragment with presented params
 MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct );
 
-/// saves distance map to image in scales of gray:
-/// far: 0.3 (dark-gray)
-/// close: 1.0 (white)
-MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename );
+/// saves distance map to monochrome image in scales of gray:
+/// \param threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)
+/// minimum (close): 1.0 (white)
+/// maximum (far): threshold
+/// invalid (infinity): 0.0 (black)
+MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
+
+/// load distance map from monochrome image in scales of gray:
+/// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+MRMESH_API tl::expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
+
+/// load distance map from monochrome image file
+/// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+MRMESH_API tl::expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// \}
 

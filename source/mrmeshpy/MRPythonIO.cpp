@@ -237,31 +237,43 @@ PointCloud pythonLoadPointCloudFromAnyFormat( pybind11::object fileHandle, const
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
-    m.def( "save_mesh", ( bool( * )( const MR::Mesh&, const std::string& ) ) & pythonSaveMeshToAnyFormat, "saves mesh in file of known format/extension" );
-    m.def( "save_mesh", ( bool( * )( const MR::Mesh&, const std::string&, pybind11::object ) ) & pythonSaveMeshToAnyFormat, "saves mesh in python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "saveMesh", ( bool( * )( const MR::Mesh&, const std::string& ) )& pythonSaveMeshToAnyFormat,
+        pybind11::arg( "mesh" ), pybind11::arg( "path" ), "saves mesh in file of known format/extension" );
+    m.def( "saveMesh", ( bool( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat,
+        pybind11::arg( "mesh" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves mesh in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 {
-    m.def( "load_mesh", ( MR::Mesh( * )( const std::string& ) )& pythonLoadMeshFromAnyFormat, "load mesh of known format" );
-    m.def( "load_mesh", ( MR::Mesh( * )( pybind11::object, const std::string& ) )& pythonLoadMeshFromAnyFormat, "load mesh from python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "loadMesh", ( MR::Mesh( * )( const std::string& ) )& pythonLoadMeshFromAnyFormat,
+        pybind11::arg( "path" ), "load mesh of known format" );
+    m.def( "loadMesh", ( MR::Mesh( * )( pybind11::object, const std::string& ) )& pythonLoadMeshFromAnyFormat,
+        pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load mesh from python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
 {
-    m.def( "save_lines", ( bool( * )( const MR::Polyline3&, const std::string& ) ) & pythonSaveLinesToAnyFormat, "saves lines in file of known format/extension" );
-    m.def( "save_lines", ( bool( * )( const MR::Polyline3&, const std::string&, pybind11::object ) ) & pythonSaveLinesToAnyFormat, "saves lines in python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "saveLines", ( bool( * )( const MR::Polyline3&, const std::string& ) )& pythonSaveLinesToAnyFormat,
+        pybind11::arg( "polyline" ), pybind11::arg( "path" ), "saves lines in file of known format/extension" );
+    m.def( "saveLines", ( bool( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat,
+        pybind11::arg( "polyline" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves lines in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 {
-    m.def( "load_lines", ( MR::Polyline3( * )( const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines of known format" );
-    m.def( "load_lines", ( MR::Polyline3( * )( pybind11::object, const std::string& ) ) & pythonLoadLinesFromAnyFormat, "load lines from python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "loadLines", ( MR::Polyline3( * )( const std::string& ) )& pythonLoadLinesFromAnyFormat,
+        pybind11::arg( "path" ), "load lines of known format" );
+    m.def( "loadLines", ( MR::Polyline3( * )( pybind11::object, const std::string& ) )& pythonLoadLinesFromAnyFormat,
+        pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load lines from python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
-    m.def( "save_points", ( bool( * )( const MR::PointCloud&, const std::string& ) ) & pythonSavePointCloudToAnyFormat, "saves point cloud in file of known format/extension" );
-    m.def( "save_points", ( bool( * )( const MR::PointCloud&, const std::string&, pybind11::object ) ) & pythonSavePointCloudToAnyFormat, "saves point cloud in python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "savePoints", ( bool( * )( const MR::PointCloud&, const std::string& ) )& pythonSavePointCloudToAnyFormat,
+        pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), "saves point cloud in file of known format/extension" );
+    m.def( "savePoints", ( bool( * )( const MR::PointCloud&, const std::string&, pybind11::object ) )& pythonSavePointCloudToAnyFormat,
+        pybind11::arg( "pointCloud" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves point cloud in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
 {
-    m.def( "load_points", ( MR::PointCloud( * )( const std::string& ) ) & pythonLoadPointCloudFromAnyFormat, "load point cloud of known format" );
-    m.def( "load_points", ( MR::PointCloud( * )( pybind11::object, const std::string& ) ) & pythonLoadPointCloudFromAnyFormat, "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
+    m.def( "loadPoints", ( MR::PointCloud( * )( const std::string& ) )& pythonLoadPointCloudFromAnyFormat,
+        pybind11::arg( "path" ), "load point cloud of known format" );
+    m.def( "loadPoints", ( MR::PointCloud( * )( pybind11::object, const std::string& ) )& pythonLoadPointCloudFromAnyFormat,
+        pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )

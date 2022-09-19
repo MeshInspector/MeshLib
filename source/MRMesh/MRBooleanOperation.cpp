@@ -90,9 +90,9 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     if ( !prepareLeft( origin, cutPaths, leftPart ) )
         return false;
 
-    EdgeMap map;
+    WholeEdgeMap map;
     FaceMap* fMapPtr = maps ? &maps->cut2newFaces : nullptr;
-    EdgeMap* eMapPtr = maps ? &maps->old2newEdges : &map;
+    WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &map;
     VertMap* vMapPtr = maps ? &maps->old2newVerts : nullptr;
 
     auto comps = MeshComponents::getAllComponents( origin, MeshComponents::FaceIncidence::PerVertex );
@@ -103,7 +103,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
 
     for ( auto& path : cutPaths )
         for ( auto& e : path )
-            e = ( *eMapPtr )[e];
+            e = mapEdge( *eMapPtr, e );
 
     return true;
 }
@@ -120,11 +120,11 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
         partB.transform( *rigidB2A );
 
     FaceMap fMapNew;
-    EdgeMap eMapNew;
+    WholeEdgeMap eMapNew;
     VertMap vMapNew;
 
     FaceMap* fMapNewPtr = mapper ? &fMapNew : nullptr;
-    EdgeMap* eMapNewPtr = mapper ? &eMapNew : nullptr;
+    WholeEdgeMap* eMapNewPtr = mapper ? &eMapNew : nullptr;
     VertMap* vMapNewPtr = mapper ? &vMapNew : nullptr;
 
     if ( pathsA.empty() )
@@ -143,14 +143,14 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
     {
         int objectIndex = pathsHaveLeftHole ? int( BooleanResultMapper::MapObject::A ) : int( BooleanResultMapper::MapObject::B );
         FaceMap& fMap = mapper->maps[objectIndex].cut2newFaces;
-        EdgeMap& eMap = mapper->maps[objectIndex].old2newEdges;
+        WholeEdgeMap& eMap = mapper->maps[objectIndex].old2newEdges;
         VertMap& vMap = mapper->maps[objectIndex].old2newVerts;
         for ( int i = 0; i < fMap.size(); ++i )
             if ( fMap[FaceId( i )].valid() )
                 fMap[FaceId( i )] = fMapNew[fMap[FaceId( i )]];
         for ( int i = 0; i < eMap.size(); ++i )
-            if ( eMap[EdgeId( i )].valid() )
-                eMap[EdgeId( i )] = eMapNew[eMap[EdgeId( i )]];
+            if ( eMap[UndirectedEdgeId( i )].valid() )
+                eMap[UndirectedEdgeId( i )] = mapEdge( eMapNew, mapEdge( eMap, UndirectedEdgeId( i ) ) );
         for ( int i = 0; i < vMap.size(); ++i )
             if ( vMap[VertId( i )].valid() )
                 vMap[VertId( i )] = vMapNew[vMap[VertId( i )]];
@@ -181,7 +181,7 @@ Mesh doTrivialBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut, Bool
     if ( aPartFbs.count() != 0 )
     {
         FaceMap* fMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2newFaces : nullptr;
-        EdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newEdges : nullptr;
+        WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newEdges : nullptr;
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].old2newVerts : nullptr;
 
         aPart.addPartByMask( meshACut, aPartFbs, operation == BooleanOperation::DifferenceBA,
@@ -191,7 +191,7 @@ Mesh doTrivialBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut, Bool
     if ( bPartFbs.count() != 0 )
     {
         FaceMap* fMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2newFaces : nullptr;
-        EdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newEdges : nullptr;
+        WholeEdgeMap* eMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newEdges : nullptr;
         VertMap* vMapPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )].old2newVerts : nullptr;
 
         bPart.addPartByMask( meshBCut, bPartFbs, operation == BooleanOperation::DifferenceAB,
@@ -303,7 +303,7 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
     EdgeBitSet res;
     for ( auto e : oldBS )
     {
-        auto en = maps[int( obj )].old2newEdges[e];
+        auto en = mapEdge( maps[int( obj )].old2newEdges, e );
         if ( en.valid() )
             res.autoResizeSet( en );
     }

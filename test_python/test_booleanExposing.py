@@ -7,13 +7,13 @@ def isEqualVector3(a, b):
     return diff.length() < 1.e-6
 
 def test_booleanExposing():
-    size = mrmesh.Vector3.diagonal( 2 )
-    pos1 = mrmesh.Vector3.diagonal( 0 )
-    pos2 = mrmesh.Vector3.diagonal( -1 )
-    pos3 = mrmesh.Vector3.diagonal( 1 )
+    size = mrmesh.Vector3f.diagonal( 2 )
+    pos1 = mrmesh.Vector3f.diagonal( 0 )
+    pos2 = mrmesh.Vector3f.diagonal( -1 )
+    pos3 = mrmesh.Vector3f.diagonal( 1 )
 
-    meshA = mrmesh.make_cube(size, pos1)
-    meshB = mrmesh.make_cube(size, pos2)
+    meshA = mrmesh.makeCube(size, pos1)
+    meshB = mrmesh.makeCube(size, pos2)
 
     bOperation = mrmesh.BooleanOperation.Intersection
     bResMapper = mrmesh.BooleanResultMapper()
@@ -21,8 +21,8 @@ def test_booleanExposing():
 
     bResMesh = bResult.mesh
 
-    assert( isEqualVector3( bResMesh.computeBoundingBox(bResMesh.topology.getValidFaces(), mrmesh.AffineXf3() ).min , pos1 ) )
-    assert( isEqualVector3( bResMesh.computeBoundingBox(bResMesh.topology.getValidFaces(), mrmesh.AffineXf3() ).max , pos3 ) )
+    assert( isEqualVector3( bResMesh.computeBoundingBox(bResMesh.topology.getValidFaces(), mrmesh.AffineXf3f() ).min , pos1 ) )
+    assert( isEqualVector3( bResMesh.computeBoundingBox(bResMesh.topology.getValidFaces(), mrmesh.AffineXf3f() ).max , pos3 ) )
 
     assert( bResMesh.topology.getValidVerts().size() == 14 )
     assert( bResMesh.topology.getValidVerts().count() == 14 )
@@ -30,18 +30,7 @@ def test_booleanExposing():
 
 
     brmmAA = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
-    brmmAB = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
-    brmmBA = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
     brmmBB = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
 
-    assert( brmmAA.size() == 14)
     assert( brmmAA.count() == 1)
-
-    assert( brmmAB.size() == 4)
-    assert( brmmAB.count() == 1)
-
-    assert( brmmBA.size() == 14)
-    assert( brmmBA.count() == 1)
-
-    assert( brmmBB.size() == 4)
     assert( brmmBB.count() == 1)

@@ -144,8 +144,12 @@ struct RemeshSettings
     bool useCurvature = false;
     /// Region on mesh to be changed, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Edges specified by this bit-set will never be flipped
+    const UndirectedEdgeBitSet* notFlippable = nullptr;
     ///  whether to pack mesh at the end
     bool packMesh = false;
+    /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
+    std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback;
 };

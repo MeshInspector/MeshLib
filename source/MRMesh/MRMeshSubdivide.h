@@ -23,6 +23,8 @@ struct SubdivideSettings
     float maxAngleChangeAfterFlip = 10;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Edges specified by this bit-set will never be flipped
+    const UndirectedEdgeBitSet* notFlippable = nullptr;
     /// New vertices appeared during subdivision will be added here
     VertBitSet * newVerts = nullptr;
     /// If false do not touch border edges (cannot subdivide lone faces)\n
@@ -36,6 +38,8 @@ struct SubdivideSettings
     bool useCurvature = false;
     /// this function is called each time a new vertex has been created, but before the ring is made Delone
     std::function<void(VertId)> onVertCreated;
+    /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
+    std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback = {};
 };

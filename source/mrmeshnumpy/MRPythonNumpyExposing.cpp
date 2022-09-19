@@ -9,7 +9,14 @@
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
-    pybind11::module_::import( "meshlib.mrmeshpy" );
+    try
+    {
+        pybind11::module_::import( "meshlib.mrmeshpy" );
+    }
+    catch ( const pybind11::error_already_set& )
+    {
+        pybind11::module_::import( "mrmeshpy" );
+    }
 } )
 
 
@@ -314,16 +321,18 @@ pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
-    m.def( "getNumpyCurvature", &getNumpyCurvature );
-    m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient );
-    m.def( "getNumpyFaces", &getNumpyFaces );
-    m.def( "getNumpyVerts", &getNumpyVerts );
-    m.def( "getNumpyBitSet", &getNumpyBitSet );
+    m.def( "getNumpyCurvature", &getNumpyCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with curvature for each valid vertex of given mesh" );
+    m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points" );
+    m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
+    m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of mesh valid points" );
+    m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )
 {
-    m.def( "pointCloudFromPoints", &pointCloudFromNP, pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
+    m.def( "pointCloudFromPoints", &pointCloudFromNP, 
+        pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, 
+        "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
 } )
 
 template<typename T>
@@ -358,8 +367,8 @@ MR::TaggedBitSet<T> bitSetFromNP( const pybind11::buffer& bools )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
 {
-    m.def( "faceBitSetFromBools", &bitSetFromNP<MR::FaceTag> );
-    m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag> );
-    m.def( "edgeBitSetFromBools", &bitSetFromNP<MR::EdgeTag> );
-    m.def( "undirectedEdgeBitSetFromBools", &bitSetFromNP<MR::UndirectedEdgeTag> );
+    m.def( "faceBitSetFromBools", &bitSetFromNP<MR::FaceTag>, pybind11::arg( "boolArray" ), "returns FaceBitSet from numpy array with bools" );
+    m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag>, pybind11::arg( "boolArray" ), "returns VertBitSet from numpy array with bools" );
+    m.def( "edgeBitSetFromBools", &bitSetFromNP<MR::EdgeTag>, pybind11::arg( "boolArray" ), "returns EdgeBitSet from numpy array with bools" );
+    m.def( "undirectedEdgeBitSetFromBools", &bitSetFromNP<MR::UndirectedEdgeTag>, pybind11::arg( "boolArray" ), "returns UndirectedEdgeBitSet from numpy array with bools" );
 } )

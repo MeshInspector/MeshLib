@@ -305,13 +305,12 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
     dirty_ |= DIRTY_SELECTION;
 }
 
-void ObjectMeshHolder::selectEdges( const UndirectedEdgeBitSet& newSelection )
+void ObjectMeshHolder::selectEdges( UndirectedEdgeBitSet newSelection )
 {
-    selectedEdges_ = newSelection;
+    selectedEdges_ = std::move( newSelection );
     numSelectedEdges_.reset();
     dirty_ |= DIRTY_EDGES_SELECTION;
 }
-
 
 bool ObjectMeshHolder::isMeshClosed() const
 {
@@ -402,6 +401,7 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         worldBox_.reset();
+        worldBox_.get().reset();
         totalArea_.reset();
         if ( mesh_ )
             mesh_->invalidateCaches();

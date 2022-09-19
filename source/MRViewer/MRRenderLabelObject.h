@@ -3,6 +3,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
+#include "MRMesh/MRBox.h"
 
 namespace MR
 {
@@ -17,6 +18,8 @@ public:
 
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
+
+    virtual void forceBindAll() override;
 
 private:
     const ObjectLabel* objLabel_;
@@ -66,6 +69,7 @@ private:
     Vector3f positionState_;
     Vector2f pivotPointState_;
     float backgroundPaddingState_;
+    Box3f meshBox_;
 };
 
 }

@@ -159,9 +159,9 @@ public:
     // Return the current viewport, or the viewport corresponding to a given unique identifier
     //
     // Inputs:
-    //   core_id  unique identifier corresponding to the desired viewport (current viewport if 0)
-    MRVIEWER_API Viewport& viewport( ViewportId viewport_id = {} );
-    MRVIEWER_API const Viewport& viewport( ViewportId viewport_id = {} ) const;
+    //   viewportId unique identifier corresponding to the desired viewport (current viewport if 0)
+    MRVIEWER_API Viewport& viewport( ViewportId viewportId = {} );
+    MRVIEWER_API const Viewport& viewport( ViewportId viewportId = {} ) const;
 
     // Append a new "slot" for a viewport (i.e., copy properties of the current viewport, only
     // changing the viewport size/position)
@@ -203,6 +203,11 @@ public:
     // fill = 0.6 parameter means that scene will 0.6 of screen,
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all(), float fill = 0.6f, bool snapView = true );
+
+    // Calls fitBox for single/each viewport in viewer
+    // fill = 0.6 parameter means that scene will 0.6 of screen,
+    // snapView - to snap camera angle to closest canonical quaternion
+    MRVIEWER_API void fitBoxViewport( const Box3f& box, MR::ViewportMask vpList = MR::ViewportMask::all(), float fill = 0.6f, bool snapView = true );
 
     // Calls fitData and change FOV to match the screen size then
     // params - params fit data

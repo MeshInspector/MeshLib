@@ -14,21 +14,22 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRFillContour.h"
+#include "MRMesh/MRExpandShrink.h"
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Box3f>( m, "Box3" ).
+    pybind11::class_<MR::Box3f>( m, "Box3f", "Box given by its min- and max- corners" ).
         def( pybind11::init<>() ).
-        def_readwrite( "min", &MR::Box3f::min ).
+        def_readwrite( "min", &MR::Box3f::min, "create invalid box by default" ).
         def_readwrite( "max", &MR::Box3f::max ).
         def( "valid", &MR::Box3f::valid );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2i, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Vector2i>( m, "Vector2i" ).
+    pybind11::class_<MR::Vector2i>( m, "Vector2i", "two-dimensional vector" ).
         def( pybind11::init<>() ).
         def_readwrite( "x", &MR::Vector2i::x ).
         def_readwrite( "y", &MR::Vector2i::y ).
@@ -48,11 +49,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2i, [] ( pybind11::module_& m )
         def( "normalized", &MR::Vector2i::normalized );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Vector3f>( m, "Vector3" ).
+    pybind11::class_<MR::Vector3f>( m, "Vector3f", "three-dimensional vector" ).
         def( pybind11::init<>() ).
-        def( pybind11::init<float, float, float>() ).
+        def( pybind11::init<float, float, float>(), pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ) ).
         def_readwrite( "x", &MR::Vector3f::x ).
         def_readwrite( "y", &MR::Vector3f::y ).
         def_readwrite( "z", &MR::Vector3f::z ).
@@ -73,25 +74,30 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3, [] ( pybind11::module_& m )
         def( "normalized", &MR::Vector3f::normalized );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Matrix3f>( m, "Matrix3" ).
+    pybind11::class_<MR::Matrix3f>( m, "Matrix3f", "arbitrary 3x3 matrix" ).
         def( pybind11::init<>() ).
-        def_readwrite( "x", &MR::Matrix3f::x ).
+        def_readwrite( "x", &MR::Matrix3f::x, "rows, identity matrix by default" ).
         def_readwrite( "y", &MR::Matrix3f::y ).
         def_readwrite( "z", &MR::Matrix3f::z ).
-        def( "zero", &MR::Matrix3f::zero ).
-        def( "scale", ( MR::Matrix3f( * )( float ) noexcept )& MR::Matrix3f::scale ).
-        def( "scale", ( MR::Matrix3f( * )( float, float, float ) noexcept )& MR::Matrix3f::scale ).
-        def( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, float ) noexcept )& MR::Matrix3f::rotation ).
-        def( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, const MR::Vector3f& ) noexcept )& MR::Matrix3f::rotation ).
-        def( "rotationFromEuler", &MR::Matrix3f::rotationFromEuler ).
-        def( "normSq", &MR::Matrix3f::normSq ).
+        def_static( "zero", &MR::Matrix3f::zero ).
+        def_static( "scale", ( MR::Matrix3f( * )( float ) noexcept )& MR::Matrix3f::scale, pybind11::arg( "s" ), "returns a matrix that scales uniformly" ).
+        def_static( "scale", ( MR::Matrix3f( * )( float, float, float ) noexcept )& MR::Matrix3f::scale,
+            pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "z" ), "returns a matrix that has its own scale along each axis" ).
+        def_static( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, float ) noexcept )& MR::Matrix3f::rotation,
+            pybind11::arg( "axis" ), pybind11::arg( "angle" ),"creates matrix representing rotation around given axis on given angle").
+        def_static( "rotation", ( MR::Matrix3f( * )( const MR::Vector3f&, const MR::Vector3f& ) noexcept )& MR::Matrix3f::rotation,
+            pybind11::arg( "from" ), pybind11::arg( "to" ), "creates matrix representing rotation that after application to (from) makes (to) vector" ).
+        def_static( "rotationFromEuler", &MR::Matrix3f::rotationFromEuler, pybind11::arg( "eulerAngles" ), 
+            "creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)\n"
+            "see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations" ).
+        def( "normSq", &MR::Matrix3f::normSq, "compute sum of squared matrix elements" ).
         def( "norm", &MR::Matrix3f::norm ).
-        def( "det", &MR::Matrix3f::det ).
-        def( "inverse", &MR::Matrix3f::inverse ).
-        def( "transposed", &MR::Matrix3f::transposed ).
-        def( "toEulerAngles", &MR::Matrix3f::toEulerAngles ).
+        def( "det", &MR::Matrix3f::det, "computes determinant of the matrix" ).
+        def( "inverse", &MR::Matrix3f::inverse, "computes inverse matrix" ).
+        def( "transposed", &MR::Matrix3f::transposed, "computes transposed matrix" ).
+        def( "toEulerAngles", &MR::Matrix3f::toEulerAngles, "returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)" ).
         def( pybind11::self + pybind11::self ).
         def( pybind11::self - pybind11::self ).
         def( pybind11::self* float() ).
@@ -106,40 +112,44 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3, [] ( pybind11::module_& m )
         def( pybind11::self == pybind11::self );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::AffineXf3f>( m, "AffineXf3" ).
+    pybind11::class_<MR::AffineXf3f>( m, "AffineXf3f", "affine transformation: y = A*x + b, where A in VxV, and b in V" ).
         def( pybind11::init<>() ).
         def_readwrite( "A", &MR::AffineXf3f::A ).
         def_readwrite( "b", &MR::AffineXf3f::b ).
-        def( "translation", &MR::AffineXf3f::translation ).
-        def( "linear", &MR::AffineXf3f::linear ).
-        def( "xfAround", &MR::AffineXf3f::xfAround ).
-        def( "linearOnly", &MR::AffineXf3f::linearOnly ).
-        def( "inverse", &MR::AffineXf3f::inverse ).
-        def( "__call__", &MR::AffineXf3f::operator() ).
+        def_static( "translation", &MR::AffineXf3f::translation, pybind11::arg( "b" ), "creates translation-only transformation (with identity linear component)" ).
+        def_static( "linear", &MR::AffineXf3f::linear, pybind11::arg( "A" ), "creates linear-only transformation (without translation)" ).
+        def_static( "xfAround", &MR::AffineXf3f::xfAround, pybind11::arg( "A" ), pybind11::arg( "stable" ), "creates transformation with given linear part with given stable point" ).
+        def( "linearOnly", &MR::AffineXf3f::linearOnly, pybind11::arg( "x" ),
+            "applies only linear part of the transformation to given vector (e.g. to normal) skipping adding shift (b)\n"
+            "for example if this is a rigid transformation, then only rotates input vector" ).
+        def( "inverse", &MR::AffineXf3f::inverse, "computes inverse transformation" ).
+        def( "__call__", &MR::AffineXf3f::operator(), "application of the transformation to a point" ).
         def( pybind11::self* pybind11::self ).
         def( pybind11::self == pybind11::self );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Line3f>( m, "Line3" ).
+    pybind11::class_<MR::Line3f>( m, "Line3f", "3-dimensional line: cross( x - p, d ) = 0" ).
         def( pybind11::init<>() ).
         def_readwrite( "p", &MR::Line3f::p ).
         def_readwrite( "d", &MR::Line3f::d ).
-        def( "distanceSq", &MR::Line3f::distanceSq ).
-        def( "normalized", &MR::Line3f::normalized ).
-        def( "project", &MR::Line3f::project );
+        def( "distanceSq", &MR::Line3f::distanceSq, pybind11::arg( "x" ), "returns squared distance from given point to this line" ).
+        def( "normalized", &MR::Line3f::normalized, "returns same line represented with unit d-vector" ).
+        def( "project", &MR::Line3f::project, pybind11::arg( "x" ), "finds the closest point on line" );
 } )
 
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, dot, ( float( * )( const MR::Vector3f&, const MR::Vector3f& ) )& MR::dot<float>, "dot product of two Vector3" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, cross, ( MR::Vector3f( * )( const MR::Vector3f&, const MR::Vector3f& ) )& MR::cross<float>, "cross product of two Vector3" )
-
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DotCrossVector3f, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::Plane3f>( m, "Plane3" ).
+    m.def( "dot", ( float( * )( const MR::Vector3f&, const MR::Vector3f& ) )& MR::dot<float>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );
+    m.def( "cross", ( MR::Vector3f( * )( const MR::Vector3f&, const MR::Vector3f& ) )& MR::cross<float>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3f, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Plane3f>( m, "Plane3f", "3-dimensional plane: dot(n,x) - d = 0" ).
         def( pybind11::init<>() ).
         def_readwrite( "n", &MR::Plane3f::n ).
         def_readwrite( "d", &MR::Plane3f::d );
@@ -174,70 +184,117 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeId, [] ( pybind11::module_& m 
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::ViewportId>( m, "ViewportId" ).
+    pybind11::class_<MR::ViewportId>( m, "ViewportId",
+        "stores unique identifier of a viewport, which is power of two;\n"
+        "id=0 has a special meaning of default viewport in some contexts" ).
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( "value", &MR::ViewportId::value ).
         def( "valid", &MR::ViewportId::valid );
 
-    pybind11::class_<MR::ViewportMask>( m, "ViewportMask" ).
+    pybind11::class_<MR::ViewportMask>( m, "ViewportMask", "stores mask of viewport unique identifiers" ).
         def( pybind11::init<>() ).
         def( pybind11::init<unsigned>() ).
         def( pybind11::init<MR::ViewportId>() ).
-        def_static( "all", &MR::ViewportMask::all ).
-        def_static( "any", &MR::ViewportMask::any );
+        def_static( "all", &MR::ViewportMask::all, "mask meaning all or any viewports" ).
+        def_static( "any", &MR::ViewportMask::any, "mask meaning all or any viewports" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::MeshEdgePoint>( m, "MeshEdgePoint" ).
+    pybind11::class_<MR::MeshEdgePoint>( m, "MeshEdgePoint", "encodes a point on a mesh edge" ).
         def( pybind11::init<>() ).
-        def( pybind11::init<MR::EdgeId, float>() ).
+        def( pybind11::init<MR::EdgeId, float>(), pybind11::arg( "e" ), pybind11::arg( "a" ) ).
         def_readwrite( "e", &MR::MeshEdgePoint::e ).
-        def_readwrite( "a", &MR::MeshEdgePoint::a ).
-        def( "inVertex", ( MR::VertId( MR::MeshEdgePoint::* )( const MR::MeshTopology& )const )& MR::MeshEdgePoint::inVertex ).
-        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex ).
-        def( "getClosestVertex", &MR::MeshEdgePoint::getClosestVertex ).
-        def( "sym", &MR::MeshEdgePoint::sym ).
+        def_readwrite( "a", &MR::MeshEdgePoint::a, "a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )" ).
+        def( "inVertex", ( MR::VertId( MR::MeshEdgePoint::* )( const MR::MeshTopology& )const )& MR::MeshEdgePoint::inVertex,
+            pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
+        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex, "just returns true of false" ).
+        def( "getClosestVertex", &MR::MeshEdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
+        def( "sym", &MR::MeshEdgePoint::sym, "represents the same point relative to sym edge in" ).
         def( pybind11::self == pybind11::self );
 
-    pybind11::class_<MR::TriPointf>( m, "TriPoint" ).
+    pybind11::class_<MR::TriPointf>( m, "TriPointf", 
+        "encodes a point inside a triangle using barycentric coordinates\n"
+        "\tNotations used below: v0, v1, v2 - points of the triangle").
         def( pybind11::init<>() ).
-        def( pybind11::init<float, float>() ).
-        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
-        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
-        def_readwrite( "a", &MR::TriPointf::a ).
-        def_readwrite( "b", &MR::TriPointf::b );
+        def( pybind11::init<float, float>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
+            pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
+            "given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point" ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
+            pybind11::arg( "p" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
+            "given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point" ).
+        def_readwrite( "a", &MR::TriPointf::a, 
+            "barycentric coordinates:\n"
+            "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
+            "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
+        def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" );
 
-    pybind11::class_<MR::MeshTriPoint>( m, "MeshTriPoint" ).
+    pybind11::class_<MR::MeshTriPoint>( m, "MeshTriPoint",
+        "encodes a point inside a triangular mesh face using barycentric coordinates\n"
+        "\tNotations used below:\n" 
+        "\t v0 - the value in org( e )\n"
+        "\t v1 - the value in dest( e )\n"
+        "\t v2 - the value in dest( next( e ) )" ).
         def( pybind11::init<>() ).
-        def( pybind11::init<MR::EdgeId, MR::TriPointf>() ).
-        def( pybind11::init<const MR::MeshEdgePoint&>() ).
-        def( pybind11::init<MR::EdgeId, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>() ).
-        def_readwrite( "e", &MR::MeshTriPoint::e ).
-        def_readwrite( "bary", &MR::MeshTriPoint::bary ).
-        def( "onEdge", &MR::MeshTriPoint::onEdge ).
-        def( "inVertex", &MR::MeshTriPoint::inVertex ).
-        def( "isBd", &MR::MeshTriPoint::isBd );
+        def( pybind11::init<MR::EdgeId, MR::TriPointf>(), pybind11::arg( "e" ), pybind11::arg( "bary" ) ).
+        def( pybind11::init<const MR::MeshEdgePoint&>(), pybind11::arg( "ep" ) ).
+        def( pybind11::init<MR::EdgeId, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
+            pybind11::arg( "e" ), pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
+            "given a point coordinates computes its barycentric coordinates" ).
+        def_readwrite( "e", &MR::MeshTriPoint::e, "left face of this edge is considered" ).
+        def_readwrite( "bary", &MR::MeshTriPoint::bary,
+            "barycentric coordinates\n"
+            "a in [0,1], a=0 => point is on next( e ) edge, a=1 => point is in dest( e )\n"
+            "b in [0,1], b=0 => point is on e edge, b=1 => point is in dest( next( e ) )\n"
+            "a+b in [0,1], a+b=0 => point is in org( e ), a+b=1 => point is on prev( e.sym() ) edge" ).
+        def( "onEdge", &MR::MeshTriPoint::onEdge, pybind11::arg( "topology" ), "returns valid value if the point is on edge, otherwise returns null optional" ).
+        def( "inVertex", &MR::MeshTriPoint::inVertex, pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
+        def( "isBd", &MR::MeshTriPoint::isBd, pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr, "returns true if the point is in vertex on on edge, and that location is on the boundary of the region" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::EdgeMetric>( m, "EdgeMetric" );
 
-    m.def( "identityMetric", &MR::identityMetric, "returns 1 for each edge" );
-    m.def( "edgeLengthMetric", &MR::edgeLengthMetric,"returns edge length" );
-    m.def( "edgeCurvMetric", &MR::edgeCurvMetric, "returns edge's metric that depends both on edge's length and on the angle between its left and right faces" );
-    m.def( "edgeTableMetric", &MR::edgeTableMetric, "pre-computes the metric for all mesh edges to quickly return it later for any edge" );
+    m.def( "identityMetric", &MR::identityMetric, "metric returning 1 for every edge" );
+    m.def( "edgeLengthMetric", &MR::edgeLengthMetric, pybind11::arg( "mesh" ), "returns edge's length as a metric" );
+    m.def( "edgeCurvMetric", &MR::edgeCurvMetric, 
+        pybind11::arg( "mesh" ), pybind11::arg( "angleSinFactor" ) = 2.0f, pybind11::arg( "angleSinForBoundary" ) = 0.0f,
+        "returns edge's metric that depends both on edge's length and on the angle between its left and right faces\n"
+        "\tangleSinFactor - multiplier before dihedral angle sine in edge metric calculation (positive to prefer concave angles, negative - convex)\n"
+        "\tangleSinForBoundary - consider this dihedral angle sine for boundary edges" );
+    m.def( "edgeTableMetric", &MR::edgeTableMetric, pybind11::arg( "topology" ), pybind11::arg( "metric" ), "pre-computes the metric for all mesh edges to quickly return it later for any edge" );
+
     m.def( "buildShortestPath", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) )& MR::buildShortestPath,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
         "builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned" );
+    m.def( "buildShortestPathBiDir", &MR::buildShortestPathBiDir,
+        pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
+        "builds shortest path in euclidean metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) )& MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+    m.def( "buildSmallestMetricPathBiDir", &MR::buildSmallestMetricPathBiDir,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
+        "builds shortest path in given metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) )& MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all faces within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all faces within given number of hops (stars) from the initial region boundary" );
 
     m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::dilateRegionByMetric,
        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
@@ -267,8 +324,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
         "shrinks the region (of faces or vertices) on given value (in meters)" );
 
-    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath& ) )& MR::fillContourLeft, "fill region located to the left from given edges" );
-    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const std::vector<MR::EdgePath>& ) )& MR::fillContourLeft, "fill region located to the left from given edges" );
+    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath& ) )& MR::fillContourLeft,
+        pybind11::arg( "topology" ), pybind11::arg( "contour" ), "fill region located to the left from given edges" );
+    m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const std::vector<MR::EdgePath>& ) )& MR::fillContourLeft,
+        pybind11::arg( "topology" ), pybind11::arg( "contours" ), "fill region located to the left from given edges" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
@@ -277,8 +336,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
         def( "valid", &MR::EdgeId::valid ).
-        def( "sym", &MR::EdgeId::sym ).
-        def( "undirected", &MR::EdgeId::undirected ).
+        def( "sym", &MR::EdgeId::sym, "returns identifier of the edge with same ends but opposite orientation" ).
+        def( "undirected", &MR::EdgeId::undirected, "returns unique identifier of the edge ignoring its direction" ).
         def( "get", &MR::EdgeId::operator int );
 } )
 

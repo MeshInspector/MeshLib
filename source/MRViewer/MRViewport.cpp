@@ -163,31 +163,36 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                     continue;
                 res.point = pc->points[vid];
             }
+            else
+            {
+                res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            }
         }
         else if ( auto linesObj = renderVector[pickRes.geomId]->asType<ObjectLinesHolder>() )
         {
+            res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            UndirectedEdgeId ue{ int( pickRes.primId ) };
             if ( auto pl = linesObj->polyline() )
-            {
-                res.point = unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) );
-                UndirectedEdgeId ue{ int( pickRes.primId ) };
-                res.point = closestPointOnLineSegm( renderVector[pickRes.geomId]->worldXf().inverse()( res.point ), { pl->orgPnt( ue ), pl->destPnt( ue ) } );
-            }
+                res.point = closestPointOnLineSegm( res.point, { pl->orgPnt( ue ), pl->destPnt( ue ) } );
         }
         else if ( auto meshObj = renderVector[pickRes.geomId]->asType<ObjectMeshHolder>() )
         {
             if ( res.face.valid() )
             {
                 const auto& mesh = meshObj->mesh();
-                if ( !mesh || !mesh->topology.hasFace( res.face ) )
+                if ( mesh && !mesh->topology.hasFace( res.face ) )
                 {
                     assert( false );
                     continue;
                 }
 
-                res.point = unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) );
-                Vector3f a, b, c;
-                mesh->getTriPoints( res.face, a, b, c );
-                res.point = closestPointInTriangle( renderVector[pickRes.geomId]->worldXf().inverse()( res.point ), a, b, c ).first;
+                res.point = renderVector[pickRes.geomId]->worldXf().inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+                if ( mesh )
+                {
+                    Vector3f a, b, c;
+                    mesh->getTriPoints( res.face, a, b, c );
+                    res.point = closestPointInTriangle( res.point, a, b, c ).first;
+                }
             }
         }
         if ( auto parent = renderVector[pickRes.geomId]->parent() )

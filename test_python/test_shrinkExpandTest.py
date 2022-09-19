@@ -2,9 +2,9 @@ from helper import *
 import pytest
 
 def test_shrinkExpand():
-	torus = mrmesh.make_components_test_torus(2, 1, 10, 10, None)
+	torus = mrmesh.makeTorusWithComponents(2, 1, 10, 10, None)
 
-	components = mrmesh.get_mesh_components_verts(torus, None)
+	components = mrmesh.getAllComponentsVerts(torus, None)
 
 	assert(len(components) == 5)
 
@@ -18,9 +18,9 @@ def test_shrinkExpand():
 
 	assert(components[0].count() == prevCount -1)
 	prevCount = components[0].count()
-	mrmesh.shrink_verts(torus.topology,components[0],1)
+	mrmesh.shrink(torus.topology,components[0],1)
 	assert(components[0].count() < prevCount)
 
 	prevCount = components[0].count()
-	mrmesh.expand_verts(torus.topology,components[0],1)
+	mrmesh.expand(torus.topology,components[0],1)
 	assert(components[0].count() > prevCount)

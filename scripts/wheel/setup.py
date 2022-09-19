@@ -21,13 +21,13 @@ LIBS_EXTENSION = ""
 SYSTEM = ""
 
 if platform_system == "Windows":
-    LIBS_EXTENSION = ".pyd"
+    LIBS_EXTENSION = "pyd"
     SYSTEM = "Microsoft :: Windows"
 elif platform_system == "Linux":
-    LIBS_EXTENSION = ".so"
+    LIBS_EXTENSION = "so"
     SYSTEM = "POSIX :: Linux"
 elif platform_system == "Darwin":
-    LIBS_EXTENSION = ".so"
+    LIBS_EXTENSION = "so"
     SYSTEM = "MacOS"
 
 here = pathlib.Path(__file__).parent.resolve()

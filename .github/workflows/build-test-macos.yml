@@ -61,7 +61,8 @@ jobs:
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
 
       - name: Upload Wheel to Artifacts
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        if: ${{false}}
+        #if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v2
         with:
           name: Wheelhouse
@@ -69,7 +70,8 @@ jobs:
           retention-days: 1
 
       - name: Upload Wheel to Distributive
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        if: ${{false}}
+        #if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v2
         with:
           name: Distributives

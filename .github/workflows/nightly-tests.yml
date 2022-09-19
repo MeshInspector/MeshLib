@@ -1,0 +1,51 @@
+
+name: Nightly Tests
+
+on:
+  schedule:
+    - cron:  '20 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  pip-test:
+    timeout-minutes: 20
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [winodws-latest, ubunut-20.04, macos-latest]
+        config: [Release, Test]
+        include:
+          - os: winodws-latest
+            py-version: 3.10
+            py-cmd: python
+          - os: ubunut-20.04
+            py-version: 3.8
+            py-cmd: python3
+          - os: macos-latest
+            py-version: 3.10
+            py-cmd: python3
+          - config: Release
+            pip-options: ""
+          - config: Test
+            pip-options: "-i https://test.pypi.org/simple/"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Install pip package
+        run: |
+          pip install --upgrade pip
+          pip install ${{ matrix.pip-options }} meshlib
+
+      - name: Run Python tests
+        run: ${{ matrix.py-version }} ./scripts/run_python_test_script.py
+
+
+
+  #install-test:
+

@@ -34,6 +34,8 @@ public:
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Lines"; }
+    /// reflects the lines from a given plane
+    MRMESH_API void mirror( const Plane3f& plane );
 
 protected:
     MRMESH_API ObjectLines( const ObjectLines& other );

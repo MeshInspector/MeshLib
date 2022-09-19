@@ -38,6 +38,8 @@ public:
     MRMESH_API VertId addPoint( const Vector3f& point );
     /// appends a point with normal and returns its VertId
     MRMESH_API VertId addPoint( const Vector3f& point, const Vector3f& normal );
+    /// reflects the points from a given plane
+    MRMESH_API void mirror( const Plane3f& plane );
 
     /// Invalidates caches (e.g. aabb-tree) after a change in point cloud
     void invalidateCaches() { AABBTreeOwner_.reset(); }

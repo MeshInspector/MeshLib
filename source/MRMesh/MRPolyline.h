@@ -116,10 +116,6 @@ public:
         invalidateCaches();
     }
 
-    template < class Q = V>
-    typename std::enable_if_t< !std::is_same_v<Q, Vector3f> > mirror( const Plane3f& plane )
-    {}
-
 private:
     mutable UniqueThreadSafeOwner<AABBTreePolyline<V>> AABBTreeOwner_;
 };

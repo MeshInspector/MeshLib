@@ -100,7 +100,7 @@ jobs:
           python3 -m pip install auditwheel wheel setuptools
           python3 ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
-          python3 setup.py bdist_wheel --version ${{inputs.version}} --python-tag=cp38
+          python3 setup.py bdist_wheel --version ${{inputs.version}}
           python3 -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
 
       - name: Upload Wheel to Artifacts

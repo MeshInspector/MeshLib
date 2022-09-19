@@ -24,8 +24,6 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFixer.h"
-#include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRMeshFwd.h"
 #include <tl/expected.hpp>
 
 using namespace MR;
@@ -288,8 +286,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::MeshToDistanceMapParams>( m, "MeshToDistanceMapParams" ).
         def( pybind11::init<>(), "Default constructor. Manual params initialization is required" ).
-        def( pybind11::init<const MR::MeshToDistanceMapParams&>(), "Init fields by `MeshToDistanceMapParams` struct" ).
-        def( pybind11::init<const MR::ContourToDistanceMapParams&>(), "Init fields by `ContourToDistanceMapParams` struct" ).
         def( "setDistanceLimits", &MR::MeshToDistanceMapParams::setDistanceLimits, pybind11::arg( "min" ), pybind11::arg( "max" ),
             "if distance is not in set range, pixel became invalid\n"
             "default value: false. Any distance will be applied (include negative)" ).
@@ -305,6 +301,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 
     pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
+        def( pybind11::init<const MR::MeshToDistanceMapParams&>(), "Init fields by `MeshToDistanceMapParams` struct" ).
+        def( pybind11::init<const MR::ContourToDistanceMapParams&>(), "Init fields by `ContourToDistanceMapParams` struct" ).
         def( "toWorld", &MR::DistanceMapToWorld::toWorld, pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "depth" ),
             "Get world coordinate by depth map info.\n"
             "x - float X coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
@@ -340,10 +338,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
 
-    m.def( "distanceMapTo2DIsoPolyline", &MR::distanceMapTo2DIsoPolyline,
+    m.def( "distanceMapTo2DIsoPolyline", ( Polyline2( * )(const DistanceMap&, float) ) &MR::distanceMapTo2DIsoPolyline,
         pybind11::arg( "dm" ), pybind11::arg( "isoValue" ),
-        "converts distance map to 2d iso-lines:\n"
-        "iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );
+        "Converts distance map to 2d iso-lines:\n"
+        "Iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );
+
+    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<Polyline2, AffineXf3f>( * )( const DistanceMap&, const DistanceMapToWorld&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
+        pybind11::arg( "dm" ), pybind11::arg( "params" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
+        "Iso-lines are created in real space.\n"
+        "( contours plane with parameters according DistanceMapToWorld )\n"
+        "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
+
 } )
 
 // Position Verts Smooth

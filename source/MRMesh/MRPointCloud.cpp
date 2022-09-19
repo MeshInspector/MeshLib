@@ -2,7 +2,7 @@
 #include "MRAABBTreePoints.h"
 #include "MRComputeBoundingBox.h"
 #include "MRPch/MRSpdlog.h"
-
+#include "MRPlane3.h"
 namespace MR
 {
 
@@ -87,6 +87,16 @@ size_t PointCloud::heapBytes() const
         + normals.heapBytes()
         + validPoints.heapBytes()
         + AABBTreeOwner_.heapBytes();
+}
+
+void PointCloud::mirror( const Plane3f& plane )
+{
+    for ( auto& p : points )
+    {
+        p += 2.0f * ( plane.project( p ) - p );
+    }
+
+    invalidateCaches();
 }
 
 } //namespace MR

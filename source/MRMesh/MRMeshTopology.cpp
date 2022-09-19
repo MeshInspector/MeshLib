@@ -939,8 +939,30 @@ void MeshTopology::addPart( const MeshTopology & from,
         *outEmap = std::move( emap );
 }
 
+bool MeshTopology::operator ==( const MeshTopology & b ) const
+{
+    MR_TIMER
+    // make fast comparisons first
+    if ( numValidVerts_ != b.numValidVerts_
+      || numValidFaces_ != b.numValidFaces_
+      || validVerts_ != b.validVerts_
+      || validFaces_ != b.validFaces_ )
+        return false;
+
+    for ( auto v : validVerts_ )
+        if ( edgePerVertex_[v] != b.edgePerVertex_[v] )
+            return false;
+
+    for ( auto f : validFaces_ )
+        if ( edgePerFace_[f] != b.edgePerFace_[f] )
+            return false;
+
+    return edges_ == b.edges_;
+}
+
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
 {
+    MR_TIMER
     edges_.resize( edgeSize );
 
     edgePerVertex_.resize( vertSize );

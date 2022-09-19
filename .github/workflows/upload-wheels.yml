@@ -45,7 +45,7 @@ jobs:
         with:
           repository: MeshInspector/MeshLib
           latest: true
-          fileName: "meshlib-*.whl"
+          fileName: "*.whl"
           out-file-path: ""
 
       - name: Download Wheels Artifacts

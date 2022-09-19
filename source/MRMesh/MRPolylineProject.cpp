@@ -4,7 +4,9 @@
 #include "MRAABBTreePolyline.h"
 #include "MRLineSegm.h"
 #include <algorithm>
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #include <execution>
+#endif
 
 namespace MR
 {

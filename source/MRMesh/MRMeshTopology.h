@@ -247,9 +247,8 @@ public:
     /// \return text of error if any
     MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
 
-    /// comparison via edges (all other members are considered as not important caches)
-    [[nodiscard]] bool operator ==( const MeshTopology & b ) const { return edges_ == b.edges_; }
-    [[nodiscard]] bool operator !=( const MeshTopology & b ) const { return edges_ != b.edges_; }
+    /// compare that two topologies are exactly the same
+    [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;
 
     /// These function are for parallel mesh creation from different threads. If you are not sure, do not use them.
     /// \details resizes all internal vectors and sets the numbers of valid elements in preparation for addPackedPart

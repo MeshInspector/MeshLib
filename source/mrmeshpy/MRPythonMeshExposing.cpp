@@ -64,7 +64,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
             "gets 3 vertices of given triangular face;\n"
-            "the vertices are returned in counter-clockwise order if look from mesh outside" );
+            "the vertices are returned in counter-clockwise order if look from mesh outside" ).
+        def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
@@ -153,7 +154,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint, pybind11::arg( "p" ), "returns interpolated coordinates of given point" ).
         def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint, pybind11::arg( "ep" ), "returns a point on the edge: origin point for f=0 and destination point for f=1" ).
         def( "invalidateCaches", &MR::Mesh::invalidateCaches, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
-        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) )& MR::Mesh::transform, pybind11::arg( "xf" ), "applies given transformation to all valid mesh vertices" );
+        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) )& MR::Mesh::transform, pybind11::arg( "xf" ), "applies given transformation to all valid mesh vertices" ).
+        def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )

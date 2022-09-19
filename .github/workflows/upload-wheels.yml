@@ -41,7 +41,7 @@ jobs:
 
       - name: Download Wheels from Release
         if: ${{ env.deploy_type == 'prod' }}
-        uses: robinraju/release-downloader@v1.3
+        uses: robinraju/release-downloader@v1.5
         with:
           repository: MeshInspector/MeshLib
           latest: true

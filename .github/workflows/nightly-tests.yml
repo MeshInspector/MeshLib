@@ -41,7 +41,7 @@ jobs:
       - name: Install pip package
         run: |
           pip install --upgrade pip
-          pip install ${{ matrix.pip-options }} meshlib
+          pip install --upgrade --force-reinstall ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
         run: ${{ matrix.py-cmd }} ./scripts/run_python_test_script.py

@@ -34,9 +34,8 @@ struct [[nodiscard]] Mesh
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
 
-    // comparison
-    bool operator ==( const Mesh & b ) const { return topology == b.topology && points == b.points; }
-    bool operator !=( const Mesh & b ) const { return !operator==( b ); }
+    /// compare that two meshes are exactly the same
+    [[nodiscard]] MRMESH_API bool operator ==( const Mesh & b ) const;
 
     // returns coordinates of the edge origin
     Vector3f orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }

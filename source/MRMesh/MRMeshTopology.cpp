@@ -939,8 +939,49 @@ void MeshTopology::addPart( const MeshTopology & from,
         *outEmap = std::move( emap );
 }
 
+bool MeshTopology::operator ==( const MeshTopology & b ) const
+{
+    MR_TIMER
+    // make fast comparisons first
+    if ( numValidVerts_ != b.numValidVerts_
+      || numValidFaces_ != b.numValidFaces_ )
+        return false;
+
+    auto sameSetBits = []<class T>( const TaggedBitSet<T> & a,  const TaggedBitSet<T> & b )
+    {
+        if ( a.size() == b.size() )
+            return a == b;
+
+        auto ai = begin( a );
+        auto bi = begin( b );
+        const auto ae = end( a );
+        const auto be = end( b );
+        for ( ; ai != ae && bi != be; ++ai, ++bi )
+            if ( *ai != *bi )
+                return false;
+        return ai == ae && bi == be;
+    };
+
+    if ( !sameSetBits( validVerts_, b.validVerts_ )
+      || !sameSetBits( validFaces_, b.validFaces_ ) )
+        return false;
+
+    /* uncommenting this breaks MeshDiff unit test
+    for ( auto v : validVerts_ )
+        if ( edgePerVertex_[v] != b.edgePerVertex_[v] )
+            return false;
+
+    for ( auto f : validFaces_ )
+        if ( edgePerFace_[f] != b.edgePerFace_[f] )
+            return false;
+    */
+
+    return edges_ == b.edges_;
+}
+
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
 {
+    MR_TIMER
     edges_.resize( edgeSize );
 
     edgePerVertex_.resize( vertSize );

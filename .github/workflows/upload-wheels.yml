@@ -32,7 +32,7 @@ jobs:
       - name: Set Deploy Type
         id: set-deploy-type
         run: |
-          if [ "${{github.event.inputs.deploy_type}}" == "prod" ] || [ "${{inputs.deploy_type}}" == "prod" ] || [ "${{github.event_name}}" == "release" ]; then
+          if [ "${{github.event.inputs.deploy_type}}" = "prod" ] || [ "${{inputs.deploy_type}}" = "prod" ] || [ "${{github.event_name}}" = "release" ]; then
             deploy_type="prod"
           else
             deploy_type="test"

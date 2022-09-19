@@ -1,6 +1,40 @@
-# used in pair with create_wheel.sh
 import setuptools
 import pathlib
+import argparse
+import os
+import platform
+import sys
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Just an example",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-v", "--version", help="wheel version")
+    args = parser.parse_args()
+    config = vars(args)
+    print(config)
+    return args
+
+args = parse_args()
+
+platform_system = platform.system()
+print(platform_system)
+
+VERSION=str(args.version)
+PY_VERSION=str(sys.version_info[0]) + "." + str(sys.version_info[1])
+LIBS_EXTENSION = ""
+SYSTEM = ""
+
+if platform_system == "Windows":
+    LIBS_EXTENSION = ".pyd"
+    SYSTEM = "Microsoft :: Windows"
+elif platform_system == "Linux":
+    LIBS_EXTENSION = ".so"
+    SYSTEM = "POSIX :: Linux"
+elif platform_system == "Darwin":
+    LIBS_EXTENSION = ".so"
+    SYSTEM = "MacOS"
+
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -9,7 +43,7 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 
 setuptools.setup(
     name="meshlib",
-    version='$',
+    version=VERSION,
     author="MeshLib Team",
     author_email="support@meshinspector.com",
     description="3d processing library",
@@ -18,15 +52,15 @@ setuptools.setup(
     url="https://github.com/MeshInspector/MeshLib",
     license_files=('LICENSE',),
     packages=['meshlib'],
-    package_data={'meshlib': ['mrmeshnumpy.$', 'mrmeshpy.$', 'mrviewerpy.$']},
+    package_data={'meshlib': ['mrmeshnumpy.{ext}', 'mrmeshpy.{ext}', 'mrviewerpy.{ext}'.format(ext=LIBS_EXTENSION)]},
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: $",
+        "Programming Language :: Python :: {}}".format(PY_VERSION),
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
-        "Operating System :: $",
+        "Operating System :: {}".format(SYSTEM),
     ],
-    python_requires='==$.*',
+    python_requires='=={}.*'.format(PY_VERSION),
     install_requires=[
         'numpy>=1.21.0',
         'pytest>=7.1.0',

@@ -98,19 +98,17 @@ jobs:
           cd ..
           python3 -m pip install --upgrade pip
           python3 -m pip install auditwheel wheel setuptools
-          python3 ./scripts/wheel/create_wheel.py -v ${{inputs.version}}
+          python3 ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
-          python3 setup.py bdist_wheel
+          python3 setup.py bdist_wheel --version ${{inputs.version}} --python-tag=cp38
           python3 -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
-          cd ../../..
-          mv ./scripts/wheel/meshlib/wheelhouse/*.whl ./
 
       - name: Upload Wheel to Artifacts
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
           name: Wheelhouse
-          path: meshlib-*.whl
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
       - name: Upload Wheel to Distributive

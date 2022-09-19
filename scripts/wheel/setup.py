@@ -6,21 +6,16 @@ import platform
 import sys
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Just an example",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-v", "--version", help="wheel version")
-    args = parser.parse_args()
-    config = vars(args)
-    print(config)
-    return args
-
-args = parse_args()
-
 platform_system = platform.system()
 print(platform_system)
 
-VERSION=str(args.version)
+VERSION = ""
+
+if '--version' in sys.argv:
+    index = sys.argv.index('--version')
+    sys.argv.pop(index)  # Removes the '--foo'
+    VERSION = sys.argv.pop(index)  # Returns the element after the '--foo'
+
 PY_VERSION=str(sys.version_info[0]) + "." + str(sys.version_info[1])
 LIBS_EXTENSION = ""
 SYSTEM = ""
@@ -35,9 +30,7 @@ elif platform_system == "Darwin":
     LIBS_EXTENSION = ".so"
     SYSTEM = "MacOS"
 
-
 here = pathlib.Path(__file__).parent.resolve()
-
 # Get the long description from the readme file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
@@ -55,7 +48,7 @@ setuptools.setup(
     package_data={'meshlib': ['mrmeshnumpy.{ext}', 'mrmeshpy.{ext}', 'mrviewerpy.{ext}'.format(ext=LIBS_EXTENSION)]},
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: {}}".format(PY_VERSION),
+        "Programming Language :: Python :: {}".format(PY_VERSION),
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
         "Operating System :: {}".format(SYSTEM),

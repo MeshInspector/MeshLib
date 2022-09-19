@@ -156,9 +156,6 @@ jobs:
     needs:
       - update-win-version
       - ubuntu20-build-test
-      - ubuntu22-build-test
-      - fedora35-build-test
-      - emscripten-build-test
       - macos-build-test
     uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@master
     with:

@@ -53,9 +53,9 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel setuptools delocate
-          python3 ./scripts/wheel/create_wheel.py -v ${{inputs.version}}
+          python3 ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          python3 setup.py bdist_wheel --plat-name=macosx_10_15_x86_64 --python-tag=cp310
+          python3 setup.py bdist_wheel --plat-name=macosx_10_15_x86_64 --python-tag=cp310  --version ${{inputs.version}}
           delocate-path meshlib
           cd ../../..
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl

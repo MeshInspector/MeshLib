@@ -44,7 +44,7 @@ jobs:
           pip install ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
-        run: ${{ matrix.py-version }} ./scripts/run_python_test_script.py
+        run: ${{ matrix.py-cmd }} ./scripts/run_python_test_script.py
 
 
 

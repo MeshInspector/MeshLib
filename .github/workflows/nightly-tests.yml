@@ -11,18 +11,19 @@ jobs:
     timeout-minutes: 20
     runs-on: ${{matrix.os}}
     strategy:
+      fail-fast: true
       matrix:
-        os: [winodws-latest, ubunut-20.04, macos-latest]
+        os: [windows-latest, ubuntu-20.04, macos-latest]
         config: [Release, Test]
         include:
           - os: winodws-latest
-            py-version: 3.10
+            py-version: "3.10"
             py-cmd: python
           - os: ubunut-20.04
-            py-version: 3.8
+            py-version: "3.8"
             py-cmd: python3
           - os: macos-latest
-            py-version: 3.10
+            py-version: "3.10"
             py-cmd: python3
           - config: Release
             pip-options: ""

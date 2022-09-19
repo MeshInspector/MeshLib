@@ -24,6 +24,8 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFixer.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRMeshFwd.h"
 #include <tl/expected.hpp>
 
 using namespace MR;

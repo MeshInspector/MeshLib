@@ -204,20 +204,20 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
 
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".bmp" )
+    if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
-    else if ( ext == u8".png" )
+    else if ( ext == ".png" )
         res = MR::ImageSave::toPng( image, file );
 #endif
 #ifndef MRMESH_NO_JPEG
-    else if ( ext == u8".jpg" )
+    else if ( ext == ".jpg" )
         res = MR::ImageSave::toJpeg( image, file );
 #endif
 #endif

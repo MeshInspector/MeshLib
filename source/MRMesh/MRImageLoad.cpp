@@ -117,13 +117,13 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
 
 tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
     tl::expected<Image, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
 #ifndef MRMESH_NO_PNG
-    if ( ext == u8".png" )
+    if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );
 #endif
     return res;

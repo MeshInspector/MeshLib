@@ -469,24 +469,24 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
 tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
                                                       ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".off" )
+    if ( ext == ".off" )
         res = MR::MeshSave::toOff( mesh, file, callback );
-    else if ( ext == u8".obj" )
+    else if ( ext == ".obj" )
         res = MR::MeshSave::toObj( mesh, file, {}, 1, callback );
-    else if ( ext == u8".stl" )
+    else if ( ext == ".stl" )
         res = MR::MeshSave::toBinaryStl( mesh, file, callback );
-    else if ( ext == u8".ply" )
+    else if ( ext == ".ply" )
         res = MR::MeshSave::toPly( mesh, file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
-    else if ( ext == u8".ctm" )
+    else if ( ext == ".ctm" )
         res = MR::MeshSave::toCtm( mesh, file, {}, colors, callback );
 #endif
-    else if ( ext == u8".mrmesh" )
+    else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, file, callback );
     return res;
 }

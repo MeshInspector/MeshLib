@@ -9,6 +9,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRStringConvert.h"
 #include <filesystem>
 
 namespace MR
@@ -188,12 +189,12 @@ tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_
 
     const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
     return std::async( getAsyncLaunchType(),
-        [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
+        [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
 }
 
 tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
+    auto res = PointsLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

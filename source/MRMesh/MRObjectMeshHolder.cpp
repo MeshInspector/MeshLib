@@ -13,6 +13,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRStringConvert.h"
 #include <filesystem>
 
 namespace MR
@@ -49,7 +50,7 @@ tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( 
     if ( ancillary_ || !mesh_ )
         return {};
 
-    auto save = [mesh = mesh_, filename = path.u8string() + u8".ctm", this]() 
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
     { 
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
     };
@@ -128,7 +129,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

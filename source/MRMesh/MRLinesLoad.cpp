@@ -128,14 +128,14 @@ tl::expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCall
 
 tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".mrlines" )
+    if ( ext == ".mrlines" )
         res = fromMrLines( file, callback );
-    if ( ext == u8".pts" )
+    if ( ext == ".pts" )
         res = fromPts( file, callback );
     return res;
 }

@@ -12,6 +12,7 @@
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
+#include "MRStringConvert.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
@@ -328,7 +329,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = path.u8string() + u8".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
+        [this, filename = utf8string( path.u8string() ) + ".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -362,7 +363,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
 #ifndef MRMESH_NO_DICOM
-    auto res = VoxelsLoad::loadRaw( path.u8string() + u8".raw", progressCb );
+    auto res = VoxelsLoad::loadRaw( utf8string( path ) + ".raw", progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     

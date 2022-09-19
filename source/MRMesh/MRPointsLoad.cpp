@@ -327,20 +327,20 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
 tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".ply" )
+    if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
-    else if ( ext == u8".ctm" )
+    else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
 #endif
-    else if ( ext == u8".obj" )
+    else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( file, callback );
-    else if ( ext == u8".asc" )
+    else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
     return res;
 }

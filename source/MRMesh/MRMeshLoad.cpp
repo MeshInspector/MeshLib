@@ -572,17 +572,17 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char)tolower( c );
 
-    ext = u8"*" + ext;
+    ext = "*" + ext;
 
     tl::expected<MR::Mesh, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
     {
-        return filter.extension == asString( ext );
+        return filter.extension == ext;
     } );
     if ( itF == filters.end() )
         return res;

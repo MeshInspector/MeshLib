@@ -8,10 +8,8 @@
 requirements_file=requirements/macos.txt
 for req in `cat $requirements_file`
 do
-  echo "brew \"${req}\"" >> requirements/Brewfile
+  brew install $req
 done
-
-brew bundle install --file=requirements/Brewfile
 
 brew install pybind11
 

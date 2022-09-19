@@ -93,17 +93,6 @@ std::vector<std::string> ObjectLines::getInfoLines() const
     return res;
 }
 
-void ObjectLines::mirror( const Plane3f& plane )
-{
-    if ( !polyline_ )
-        return;
-
-    for ( auto& p : polyline_->points )
-    {
-        p += 2.0f * ( plane.project( p ) - p );
-    }
-}
-
 ObjectLines::ObjectLines( const ObjectLines& other ) :
     ObjectLinesHolder( other )
 {

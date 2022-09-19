@@ -2,6 +2,7 @@
 
 #include "MRPolylineTopology.h"
 #include "MRUniqueThreadSafeOwner.h"
+#include "MRPlane3.h"
 
 namespace MR
 {
@@ -103,6 +104,15 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    /// reflects the polyline from a given plane. Enabled only for Plane3f
+    template < typename = std::enable_if_t< std::is_same_v<V, Vector3f> > >
+    void mirror( const Plane3f& plane )
+    {
+        for ( auto& p : points )
+        {
+            p += 2.0f * ( plane.project( p ) - p );
+        }
+    }
 
 private:
     mutable UniqueThreadSafeOwner<AABBTreePolyline<V>> AABBTreeOwner_;

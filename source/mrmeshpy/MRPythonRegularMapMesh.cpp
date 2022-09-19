@@ -44,11 +44,14 @@ MR::Mesh meshRegularMap( const char* surfacePCPath, const char* directionsPCPath
     return resMesh.value();
 }
 
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, mesh_regular_map, meshRegularMap, "creates and select mesh by regular map\n"
-                     "params:\n"
-                     " path to surface PointCloud\n"
-                     " path to directions PointCloud\n"
-                     " path to distances binnary file (1/distance per point)\n"
-                     " map width\n"
-                     " map height\n")
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegularMapMeshing, [] ( pybind11::module_& m )
+{
+    m.def( "meshRegularMap", &meshRegularMap,
+        pybind11::arg( "surfacePCPath" ), pybind11::arg( "directionsPCPath" ), pybind11::arg( "distancesPath" ), pybind11::arg( "width" ), pybind11::arg( "height" ),
+        "creates and select mesh by regular map\n"
+        "\tsurfacePCPath - path to surface PointCloud\n"
+        "\tdirectionsPCPath - path to directions PointCloud\n"
+        "\tdistancesPath - path to distances binnary file (1/distance per point)\n"
+        "\twidth - map width\n"
+        "\theight - map height" );
+} )

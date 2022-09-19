@@ -9,6 +9,6 @@ def test_fixUndercuts():
     dir.y = 0
     dir.z = 1
 
-    mrmesh.fix_undercuts(torus, dir, 0.2, 0.)
+    mrmesh.fixUndercuts(torus, dir, 0.2, 0.)
 
     assert(torus.points.vec.size() > 2900)

@@ -8,8 +8,7 @@ gdcm
 ilmbase
 jpeg-turbo
 jsoncpp
-eigen
-llvm
+llvm@13
 openblas
 openexr
 openvdb

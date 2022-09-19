@@ -10,12 +10,12 @@ def test_stitch_TwoHoles():
     assert(len(holes)==2)
 
     params = mrmesh.StitchHolesParams()
-    mrmesh.set_stitch_holes_metric_edge_length(params, torus)
-    mrmesh.stitch_holes(torus, holes[0], holes[1], params)
+    params.metric = mrmesh.getEdgeLengthStitchMetric(torus)
+    mrmesh.buildCylinderBetweenTwoHoles(torus, holes[0], holes[1], params)
 
     holes = torus.topology.findHoleRepresentiveEdges()
     assert(len(holes)==0)
 
-    mrmesh.stitch_two_holes(torus2, params)
+    mrmesh.buildCylinderBetweenTwoHoles(torus2, params)
     holes = torus2.topology.findHoleRepresentiveEdges()
     assert(len(holes)==0)

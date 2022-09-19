@@ -56,6 +56,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
         def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
         def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
+        def( "deleteFaces", &MR::MeshTopology::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
         def( "findBoundary", &MR::MeshTopology::findBoundary, pybind11::arg( "region" ) = nullptr,
             "returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;\n"
             "unlike findRegionBoundary this method returns loops in opposite orientation" ).
@@ -63,7 +64,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
             "gets 3 vertices of given triangular face;\n"
-            "the vertices are returned in counter-clockwise order if look from mesh outside" );
+            "the vertices are returned in counter-clockwise order if look from mesh outside" ).
+        def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
@@ -94,8 +96,14 @@ MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilde
     return MR::MeshBuilder::fromTriangles( t, s );
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )
 {
+    pybind11::class_<MR::ThreeVertIds>( m, "ThreeVertIds" ).
+        def( pybind11::init( [] ( MR::VertId v0, MR::VertId v1, MR::VertId v2 )->MR::ThreeVertIds
+    {
+        return { v0, v1, v2 };
+    } ) );
+
     pybind11::class_<MR::Triangulation>( m, "Triangulation" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &Triangulation::vec_ );
@@ -113,7 +121,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, [] ( pybind11::module_& m )
         "if skippedTris is given then it receives all input triangles not added in the resulting topology" );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vecMeshBuilderTri, MR::MeshBuilder::Triangle )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorThreeVertIds, MR::ThreeVertIds )
 
 MR::Mesh pythonCopyMeshFunction( const MR::Mesh& mesh )
 {
@@ -146,7 +154,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "triPoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshTriPoint& )const )& MR::Mesh::triPoint, pybind11::arg( "p" ), "returns interpolated coordinates of given point" ).
         def( "edgePoint", ( MR::Vector3f( MR::Mesh::* )( const MR::MeshEdgePoint& )const )& MR::Mesh::edgePoint, pybind11::arg( "ep" ), "returns a point on the edge: origin point for f=0 and destination point for f=1" ).
         def( "invalidateCaches", &MR::Mesh::invalidateCaches, "Invalidates caches (e.g. aabb-tree) after a change in mesh geometry or topology" ).
-        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) )& MR::Mesh::transform, pybind11::arg( "xf" ), "applies given transformation to all valid mesh vertices" );
+        def( "transform", ( void( MR::Mesh::* ) ( const AffineXf3f& ) )& MR::Mesh::transform, pybind11::arg( "xf" ), "applies given transformation to all valid mesh vertices" ).
+        def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
@@ -237,6 +246,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
     m.def( "getEdgeLengthFillMetric", &MR::getEdgeLengthFillMetric, pybind11::arg( "mesh" ),
         "Simple metric minimizing the sum of all edge lengths" );
     
+    m.def( "getEdgeLengthStitchMetric", &MR::getEdgeLengthStitchMetric, pybind11::arg( "mesh" ),
+        "Forbids connecting vertices from the same hole\n"
+        "Simple metric minimizing edge length" );
+
     m.def( "getCircumscribedMetric", &MR::getCircumscribedMetric, pybind11::arg( "mesh" ),
         "This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.\n"
         "It is rather fast to calculate, and it results in typically good triangulations." );
@@ -251,6 +264,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" ).
         def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces, "If not nullptr accumulate new faces" );
 
+    pybind11::class_<MR::StitchHolesParams>( m, "StitchHolesParams", "Structure has some options to control buildCylinderBetweenTwoHoles" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "metric", &StitchHolesParams::metric,
+            "Specifies triangulation metric\n"
+            "default for buildCylinderBetweenTwoHoles: getComplexStitchMetric").
+        def_readwrite( "outNewFaces", &StitchHolesParams::outNewFaces, "If not nullptr accumulate new faces" );
+
     m.def( "fillHole", &MR::fillHole,
         pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "params" ) = MR::FillHoleParams{},
         "Fills given hole represented by one of its edges (having no valid left face),\n"
@@ -259,6 +279,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         "\tmesh - mesh with hole\n"
         "\ta - EdgeId which represents hole\n"
         "\tparams - parameters of hole filling" );
+
+    m.def( "buildCylinderBetweenTwoHoles", ( void ( * )( Mesh&, EdgeId, EdgeId, const StitchHolesParams& ) )& MR::buildCylinderBetweenTwoHoles,
+        pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "params" ) = MR::StitchHolesParams{},
+        "Build cylindrical patch to fill space between two holes represented by one of their edges each,\n"
+        "default metric: ComplexStitchMetric\n"
+        "\tmesh - mesh with hole\n"
+        "\ta - EdgeId which represents 1st hole\n"
+        "\tb - EdgeId which represents 2nd hole\n"
+        "\tparams - parameters of holes stitching" );
+
+    m.def( "buildCylinderBetweenTwoHoles", ( bool ( * )( Mesh&, const StitchHolesParams& ) )& MR::buildCylinderBetweenTwoHoles,
+       pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MR::StitchHolesParams{},
+       "this version finds holes in the mesh by itself and returns false if they are not found" );
 } )
 
 Mesh pythonMergeMehses( const pybind11::list& meshes )
@@ -345,5 +378,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         "creates torus with empty sectors\n"
         "main application - testing Components" );
 
+
+    pybind11::class_<MR::FaceFace>( m, "FaceFace" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<FaceId, FaceId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
+        def_readwrite( "aFace", &MR::FaceFace::aFace ).
+        def_readwrite( "bFace", &MR::FaceFace::bFace );
+
+    m.def( "findSelfCollidingTriangles", &MR::findSelfCollidingTriangles, pybind11::arg( "mp" ), "finds all pairs of colliding triangles from one mesh or a region" );
+
     m.def( "findSelfCollidingTrianglesBS", &MR::findSelfCollidingTrianglesBS, pybind11::arg( "mp" ), "finds union of all self-intersecting faces" );
+
+    m.def( "findCollidingTriangles", &MR::findCollidingTriangles, 
+        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false, 
+        "finds all pairs of colliding triangles from two meshes or two mesh regions\n"
+        "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
+        "\tfirstIntersectionOnly - if true then the function returns at most one pair of intersecting triangles and returns faster" );
 } )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, MR::FaceFace )

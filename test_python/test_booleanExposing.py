@@ -30,18 +30,7 @@ def test_booleanExposing():
 
 
     brmmAA = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
-    brmmAB = bResMapper.map( meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
-    brmmBA = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.A )
     brmmBB = bResMapper.map( meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.B )
 
-    assert( brmmAA.size() == 14)
     assert( brmmAA.count() == 1)
-
-    assert( brmmAB.size() == 4)
-    assert( brmmAB.count() == 1)
-
-    assert( brmmBA.size() == 14)
-    assert( brmmBA.count() == 1)
-
-    assert( brmmBB.size() == 4)
     assert( brmmBB.count() == 1)

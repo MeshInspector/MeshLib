@@ -6,15 +6,8 @@ def isEqualVector3(a, b):
     return diff.length() < 1.e-6
 
 
-size = mrmesh.Vector3f.diagonal( 2 )
-pos1 = mrmesh.Vector3f.diagonal( 0 )
-pos2 = mrmesh.Vector3f.diagonal( -1 )
-pos3 = mrmesh.Vector3f.diagonal( 1 )
-
-
 # TEST 1
-
-def test_decimate1():
+def decimate1(size, pos1, pos2, pos3):
     mesh = mrmesh.makeCube(size, pos1)
     settings = mrmesh.DecimateSettings()
 
@@ -30,7 +23,7 @@ def test_decimate1():
 
 
 # TEST 2
-def test_decimate2():
+def decimate2(size, pos1, pos2, pos3):
     meshA = mrmesh.makeCube(size, pos1)
     meshB = mrmesh.makeCube(size, pos2)
 
@@ -53,3 +46,12 @@ def test_decimate2():
     assert( mesh.topology.getValidVerts().size() == 14 )
     assert( mesh.topology.getValidVerts().count() == 8 )
     assert( mesh.topology.findHoleRepresentiveEdges().size() == 0 )
+
+
+def test_deciamte():
+    size = mrmesh.Vector3f.diagonal( 2 )
+    pos1 = mrmesh.Vector3f.diagonal( 0 )
+    pos2 = mrmesh.Vector3f.diagonal( -1 )
+    pos3 = mrmesh.Vector3f.diagonal( 1 )
+    decimate1(size, pos1, pos2, pos3)
+    decimate2(size, pos1, pos2, pos3)

@@ -32,7 +32,7 @@ jobs:
       - name: Set Deploy Type
         id: set-deploy-type
         run: |
-          if [ "${{github.event.inputs.deploy_type}}" == "prod" ] || [ "${{inputs.deploy_type}}" == "prod" ] || [ "${{github.event_name}}" == "release" ]; then
+          if [ "${{github.event.inputs.deploy_type}}" = "prod" ] || [ "${{inputs.deploy_type}}" = "prod" ] || [ "${{github.event_name}}" = "release" ]; then
             deploy_type="prod"
           else
             deploy_type="test"
@@ -41,11 +41,11 @@ jobs:
 
       - name: Download Wheels from Release
         if: ${{ env.deploy_type == 'prod' }}
-        uses: robinraju/release-downloader@v1.3
+        uses: robinraju/release-downloader@v1.5
         with:
           repository: MeshInspector/MeshLib
           latest: true
-          fileName: "meshlib-*.whl"
+          fileName: "*.whl"
           out-file-path: ""
 
       - name: Download Wheels Artifacts

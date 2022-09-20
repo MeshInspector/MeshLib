@@ -1302,11 +1302,14 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, F
 {
     MR_TIMER
     assert( oldFace.valid() );
-    FaceBitSet newFaces;
-    executeFillHolePlan( mesh, e, plan, new2OldMap ? &newFaces : nullptr );
+    const auto fsz0 = mesh.topology.faceSize();
+    executeFillHolePlan( mesh, e, plan );
     if ( new2OldMap )
-        for ( auto f : newFaces )
+    {
+        const auto fsz = mesh.topology.faceSize();
+        for ( FaceId f{ fsz0 }; f < fsz; ++f )
             new2OldMap->autoResizeAt( f ) = oldFace;
+    }
 }
 
 void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )

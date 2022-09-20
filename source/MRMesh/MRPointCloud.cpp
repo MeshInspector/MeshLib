@@ -3,6 +3,7 @@
 #include "MRComputeBoundingBox.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
+#include "MRPch/MRTBB.h"
 namespace MR
 {
 
@@ -91,10 +92,21 @@ size_t PointCloud::heapBytes() const
 
 void PointCloud::mirror( const Plane3f& plane )
 {
-    for ( auto& p : points )
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId(0), VertId(points.size()) ), [&] ( const tbb::blocked_range<VertId>& range )
     {
-        p += 2.0f * ( plane.project( p ) - p );
-    }
+        for ( auto v = range.begin(); v < range.end(); ++v )
+        {
+            auto pOld = points[v];
+            points[v] += 2.0f * ( plane.project( points[v] ) - points[v] );
+
+            if ( !normals.empty() )
+            {
+                auto pn = normals[v] + pOld;
+                pn += 2.0f * ( plane.project( pn ) - pn );
+                normals[v] = pn - points[v];
+            }
+        }
+    } );
 
     invalidateCaches();
 }

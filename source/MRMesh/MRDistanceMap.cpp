@@ -255,7 +255,7 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
             return tl::make_unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
         if ( pixels[i].r < threshold )
             continue;
-        dm.set( i, 1.f - ( pixels[i].r - threshold ) / (1.f - threshold ) );
+        dm.set( i, ( pixels[i].r - threshold ) / (1.f - threshold ) );
     }
     return dm;
 }

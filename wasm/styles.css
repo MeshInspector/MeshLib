@@ -21,10 +21,15 @@
     user-select: none;
 }
 
+html {
+    overflow: hidden
+}
+
 body {
     font-family: arial;
     margin: 0;
-    padding: none
+    padding: none;
+    overflow: hidden
 }
 
 .emscripten {

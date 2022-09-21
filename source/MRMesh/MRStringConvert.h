@@ -28,10 +28,10 @@ inline const std::string & asString( const std::u8string & s ) { return reinterp
 inline const std::u8string & asU8String( const std::string & s ) { return reinterpret_cast<const std::u8string &>( s ); }
 inline const std::u8string & asU8String( const std::u8string & s ) { return s; }
 
-inline std::string asString( std::string && s ) { return s; }
+inline std::string asString( std::string && s ) { return std::move( s ); }
 inline std::string asString( std::u8string && s ) { return reinterpret_cast<std::string &&>( s ); }
 inline std::u8string asU8String( std::string && s ) { return reinterpret_cast<std::u8string &&>( s ); }
-inline std::u8string asU8String( std::u8string && s ) { return s; }
+inline std::u8string asU8String( std::u8string && s ) { return std::move( s ); }
 
 inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
 

@@ -23,7 +23,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   versioning-and-release-url:
-    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
     with:
       version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -32,7 +32,7 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -40,7 +40,7 @@ jobs:
 
   ubuntu20-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu20.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -48,7 +48,7 @@ jobs:
 
   ubuntu22-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-ubuntu22.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -56,7 +56,7 @@ jobs:
 
   fedora35-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-fedora35.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -64,14 +64,14 @@ jobs:
 
   emscripten-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-emscripten.yml@master
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
     needs: [ versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@pip-packages
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-macos.yml@master
     with:
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

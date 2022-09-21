@@ -93,6 +93,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::FaceNormals>( m, "FaceNormals" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::FaceNormals::vec_ );
+
+    pybind11::class_<MR::Vector<Vector2f, VertId>>( m, "VertCoords2" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::FaceNormals::vec_ );
 } )
 
 MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )

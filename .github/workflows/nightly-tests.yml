@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-20.04, macos-latest]
+        os: [windows-latest, ubuntu-20.04] #, macos-latest]
         config: [Release, Test]
         include:
           - os: windows-latest
@@ -22,9 +22,9 @@ jobs:
           - os: ubuntu-20.04
             py-version: "3.8"
             py-cmd: python3
-          - os: macos-latest
-            py-version: "3.10"
-            py-cmd: python3
+          #- os: macos-latest
+           # py-version: "3.10"
+            #py-cmd: python3
           - config: Release
             pip-options: ""
           - config: Test

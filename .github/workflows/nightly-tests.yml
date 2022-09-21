@@ -18,7 +18,7 @@ jobs:
         include:
           - os: windows-latest
             py-version: "3.10"
-            py-cmd: python
+            py-cmd: py -3.10
           - os: ubuntu-20.04
             py-version: "3.8"
             py-cmd: python3
@@ -40,9 +40,9 @@ jobs:
 
       - name: Install pip package
         run: |
-          pip install --upgrade pip
-          pip install --upgrade --force-reinstall -r ./requirements/python.txt
-          pip install --upgrade --force-reinstall ${{ matrix.pip-options }} meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip install --upgrade --force-reinstall -r ./requirements/python.txt
+          ${{ matrix.py-cmd }} -m pip install --upgrade --force-reinstall ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
         run: ${{ matrix.py-cmd }} ./scripts/run_python_test_script.py

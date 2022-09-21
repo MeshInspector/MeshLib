@@ -65,17 +65,17 @@ jobs:
             container: ubuntu:20.04
             fileName: "*ubuntu20*"
             updateCmd: apt-get -y update && apt-get -y upgrade
-            installCmd: apt-get install ./*.deb
+            installCmd: apt-get -y install ./*.deb
           - os: Ubuntu22
             container: ubuntu:22.04
             fileName: "*ubuntu20*"
             updateCmd: apt-get -y update && apt-get -y upgrade
-            installCmd: apt-get install ./*.deb
+            installCmd: apt-get -y install ./*.deb
           - os: Fedroa35
             container: fedora:35
             fileName: "*-dev.rpm"
             updateCmd: dnf --refresh -y upgrade
-            installCmd: dnf install ./*.rpm
+            installCmd: dnf -y install ./*.rpm
     steps:
       - name: Download Release
         uses: robinraju/release-downloader@v1.5

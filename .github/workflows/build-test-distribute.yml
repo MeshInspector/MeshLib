@@ -156,7 +156,7 @@ jobs:
     needs:
       - update-win-version
       - ubuntu20-build-test
-      - macos-build-test
+      #- macos-build-test
     uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@master
     with:
       deploy_type: "test"

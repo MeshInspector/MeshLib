@@ -41,13 +41,56 @@ jobs:
       - name: Install pip package
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip install --upgrade --force-reinstall -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install --upgrade --force-reinstall ${{ matrix.pip-options }} meshlib
+          ${{ matrix.py-cmd }} -m pip uninstall meshlib         
+          ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
         run: ${{ matrix.py-cmd }} ./scripts/run_python_test_script.py
 
 
 
-  #install-test:
+  install-test:
+    timeout-minutes: 20
+    runs-on: ${{matrix.os}}
+    container:
+      image: ${{matrix.container}}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [Ubuntu20, Ubuntu22, Fedroa35]
+        include:
+          - os: Ubuntu20
+            container: ubuntu:20.04
+            fileName: "*ubuntu20*"
+            updateCmd: apt-get -y update && apt-get -y upgrade
+            installCmd: dpkg --install ./*.deb
+          - os: Ubuntu22
+            container: ubuntu:22.04
+            fileName: "*ubuntu20*"
+            updateCmd: apt-get -y update && apt-get -y upgrade
+            installCmd: dpkg --install ./*.deb
+          - os: Fedroa35
+            container: fedora:35
+            fileName: "*-dev.rpm"
+            updateCmd: dnf --refresh -y upgrade
+            installCmd: rpm -i  ./*.rpm
+    steps:
+      - name: Download Release
+        uses: robinraju/release-downloader@v1.5
+        with:
+          repository: MeshInspector/MeshLib
+          latest: true
+          fileName: ${{matrix.fileName}}
+          out-file-path: ""
+
+      - name: Install Release
+        run: |
+          ${{matrix.updateCmd}}
+          ${{matrix.installCmd}}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
 

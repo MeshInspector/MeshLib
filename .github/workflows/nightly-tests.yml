@@ -52,7 +52,7 @@ jobs:
 
   install-test:
     timeout-minutes: 20
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-latest
     container:
       image: ${{matrix.container}}
       options: --user root

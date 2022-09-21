@@ -68,7 +68,7 @@ jobs:
             installCmd: apt-get -y install ./*.deb
           - os: Ubuntu22
             container: ubuntu:22.04
-            fileName: "*ubuntu20*"
+            fileName: "*ubuntu22*"
             updateCmd: apt-get -y update && apt-get -y upgrade
             installCmd: apt-get -y install ./*.deb
           - os: Fedroa35

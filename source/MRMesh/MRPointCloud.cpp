@@ -3,6 +3,8 @@
 #include "MRComputeBoundingBox.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPlane3.h"
+#include "MRBitSetParallelFor.h"
+
 namespace MR
 {
 
@@ -91,10 +93,12 @@ size_t PointCloud::heapBytes() const
 
 void PointCloud::mirror( const Plane3f& plane )
 {
-    for ( auto& p : points )
+    BitSetParallelFor( validPoints, [&] ( VertId id )
     {
-        p += 2.0f * ( plane.project( p ) - p );
-    }
+        points[id] += 2.0f * ( plane.project( points[id] ) - points[id] );
+        if ( !normals.empty() )
+            normals[id] -= 2.0f * dot( normals[id], plane.n ) * plane.n;
+    } );  
 
     invalidateCaches();
 }

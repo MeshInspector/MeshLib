@@ -357,6 +357,9 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
         }
     }
 
+    if ( actualSize.x < maxTextSize + 2 * ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FramePadding.x )
+        return ImGui::End();
+
     std::vector<Color>& colors = texture_.pixels;
     if ( texture_.filter == FilterType::Discrete )
     {

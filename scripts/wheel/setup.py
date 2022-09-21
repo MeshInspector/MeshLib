@@ -41,7 +41,7 @@ setuptools.setup(
     url="https://github.com/MeshInspector/MeshLib",
     license_files=('LICENSE',),
     packages=['meshlib'],
-    package_data={'meshlib': ['mrmeshnumpy.{ext}'.format(LIBS_EXTENSION), 'mrmeshpy.{ext}'.format(LIBS_EXTENSION), 'mrviewerpy.{ext}'.format(LIBS_EXTENSION)]},
+    package_data={'meshlib': ['mrmeshnumpy.{}'.format(LIBS_EXTENSION), 'mrmeshpy.{}'.format(LIBS_EXTENSION), 'mrviewerpy.{}'.format(LIBS_EXTENSION)]},
     include_package_data=True,
     classifiers=[
         'Programming Language :: Python :: 3.8',

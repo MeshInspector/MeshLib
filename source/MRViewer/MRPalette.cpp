@@ -4,6 +4,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRViewer.h"
 #include <string>
 #include <fstream>
 
@@ -314,8 +315,19 @@ void Palette::setFilterType( FilterType type )
 
 void Palette::draw( const ImVec2& pose, const ImVec2& size )
 {
+    float maxTextSize = 0.0f;
+    for ( const auto& label : labels_ )
+    {
+        auto textSize = ImGui::CalcTextSize( label.text.c_str() ).x;
+        if ( textSize > maxTextSize )
+            maxTextSize = textSize;
+    }
+    
+    const auto& style = ImGui::GetStyle();
+    const auto& windowSize = Viewer::instance()->viewport().getViewportRect();
     ImGui::SetNextWindowPos( pose, ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
+    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x, labels_.size() * ImGui::GetTextLineHeightWithSpacing() }, { width( windowSize ), height( windowSize ) } );
 
     ImGui::Begin( "Gradient palette", &isWindowOpen_,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
@@ -326,7 +338,6 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     // allows to move window
     const auto& actualPose = ImGui::GetWindowPos();
     const auto& actualSize = ImGui::GetWindowSize();
-    float maxTextSize = 0.0f;
 
     if ( showLabels_ )
     {
@@ -346,16 +357,16 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
                 auto text = labels_[i].text;
                 lastPixPose = pixPose;
                 drawList->AddText( ImGui::GetFont(), fontSize,
-                                   { actualPose.x + ImGui::GetStyle().WindowPadding.x, 
+                                   { actualPose.x + style.WindowPadding.x, 
                                    actualPose.y + labels_[i].value * pixRange },
                                    ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
-                                   text.c_str() );
-                auto textSize = ImGui::CalcTextSize( text.c_str() ).x;
-                if ( textSize > maxTextSize )
-                    maxTextSize = textSize;
+                                   text.c_str() );                
             }
         }
     }
+
+    if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
+        return ImGui::End();
 
     std::vector<Color>& colors = texture_.pixels;
     if ( texture_.filter == FilterType::Discrete )
@@ -364,9 +375,9 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
         for ( int i = 0; i < colors.size(); i++ )
         {
             drawList->AddRectFilled(
-                { actualPose.x + ImGui::GetStyle().WindowPadding.x + maxTextSize + ImGui::GetStyle().FramePadding.x,
+                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
-                { actualPose.x - ImGui::GetStyle().WindowPadding.x + actualSize.x ,
+                { actualPose.x - style.WindowPadding.x + actualSize.x ,
                 actualPose.y + ( i + 1 ) * yStep },
                 colors[colors.size() - 1 - i].getUInt32() );
         }
@@ -380,9 +391,9 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
             const auto color1 = colors[colors.size() - 1 - i].getUInt32();
             const auto color2 = colors[colors.size() - 2 - i].getUInt32();
             drawList->AddRectFilledMultiColor(
-                { actualPose.x + ImGui::GetStyle().WindowPadding.x + maxTextSize + ImGui::GetStyle().FramePadding.x,
+                { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
-                { actualPose.x - ImGui::GetStyle().WindowPadding.x + actualSize.x ,
+                { actualPose.x - style.WindowPadding.x + actualSize.x ,
                 actualPose.y + ( i + 1 ) * yStep },
                 color1, color1, color2, color2 );
         }

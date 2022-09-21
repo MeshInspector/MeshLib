@@ -89,6 +89,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::Vector<float, VertId>>( m, "VectorFloatByVert" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::Vector<float, VertId>::vec_ );
+
+    pybind11::class_<MR::FaceNormals>( m, "FaceNormals" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::FaceNormals::vec_ );
+
+    pybind11::class_<MR::Vector<Vector2f, VertId>>( m, "VertCoords2" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::Vector<Vector2f, VertId>::vec_ );
 } )
 
 MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
@@ -261,15 +269,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         def_readwrite( "makeDegenerateBand", &MR::FillHoleParams::makeDegenerateBand,
             "If true creates degenerate faces band around hole to have sharp angle visualization\n"
             "warning: This flag bad for result topology, most likely you do not need it" ).
-        def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" ).
-        def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces, "If not nullptr accumulate new faces" );
+        def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" );
 
     pybind11::class_<MR::StitchHolesParams>( m, "StitchHolesParams", "Structure has some options to control buildCylinderBetweenTwoHoles" ).
         def( pybind11::init<>() ).
         def_readwrite( "metric", &StitchHolesParams::metric,
             "Specifies triangulation metric\n"
-            "default for buildCylinderBetweenTwoHoles: getComplexStitchMetric").
-        def_readwrite( "outNewFaces", &StitchHolesParams::outNewFaces, "If not nullptr accumulate new faces" );
+            "default for buildCylinderBetweenTwoHoles: getComplexStitchMetric");
 
     m.def( "fillHole", &MR::fillHole,
         pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "params" ) = MR::FillHoleParams{},
@@ -328,7 +334,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
     m.def( "computePerFaceNormals", &MR::computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
     m.def( "mergeMehses", &pythonMergeMehses, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
-    m.def( "buildBottom", &MR::buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ), pybind11::arg( "outNewFaces" ) = nullptr,
+    m.def( "buildBottom", &MR::buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ),
         "adds cylindrical extension of given hole represented by one of its edges (having no valid left face)\n"
         "by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;\n"
         "return: the edge of new hole opposite to input edge (a)" );

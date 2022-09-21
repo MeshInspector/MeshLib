@@ -22,6 +22,7 @@ public:
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
     {}
 
+    bool hasAnyLine() const;
     IsoLines extract();
 
     IsoLine track( const MeshTriPoint& start, ContinueTrack continueTrack );
@@ -34,7 +35,6 @@ private:
     std::optional<MeshEdgePoint> findNextEdgePoint_( EdgeId e ) const;
 
 private:
-
     const MeshTopology& topology_;
     const FaceBitSet* region_ = nullptr;
     ValueInVertex valueInVertex_;
@@ -61,6 +61,25 @@ IsoLines Isoliner::extract()
             res.push_back( extractOneLine_( toEdgePoint_( e.sym(), vd, vo ) ) );
     }
     return res;
+}
+
+bool Isoliner::hasAnyLine() const
+{
+    for ( auto ue : undirectedEdges( topology_ ) )
+    {
+        if ( region_ && !contains( *region_, topology_.left( ue ) ) && !contains( *region_, topology_.right( ue ) ) )
+            continue;
+        EdgeId e = ue;
+        VertId o = topology_.org( e );
+        VertId d = topology_.dest( e );
+        float vo = valueInVertex_( o );
+        float vd = valueInVertex_( d );
+        if ( vo < 0 && 0 <= vd )
+            return true;
+        else if ( vd < 0 && 0 <= vo )
+            return true;
+    }
+    return false;
 }
 
 IsoLine Isoliner::track( const MeshTriPoint& start, ContinueTrack continueTrack )
@@ -195,6 +214,18 @@ IsoLines extractIsolines( const MeshTopology& topology,
     return s.extract();
 }
 
+bool hasAnyIsoline( const MeshTopology& topology,
+    const Vector<float, VertId>& vertValues, float isoValue, const FaceBitSet* region )
+{
+    MR_TIMER;
+
+    Isoliner s( topology, [&] ( VertId v )
+    {
+        return vertValues[v] - isoValue;
+    }, region );
+    return s.hasAnyLine();
+}
+
 PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane )
 {
     MR_TIMER;
@@ -204,6 +235,17 @@ PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane )
         return plane.distance( mp.mesh.points[v] );
     }, mp.region );
     return s.extract();
+}
+
+bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane )
+{
+    MR_TIMER;
+
+    Isoliner s( mp.mesh.topology, [&] ( VertId v )
+    {
+        return plane.distance( mp.mesh.points[v] );
+    }, mp.region );
+    return s.hasAnyLine();
 }
 
 PlaneSection trackSection( const MeshPart& mp,

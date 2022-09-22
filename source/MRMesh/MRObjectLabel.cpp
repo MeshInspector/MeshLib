@@ -146,7 +146,7 @@ void ObjectLabel::setupRenderObject_() const
 
 void ObjectLabel::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::Labels ) );
+    setFrontColor( SceneColors::get( SceneColors::Labels ), true );
     setFrontColor( SceneColors::get( SceneColors::Labels ), false );
     setSourcePointColor( Color::gray() );
     setLeaderLineColor( Color::gray() );

@@ -56,7 +56,7 @@ public:
     }
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
-    void resizeWithReserve( size_t newSize )
+    void resizeWithReserve( size_t newSize, T value = T() )
     {
         auto reserved = vec_.capacity();
         if ( reserved > 0 && newSize > reserved )
@@ -65,7 +65,7 @@ public:
                 reserved <<= 1;
             vec_.reserve( reserved );
         }
-        vec_.resize( newSize );
+        vec_.resize( newSize, value );
     }
 
     /// sets elements [pos, pos+len) to given value, adjusting the size of the vector to include new elements
@@ -73,8 +73,13 @@ public:
     {
         assert( pos );
         const int p{ pos };
-        if ( p + len > size() )
-            resizeWithReserve( p + len );
+        if ( const auto sz = size(); p + len > sz )
+        {
+            resizeWithReserve( p + len, val );
+            if ( p >= sz )
+                return;
+            len = sz - p;
+        }
         for ( size_t i = 0; i < len; ++i )
             vec_[ p + i ] = val;
     }

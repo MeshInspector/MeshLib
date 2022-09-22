@@ -155,6 +155,9 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     {
         return getRequirements_( item );
     } );
+
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    g.IO.ConfigWindowsResizeFromEdges = false;
 }
 
 void RibbonMenu::shutdown()

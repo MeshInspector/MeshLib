@@ -35,6 +35,8 @@ inline std::u8string asU8String( std::u8string && s ) { return std::move( s ); }
 
 inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
 
+std::string utf8string( const std::u8string & ) = delete;
+
 #else // std::u8string is not defined
 
 /// converts system encoded string to UTF8-encoded string
@@ -53,6 +55,8 @@ inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesy
 /// returns filename as UTF8-encoded string
 inline std::string utf8string( const std::filesystem::path & path )
     { return asString( path.u8string() ); }
+
+std::string utf8string( const std::string & ) = delete;
 
 /// \}
 

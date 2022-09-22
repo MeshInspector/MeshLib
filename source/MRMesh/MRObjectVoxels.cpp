@@ -329,7 +329,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path.u8string() ) + ".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )

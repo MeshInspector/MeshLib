@@ -1307,8 +1307,7 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, F
     if ( new2OldMap )
     {
         const auto fsz = mesh.topology.faceSize();
-        for ( FaceId f{ fsz0 }; f < fsz; ++f )
-            new2OldMap->autoResizeAt( f ) = oldFace;
+        new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
 }
 

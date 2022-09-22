@@ -71,10 +71,12 @@ public:
     /// sets elements [pos, pos+len) to given value, adjusting the size of the vector to include new elements
     void autoResizeSet( I pos, size_t len, T val )
     {
-        if ( pos + len > size() )
-            resizeWithReserve( pos + len );
+        assert( pos );
+        const int p{ pos };
+        if ( p + len > size() )
+            resizeWithReserve( p + len );
         for ( size_t i = 0; i < len; ++i )
-            vec_[ pos + i ] = val;
+            vec_[ p + i ] = val;
     }
     void autoResizeSet( I i, T val ) { autoResizeSet( i, 1, val ); }
 

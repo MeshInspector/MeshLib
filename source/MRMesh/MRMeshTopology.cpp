@@ -944,26 +944,9 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
     MR_TIMER
     // make fast comparisons first
     if ( numValidVerts_ != b.numValidVerts_
-      || numValidFaces_ != b.numValidFaces_ )
-        return false;
-
-    auto sameSetBits = []<class T>( const TaggedBitSet<T> & a,  const TaggedBitSet<T> & b )
-    {
-        if ( a.size() == b.size() )
-            return a == b;
-
-        auto ai = begin( a );
-        auto bi = begin( b );
-        const auto ae = end( a );
-        const auto be = end( b );
-        for ( ; ai != ae && bi != be; ++ai, ++bi )
-            if ( *ai != *bi )
-                return false;
-        return ai == ae && bi == be;
-    };
-
-    if ( !sameSetBits( validVerts_, b.validVerts_ )
-      || !sameSetBits( validFaces_, b.validFaces_ ) )
+        || numValidFaces_ != b.numValidFaces_
+        || validVerts_ != b.validVerts_
+        || validFaces_ != b.validFaces_ )
         return false;
 
     /* uncommenting this breaks MeshDiff unit test

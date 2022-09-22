@@ -155,6 +155,10 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     {
         return getRequirements_( item );
     } );
+    
+    //get rid of bottom-left resize grip
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    g.IO.ConfigWindowsResizeFromEdges = false;
 }
 
 void RibbonMenu::shutdown()

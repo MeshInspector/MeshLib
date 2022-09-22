@@ -28,6 +28,8 @@ struct FillHoleParams
       * \sa \ref FillHoleMetric
       */
     FillHoleMetric metric;
+    /// If not nullptr accumulate new faces
+    FaceBitSet* outNewFaces{ nullptr };
     /** If Strong makes additional efforts to avoid creating multiple edges, 
       * in some rare cases it is not possible (cases with extremely bad topology), 
       * if you faced one try to use \ref MR::duplicateMultiHoleVertices before \ref MR::fillHole
@@ -75,6 +77,8 @@ struct StitchHolesParams
       * \sa \ref FillHoleMetric
       */
     FillHoleMetric metric;
+    /// If not nullptr accumulate new faces
+    FaceBitSet* outNewFaces{ nullptr };
 };
 
 /** \brief Stitches two holes in Mesh\n
@@ -139,7 +143,7 @@ using FillHolePlan = std::vector<FillHoleItem>;
 /// similar to fillHole function, but only gets the plan how to fill given hole, not filling it immediately
 MRMESH_API FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );
 /// quickly fills the hole given the plan (quickly compared to fillHole function)
-MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan );
+MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces = nullptr );
 
 /** \brief Fills hole in mesh trivially\n
   * \ingroup FillHoleGroup
@@ -157,35 +161,36 @@ MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan
   *
   * \param mesh mesh with hole
   * \param a EdgeId which represents hole
+  * \param outNewFaces optional output newly generated faces
   * \return new vertex
   * 
   * \sa \ref fillHole
   */
-MRMESH_API VertId fillHoleTrivially( Mesh& mesh, EdgeId a );
+MRMESH_API VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
 /// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
 /// by adding new vertices located in given plane and 2 * number_of_hole_edge triangles;
 /// \return the edge of new hole opposite to input edge (a)
-MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane );
+MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces = nullptr );
 
 /// adds extension of given hole represented by one of its edges (having no valid left face)
 /// by adding new vertices located at getVertPos( existing vertex position );
 /// \return the edge of new hole opposite to input edge (a)
-MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos );
+MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos, FaceBitSet * outNewFaces = nullptr );
 
 /// adds cylindrical extension of given hole represented by one of its edges (having no valid left face)
 /// by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;
 /// \return the edge of new hole opposite to input edge (a)
-MRMESH_API EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension );
+MRMESH_API EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, FaceBitSet* outNewFaces = nullptr );
 
 /// creates a band of degenerate triangles around given hole;
 /// \return the edge of new hole opposite to input edge (a)
-MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a );
+MRMESH_API EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 
 /// creates a bridge between two boundary edges a and b (both having no valid left face);
 /// bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;
 /// \return false if bridge cannot be created because otherwise multiple edges appear
-MRMESH_API bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b );
+MRMESH_API bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces = nullptr );
 
 /// creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);
 /// \return invalid id if bridge cannot be created because otherwise multiple edges appear

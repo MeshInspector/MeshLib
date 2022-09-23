@@ -95,7 +95,11 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
 
 tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
+#ifndef MRMESH_NO_OPENCTM
     auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+#else
+    auto res = MeshLoad::fromMrmesh( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+#endif
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 

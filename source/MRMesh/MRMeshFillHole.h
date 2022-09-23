@@ -138,7 +138,13 @@ struct FillHoleItem
     // otherwise it refers to the edge created recently
     int edgeCode1, edgeCode2;
 };
-using FillHolePlan = std::vector<FillHoleItem>;
+
+/// concise representation of proposed hole triangulation
+struct FillHolePlan
+{
+    std::vector<FillHoleItem> items;
+    int numNewTris = 0;
+};
 
 /// similar to fillHole function, but only gets the plan how to fill given hole, not filling it immediately
 MRMESH_API FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );

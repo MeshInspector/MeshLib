@@ -31,7 +31,6 @@ std::u8string Utf16ToUtf8( const std::wstring_view & utf16 )
 }
 #endif
 
-#if defined( __cpp_lib_char8_t ) && ( !defined( _LIBCPP_VERSION ) || _LIBCPP_VERSION >= 12000 )
 std::u8string systemToUtf8( const char* system )
 {
     if ( !system )
@@ -51,12 +50,6 @@ std::u8string systemToUtf8( const char* system )
     return asU8String( system );
 #endif
 }
-#else
-std::string systemToUtf8( const char* system )
-{
-    return system;
-}
-#endif
 
 std::string bytesString( size_t size )
 {

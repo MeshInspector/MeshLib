@@ -561,7 +561,7 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
     for ( auto entry : std::filesystem::directory_iterator( parentPath, ec ) )
     {
         auto filename = entry.path().filename();
-        auto pos = filename.u8string().find( path.filename().u8string() );
+        auto pos = utf8string( filename ).find( utf8string( path.filename() ) );
         if ( pos != std::string::npos )
             candidatePaths.push_back( entry.path() );
     }

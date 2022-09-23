@@ -182,6 +182,7 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )
@@ -204,6 +205,7 @@ tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
     return {};
 }
+#endif
 
 void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 {

@@ -72,6 +72,7 @@ Box3f ObjectLabel::computeBoundingBox_() const
     return box;
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
@@ -94,6 +95,7 @@ tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::files
     mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
 }
+#endif
 
 void ObjectLabel::serializeFields_( Json::Value& root ) const
 {

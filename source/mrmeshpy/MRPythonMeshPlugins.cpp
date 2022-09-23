@@ -24,6 +24,7 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFixer.h"
+#include <pybind11/functional.h>
 #include <tl/expected.hpp>
 
 using namespace MR;
@@ -212,11 +213,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
 
-    m.def( "relax", [] ( Mesh& mesh, const MeshRelaxParams& params )
-    {
-        return relax( mesh, params ); // lambda to skip progress callback parameter
-    },
-        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{},
+    m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
+        pybind11::arg( "mesh" ), pybind11::arg( "params" ) = MeshRelaxParams{}, pybind11::arg( "cb" ) = ProgressCallback{},
         "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
         "return true if was finished successfully, false if was interrupted by progress callback");
 } )
@@ -249,21 +247,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         "return The total number of edge splits performed" );
 
 } )
-
-
-// Distance Map
-void saveDistanceMapToImageSimple( const DistanceMap& dm, const std::string& filename, float threshold )
-{
-    saveDistanceMapToImage( dm, filename, threshold );
-}
-
-DistanceMap loadDistanceMapFromImageSimple( const std::string& path, float threshold )
-{
-    auto res = loadDistanceMapFromImage( path, threshold );
-    if ( res.has_value() )
-        return std::move( *res );
-    return DistanceMap();
-}
 
 // Distance Map
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
@@ -325,7 +308,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "converts distance map back to the mesh fragment with presented params" );
     
-    m.def( "saveDistanceMapToImage", &saveDistanceMapToImageSimple,
+    m.def( "saveDistanceMapToImage", &MR::saveDistanceMapToImage,
         pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
         "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -333,7 +316,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 
-    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImageSimple,
+    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImage,
         pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
@@ -350,6 +333,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
 
 } )
+
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedDistanceMap, DistanceMap, std::string )
 
 // Position Verts Smooth
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::module_& m )

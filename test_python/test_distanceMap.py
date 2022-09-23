@@ -6,7 +6,7 @@ def test_distanceMap():
     R1 = 2
     R2 = 1
     torus = mrmesh.makeTorus(R1, R2, 10, 10, None)
-    mrmesh.saveMesh(torus, "c:/temp/testTorus_dm.stl")
+    mrmesh.saveMesh(torus, mrmesh.Path("c:/temp/testTorus_dm.stl"))
 
     params = mrmesh.MeshToDistanceMapParams()
     params.resolution.x = 20

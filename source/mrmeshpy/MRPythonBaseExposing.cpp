@@ -15,8 +15,24 @@
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRFillContour.h"
 #include "MRMesh/MRExpandShrink.h"
+#include "MRMesh/MRColor.h"
+#include <tl/expected.hpp>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
+{
+    using expectedType = tl::expected<void, std::string>;
+    pybind11::class_<expectedType>( m, "ExpectedVoid" ).
+        def( "has_value", &expectedType::has_value ).
+        def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
+{
+    pybind11::class_<std::filesystem::path>( m, "Path" ).
+        def( pybind11::init<const std::string&>() );
+} )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3f, [] ( pybind11::module_& m )
 {
@@ -70,6 +86,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2f, [] ( pybind11::module_& m )
         def( "lengthSq", &MR::Vector2f::lengthSq ).
         def( "normalized", &MR::Vector2f::normalized );
 } )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Color>( m, "Color" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<int, int, int, int>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 255 ).
+        def( pybind11::init<float, float, float, float>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 1.0f ).
+        def_readwrite( "r", &MR::Color::r ).
+        def_readwrite( "r", &MR::Color::g ).
+        def_readwrite( "r", &MR::Color::b ).
+        def_readwrite( "r", &MR::Color::a );
+} )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
 {

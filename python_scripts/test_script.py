@@ -1,9 +1,9 @@
 print('Import mrmesh')
-import meshlib.mrmeshpy as mrmesh
+import mrmeshpy as mrmesh
 
 print('Start test script')
 
-mesh = mrmesh.loadMesh("M:\\sectioning\\sectioning\\468\\Final Output\\P523468_101_OtherFiles\\stitched.mrmesh")
+mesh = mrmesh.loadMesh(mrmesh.Path("M:\\sectioning\\sectioning\\468\\Final Output\\P523468_101_OtherFiles\\stitched.mrmesh")).value()
 holes = mesh.topology.findHoleRepresentiveEdges()
 vec3 = mrmesh.Vector3f();
 vec3.z = 1.0;

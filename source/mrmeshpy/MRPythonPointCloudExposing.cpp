@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshToPointCloud.h"
 #include "MRMesh/MRBox.h"
 #include <pybind11/stl.h>
+#include <pybind11/functional.h>
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 {
@@ -28,11 +29,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
             "Critical length of hole (all holes with length less then this value will be filled)\n"
             "If value is subzero it is set automaticly to 0.7*bbox.diagonal()" );
 
-    m.def( "triangulatePointCloud", [] ( const MR::PointCloud& pointCloud, const MR::TriangulationParameters& params )
-    {
-        return MR::triangulatePointCloud( pointCloud, params ); // lambda to handle progress callback parameter
-    },
-        pybind11::arg( "pointCloud" ), pybind11::arg( "params" ) = MR::TriangulationParameters{},
+    m.def( "triangulatePointCloud", &MR::triangulatePointCloud,
+        pybind11::arg( "pointCloud" ), pybind11::arg( "params" ) = MR::TriangulationParameters{}, pybind11::arg( "progressCb" ) = MR::ProgressCallback{},
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 
@@ -41,3 +39,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         "Mesh to PointCloud" );
 } )
 
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedPointCloud, MR::PointCloud, std::string )

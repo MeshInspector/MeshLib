@@ -1,3 +1,4 @@
+#ifndef MRMESH_NO_LABEL
 #include "MRObjectLabel.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
@@ -76,17 +77,25 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
     if ( ancillary_ || !mesh_ )
         return {};
 
-    auto save = [mesh = mesh_, filename = path.u8string() + u8".ctm", this]()
+#ifndef MRMESH_NO_OPENCTM
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
     {
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
+        MR::MeshSave::toMrmesh( *mesh, filename );
     };
+#else
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    {
+        MR::MeshSave::toMrmesh( *mesh, filename );
+    };
+#endif
 
     return std::async( getAsyncLaunchType(), save );
 }
 
 tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = MeshLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
+    auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 
@@ -301,3 +310,4 @@ void ObjectLabel::setLeaderLineColor( const Color &color )
 }
 
 }
+#endif

@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MREmbeddedPython.h"
 #include "MRPython.h"
 #include "MRStringConvert.h"
@@ -102,11 +102,11 @@ bool EmbeddedPython::isPythonScript( const std::filesystem::path& path )
     if ( !std::filesystem::is_regular_file( path, ec ) )
         return false;
 
-    auto ext = path.extension().u8string();
+    auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    if ( ext != u8".py" )
+    if ( ext != ".py" )
         return false;
     
     return true;

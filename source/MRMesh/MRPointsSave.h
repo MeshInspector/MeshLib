@@ -35,11 +35,13 @@ struct CtmSavePointsOptions
     const char* comment = "MeshInspector Points";
 };
 
+#ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
 MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,
                                                   const CtmSavePointsOptions& options = {}, ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors = nullptr,
                                                   const CtmSavePointsOptions& options = {}, ProgressCallback callback = {} );
+#endif
 
 /// detects the format from file extension and save points to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors = nullptr,

@@ -3,10 +3,13 @@
 #include "MRVector3.h"
 #include "MRColor.h"
 #include "MRStringConvert.h"
-#include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include <fstream>
+
+#ifndef MRMESH_NO_OPENCTM
+#include "OpenCTM/openctm.h"
+#endif
 
 namespace MR
 {
@@ -16,7 +19,9 @@ namespace PointsSave
 const IOFilters Filters =
 {
     {"PLY (.ply)",        "*.ply"},
-    {"CTM (.ctm)",        "*.ctm"}
+#ifndef MRMESH_NO_OPENCTM
+    {"CTM (.ctm)",        "*.ctm"},
+#endif
 };
 
 tl::expected<void, std::string> toPly( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr*/, ProgressCallback callback )
@@ -80,6 +85,7 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     return {};
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
@@ -201,18 +207,22 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
         callback( 1.f );
     return {};
 }
+#endif
+
 tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".ply" )
+    if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, file, colors, callback );
-    else if ( ext == u8".ctm" )
+#ifndef MRMESH_NO_OPENCTM
+    else if ( ext == ".ctm" )
         res = MR::PointsSave::toCtm( points, file, colors, {}, callback );
+#endif
     return res;
 }
 tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const Vector<Color, VertId>* colors /*= nullptr */,
@@ -225,8 +235,10 @@ tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsSave::toPly( points, out, colors, callback );
+#ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsSave::toCtm( points, out, colors, {}, callback );
+#endif
     return res;
 }
 

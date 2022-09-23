@@ -1,3 +1,4 @@
+#ifndef MRMESH_NO_LABEL
 #include "MRAlignTextToMesh.h"
 #include "MRMesh.h"
 #include "MRBox.h"
@@ -61,3 +62,4 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
 }
 
 }
+#endif

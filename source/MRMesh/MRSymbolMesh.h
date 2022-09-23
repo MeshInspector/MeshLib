@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef MRMESH_NO_LABEL
 #include "MRSystem.h"
 #include <string>
 #include <filesystem>
@@ -41,3 +43,4 @@ MRMESH_API void addBaseToPlanarMesh( Mesh& mesh, float zOffset = 1.0f );
 MRMESH_API Mesh createSymbolsMesh( const SymbolMeshParams& params );
 
 }
+#endif

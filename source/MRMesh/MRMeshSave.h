@@ -71,11 +71,13 @@ struct CtmSaveOptions
     const char * comment = "MeshInspector.com";
 };
 
+#ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
 MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
                                                   ProgressCallback callback = {} );
 MRMESH_API tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {}, const Vector<Color, VertId>* colors = nullptr,
                                                   ProgressCallback callback = {} );
+#endif
 
 /// detects the format from file extension and save mesh to it
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const Vector<Color, VertId>* colors = nullptr,

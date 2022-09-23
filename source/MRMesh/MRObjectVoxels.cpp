@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRObjectVoxels.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
@@ -12,6 +12,7 @@
 #include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
+#include "MRStringConvert.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
@@ -328,7 +329,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = path.u8string() + u8".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::saveRAW( filename, *this ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -359,9 +360,10 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
         setIsoValue( isoValue_ );
 }
 
+#ifndef MRMESH_NO_DICOM
 tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = VoxelsLoad::loadRaw( path.u8string() + u8".raw", progressCb );
+    auto res = VoxelsLoad::loadRaw( utf8string( path ) + ".raw", progressCb );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     
@@ -371,6 +373,7 @@ tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::file
 
     return {};
 }
+#endif
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {

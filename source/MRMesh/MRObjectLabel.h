@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef MRMESH_NO_LABEL
 #include "MRVisualObject.h"
 #include "MRSymbolMesh.h"
 
@@ -167,3 +169,4 @@ private:
 };
 
 }
+#endif

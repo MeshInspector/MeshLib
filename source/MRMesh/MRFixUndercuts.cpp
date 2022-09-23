@@ -1,4 +1,4 @@
-#ifndef MRMESH_NO_VOXEL
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRFixUndercuts.h"
 #include "MRMesh.h"
 #include "MRMatrix3.h"

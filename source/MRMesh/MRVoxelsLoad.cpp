@@ -1,4 +1,4 @@
-#ifndef MRMESH_NO_DICOM
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"

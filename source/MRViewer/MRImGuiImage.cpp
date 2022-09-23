@@ -1,11 +1,9 @@
 #include "MRImGuiImage.h"
+#include "MRMesh/MRObjectVoxels.h"
+#include "MRMesh/MRFloatGrid.h"
 #include "MRGLMacro.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
-#ifndef __EMSCRIPTEN__
-#include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRFloatGrid.h"
-#endif
 
 namespace MR
 {

@@ -1,5 +1,5 @@
 #pragma once
-#ifndef MRMESH_NO_VOXEL
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MROffset.h"
 
 namespace MR

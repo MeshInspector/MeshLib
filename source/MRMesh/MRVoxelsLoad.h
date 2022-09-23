@@ -1,5 +1,5 @@
 #pragma once
-#ifndef MRMESH_NO_DICOM
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"

@@ -1,4 +1,4 @@
-#ifndef MRMESH_NO_PYTHON
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MREmbeddedPython.h"
 #include "MRPython.h"
 #include "MRStringConvert.h"

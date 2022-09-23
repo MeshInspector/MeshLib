@@ -298,24 +298,20 @@ tl::expected<void, std::string> toPly( const Mesh & mesh, std::ostream & out, co
     return {};
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<void, std::string> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toCtm( mesh, out, options, colors, callback );
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
 
 tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options, const Vector<Color, VertId>* colors,
                                        ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     MR_TIMER
 
     class ScopedCtmConext 
@@ -461,10 +457,8 @@ tl::expected<void, std::string> toCtm( const Mesh & mesh, std::ostream & out, co
     if ( callback )
         callback( 1.f );
     return {};
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
+#endif
 
 tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const Vector<Color, VertId>* colors,
                                                       ProgressCallback callback )

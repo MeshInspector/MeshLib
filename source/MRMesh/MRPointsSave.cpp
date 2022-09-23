@@ -85,24 +85,20 @@ tl::expected<void, std::string> toPly( const PointCloud& points, std::ostream& o
     return {};
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<void, std::string> toCtm( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
     return toCtm( points, out, colors, options, callback );
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
 
 tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& out, const Vector<Color, VertId>* colors /*= nullptr */,
                                                   const CtmSavePointsOptions& options /*= {}*/, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     MR_TIMER;
 
     class ScopedCtmConext
@@ -210,10 +206,9 @@ tl::expected<void, std::string> toCtm( const PointCloud& points, std::ostream& o
     if ( callback )
         callback( 1.f );
     return {};
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
+#endif
+
 tl::expected<void, std::string> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const Vector<Color, VertId>* colors /*= nullptr */,
                                                       ProgressCallback callback )
 {

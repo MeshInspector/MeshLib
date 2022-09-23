@@ -29,22 +29,18 @@ const IOFilters Filters =
 #endif
 };
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return fromCtm( in, colors, callback );
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
 
 tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     MR_TIMER;
 
     class ScopedCtmConext
@@ -131,10 +127,8 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
     }
 
     return points;
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
+#endif
 
 tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {

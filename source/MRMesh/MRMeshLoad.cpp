@@ -464,22 +464,18 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
     return std::move( res );
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     return fromCtm( in, colors, callback );
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
 
 tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
-#ifndef MRMESH_NO_OPENCTM
     MR_TIMER
 
     class ScopedCtmConext 
@@ -565,10 +561,8 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
     mesh.topology = MeshBuilder::fromTriangles( t );
 
     return mesh;
-#else
-    return tl::make_unexpected( "This build has no OpenCTM support" );
-#endif
 }
+#endif
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {

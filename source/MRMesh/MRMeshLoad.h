@@ -60,11 +60,13 @@ MRMESH_API tl::expected<Mesh, std::string> fromPly( const std::filesystem::path&
 MRMESH_API tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
 
+#ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file
 MRMESH_API tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
 MRMESH_API tl::expected<Mesh, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
+#endif
 
 /// detects the format from file extension and loads mesh from it
 MRMESH_API tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,

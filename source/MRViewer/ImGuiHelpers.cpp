@@ -321,6 +321,44 @@ MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, f
     return res;
 }
 
+MultiDragRes DragIntValid3( const char* label, int v[3], float speed, int min, int max, const char* format, const char* ( *tooltips )[3])
+{
+    MultiDragRes res;
+
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiWindow* window = g.CurrentWindow;
+    if ( window->SkipItems )
+        return res;
+
+    BeginGroup();
+    PushID( label );
+    constexpr int components = 3;
+    PushMultiItemsWidths( components, CalcItemWidth() );
+    for ( int i = 0; i < components; i++ )
+    {
+        PushID( i );
+        if ( i > 0 )
+            SameLine( 0, g.Style.ItemInnerSpacing.x );
+        res.valueChanged = DragIntValid( "", v + i, speed, min, max, format ) || res.valueChanged;
+        if ( tooltips && IsItemHovered() && !IsItemActive() )
+            SetTooltip( "%s", ( *tooltips )[i] );
+        res.itemDeactivatedAfterEdit = res.itemDeactivatedAfterEdit || IsItemDeactivatedAfterEdit();
+        PopID();
+        PopItemWidth();
+    }
+    PopID();
+
+    const char* label_end = FindRenderedTextEnd( label );
+    if ( label != label_end )
+    {
+        SameLine( 0, g.Style.ItemInnerSpacing.x );
+        TextEx( label, label_end );
+    }
+
+    EndGroup();
+    return res;
+}
+
 bool BeginStatePlugin( const char* label, bool* open, float width )
 {
     ImGuiWindow* window = FindWindowByName( label );

@@ -45,20 +45,25 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color )
     edgeSelectionColor_ = color;
 }
 
-#ifndef MRMESH_NO_OPENCTM
 tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
         return {};
 
+#ifndef MRMESH_NO_OPENCTM
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
     { 
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
     };
+#else
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    {
+        MR::MeshSave::toMrmesh( *mesh, filename );
+    };
+#endif
 
     return std::async( getAsyncLaunchType(), save );
 }
-#endif
 
 void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 {
@@ -128,18 +133,20 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
 }
 
-#ifndef MRMESH_NO_OPENCTM
 tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
+#ifndef MRMESH_NO_OPENCTM
     auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+#else
+    auto res = MeshLoad::fromMrmesh( utf8string( path ) + ".mrmesh", &vertsColorMap_, progressCb );
+#endif
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 
     mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
 }
-#endif
 
 Box3f ObjectMeshHolder::computeBoundingBox_() const
 {

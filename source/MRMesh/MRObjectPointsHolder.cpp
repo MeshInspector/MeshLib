@@ -182,20 +182,28 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-#ifndef MRMESH_NO_OPENCTM
 tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )
         return {};
 
     const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
+#ifndef MRMESH_NO_OPENCTM
     return std::async( getAsyncLaunchType(),
         [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
+#else
+    return std::async( getAsyncLaunchType(),
+        [points = points_, filename = utf8string( path ) + ".ply", ptr = colorMapPtr]() { MR::PointsSave::toPly( *points, filename, ptr ); } );
+#endif
 }
 
 tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
+#ifndef MRMESH_NO_OPENCTM
     auto res = PointsLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+#else
+    auto res = PointsLoad::fromPly( utf8string( path ) + ".ply", &vertsColorMap_, progressCb );
+#endif
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 
@@ -205,7 +213,6 @@ tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
     return {};
 }
-#endif
 
 void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 {

@@ -72,16 +72,23 @@ Box3f ObjectLabel::computeBoundingBox_() const
     return box;
 }
 
-#ifndef MRMESH_NO_OPENCTM
 tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
         return {};
 
+#ifndef MRMESH_NO_OPENCTM
     auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
     {
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
+        MR::MeshSave::toMrmesh( *mesh, filename );
     };
+#else
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    {
+        MR::MeshSave::toMrmesh( *mesh, filename );
+    };
+#endif
 
     return std::async( getAsyncLaunchType(), save );
 }
@@ -95,7 +102,6 @@ tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::files
     mesh_ = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
 }
-#endif
 
 void ObjectLabel::serializeFields_( Json::Value& root ) const
 {

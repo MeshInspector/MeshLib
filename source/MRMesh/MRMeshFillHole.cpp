@@ -481,7 +481,7 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
 
 void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
 {
-    const auto fsz0 = mesh.topology.faceSize();
+    [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
     if ( plan.items.empty() )
     {
         if ( mesh.topology.isLeftTri( a0 ) )
@@ -515,7 +515,7 @@ void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSe
             plan.items[i].edgeCode1 = (int)c;
         }
     }
-    const auto fsz = mesh.topology.faceSize();
+    [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
     assert( plan.numNewTris == int( fsz - fsz0 ) );
 }
 

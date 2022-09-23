@@ -87,6 +87,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, []( pybind11::module_& 
 MR_ADD_PYTHON_POLYLINE(2)
 MR_ADD_PYTHON_POLYLINE(3)
 
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedPolyline2, MR::Polyline2, std::string )
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedPolyline3, MR::Polyline3, std::string )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlanarTriangulation, [] ( pybind11::module_& m )
 {
     m.def( "triangulateContours", ( MR::Mesh( * )( const MR::Contours2f&, bool ) )& MR::PlanarTriangulation::triangulateContours,

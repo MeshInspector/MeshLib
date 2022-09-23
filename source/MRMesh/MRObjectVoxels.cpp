@@ -280,7 +280,7 @@ void ObjectVoxels::updateHistogram_( float min, float max )
 
 void ObjectVoxels::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
 }
 

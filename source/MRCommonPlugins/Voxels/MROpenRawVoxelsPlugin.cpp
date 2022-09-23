@@ -39,25 +39,34 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto menuWidth = 350.0f * menuScaling;
     ImGui::BeginStatePlugin( plugin_name.c_str(), &dialogIsOpen_, menuWidth );
 
-    ImGui::SetNextItemWidth( menuScaling * 200.0f );
-    ImGui::DragInt3( "Dimensions", &parameters_.dimensions.x, 1, 0 );
-    ImGui::SetNextItemWidth( menuScaling * 100.0f );
-    if ( ImGui::DragFloatValid( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0 ) )
-        parameters_.voxelSize = Vector3f::diagonal( parameters_.voxelSize.x );
+    RibbonButtonDrawer::GradientCheckbox( "Auto parameters", &autoMode_ );
+    ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
-    ImGui::Text( "Scalar type:" );
-    for ( int i = 0; i<int( VoxelsLoad::RawParameters::ScalarType::Count ); ++i )
-        ImGui::RadioButton( cScalarTypeNames[i], ( int* ) &parameters_.scalarType, i );
 
-    if ( ImGui::Button( "Open file", ImVec2( -1, 0 ) ) )
+    if ( !autoMode_ )
+    {
+        ImGui::PushItemWidth( menuScaling * 200.0f );
+        ImGui::DragInt3( "Dimensions", &parameters_.dimensions.x, 1, 0 );
+        ImGui::DragFloat3( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0 );
+        ImGui::PopItemWidth();
+        ImGui::Separator();
+        ImGui::Text( "Scalar type:" );
+        for ( int i = 0; i<int( VoxelsLoad::RawParameters::ScalarType::Count ); ++i )
+            ImGui::RadioButton( cScalarTypeNames[i], ( int* )&parameters_.scalarType, i );
+    }
+    if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
     {
         auto path = openFileDialog( { {},{},{{"RAW File","*.raw"}} } );
         if ( !path.empty() )
         {
-            ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path]()->std::function<void()>
+            ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
             {
                 ProgressBar::nextTask( "Load file" );
-                auto res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
+                tl::expected<SimpleVolume, std::string> res;
+                if ( autoMode )
+                    res = VoxelsLoad::loadRaw( path, ProgressBar::callBackSetProgress );
+                else
+                    res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
                 if ( res.has_value() )
                 {
                     ProgressBar::nextTask( "Create object" );
@@ -85,6 +94,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                         menu->showErrorModal( error );
                 };
             }, 3 );
+            dialogIsOpen_ = false;
         }
     }
 
@@ -94,6 +104,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 bool OpenRawVoxelsPlugin::onEnable_()
 {
     parameters_ = VoxelsLoad::RawParameters();
+    autoMode_ = true;
     return true;
 }
 

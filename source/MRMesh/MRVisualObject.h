@@ -111,7 +111,7 @@ public:
     MRMESH_API const Color& getFrontColor( bool selected = true ) const;
     /// if selected sets color of object when it is selected
     /// otherwise sets color of object when it is not selected
-    MRMESH_API virtual void setFrontColor( const Color& color, bool selected = true );
+    MRMESH_API virtual void setFrontColor( const Color& color, bool selected );
 
     MRMESH_API const Color& getBackColor() const;
     MRMESH_API virtual void setBackColor( const Color& color );

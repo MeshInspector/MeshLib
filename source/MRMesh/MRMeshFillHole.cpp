@@ -339,6 +339,14 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     MR_TIMER;
     MR_WRITER( mesh );
 
+    auto newFace = [&] ()
+    {
+        auto res = mesh.topology.addFaceId();
+        if ( params.outNewFaces )
+            params.outNewFaces->autoResizeSet( res );
+        return res;
+    };
+
     size_t aLoopEdgesCounter = 0;
     size_t bLoopEdgesCounter = 0;
     // find two closest points between two boundaries
@@ -431,12 +439,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
         }
         mesh.topology.splice( sp, e2 );
         mesh.topology.splice( symSp, e2.sym() );
-        mesh.topology.setLeft( e1, mesh.topology.addFaceId() );
+        mesh.topology.setLeft( e1, newFace() );
         prevA = current.a;
         e1 = e2;
     }
     // make last triangle without adding new edges
-    mesh.topology.setLeft( e1, mesh.topology.addFaceId() );
+    mesh.topology.setLeft( e1, newFace() );
 }
 
 bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params )
@@ -451,45 +459,64 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
 
 // returns new edge connecting org(a) and org(b),
 // if left or right of new edge is triangular region then makes new faceids
-static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b )
+static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
 {
+    auto newFace = [&]()
+    {
+        auto res = topology.addFaceId();
+        if ( outNewFaces )
+            outNewFaces->autoResizeSet( res );
+        return res;
+    };
+
     EdgeId newEdge = topology.makeEdge();
     topology.splice( a, newEdge );
     topology.splice( b, newEdge.sym() );
     if ( topology.isLeftTri( newEdge ) )
-        topology.setLeft( newEdge, topology.addFaceId() );
+        topology.setLeft( newEdge, newFace() );
     if ( topology.isLeftTri( newEdge.sym() ) )
-        topology.setLeft( newEdge.sym(), topology.addFaceId() );
+        topology.setLeft( newEdge.sym(), newFace() );
     return newEdge;
 }
 
-void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan )
+void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
 {
-    if ( plan.empty() )
+    [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
+    if ( plan.items.empty() )
     {
         if ( mesh.topology.isLeftTri( a0 ) )
         {
+            assert( plan.numNewTris == 1 );
             auto newFaceId = mesh.topology.addFaceId();
+            if ( outNewFaces )
+                outNewFaces->autoResizeSet( newFaceId );
             mesh.topology.setLeft( a0, newFaceId );
         }
         else
-            fillHoleTrivially( mesh, a0 );
-        return;
+        {
+            assert( plan.numNewTris >= 3 );
+            fillHoleTrivially( mesh, a0, outNewFaces );
+        }
     }
-    MR_TIMER
-    auto getEdge = [&]( int code )
+    else
     {
-        if ( code >= 0 )
-            return EdgeId( code );
-        return EdgeId( plan[ -(code+1) ].edgeCode1 );
-    };
-    for ( int i = 0; i < plan.size(); ++i )
-    {
-        EdgeId a = getEdge( plan[i].edgeCode1 );
-        EdgeId b = getEdge( plan[i].edgeCode2 );
-        EdgeId c = makeNewEdge( mesh.topology, a, b );
-        plan[i].edgeCode1 = (int)c;
+        MR_TIMER
+        auto getEdge = [&]( int code )
+        {
+            if ( code >= 0 )
+                return EdgeId( code );
+            return EdgeId( plan.items[ -(code+1) ].edgeCode1 );
+        };
+        for ( int i = 0; i < plan.items.size(); ++i )
+        {
+            EdgeId a = getEdge( plan.items[i].edgeCode1 );
+            EdgeId b = getEdge( plan.items[i].edgeCode2 );
+            EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
+            plan.items[i].edgeCode1 = (int)c;
+        }
     }
+    [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
+    assert( plan.numNewTris == int( fsz - fsz0 ) );
 }
 
 // Sub cubic complexity
@@ -517,7 +544,11 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     } while ( a != a0 );
 
     if ( loopEdgesCounter <= 3 )
+    {
+        // no new edges, one triangle
+        res.numNewTris = 1;
         return res;
+    }
 
     // Fill EdgeMaps
     std::vector<EdgeId> edgeMap( loopEdgesCounter );
@@ -594,7 +625,11 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     }
 
     if ( finConn.a == -1 || finConn.b == -1 )
+    {
+        // "trivial" fill
+        res.numNewTris = loopEdgesCounter;
         return res;
+    }
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );
@@ -612,17 +647,19 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.size() + 1 );
-            res.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
+            auto newEdgeCode = -int( res.items.size() + 1 );
+            res.items.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
             newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdgeCode} );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.size() + 1 );
-            res.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
+            auto newEdgeCode = -int( res.items.size() + 1 );
+            res.items.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
             newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdgeCode} );
         }
+
+        ++res.numNewTris;
     }
     return res;
 }
@@ -648,7 +685,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
     if ( params.makeDegenerateBand )
     {
-        a = a0 = makeDegenerateBandAroundHole( mesh, a0 );
+        a = a0 = makeDegenerateBandAroundHole( mesh, a0, params.outNewFaces );
         for ( unsigned i = 0; i < loopEdgesCounter; ++i )
             a = mesh.topology.prev( a.sym() );
     }
@@ -657,14 +694,22 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
         return;
 
-    executeFillHolePlan( mesh, a0, plan );
+    executeFillHolePlan( mesh, a0, plan, params.outNewFaces );
 }
 
-VertId fillHoleTrivially( Mesh& mesh, EdgeId a )
+VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_TIMER;
     MR_WRITER( mesh );
     assert( !mesh.topology.left( a ) );
+
+    auto addFaceId = [&]()
+    {
+        auto res = mesh.topology.addFaceId();
+        if ( outNewFaces )
+            outNewFaces->autoResizeSet( res );
+        return res;
+    };
 
     Vector3d sum;
     int holeDegree = 0;
@@ -689,24 +734,32 @@ VertId fillHoleTrivially( Mesh& mesh, EdgeId a )
         mesh.topology.splice( bdi, ei );
         mesh.topology.splice( elast.sym(), ei.sym() );
         assert( mesh.topology.isLeftTri( ei ) );
-        mesh.topology.setLeft( ei, mesh.topology.addFaceId() );
+        mesh.topology.setLeft( ei, addFaceId() );
         elast = ei;
         bdi = bdi1;
     }
     // and last face
     assert( mesh.topology.isLeftTri( e0 ) );
-    mesh.topology.setLeft( e0, mesh.topology.addFaceId() );
+    mesh.topology.setLeft( e0, addFaceId() );
 
     mesh.topology.setOrg( e0.sym(), centerVert );
 
     return centerVert;
 }
 
-EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos )
+EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &)> getVertPos, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_TIMER;
     MR_WRITER( mesh );
     assert( !mesh.topology.left( a ) );
+
+    auto addFaceId = [&]()
+    {
+        auto res = mesh.topology.addFaceId();
+        if ( outNewFaces )
+            outNewFaces->autoResizeSet( res );
+        return res;
+    };
 
     EdgeId e0, ei;
     e0 = ei = mesh.topology.makeEdge();
@@ -720,7 +773,7 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &
         mesh.topology.splice( ei.sym(), em.sym() );
         mesh.topology.splice( ai1, em );
         assert( mesh.topology.isLeftTri( em ) );
-        mesh.topology.setLeft( em, mesh.topology.addFaceId() );
+        mesh.topology.setLeft( em, addFaceId() );
 
         EdgeId ei1;
         if ( ai1 == e0 )
@@ -735,7 +788,7 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &
         mesh.topology.splice( em.sym(), opp );
         mesh.topology.splice( opp.sym(), mesh.topology.prev( ei1.sym() ) );
         assert( mesh.topology.isLeftTri( ei1 ) );
-        mesh.topology.setLeft( ei1, mesh.topology.addFaceId() );
+        mesh.topology.setLeft( ei1, addFaceId() );
         if ( a == ai )
             res = opp;
         ei = ei1;
@@ -744,13 +797,14 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &
     return res;
 }
 
-EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane )
+EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces )
 {
     return extendHole( mesh, a, 
-        [plane]( const Vector3f & p ) { return plane.project( p ); } );
+        [plane]( const Vector3f & p ) { return plane.project( p ); },
+        outNewFaces );
 }
 
-EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension )
+EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, FaceBitSet* outNewFaces /*= nullptr */ )
 {
     dir = dir.normalized();
     float min = FLT_MAX;
@@ -766,16 +820,17 @@ EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension )
         }
     }
 
-    return extendHole( mesh, a, Plane3f::fromDirAndPt( dir, mesh.points[minVert] - holeExtension * dir ) );
+    return extendHole( mesh, a, Plane3f::fromDirAndPt( dir, mesh.points[minVert] - holeExtension * dir ), outNewFaces );
 }
 
-EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a )
+EdgeId makeDegenerateBandAroundHole( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces )
 {
     return extendHole( mesh, a, 
-        []( const Vector3f & p ) { return p; } );
+        []( const Vector3f & p ) { return p; },
+        outNewFaces );
 }
 
-bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b )
+bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
 {
     assert( !topology.left( a ) );
     assert( !topology.left( b ) );
@@ -809,6 +864,8 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b )
         }
         auto f = topology.addFaceId();
         topology.setLeft( a, f );
+        if ( outNewFaces )
+            outNewFaces->autoResizeSet( f );
         return true;
     }
 
@@ -851,6 +908,11 @@ bool makeBridge( MeshTopology & topology, EdgeId a, EdgeId b )
     topology.setLeft( a, fa );
     auto fb = topology.addFaceId();
     topology.setLeft( b, fb );
+    if ( outNewFaces )
+    {
+        outNewFaces->autoResizeSet( fa );
+        outNewFaces->autoResizeSet( fb );
+    }
     return true;
 }
 
@@ -904,8 +966,10 @@ TEST( MRMesh, buildCylinderBetweenTwoHoles )
     EXPECT_FALSE( mesh.topology.left( bdEdges[0] ).valid() );
     EXPECT_FALSE( mesh.topology.left( bdEdges[1] ).valid() );
 
+    FaceBitSet newFaces;
     StitchHolesParams params;
     auto fsz0 = mesh.topology.faceSize();
+    params.outNewFaces = &newFaces;
     buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
     auto numNewFaces = mesh.topology.faceSize() - fsz0;
 
@@ -913,6 +977,8 @@ TEST( MRMesh, buildCylinderBetweenTwoHoles )
     EXPECT_EQ( mesh.topology.numValidFaces(), 8 );
     EXPECT_EQ( mesh.points.size(), 6 );
     EXPECT_EQ( numNewFaces, 6 );
+    EXPECT_EQ( newFaces.count(), 6 );
+    EXPECT_EQ( newFaces.size(), 8 );
 
     bdEdges = mesh.topology.findHoleRepresentiveEdges();
     EXPECT_EQ( bdEdges.size(), 0 );
@@ -928,7 +994,9 @@ TEST( MRMesh, makeBridge )
     topology.setOrg( b, topology.addVertId() );
     topology.setOrg( b.sym(), topology.addVertId() );
     EXPECT_EQ( topology.numValidFaces(), 0 );
-    EXPECT_TRUE( makeBridge( topology, a, b ) );
+    FaceBitSet fbs;
+    EXPECT_TRUE( makeBridge( topology, a, b, &fbs ) );
+    EXPECT_EQ( fbs.count(), 2 );
     EXPECT_EQ( topology.numValidVerts(), 4 );
     EXPECT_EQ( topology.numValidFaces(), 2 );
     EXPECT_EQ( topology.edgeSize(), 5 * 2 );
@@ -941,7 +1009,9 @@ TEST( MRMesh, makeBridge )
     topology.splice( a.sym(), b );
     topology.setOrg( b.sym(), topology.addVertId() );
     EXPECT_EQ( topology.numValidFaces(), 0 );
-    makeBridge( topology, a, b );
+    fbs.reset();
+    makeBridge( topology, a, b, &fbs );
+    EXPECT_EQ( fbs.count(), 1 );
     EXPECT_EQ( topology.numValidVerts(), 3 );
     EXPECT_EQ( topology.numValidFaces(), 1 );
     EXPECT_EQ( topology.edgeSize(), 3 * 2 );

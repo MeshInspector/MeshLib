@@ -31,8 +31,8 @@ public:
     /// unite two elements, returns new common root
     I unite( I first, I second )
     {
-        auto firstRoot = getRoot_( first );
-        auto secondRoot = getRoot_( second );
+        auto firstRoot = updateRoot_( first );
+        auto secondRoot = updateRoot_( second );
         if ( firstRoot == secondRoot )
             return firstRoot;
         /// select root by size for best performance
@@ -52,31 +52,37 @@ public:
     /// returns true if given two elements are from one component
     bool united( I first, I second )
     {
-        auto firstRoot = getRoot_( first );
-        auto secondRoot = getRoot_( second );
+        auto firstRoot = updateRoot_( first );
+        auto secondRoot = updateRoot_( second );
         return firstRoot == secondRoot;
     }
     /// finds root of element
     I find( I a )
     {
-        return getRoot_( a );
+        return updateRoot_( a );
     }
     /// gets roots for all elements
     const Vector<I, I> & roots()
     {
         for ( I i{ 0 }; i < roots_.size(); ++i )
-            roots_[i] = getRoot_( i );
+            updateRoot_( i );
         return roots_;
     }
 private:
-    I getRoot_( I a )
+    // find the root of given element, and set it as parent for it and other parents
+    I updateRoot_( I a )
     {
-        while ( a != roots_[a] )
-        {
-            roots_[a] = roots_[roots_[a]];
-            a = roots_[a];
+        // find root
+        I r = roots_[a];
+        for ( I e = a; e != r; r = roots_[e = r] ) {}
+        // update parents
+        while ( a != r ) 
+        { 
+            I b = r;
+            std::swap( roots_[a], b );
+            a = b; 
         }
-        return a;
+        return r;
     }
     /// roots for each element
     Vector<I, I> roots_;

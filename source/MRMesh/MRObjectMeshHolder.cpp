@@ -187,7 +187,7 @@ void ObjectMeshHolder::updateMeshStat_() const
 
 void ObjectMeshHolder::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );

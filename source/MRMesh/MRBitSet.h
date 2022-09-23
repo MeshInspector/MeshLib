@@ -19,8 +19,8 @@ namespace MR
 /// container of bits
 class BitSet : public boost::dynamic_bitset<std::uint64_t>
 {
-    using base = boost::dynamic_bitset<std::uint64_t>;
 public:
+    using base = boost::dynamic_bitset<std::uint64_t>;
     using base::base;
     using IndexType = size_t;
 
@@ -117,6 +117,15 @@ public:
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
 };
+
+/// compare that two bit sets have the same set bits (they can be equal even if sizes are distinct but last bits are off)
+[[nodiscard]] MRMESH_API bool operator == ( const BitSet & a, const BitSet & b );
+template <typename T>
+[[nodiscard]] inline bool operator == ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b )
+    { return static_cast<const BitSet &>( a ) == static_cast<const BitSet &>( b ); }
+/// prohibit comparison of unrelated sets
+template <typename T, typename U>
+void operator == ( const TaggedBitSet<T> & a, const TaggedBitSet<U> & b ) = delete;
 
 template <typename T>
 [[nodiscard]] inline bool contains( const TaggedBitSet<T> * bitset, Id<T> id )

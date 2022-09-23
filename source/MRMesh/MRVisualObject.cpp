@@ -97,7 +97,7 @@ const Color& VisualObject::getFrontColor( bool selected /*= true */ ) const
     return selected ? selectedColor_ : unselectedColor_;
 }
 
-void VisualObject::setFrontColor( const Color& color, bool selected /*= true */ )
+void VisualObject::setFrontColor( const Color& color, bool selected )
 {
     auto& oldColor = selected ? selectedColor_ : unselectedColor_;
     if ( oldColor == color )
@@ -383,7 +383,7 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
 
 void VisualObject::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );

@@ -1307,8 +1307,7 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, F
     if ( new2OldMap )
     {
         const auto fsz = mesh.topology.faceSize();
-        for ( FaceId f{ fsz0 }; f < fsz; ++f )
-            new2OldMap->autoResizeAt( f ) = oldFace;
+        new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
 }
 
@@ -1657,10 +1656,23 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     } );
     // fill contours
+
+    int numNewTris = 0;
+    for ( const auto & hd : holeRepresentativeEdges )
+        numNewTris += hd.plan.numNewTris;
+    const auto expectedTotalTris = mesh.topology.faceSize() + numNewTris;
+
+    mesh.topology.faceReserve( expectedTotalTris );
+    if ( params.new2OldMap )
+        params.new2OldMap->reserve( expectedTotalTris );
+
     for ( auto & hd : holeRepresentativeEdges )
-    {
         executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap );
-    }
+
+    assert( mesh.topology.faceSize() == expectedTotalTris );
+    if ( params.new2OldMap )
+        assert( params.new2OldMap->size() == expectedTotalTris );
+
     res.resultCut = std::move( preRes.paths );
 
     return res;

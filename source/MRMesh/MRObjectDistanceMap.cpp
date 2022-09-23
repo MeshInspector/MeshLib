@@ -184,7 +184,7 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
 
 void ObjectDistanceMap::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 

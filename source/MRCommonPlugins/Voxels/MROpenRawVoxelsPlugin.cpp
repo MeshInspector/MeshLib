@@ -1,6 +1,7 @@
 #ifndef __EMSCRIPTEN__
 #include "MROpenRawVoxelsPlugin.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRProgressBar.h"
@@ -37,22 +38,25 @@ OpenRawVoxelsPlugin::OpenRawVoxelsPlugin():
 void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
     auto menuWidth = 350.0f * menuScaling;
-    ImGui::BeginStatePlugin( plugin_name.c_str(), &dialogIsOpen_, menuWidth );
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling ) )
+        return;
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     RibbonButtonDrawer::GradientCheckbox( "Auto parameters", &autoMode_ );
+    ImGui::PopStyleVar();
     ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
-
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
     if ( !autoMode_ )
     {
         ImGui::PushItemWidth( menuScaling * 200.0f );
-        ImGui::DragInt3( "Dimensions", &parameters_.dimensions.x, 1, 0 );
-        ImGui::DragFloat3( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0 );
+        ImGui::DragIntValid3( "Dimensions", &parameters_.dimensions.x, 1, 0, std::numeric_limits<int>::max() );
+        ImGui::DragFloatValid3( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0.0f );
         ImGui::PopItemWidth();
         ImGui::Separator();
-        ImGui::Text( "Scalar type:" );
-        for ( int i = 0; i<int( VoxelsLoad::RawParameters::ScalarType::Count ); ++i )
-            ImGui::RadioButton( cScalarTypeNames[i], ( int* )&parameters_.scalarType, i );
+        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, MenuItemsList( std::begin( cScalarTypeNames ), std::end( cScalarTypeNames ) ) );
     }
     if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
     {
@@ -97,8 +101,8 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             dialogIsOpen_ = false;
         }
     }
-
-    ImGui::End();
+    ImGui::PopStyleVar( 3 );
+    ImGui::EndCustomStatePlugin();
 }
 
 bool OpenRawVoxelsPlugin::onEnable_()

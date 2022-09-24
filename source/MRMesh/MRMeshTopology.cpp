@@ -206,6 +206,14 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
+void MeshTopology::getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const
+{
+    e0 = edgeWithLeft( f );
+    e1 = prev( e0.sym() );
+    e2 = prev( e1.sym() );
+    assert( e0 == prev( e2.sym() ) );
+}
+
 std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER

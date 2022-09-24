@@ -15,16 +15,17 @@ class UnionFind
 {
 public:
     UnionFind() = default;
-    UnionFind( size_t size )
+    explicit UnionFind( size_t size )
     {
         reset( size );
     }
     /// reset roots to represent each element as disjoint set of rank 0
     void reset( size_t size )
     {
-        roots_.resize( size );
-        for ( I i{ 0 }; i < roots_.size(); ++i )
-            roots_[i] = i;
+        roots_.clear();
+        roots_.reserve( size );
+        for ( I i{ 0 }; i < size; ++i )
+            roots_.push_back( i );
         sizes_.clear();
         sizes_.resize( size, 1 );
     }

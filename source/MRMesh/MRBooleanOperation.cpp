@@ -95,7 +95,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     WholeEdgeMap* eMapPtr = maps ? &maps->old2newEdges : &map;
     VertMap* vMapPtr = maps ? &maps->old2newVerts : nullptr;
 
-    auto comps = MeshComponents::getAllComponents( origin, MeshComponents::FaceIncidence::PerVertex );
+    auto comps = MeshComponents::getAllComponents( origin );
     leftPart = preparePart( origin, comps, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A );
 
     outMesh.addPartByMask( origin, leftPart, needFlip, {}, {}, 
@@ -164,9 +164,9 @@ Mesh doTrivialBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut, Bool
     FaceBitSet aPartFbs, bPartFbs;
     std::vector<FaceBitSet> aComponents, bComponents;
     if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
-        aComponents = MeshComponents::getAllComponents( meshACut, MeshComponents::FaceIncidence::PerVertex );
+        aComponents = MeshComponents::getAllComponents( meshACut );
     if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
-        bComponents = MeshComponents::getAllComponents( meshBCut, MeshComponents::FaceIncidence::PerVertex );
+        bComponents = MeshComponents::getAllComponents( meshBCut );
 
     if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
         aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, false, true, rigidB2A );

@@ -35,7 +35,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         return res;
 
     // sequentially subdivide full task on smaller subtasks;
-    // they shall be not too many for this subdivision not to take too ling;
+    // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
     std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } }, nextSubtasks, leafTasks;
     for( int i = 0; i < 16; ++i ) // 16 -> will produce at most 2^16 subtasks

@@ -127,7 +127,10 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)pluginLibraryList.json $(TargetDir)pluginLibraryList.json
-</Command>
+		if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
+		copy /Y $(TargetDir)*.py* $(TargetDir)meshlib
+		copy $(SolutionDir)..\test_python\helper\win_init.py $(TargetDir)meshlib\__init__.py
+	  </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

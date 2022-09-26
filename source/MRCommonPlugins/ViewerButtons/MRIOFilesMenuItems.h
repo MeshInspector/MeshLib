@@ -39,7 +39,7 @@ public:
     virtual bool action() override;
 };
 
-class SaveObjectMenuItem : public RibbonMenuItem, public SceneStateExactCheck<1, VisualObject>
+class SaveObjectMenuItem : public RibbonMenuItem, public SceneStateOrCheck< SceneStateExactCheck<1, ObjectMesh>, SceneStateExactCheck<1, ObjectLines>, SceneStateExactCheck<1, ObjectPoints> >
 {
 public:
     SaveObjectMenuItem();

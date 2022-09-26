@@ -52,7 +52,7 @@ jobs:
 
 
   install-test:
-    timeout-minutes: 20
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     container:
       image: ${{matrix.container}}
@@ -65,12 +65,12 @@ jobs:
           - os: Ubuntu20
             container: ubuntu:20.04
             fileName: "*ubuntu20*"
-            updateCmd: DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
             installCmd: apt-get -y install ./*.deb
           - os: Ubuntu22
             container: ubuntu:22.04
             fileName: "*ubuntu22*"
-            updateCmd: DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
             installCmd: apt-get -y install ./*.deb
           - os: Fedroa35
             container: fedora:35

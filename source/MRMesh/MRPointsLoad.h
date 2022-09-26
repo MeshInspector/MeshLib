@@ -20,11 +20,13 @@ namespace PointsLoad
 
 MRMESH_API extern const IOFilters Filters;
 
+#ifndef MRMESH_NO_OPENCTM
 /// loads from .ctm file
 MRMESH_API tl::expected<PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
                                                           ProgressCallback callback = {} );
 MRMESH_API tl::expected<PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                           ProgressCallback callback = {} );
+#endif
 
 /// loads from .ply file
 MRMESH_API tl::expected<PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,

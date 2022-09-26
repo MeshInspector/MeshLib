@@ -2,6 +2,8 @@
 #include "MRAABBTreePoints.h"
 #include "MRComputeBoundingBox.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPlane3.h"
+#include "MRBitSetParallelFor.h"
 
 namespace MR
 {
@@ -87,6 +89,18 @@ size_t PointCloud::heapBytes() const
         + normals.heapBytes()
         + validPoints.heapBytes()
         + AABBTreeOwner_.heapBytes();
+}
+
+void PointCloud::mirror( const Plane3f& plane )
+{
+    BitSetParallelFor( validPoints, [&] ( VertId id )
+    {
+        points[id] += 2.0f * ( plane.project( points[id] ) - points[id] );
+        if ( !normals.empty() )
+            normals[id] -= 2.0f * dot( normals[id], plane.n ) * plane.n;
+    } );  
+
+    invalidateCaches();
 }
 
 } //namespace MR

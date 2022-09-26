@@ -59,6 +59,7 @@ void ObjectLinesHolder::setDirtyFlags( uint32_t mask )
     {
         totalLength_.reset();
         worldBox_.reset();
+        worldBox_.get().reset();
         if ( polyline_ )
             polyline_->invalidateCaches();
     }
@@ -234,7 +235,7 @@ void ObjectLinesHolder::setupRenderObject_() const
 
 void ObjectLinesHolder::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
 }
 

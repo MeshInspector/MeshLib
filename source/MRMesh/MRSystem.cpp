@@ -11,18 +11,24 @@
 #ifndef _MSC_VER
 #include <cpuid.h>
 #endif
+#ifdef __MINGW32__
+#include <windows.h>
+#endif
 
 #else
 
-#include "MRPch/MRSpdlog.h"
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
+#ifndef MRMESH_NO_CLIPBOARD
 #include <clip/clip.h>
+#endif
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
 #include <cpuid.h>
+#ifndef MRMESH_NO_CLIPBOARD
 #include <clip/clip.h>
+#endif
 #endif
 #endif
 #include <pthread.h>
@@ -284,6 +290,8 @@ std::string GetClipboardText()
     CloseClipboard();
 
     return text;
+#elif defined(MRMESH_NO_CLIPBOARD)
+    return "";
 #else
     std::string text;
     if ( !clip::get_text( text ) )
@@ -308,6 +316,9 @@ void SetClipboardText( const std::string& text )
     EmptyClipboard();
     SetClipboardData( CF_TEXT, hMem );
     CloseClipboard();
+#elif defined( MRMESH_NO_CLIPBOARD )
+    ( void )text;
+    return;
 #else
     if ( !clip::set_text( text ) )
         spdlog::error( "Could not set clipboard" );

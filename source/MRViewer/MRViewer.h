@@ -159,9 +159,9 @@ public:
     // Return the current viewport, or the viewport corresponding to a given unique identifier
     //
     // Inputs:
-    //   core_id  unique identifier corresponding to the desired viewport (current viewport if 0)
-    MRVIEWER_API Viewport& viewport( ViewportId viewport_id = {} );
-    MRVIEWER_API const Viewport& viewport( ViewportId viewport_id = {} ) const;
+    //   viewportId unique identifier corresponding to the desired viewport (current viewport if 0)
+    MRVIEWER_API Viewport& viewport( ViewportId viewportId = {} );
+    MRVIEWER_API const Viewport& viewport( ViewportId viewportId = {} ) const;
 
     // Append a new "slot" for a viewport (i.e., copy properties of the current viewport, only
     // changing the viewport size/position)

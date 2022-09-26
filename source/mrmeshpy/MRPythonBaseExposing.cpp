@@ -14,8 +14,25 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRFillContour.h"
+#include "MRMesh/MRExpandShrink.h"
+#include "MRMesh/MRColor.h"
+#include <tl/expected.hpp>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
+{
+    using expectedType = tl::expected<void, std::string>;
+    pybind11::class_<expectedType>( m, "ExpectedVoid" ).
+        def( "has_value", &expectedType::has_value ).
+        def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
+{
+    pybind11::class_<std::filesystem::path>( m, "Path" ).
+        def( pybind11::init<const std::string&>() );
+} )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3f, [] ( pybind11::module_& m )
 {
@@ -48,6 +65,43 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2i, [] ( pybind11::module_& m )
         def( "normalized", &MR::Vector2i::normalized );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2f, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Vector2f>( m, "Vector2f", "two-dimensional vector" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "x", &MR::Vector2f::x ).
+        def_readwrite( "y", &MR::Vector2f::y ).
+        def( pybind11::self + pybind11::self ).
+        def( pybind11::self - pybind11::self ).
+        def( pybind11::self * float() ).
+        def( float() * pybind11::self ).
+        def( pybind11::self / float() ).
+        def( pybind11::self += pybind11::self ).
+        def( pybind11::self -= pybind11::self ).
+        def( pybind11::self *= float() ).
+        def( pybind11::self /= float() ).
+        def( -pybind11::self ).
+        def( pybind11::self == pybind11::self ).
+        def( "length", &MR::Vector2f::length ).
+        def( "lengthSq", &MR::Vector2f::lengthSq ).
+        def( "normalized", &MR::Vector2f::normalized );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Color>( m, "Color" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<int, int, int, int>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 255 ).
+        def( pybind11::init<float, float, float, float>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 1.0f ).
+        def_readwrite( "r", &MR::Color::r ).
+        def_readwrite( "r", &MR::Color::g ).
+        def_readwrite( "r", &MR::Color::b ).
+        def_readwrite( "r", &MR::Color::a );
+} )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::Vector3f>( m, "Vector3f", "three-dimensional vector" ).
@@ -72,6 +126,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
         def( "lengthSq", &MR::Vector3f::lengthSq ).
         def( "normalized", &MR::Vector3f::normalized );
 } )
+
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
 {
@@ -262,8 +317,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     m.def( "edgeCurvMetric", &MR::edgeCurvMetric, 
         pybind11::arg( "mesh" ), pybind11::arg( "angleSinFactor" ) = 2.0f, pybind11::arg( "angleSinForBoundary" ) = 0.0f,
         "returns edge's metric that depends both on edge's length and on the angle between its left and right faces\n"
-        "\tangleSinFactor multiplier before dihedral angle sine in edge metric calculation (positive to prefer concave angles, negative - convex)\n"
-        "\tangleSinForBoundary consider this dihedral angle sine for boundary edges" );
+        "\tangleSinFactor - multiplier before dihedral angle sine in edge metric calculation (positive to prefer concave angles, negative - convex)\n"
+        "\tangleSinForBoundary - consider this dihedral angle sine for boundary edges" );
     m.def( "edgeTableMetric", &MR::edgeTableMetric, pybind11::arg( "topology" ), pybind11::arg( "metric" ), "pre-computes the metric for all mesh edges to quickly return it later for any edge" );
 
     m.def( "buildShortestPath", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) )& MR::buildShortestPath,
@@ -281,6 +336,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) )& MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
+
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "expand", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::expand,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "adds to the region all faces within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::VertBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all vertices within given number of hops (stars) from the initial region boundary" );
+    m.def( "shrink", ( void( * )( const MR::MeshTopology&, MR::FaceBitSet&, int ) )& MR::shrink,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
+        "removes from the region all faces within given number of hops (stars) from the initial region boundary" );
 
     m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::dilateRegionByMetric,
        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
@@ -334,6 +402,9 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorVerts, MR::VertId )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVec3, MR::Vector3f )
+MR_ADD_PYTHON_VEC( mrmeshpy, Contours3f, MR::Contour3f )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorVec2, MR::Vector2f )
+MR_ADD_PYTHON_VEC( mrmeshpy, Contours2f, MR::Contour2f )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
 

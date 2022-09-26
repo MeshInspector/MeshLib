@@ -19,7 +19,7 @@ void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     auto selEdges = objMesh->getSelectedEdges();
     topology.excludeLoneEdges( selEdges );
     Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( selEdges );
+    objMesh->selectEdges( std::move( selEdges ) );
 
     // remove deleted edges from creases
     auto creases = objMesh->creases();
@@ -61,7 +61,7 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
     // update edges in the selection
     auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
     Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( selEdges );
+    objMesh->selectEdges( std::move( selEdges ) );
 
     // update edges in the creases
     auto creases = getMapping( objMesh->creases(), emap );

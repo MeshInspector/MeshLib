@@ -97,7 +97,7 @@ const Color& VisualObject::getFrontColor( bool selected /*= true */ ) const
     return selected ? selectedColor_ : unselectedColor_;
 }
 
-void VisualObject::setFrontColor( const Color& color, bool selected /*= true */ )
+void VisualObject::setFrontColor( const Color& color, bool selected )
 {
     auto& oldColor = selected ? selectedColor_ : unselectedColor_;
     if ( oldColor == color )
@@ -351,16 +351,16 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
         ss << "box min: (" << bbox.min.x << ", " << bbox.min.y << ", " << bbox.min.z << ")";
         res.push_back( ss.str() );
 
-        ss = {};
+        ss = std::stringstream{};
         ss << "box max: (" << bbox.max.x << ", " << bbox.max.y << ", " << bbox.max.z << ")";
         res.push_back( ss.str() );
 
-        ss = {};
+        ss = std::stringstream{};
         const auto bcenter = bbox.center();
         ss << "box center: (" << bcenter.x << ", " << bcenter.y << ", " << bcenter.z << ")";
         res.push_back( ss.str() );
 
-        ss = {};
+        ss = std::stringstream{};
         const auto bsize = bbox.size();
         ss << "(" << bsize.x << ", " << bsize.y << ", " << bsize.z << ")";
         const auto boxStr = ss.str();
@@ -370,7 +370,7 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
         if ( wbox.valid() )
         {
             const auto wbsize = wbox.size();
-            ss = {};
+            ss = std::stringstream{};
             ss << "(" << wbsize.x << ", " << wbsize.y << ", " << wbsize.z << ")";
             const auto wboxStr = ss.str();
             if ( boxStr != wboxStr )
@@ -383,7 +383,7 @@ void VisualObject::boundingBoxToInfoLines_( std::vector<std::string> & res ) con
 
 void VisualObject::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );

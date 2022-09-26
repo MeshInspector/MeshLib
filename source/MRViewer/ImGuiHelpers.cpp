@@ -321,6 +321,44 @@ MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, f
     return res;
 }
 
+MultiDragRes DragIntValid3( const char* label, int v[3], float speed, int min, int max, const char* format, const char* ( *tooltips )[3])
+{
+    MultiDragRes res;
+
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiWindow* window = g.CurrentWindow;
+    if ( window->SkipItems )
+        return res;
+
+    BeginGroup();
+    PushID( label );
+    constexpr int components = 3;
+    PushMultiItemsWidths( components, CalcItemWidth() );
+    for ( int i = 0; i < components; i++ )
+    {
+        PushID( i );
+        if ( i > 0 )
+            SameLine( 0, g.Style.ItemInnerSpacing.x );
+        res.valueChanged = DragIntValid( "", v + i, speed, min, max, format ) || res.valueChanged;
+        if ( tooltips && IsItemHovered() && !IsItemActive() )
+            SetTooltip( "%s", ( *tooltips )[i] );
+        res.itemDeactivatedAfterEdit = res.itemDeactivatedAfterEdit || IsItemDeactivatedAfterEdit();
+        PopID();
+        PopItemWidth();
+    }
+    PopID();
+
+    const char* label_end = FindRenderedTextEnd( label );
+    if ( label != label_end )
+    {
+        SameLine( 0, g.Style.ItemInnerSpacing.x );
+        TextEx( label, label_end );
+    }
+
+    EndGroup();
+    return res;
+}
+
 bool BeginStatePlugin( const char* label, bool* open, float width )
 {
     ImGuiWindow* window = FindWindowByName( label );
@@ -963,20 +1001,24 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         planeWidget.definePlane();
         planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().center() ) );
     };
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY" ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f * menuScaling, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine();
+
     const bool importPlaneModeOld = planeWidget.importPlaneMode();
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import plane" ) )
+
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f * menuScaling, 0 } ) )
     {
         spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
@@ -993,40 +1035,70 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         ImGui::Text( "%s", "Click on the plane object in scene to import its parameters" );
 
     if ( !planeWidget.getPlaneObject() )
+    {
+        ImGui::PopStyleVar( 2 );
         return;
+    }
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cInputPadding * menuScaling } );
 
     auto planeBackUp = planeWidget.getPlane();
     auto plane = planeWidget.getPlane();
 
     float dragspeed = planeWidget.box().diagonal() * 1e-3f;
+    ImGui::SetNextItemWidth( 200.0f * menuScaling );
     ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
-    if ( ImGui::ArrowButton( "##left", ImGuiDir_Left ) )
+
+    ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = MR::cDefaultFontSize / MR::cBigIconSize;
+        ImGui::PushFont( iconsFont );
+    }
+
+    const float arrowButtonSize = 2.0f * MR::cInputPadding * menuScaling + ImGui::GetTextLineHeight();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling * 0.5f, MR::cDefaultWindowPaddingY * menuScaling } );
+    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x84", { arrowButtonSize, arrowButtonSize } ) )
         plane.d -= dragspeed;
+    
     ImGui::SameLine();
-    if ( ImGui::ArrowButton( "##right", ImGuiDir_Right ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
         plane.d += dragspeed;
+    ImGui::PopStyleVar();
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 1.0f;
+        ImGui::PopFont();
+    }
+
     ImGui::SameLine();
     ImGui::PopButtonRepeat();
-    ImGui::SetNextItemWidth( menuScaling * 100 );
 
-    
+    ImGui::SetNextItemWidth( 80.0f * menuScaling );
     ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
 
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", ImVec2( -1, 0 ) ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", { 60.0f * menuScaling, 0 } ) )
         plane = -plane;
+
+    ImGui::PopStyleVar();
+    ImGui::Separator();
 
     auto planeObj = planeWidget.getPlaneObject();
     if ( planeObj )
     {
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show plane", &showPlane ) )
+        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show Plane", &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );     
+        ImGui::PopStyleVar();
     }
 
     if ( planeBackUp != plane )
         planeWidget.updatePlane( plane, plane.n != planeBackUp.n );
+    
+    ImGui::PopStyleVar( 2 );
 }
 
 void Image( const MR::ImGuiImage& image, const ImVec2& size, const MR::Color& multColor )

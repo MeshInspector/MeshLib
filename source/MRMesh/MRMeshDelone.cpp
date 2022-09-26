@@ -98,23 +98,24 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDevia
     return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
 }
 
-int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings )
+int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
 {
-    if ( settings.numIters <= 0 )
+    if ( numIters <= 0 )
         return 0;
     MR_TIMER;
     MR_WRITER( mesh );
 
     int flipsDone = 0;
-    for ( int iter = 0; iter < settings.numIters; ++iter )
+    for ( int iter = 0; iter < numIters; ++iter )
     {
-        if ( settings.progressCallback && !settings.progressCallback( float( iter ) / settings.numIters ) )
+        if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
             return flipsDone;
 
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+            if ( ( settings.notFlippable && settings.notFlippable->test( e ) )
+                || checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
                 continue;
 
             mesh.topology.flipEdge( e );
@@ -126,15 +127,16 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings )
     return flipsDone;
 }
 
-void makeDeloneOriginRing( Mesh & mesh, EdgeId e, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
+void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
 {
     MR_WRITER( mesh );
     const EdgeId e0 = e;
     for (;;)
     {
         auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid() 
-            || checkDeloneQuadrangleInMesh( mesh, testEdge, maxDeviationAfterFlip, maxAngleChange, region ) )
+        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid()
+            || ( settings.notFlippable && settings.notFlippable->test( testEdge.undirected() ) )
+            || checkDeloneQuadrangleInMesh( mesh, testEdge, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
         {
             e = mesh.topology.next( e );
             if ( e == e0 )

@@ -59,7 +59,7 @@ public:
     MRMESH_API virtual void setSelectedFacesColor( const Color& color );
 
     const UndirectedEdgeBitSet& getSelectedEdges() const { return selectedEdges_; }
-    MRMESH_API virtual void selectEdges( const UndirectedEdgeBitSet& newSelection );
+    MRMESH_API virtual void selectEdges( UndirectedEdgeBitSet newSelection );
     /// returns colors of selected edges
     MRMESH_API const Color& getSelectedEdgesColor() const;
     /// sets colors of selected edges

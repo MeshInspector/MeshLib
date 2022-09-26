@@ -4,6 +4,10 @@
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 
+#ifdef __MINGW32__
+#include <windows.h>
+#endif
+
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif

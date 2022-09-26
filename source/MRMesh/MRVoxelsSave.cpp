@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelsSave.h"
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"
@@ -24,14 +24,14 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         return tl::make_unexpected( "Path is empty" );
     }
 
-    auto ext = path.extension().u8string();
+    auto ext = utf8string( path.extension() );
     for ( auto & c : ext )
         c = (char) tolower( c );
 
-    if ( ext != u8".raw" )
+    if ( ext != ".raw" )
     {
         std::stringstream ss;
-        ss << "Extension is not correct, expected \".raw\" current \"" << asString( ext ) << "\"" << std::endl;
+        ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
         return tl::make_unexpected( ss.str() );
     }
 

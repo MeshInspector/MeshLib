@@ -4,14 +4,14 @@ import pytest
 
 
 def test_delete_faces():
-    torus = mrmesh.make_torus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
     
     
     faceBitSetToDelete = mrmesh.FaceBitSet()
     faceBitSetToDelete.resize(5, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)
     oldFaceBS = torus.topology.getValidFaces()
-    mrmesh.delete_faces(torus.topology, faceBitSetToDelete)
+    torus.topology.deleteFaces(faceBitSetToDelete)
     
     deletedBitSet = oldFaceBS - torus.topology.getValidFaces()
   

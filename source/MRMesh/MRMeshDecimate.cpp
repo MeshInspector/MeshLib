@@ -199,7 +199,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation 
     bool meshChanged = false;
     for( int i = 0; i < maxIters; ++i )
     {
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, { .numIters = 5, .maxDeviationAfterFlip = maxDeviation } ) > 0;
+        bool changedThisIter = makeDeloneEdgeFlips( mesh, { .maxDeviationAfterFlip = maxDeviation }, 5 ) > 0;
 
         DecimateSettings settings;
         settings.maxError = maxDeviation;
@@ -537,6 +537,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.useCurvature = settings.useCurvature;
     subs.region = settings.region;
+    subs.notFlippable = settings.notFlippable;
+    subs.onEdgeSplit = settings.onEdgeSplit;
     if ( settings.progressCallback )
         subs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( arg * 0.5f ); };
     subdivideMesh( mesh, subs );

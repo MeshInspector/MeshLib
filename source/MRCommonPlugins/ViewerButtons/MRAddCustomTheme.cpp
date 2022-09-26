@@ -180,26 +180,26 @@ void AddCustomThemePlugin::save_()
         auto visualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get() );
         for ( auto obj : visualObjs )
         {
-            obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+            obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
             obj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
             obj->setBackColor( SceneColors::get( SceneColors::BackFaces ) );
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 #ifndef __EMSCRIPTEN__
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
-                objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ) );
+                objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectVoxels ), false );
             }
             else
 #endif
             if ( auto objDM = std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
             {
-                objDM->setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ) );
+                objDM->setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );
                 objDM->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
             }
             else if ( auto meshObj = std::dynamic_pointer_cast< ObjectMesh >( obj ) )
             {
-                meshObj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ) );
+                meshObj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
                 meshObj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
                 meshObj->setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
                 meshObj->setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
@@ -207,12 +207,12 @@ void AddCustomThemePlugin::save_()
             }
             else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( obj ) )
             {
-                objPoints->setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ) );
+                objPoints->setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
                 objPoints->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
             }
             else if ( auto objLines = std::dynamic_pointer_cast< ObjectLines >( obj ) )
             {
-                objLines->setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ) );
+                objLines->setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ), true );
                 objLines->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
             }
         }

@@ -9,6 +9,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRStringConvert.h"
 #include <filesystem>
 
 namespace MR
@@ -70,6 +71,7 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask )
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
         worldBox_.reset();
+        worldBox_.get().reset();
         if ( points_ )
             points_->invalidateCaches();
     }
@@ -186,13 +188,22 @@ tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_
         return {};
 
     const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
+#ifndef MRMESH_NO_OPENCTM
     return std::async( getAsyncLaunchType(),
-        [points = points_, filename = path.u8string() + u8".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
+        [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr]() { MR::PointsSave::toCtm( *points, filename, ptr ); } );
+#else
+    return std::async( getAsyncLaunchType(),
+        [points = points_, filename = utf8string( path ) + ".ply", ptr = colorMapPtr]() { MR::PointsSave::toPly( *points, filename, ptr ); } );
+#endif
 }
 
 tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = PointsLoad::fromCtm( path.u8string() + u8".ctm", &vertsColorMap_, progressCb );
+#ifndef MRMESH_NO_OPENCTM
+    auto res = PointsLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );
+#else
+    auto res = PointsLoad::fromPly( utf8string( path ) + ".ply", &vertsColorMap_, progressCb );
+#endif
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
 
@@ -230,7 +241,7 @@ void ObjectPointsHolder::setupRenderObject_() const
 
 void ObjectPointsHolder::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectPoints ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectPoints ), false );
     setSelectedVerticesColor( SceneColors::get( SceneColors::SelectedPoints ) );
 }

@@ -2,9 +2,9 @@ from helper import *
 import pytest
 
 
-def test_col():
-    torus = mrmesh.make_torus(2, 1, 10, 10, None)
-    torus2 = mrmesh.make_torus(2, 1, 10, 10, None)
+def test_collision():
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
 
     transVector = mrmesh.Vector3f()
     transVector.x = 0.5
@@ -15,7 +15,7 @@ def test_col():
 
     xf = mrmesh.AffineXf3f()
     torus1 = torus
-    pairs = mrmesh.find_colliding_faces(torus1, torus2, None, False)
+    pairs = mrmesh.findCollidingTriangles(mrmesh.MeshPart(torus1), mrmesh.MeshPart(torus2))
 
 # at least 100 triangles should collide for that transforms
     assert (len(pairs) > 103)

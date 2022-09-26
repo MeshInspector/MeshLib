@@ -9,6 +9,9 @@ on:
         required: false
         type: string
         default: ''
+      UPLOAD_ARTIFACTS:
+        required: true
+        type: boolean
     outputs:
       version:
         description: "Version (with namespace)"
@@ -30,11 +33,13 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Checkout
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
       - name: Versioning
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: paulhatch/semantic-version@v4.0.2
         id: version
         with:
@@ -51,6 +56,7 @@ jobs:
           echo "::set-output name=version_tag::${version_tag}"
 
       - name: Create Release
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
         id: create_release
         uses: actions/create-release@v1
         env:

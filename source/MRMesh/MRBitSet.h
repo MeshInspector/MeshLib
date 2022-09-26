@@ -19,8 +19,8 @@ namespace MR
 /// container of bits
 class BitSet : public boost::dynamic_bitset<std::uint64_t>
 {
-    using base = boost::dynamic_bitset<std::uint64_t>;
 public:
+    using base = boost::dynamic_bitset<std::uint64_t>;
     using base::base;
     using IndexType = size_t;
 
@@ -38,27 +38,27 @@ public:
     /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     [[nodiscard]] MRMESH_API IndexType find_last() const;
 
-    /// this accessor automatically adjusts the size of the set to include i-th element
-    void autoResizeSet( size_t pos, bool val = true )
+    /// doubles reserved memory until resize(newSize) can be done without reallocation
+    void resizeWithReserve( size_t newSize )
     {
-        auto sz = size();
-        if ( pos == sz )
+        auto reserved = capacity();
+        if ( reserved > 0 && newSize > reserved )
         {
-            push_back( val );
-            return;
+            while ( newSize > reserved )
+                reserved <<= 1;
+            reserve( reserved );
         }
-        if ( pos > sz )
-        {
-            if ( capacity() <= pos && sz > 0 )
-            {
-                while ( pos < sz )
-                    sz <<= 1;
-                reserve( sz );
-            }
-            resize( pos + 1 );
-        }
-        set( pos, val );
+        resize( newSize );
     }
+
+    /// sets elements [pos, pos+len) to given value, adjusting the size of the set to include new elements
+    void autoResizeSet( size_t pos, size_type len, bool val = true )
+    {
+        if ( pos + len > size() )
+            resizeWithReserve( pos + len );
+        set( pos, len, val );
+    }
+    void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
 
     /// same as \ref autoResizeSet and returns previous value of pos-bit
     [[nodiscard]] bool autoResizeTestSet( size_t pos, bool val = true )
@@ -106,6 +106,7 @@ public:
     TaggedBitSet & operator ^= ( const TaggedBitSet & b ) { base::operator ^= ( b ); return * this; }
     TaggedBitSet & operator -= ( const TaggedBitSet & b ) { base::operator -= ( b ); return * this; }
 
+    void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
@@ -116,6 +117,15 @@ public:
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
 };
+
+/// compare that two bit sets have the same set bits (they can be equal even if sizes are distinct but last bits are off)
+[[nodiscard]] MRMESH_API bool operator == ( const BitSet & a, const BitSet & b );
+template <typename T>
+[[nodiscard]] inline bool operator == ( const TaggedBitSet<T> & a, const TaggedBitSet<T> & b )
+    { return static_cast<const BitSet &>( a ) == static_cast<const BitSet &>( b ); }
+/// prohibit comparison of unrelated sets
+template <typename T, typename U>
+void operator == ( const TaggedBitSet<T> & a, const TaggedBitSet<U> & b ) = delete;
 
 template <typename T>
 [[nodiscard]] inline bool contains( const TaggedBitSet<T> * bitset, Id<T> id )

@@ -85,6 +85,10 @@ public:
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    /// gets 3 edges of given triangular face, oriented to have it on the left;
+    /// the edges are returned in counter-clockwise order if look from mesh outside
+    MRMESH_API void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const;
+               void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getTriEdges( f, e[0], e[1], e[2] ); }
     /// returns true if the cell to the left of a is quadrangular
     [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;
 
@@ -106,7 +110,7 @@ public:
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
-     /// returns cached set of all valid vertices
+    /// returns cached set of all valid vertices
     [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
@@ -247,9 +251,8 @@ public:
     /// \return text of error if any
     MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
 
-    /// comparison via edges (all other members are considered as not important caches)
-    [[nodiscard]] bool operator ==( const MeshTopology & b ) const { return edges_ == b.edges_; }
-    [[nodiscard]] bool operator !=( const MeshTopology & b ) const { return edges_ != b.edges_; }
+    /// compare that two topologies are exactly the same
+    [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;
 
     /// These function are for parallel mesh creation from different threads. If you are not sure, do not use them.
     /// \details resizes all internal vectors and sets the numbers of valid elements in preparation for addPackedPart
@@ -294,8 +297,14 @@ private:
             { return !( *this == b ); }
     };
     /// translates all fields in the record for this edge given maps
-    HalfEdgeRecord translate_( EdgeId i, const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
-    HalfEdgeRecord translate_( EdgeId i, const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
+    void translateNoFlip_( HalfEdgeRecord & r,
+        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const;
+    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+        const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap, bool flipOrientation ) const;
+    void translateNoFlip_( HalfEdgeRecord & r,
+        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap ) const;
+    void translate_( HalfEdgeRecord & r, HalfEdgeRecord & rsym,
+        const FaceHashMap & fmap, const VertHashMap & vmap, const WholeEdgeHashMap & emap, bool flipOrientation ) const;
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;

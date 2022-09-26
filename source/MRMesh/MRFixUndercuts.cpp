@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRFixUndercuts.h"
 #include "MRMesh.h"
 #include "MRMatrix3.h"
@@ -28,15 +28,14 @@ namespace FixUndercuts
 {
 constexpr float numVoxels = 1e7f;
 
-FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float holeExtension, Vector3f dir, FaceBitSet* outNewFaces = nullptr )
+FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float holeExtension, Vector3f dir )
 {
     MR_TIMER;
     auto borders = mesh.topology.findHoleRepresentiveEdges();
     
     for ( auto& border : borders )
-        border = buildBottom( mesh, border, dir, holeExtension, outNewFaces );
+        border = buildBottom( mesh, border, dir, holeExtension );
     FillHoleParams params;
-    params.outNewFaces = outNewFaces;
     for ( const auto& border : borders )
         fillHole( mesh, border, params );
 
@@ -142,7 +141,9 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
 
     // add new triangles after hole filling to bitset
     FaceBitSet copyFBS = faceBitSet;
-    auto fullGrid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace, &copyFBS );
+    copyFBS.resize( mesh.topology.faceSize(), false );
+    auto fullGrid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
+    copyFBS.resize( mesh.topology.faceSize(), true );
 
     // create mesh and unclosed grid 
     Mesh selectedPartMesh;

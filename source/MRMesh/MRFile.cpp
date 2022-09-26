@@ -1,5 +1,6 @@
 #include "MRFile.h"
 #include "MRStringConvert.h"
+#include <cstring>
 
 namespace MR
 {

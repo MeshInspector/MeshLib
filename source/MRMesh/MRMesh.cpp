@@ -74,6 +74,17 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     return res;
 }
 
+bool Mesh::operator ==( const Mesh & b ) const
+{
+    MR_TIMER
+    if ( topology != b.topology )
+        return false;
+    for ( auto v : topology.getValidVerts() )
+        if ( points[v] != b.points[v] )
+            return false;
+    return true;
+}
+
 void Mesh::getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const
 {
     VertId a, b, c;

@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include "MRPdf.h"
 #include "MRSerializer.h"
 #include "MRImageSave.h"

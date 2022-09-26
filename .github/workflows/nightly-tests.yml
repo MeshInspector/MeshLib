@@ -46,13 +46,14 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
-        run: ${{ matrix.py-cmd }} ./scripts/run_python_test_script.py
+        working-directory: test_python
+        run: ${{ matrix.py-cmd }} -m pytest -s -v
 
 
 
   install-test:
     timeout-minutes: 20
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-latest
     container:
       image: ${{matrix.container}}
       options: --user root

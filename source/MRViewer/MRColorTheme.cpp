@@ -207,7 +207,7 @@ void ColorTheme::apply()
             auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
             for ( auto label : labels )
             {
-                label->setFrontColor( color );
+                label->setFrontColor( color, true );
                 label->setFrontColor( color, false );
             }
         };

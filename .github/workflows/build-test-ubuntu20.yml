@@ -6,6 +6,9 @@ on:
       image_tag:
         required: true
         type: string
+      version:
+        required: true
+        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -67,14 +70,51 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py
 
-      - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+      - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
-        run: tar -cvf Ubuntu20${{matrix.config}}Bin.tar ./build/${{matrix.config}}/bin
+        env:
+          MESHRUS_BUILD_RELEASE: ON
+          MESHRUS_BUILD_DEBUG: OFF
+        run: |
+          ./scripts/distribution.sh ${{inputs.version}}
+          mv ./distr/meshlib-dev.deb meshlib-ubuntu20-dev.deb
 
-      - name: Upload Ubuntu Binaries Archive
+      - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu20${{matrix.config}}BinArchive
-          path: Ubuntu20${{matrix.config}}Bin.tar
+          name: Distributives
+          path: meshlib-ubuntu20-dev.deb
+          retention-days: 1
+
+      - name: Create and fix Wheel
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        run: |
+          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
+          tar xf patchelf-0.10.tar.bz2
+          cd patchelf-0.10
+          ./configure
+          make install
+          cd ..
+          python3 -m pip install --upgrade pip
+          python3 -m pip install auditwheel wheel setuptools
+          python3 ./scripts/wheel/setup_workspace.py 
+          cd ./scripts/wheel/meshlib
+          python3 setup.py bdist_wheel --python-tag=cp38 --version ${{inputs.version}}
+          python3 -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
+
+      - name: Upload Wheel to Artifacts
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Wheelhouse
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
+          retention-days: 1
+
+      - name: Upload Wheel to Distributive
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Distributives
+          path: meshlib-*.whl
           retention-days: 1

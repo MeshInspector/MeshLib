@@ -15,8 +15,24 @@
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRFillContour.h"
 #include "MRMesh/MRExpandShrink.h"
+#include "MRMesh/MRColor.h"
+#include <tl/expected.hpp>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
+{
+    using expectedType = tl::expected<void, std::string>;
+    pybind11::class_<expectedType>( m, "ExpectedVoid" ).
+        def( "has_value", &expectedType::has_value ).
+        def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& m )
+{
+    pybind11::class_<std::filesystem::path>( m, "Path" ).
+        def( pybind11::init<const std::string&>() );
+} )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Box3f, [] ( pybind11::module_& m )
 {
@@ -49,6 +65,43 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2i, [] ( pybind11::module_& m )
         def( "normalized", &MR::Vector2i::normalized );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector2f, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Vector2f>( m, "Vector2f", "two-dimensional vector" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "x", &MR::Vector2f::x ).
+        def_readwrite( "y", &MR::Vector2f::y ).
+        def( pybind11::self + pybind11::self ).
+        def( pybind11::self - pybind11::self ).
+        def( pybind11::self * float() ).
+        def( float() * pybind11::self ).
+        def( pybind11::self / float() ).
+        def( pybind11::self += pybind11::self ).
+        def( pybind11::self -= pybind11::self ).
+        def( pybind11::self *= float() ).
+        def( pybind11::self /= float() ).
+        def( -pybind11::self ).
+        def( pybind11::self == pybind11::self ).
+        def( "length", &MR::Vector2f::length ).
+        def( "lengthSq", &MR::Vector2f::lengthSq ).
+        def( "normalized", &MR::Vector2f::normalized );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::Color>( m, "Color" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<int, int, int, int>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 255 ).
+        def( pybind11::init<float, float, float, float>(),
+            pybind11::arg( "r" ), pybind11::arg( "g" ), pybind11::arg( "b" ), pybind11::arg( "a" ) = 1.0f ).
+        def_readwrite( "r", &MR::Color::r ).
+        def_readwrite( "r", &MR::Color::g ).
+        def_readwrite( "r", &MR::Color::b ).
+        def_readwrite( "r", &MR::Color::a );
+} )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::Vector3f>( m, "Vector3f", "three-dimensional vector" ).
@@ -73,6 +126,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector3f, [] ( pybind11::module_& m )
         def( "lengthSq", &MR::Vector3f::lengthSq ).
         def( "normalized", &MR::Vector3f::normalized );
 } )
+
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
 {
@@ -348,6 +402,9 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorVerts, MR::VertId )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVec3, MR::Vector3f )
+MR_ADD_PYTHON_VEC( mrmeshpy, Contours3f, MR::Contour3f )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorVec2, MR::Vector2f )
+MR_ADD_PYTHON_VEC( mrmeshpy, Contours2f, MR::Contour2f )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
 

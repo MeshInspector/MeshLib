@@ -89,6 +89,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::Vector<float, VertId>>( m, "VectorFloatByVert" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::Vector<float, VertId>::vec_ );
+
+    pybind11::class_<MR::FaceNormals>( m, "FaceNormals" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::FaceNormals::vec_ );
+
+    pybind11::class_<MR::Vector<Vector2f, VertId>>( m, "VertCoords2" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::Vector<Vector2f, VertId>::vec_ );
+
+    pybind11::class_<MR::Vector<Color, VertId>>( m, "VertColorMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::Vector<Color, VertId>::vec_ );
 } )
 
 MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
@@ -159,6 +171,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
+
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedMesh, MR::Mesh, std::string )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
 {

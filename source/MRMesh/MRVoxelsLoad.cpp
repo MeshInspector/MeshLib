@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
@@ -542,14 +542,14 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
         return tl::make_unexpected( "Path is empty" );
     }
 
-    auto ext = path.extension().u8string();
+    auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    if ( ext != u8".raw" )
+    if ( ext != ".raw" )
     {
         std::stringstream ss;
-        ss << "Extension is not correct, expected \".raw\" current \"" << asString( ext ) << "\"" << std::endl;
+        ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
         return tl::make_unexpected( ss.str() );
     }
 
@@ -561,7 +561,7 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
     for ( auto entry : std::filesystem::directory_iterator( parentPath, ec ) )
     {
         auto filename = entry.path().filename();
-        auto pos = filename.u8string().find( path.filename().u8string() );
+        auto pos = utf8string( filename ).find( utf8string( path.filename() ) );
         if ( pos != std::string::npos )
             candidatePaths.push_back( entry.path() );
     }

@@ -31,6 +31,7 @@
     <ClCompile Include="MRPythonMeshICPExposing.cpp" />
     <ClCompile Include="MRPythonMeshPlugins.cpp" />
     <ClCompile Include="MRPythonPointCloudExposing.cpp" />
+    <ClCompile Include="MRPythonPolyline.cpp" />
     <ClCompile Include="MRPythonRegularMapMesh.cpp" />
     <ClCompile Include="MRPythonSampling.cpp" />
     <ClCompile Include="MRPythonSegmentation.cpp" />

@@ -1302,11 +1302,13 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, F
 {
     MR_TIMER
     assert( oldFace.valid() );
-    FaceBitSet newFaces;
-    executeFillHolePlan( mesh, e, plan, new2OldMap ? &newFaces : nullptr );
+    const auto fsz0 = mesh.topology.faceSize();
+    executeFillHolePlan( mesh, e, plan );
     if ( new2OldMap )
-        for ( auto f : newFaces )
-            new2OldMap->autoResizeAt( f ) = oldFace;
+    {
+        const auto fsz = mesh.topology.faceSize();
+        new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
+    }
 }
 
 void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
@@ -1654,10 +1656,23 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     } );
     // fill contours
+
+    int numNewTris = 0;
+    for ( const auto & hd : holeRepresentativeEdges )
+        numNewTris += hd.plan.numNewTris;
+    const auto expectedTotalTris = mesh.topology.faceSize() + numNewTris;
+
+    mesh.topology.faceReserve( expectedTotalTris );
+    if ( params.new2OldMap )
+        params.new2OldMap->reserve( expectedTotalTris );
+
     for ( auto & hd : holeRepresentativeEdges )
-    {
         executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap );
-    }
+
+    assert( mesh.topology.faceSize() == expectedTotalTris );
+    if ( params.new2OldMap )
+        assert( params.new2OldMap->size() == expectedTotalTris );
+
     res.resultCut = std::move( preRes.paths );
 
     return res;

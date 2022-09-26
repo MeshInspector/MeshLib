@@ -3,7 +3,7 @@ namespace MR {
 /** \page EmbendedPythonOverview Python overview
 
 Python is one of the most popular and widely used programming language in scientific researches, machine learning, data analysis and advanced testing.\n
-\b Requires \b python \b 3.10 (3.9 on linux)
+\b Requires \b python \b 3.10 (3.8 on Ubuntu 20.04)
 
 MeshLib library allows you to call python scripts directly from the command line or use particular functions by `import mrmeshpy`. 
 
@@ -20,11 +20,13 @@ MeshLib provides several usage options\n
 \code
 import mrmeshpy
 
-mesh = mrmeshpy.load_mesh("mesh.stl")
+expMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
+assert(expMesh.has_value())
+mesh = expMesh.value()
 # ...
 # some mesh modifications can be perform here
 # ...
-mrmeshpy.save_mesh("mesh.ply")
+mrmeshpy.saveMesh(mesh, mrmeshpy.Path("mesh.ply"))
 \endcode
 2. Run scritp with MeshInspector executable file (MeshInspector.exe on windows or ./MRApp on linux)
 \code

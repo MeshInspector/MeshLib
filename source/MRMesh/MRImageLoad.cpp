@@ -6,10 +6,12 @@
 #include <filesystem>
 #include <tl/expected.hpp>
 #include <string>
+#ifndef MRMESH_NO_PNG
 #ifdef __EMSCRIPTEN__
 #include <png.h>
 #else
 #include <libpng16/png.h>
+#endif
 #endif
 
 namespace MR
@@ -19,9 +21,12 @@ namespace ImageLoad
 
 const IOFilters Filters =
 {
-    {"Portable Network Graphics (.png)",  "*.png"}
+#ifndef MRMESH_NO_PNG
+    {"Portable Network Graphics (.png)",  "*.png"},
+#endif
 };
 
+#ifndef MRMESH_NO_PNG
 struct ReadPng
 {
     ReadPng( const std::filesystem::path& file )
@@ -108,16 +113,19 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
     png_read_end( png.pngPtr, NULL );
     return result;
 }
+#endif
 
 tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
     tl::expected<Image, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".png" )
+#ifndef MRMESH_NO_PNG
+    if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );
+#endif
     return res;
 }
 

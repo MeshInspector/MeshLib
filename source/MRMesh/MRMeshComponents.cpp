@@ -312,45 +312,32 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
     MR_TIMER;
 
     const auto& mesh = meshPart.mesh;
-    const auto& edgesPerFaces = mesh.topology.edgePerFace();
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-
-    auto test = [reg = meshPart.region]( FaceId f )
-    {
-        if ( !reg )
-            return true;
-        else
-            return reg->test( f );
-    };
-
-    FaceId f1;
-    EdgeId e;
     UnionFind<FaceId> unionFindStructure( region.find_last() + 1 );
     for ( auto f0 : region )
     { 
-        e = edgesPerFaces[f0];
         if ( incidence == FaceIncidence::PerEdge )
         {
+            EdgeId e[3];
+            mesh.topology.getTriEdges( f0, e );
             for ( int i = 0; i < 3; ++i )
             {
-                assert( mesh.topology.left( e ) == f0 );
-                f1 = mesh.topology.right( e );
-                if ( f1.valid() && test( f1 ) && f1 < f0 )
+                assert( mesh.topology.left( e[i] ) == f0 );
+                FaceId f1 = mesh.topology.right( e[i] );
+                if ( f1 < f0 && contains( meshPart.region, f1 ) )
                     unionFindStructure.unite( f0, f1 );
-
-                e = mesh.topology.prev( e.sym() );
             }
         }
         else if ( incidence == FaceIncidence::PerVertex )
         {
             VertId vid[3];
-            mesh.topology.getLeftTriVerts( e, vid );
+            mesh.topology.getTriVerts( f0, vid );
             for ( auto faceVert : vid )
             {
                 for ( auto edge : orgRing( mesh.topology, faceVert ) )
                 {
-                    f1 = mesh.topology.left( edge );
-                    if ( f1.valid() && test( f1 ) && f1 < f0 )
+                    FaceId f1 = mesh.topology.left( edge );
+                    if ( f1 < f0 && contains( meshPart.region, f1 ) )
                         unionFindStructure.unite( f0, f1 );
                 }
             }

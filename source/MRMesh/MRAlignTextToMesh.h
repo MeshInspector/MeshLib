@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef MRMESH_NO_LABEL
 #include "MRMeshFwd.h"
 #include <tl/expected.hpp>
 #include "MRId.h"
@@ -30,3 +32,4 @@ struct TextMeshAlignParams : SymbolMeshParams
 
 MRMESH_API tl::expected<Mesh, std::string> alignTextToMesh( const Mesh& mesh, const AffineXf3f& xf, const TextMeshAlignParams& params );
 }
+#endif

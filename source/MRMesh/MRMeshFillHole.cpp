@@ -481,33 +481,42 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
 
 void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
 {
-    if ( plan.empty() )
+    [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
+    if ( plan.items.empty() )
     {
         if ( mesh.topology.isLeftTri( a0 ) )
         {
+            assert( plan.numNewTris == 1 );
             auto newFaceId = mesh.topology.addFaceId();
             if ( outNewFaces )
                 outNewFaces->autoResizeSet( newFaceId );
             mesh.topology.setLeft( a0, newFaceId );
         }
         else
+        {
+            assert( plan.numNewTris >= 3 );
             fillHoleTrivially( mesh, a0, outNewFaces );
-        return;
+        }
     }
-    MR_TIMER
-    auto getEdge = [&]( int code )
+    else
     {
-        if ( code >= 0 )
-            return EdgeId( code );
-        return EdgeId( plan[ -(code+1) ].edgeCode1 );
-    };
-    for ( int i = 0; i < plan.size(); ++i )
-    {
-        EdgeId a = getEdge( plan[i].edgeCode1 );
-        EdgeId b = getEdge( plan[i].edgeCode2 );
-        EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
-        plan[i].edgeCode1 = (int)c;
+        MR_TIMER
+        auto getEdge = [&]( int code )
+        {
+            if ( code >= 0 )
+                return EdgeId( code );
+            return EdgeId( plan.items[ -(code+1) ].edgeCode1 );
+        };
+        for ( int i = 0; i < plan.items.size(); ++i )
+        {
+            EdgeId a = getEdge( plan.items[i].edgeCode1 );
+            EdgeId b = getEdge( plan.items[i].edgeCode2 );
+            EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
+            plan.items[i].edgeCode1 = (int)c;
+        }
     }
+    [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
+    assert( plan.numNewTris == int( fsz - fsz0 ) );
 }
 
 // Sub cubic complexity
@@ -535,7 +544,11 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     } while ( a != a0 );
 
     if ( loopEdgesCounter <= 3 )
+    {
+        // no new edges, one triangle
+        res.numNewTris = 1;
         return res;
+    }
 
     // Fill EdgeMaps
     std::vector<EdgeId> edgeMap( loopEdgesCounter );
@@ -612,7 +625,11 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     }
 
     if ( finConn.a == -1 || finConn.b == -1 )
+    {
+        // "trivial" fill
+        res.numNewTris = loopEdgesCounter;
         return res;
+    }
 
     // queue for adding new edges (not to make tree like recursive logic)
     WeightedConn fictiveLastConn( finConn.a, ( finConn.b + 1 ) % loopEdgesCounter, 0.0 );
@@ -630,17 +647,19 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.size() + 1 );
-            res.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
+            auto newEdgeCode = -int( res.items.size() + 1 );
+            res.items.push_back( { (int)edgeMap[curConn.first.prevA], (int)edgeMap[curConn.first.a] } );
             newEdgesQueue.push( {newEdgesMap[curConn.first.a][curConn.first.prevA],newEdgeCode} );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.size() + 1 );
-            res.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
+            auto newEdgeCode = -int( res.items.size() + 1 );
+            res.items.push_back( { (int)curConn.second, (int)edgeMap[curConn.first.prevA] } );
             newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdgeCode} );
         }
+
+        ++res.numNewTris;
     }
     return res;
 }
@@ -949,12 +968,15 @@ TEST( MRMesh, buildCylinderBetweenTwoHoles )
 
     FaceBitSet newFaces;
     StitchHolesParams params;
+    auto fsz0 = mesh.topology.faceSize();
     params.outNewFaces = &newFaces;
     buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
+    auto numNewFaces = mesh.topology.faceSize() - fsz0;
 
     EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 8 );
     EXPECT_EQ( mesh.points.size(), 6 );
+    EXPECT_EQ( numNewFaces, 6 );
     EXPECT_EQ( newFaces.count(), 6 );
     EXPECT_EQ( newFaces.size(), 8 );
 
@@ -971,6 +993,7 @@ TEST( MRMesh, makeBridge )
     auto b = topology.makeEdge();
     topology.setOrg( b, topology.addVertId() );
     topology.setOrg( b.sym(), topology.addVertId() );
+    EXPECT_EQ( topology.numValidFaces(), 0 );
     FaceBitSet fbs;
     EXPECT_TRUE( makeBridge( topology, a, b, &fbs ) );
     EXPECT_EQ( fbs.count(), 2 );
@@ -985,6 +1008,7 @@ TEST( MRMesh, makeBridge )
     b = topology.makeEdge();
     topology.splice( a.sym(), b );
     topology.setOrg( b.sym(), topology.addVertId() );
+    EXPECT_EQ( topology.numValidFaces(), 0 );
     fbs.reset();
     makeBridge( topology, a, b, &fbs );
     EXPECT_EQ( fbs.count(), 1 );

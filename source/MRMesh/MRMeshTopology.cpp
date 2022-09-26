@@ -206,6 +206,14 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
+void MeshTopology::getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const
+{
+    e0 = edgeWithLeft( f );
+    e1 = prev( e0.sym() );
+    e2 = prev( e1.sym() );
+    assert( e0 == prev( e2.sym() ) );
+}
+
 std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER
@@ -944,26 +952,9 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
     MR_TIMER
     // make fast comparisons first
     if ( numValidVerts_ != b.numValidVerts_
-      || numValidFaces_ != b.numValidFaces_ )
-        return false;
-
-    auto sameSetBits = []<class T>( const TaggedBitSet<T> & a,  const TaggedBitSet<T> & b )
-    {
-        if ( a.size() == b.size() )
-            return a == b;
-
-        auto ai = begin( a );
-        auto bi = begin( b );
-        const auto ae = end( a );
-        const auto be = end( b );
-        for ( ; ai != ae && bi != be; ++ai, ++bi )
-            if ( *ai != *bi )
-                return false;
-        return ai == ae && bi == be;
-    };
-
-    if ( !sameSetBits( validVerts_, b.validVerts_ )
-      || !sameSetBits( validFaces_, b.validFaces_ ) )
+        || numValidFaces_ != b.numValidFaces_
+        || validVerts_ != b.validVerts_
+        || validFaces_ != b.validFaces_ )
         return false;
 
     /* uncommenting this breaks MeshDiff unit test

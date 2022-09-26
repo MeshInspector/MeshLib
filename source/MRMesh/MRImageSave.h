@@ -22,14 +22,18 @@ MRMESH_API extern const IOFilters Filters;
 MRMESH_API tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem::path& path );
 
 #ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PNG
 /// saves in .png format
 MRMESH_API tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& path );
 
 /// saves in .png format
 MRMESH_API tl::expected<void, std::string> toPng( const Image& image, std::ostream& os );
+#endif
 
+#ifndef MRMESH_NO_JPEG
 /// saves in .jpg format
 MRMESH_API tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path );
+#endif
 #endif
 
 /// detects the format from file extension and save image to it  

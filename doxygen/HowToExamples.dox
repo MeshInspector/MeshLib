@@ -135,14 +135,17 @@ In this section we provide the same examples but with python code\n
 Load and save example:
 \code
 import mrmeshpy
-mesh = mrmeshpy.load_mesh("mesh.stl")
-mrmeshpy.save_mesh("mesh.ply")
+expectedMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
+if expectedMesh.has_value():
+    mrmeshpy.saveMesh(expectedMesh.value(),mrmeshpy.Path("mesh.ply"))
 \endcode
 
 Mesh modification examples
 \code
 import mrmeshpy
-mesh = mrmeshpy.load_mesh("mesh.stl")
+expectedMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
+assert(expectedMesh.has_value())
+mesh = expectedMesh.value()
 
 relaxParams = mrmeshpy.MeshRelaxParams()
 relaxParams.iterations = 5
@@ -150,11 +153,11 @@ mrmeshpy.relax(mesh, relaxParams)
 
 props = mrmeshpy.SubdivideSettings()
 props.maxDeviationAfterFlip = 0.5
-mrmeshpy.subdivide_mesh(mesh,props)
+mrmeshpy.subdivideMesh(mesh,props)
 
-plusZ = mrmeshpy.Vector3()
+plusZ = mrmeshpy.Vector3f()
 plusZ.z = 1.0
-rotationXf = mrmeshpy.AffineXf3.linear( mrmeshpy.Matrix3.rotation( plusZ, 3.1415*0.5 ) )
+rotationXf = mrmeshpy.AffineXf3f.linear( mrmeshpy.Matrix3f.rotation( plusZ, 3.1415*0.5 ) )
 mesh.transform(rotationXf)
 \endcode
 

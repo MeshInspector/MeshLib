@@ -145,16 +145,16 @@ tl::expected<void, std::string> toDxf( const Polyline3& polyline, std::ostream& 
 
 tl::expected<void, std::string> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".mrlines" )
+    if ( ext == ".mrlines" )
         res = toMrLines( polyline, file, callback );
-    if ( ext == u8".pts" )
+    if ( ext == ".pts" )
         res = toPts( polyline, file, callback );
-    if ( ext == u8".dxf" )
+    if ( ext == ".dxf" )
         res = toDxf( polyline, file, callback );
     return res;
 }

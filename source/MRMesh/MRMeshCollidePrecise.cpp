@@ -34,53 +34,55 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
-    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } };
-    std::vector<FaceFace> collidingBoxes;
-
-    while( !subtasks.empty() )
+    // sequentially subdivide full task on smaller subtasks;
+    // they shall be not too many for this subdivision not to take too long;
+    // and they shall be not too few for enough parallelism later
+    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    for( int i = 0; i < 16; ++i ) // 16 -> will produce at most 2^16 subtasks
     {
-        const auto s = subtasks.back();
-        subtasks.pop_back();
-        const auto & aNode = aTree[s.aNode];
-        const auto & bNode = bTree[s.bNode];
-
-        // check intersection in int boxes for consistency with precise intersections
-        auto transformedBoxb = transformed( bNode.box, rigidB2A );
-        Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
-        Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
-        if ( !aBox.intersects( bBox ) )
-            continue;
-
-        if ( aNode.leaf() && bNode.leaf() )
+        int numSplits = 0;
+        while( !subtasks.empty() )
         {
-            const auto aFace = aNode.leafId();
-            if ( a.region && !a.region->test( aFace ) )
+            const auto s = subtasks.back();
+            subtasks.pop_back();
+            const auto & aNode = aTree[s.aNode];
+            const auto & bNode = bTree[s.bNode];
+
+            // check intersection in int boxes for consistency with precise intersections
+            auto transformedBoxb = transformed( bNode.box, rigidB2A );
+            Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
+            Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
+            if ( !aBox.intersects( bBox ) )
                 continue;
-            const auto bFace = bNode.leafId();
-            if ( b.region && !b.region->test( bFace ) )
+
+            if ( aNode.leaf() && bNode.leaf() )
+            {
+                leafTasks.push_back( s );
                 continue;
-            collidingBoxes.emplace_back( aFace, bFace );
-            continue;
-        }
+            }
         
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
-        {
-            // split aNode
-            subtasks.emplace_back( aNode.l, s.bNode );
-            subtasks.emplace_back( aNode.r, s.bNode );
+            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+            {
+                // split aNode
+                nextSubtasks.emplace_back( aNode.l, s.bNode );
+                nextSubtasks.emplace_back( aNode.r, s.bNode );
+            }
+            else
+            {
+                assert( !bNode.leaf() );
+                // split bNode
+                nextSubtasks.emplace_back( s.aNode, bNode.l );
+                nextSubtasks.emplace_back( s.aNode, bNode.r );
+            }
+            ++numSplits;
         }
-        else
-        {
-            assert( !bNode.leaf() );
-            // split bNode
-            subtasks.emplace_back( s.aNode, bNode.l );
-            subtasks.emplace_back( s.aNode, bNode.r );
-        }
+        subtasks.swap( nextSubtasks );
+        if ( !numSplits )
+            break;
     }
+    subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
-    // there can be at most two triangle-edge intersections in a triangle pair
-    res.edgesAtrisB.resize( collidingBoxes.size() * 2 );
-    res.edgesBtrisA.resize( collidingBoxes.size() * 2 );
+    std::vector<PreciseCollisionResult> subtaskRes( subtasks.size() );
 
     // we do not check an edge if its right triangle has smaller index and also in the mesh part
     auto checkEdge = [&]( EdgeId e, const MeshPart & mp )
@@ -97,86 +99,144 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     };
 
     const int aVertsSize = (int)a.mesh.topology.vertSize();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)collidingBoxes.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    auto checkTwoTris = [&]( FaceId aTri, FaceId bTri, PreciseCollisionResult & res )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        PreciseVertCoords avc[3], bvc[3];
+        a.mesh.topology.getTriVerts( aTri, avc[0].id, avc[1].id, avc[2].id );
+        b.mesh.topology.getTriVerts( bTri, bvc[0].id, bvc[1].id, bvc[2].id );
+
+        for ( int j = 0; j < 3; ++j )
         {
-            const auto aTri = collidingBoxes[i].aFace;
-            const auto bTri = collidingBoxes[i].bFace;
+            avc[j].pt = conv( a.mesh.points[avc[j].id] );
+            const auto bf = b.mesh.points[bvc[j].id];
+            bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
+            bvc[j].id += aVertsSize;
+        }
 
-            PreciseVertCoords avc[3], bvc[3];
-            a.mesh.topology.getTriVerts( aTri, avc[0].id, avc[1].id, avc[2].id );
-            b.mesh.topology.getTriVerts( bTri, bvc[0].id, bvc[1].id, bvc[2].id );
+        // check edges from A
+        int numA = 0;
+        EdgeId aEdge = a.mesh.topology.edgeWithLeft( aTri );
+        auto aEdgeCheck = [&]( int v0, int v1 )
+        {
+            if ( !checkEdge( aEdge, a ) )
+                return EdgeId{};
+            auto isect = doTriangleSegmentIntersect( { bvc[0], bvc[1], bvc[2], avc[v0], avc[v1] } );
+            if ( !isect )
+                return EdgeId{};
+            return isect.dIsLeftFromABC ? aEdge : aEdge.sym();
+        };
+        if ( auto e = aEdgeCheck( 0, 1 ) )
+        {
+            res.edgesAtrisB.emplace_back( e, bTri );
+        }
+        aEdge = a.mesh.topology.prev( aEdge.sym() );
+        if ( auto e = aEdgeCheck( 1, 2 ) )
+        {
+            res.edgesAtrisB.emplace_back( e, bTri );
+        }
+        aEdge = a.mesh.topology.prev( aEdge.sym() );
+        if ( numA < 2 )
+        {
+            if ( auto e = aEdgeCheck( 2, 0 ) )
+                res.edgesAtrisB.emplace_back( e, bTri );
+        }
 
-            for ( int j = 0; j < 3; ++j )
-            {
-                avc[j].pt = conv( a.mesh.points[avc[j].id] );
-                const auto bf = b.mesh.points[bvc[j].id];
-                bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
-                bvc[j].id += aVertsSize;
-            }
+        // check edges from B
+        int numB = 0;
+        EdgeId bEdge = b.mesh.topology.edgeWithLeft( bTri );
+        auto bEdgeCheck = [&]( int v0, int v1 )
+        {
+            if ( !checkEdge( bEdge, b ) )
+                return EdgeId{};
+            auto isect = doTriangleSegmentIntersect( { avc[0], avc[1], avc[2], bvc[v0], bvc[v1] } );
+            if ( !isect )
+                return EdgeId{};
+            return isect.dIsLeftFromABC ? bEdge : bEdge.sym();
+        };
+        if ( auto e = bEdgeCheck( 0, 1 ) )
+        {
+            res.edgesBtrisA.emplace_back( e, aTri );
+        }
+        bEdge = b.mesh.topology.prev( bEdge.sym() );
+        if ( auto e = bEdgeCheck( 1, 2 ) )
+        {
+            res.edgesBtrisA.emplace_back( e, aTri );
+        }
+        bEdge = b.mesh.topology.prev( bEdge.sym() );
+        if ( numB < 2 )
+        {
+            if ( auto e = bEdgeCheck( 2, 0 ) )
+                res.edgesBtrisA.emplace_back( e, aTri );
+        }
+    };
 
-            // check edges from A
-            int numA = 0;
-            EdgeId aEdge = a.mesh.topology.edgeWithLeft( aTri );
-            auto aEdgeCheck = [&]( int v0, int v1 )
+    // checks subtasks in parallel
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
+        [&]( const tbb::blocked_range<size_t>& range )
+    {
+        std::vector<NodeNode> mySubtasks;
+        for ( auto is = range.begin(); is < range.end(); ++is )
+        {
+            mySubtasks.push_back( subtasks[is] );
+            PreciseCollisionResult myRes;
+            while ( !mySubtasks.empty() )
             {
-                if ( !checkEdge( aEdge, a ) )
-                    return EdgeId{};
-                auto isect = doTriangleSegmentIntersect( { bvc[0], bvc[1], bvc[2], avc[v0], avc[v1] } );
-                if ( !isect )
-                    return EdgeId{};
-                return isect.dIsLeftFromABC ? aEdge : aEdge.sym();
-            };
-            if ( auto e = aEdgeCheck( 0, 1 ) )
-            {
-                res.edgesAtrisB[ 2*i + numA++ ] = EdgeTri( e, bTri );
-            }
-            aEdge = a.mesh.topology.prev( aEdge.sym() );
-            if ( auto e = aEdgeCheck( 1, 2 ) )
-            {
-                res.edgesAtrisB[ 2*i + numA++ ] = EdgeTri( e, bTri );
-            }
-            aEdge = a.mesh.topology.prev( aEdge.sym() );
-            if ( numA < 2 )
-            {
-                if ( auto e = aEdgeCheck( 2, 0 ) )
-                    res.edgesAtrisB[ 2*i + numA++ ] = EdgeTri( e, bTri );
-            }
+                const auto s = mySubtasks.back();
+                mySubtasks.pop_back();
+                const auto & aNode = aTree[s.aNode];
+                const auto & bNode = bTree[s.bNode];
 
-            // check edges from B
-            int numB = 0;
-            EdgeId bEdge = b.mesh.topology.edgeWithLeft( bTri );
-            auto bEdgeCheck = [&]( int v0, int v1 )
-            {
-                if ( !checkEdge( bEdge, b ) )
-                    return EdgeId{};
-                auto isect = doTriangleSegmentIntersect( { avc[0], avc[1], avc[2], bvc[v0], bvc[v1] } );
-                if ( !isect )
-                    return EdgeId{};
-                return isect.dIsLeftFromABC ? bEdge : bEdge.sym();
-            };
-            if ( auto e = bEdgeCheck( 0, 1 ) )
-            {
-                res.edgesBtrisA[ 2*i + numB++ ] = EdgeTri( e, aTri );
+                // check intersection in int boxes for consistency with precise intersections
+                auto transformedBoxb = transformed( bNode.box, rigidB2A );
+                Box3i aBox{ conv( aNode.box.min ),conv( aNode.box.max ) };
+                Box3i bBox{ conv( transformedBoxb.min ),conv( transformedBoxb.max ) };
+                if ( !aBox.intersects( bBox ) )
+                    continue;
+
+                if ( aNode.leaf() && bNode.leaf() )
+                {
+                    const auto aFace = aNode.leafId();
+                    if ( a.region && !a.region->test( aFace ) )
+                        continue;
+                    const auto bFace = bNode.leafId();
+                    if ( b.region && !b.region->test( bFace ) )
+                        continue;
+                    checkTwoTris( aFace, bFace, myRes );
+                    continue;
+                }
+        
+                if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+                {
+                    // split aNode
+                    mySubtasks.emplace_back( aNode.l, s.bNode );
+                    mySubtasks.emplace_back( aNode.r, s.bNode );
+                }
+                else
+                {
+                    assert( !bNode.leaf() );
+                    // split bNode
+                    mySubtasks.emplace_back( s.aNode, bNode.l );
+                    mySubtasks.emplace_back( s.aNode, bNode.r );
+                }
             }
-            bEdge = b.mesh.topology.prev( bEdge.sym() );
-            if ( auto e = bEdgeCheck( 1, 2 ) )
-            {
-                res.edgesBtrisA[ 2*i + numB++ ] = EdgeTri( e, aTri );
-            }
-            bEdge = b.mesh.topology.prev( bEdge.sym() );
-            if ( numB < 2 )
-            {
-                if ( auto e = bEdgeCheck( 2, 0 ) )
-                    res.edgesBtrisA[ 2*i + numB++ ] = EdgeTri( e, aTri );
-            }
+            subtaskRes[is] = std::move( myRes );
         }
     } );
 
-    res.edgesAtrisB.erase( std::remove_if( res.edgesAtrisB.begin(), res.edgesAtrisB.end(), []( const EdgeTri & et ) { return !et.edge.valid(); } ), res.edgesAtrisB.end() );
-    res.edgesBtrisA.erase( std::remove_if( res.edgesBtrisA.begin(), res.edgesBtrisA.end(), []( const EdgeTri & et ) { return !et.edge.valid(); } ), res.edgesBtrisA.end() );
+    // unite results from sub-trees into final vectors
+    size_t colsAB = 0, colsBA = 0;
+    for ( const auto & s : subtaskRes )
+    {
+        colsAB += s.edgesAtrisB.size();
+        colsBA += s.edgesBtrisA.size();
+    }
+    res.edgesAtrisB.reserve( colsAB );
+    res.edgesBtrisA.reserve( colsBA );
+    for ( const auto & s : subtaskRes )
+    {
+        res.edgesAtrisB.insert( res.edgesAtrisB.end(), s.edgesAtrisB.begin(), s.edgesAtrisB.end() );
+        res.edgesBtrisA.insert( res.edgesBtrisA.end(), s.edgesBtrisA.begin(), s.edgesBtrisA.end() );
+    }
 
     return res;
 }

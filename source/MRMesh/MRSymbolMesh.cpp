@@ -1,3 +1,4 @@
+#ifndef MRMESH_NO_LABEL
 #include "MRSymbolMesh.h"
 #include "MRMesh.h"
 #include "MRVector2.h"
@@ -257,3 +258,4 @@ Mesh createSymbolsMesh( const SymbolMeshParams& params )
 }
 
 }
+#endif

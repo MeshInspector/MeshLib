@@ -9,12 +9,14 @@
 #include "MRStringConvert.h"
 #include "MRMeshLoadObj.h"
 #include "MRColor.h"
-#include "OpenCTM/openctm.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
-#include "MRViewer/MRProgressBar.h"
 #include <array>
 #include <future>
+
+#ifndef MRMESH_NO_OPENCTM
+#include "OpenCTM/openctm.h"
+#endif
 
 namespace MR
 {
@@ -462,6 +464,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
     return std::move( res );
 }
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -559,20 +562,21 @@ tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId
 
     return mesh;
 }
+#endif
 
 tl::expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char)tolower( c );
 
-    ext = u8"*" + ext;
+    ext = "*" + ext;
 
     tl::expected<MR::Mesh, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
     {
-        return filter.extension == asString( ext );
+        return filter.extension == ext;
     } );
     if ( itF == filters.end() )
         return res;
@@ -614,7 +618,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
+#ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
+#endif
 
 } //namespace MeshLoad
 

@@ -235,7 +235,7 @@ void ObjectLinesHolder::setupRenderObject_() const
 
 void ObjectLinesHolder::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectLines ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectLines ), false );
 }
 

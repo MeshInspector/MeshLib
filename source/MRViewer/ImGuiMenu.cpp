@@ -1365,7 +1365,7 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
         return Vector4f( data->getFrontColor() );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setFrontColor( Color( color ) );
+        data->setFrontColor( Color( color ), true );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Unselected color", [&] ( const VisualObject* data )
     {

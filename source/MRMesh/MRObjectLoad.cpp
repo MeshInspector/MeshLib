@@ -117,7 +117,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
             if ( !directoryEntry.is_regular_file(ec) )
                 continue;
 
-            auto ext = path.extension().u8string();
+            auto ext = utf8string( path.extension() );
             for ( auto & c : ext )
                 c = (char) tolower( c );
 

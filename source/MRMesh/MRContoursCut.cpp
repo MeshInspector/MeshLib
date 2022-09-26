@@ -1286,7 +1286,6 @@ FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
 
 FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 {
-    MR_TIMER
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
@@ -1300,7 +1299,6 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 
 void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, FaceId oldFace, FaceMap* new2OldMap )
 {
-    MR_TIMER
     assert( oldFace.valid() );
     const auto fsz0 = mesh.topology.faceSize();
     executeFillHolePlan( mesh, e, plan );
@@ -1646,6 +1644,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
     // prepare in parallel the plan to fill every contour
+    Timer t( "get TriangulateContourPlans" );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, holeRepresentativeEdges.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
@@ -1657,6 +1656,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     } );
     // fill contours
 
+    t.restart( "run TriangulateContourPlans" );
     int numNewTris = 0;
     for ( const auto & hd : holeRepresentativeEdges )
         numNewTris += hd.plan.numNewTris;

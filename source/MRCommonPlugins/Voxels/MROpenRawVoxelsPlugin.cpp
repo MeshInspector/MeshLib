@@ -48,14 +48,16 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PopStyleVar();
     ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
+
     if ( !autoMode_ )
     {
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
         ImGui::PushItemWidth( menuScaling * 200.0f );
         ImGui::DragIntValid3( "Dimensions", &parameters_.dimensions.x, 1, 0, std::numeric_limits<int>::max() );
         ImGui::DragFloatValid3( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0.0f );
         ImGui::PopItemWidth();
         ImGui::Separator();
+        ImGui::PopStyleVar();
         RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, MenuItemsList( std::begin( cScalarTypeNames ), std::end( cScalarTypeNames ) ) );
     }
     if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
@@ -101,7 +103,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             dialogIsOpen_ = false;
         }
     }
-    ImGui::PopStyleVar( 3 );
+    ImGui::PopStyleVar( 2 );
     ImGui::EndCustomStatePlugin();
 }
 

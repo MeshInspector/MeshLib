@@ -116,5 +116,5 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Distributives
-          path: meshlib-*.whl
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1

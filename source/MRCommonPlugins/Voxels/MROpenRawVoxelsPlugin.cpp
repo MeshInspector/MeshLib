@@ -47,7 +47,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     RibbonButtonDrawer::GradientCheckbox( "Auto parameters", &autoMode_ );
     ImGui::PopStyleVar();
     ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
-    ImGui::Separator();    
+    ImGui::Separator();
 
     if ( !autoMode_ )
     {

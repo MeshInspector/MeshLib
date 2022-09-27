@@ -35,7 +35,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/stacktrace/stacktrace.hpp>
+#include <boost/stacktrace.hpp>
 
 #ifdef __EMSCRIPTEN__
 #define GLFW_INCLUDE_ES3

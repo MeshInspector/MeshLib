@@ -66,7 +66,7 @@ jobs:
               - 'thirdparty/install.bat'
 
       - name: Get branch names
-        if: ${{steps.changes.outputs.src == 'true'}}
+        if: ${{steps.changes.outputs.src == 'true' ||  steps.windows-changes.outputs.src == 'true'}}
         id: branch-name
         uses: tj-actions/branch-names@v4.9
 
@@ -94,7 +94,7 @@ jobs:
 
       - name: Checking whether to start image rebuild
         id: need-rebuild
-        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
+        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src || steps.windows-changes.outputs.src}}"
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]

@@ -34,8 +34,11 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
+
+#ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/stacktrace.hpp>
+#endif
 
 #ifdef __EMSCRIPTEN__
 #define GLFW_INCLUDE_ES3
@@ -210,6 +213,9 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupSettingsManager( &viewer, params.name );
     setup.setupConfiguration( &viewer );
     setup.setupExtendedLibraries();
+#ifdef __EMSCRIPTEN__
+    return viewer.launch( params );
+#else
     int res = 0;
     try
     {
@@ -225,6 +231,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     }
 
     return res;
+#endif
 }
 
 void loadMRViewerDll()

@@ -28,7 +28,9 @@ void tryClearDirectory( const std::filesystem::path& dir )
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
-    spdlog::critical( boost::stacktrace::stacktrace() );
+    auto stacktrace = boost::stacktrace::stacktrace();
+    for ( const auto& frame : stacktrace )
+        spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
     std::exit( signal );
 }
 

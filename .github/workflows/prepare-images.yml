@@ -94,7 +94,7 @@ jobs:
 
       - name: Checking whether to start image rebuild
         id: need-rebuild
-        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src}}"
+        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}"
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
@@ -105,15 +105,17 @@ jobs:
           echo ${{github.repository}}
           if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-build\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
-          elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
-          else
+          elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
+          elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
+              echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"      
+          else
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
           fi
 
   image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
+    if: ${{ needs.image-select.outputs.need_rebuild }}
     timeout-minutes: 180
     runs-on: ${{ matrix.os }}
     strategy:
@@ -136,12 +138,22 @@ jobs:
           username: meshrus
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build image
+      - name: Build Linux image
+        if: ${{ matrix.distribution != 'windows' }}
         run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
 
-      - name: Push image
+      - name: Build Windows image
+        if: ${{ matrix.distribution == 'windows' }}
+        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} .
+
+      - name: Push Linux image
+        if: ${{ matrix.distribution != 'windows' }}
         run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
-        
+
+      - name: Push Windows image
+        if: ${{ matrix.distribution == 'windows' }}
+        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}}
+
       - name: Remove unused Docker data
         if: ${{ matrix.distribution != 'windows' }}
         run: docker system prune --force --all --volumes

@@ -3,6 +3,8 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include <boost/stacktrace.hpp>
+#include <csignal>
 
 #ifdef __MINGW32__
 #include <windows.h>
@@ -22,6 +24,14 @@ void tryClearDirectory( const std::filesystem::path& dir )
 
     std::filesystem::remove_all( dir, ec );
 }
+
+void crashSignalHandler( int signal )
+{
+    spdlog::critical( "Crash signal: {}", signal );
+    spdlog::critical( boost::stacktrace::stacktrace() );
+    std::exit( signal );
+}
+
 }
 
 namespace MR
@@ -94,6 +104,7 @@ Logger::Logger()
 
 void setupLoggerByDefault()
 {
+    printStacktraceOnCrash();
     redirectSTDStreamsToLogger();
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -137,6 +148,16 @@ void redirectSTDStreamsToLogger()
 {
     auto restoringSink = std::make_shared<RestoringStreamsSink>();
     Logger::instance().addSink( restoringSink );
+}
+
+void printStacktraceOnCrash()
+{
+    std::signal( SIGTERM, crashSignalHandler );
+    std::signal( SIGSEGV, crashSignalHandler );
+    std::signal( SIGINT, crashSignalHandler );
+    std::signal( SIGILL, crashSignalHandler );
+    std::signal( SIGABRT, crashSignalHandler );
+    std::signal( SIGFPE, crashSignalHandler );
 }
 
 }

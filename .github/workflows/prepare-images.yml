@@ -144,7 +144,7 @@ jobs:
 
       - name: Build Windows image
         if: ${{ matrix.distribution == 'windows' }}
-        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} .
 
       - name: Push Linux image
         if: ${{ matrix.distribution != 'windows' }}

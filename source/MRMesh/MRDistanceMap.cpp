@@ -244,7 +244,7 @@ tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, c
 
 tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
 {
-    threshold = std::clamp( threshold, 0.f, 1.f );
+    threshold = std::clamp( threshold * 255, 0.f, 255.f );
     DistanceMap dm( image.resolution.x, image.resolution.y );
     const auto& pixels = image.pixels;
     for ( int i = 0; i < image.pixels.size(); ++i )
@@ -255,7 +255,7 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
             return tl::make_unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
         if ( pixels[i].r < threshold )
             continue;
-        dm.set( i, ( pixels[i].r - threshold ) / (1.f - threshold ) );
+        dm.set( i, pixels[i].r );
     }
     return dm;
 }

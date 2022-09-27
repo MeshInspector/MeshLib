@@ -66,7 +66,7 @@ jobs:
               - 'thirdparty/install.bat'
 
       - name: Get branch names
-        if: ${{steps.changes.outputs.src == 'true'}}
+        if: ${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
         id: branch-name
         uses: tj-actions/branch-names@v4.9
 

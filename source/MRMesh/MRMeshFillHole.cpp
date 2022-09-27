@@ -500,7 +500,6 @@ void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSe
     }
     else
     {
-        MR_TIMER
         auto getEdge = [&]( int code )
         {
             if ( code >= 0 )
@@ -530,7 +529,6 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         assert( false );
         return res;
     }
-    MR_TIMER;
     assert( !mesh.topology.left( a0 ) );
     if ( mesh.topology.left( a0 ) )
         return res;
@@ -699,7 +697,6 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )
 {
-    MR_TIMER;
     MR_WRITER( mesh );
     assert( !mesh.topology.left( a ) );
 

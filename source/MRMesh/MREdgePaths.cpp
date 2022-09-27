@@ -337,6 +337,8 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
 {
     MR_TIMER
 
+    if ( start == finish )
+        return {};
     EdgePathsBuilder bs( topology, metric );
     bs.addStart( topology.edgeWithOrg( start ), 0 );
     EdgePathsBuilder bf( topology, metric );

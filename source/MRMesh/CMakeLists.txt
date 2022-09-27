@@ -144,7 +144,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 
 	IF (NOT MR_EMSCRIPTEN)
 		find_library(COCOA_LIBRARY Cocoa ONLY)
-
+	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 		target_link_libraries(${PROJECT_NAME} PRIVATE
 		    spdlog
 		    gtest gtest_main
@@ -158,7 +158,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
 			${COCOA_LIBRARY}
 		)
 	ELSE()
-	    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
 	    target_link_libraries(${PROJECT_NAME} PRIVATE
 	        gtest gtest_main
 	        zip

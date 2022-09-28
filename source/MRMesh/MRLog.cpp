@@ -3,6 +3,7 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRTimer.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/stacktrace.hpp>
@@ -35,6 +36,8 @@ void crashSignalHandler( int signal )
     auto stacktrace = boost::stacktrace::stacktrace();
     for ( const auto& frame : stacktrace )
         spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+
+    MR::printCurrentTimerBranch();
     std::exit( signal );
 }
 #endif

@@ -121,10 +121,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
     {\
         vectorClass.def( "length", &VectorType::length ).\
         def( "normalized", &VectorType::normalized );\
+        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
+            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
     }\
 \
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
+    m.def( "mixed", ( type( * )( const VectorType&, const VectorType&, const VectorType& ) )& MR::mixed<type>,\
+        pybind11::arg( "a" ), pybind11::arg( "b" ),pybind11::arg( "c" ), "mixed product" );\
+    m.def( "mult", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::mult<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "per component multiplication" );\
 } )
 
 MR_ADD_PYTHON_VECTOR3( Vector3i, int )

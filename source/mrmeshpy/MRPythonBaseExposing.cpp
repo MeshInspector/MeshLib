@@ -117,11 +117,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( pybind11::self == pybind11::self ).\
         def_static( "diagonal", &VectorType::diagonal ).\
         def( "lengthSq", &VectorType::lengthSq );\
-    /*if constexpr ( !std::is_same_v( type, int ) ) \
+    if constexpr ( !std::is_same_v<type, int> ) \
     {\
-        vectorClass.def( "length", &VectorType::length );\
+        vectorClass.def( "length", &VectorType::length ).\
         def( "normalized", &VectorType::normalized );\
-    }*/\
+    }\
 \
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\

@@ -24,6 +24,8 @@ void ImGuiImage::update( const MeshTexture& texture )
 
 void ImGuiImage::bind_()
 {
+    if ( !getViewerInstance().isGLInitialized() )
+        return;
     glTex_.loadData(
         { 
             .resolution = texture_.resolution, 

@@ -134,7 +134,7 @@ int main()
 In this section we provide the same examples but with python code\n
 Load and save example:
 \code
-import mrmeshpy
+import meshlib.mrmeshpy as mrmeshpy
 expectedMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
 if expectedMesh.has_value():
     mrmeshpy.saveMesh(expectedMesh.value(),mrmeshpy.Path("mesh.ply"))
@@ -142,7 +142,7 @@ if expectedMesh.has_value():
 
 Mesh modification examples
 \code
-import mrmeshpy
+import meshlib.mrmeshpy as mrmeshpy
 expectedMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
 assert(expectedMesh.has_value())
 mesh = expectedMesh.value()

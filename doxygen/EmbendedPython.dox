@@ -18,7 +18,7 @@ sys.path.append('path_to_modules_directory')
 MeshLib provides several usage options\n
 1. Directly from system python
 \code
-import mrmeshpy
+import meshlib.mrmeshpy as mrmeshpy
 
 expMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
 assert(expMesh.has_value())

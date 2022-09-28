@@ -322,6 +322,8 @@ size_t RenderLabelObject::glBytes() const
 
 void RenderLabelObject::forceBindAll()
 {
+    if ( !getViewerInstance().isGLInitialized() || !loadGL() )
+        return;
     update_();
     bindLabel_();
 }
@@ -363,7 +365,7 @@ void RenderLabelObject::initBuffers_()
 
 void RenderLabelObject::freeBuffers_()
 {
-    if ( !Viewer::constInstance()->isGLInitialized() || !loadGL() )
+    if ( !getViewerInstance().isGLInitialized() || !loadGL() )
         return;
 
     GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );

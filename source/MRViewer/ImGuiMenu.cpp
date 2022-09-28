@@ -264,8 +264,11 @@ void ImGuiMenu::reload_font(int font_size)
 void ImGuiMenu::shutdown()
 {
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    if ( viewer && viewer->isGLInitialized() )
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+    }
 
     disconnect();
     // User is responsible for destroying context if a custom context is given

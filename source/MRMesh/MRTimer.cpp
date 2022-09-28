@@ -132,7 +132,7 @@ void Timer::start( const std::string& name )
 
 void Timer::finish()
 {
-    auto& currentParent = currentRecord->parent;
+    auto currentParent = currentRecord->parent;
     if ( !currentParent )
         return;
 
@@ -140,7 +140,6 @@ void Timer::finish()
     ++currentRecord->count;
 
     currentRecord = currentParent;
-    currentParent = nullptr;
 }
 
 } //namespace MR

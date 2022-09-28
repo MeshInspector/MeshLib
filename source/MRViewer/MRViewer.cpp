@@ -227,6 +227,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         auto stacktrace = boost::stacktrace::stacktrace();
         for ( const auto& frame : stacktrace )
             spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+        printCurrentTimerBranch();
         res = 1;
     }
 

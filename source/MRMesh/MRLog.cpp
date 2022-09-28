@@ -4,6 +4,11 @@
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 
+#ifndef __EMSCRIPTEN__
+#include <boost/stacktrace.hpp>
+#include <csignal>
+#endif
+
 #ifdef __MINGW32__
 #include <windows.h>
 #endif
@@ -22,6 +27,18 @@ void tryClearDirectory( const std::filesystem::path& dir )
 
     std::filesystem::remove_all( dir, ec );
 }
+
+#ifndef __EMSCRIPTEN__
+void crashSignalHandler( int signal )
+{
+    spdlog::critical( "Crash signal: {}", signal );
+    auto stacktrace = boost::stacktrace::stacktrace();
+    for ( const auto& frame : stacktrace )
+        spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+    std::exit( signal );
+}
+#endif
+
 }
 
 namespace MR
@@ -94,6 +111,9 @@ Logger::Logger()
 
 void setupLoggerByDefault()
 {
+#ifndef __EMSCRIPTEN__
+    printStacktraceOnCrash();
+#endif
     redirectSTDStreamsToLogger();
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -138,5 +158,17 @@ void redirectSTDStreamsToLogger()
     auto restoringSink = std::make_shared<RestoringStreamsSink>();
     Logger::instance().addSink( restoringSink );
 }
+
+#ifndef __EMSCRIPTEN__
+void printStacktraceOnCrash()
+{
+    std::signal( SIGTERM, crashSignalHandler );
+    std::signal( SIGSEGV, crashSignalHandler );
+    std::signal( SIGINT, crashSignalHandler );
+    std::signal( SIGILL, crashSignalHandler );
+    std::signal( SIGABRT, crashSignalHandler );
+    std::signal( SIGFPE, crashSignalHandler );
+}
+#endif
 
 }

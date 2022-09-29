@@ -17,16 +17,39 @@
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
+#include <sstream>
+#include <iomanip>
 
 namespace
 {
-void tryClearDirectory( const std::filesystem::path& dir )
+// removes log files from given folder that are older than given amount of hours
+void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( dir, ec ) )
         return;
 
-    std::filesystem::remove_all( dir, ec );
+    auto now = std::chrono::system_clock::now();
+    std::time_t nowSinceEpoch = std::chrono::system_clock::to_time_t( now );
+
+    const std::filesystem::directory_iterator dirEnd;
+    for ( auto entry = std::filesystem::directory_iterator( dir, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
+    {
+        auto fileName = MR::utf8string( entry->path().filename() );
+        auto prefixOffset = fileName.find( "MRLog_" );
+        if ( prefixOffset == std::string::npos )
+            continue; // not log file
+        std::tm tm;
+        std::stringstream ss( fileName.substr( prefixOffset + 6, 19 ) );
+        ss >> std::get_time( &tm, "%Y-%m-%d_%H-%M-%S" );
+        if ( ss.fail() )
+            continue; // cannot parse time
+        std::time_t fileDateSinceEpoch = std::mktime( &tm );
+        auto diffHours = ( nowSinceEpoch - fileDateSinceEpoch ) / 3600;
+        if ( diffHours < hours )
+            continue; // "young" file
+        std::filesystem::remove( entry->path(), ec );
+    }
 }
 
 #ifndef __EMSCRIPTEN__
@@ -129,7 +152,7 @@ void setupLoggerByDefault()
     std::time_t t = std::chrono::system_clock::to_time_t( now );
     auto fileName = GetTempDirectory();
     fileName /= "Logs";
-    tryClearDirectory( fileName );
+    removeOldLogs( fileName );
 
     fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", fmt::localtime( t ),
                 std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );

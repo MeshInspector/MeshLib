@@ -7,8 +7,8 @@ def test_makeCube():
     pos2 = mrmesh.Vector3f.diagonal( 3 )
 
     cube = mrmesh.makeCube(size, pos1)
-    assert(cube.topology.numValidVerts() = 8)
-    assert(cube.topology.numValidFaces() = 12)
+    assert(cube.topology.numValidVerts() == 8)
+    assert(cube.topology.numValidFaces() == 12)
 
     cube2 = mrmesh.makeCube(size, pos2)
 

@@ -49,6 +49,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::MeshTopology>( m, "MeshTopology" ).
         def( pybind11::init<>() ).
+        def( "numValidFaces", &MR::MeshTopology::numValidFaces, "returns the number of valid faces" ).
+        def( "numValidVerts", &MR::MeshTopology::numValidVerts, "returns the number of valid vertices" ).
         def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
         def( "org", &MR::MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).

@@ -16,6 +16,7 @@
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
+#include <sstream>
 #include <iomanip>
 
 namespace

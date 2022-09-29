@@ -52,7 +52,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
     using expectedType = tl::expected<type,errorType>;\
     pybind11::class_<expectedType>(m, #name ).\
         def( "has_value", &expectedType::has_value ).\
-        def( "value", ( type& ( expectedType::* )( )& )& expectedType::value, pybind11::return_value_policy::reference ).\
+        def( "value", ( type& ( expectedType::* )( )& )& expectedType::value, pybind11::return_value_policy::reference_internal ).\
         def( "error", ( const errorType& ( expectedType::* )( )const& )& expectedType::error );\
 } )
 

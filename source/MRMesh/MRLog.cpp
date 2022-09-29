@@ -30,9 +30,10 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
     auto now = std::chrono::system_clock::now();
     std::time_t nowSinceEpoch = std::chrono::system_clock::to_time_t( now );
 
-    for ( auto entry : std::filesystem::directory_iterator( dir, ec ) )
+    const std::filesystem::directory_iterator dirEnd;
+    for ( auto entry = std::filesystem::directory_iterator( dir, ec ); !ec && entry != dirEnd; entry.increment( ec ) )
     {
-        auto fileName = MR::utf8string( entry.path().filename() );
+        auto fileName = MR::utf8string( entry->path().filename() );
         auto prefixOffset = fileName.find( "MRLog_" );
         if ( prefixOffset == std::string::npos )
             continue; // not log file
@@ -42,10 +43,10 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
         if ( ss.fail() )
             continue; // cannot parse time
         std::time_t fileDateSinceEpoch = std::mktime( &tm );
-        auto diffHours = nowSinceEpoch - fileDateSinceEpoch / 3600;
+        auto diffHours = ( nowSinceEpoch - fileDateSinceEpoch ) / 3600;
         if ( diffHours < hours )
             continue; // "young" file
-        std::filesystem::remove( entry.path(), ec );
+        std::filesystem::remove( entry->path(), ec );
     }
 }
 

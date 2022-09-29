@@ -20,6 +20,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	MRViewer
 	MRMesh
 	fmt
-	${PYTHON_LIB}
+	pybind11::module
 )
 

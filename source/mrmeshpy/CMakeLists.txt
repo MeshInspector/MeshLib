@@ -20,5 +20,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	MRMesh
 	spdlog
 	fmt
-	${PYTHON_LIB}
+	pybind11::module
 )

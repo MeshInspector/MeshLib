@@ -20,7 +20,8 @@
 
 namespace
 {
-void removeOldLogs( const std::filesystem::path& dir )
+// removes log files from given folder that are older than given amount of hours
+void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( dir, ec ) )
@@ -39,11 +40,11 @@ void removeOldLogs( const std::filesystem::path& dir )
         std::stringstream ss( fileName.substr( prefixOffset + 6, 19 ) );
         ss >> std::get_time( &tm, "%Y-%m-%d_%H-%M-%S" );
         if ( ss.fail() )
-            continue;
+            continue; // cannot parse time
         std::time_t fileDateSinceEpoch = std::mktime( &tm );
         auto diffHours = nowSinceEpoch - fileDateSinceEpoch / 3600;
-        if ( diffHours < 24)
-            continue;
+        if ( diffHours < hours )
+            continue; // "young" file
         std::filesystem::remove( entry.path(), ec );
     }
 }

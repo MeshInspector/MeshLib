@@ -16,12 +16,9 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX ""
                         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib")
 
-find_package(pybind11)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	MRViewer
 	MRMesh
 	fmt
-	pybind11::module
 )
 

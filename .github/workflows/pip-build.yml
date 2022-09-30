@@ -72,7 +72,7 @@ jobs:
 
       - name: Python Tests
         working-directory: ./build/Release/bin
-        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py ${{ matrix.py-cmd }}
+        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
 
       - name: Create and fix Wheel
         run: |

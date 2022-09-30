@@ -56,6 +56,19 @@ $ ./build/Release/bin/MRTest
 \note You could specify build type to Debug by \c export \c MESHRUS_BUILD_TYPE=Debug , \a Release is default.
 \endparblock
 
+\section PythonIntegration Python integration
+Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.\n
+Moreover, MeshLib can be easily installed as a python package using `pip install`:\n
+ - On Windows in Python 3.10 via
+\code
+py -3.10 -m pip install --upgrade pip meshlib
+\endcode
+ - On Ubuntu 20.04 Linux in Python 3.8 via
+\code
+python3 -m pip install --upgrade pip meshlib
+\endcode
+Support for `pip install` on MacOS X is coming.
+
 Find more:
   - \link DataModel Data model overview \endlink
   - \link EmbendedPythonOverview Python overview \endlink

@@ -471,7 +471,7 @@ void ImGuiMenu::draw_labels( const VisualObject& obj )
 {
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     const auto& labels = obj.getLabels();
-MR_SUPPRESS_WARNING_POP
+
     for ( const auto& viewport : viewer->viewport_list )
     {
         if ( !obj.isVisible( viewport.id ) )
@@ -485,9 +485,7 @@ MR_SUPPRESS_WARNING_POP
                     xf( labels[i].position ),
                     Vector3f( 0.0f, 0.0f, 0.0f ),
                     labels[i].text,
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
                     obj.getLabelsColor(),
-MR_SUPPRESS_WARNING_POP
                     clip );
         if ( obj.getVisualizeProperty( VisualizeMaskType::Name, viewport.id ) )
             draw_text(
@@ -495,12 +493,10 @@ MR_SUPPRESS_WARNING_POP
                 xf( obj.getBoundingBox().center() ),
                 Vector3f( 0.0f, 0.0f, 0.0f ),
                 obj.name(), 
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
                  obj.getLabelsColor(),
-MR_SUPPRESS_WARNING_POP
                 clip );
     }
-
+MR_SUPPRESS_WARNING_POP
 }
 
 void ImGuiMenu::draw_text(

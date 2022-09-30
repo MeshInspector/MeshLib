@@ -1,0 +1,83 @@
+name: Build Manylinux Pip
+
+on:
+  schedule:
+    - cron:  '20 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  get-latest-tag:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+
+  manylinux-pip:
+    needs: get-latest-tag
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: meshrus/meshlib-ubuntu:latest
+      options: --user root
+    strategy:
+      matrix:
+        py-version: [3.8, 3.9, 3.10 ]
+        include:
+          - py-version: 3.8
+            py-tag: "cp38"
+          - py-version: 3.9
+            py-tag: "cp39"
+          - py-version: 3.10
+            py-tag: "cp310"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
+          MESHRUS_BUILD_RELEASE: "ON"
+          MESHRUS_BUILD_DEBUG: "OFF"
+          CMAKE_CXX_COMPILER: /usr/bin/g++-10
+          # not realy needed
+          CMAKE_C_COMPILER: /usr/bin/gcc-10
+
+      - name: Run Tests
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Create and fix Wheel
+        run: |
+          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
+          tar xf patchelf-0.10.tar.bz2
+          cd patchelf-0.10
+          ./configure
+          make install
+          cd ..
+          python3 -m pip install --upgrade pip
+          python3 -m pip install auditwheel wheel setuptools
+          python3 ./scripts/wheel/setup_workspace.py 
+          cd ./scripts/wheel/meshlib
+          python3 setup.py bdist_wheel --python-tag=cp${{matrix.py-version}} --version ${{needs.get-latest-tag.outputs.version_tag}}
+          python3 -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl

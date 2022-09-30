@@ -336,7 +336,7 @@ void RenderLabelObject::bindLabel_()
     if ( auto mesh = objLabel_->labelRepresentingMesh() )
         bindVertexAttribArray( shader, "position", vertPosBuffer_, mesh->points.vec_, 3, dirty_ & DIRTY_POSITION );
     else
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.valid() );
 
     auto faceIndices = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faceIndices.dirty(), faceIndices );

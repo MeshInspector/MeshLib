@@ -40,6 +40,11 @@ jobs:
             py-cmd: "python3.10"
 
     steps:
+      - name: Python setup
+        run: |
+          apt -y update && apt -y upgrade && apt -y install software-properties-common
+          add-apt-repository -y ppa:deadsnakes/ppa && apt install ${{ matrix.py-cmd }}-dev
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -47,11 +52,6 @@ jobs:
 
       - name: Install thirdparty libs
         run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-
-      - name: Python setup
-        run: |
-          apt -y update && apt -y install software-properties-common
-          add-apt-repository -y ppa:deadsnakes/ppa && apt install ${{ matrix.py-cmd }}-dev
 
       - name: Build
         run: ./scripts/build_source.sh

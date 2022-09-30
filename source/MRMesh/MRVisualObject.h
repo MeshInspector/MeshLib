@@ -99,7 +99,9 @@ public:
     MRMESH_API virtual void setAllVisualizeProperties( const AllVisualizeProperties& properties );
 
     /// shows/hides labels
+    [[deprecated]]
     void showLabels( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Labels ), ViewportMask::all() ); }
+    [[deprecated]]
     bool showLabels() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Labels ), ViewportMask::any() ); }
 
     /// shows/hides name
@@ -115,8 +117,9 @@ public:
 
     MRMESH_API const Color& getBackColor() const;
     MRMESH_API virtual void setBackColor( const Color& color );
-
+    [[deprecated]]
     MRMESH_API const Color& getLabelsColor() const;
+    [[deprecated]]
     MRMESH_API virtual void setLabelsColor( const Color& color );
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
@@ -155,7 +158,9 @@ public:
     float getShininess() const { return shininess_; }
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
+    [[deprecated]]
     const std::vector<PositionedText>& getLabels() const { return labels_; }
+    [[deprecated]]
     virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

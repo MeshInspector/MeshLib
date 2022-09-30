@@ -1113,7 +1113,8 @@ void Viewer::set_root( Object& newRoot )
 {
     std::swap( SceneRoot::get(), newRoot );
 }
-
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
 void Viewer::initGlobalBasisAxesObject_()
 {
     constexpr Vector3f PlusAxis[3] = {
@@ -1148,7 +1149,7 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
 }
-
+#pragma warning ( pop )
 void Viewer::initBasisAxesObject_()
 {
     // store basis axes in the corner

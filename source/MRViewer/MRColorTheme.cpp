@@ -203,7 +203,10 @@ void ColorTheme::apply()
             if ( !obj )
                 return;
             const Color& color = SceneColors::get( SceneColors::Type::Labels );
+#pragma warning( push )
+#pragma warning( disable : 4996 )
             obj->setLabelsColor( color );
+#pragma warning( pop )
             auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
             for ( auto label : labels )
             {

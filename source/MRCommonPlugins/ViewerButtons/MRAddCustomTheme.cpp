@@ -183,7 +183,10 @@ void AddCustomThemePlugin::save_()
             obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
             obj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
             obj->setBackColor( SceneColors::get( SceneColors::BackFaces ) );
+#pragma warning ( push )
+#pragma warning ( disable : 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
+#pragma warning ( pop )
 #ifndef __EMSCRIPTEN__
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {

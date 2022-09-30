@@ -415,7 +415,8 @@ void ImGuiMenu::draw_menu()
   if (callback_draw_custom_window) { callback_draw_custom_window(); }
   else { draw_custom_window(); }
 }
-
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
 void ImGuiMenu::draw_viewer_window()
 {
   float menu_width = 180.f * menu_scaling();
@@ -499,6 +500,8 @@ void ImGuiMenu::draw_labels( const VisualObject& obj )
     }
 
 }
+
+#pragma warning ( pop )
 
 void ImGuiMenu::draw_text(
     const Viewport& viewport,
@@ -1353,6 +1356,8 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
 
     return someChanges;
 }
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
 
 bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
 {
@@ -1453,6 +1458,7 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
 
     return someChanges;
 }
+#pragma warning ( pop )
 
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}

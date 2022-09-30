@@ -50,6 +50,9 @@ jobs:
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
           add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev
+
+      - name: Pip setup
+        run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 

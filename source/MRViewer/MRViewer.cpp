@@ -34,6 +34,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
+#include "MRGetSystemInfoJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -506,6 +507,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         spdlog::info( "Init menu plugin." );
         menuPlugin_->init( this );
     }
+
+    // print after menu init to know valid menu_scaling
+    spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
+
     init_();
     // it is replaced here because some plugins can rise modal window, and scroll event sometimes can pass over it
     if ( window )

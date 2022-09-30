@@ -223,6 +223,9 @@
     <ClCompile Include="MRPlaneWidget.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRGetSystemInfoJson.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -421,6 +424,9 @@
     </ClInclude>
     <ClInclude Include="MRPlaneWidget.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGetSystemInfoJson.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

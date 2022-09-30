@@ -498,7 +498,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         menuPlugin_->init( this );
     }
 
-    // print after menu init to know valud menu_scaling
+    // print after menu init to know valid menu_scaling
     spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
 
     init_();

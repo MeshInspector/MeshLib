@@ -7,24 +7,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  pip-test:
+  pip-test-linux:
     timeout-minutes: 20
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-20.04] #, macos-latest]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
         config: [Release, Test]
         include:
-          - os: windows-latest
-            py-version: "3.10"
-            py-cmd: py -3.10
           - os: ubuntu-20.04
             py-version: "3.8"
             py-cmd: python3
-          #- os: macos-latest
-           # py-version: "3.10"
-            #py-cmd: python3
           - config: Release
             pip-options: ""
           - config: Test
@@ -40,15 +36,46 @@ jobs:
 
       - name: Install pip package
         run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt     
-          ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
+          python3 -m pip install --upgrade pip
+          python3 -m pip uninstall -y meshlib
+          python3 -m pip install --upgrade -r ./requirements/python.txt     
+          python3 -m pip install ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
         working-directory: test_python
-        run: ${{ matrix.py-cmd }} -m pytest -s -v
+        run: python3 -m pytest -s -v
 
+  pip-test-windows:
+    timeout-minutes: 20
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Test]
+        include:
+          - config: Release
+            pip-options: ""
+          - config: Test
+            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Install pip package
+        run: |
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip uninstall -y meshlib
+          py -3.10 -m pip install --upgrade -r ./requirements/python.txt     
+          py -3.10 -m pip install ${{ matrix.pip-options }} meshlib
+
+      - name: Run Python tests
+        working-directory: test_python
+        run: py -3.10 -m pytest -s -v
 
 
   install-test:

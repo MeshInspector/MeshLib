@@ -65,13 +65,13 @@ jobs:
           CMAKE_C_COMPILER: /usr/bin/gcc-10
 
       - name: Run Tests
-        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/Release/bin/MRTest
 
       - name: Python Tests
-        working-directory: ./build/${{ matrix.config }}/bin
+        working-directory: ./build/Release/bin
         run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py ${{ matrix.py-cmd }}
 
       - name: Create and fix Wheel

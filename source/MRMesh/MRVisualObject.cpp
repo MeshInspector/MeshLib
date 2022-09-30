@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <tl/expected.hpp>
 #include "MRPch/MRJson.h"
+#include "MRPch/MRSuppressWarning.h"
 
 namespace MR
 {
@@ -271,7 +272,9 @@ void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
     root["InvertNormals"] = !invertNormals_.empty();
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     root["ShowLabes"] = showLabels();
+MR_SUPPRESS_WARNING_POP
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
@@ -296,9 +299,10 @@ void VisualObject::deserializeFields_( const Json::Value& root )
 
     if ( root["InvertNormals"].isBool() ) // Support old versions
         invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     if ( root["ShowLabes"].isBool() )
         showLabels( root["ShowLabes"].asBool() );
-
+MR_SUPPRESS_WARNING_POP
     auto readColors = [&root]( const char* fieldName, Color& res )
     {
         const auto& colors = root["Colors"]["Faces"][fieldName];
@@ -386,7 +390,9 @@ void VisualObject::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );
+MR_SUPPRESS_WARNING_POP
 }
 
 } //namespace MR

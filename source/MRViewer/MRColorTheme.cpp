@@ -13,6 +13,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "MRPch/MRSuppressWarning.h"
 #include "ImGuiMenu.h"
 #include <imgui.h>
 #include <assert.h>
@@ -203,10 +204,9 @@ void ColorTheme::apply()
             if ( !obj )
                 return;
             const Color& color = SceneColors::get( SceneColors::Type::Labels );
-#pragma warning( push )
-#pragma warning( disable : 4996 )
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( color );
-#pragma warning( pop )
+MR_SUPPRESS_WARNING_POP
             auto labels = getAllObjectsInTree<ObjectLabel>( obj.get(), ObjectSelectivityType::Any );
             for ( auto label : labels )
             {

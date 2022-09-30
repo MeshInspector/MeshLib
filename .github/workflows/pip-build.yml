@@ -40,16 +40,18 @@ jobs:
             py-cmd: "python3.10"
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
           add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev
-
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 
       - name: Install thirdparty libs
         run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib

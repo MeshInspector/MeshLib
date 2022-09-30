@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Python setup
-        if: ${{ matrix.py-version != "3.8" }}
+        if: ${{ matrix.py-version != '3.8' }}
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
           add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev

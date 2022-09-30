@@ -26,6 +26,7 @@ jobs:
       image: meshrus/meshlib-ubuntu:latest
       options: --user root
     strategy:
+      fail-fast: false
       matrix:
         py-version: ["3.8", "3.9", "3.10" ]
         include:
@@ -53,7 +54,7 @@ jobs:
 
       - name: Pip setup
         run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 
       - name: Install thirdparty libs

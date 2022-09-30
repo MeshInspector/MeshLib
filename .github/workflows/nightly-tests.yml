@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
+      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -20,10 +21,13 @@ jobs:
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
+            py-cmd: "python3.8"
           - os: "ubuntu:22.04"
             py-version: "3.10"
+            py-cmd: "python3.10"
           - os: "fedora:35"
             py-version: "3.9"
+            py-cmd: "python3.9"
           - config: Release
             pip-options: ""
           - config: Test
@@ -39,14 +43,14 @@ jobs:
 
       - name: Install pip package
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip uninstall -y meshlib
-          python3 -m pip install --upgrade -r ./requirements/python.txt     
-          python3 -m pip install ${{ matrix.pip-options }} meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt     
+          ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
 
       - name: Run Python tests
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   pip-test-windows:
     timeout-minutes: 20

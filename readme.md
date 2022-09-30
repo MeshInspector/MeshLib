@@ -113,14 +113,15 @@ Although MeshLib is written in C++, all functions are exposed to Python as well.
 Moreover, MeshLib can be easily installed as a python package using `pip install`:
 * On Windows in Python 3.10 via
 ```
-py -3.10 -m pip install --upgrade meshlib
+py -3.10 -m pip install --upgrade pip meshlib
 ```
 * On Ubuntu 20.04 Linux in Python 3.8 via
 ```
 sudo apt install python3-pip
-python3 -m pip install --upgrade pip
-python3 -m pip install meshlib
+python3 -m pip install --upgrade pip meshlib
 ```
+Support for `pip install` on MacOS X is coming.
+
 
 # Build
 ## Build with VS2019 on Windows

@@ -1,1 +1,14 @@
+name: Build Manylinux Pip
 
+on:
+  workflow_dispatch:
+
+jobs:
+  get-latest-tag:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag

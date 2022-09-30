@@ -17,6 +17,8 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRMeshNormals.h"
+#include "MRMesh/MRSphere.h"
+#include "MRMesh/MRUVSphere.h"
 
 using namespace MR;
 
@@ -351,6 +353,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 
     m.def( "makeCube", &MR::makeCube, pybind11::arg( "size" ) = MR::Vector3f::diagonal( 1 ), pybind11::arg( "base" ) = MR::Vector3f::diagonal( -0.5f ),
         "Base is \"lower\" corner of the cube coordinates" );
+    
+    pybind11::class_<MR::SphereParams>( m, "SphereParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "radius", &MR::SphereParams::radius ).
+        def_readwrite( "numMeshVertices", &MR::SphereParams::numMeshVertices );
+
+    m.def( "makeSphere", &MR::makeSphere, pybind11::arg( "params" ),
+        "creates a mesh of sphere with irregular triangulation" );
+    m.def( "makeUVSphere", &MR::makeUVSphere, 
+        pybind11::arg( "radius" ) = 1.0f, 
+        pybind11::arg( "horisontalResolution" ) = 16, pybind11::arg( "verticalResolution" ) = 16,
+        "Z is polar axis of this UVSphere" );
 
     m.def( "makeTorus", &MR::makeTorus,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,

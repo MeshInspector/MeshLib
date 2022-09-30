@@ -9,6 +9,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 
 namespace MR
@@ -183,10 +184,9 @@ void AddCustomThemePlugin::save_()
             obj->setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
             obj->setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
             obj->setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-#pragma warning ( push )
-#pragma warning ( disable : 4996 )
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
-#pragma warning ( pop )
+MR_SUPPRESS_WARNING_POP
 #ifndef __EMSCRIPTEN__
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {

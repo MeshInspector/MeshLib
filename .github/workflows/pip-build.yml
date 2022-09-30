@@ -96,9 +96,7 @@ jobs:
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
 
       - name: Install twine
-        run: |
-          ${{ matrix.py-cmd }} -m pip install twine
+        run: ${{ matrix.py-cmd }} -m pip install twine
 
       - name: Upload to Test PyPi
-        if: ${{ env.deploy_type == 'test' }}
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}

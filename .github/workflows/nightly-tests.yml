@@ -7,7 +7,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  get-latest-tag:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+
   pip-test-linux:
+    needs: get-latest-tag
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
@@ -16,8 +29,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
         config: [Release, Test]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        tag: ['master', '${{needs.get-latest-tag.outputs.version_tag}}']
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -35,6 +49,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: ${{ matrix.tag }}
 
       - name: Python setup
         uses: actions/setup-python@v4
@@ -54,12 +70,14 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   pip-test-windows:
+    needs: get-latest-tag
     timeout-minutes: 20
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         config: [Release, Test]
+        tag: ['master', '${{needs.get-latest-tag.outputs.version_tag}}']
         include:
           - config: Release
             pip-options: ""
@@ -68,6 +86,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: ${{ matrix.tag }}
 
       - name: Python setup
         uses: actions/setup-python@v4

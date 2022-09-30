@@ -30,6 +30,9 @@ if platformSystem == 'Linux':
 elif platformSystem == 'Darwin':
     python_cmd = "python3 "
 
+if len(sys.argv) > 1:
+    python_cmd = str(sys.argv[1]).strip() + " "
+
 directory = os.path.dirname(os.path.abspath(__file__))
 if len(sys.argv) == 1:
     directory = os.path.join(directory, "..")

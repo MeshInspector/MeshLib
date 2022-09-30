@@ -415,8 +415,7 @@ void ImGuiMenu::draw_menu()
   if (callback_draw_custom_window) { callback_draw_custom_window(); }
   else { draw_custom_window(); }
 }
-#pragma warning ( push )
-#pragma warning( disable : 4996 )
+
 void ImGuiMenu::draw_viewer_window()
 {
   float menu_width = 180.f * menu_scaling();
@@ -463,8 +462,11 @@ void ImGuiMenu::draw_labels_window()
           continue;
       if ( !viewer->globalBasisAxes->getVisualizeProperty( VisualizeMaskType::Labels, viewport.id ) )
           continue;
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
       for ( const auto& label : viewer->globalBasisAxes->getLabels() )
           draw_text( viewport, viewport.getParameters().globalBasisAxesXf( label.position ), Vector3f(), label.text, viewer->globalBasisAxes->getLabelsColor(), true );
+#pragma warning ( pop )
   }
   ImGui::End();
   ImGui::PopStyleColor();
@@ -473,7 +475,10 @@ void ImGuiMenu::draw_labels_window()
 
 void ImGuiMenu::draw_labels( const VisualObject& obj )
 {
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
     const auto& labels = obj.getLabels();
+#pragma warning ( pop )
     for ( const auto& viewport : viewer->viewport_list )
     {
         if ( !obj.isVisible( viewport.id ) )
@@ -487,21 +492,25 @@ void ImGuiMenu::draw_labels( const VisualObject& obj )
                     xf( labels[i].position ),
                     Vector3f( 0.0f, 0.0f, 0.0f ),
                     labels[i].text,
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
                     obj.getLabelsColor(),
+#pragma warning ( pop )
                     clip );
         if ( obj.getVisualizeProperty( VisualizeMaskType::Name, viewport.id ) )
             draw_text(
                 viewport,
                 xf( obj.getBoundingBox().center() ),
                 Vector3f( 0.0f, 0.0f, 0.0f ),
-                obj.name(),
-                obj.getLabelsColor(),
+                obj.name(), 
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
+                 obj.getLabelsColor(),
+#pragma warning ( pop )
                 clip );
     }
 
 }
-
-#pragma warning ( pop )
 
 void ImGuiMenu::draw_text(
     const Viewport& viewport,
@@ -1356,8 +1365,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
 
     return someChanges;
 }
-#pragma warning ( push )
-#pragma warning( disable : 4996 )
 
 bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
 {
@@ -1391,10 +1398,16 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
         return Vector4f( data->getLabelsColor() );
+#pragma warning ( pop )
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
+#pragma warning ( push )
+#pragma warning( disable : 4996 )
         data->setLabelsColor( Color( color ) );
+#pragma warning ( pop )
     } );
 
     if ( !selectedMeshObjs.empty() )
@@ -1458,7 +1471,6 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
 
     return someChanges;
 }
-#pragma warning ( pop )
 
 void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& )
 {}

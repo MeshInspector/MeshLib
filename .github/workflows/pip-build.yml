@@ -27,13 +27,13 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        py-version: [3.8, 3.9, 3.10 ]
+        py-version: ["3.8", "3.9", "3.10" ]
         include:
-          - py-version: 3.8
+          - py-version: "3.8"
             py-tag: "cp38"
-          - py-version: 3.9
+          - py-version: "3.9"
             py-tag: "cp39"
-          - py-version: 3.10
+          - py-version: "3.10"
             py-tag: "cp310"
 
     steps:

@@ -86,7 +86,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
-          ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=cp${{matrix.py-version}} --version ${{needs.setup.outputs.version_tag}}
+          ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
 
       - name: Install twine
@@ -106,4 +106,4 @@ jobs:
   manylinux-pip-test:
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
     with:
-      matrix: '[Release]'
+      matrix: '[Test]'

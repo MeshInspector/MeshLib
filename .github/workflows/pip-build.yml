@@ -1,12 +1,12 @@
 name: Build Manylinux Pip
 
 on:
-  schedule:
-    - cron:  '20 4 * * *'
+  release:
+    types: [ published ]
   workflow_dispatch:
 
 jobs:
-  get-latest-tag:
+  setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
@@ -18,8 +18,9 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
 
+
   manylinux-pip:
-    needs: get-latest-tag
+    needs: setup
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
@@ -82,21 +83,27 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
-          tar xf patchelf-0.10.tar.bz2
-          cd patchelf-0.10
-          ./configure
-          make install
-          cd ..
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
-          ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=cp${{matrix.py-version}} --version ${{needs.get-latest-tag.outputs.version_tag}}
+          ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=cp${{matrix.py-version}} --version ${{needs.setup.outputs.version_tag}}
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
 
       - name: Install twine
         run: ${{ matrix.py-cmd }} -m pip install twine
 
       - name: Upload to Test PyPi
+        if: ${{ false }}
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }}
+
+      - name: Upload to Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ManyLinux-${{ matrix.py-cmd }}
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
+          retention-days: 1
+
+  manylinux-pip-test:
+    uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
+    with:
+      matrix: '[Release]'

@@ -5,13 +5,20 @@ on:
   schedule:
     - cron:  '20 4 * * *'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      config:
+        required: false
+        type: string
+        default: '[Release, Test]'
 
 jobs:
-  get-latest-tag:
+  setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+      config: ${{ steps.set-config.outputs.config }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,8 +26,17 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
 
+      - name: Set config
+        if: set-config
+        run: |
+          if [ "${{inputs.config}}" != "" ]; then
+             echo "::set-output name=config::${{inputs.config}}
+          else
+            echo "::set-output name=config::[Release, Test]
+          fi
+
   pip-test-linux:
-    needs: get-latest-tag
+    needs: setup
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
@@ -29,9 +45,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Release, Test]
+        config: ${{ fromJSON('${{needs.setup.outputs.config}}') }}
         os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
-        tag: ['master', '${{needs.get-latest-tag.outputs.version_tag}}']
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -44,8 +59,10 @@ jobs:
             py-cmd: "python3.9"
           - config: Release
             pip-options: ""
+            tag: 'master'
           - config: Test
             pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+            tag: '${{needs.setup.outputs.version_tag}}'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -57,32 +74,45 @@ jobs:
         with:
           python-version: ${{ matrix.py-version }}
 
-      - name: Install pip package
+      - name: Pip setup
         run: |
           apt -y update && apt -y upgrade && apt -y install curl
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt     
-          ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Download Meshlib wheel from Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ManyLinux-${{ matrix.py-cmd }}
+
+      - name: Meshlib wheel install
+        run: |  
+          if [ "${{inputs.config}}" != "" ]; then
+            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+          else
+            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
+          fi
 
       - name: Run Python tests
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   pip-test-windows:
-    needs: get-latest-tag
+    needs: setup
     timeout-minutes: 20
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        config: [Release, Test]
-        tag: ['master', '${{needs.get-latest-tag.outputs.version_tag}}']
+        config: ${{ fromJSON('${{needs.setup.outputs.config}}') }}
         include:
           - config: Release
             pip-options: ""
+            tag: 'master'
           - config: Test
             pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+            tag: '${{needs.setup.outputs.version_tag}}'
     steps:
       - name: Checkout
         uses: actions/checkout@v3

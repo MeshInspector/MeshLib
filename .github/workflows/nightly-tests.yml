@@ -29,7 +29,7 @@ jobs:
       - name: Set config
         id: set-config
         run: |
-          if [ "${{inputs.config}}" != "" ]; then
+          if [ "${{inputs.config}}" == "" ]; then
              echo "::set-output name=config::Release"
           else
             echo "::set-output name=config::${{inputs.config}}"

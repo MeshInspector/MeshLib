@@ -103,8 +103,20 @@ jobs:
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
-  manylinux-pip-test:
+  pip-test:
     needs: manylinux-pip
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
     with:
       config: toJson('Test')
+
+  delete-artifacts:
+    timeout-minutes: 5
+    runs-on: ubuntu-20.04
+    needs: pip-test
+    if: always()
+    steps:
+      - name: Delete All Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Wheelhouse
+          failOnError: false

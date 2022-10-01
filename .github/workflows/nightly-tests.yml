@@ -82,6 +82,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Meshlib wheel from Artifact
+        if: ${{inputs.config != "" }}
         uses: actions/download-artifact@v3
         with:
           name: ManyLinux-${{ matrix.py-cmd }}
@@ -97,6 +98,21 @@ jobs:
       - name: Run Python tests
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+      - name: Delete Meshlib wheel from Artifact
+        if: always()
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: ManyLinux-${{ matrix.py-cmd }}
+          failOnError: false
+
+      - name: Upload to Wheelhouse
+        if: ${{inputs.config != "" }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Wheelhouse
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
+          retention-days: 1
 
   pip-test-windows:
     needs: setup

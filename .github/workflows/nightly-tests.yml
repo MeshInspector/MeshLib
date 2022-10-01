@@ -27,7 +27,7 @@ jobs:
         id: get-latest-tag
 
       - name: Set config
-        if: set-config
+        id: set-config
         run: |
           if [ "${{inputs.config}}" != "" ]; then
              echo "::set-output name=config::${{inputs.config}}

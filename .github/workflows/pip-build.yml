@@ -104,7 +104,7 @@ jobs:
           retention-days: 1
 
   manylinux-pip-test:
-    #needs: manylinux-pip
+    needs: manylinux-pip
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
     with:
       config: toJson('Test')

@@ -10,7 +10,7 @@ on:
       config:
         required: false
         type: string
-        default: '[Release, Test]'
+        default: toJson('Release', 'Test')
 
 jobs:
   setup:
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: ${{ fromJSON('${{needs.setup.outputs.config}}') }}
+        config: [Release, Test]
         os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
         include:
           - os: "ubuntu:20.04"

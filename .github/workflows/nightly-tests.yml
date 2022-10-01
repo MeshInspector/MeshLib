@@ -82,7 +82,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Meshlib wheel from Artifact
-        if: ${{inputs.config != "" }}
+        if: ${{inputs.config != '' }}
         uses: actions/download-artifact@v3
         with:
           name: ManyLinux-${{ matrix.py-cmd }}
@@ -107,7 +107,7 @@ jobs:
           failOnError: false
 
       - name: Upload to Wheelhouse
-        if: ${{inputs.config != "" }}
+        if: ${{inputs.config != '' }}
         uses: actions/upload-artifact@v3
         with:
           name: Wheelhouse

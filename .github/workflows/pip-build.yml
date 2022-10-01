@@ -106,4 +106,4 @@ jobs:
   manylinux-pip-test:
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
     with:
-      matrix: '[Test]'
+      config: '[Test]'

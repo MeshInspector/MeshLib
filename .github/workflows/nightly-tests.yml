@@ -10,7 +10,7 @@ on:
       config:
         required: false
         type: string
-        default: toJson('Release', 'Test')
+        default: 'Release'
 
 jobs:
   setup:
@@ -30,9 +30,9 @@ jobs:
         id: set-config
         run: |
           if [ "${{inputs.config}}" != "" ]; then
-             echo "::set-output name=config::${{inputs.config}}
+             echo "::set-output name=config::Release"
           else
-            echo "::set-output name=config::[\"Release\", \"Test\"]"
+            echo "::set-output name=config::${{inputs.config}}"
           fi
 
   pip-test-linux:
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Release, Test]
+        config: ${{needs.setup.outputs.config}}
         os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
         include:
           - os: "ubuntu:20.04"
@@ -59,15 +59,13 @@ jobs:
             py-cmd: "python3.9"
           - config: Release
             pip-options: ""
-            tag: 'master'
           - config: Test
             pip-options: "-i https://test.pypi.org/simple/ --no-deps"
-            tag: '${{needs.setup.outputs.version_tag}}'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ matrix.tag }}
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         uses: actions/setup-python@v4
@@ -121,19 +119,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: ${{ fromJSON('${{needs.setup.outputs.config}}') }}
+        config: ${{needs.setup.outputs.config}}
         include:
           - config: Release
             pip-options: ""
-            tag: 'master'
           - config: Test
             pip-options: "-i https://test.pypi.org/simple/ --no-deps"
-            tag: '${{needs.setup.outputs.version_tag}}'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ matrix.tag }}
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         uses: actions/setup-python@v4

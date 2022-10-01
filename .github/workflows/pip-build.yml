@@ -106,8 +106,6 @@ jobs:
   pip-test:
     needs: manylinux-pip
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
-    with:
-      config: toJson('Test')
 
   delete-artifacts:
     timeout-minutes: 5

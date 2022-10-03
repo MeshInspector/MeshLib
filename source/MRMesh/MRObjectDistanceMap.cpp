@@ -168,8 +168,8 @@ tl::expected<void, std::string> ObjectDistanceMap::deserializeModel_( const std:
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     
-    dmap_ = std::make_shared<DistanceMap>( res.value() );
-
+    dmap_ = std::make_shared<DistanceMap>( res.value().first );
+    toWorldParams_ = res.value().second;
     return {};
 }
 
@@ -179,7 +179,7 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_, toWorldParams_ ); } );
 }
 
 void ObjectDistanceMap::setDefaultColors_()

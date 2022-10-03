@@ -16,7 +16,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& path, ProgressCallback progressCb )
+tl::expected<DistanceMapWithParams, std::string> loadRaw( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     MR_TIMER;
 
@@ -43,6 +43,10 @@ tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& pat
     if ( !inFile )
         return tl::make_unexpected( readError );
 
+    DistanceMapToWorld params;
+    if ( !inFile.read( ( char* )&params, sizeof( params ) ) )
+        return tl::make_unexpected( readError );
+
     uint64_t resolution[2] = {};
     if ( !inFile.read( ( char* )resolution, sizeof( resolution ) ) )
         return tl::make_unexpected( readError );
@@ -60,8 +64,7 @@ tl::expected<DistanceMap, std::string> loadRaw( const std::filesystem::path& pat
     for ( size_t i = 0; i < size; ++i )
         dmap.set( int( i ), buffer[i] );
     
-    
-    return dmap;
+    return DistanceMapWithParams { std::move(dmap), std::move(params) };
 }
 
 

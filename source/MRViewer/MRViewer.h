@@ -545,7 +545,7 @@ private:
     bool swapOnLastForcedFrameOnly_{ false };
 
     // if this flag is set shows some developer features useful for debugging
-    bool enableDeveloperFeatures_{ false };
+    bool enableDeveloperFeatures_{ true };
 
     // special plugin for menu (initialized before splash window starts)
     std::shared_ptr<ImGuiMenu> menuPlugin_;

@@ -32,6 +32,7 @@ public:
         Lines,
         Points,
         Voxels,
+        DistanceMap,
         Count
     };
     MRVIEWER_API int getLastExtentionNum( ObjType objType );

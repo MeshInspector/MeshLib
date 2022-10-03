@@ -8,8 +8,11 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
+#include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectDistanceMap.h"
+#include "MRMesh/MRDistanceMap.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRStringConvert.h"
@@ -62,6 +65,17 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
         }
         else
             result = tl::make_unexpected( std::string( "ObjectMesh has no Mesh in it" ) );
+    }
+    else if ( auto objDistanceMap = obj.asType<ObjectDistanceMap>() )
+    {
+        if ( auto distanceMap = objDistanceMap->getDistanceMap() )
+        {
+            result = DistanceMapSave::saveRAW( filename, *distanceMap, objDistanceMap->getToWorldParameters() );
+        }
+        else
+        {
+            result = tl::make_unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
+        }
     }
 #ifndef __EMSCRIPTEN__
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
@@ -168,6 +182,14 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 else if ( result.error() == "unsupported file extension" )
                 {
                     result = tl::make_unexpected( objectLines.error() );
+
+                    auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
+                    if ( objectDistanceMap.has_value() )
+                    {
+                        objectDistanceMap->select( true );
+                        auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
+                        result = { obj };
+                    }
                 }
             }
         }

@@ -16,7 +16,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const DistanceMap& dmap )
+tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
 {
     if ( path.empty() )
         return tl::make_unexpected( "Path is empty" );
@@ -38,6 +38,9 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     std::ofstream outFile( path, std::ios::binary );
     const std::string writeError = "Cannot write file: " + utf8string( path );
     if ( !outFile )
+        return tl::make_unexpected( writeError );
+
+    if ( !outFile.write( (char*)&params, sizeof(params) ) )
         return tl::make_unexpected( writeError );
 
     size_t resolution[2] = { dmap.resX(), dmap.resY() };

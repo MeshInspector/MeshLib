@@ -91,33 +91,10 @@ jobs:
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
-      - name: Delete Meshlib wheel from Artifact
-        if: always()
-        uses: geekyeggo/delete-artifact@v1
-        with:
-          name: ManyLinux-${{ matrix.py-cmd }}
-          failOnError: false
-
-      - name: Upload to Wheelhouse
-        if: ${{inputs.config != '' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
-          retention-days: 1
-
   pip-test-windows:
     needs: setup
     timeout-minutes: 20
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - config: Release
-            pip-options: ""
-          - config: Test
-            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -134,7 +111,7 @@ jobs:
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip uninstall -y meshlib
           py -3.10 -m pip install --upgrade -r ./requirements/python.txt     
-          py -3.10 -m pip install ${{ matrix.pip-options }} meshlib
+          py -3.10 -m pip install meshlib
 
       - name: Run Python tests
         working-directory: test_python

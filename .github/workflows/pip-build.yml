@@ -108,7 +108,7 @@ jobs:
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
   upload-to-release:
-    needs: release-test
+    needs: release-tests
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:

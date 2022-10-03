@@ -56,6 +56,12 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Python setup
+        if: ${{ matrix.os == 'fedora:35'}}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
       - name: System setup
         if: ${{ matrix.os != 'fedora:35'}}
         run: |

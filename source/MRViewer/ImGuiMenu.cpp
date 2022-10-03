@@ -25,6 +25,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 ////////////////////////////////////////////////////////////////////////////////
 #include "MRPch/MRWasm.h"
+#include "MRPch/MRSuppressWarning.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
@@ -264,8 +265,11 @@ void ImGuiMenu::reload_font(int font_size)
 void ImGuiMenu::shutdown()
 {
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    if ( viewer && viewer->isGLInitialized() )
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+    }
 
     disconnect();
     // User is responsible for destroying context if a custom context is given
@@ -457,10 +461,6 @@ void ImGuiMenu::draw_labels_window()
   {
       if ( !viewer->globalBasisAxes->isVisible( viewport.id ) )
           continue;
-      if ( !viewer->globalBasisAxes->getVisualizeProperty( VisualizeMaskType::Labels, viewport.id ) )
-          continue;
-      for ( const auto& label : viewer->globalBasisAxes->getLabels() )
-          draw_text( viewport, viewport.getParameters().globalBasisAxesXf( label.position ), Vector3f(), label.text, viewer->globalBasisAxes->getLabelsColor(), true );
   }
   ImGui::End();
   ImGui::PopStyleColor();
@@ -469,7 +469,9 @@ void ImGuiMenu::draw_labels_window()
 
 void ImGuiMenu::draw_labels( const VisualObject& obj )
 {
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
     const auto& labels = obj.getLabels();
+
     for ( const auto& viewport : viewer->viewport_list )
     {
         if ( !obj.isVisible( viewport.id ) )
@@ -490,11 +492,11 @@ void ImGuiMenu::draw_labels( const VisualObject& obj )
                 viewport,
                 xf( obj.getBoundingBox().center() ),
                 Vector3f( 0.0f, 0.0f, 0.0f ),
-                obj.name(),
-                obj.getLabelsColor(),
+                obj.name(), 
+                 obj.getLabelsColor(),
                 clip );
     }
-
+MR_SUPPRESS_WARNING_POP
 }
 
 void ImGuiMenu::draw_text(
@@ -1383,10 +1385,14 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
         return Vector4f( data->getLabelsColor() );
+MR_SUPPRESS_WARNING_POP
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
+MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
         data->setLabelsColor( Color( color ) );
+MR_SUPPRESS_WARNING_POP
     } );
 
     if ( !selectedMeshObjs.empty() )

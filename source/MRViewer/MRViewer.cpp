@@ -34,6 +34,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
+#include "MRGetSystemInfoJson.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -190,6 +191,16 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
 namespace MR
 {
 
+void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos )
+{
+    auto label = std::make_shared<ObjectLabel>();
+    label->setFrontColor( Color::white(), false );
+    label->setLabel( { str, pos } );
+    label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
+    label->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+    obj.addChild( label );
+}
+
 int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
     static bool firstLaunch = true;
@@ -227,6 +238,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         auto stacktrace = boost::stacktrace::stacktrace();
         for ( const auto& frame : stacktrace )
             spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+        printCurrentTimerBranch();
         res = 1;
     }
 
@@ -495,6 +507,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         spdlog::info( "Init menu plugin." );
         menuPlugin_->init( this );
     }
+
+    // print after menu init to know valid menu_scaling
+    spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
+
     init_();
     // it is replaced here because some plugins can rise modal window, and scroll event sometimes can pass over it
     if ( window )
@@ -1139,7 +1155,9 @@ void Viewer::initGlobalBasisAxesObject_()
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
     }
-    globalBasisAxes->setLabels( { {"X",1.1f * Vector3f::plusX()},{"Y",1.1f * Vector3f::plusY()},{"Z",1.1f * Vector3f::plusZ()} } );
+    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
+    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
+    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
     globalBasisAxes->setVisualizeProperty( defaultLabelsGlobalBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
@@ -1172,18 +1190,10 @@ void Viewer::initBasisAxesObject_()
         colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
     }
     const float labelPos = size + 0.2f;
-    auto addLabel = [&] ( const std::string& str, const Vector3f& pos )
-    {
-        std::shared_ptr<ObjectLabel> label = std::make_shared<ObjectLabel>();
-        label->setFrontColor( Color::white(), false );
-        label->setLabel( { str, pos } );
-        label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
-        label->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
-        basisAxes->addChild( label );
-    };
-    addLabel( "X", labelPos * Vector3f::plusX() );
-    addLabel( "Y", labelPos * Vector3f::plusY() );
-    addLabel( "Z", labelPos * Vector3f::plusZ() );
+   
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
     
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );

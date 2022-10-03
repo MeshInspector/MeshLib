@@ -215,7 +215,7 @@ tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, c
     auto size = dm.numPoints();
     std::vector<Color> pixels( size );
     float min = std::numeric_limits<float>::max();
-    float max = -std::numeric_limits<float>::max();
+    float max = std::numeric_limits<float>::lowest();
 
     // find min-max
     for ( int i = 0; i < size; ++i )
@@ -255,7 +255,7 @@ tl::expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Imag
             return tl::make_unexpected( "Error convert Image to DistanceMap: image isn't monochrome" );
         if ( pixels[i].r < threshold )
             continue;
-        dm.set( i, pixels[i].r );
+        dm.set( i, 255.0f - pixels[i].r );
     }
     return dm;
 }

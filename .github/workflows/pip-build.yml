@@ -21,7 +21,7 @@ jobs:
 
   manylinux-pip:
     needs: setup
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     container:
       image: meshrus/meshlib-ubuntu:latest

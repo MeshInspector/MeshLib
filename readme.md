@@ -115,10 +115,11 @@ Moreover, MeshLib can be easily installed as a python package using `pip install
 ```
 py -3.10 -m pip install --upgrade pip meshlib
 ```
-* On Ubuntu 20.04 Linux in Python 3.8 via
+* On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ in Pythons 3.8,3.9,3.10 via
 ```
 sudo apt install python3-pip
-python3 -m pip install --upgrade pip meshlib
+python3 -m pip install --upgrade pip
+python3 -m pip install --upgrade meshlib
 ```
 Support for `pip install` on MacOS X is coming.
 

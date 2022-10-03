@@ -1,0 +1,162 @@
+
+name: Nightly Tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      config:
+        required: false
+        type: string
+        default: 'Release'
+
+jobs:
+  setup:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+
+  pip-test-linux:
+    needs: setup
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        include:
+          - os: "ubuntu:20.04"
+            py-version: "3.8"
+            py-cmd: "python3.8"
+          - os: "ubuntu:22.04"
+            py-version: "3.10"
+            py-cmd: "python3.10"
+          - os: "fedora:35"
+            py-version: "3.9"
+            py-cmd: "python3.9"
+          - config: Release
+            pip-options: ""
+          - config: Test
+            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Python setup
+        if: ${{ matrix.os == 'fedora:35'}}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: System setup
+        if: ${{ matrix.os != 'fedora:35'}}
+        run: |
+          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+      - name: Pip setup
+        run: |
+          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Download Meshlib wheel from Artifact
+        if: ${{inputs.config != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ManyLinux-${{ matrix.py-cmd }}
+
+      - name: Meshlib wheel install
+        run: |  
+          if [ "${{inputs.config}}" != "" ]; then
+            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+          else
+            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
+          fi
+
+      - name: Run Python tests
+        working-directory: test_python
+        run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+  pip-test-windows:
+    needs: setup
+    timeout-minutes: 20
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Install pip package
+        run: |
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip uninstall -y meshlib
+          py -3.10 -m pip install --upgrade -r ./requirements/python.txt     
+          py -3.10 -m pip install meshlib
+
+      - name: Run Python tests
+        working-directory: test_python
+        run: py -3.10 -m pytest -s -v
+
+
+  install-test:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container:
+      image: ${{matrix.container}}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [Ubuntu20, Ubuntu22, Fedroa35]
+        include:
+          - os: Ubuntu20
+            container: ubuntu:20.04
+            fileName: "*ubuntu20*"
+            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+            installCmd: apt-get -y install ./*.deb
+          - os: Ubuntu22
+            container: ubuntu:22.04
+            fileName: "*ubuntu22*"
+            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+            installCmd: apt-get -y install ./*.deb
+          - os: Fedroa35
+            container: fedora:35
+            fileName: "*-dev.rpm"
+            updateCmd: dnf --refresh -y upgrade
+            installCmd: dnf -y install ./*.rpm
+    steps:
+      - name: Download Release
+        uses: robinraju/release-downloader@v1.5
+        with:
+          repository: MeshInspector/MeshLib
+          latest: true
+          fileName: ${{matrix.fileName}}
+          out-file-path: ""
+
+      - name: Install Release
+        run: |
+          ${{matrix.updateCmd}}
+          ${{matrix.installCmd}}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+        #  apt -y update  && apt -y install python3-pip

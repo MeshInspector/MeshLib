@@ -103,9 +103,9 @@ jobs:
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
-  release-test:
+  release-tests:
     needs: manylinux-pip
-    uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
+    uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
   upload-to-release:
     needs: release-test

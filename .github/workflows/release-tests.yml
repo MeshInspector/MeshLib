@@ -2,8 +2,6 @@
 name: Nightly Tests
 
 on:
-  schedule:
-    - cron:  '20 4 * * *'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -160,3 +158,5 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+
+        #  apt -y update  && apt -y install python3-pip

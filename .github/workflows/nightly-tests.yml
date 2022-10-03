@@ -61,10 +61,14 @@ jobs:
         with:
           python-version: ${{ matrix.py-version }}
 
+      - name: System setup
+        if: ${{ matrix.os != 'fedora:35'}}
+        run: |
+          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
+
       - name: Pip setup
         run: |
-          apt -y update && apt -y upgrade && apt -y install curl
-          curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
+          ${{ matrix.py-cmd }} -m pip install --update pip
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
 

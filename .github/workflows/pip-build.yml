@@ -103,12 +103,12 @@ jobs:
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
-  pip-test:
+  release-test:
     needs: manylinux-pip
     uses: MeshInspector/MeshLib/.github/workflows/nightly-tests.yml@pip-build
 
   upload-to-release:
-    needs: pip-test
+    needs: release-test
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -126,7 +126,7 @@ jobs:
   delete-artifacts:
     timeout-minutes: 5
     runs-on: ubuntu-20.04
-    needs: pip-test
+    needs: upload-to-release
     if: always()
     steps:
       - name: Delete Wheelhouse

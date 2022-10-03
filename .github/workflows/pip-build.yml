@@ -118,3 +118,21 @@ jobs:
         with:
           name: Wheelhouse
           failOnError: false
+
+      - name: Delete All Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: ManyLinux-python3.8
+          failOnError: false
+
+      - name: Delete All Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: ManyLinux-python3.9
+          failOnError: false
+
+      - name: Delete All Wheelhouse
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: ManyLinux-python3.10
+          failOnError: false

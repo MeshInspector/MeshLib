@@ -11,7 +11,6 @@ namespace MR
 
 namespace DistanceMapLoad
 {
-using DistanceMapWithParams = std::pair<DistanceMap, DistanceMapToWorld>;
 /// \defgroup DistanceMapLoadGroup DistanceMap Load
 /// \ingroup IOGroup
 /// \{

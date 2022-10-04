@@ -62,6 +62,9 @@ tl::expected<void, std::string> toMrDistanceMap( const std::filesystem::path& pa
     if ( path.empty() )
         return tl::make_unexpected( "Path is empty" );
 
+    if ( !params )
+        return tl::make_unexpected( "DistanceMapToWorld is null" );
+
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );

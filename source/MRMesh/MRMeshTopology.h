@@ -112,6 +112,8 @@ public:
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
     /// returns cached set of all valid vertices
     [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
+    /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
+    void flip( VertBitSet & vs ) const { vs = getValidVerts() - vs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
 
@@ -143,6 +145,8 @@ public:
     [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
     /// returns cached set of all valid faces
     [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
+    /// sets in (fs) all valid faces that were not selected before the call, and resets other bits
+    void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
 

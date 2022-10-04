@@ -57,13 +57,10 @@ tl::expected<void, std::string> toRAW( const std::filesystem::path& path, const 
     return {};
 }
 
-tl::expected<void, std::string> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld* params )
+tl::expected<void, std::string> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
 {
     if ( path.empty() )
         return tl::make_unexpected( "Path is empty" );
-
-    if ( !params )
-        return tl::make_unexpected( "DistanceMapToWorld is null" );
 
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -84,7 +81,7 @@ tl::expected<void, std::string> toMrDistanceMap( const std::filesystem::path& pa
     if ( !outFile )
         return tl::make_unexpected( writeError );
     
-    if ( !outFile.write( ( const char* )params, sizeof( DistanceMapToWorld ) ) )
+    if ( !outFile.write( ( const char* )&params, sizeof( DistanceMapToWorld ) ) )
         return tl::make_unexpected( writeError );
 
     size_t resolution[2] = { dmap.resX(), dmap.resY() };
@@ -119,7 +116,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::pat
     if ( itF->extension == "*.raw" )
         return toRAW( path, dmap );
 
-    return toMrDistanceMap( path, dmap, params );
+    return toMrDistanceMap( path, dmap, params ? *params : DistanceMapToWorld {} );
 }
 
 } // namespace DistanceMapSave

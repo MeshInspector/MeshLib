@@ -64,7 +64,7 @@ tl::expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& pat
     return dmap;
 }
 
-tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, const DistanceMapToWorld* params, ProgressCallback progressCb )
+tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, const DistanceMapToWorld& params, ProgressCallback progressCb )
 {
     if ( path.empty() )
         return tl::make_unexpected( "Path is empty" );
@@ -89,7 +89,7 @@ tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem:
     if ( !inFile )
         return tl::make_unexpected( readError );
 
-    if ( !inFile.read( ( char* )params, sizeof( DistanceMapToWorld ) ) )
+    if ( !inFile.read( ( char* )&params, sizeof( DistanceMapToWorld ) ) )
         return tl::make_unexpected( readError );
 
     uint64_t resolution[2] = {};
@@ -130,11 +130,8 @@ tl::expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesy
     if ( itF->extension == "*.raw" )
         return fromRaw( path, progressCb );
     
-    return fromMrDistanceMap( path, params, progressCb );
+    return fromMrDistanceMap( path, params ? *params : DistanceMapToWorld {}, progressCb );
 }
-
-
-
 
 } // namespace DistanceMapLoad
 

@@ -24,7 +24,7 @@ MRMESH_API extern const IOFilters Filters;
  * [resX * resY] float - matrix of values
  */
 MRMESH_API tl::expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb = {} );
-MRMESH_API tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, const DistanceMapToWorld* params, ProgressCallback progressCb = {} );
+MRMESH_API tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, const DistanceMapToWorld& params, ProgressCallback progressCb = {} );
 MRMESH_API tl::expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const DistanceMapToWorld* params, ProgressCallback progressCb = {} );
 
 /// \}

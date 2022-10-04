@@ -114,10 +114,11 @@ tl::expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem:
 
 tl::expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb )
 {
-    auto ext = std::string( "*" ) + utf8string( path.extension() );
+    auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
+    ext.insert( std::begin( ext ), '*' );
     tl::expected<DistanceMap, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRIOFilters.h"
+#include "MRDistanceMapParams.h"
 #include <tl/expected.hpp>
 #include <filesystem>
 
@@ -22,7 +23,9 @@ MRMESH_API extern const IOFilters Filters;
  * 2 integer - DistanceMap.resX & DistanceMap.resY
  * [resX * resY] float - matrix of values
  */
-MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const DistanceMap& dmapObject );
+MRMESH_API tl::expected<void, std::string> toRAW( const std::filesystem::path& path, const DistanceMap& dmap );
+MRMESH_API tl::expected<void, std::string> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmapObject, const DistanceMapToWorld& params );
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmapObject, const DistanceMapToWorld* params = nullptr );
 
 /// \}
 

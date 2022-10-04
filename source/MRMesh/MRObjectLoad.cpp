@@ -4,9 +4,12 @@
 #include "MRLinesLoad.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
+#include "MRDistanceMapLoad.h"
 #include "MRPointsLoad.h"
 #include "MRObjectLines.h"
 #include "MRObjectPoints.h"
+#include "MRDistanceMap.h"
+#include "MRObjectDistanceMap.h"
 #include "MRStringConvert.h"
 
 namespace MR
@@ -73,6 +76,24 @@ tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::fil
     }
 
     return objectPoints;
+}
+
+tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER;
+
+    DistanceMapToWorld params;
+    auto distanceMap = DistanceMapLoad::fromAnySupportedFormat( file, &params, callback );
+    if ( !distanceMap.has_value() )
+    {
+        return tl::make_unexpected( distanceMap.error() );
+    }
+
+    ObjectDistanceMap objectDistanceMap;
+    objectDistanceMap.setName( utf8string( file.stem() ) );
+    objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMap.value() ) ), params );
+
+    return objectDistanceMap;
 }
 
 tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder )

@@ -82,16 +82,16 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
 {
     MR_TIMER;
 
-    Vector<Color, VertId> colors;
-    auto distanceMapWithParams = DistanceMapLoad::loadRaw( file, callback );
-    if ( !distanceMapWithParams.has_value() )
+    DistanceMapToWorld params;
+    auto distanceMap = DistanceMapLoad::fromAnySupportedFormat( file, &params, callback );
+    if ( !distanceMap.has_value() )
     {
-        return tl::make_unexpected( distanceMapWithParams.error() );
+        return tl::make_unexpected( distanceMap.error() );
     }
 
     ObjectDistanceMap objectDistanceMap;
     objectDistanceMap.setName( utf8string( file.stem() ) );
-    objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMapWithParams.value().first ) ), std::move( distanceMapWithParams.value().second ) );
+    objectDistanceMap.setDistanceMap( std::make_shared<MR::DistanceMap>( std::move( distanceMap.value() ) ), params );
 
     return objectDistanceMap;
 }

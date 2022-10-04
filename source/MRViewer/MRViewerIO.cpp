@@ -70,7 +70,7 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
     {
         if ( auto distanceMap = objDistanceMap->getDistanceMap() )
         {
-            result = DistanceMapSave::saveRAW( filename, *distanceMap, objDistanceMap->getToWorldParameters() );
+            result = DistanceMapSave::toAnySupportedFormat( filename, *distanceMap, &objDistanceMap->getToWorldParameters() );
         }
         else
         {

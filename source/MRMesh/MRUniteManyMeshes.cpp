@@ -86,7 +86,7 @@ private:
 };
 
 tl::expected<Mesh, std::string> uniteManyMeshes( 
-    const std::vector<Mesh>& meshes, const UniteManyMeshesParams& params /*= {} */ )
+    const std::vector<const Mesh*>& meshes, const UniteManyMeshesParams& params /*= {} */ )
 {
     MR_TIMER;
     if ( meshes.empty() )
@@ -97,6 +97,8 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     for ( int m = 0; m < meshes.size(); ++m )
     {
         const auto& mesh = meshes[m];
+        if ( !mesh )
+            continue;
         bool merged = false;
         for ( auto& group : nonIntersectingGroups )
         {
@@ -109,7 +111,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     return;
                 for ( int i = range.begin(); i < range.end(); ++i )
                 {
-                    localIntersect = !findCollidingTriangles( mesh, meshes[group[i]], nullptr, true ).empty();
+                    localIntersect = !findCollidingTriangles( *mesh, *meshes[group[i]], nullptr, true ).empty();
                     if ( localIntersect )
                         return;
                 }
@@ -135,7 +137,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     {
         for ( int i = range.begin(); i < range.end(); ++i )
             for ( int j = 0; j < nonIntersectingGroups[i].size(); ++j )
-                mergedMeshes[i].addPart( meshes[nonIntersectingGroups[i][j]] );
+                mergedMeshes[i].addPart( *meshes[nonIntersectingGroups[i][j]] );
     } );
 
     std::vector<Vector3f> randomShifts;

@@ -7,24 +7,24 @@
 namespace MR
 {
 
-// parameters structure for uniteManyMeshes function
+// Parameters structure for uniteManyMeshes function
 struct UniteManyMeshesParams
 {
-    // apply random shift to each mesh, to prevent degenerations on coincident surfaces
+    // Apply random shift to each mesh, to prevent degenerations on coincident surfaces
     bool useRandomShifts{ false };
-    // try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces
+    // Try fix degenerations after each boolean step, to prevent boolean failure due to high amount of degenerated faces
     // useful on meshes with many coincident surfaces 
     // (useRandomShifts used for same issue)
     bool fixDegenerations{ false };
-    // max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
+    // Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
     // not used if both flags (useRandomShifts,fixDegenerations) are false
     float maxAllowedError{ 1e-5f };
 };
 
-// unites many meshes in parallel
+// Computes the surface of objects' union each of which is defined by its own surface mesh
 // - merge non intersecting meshes first
 // - unite merged groups
-MRMESH_API tl::expected<Mesh, std::string> uniteManyMeshes( const std::vector<Mesh>& meshes, 
+MRMESH_API tl::expected<Mesh, std::string> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
     const UniteManyMeshesParams& params = {} );
 
 }

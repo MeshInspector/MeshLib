@@ -116,15 +116,16 @@ jobs:
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
+            py-dir: "Python38"
+            py-file: "python38"
           - py-version: "3.9"
             py-tag: "cp39"
             py-cmd: "python3.9"
             py-dir: "Python39"
+            py-file: "python39"
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
-            py-dir: "Python39"
-
     steps:
       - name: Clear workspace
         run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
@@ -142,6 +143,8 @@ jobs:
         run: |
           docker exec meshlib-win choco uninstall python python3 -y
           docker exec meshlib-win choco install python3 --version=${{matrix.py-version}} -y
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -Destination bin"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "mkdir python3.10"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"

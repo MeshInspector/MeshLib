@@ -575,7 +575,7 @@ ImGuiContext* ImGuiMenu::getCurrentContext() const
     return context_;
 }
 
-void ImGuiMenu::draw_helpers( std::function<bool( const char*, const ImVec2& )> drawButtonCallback, float buttonPadding )
+void ImGuiMenu::draw_helpers()
 {
     if ( showShortcuts_ )
     {
@@ -584,7 +584,46 @@ void ImGuiMenu::draw_helpers( std::function<bool( const char*, const ImVec2& )> 
 
     if ( showStatistics_ )
     {
-        drawStatisticsWindow_( drawButtonCallback, buttonPadding );
+        const auto style = ImGui::GetStyle();
+        const float fpsWindowWidth = 300 * menu_scaling();
+        int numLines = 5 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 5 - for: GL buffer size, prev frame time, swapped frames, total frames, fps;
+        // TextHeight +1 for button, ItemSpacing +2 for separators
+        const float fpsWindowHeight = ( style.WindowPadding.y * 2 +
+                                        ImGui::GetTextLineHeight() * ( numLines + 2 ) +
+                                        style.ItemSpacing.y * ( numLines + 3 ) +
+                                        style.FramePadding.y * 4 );
+        const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
+        const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
+        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
+        ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
+        ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
+                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
+        for ( int i = 0; i<int( Viewer::GLPrimitivesType::Count ); ++i )
+            ImGui::Text( "%s: %zu", cGLPrimitivesCounterNames[i], viewer->getLastFrameGLPrimitivesCount( Viewer::GLPrimitivesType( i ) ) );
+        ImGui::Separator();
+        for ( int i = 0; i<int( Viewer::EventType::Count ); ++i )
+            ImGui::Text( "%s: %zu", cEventCounterNames[i], viewer->getEventsCount( Viewer::EventType( i ) ) );
+        ImGui::Separator();
+        auto glBufferSizeStr = bytesString( viewer->getStaticGLBufferSize() );
+        ImGui::Text( "GL memory buffer: %s", glBufferSizeStr.c_str() );
+        auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
+        if ( prevFrameTime > frameTimeMillisecThreshold_ )
+            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
+        else
+            ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
+        ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
+        ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
+        ImGui::Text( "FPS: %zu", viewer->getFPS() );
+
+        if ( ImGui::Button( "Reset", ImVec2( -1, 0 ) ) )
+        {
+            viewer->resetAllCounters();
+        }
+        if ( ImGui::Button( "Print time to console", ImVec2( -1, 0 ) ) )
+        {
+            printTimingTreeAndStop();
+        }
+        ImGui::End();
     }
 
     if ( showRenameModal_ )
@@ -2444,52 +2483,6 @@ void ImGuiMenu::drawShortcutsWindow_()
         const auto& shortcutsList = shortcutManager_->getShortcutList();
         for ( const auto& [key, category, name] : shortcutsList )
             ImGui::Text( "%s - %s", ShortcutManager::getKeyFullString( key ).c_str(), name.c_str() );
-    }
-    ImGui::End();
-}
-
-// A virtual function for drawing of the dialog with statistics. It can be overriden in the inherited classes
-
-void ImGuiMenu::drawStatisticsWindow_( std::function<bool( const char*, const ImVec2& )> drawButtonCallback, float buttonPadding )
-{
-    const auto style = ImGui::GetStyle();
-    const float fpsWindowWidth = 300 * menu_scaling();
-    int numLines = 5 + int( Viewer::EventType::Count ) + int( Viewer::GLPrimitivesType::Count ); // 5 - for: GL buffer size, prev frame time, swapped frames, total frames, fps;
-    // TextHeight +1 for button, ItemSpacing +2 for separators
-    const float fpsWindowHeight = ( style.WindowPadding.y * 2 +
-                                    ImGui::GetTextLineHeight() * ( numLines + 2 ) +
-                                    style.ItemSpacing.y * ( numLines + 3 ) +
-                                    buttonPadding * 4 );
-    const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
-    const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
-    ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
-    ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
-    ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
-                  ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-    for ( int i = 0; i<int( Viewer::GLPrimitivesType::Count ); ++i )
-        ImGui::Text( "%s: %zu", cGLPrimitivesCounterNames[i], viewer->getLastFrameGLPrimitivesCount( Viewer::GLPrimitivesType( i ) ) );
-    ImGui::Separator();
-    for ( int i = 0; i<int( Viewer::EventType::Count ); ++i )
-        ImGui::Text( "%s: %zu", cEventCounterNames[i], viewer->getEventsCount( Viewer::EventType( i ) ) );
-    ImGui::Separator();
-    auto glBufferSizeStr = bytesString( viewer->getStaticGLBufferSize() );
-    ImGui::Text( "GL memory buffer: %s", glBufferSizeStr.c_str() );
-    auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
-    if ( prevFrameTime > frameTimeMillisecThreshold_ )
-        ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
-    else
-        ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
-    ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
-    ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
-    ImGui::Text( "FPS: %zu", viewer->getFPS() );
-
-    if ( drawButtonCallback( "Reset", ImVec2( -1, 0 ) ) )
-    {
-        viewer->resetAllCounters();
-    }
-    if ( drawButtonCallback( "Print time to console", ImVec2( -1, 0 ) ) )
-    {
-        printTimingTreeAndStop();
     }
     ImGui::End();
 }

@@ -141,7 +141,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawRibbonSceneList_();
         drawRibbonViewportsLabels_();
 
-        draw_helpers( RibbonButtonDrawer::GradientButton, cButtonPadding * menu_scaling() );
+        draw_helpers();
     };
 
     buttonDrawer_.setMenu( this );

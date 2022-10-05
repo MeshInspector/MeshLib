@@ -24,6 +24,9 @@
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+    <PythonVersion>310</PythonVersion>
+    <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
+    <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -73,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
-      <AdditionalDependencies>$(VcpkgCurrentInstalledDir)\lib\python310.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 </Project>

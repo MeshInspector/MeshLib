@@ -231,8 +231,3 @@ jobs:
         with:
           name: ManyLinux-python3.10
           failOnError: false
-
-
-docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"
-docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "mkdir python3.10"
-docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Copy-Item -Path C:\Python39\include\* -Destination python3.10 -Recurse"

@@ -36,7 +36,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromCtm( in, colors, callback );
+    return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
@@ -136,7 +136,7 @@ tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPly( in, colors, callback );
+    return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
@@ -208,7 +208,7 @@ tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromObj( in, callback );
+    return addFileNameInError( fromObj( in, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
@@ -260,7 +260,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromAsc( in, callback );
+    return addFileNameInError( fromAsc( in, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )

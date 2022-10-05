@@ -143,6 +143,8 @@ jobs:
         run: |
           docker exec meshlib-win choco uninstall python python3 -y
           docker exec meshlib-win choco install python3 --version=${{matrix.py-version}} -y
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\lib  meshlib-win powershell.exe -c "Remove-Item python310.*"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\bin  meshlib-win powershell.exe -c "Remove-Item python310.*"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -Destination bin"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"

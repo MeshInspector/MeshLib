@@ -548,9 +548,9 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
     EdgePathsBuilder builder( topology, metric );
     builder.addStartRegion( region, 0 );
 
-    while ( !builder.done() && builder.doneDistance() <= dilation )
+    for ( int i = 0; !builder.done() && builder.doneDistance() <= dilation; ++i )
     {
-        if ( callback && !callback( builder.doneDistance() / dilation ) )
+        if ( ( i % 1024 == 0 ) && callback && !callback( builder.doneDistance() / dilation ) )
             return false;
 
         auto vinfo = builder.growOneEdge();

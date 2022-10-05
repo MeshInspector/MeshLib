@@ -615,11 +615,11 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
         ImGui::Text( "FPS: %zu", viewer->getFPS() );
 
-        if ( ImGui::Button( "Reset", ImVec2( -1, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Reset", ImVec2( -1, 0 ) ) )
         {
             viewer->resetAllCounters();
         }
-        if ( ImGui::Button( "Print time to console", ImVec2( -1, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Print time to console", ImVec2( -1, 0 ) ) )
         {
             printTimingTreeAndStop();
         }

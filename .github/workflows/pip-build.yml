@@ -143,13 +143,13 @@ jobs:
         run: |
           docker exec meshlib-win choco uninstall python python3 -y
           docker exec meshlib-win choco install python3 --version=${{matrix.py-version}} -y
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\lib  meshlib-win powershell.exe -c "Remove-Item python310.*"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\bin  meshlib-win powershell.exe -c "Remove-Item python310.*"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\lib meshlib-win powershell.exe -c "Remove-Item python310.*"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\bin meshlib-win powershell.exe -c "Remove-Item python310.*"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -Destination bin"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "mkdir python3.10"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include  meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "mkdir python3.10"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
 
       - name: Build
         run: |
@@ -164,7 +164,7 @@ jobs:
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
 
       - name: Python Tests
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py -cmd ${{ matrix.py-cmd }}
+        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py -cmd "py -${{ matrix.py-version }}"
 
       - name: Create and fix Wheel
         run: |

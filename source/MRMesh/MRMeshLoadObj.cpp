@@ -16,7 +16,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::f
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromSceneObjFile( in, combineAllObjects, callback );
+    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, callback ), file );
 }
 
 tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects,

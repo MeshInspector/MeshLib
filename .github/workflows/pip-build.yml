@@ -20,6 +20,7 @@ jobs:
 
 
   manylinux-pip:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -165,7 +166,7 @@ jobs:
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py   
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=cp310 --version ${{inputs.version}}
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=cp310 --version ${{needs.setup.outputs.version_tag}}
           $WheelFile = (docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
           echo $WheelFile
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile

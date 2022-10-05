@@ -183,6 +183,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
     pybind11::class_<MR::MeshPart>( m, "MeshPart", "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)" ).
         def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
         def_readwrite( "region", &MR::MeshPart::region, "nullptr here means whole mesh" );
+
+    pybind11::implicitly_convertible<const Mesh&, MR::MeshPart>();
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )

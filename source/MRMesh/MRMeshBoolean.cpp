@@ -41,6 +41,8 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         meshBCut = meshB;
     }
 
+    converters = getVectorConverters( meshA, meshB, rigidB2A );
+
     const Mesh& constMeshARef = needCutMeshA ? meshACut : meshA;
     const Mesh& constMeshBRef = needCutMeshB ? meshBCut : meshB;
 
@@ -49,7 +51,6 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     std::vector<int> prevLoneContoursIds;
     for ( ;;)
     {
-        converters = getVectorConverters( constMeshARef, constMeshBRef, rigidB2A );
         // find intersections
         intersections = findCollidingEdgeTrisPrecise( constMeshARef, constMeshBRef, converters.toInt, rigidB2A );
         // order intersections

@@ -155,7 +155,7 @@ public:
   // Draw menu
   MRVIEWER_API virtual void draw_menu();
 
-  MRVIEWER_API void draw_helpers();
+  MRVIEWER_API void draw_helpers( std::function<bool( const char*, const ImVec2& )> drawButtonCallback = ImGui::Button, float buttonPadding = 0 );
 
   // Can be overwritten by `callback_draw_viewer_window`
   MRVIEWER_API virtual void draw_viewer_window();
@@ -321,6 +321,9 @@ protected:
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
+
+    // A function for drawing of the dialog with statistics.
+    MRVIEWER_API void drawStatisticsWindow_( std::function<bool(const char*, const ImVec2&)> drawButtonCallback, float buttonPadding );
 };
 
 } // end namespace

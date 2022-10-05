@@ -164,7 +164,7 @@ jobs:
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
 
       - name: Python Tests
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
+        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py -cmd ${{ matrix.py-cmd }}
 
       - name: Create and fix Wheel
         run: |

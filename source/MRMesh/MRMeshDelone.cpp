@@ -10,22 +10,21 @@ namespace MR
 
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
-    auto dir = []( const auto& p, const auto& q, const auto& r )
-    {
-        return cross( q - p, r - p );
-    };
-    const auto dirABD = dir( a, b, d );
-    const auto dirDBC = dir( d, b, c );
-
-    if ( dot( dirABD, dirDBC ) < 0 )
-        return true; // flipping of given edge will create two faces with opposite normals
-
     if ( maxAngleChange < NoAngleChangeLimit )
     {
+        auto dir = []( const auto& p, const auto& q, const auto& r )
+        {
+            return cross( q - p, r - p );
+        };
+
+        const auto dirABD = dir( a, b, d );
+        const auto dirDBC = dir( d, b, c );
         const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
+
         const auto dirABC = dir( a, b, c );
         const auto dirACD = dir( a, c, d );
         const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+
         const auto angleChange = std::abs( oldAngle - newAngle );
         if ( angleChange > maxAngleChange )
             return true;

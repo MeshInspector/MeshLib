@@ -11,9 +11,6 @@
     <MeshLibSourceDir>$(MSBuildThisFileDirectory)</MeshLibSourceDir>
     <MeshLibDir>$(MeshLibSourceDir)\..\</MeshLibDir>
     <MeshLibProjectName>MeshLib</MeshLibProjectName>
-    <PythonVersion>310</PythonVersion>
-    <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python$(PythonVersion).lib</PythonLibPath>
-    <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(CustomPropertyDir)' == ''">
     <ClCompile>

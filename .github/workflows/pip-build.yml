@@ -112,17 +112,17 @@ jobs:
         include:
           - py-version: "3.8"
             py-tag: "cp38"
-            py-cmd: "python3.8"
+            py-short-version: "38"
             py-dir: "Python38"
             py-file: "python38"
           - py-version: "3.9"
             py-tag: "cp39"
-            py-cmd: "python3.9"
+            py-short-version: "39"
             py-dir: "Python39"
             py-file: "python39"
           - py-version: "3.10"
             py-tag: "cp310"
-            py-cmd: "python3.10"
+            py-short-version: "310"
     steps:
       - name: Clear workspace
         run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
@@ -153,7 +153,7 @@ jobs:
       - name: Build
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
+          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -178,7 +178,7 @@ jobs:
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Windows-${{ matrix.py-cmd }}
+          name: Windows-python${{ matrix.py-version }}
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 

@@ -619,7 +619,7 @@ void ImGuiMenu::draw_helpers()
         {
             viewer->resetAllCounters();
         }
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Print time to console", ImVec2( -1, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Print time to log", ImVec2( -1, 0 ) ) )
         {
             printTimingTreeAndStop();
         }

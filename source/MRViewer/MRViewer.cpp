@@ -235,9 +235,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     catch ( ... )
     {
         spdlog::critical( boost::current_exception_diagnostic_information() );
-        auto stacktrace = boost::stacktrace::stacktrace();
-        for ( const auto& frame : stacktrace )
-            spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+        spdlog::critical( "Exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
         printCurrentTimerBranch();
         res = 1;
     }

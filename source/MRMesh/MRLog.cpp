@@ -56,10 +56,7 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
-    auto stacktrace = boost::stacktrace::stacktrace();
-    for ( const auto& frame : stacktrace )
-        spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
-
+    spdlog::critical( "Crash stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
     MR::printCurrentTimerBranch();
     std::exit( signal );
 }

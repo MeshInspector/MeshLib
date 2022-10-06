@@ -1,14 +1,8 @@
-
-name: Nightly Tests
+name: Post Release Tests
 
 on:
   workflow_dispatch:
   workflow_call:
-    inputs:
-      config:
-        required: false
-        type: string
-        default: 'Release'
 
 jobs:
   setup:
@@ -155,4 +149,6 @@ jobs:
 
       - name: Run Python tests
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: |
+          python3 -m pip install --upgrade -r ./requirements/python.txt 
+          python3 -m pytest -s -v

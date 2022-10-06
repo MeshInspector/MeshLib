@@ -306,6 +306,10 @@ jobs:
       - name: Upload to Production PyPi
         run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }} --skip-existing
 
+  post-release-test:
+    needs: upload-to-release
+    uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@windows-pip
+
   delete-artifacts:
     timeout-minutes: 5
     runs-on: ubuntu-20.04

@@ -276,7 +276,7 @@ jobs:
         with:
           python-version: ${{ matrix.py-version }}
 
-      - name: setup pip
+      - name: Setup pip
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip uninstall -y meshlib

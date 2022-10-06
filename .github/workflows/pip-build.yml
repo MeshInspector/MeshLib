@@ -1,4 +1,4 @@
-name: Build Manylinux Pip
+name: Build Pip Wheels
 
 on:
   release:
@@ -8,7 +8,7 @@ on:
 jobs:
   setup:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:
@@ -39,7 +39,6 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -171,7 +170,7 @@ jobs:
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py   
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag={{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           $WheelFile = (docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
           echo $WheelFile
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile

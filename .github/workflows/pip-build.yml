@@ -18,9 +18,7 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
 
-
   manylinux-pip:
-    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -173,7 +171,7 @@ jobs:
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel
           docker exec meshlib-win py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py   
-          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=cp310 --version ${{needs.setup.outputs.version_tag}}
+          docker exec -w C:\workspace\MeshLib\MeshLib\scripts\wheel\meshlib meshlib-win py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag={{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           $WheelFile = (docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
           echo $WheelFile
           docker exec -w C:\workspace\MeshLib\MeshLib meshlib-win delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
@@ -185,15 +183,113 @@ jobs:
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
+      - name: Upload to Release Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Wheelhouse
+          path: wheelhouse\meshlib-*.whl
+          retention-days: 1
+
       - name: Remove container
         if: always()
         run: docker rm -f meshlib-win
 
-  release-tests:
-    needs: manylinux-pip
-    uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
+  pip-test-linux:
+    needs: [setup, manylinux-pip]
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        include:
+          - os: "ubuntu:20.04"
+            py-version: "3.8"
+            py-cmd: "python3.8"
+          - os: "ubuntu:22.04"
+            py-version: "3.10"
+            py-cmd: "python3.10"
+          - os: "fedora:35"
+            py-version: "3.9"
+            py-cmd: "python3.9"
+          - config: Release
+            pip-options: ""
+          - config: Test
+            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Python setup
+        if: ${{ matrix.os == 'fedora:35'}}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: System setup
+        if: ${{ matrix.os != 'fedora:35'}}
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+      - name: Pip setup
+        run: |
+          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Download Meshlib wheel from Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ManyLinux-${{ matrix.py-cmd }}
+
+      - name: Meshlib wheel install
+        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+
+      - name: Run Python tests
+        working-directory: test_python
+        run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+  windows-pip-test:
+    needs: [setup, windows-pip]
+    timeout-minutes: 20
+    runs-on: windows-latest
+      matrix:
+        py-version: ["3.8", "3.9", "3.10" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Meshlib wheel from Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: Windows-python${{matrix.py-version}}
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: setup pip
+        run: |
+          py -${{matrix.py-version}} -m pip install --upgrade pip
+          py -${{matrix.py-version}} -m pip uninstall -y meshlib
+          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt     
+
+      - name: Install Meshlib wheel
+        run: powershell.exe -c "$wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -3.8 -m pip install $wheel_file"
+
+      - name: Run Python tests
+        working-directory: test_python
+        run: py -${{matrix.py-version}} -m pytest -s -v
 
   upload-to-release:
+    if: ${{ false }}
     needs: release-tests
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -221,20 +317,38 @@ jobs:
           name: Wheelhouse
           failOnError: false
 
-      - name: Delete Python3.8
+      - name: Delete ManyLinux Python3.8
         uses: geekyeggo/delete-artifact@v1
         with:
           name: ManyLinux-python3.8
           failOnError: false
 
-      - name: Delete Python3.9
+      - name: Delete ManyLinux Python3.9
         uses: geekyeggo/delete-artifact@v1
         with:
           name: ManyLinux-python3.9
           failOnError: false
 
-      - name: Delete Python3.10
+      - name: Delete ManyLinux Python3.10
         uses: geekyeggo/delete-artifact@v1
         with:
           name: ManyLinux-python3.10
+          failOnError: false
+
+      - name: Delete Windows Python3.8
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Windows-python3.8
+          failOnError: false
+
+      - name: Delete Windows Python3.9
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Windows-python3.9
+          failOnError: false
+
+      - name: Delete Windows Python3.10
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Windows-python3.10
           failOnError: false

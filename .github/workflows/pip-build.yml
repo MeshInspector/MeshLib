@@ -257,6 +257,8 @@ jobs:
     needs: [setup, windows-pip]
     timeout-minutes: 20
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
       matrix:
         py-version: ["3.8", "3.9", "3.10" ]
     steps:

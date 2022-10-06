@@ -133,8 +133,10 @@ void Timer::start( const std::string& name )
 
 void Timer::finish()
 {
+    if ( !started_ )
+        return;
     auto currentParent = currentRecord->parent;
-    if ( !currentParent || !started_ )
+    if ( !currentParent )
         return;
 
     currentRecord->time += high_resolution_clock::now() - start_;

@@ -210,6 +210,7 @@
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRUnionFind.h" />
+    <ClInclude Include="MRUniteManyMeshes.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
@@ -472,6 +473,7 @@
     <ClCompile Include="MRObjectDistanceMap.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRPolylineRelax.cpp" />
+    <ClCompile Include="MRUniteManyMeshes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">

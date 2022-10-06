@@ -283,14 +283,14 @@ jobs:
           py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt     
 
       - name: Install Meshlib wheel
-        run: powershell.exe -c "$wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -3.8 -m pip install $wheel_file"
+        shell: pwsh
+        run: $wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -3.8 -m pip install $wheel_file
 
       - name: Run Python tests
         working-directory: test_python
         run: py -${{matrix.py-version}} -m pytest -s -v
 
   upload-to-release:
-    if: ${{ false }}
     needs: [linux-pip-test, windows-pip-test]
     timeout-minutes: 10
     runs-on: ubuntu-latest

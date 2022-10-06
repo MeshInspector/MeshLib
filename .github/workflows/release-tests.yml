@@ -147,8 +147,16 @@ jobs:
         with:
           python-version: 3.10
 
+      - name: System setup
+        if: ${{ matrix.os != 'Fedroa35'}}
+        run: |
+          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+      - name: Pip setup
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade -r ./requirements/python.txt
+
       - name: Run Python tests
         working-directory: test_python
-        run: |
-          python3 -m pip install --upgrade -r ./requirements/python.txt 
-          python3 -m pytest -s -v
+        run: python3 -m pytest -s -v

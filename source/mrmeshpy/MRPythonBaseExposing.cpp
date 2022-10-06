@@ -17,6 +17,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MRColor.h"
 #include <tl/expected.hpp>
+#include <pybind11/functional.h>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 

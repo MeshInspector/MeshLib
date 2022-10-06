@@ -194,7 +194,7 @@ jobs:
         if: always()
         run: docker rm -f meshlib-win
 
-  linux-test-pip:
+  linux-pip-test:
     needs: [setup, manylinux-pip]
     timeout-minutes: 20
     runs-on: ubuntu-latest
@@ -292,7 +292,7 @@ jobs:
 
   upload-to-release:
     if: ${{ false }}
-    needs: [linux-test-pip, windows-test-pip]
+    needs: [linux-pip-test, windows-pip-test]
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:

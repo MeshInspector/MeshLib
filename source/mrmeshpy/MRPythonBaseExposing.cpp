@@ -419,6 +419,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
         def( "get", &MR::EdgeId::operator int );
 } )
 
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdges, MR::UndirectedEdgeId )
+
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdges, MR::EdgeId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVerts, MR::VertId )

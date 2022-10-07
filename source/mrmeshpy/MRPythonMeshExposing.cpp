@@ -88,6 +88,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::VertMap::vec_ );
 
+    pybind11::class_<MR::WholeEdgeMap>( m, "WholeEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::WholeEdgeMap::vec_ );
+
+    pybind11::class_<MR::UndirectedEdgeMap>( m, "UndirectedEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::UndirectedEdgeMap::vec_ );
+
     pybind11::class_<MR::EdgeMap>( m, "EdgeMap" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::EdgeMap::vec_ );

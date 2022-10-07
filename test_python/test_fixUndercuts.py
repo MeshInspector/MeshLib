@@ -1,7 +1,8 @@
 from helper import *
 import pytest
 
-def test_fixUndercuts():
+
+def test_fix_undercuts():
     torus = mrmesh.makeTorusWithUndercut(2, 1, 1.5, 10, 10, None)
 
     dir = mrmesh.Vector3f()
@@ -11,4 +12,4 @@ def test_fixUndercuts():
 
     mrmesh.fixUndercuts(torus, dir, 0.2, 0.)
 
-    assert(torus.points.vec.size() > 2900)
+    assert (torus.points.vec.size() > 2900)

@@ -733,11 +733,13 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extension.find( ext ) )
             return true;
     }
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
     for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extension.find( ext ) )
             return true;
     }
+#endif
     for ( auto& filter : DistanceMapLoad::Filters )
     {
         if ( filter.extension.find( ext ) )

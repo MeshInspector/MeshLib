@@ -41,9 +41,12 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange );
 }
 
-bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
+bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings )
 {
-    if ( !mesh.topology.isInnerEdge( edge, region ) )
+    if ( settings.notFlippable && settings.notFlippable->test( edge.undirected() ) )
+        return true; // consider condition satisfied for not-flippable edges
+
+    if ( !mesh.topology.isInnerEdge( edge, settings.region ) )
         return true; // consider condition satisfied for not inner edges
 
     VertId a, b, c, d;
@@ -84,18 +87,18 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDevia
     auto cp = mesh.points[c];
     auto dp = mesh.points[d];
 
-    if ( maxDeviationAfterFlip < FLT_MAX )
+    if ( settings.maxDeviationAfterFlip < FLT_MAX )
     {
         // two possible diagonals in the quadrangle
         auto diag0 = cp - ap;
         auto diag1 = dp - bp;
         // distance between them
         double dist = fabs( dot( cross( diag0, diag1 ).normalized(), bp - ap ) );
-        if ( dist > maxDeviationAfterFlip )
+        if ( dist > settings.maxDeviationAfterFlip )
             return true; // flipping of given edge will change the surface shape too much
     }
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
+    return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
@@ -114,8 +117,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( ( settings.notFlippable && settings.notFlippable->test( e ) )
-                || checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+            if ( checkDeloneQuadrangleInMesh( mesh, e, settings ) )
                 continue;
 
             mesh.topology.flipEdge( e );
@@ -134,9 +136,7 @@ void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings
     for (;;)
     {
         auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid()
-            || ( settings.notFlippable && settings.notFlippable->test( testEdge.undirected() ) )
-            || checkDeloneQuadrangleInMesh( mesh, testEdge, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+        if ( checkDeloneQuadrangleInMesh( mesh, testEdge, settings ) )
         {
             e = mesh.topology.next( e );
             if ( e == e0 )

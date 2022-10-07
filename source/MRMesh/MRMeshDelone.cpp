@@ -8,10 +8,10 @@
 namespace MR
 {
 
-auto dir( const auto& p, const auto& q, const auto& r )
-    {
-        return cross( q - p, r - p );
-    };
+inline auto dir( const auto& p, const auto& q, const auto& r )
+{
+    return cross( q - p, r - p );
+}
 
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {

@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -11,10 +12,10 @@ constexpr int NoAngleChangeLimit = 10;
 struct DeloneSettings
 {
     /// Maximal allowed surface deviation during every individual flip
-    float maxDeviationAfterFlip = 0.0f;
-    /// Maximal allowed angle change    
+    float maxDeviationAfterFlip = FLT_MAX;
+    /// Maximal allowed dihedral angle change over the flipped edge
     float maxAngleChange = NoAngleChangeLimit;
-    /// Region on mesh to be processed, it is constant and not updated,
+    /// Region on mesh to be processed, it is constant and not updated
     const FaceBitSet* region = nullptr;
     /// Edges specified by this bit-set will never be flipped
     const UndirectedEdgeBitSet* notFlippable = nullptr;
@@ -35,9 +36,8 @@ MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, con
 
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;
-/// \return false otherwise if flipping the edge does not introduce too large surface deviation
-MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDeviationAfterFlip, float maxAngleChange = NoAngleChangeLimit,
-    const FaceBitSet * region = nullptr ); /// false can be returned only for inner edge of the region
+/// \return false otherwise if flipping the edge does not introduce too large surface deviation (can be returned only for inner edge of the region)
+MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {} );
 
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,

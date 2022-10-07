@@ -78,6 +78,9 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
   return false;
 }
 
+MRVIEWER_API void TransparentText( const char* fmt, ... );
+MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... );
+
 /// similar to ImGui::DragFloat but
 /// 1) value on output is forced to be in [min,max] range;
 /// 2) tooltip about Shift/Alt is shown when the item is active, and the valid range

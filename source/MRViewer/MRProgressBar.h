@@ -50,9 +50,10 @@ private:
     ProgressBar();
     ~ProgressBar();
 
-    // cover task execution with try catch block
+    // cover task execution with try catch block (in release only)
     // if catches exception shows error in main thread overriding user defined main thread post processing
-    void tryRunTask_( TaskWithMainThreadPostProcessing task );
+    void tryRunTask_();
+    void tryRunTaskWithSehHandler_();
 
     void postEvent_();
     void finish_();
@@ -63,6 +64,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock> lastPostEvent_;
 
     std::thread thread_;
+    TaskWithMainThreadPostProcessing task_;
     std::function<void()> onFinish_;
 
     // needed to be able to call progress bar from any point, not only from ImGui frame scope

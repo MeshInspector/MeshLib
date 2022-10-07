@@ -151,21 +151,10 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
                             meshlib-*.whl
 
-  upload-wheels:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    needs:
-      - update-win-version
-      - ubuntu20-build-test
-      #- macos-build-test
-    uses: MeshInspector/MeshLib/.github/workflows/upload-wheels.yml@master
-    with:
-      deploy_type: "test"
-    secrets: inherit
-
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
-    needs: [ upload-distributions, upload-wheels ]
+    needs: upload-distributions
     if: always()
     steps:
         # all Windows

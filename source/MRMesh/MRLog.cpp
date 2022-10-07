@@ -191,7 +191,6 @@ void printStacktraceOnCrash()
     std::signal( SIGILL, crashSignalHandler );
     std::signal( SIGABRT, crashSignalHandler );
     std::signal( SIGFPE, crashSignalHandler );
-    spdlog::info( "signal handlers installed" );
 }
 #endif
 

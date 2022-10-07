@@ -167,8 +167,8 @@ void RenderPointsObject::bindPoints_()
     }
     else
     {
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
-        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, std::vector<Vector3f>{}, 3, false, true );
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
+        bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, std::vector<Vector3f>{}, 3, false, vertNormalsBuffer_.size() != 0 );
     }
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, objPoints_->getVertsColorMap().vec_, 4, dirty_ & DIRTY_VERTS_COLORMAP );
 
@@ -199,7 +199,7 @@ void RenderPointsObject::bindPointsPicker_()
     if ( auto pointCloud = objPoints_->pointCloud() )
         bindVertexAttribArray( shader, "position", vertPosBuffer_, pointCloud->points.vec_, 3, dirty_ & DIRTY_POSITION );
     else
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.size() != 0 );
 
     auto validIndices = loadValidIndicesBuffer_();
     validIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );
@@ -264,7 +264,8 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) || !objPoints_->pointCloud() )
-        return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, false );
+        return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, 
+            ( dirty_ & DIRTY_SELECTION ) && vertSelectionTextureSize_.x * vertSelectionTextureSize_.y == 0 );
 
     const auto& points = objPoints_->pointCloud();
     const auto numV = points->validPoints.find_last() + 1;

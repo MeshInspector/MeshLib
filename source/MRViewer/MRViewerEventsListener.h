@@ -142,24 +142,6 @@ protected:
     virtual void postDraw_() = 0;
 };
 
-struct MRVIEWER_CLASS SaveListener : ConnectionHolder
-{
-    MR_ADD_CTOR_DELETE_MOVE( SaveListener );
-    virtual ~SaveListener() = default;
-    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
-protected:
-    virtual bool save_( const std::filesystem::path& path ) = 0;
-};
-
-struct MRVIEWER_CLASS LoadListener : ConnectionHolder
-{
-    MR_ADD_CTOR_DELETE_MOVE( LoadListener );
-    virtual ~LoadListener() = default;
-    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
-protected:
-    virtual bool load_( const std::filesystem::path& path ) = 0;
-};
-
 struct MRVIEWER_CLASS DragDropListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( DragDropListener );

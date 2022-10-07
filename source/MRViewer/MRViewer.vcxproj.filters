@@ -67,17 +67,11 @@
     <ClCompile Include="ImGuiMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MROpen.cpp">
-      <Filter>Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="MRViewer.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshModifier.cpp">
       <Filter>MeshModifier</Filter>
-    </ClCompile>
-    <ClCompile Include="MRSave.cpp">
-      <Filter>Plugins</Filter>
     </ClCompile>
     <ClCompile Include="MRViewport.cpp">
       <Filter>Viewer</Filter>
@@ -240,9 +234,6 @@
     <ClInclude Include="MRMenu.h">
       <Filter>Plugins</Filter>
     </ClInclude>
-    <ClInclude Include="MROpen.h">
-      <Filter>Plugins</Filter>
-    </ClInclude>
     <ClInclude Include="MRViewer.h">
       <Filter>Viewer</Filter>
     </ClInclude>
@@ -256,9 +247,6 @@
       <Filter>MeshModifier</Filter>
     </ClInclude>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRSave.h">
-      <Filter>Plugins</Filter>
-    </ClInclude>
     <ClInclude Include="MRViewport.h">
       <Filter>Viewer</Filter>
     </ClInclude>

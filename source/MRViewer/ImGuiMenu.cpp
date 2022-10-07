@@ -2070,7 +2070,7 @@ void ImGuiMenu::draw_mr_menu()
                 for ( const auto& filename : filenames )
                 {
                     if ( !filename.empty() )
-                        viewer->load_file( filename );
+                        viewer->loadFile( filename );
                 }
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
             }
@@ -2130,7 +2130,7 @@ void ImGuiMenu::draw_mr_menu()
 #endif
             auto savePath = saveFileDialog( { {}, {}, filters } );
             if ( !savePath.empty() )
-                viewer->save_mesh_to_file( savePath );
+                viewer->saveToFile( savePath );
         }
         ImGui::SameLine( 0, p );
 
@@ -2442,7 +2442,7 @@ void ImGuiMenu::draw_open_recent_button_()
         {
             if ( ImGui::Selectable( utf8string( file ).c_str() ) )
             {
-                if ( viewer->load_file( file ) )
+                if ( viewer->loadFile( file ) )
                 {
                     viewer->fitDataViewport();
                 }

@@ -105,6 +105,36 @@ private:
     std::streamsize size_;
 };
 
+// Buffer that writes to Python instead of C++
+class PythonOstreamBuf : public std::stringbuf
+{
+public:
+    PythonOstreamBuf( pybind11::object outFileHandle ) :
+        pywrite_( outFileHandle.attr( "write" ) ),
+        pyflush_( outFileHandle.attr( "flush" ) )
+    {
+    }
+    ~PythonOstreamBuf()
+    {
+        sync_();
+    }
+    int sync() override
+    {
+        sync_();
+        return 0;
+    }
+
+private:
+    pybind11::object pywrite_;
+    pybind11::object pyflush_;
+    void sync_()
+    {
+        pybind11::bytes bytes = pybind11::bytes( this->str() );
+        pywrite_( bytes );
+        pyflush_();
+    }
+};
+
 }
 
 tl::expected<MR::Mesh, std::string> pythonLoadMeshFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
@@ -120,7 +150,7 @@ tl::expected<void, std::string> pythonSaveMeshToAnyFormat( const Mesh& mesh, con
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
-    pybind11::detail::pythonbuf pybuf( fileHandle );
+    PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
     return MR::MeshSave::toAnySupportedFormat( mesh, outfs, extension );
 }
@@ -129,7 +159,7 @@ tl::expected<void, std::string> pythonSaveLinesToAnyFormat( const MR::Polyline3&
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
-    pybind11::detail::pythonbuf pybuf( fileHandle );
+    PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
     return MR::LinesSave::toAnySupportedFormat( lines, outfs, extension );
 }
@@ -147,7 +177,7 @@ tl::expected<void, std::string> pythonSavePointCloudToAnyFormat( const PointClou
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
-    pybind11::detail::pythonbuf pybuf( fileHandle );
+    PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
     return MR::PointsSave::toAnySupportedFormat( points, outfs, extension );
 }

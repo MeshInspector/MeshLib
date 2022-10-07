@@ -53,6 +53,23 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 }
 
 #ifndef __EMSCRIPTEN__
+class SignalObserver : public tbb::task_scheduler_observer {
+public:
+    SignalObserver( std::function<void()> func )
+        : task_scheduler_observer(),
+        func_{ func }
+    {
+        observe( true ); // activate the observer
+    }
+    void on_scheduler_entry( bool ) override
+    {
+        func_();
+    }
+private:
+    std::function<void()> func_;
+};
+
+
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
@@ -134,8 +151,14 @@ Logger::Logger()
 
 void setupLoggerByDefault()
 {
+#ifdef NDEBUG
 #ifndef __EMSCRIPTEN__
     printStacktraceOnCrash();
+#ifdef _WIN32
+    // observe tbb threads creation and add signals handlers for them
+    static SignalObserver tbbObserver( [] () { printStacktraceOnCrash(); } );
+#endif
+#endif
 #endif
     redirectSTDStreamsToLogger();
     // write log to console

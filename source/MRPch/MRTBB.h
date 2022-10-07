@@ -22,6 +22,7 @@
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
 #include <tbb/global_control.h>
+#include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
 
 #ifdef __EMSCRIPTEN__

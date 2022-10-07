@@ -224,7 +224,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupSettingsManager( &viewer, params.name );
     setup.setupConfiguration( &viewer );
     setup.setupExtendedLibraries();
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
     return viewer.launch( params );
 #else
     int res = 0;

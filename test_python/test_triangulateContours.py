@@ -1,8 +1,8 @@
 from helper import *
 import pytest
 
-def test_triangulateContours():
 
+def test_triangulate_contours():
     c2f = mrmesh.Contour2f()
     c2f.resize(5)
     c2f[0].x = 0
@@ -17,8 +17,4 @@ def test_triangulateContours():
     cs2f = mrmesh.Contours2f()
     cs2f.append(c2f)
     mesh = mrmesh.triangulateContours(cs2f)
-    
-    assert(mesh.topology.numValidFaces() == 2)
-    
- 
-    
+    assert (mesh.topology.numValidFaces() == 2)

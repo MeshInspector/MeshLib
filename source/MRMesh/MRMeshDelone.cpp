@@ -8,12 +8,13 @@
 namespace MR
 {
 
+inline auto dir( const auto& p, const auto& q, const auto& r )
+{
+    return cross( q - p, r - p );
+}
+
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
-    auto dir = []( const auto& p, const auto& q, const auto& r )
-    {
-        return cross( q - p, r - p );
-    };
     const auto dirABD = dir( a, b, d );
     const auto dirDBC = dir( d, b, c );
 
@@ -39,6 +40,38 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
 bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
 {
     return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange );
+}
+
+template<typename T>
+bool checkAspectRatiosInQuadrangleT( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d, T maxAngleChange, T criticalTriAspectRatio )
+{
+    auto metricAC = std::max( triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ) );
+    auto metricBD = std::max( triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) );
+    if ( metricAC < criticalTriAspectRatio && maxAngleChange < NoAngleChangeLimit )
+    {
+        const auto dirABD = dir( a, b, d );
+        const auto dirDBC = dir( d, b, c );
+        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
+
+        const auto dirABC = dir( a, b, c );
+        const auto dirACD = dir( a, c, d );
+        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+
+        const auto angleChange = std::abs( oldAngle - newAngle );
+        if ( angleChange > maxAngleChange )
+            return true;
+    }
+    return metricAC <= metricBD;
+}
+
+bool checkAspectRatiosInQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
+{
+    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
+}
+
+bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio )
+{
+    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings )
@@ -98,7 +131,10 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
             return true; // flipping of given edge will change the surface shape too much
     }
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange );
+    if ( settings.criticalTriAspectRatio < FLT_MAX )
+        return checkAspectRatiosInQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );
+    else
+        return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )

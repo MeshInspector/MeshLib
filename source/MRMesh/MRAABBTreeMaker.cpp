@@ -167,6 +167,12 @@ TEST(MRMesh, TBBTask)
         const auto taskThreadId = std::this_thread::get_id();
         spdlog::info( "Task in thread {}", taskThreadId );
         sameThread = mainThreadId == taskThreadId;
+#ifndef _WIN32 
+#ifndef __EMSCRIPTEN__
+        int * a = nullptr;
+        *a = 1;
+#endif
+#endif
     } );
 
     spdlog::info( "Main in thread {}", mainThreadId );

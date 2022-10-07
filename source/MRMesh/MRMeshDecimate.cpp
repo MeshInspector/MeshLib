@@ -193,13 +193,19 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
     return qf;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation )
+bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
 {
     MR_TIMER;
     bool meshChanged = false;
     for( int i = 0; i < maxIters; ++i )
     {
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, { .maxDeviationAfterFlip = maxDeviation }, 5 ) > 0;
+        DeloneSettings delone
+        {
+            .maxDeviationAfterFlip = maxDeviation,
+            .maxAngleChange = maxAngleChange,
+            .criticalTriAspectRatio = criticalAspectRatio
+        };
+        bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
         DecimateSettings settings;
         settings.maxError = maxDeviation;

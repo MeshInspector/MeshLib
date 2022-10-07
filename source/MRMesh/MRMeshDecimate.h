@@ -130,7 +130,7 @@ MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, f
  * 
  * \sa \ref decimateMesh
  */
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 struct RemeshSettings
 {

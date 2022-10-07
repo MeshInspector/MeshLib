@@ -77,6 +77,10 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
   }
   return false;
 }
+/// similar to ImGui::Text but use current text color with alpha channel = 0.5
+MRVIEWER_API void TransparentText( const char* fmt, ... );
+/// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
+MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... );
 
 /// similar to ImGui::DragFloat but
 /// 1) value on output is forced to be in [min,max] range;

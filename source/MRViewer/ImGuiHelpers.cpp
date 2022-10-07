@@ -231,6 +231,30 @@ void PlotCustomHistogram( const char* str_id,
     }
 }
 
+MRVIEWER_API void TransparentText( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    TextV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
+MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    TextWrappedV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
 bool DragFloatValid( const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
     bool res = DragFloat( label, v, v_speed, v_min, v_max, format, flags );

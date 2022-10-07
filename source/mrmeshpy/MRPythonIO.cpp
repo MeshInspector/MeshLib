@@ -105,7 +105,7 @@ private:
     std::streamsize size_;
 };
 
-// Buffer that writes to Python instead of C++
+// Buffer that writes in Python instead of C++
 class PythonOstreamBuf : public std::stringbuf
 {
 public:

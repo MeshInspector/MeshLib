@@ -546,7 +546,7 @@
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
-copy $(VcpkgCurrentInstalledDir)\bin\python310.dll $(TargetDir)python310.dll
+copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
 copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
 copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
     </PostBuildEvent>

@@ -1,12 +1,13 @@
 from helper import *
 import pytest
 
-def test_selectComponents():
+
+def test_select_components():
     torus = mrmesh.makeTorusWithComponents(2, 1, 10, 10, None)
 
     components = mrmesh.getAllComponentsVerts(torus, None)
 
-    assert(len(components) == 5)
+    assert (len(components) == 5)
 
     assert (components[0].count() == components[1].count())
     assert (components[1].count() == components[2].count())

@@ -11,6 +11,10 @@
 #include "MRMesh/MRUVSphere.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRLinesLoad.h"
+#include "MRMesh/MRPointsLoad.h"
+#include "MRMesh/MRVoxelsLoad.h"
+#include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRLog.h"
@@ -40,6 +44,7 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/stacktrace.hpp>
 #endif
+#include "MRViewerIO.h"
 
 #ifdef __EMSCRIPTEN__
 #define GLFW_INCLUDE_ES3
@@ -664,7 +669,7 @@ void Viewer::parseCommandLine_( int argc, char** argv )
             EmbeddedPython::finalize();
             break;
         }
-        if( isKnownMeshFile( argv[i] ) )
+        if( isSupportedFormat( argv[i] ) )
         {
             if( load_file( argv[i] ) )
                 fitDataRequired = true;
@@ -701,7 +706,7 @@ Viewer::~Viewer()
     alphaSorter_.reset();
 }
 
-bool Viewer::isKnownMeshFile( const std::filesystem::path& mesh_file_name )
+bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
 {
     std::error_code ec;
     if( !std::filesystem::exists( mesh_file_name, ec ) )
@@ -713,10 +718,34 @@ bool Viewer::isKnownMeshFile( const std::filesystem::path& mesh_file_name )
     for( auto& c : ext )
         c = (char) tolower( c );
 
-    auto filts = MeshLoad::getFilters();
-    for( auto& filter : filts )
+    for( auto& filter : MeshLoad::getFilters() )
     {
         if( filter.extension.find(ext) )
+            return true;
+    }
+    for ( auto& filter : LinesLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) )
+            return true;
+    }
+    for ( auto& filter : PointsLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) )
+            return true;
+    }
+    for ( auto& filter : VoxelsLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) )
+            return true;
+    }
+    for ( auto& filter : DistanceMapLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) )
+            return true;
+    }
+    for ( auto& filter : SceneFileFilters )
+    {
+        if ( filter.extension.find( ext ) )
             return true;
     }
 
@@ -725,18 +754,22 @@ bool Viewer::isKnownMeshFile( const std::filesystem::path& mesh_file_name )
 
 bool Viewer::load_file( const std::filesystem::path & path )
 {
-    if ( loadSignal( path ) )
-        return true;
+    auto res = loadObjectFromFile( path );
+    if ( !res.has_value() )
+        return false;
+    for (const auto& obj : *res )
+    SceneRoot::get().addChild( obj );
 
-    return false;
+    return true;
 }
 
 bool Viewer::save_mesh_to_file( const std::filesystem::path & path )
 {
-    if ( saveSignal( path ) )
-        return true;
-
-    return false;
+    auto obj = getDepthFirstObject<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    auto res = saveObjectToFile( *obj, path );
+    if ( !res.has_value() )
+        return false;
+    return true;
 }
 
 bool Viewer::key_pressed( unsigned int unicode_key, int modifiers )

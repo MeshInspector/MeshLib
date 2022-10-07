@@ -111,7 +111,7 @@ public:
     }
 
     // Mesh IO
-    MRVIEWER_API bool isKnownMeshFile( const std::filesystem::path& file_name );
+    MRVIEWER_API bool isSupportedFormat( const std::filesystem::path& file_name );
     MRVIEWER_API bool load_file( const std::filesystem::path& file_name );
     MRVIEWER_API bool save_mesh_to_file( const std::filesystem::path & mesh_file_name );
     // Callbacks
@@ -482,13 +482,10 @@ public:
     RenderSignal drawSignal; // signal is called on scene draw (after objects tree but before viewport.postDraw())
     RenderSignal postDrawSignal; // signal is called after scene draw
     // Scene events
-    using SaveLoadSignal = boost::signals2::signal<bool( const std::filesystem::path& path ), SignalStopHandler>;
     using DragDropSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
     using PostResizeSignal = boost::signals2::signal<void( int x, int y )>;
     using PostRescaleSignal = boost::signals2::signal<void( float xscale, float yscale )>;
     using InterruptCloseSignal = boost::signals2::signal<bool(), SignalStopHandler>;
-    SaveLoadSignal saveSignal; // signal is called to save file
-    SaveLoadSignal loadSignal; // signal is called to load file
     DragDropSignal dragDropSignal; // signal is called on drag and drop file
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale

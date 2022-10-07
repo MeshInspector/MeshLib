@@ -53,6 +53,7 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 }
 
 #ifndef __EMSCRIPTEN__
+#ifdef _WIN32
 class SignalObserver : public tbb::task_scheduler_observer {
 public:
     SignalObserver( std::function<void()> func )
@@ -68,7 +69,7 @@ public:
 private:
     std::function<void()> func_;
 };
-
+#endif
 
 void crashSignalHandler( int signal )
 {

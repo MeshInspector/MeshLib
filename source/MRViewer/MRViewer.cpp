@@ -671,7 +671,7 @@ void Viewer::parseCommandLine_( int argc, char** argv )
         }
         if( isSupportedFormat( argv[i] ) )
         {
-            if( load_file( argv[i] ) )
+            if( loadFile( argv[i] ) )
                 fitDataRequired = true;
         }
     }
@@ -752,18 +752,37 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
-bool Viewer::load_file( const std::filesystem::path & path )
+bool Viewer::loadFile( const std::filesystem::path & path )
 {
+    std::string ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+    bool sceneFile = false;
+    for ( auto& filter : SceneFileFilters )
+    {
+        if ( filter.extension.find( ext ) )
+            sceneFile = true;
+    }
+
     auto res = loadObjectFromFile( path );
     if ( !res.has_value() )
         return false;
-    for (const auto& obj : *res )
-    SceneRoot::get().addChild( obj );
+    if ( sceneFile )
+    {
+        auto newRoot = (*res)[0];
+        std::swap( newRoot, SceneRoot::getSharedPtr() );
+        getViewerInstance().onSceneSaved( path );
+    }
+    else
+    {
+        for ( const auto& obj : *res )
+            SceneRoot::get().addChild( obj );
+    }
 
     return true;
 }
 
-bool Viewer::save_mesh_to_file( const std::filesystem::path & path )
+bool Viewer::saveToFile( const std::filesystem::path & path )
 {
     auto obj = getDepthFirstObject<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto res = saveObjectToFile( *obj, path );

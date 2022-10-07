@@ -149,7 +149,6 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
-                            meshlib-*.whl
 
   update-artifacts:
     timeout-minutes: 15

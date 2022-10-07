@@ -24,6 +24,8 @@ struct DecimateParallelSettings
     float maxEdgeLen = 1;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
+    /// the algorithm will try to eliminate triangles with equal or larger aspect ratio, ignoring normal orientation checks
+    float criticalTriAspectRatio = FLT_MAX;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;

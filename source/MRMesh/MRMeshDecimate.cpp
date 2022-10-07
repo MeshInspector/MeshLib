@@ -203,13 +203,16 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation,
         {
             .maxDeviationAfterFlip = maxDeviation,
             .maxAngleChange = maxAngleChange,
-            .criticalTriAspectRatio = criticalAspectRatio
+            //.criticalTriAspectRatio = criticalAspectRatio //it actually introduces flipped triangles
         };
         bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
-        DecimateSettings settings;
-        settings.maxError = maxDeviation;
-        changedThisIter = decimateMesh( mesh, settings ).vertsDeleted > 0 || changedThisIter;
+        DecimateSettings decimate
+        {
+            .maxError = maxDeviation,
+            .criticalTriAspectRatio = criticalAspectRatio
+        };
+        changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
         meshChanged = meshChanged || changedThisIter;
         if ( !changedThisIter )
             break;
@@ -399,12 +402,15 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( ( po != pd ) || ( po != collapsePos ) )
+    if ( maxOldAspectRatio < settings_.criticalTriAspectRatio )
     {
-        auto n = Vector3f{ sumDblArea_.normalized() };
-        for ( const auto da : triDblAreas_ )
-            if ( dot( da, n ) < 0 )
-                return {};
+        if ( ( po != pd ) || ( po != collapsePos ) )
+        {
+            auto n = Vector3f{ sumDblArea_.normalized() };
+            for ( const auto da : triDblAreas_ )
+                if ( dot( da, n ) < 0 )
+                    return {};
+        }
     }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )

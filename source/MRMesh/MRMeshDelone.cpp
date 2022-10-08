@@ -12,6 +12,10 @@ inline auto dir( const auto& p, const auto& q, const auto& r )
 {
     return cross( q - p, r - p );
 }
+inline auto area( const auto& p, const auto& q, const auto& r )
+{
+    return dir( p, q, r ).length();
+}
 
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
@@ -47,6 +51,8 @@ bool checkAspectRatiosInQuadrangleT( const Vector3<T>& a, const Vector3<T>& b, c
 {
     auto metricAC = std::max( triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ) );
     auto metricBD = std::max( triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) );
+    if ( metricAC <= metricBD )
+        return true;
     if ( metricAC < criticalTriAspectRatio && maxAngleChange < NoAngleChangeLimit )
     {
         const auto dirABD = dir( a, b, d );
@@ -61,7 +67,19 @@ bool checkAspectRatiosInQuadrangleT( const Vector3<T>& a, const Vector3<T>& b, c
         if ( angleChange > maxAngleChange )
             return true;
     }
-    return metricAC <= metricBD;
+    else if ( metricAC >= criticalTriAspectRatio )
+    {
+        const auto sABC = area( a, b, c );
+        const auto sACD = area( a, c, d );
+
+        const auto sABD = area( a, b, d );
+        const auto sDBC = area( d, b, c );
+
+        // in case of degenerate triangles, select the subdivision with smaller total area
+        if ( sABC + sACD < sABD + sDBC )
+            return true;
+    }
+    return false;
 }
 
 bool checkAspectRatiosInQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
@@ -127,6 +145,7 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
         auto diag1 = dp - bp;
         // distance between them
         double dist = fabs( dot( cross( diag0, diag1 ).normalized(), bp - ap ) );
+        // TODO: this actually does not work if one of the diagonals is collapsed in point, where the formula gives 0, which is wrong
         if ( dist > settings.maxDeviationAfterFlip )
             return true; // flipping of given edge will change the surface shape too much
     }

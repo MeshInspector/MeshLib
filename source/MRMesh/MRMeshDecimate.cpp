@@ -203,7 +203,7 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation,
         {
             .maxDeviationAfterFlip = maxDeviation,
             .maxAngleChange = maxAngleChange,
-            //.criticalTriAspectRatio = criticalAspectRatio //it actually introduces flipped triangles
+            .criticalTriAspectRatio = criticalAspectRatio
         };
         bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 

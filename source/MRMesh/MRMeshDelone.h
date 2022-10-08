@@ -39,7 +39,7 @@ MRMESH_API bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, con
 
 /// given quadrangle ABCD, checks whether its subdivision on 
 /// (triangles ABD and DBC) is better than on (triangles ABC and ACD),
-/// where "better" means smaller maximum triangle aspect ratio and the flip of edge from BD to AC will
+/// where "better" means smaller maximum triangle aspect ratio and the flip of edge from AC to BD will
 /// not change dihedral angle more than on given threshold
 MRMESH_API bool checkAspectRatiosInQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio );
 MRMESH_API bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio );

@@ -720,34 +720,34 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
 
     for( auto& filter : MeshLoad::getFilters() )
     {
-        if( filter.extension.find(ext) )
+        if( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
     for ( auto& filter : LinesLoad::Filters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
     for ( auto& filter : PointsLoad::Filters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
     for ( auto& filter : VoxelsLoad::Filters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
 #endif
     for ( auto& filter : DistanceMapLoad::Filters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
     for ( auto& filter : SceneFileFilters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
 
@@ -762,7 +762,7 @@ bool Viewer::loadFile( const std::filesystem::path & path )
     bool sceneFile = false;
     for ( auto& filter : SceneFileFilters )
     {
-        if ( filter.extension.find( ext ) )
+        if ( filter.extension.find( ext ) != std::string::npos )
             sceneFile = true;
     }
 

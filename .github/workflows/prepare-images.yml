@@ -32,14 +32,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           submodules: recursive
 
       - name: Filter Linux paths
         uses: dorny/paths-filter@v2
         id: changes
         with:
-          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           filters: |
             src:
               - '.github/workflows/docker-images.yml'
@@ -56,7 +54,6 @@ jobs:
         uses: dorny/paths-filter@v2
         id: windows-changes
         with:
-          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           filters: |
             src:
               - 'docker/windowsDockerfile'
@@ -84,12 +81,7 @@ jobs:
       - name: Set image tag base path
         id: set-path
         run: |
-          repo_path=${{github.repository}}
-          if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
-            repo_path="MeshRUs/MeshInspector"
-          else
-            repo_path="MeshRUs/MeshLib"
-          fi
+          repo_path="MeshRUs/MeshLib"
           echo "::set-output name=image_path::${repo_path,,}"
 
       - name: Checking whether to start image rebuild
@@ -103,14 +95,12 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
-          if [ "${{github.repository}}" == "MeshInspector/MeshInspectorCode" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"image-build\"},{\"distribution\":\"ubuntu22\", \"os\":\"image-build\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
+          if [ "${{ steps.changes.outputs.src }}" == "true" ] && [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"                    
           elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-              echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"      
-          else
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"      
           fi
 
   image-build-upload:

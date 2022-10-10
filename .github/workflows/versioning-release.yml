@@ -3,7 +3,7 @@ on:
   workflow_call:
     secrets:
       BUILD_MACHINE_TOKEN:
-        required: true
+        required: false
     inputs:
       version-namespace:
         required: false

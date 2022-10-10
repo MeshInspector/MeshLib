@@ -17,13 +17,13 @@ on:
 
 jobs:
   prepare-image:
-    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/prepare-images.yml@workflow-update
     secrets:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   versioning-and-release-url:
-    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/versioning-release.yml@workflow-update
     with:
       version-namespace: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') && github.event_name != 'push' && 'pr-test' || '' }}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

@@ -41,7 +41,6 @@ RUN sudo vcpkg integrate install
 
 # Install vcpkg requirements
 WORKDIR "C:\\vcpkg"
-COPY ./thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake ./triplets
 RUN C:\\workspace\\MeshLib\\thirdparty\\install.bat && rmdir /s /q buildtrees downloads ports packages
 
 FROM mcr.microsoft.com/windows/servercore:ltsc2019

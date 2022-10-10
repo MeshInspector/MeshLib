@@ -28,8 +28,7 @@ $ .\vcpkg integrate install (with admin rights)
 $ cd ..
 \endcode
 More details here: [vcpkg](https://github.com/microsoft/vcpkg)
-2. Copy \b MeshLib/thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake  to \b vcpkg/triplets folder of vcpkg installation.
-3. Execute install.bat
+2. Execute install.bat
 \code
 $ cd vcpkg # or add vcpcg to PATH
 $ ../MeshLib/thirdparty/install.bat

@@ -775,14 +775,21 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         auto it = schema.items.find( dropItem->name() );
         if ( it != schema.items.end() && it->second.caption != "" )
             caption = it->second.caption;
-        auto pressed = ImGui::MenuItem(
+        /*auto pressed = ImGui::MenuItem(
             ( caption + "##dropItem" ).c_str(),
             nullptr,
             dropItem->isActive(),
-            requirements.empty() );
+            requirements.empty() );*/
+        const auto scaling = Viewer::instance()->getMenuPlugin()->menu_scaling();
+        const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
+        const auto width = calcItemWidth( it->second, DrawButtonParams::SizeType::SmallText );
 
-        if ( pressed )
-            onPressAction_( dropItem, requirements.empty() );
+        DrawButtonParams params;
+        params.sizeType = DrawButtonParams::SizeType::SmallText;
+        params.iconSize = cSmallIconSize;
+        params.itemSize.y = ySize;
+        params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling;
+        drawButtonItem( it->second, params );
 
         if ( ImGui::IsItemHovered() && menu_ )
         {

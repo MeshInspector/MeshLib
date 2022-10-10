@@ -125,6 +125,12 @@ jobs:
             updateCmd: dnf --refresh -y upgrade
             installCmd: dnf -y install ./*.rpm
     steps:
+      - name: Python setup on Fedora
+        if: ${{ matrix.os == 'Fedroa35'}}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          
       - name: Download Release
         uses: robinraju/release-downloader@v1.5
         with:
@@ -141,11 +147,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Python setup
-        if: ${{ matrix.os == 'Fedroa35'}}
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
 
       - name: System setup
         if: ${{ matrix.os != 'Fedroa35'}}

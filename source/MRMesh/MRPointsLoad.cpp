@@ -3,11 +3,14 @@
 #include "miniply.h"
 #include "MRColor.h"
 #include "MRStringConvert.h"
-#include "OpenCTM/openctm.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
 #include "MRPointCloud.h"
 #include <fstream>
+
+#ifndef MRMESH_NO_OPENCTM
+#include "OpenCTM/openctm.h"
+#endif
 
 namespace MR
 {
@@ -19,18 +22,21 @@ const IOFilters Filters =
 {
     {"All (*.*)",         "*.*"},
     {"ASC (.asc)",        "*.asc"},
-    {"CTM (.ctm)",        "*.ctm"},
     {"OBJ (.obj)",        "*.obj"},
-    {"PLY (.ply)",        "*.ply"}
+    {"PLY (.ply)",        "*.ply"},
+#ifndef MRMESH_NO_OPENCTM
+    {"CTM (.ctm)",        "*.ctm"},
+#endif
 };
 
+#ifndef MRMESH_NO_OPENCTM
 tl::expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromCtm( in, colors, callback );
+    return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
@@ -122,6 +128,7 @@ tl::expected<MR::PointCloud, std::string> fromCtm( std::istream& in, Vector<Colo
 
     return points;
 }
+#endif
 
 tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
 {
@@ -129,7 +136,7 @@ tl::expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPly( in, colors, callback );
+    return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors /*= nullptr */, ProgressCallback callback )
@@ -201,7 +208,7 @@ tl::expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromObj( in, callback );
+    return addFileNameInError( fromObj( in, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
@@ -253,7 +260,7 @@ tl::expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromAsc( in, callback );
+    return addFileNameInError( fromAsc( in, callback ), file );
 }
 
 tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCallback callback )
@@ -314,18 +321,20 @@ tl::expected<MR::PointCloud, std::string> fromAsc( std::istream& in, ProgressCal
 tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, Vector<Color, VertId>* colors /*= nullptr */,
                                                                   ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".ply" )
+    if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
-    else if ( ext == u8".ctm" )
+#ifndef MRMESH_NO_OPENCTM
+    else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( file, colors, callback );
-    else if ( ext == u8".obj" )
+#endif
+    else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( file, callback );
-    else if ( ext == u8".asc" )
+    else if ( ext == ".asc" )
         res = MR::PointsLoad::fromAsc( file, callback );
     return res;
 }
@@ -340,8 +349,10 @@ tl::expected<MR::PointCloud, std::string> fromAnySupportedFormat( std::istream& 
     tl::expected<MR::PointCloud, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
+#ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
         res = MR::PointsLoad::fromCtm( in, colors, callback );
+#endif
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( in, callback );
     else if ( ext == ".asc" )

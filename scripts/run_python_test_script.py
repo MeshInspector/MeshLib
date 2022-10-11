@@ -1,6 +1,15 @@
 import os
 import sys
 import platform
+import argparse
+
+parser = argparse.ArgumentParser(description="Python Test Script")
+
+parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
+parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
+
+args = parser.parse_args()
+print(args)
 
 python_cmd = "py -3.10 "
 platformSystem = platform.system()
@@ -30,29 +39,15 @@ if platformSystem == 'Linux':
 elif platformSystem == 'Darwin':
     python_cmd = "python3 "
 
-# emulate py libs installation - collect all the necessary .pyd and .dll in meshlib folder
-if platformSystem == "Windows":
-    import glob
-    import shutil
-
-    dest_dir = os.path.join(os.getcwd(), "meshlib")
-    if not os.path.exists(dest_dir):
-        print("Creating " + str(dest_dir))
-        os.makedirs(dest_dir)
-    print("Copying files...")
-    for file in glob.glob(r'*.dll'):
-        print(file)
-        shutil.copy(file, dest_dir)
-    for file in glob.glob(r'*py*'):
-        print(file)
-        shutil.copy(file, dest_dir)
+if args.cmd:
+    python_cmd = str(args.cmd).strip() + " "
 
 directory = os.path.dirname(os.path.abspath(__file__))
-if len(sys.argv) == 1:
+if args.dir:
+    directory = os.path.join(directory, args.dir)
+else:
     directory = os.path.join(directory, "..")
     directory = os.path.join(directory, "test_python")
-else:
-    directory = os.path.join(directory, sys.argv[1])
 
 os.environ["MeshLibPyModulesPath"] = os.getcwd()
 os.chdir(directory)

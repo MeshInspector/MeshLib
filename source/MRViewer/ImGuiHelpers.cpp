@@ -231,6 +231,30 @@ void PlotCustomHistogram( const char* str_id,
     }
 }
 
+MRVIEWER_API void TransparentText( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    TextV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
+MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    TextWrappedV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
 bool DragFloatValid( const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
     bool res = DragFloat( label, v, v_speed, v_min, v_max, format, flags );
@@ -315,6 +339,44 @@ MultiDragRes DragFloatValid3( const char * label, float* valueArr, float step, f
     {
         SameLine(0, g.Style.ItemInnerSpacing.x);
         TextEx(label, label_end);
+    }
+
+    EndGroup();
+    return res;
+}
+
+MultiDragRes DragIntValid3( const char* label, int v[3], float speed, int min, int max, const char* format, const char* ( *tooltips )[3])
+{
+    MultiDragRes res;
+
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiWindow* window = g.CurrentWindow;
+    if ( window->SkipItems )
+        return res;
+
+    BeginGroup();
+    PushID( label );
+    constexpr int components = 3;
+    PushMultiItemsWidths( components, CalcItemWidth() );
+    for ( int i = 0; i < components; i++ )
+    {
+        PushID( i );
+        if ( i > 0 )
+            SameLine( 0, g.Style.ItemInnerSpacing.x );
+        res.valueChanged = DragIntValid( "", v + i, speed, min, max, format ) || res.valueChanged;
+        if ( tooltips && IsItemHovered() && !IsItemActive() )
+            SetTooltip( "%s", ( *tooltips )[i] );
+        res.itemDeactivatedAfterEdit = res.itemDeactivatedAfterEdit || IsItemDeactivatedAfterEdit();
+        PopID();
+        PopItemWidth();
+    }
+    PopID();
+
+    const char* label_end = FindRenderedTextEnd( label );
+    if ( label != label_end )
+    {
+        SameLine( 0, g.Style.ItemInnerSpacing.x );
+        TextEx( label, label_end );
     }
 
     EndGroup();

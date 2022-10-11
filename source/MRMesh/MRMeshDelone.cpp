@@ -8,12 +8,17 @@
 namespace MR
 {
 
+inline auto dir( const auto& p, const auto& q, const auto& r )
+{
+    return cross( q - p, r - p );
+}
+inline auto area( const auto& p, const auto& q, const auto& r )
+{
+    return dir( p, q, r ).length();
+}
+
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
-    auto dir = []( const auto& p, const auto& q, const auto& r )
-    {
-        return cross( q - p, r - p );
-    };
     const auto dirABD = dir( a, b, d );
     const auto dirDBC = dir( d, b, c );
 
@@ -41,9 +46,58 @@ bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f
     return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange );
 }
 
-bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDeviationAfterFlip, float maxAngleChange, const FaceBitSet * region )
+template<typename T>
+bool checkAspectRatiosInQuadrangleT( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d, T maxAngleChange, T criticalTriAspectRatio )
 {
-    if ( !mesh.topology.isInnerEdge( edge, region ) )
+    auto metricAC = std::max( triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ) );
+    auto metricBD = std::max( triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) );
+    if ( metricAC <= metricBD )
+        return true;
+    if ( metricAC < criticalTriAspectRatio && maxAngleChange < NoAngleChangeLimit )
+    {
+        const auto dirABD = dir( a, b, d );
+        const auto dirDBC = dir( d, b, c );
+        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
+
+        const auto dirABC = dir( a, b, c );
+        const auto dirACD = dir( a, c, d );
+        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+
+        const auto angleChange = std::abs( oldAngle - newAngle );
+        if ( angleChange > maxAngleChange )
+            return true;
+    }
+    else if ( metricAC >= criticalTriAspectRatio )
+    {
+        const auto sABC = area( a, b, c );
+        const auto sACD = area( a, c, d );
+
+        const auto sABD = area( a, b, d );
+        const auto sDBC = area( d, b, c );
+
+        // in case of degenerate triangles, select the subdivision with smaller total area
+        if ( sABC + sACD < sABD + sDBC )
+            return true;
+    }
+    return false;
+}
+
+bool checkAspectRatiosInQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
+{
+    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
+}
+
+bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio )
+{
+    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
+}
+
+bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings )
+{
+    if ( settings.notFlippable && settings.notFlippable->test( edge.undirected() ) )
+        return true; // consider condition satisfied for not-flippable edges
+
+    if ( !mesh.topology.isInnerEdge( edge, settings.region ) )
         return true; // consider condition satisfied for not inner edges
 
     VertId a, b, c, d;
@@ -84,18 +138,22 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, float maxDevia
     auto cp = mesh.points[c];
     auto dp = mesh.points[d];
 
-    if ( maxDeviationAfterFlip < FLT_MAX )
+    if ( settings.maxDeviationAfterFlip < FLT_MAX )
     {
         // two possible diagonals in the quadrangle
         auto diag0 = cp - ap;
         auto diag1 = dp - bp;
         // distance between them
         double dist = fabs( dot( cross( diag0, diag1 ).normalized(), bp - ap ) );
-        if ( dist > maxDeviationAfterFlip )
+        // TODO: this actually does not work if one of the diagonals is collapsed in point, where the formula gives 0, which is wrong
+        if ( dist > settings.maxDeviationAfterFlip )
             return true; // flipping of given edge will change the surface shape too much
     }
 
-    return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
+    if ( settings.criticalTriAspectRatio < FLT_MAX )
+        return checkAspectRatiosInQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );
+    else
+        return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
@@ -114,8 +172,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
         {
-            if ( ( settings.notFlippable && settings.notFlippable->test( e ) )
-                || checkDeloneQuadrangleInMesh( mesh, e, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+            if ( checkDeloneQuadrangleInMesh( mesh, e, settings ) )
                 continue;
 
             mesh.topology.flipEdge( e );
@@ -134,9 +191,7 @@ void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings
     for (;;)
     {
         auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid()
-            || ( settings.notFlippable && settings.notFlippable->test( testEdge.undirected() ) )
-            || checkDeloneQuadrangleInMesh( mesh, testEdge, settings.maxDeviationAfterFlip, settings.maxAngleChange, settings.region ) )
+        if ( checkDeloneQuadrangleInMesh( mesh, testEdge, settings ) )
         {
             e = mesh.topology.next( e );
             if ( e == e0 )

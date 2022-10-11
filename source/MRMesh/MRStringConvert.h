@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include <filesystem>
 #include <string>
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -28,7 +29,11 @@ inline const std::u8string & asU8String( const std::string & s ) { return reinte
 inline std::string asString( std::u8string && s ) { return reinterpret_cast<std::string &&>( s ); }
 inline std::u8string asU8String( std::string && s ) { return reinterpret_cast<std::u8string &&>( s ); }
 
+#if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
+inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( std::string( s ) ); }
+#else
 inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
+#endif
 
 #else // std::u8string is not defined
 
@@ -43,8 +48,13 @@ inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesy
 #endif
 
 /// returns filename as UTF8-encoded string
+#if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
+inline std::string utf8string( const std::filesystem::path & path )
+    { return path.u8string(); }
+#else
 inline std::string utf8string( const std::filesystem::path & path )
     { return asString( path.u8string() ); }
+#endif
 
 /// \}
 
@@ -54,5 +64,14 @@ inline std::string utf8string( const std::filesystem::path & path )
 /// [1024*1024,1024*1024*1024) -> nnn.nn Mb
 /// ...
 MRMESH_API std::string bytesString( size_t size );
+
+/// if (v) contains an error, then appends given file name to that error
+template<typename T>
+inline tl::expected<T, std::string> addFileNameInError( tl::expected<T, std::string> v, const std::filesystem::path & file )
+{
+    if ( !v.has_value() )
+        v = tl::make_unexpected( v.error() + ": " + utf8string( file ) );
+    return v;
+}
 
 }

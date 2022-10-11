@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRFloatGridComponents.h"
 #include "MRUnionFind.h"
 #include "MRFloatGrid.h"

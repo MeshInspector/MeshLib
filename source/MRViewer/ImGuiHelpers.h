@@ -77,6 +77,10 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
   }
   return false;
 }
+/// similar to ImGui::Text but use current text color with alpha channel = 0.5
+MRVIEWER_API void TransparentText( const char* fmt, ... );
+/// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
+MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... );
 
 /// similar to ImGui::DragFloat but
 /// 1) value on output is forced to be in [min,max] range;
@@ -113,6 +117,16 @@ MRVIEWER_API bool DragIntValid( const char *label, int* value, float speed = 1,
                                 int min = std::numeric_limits<int>::lowest(),
                                 int max = std::numeric_limits<int>::max(),
                                 const char* format = "%d" );
+
+/// similar to ImGui::DragInt3 - three drag-int controls in a row, but
+/// 1) returns information whether an item was deactivated;
+/// 2) calls DragIntValid inside instead of DragInt;
+/// 3) permits showing tooltip for each item
+MRVIEWER_API MultiDragRes DragIntValid3( const char* label, int v[3], float speed = 1,
+                                int min = std::numeric_limits<int>::lowest(),
+                                int max = std::numeric_limits<int>::max(),
+                                const char* format = "%d",
+                                const char* ( *tooltips )[3] = nullptr );
 
 // similar to ImGui::InputInt but
 // 1) value on output is forced to be in [min,max] range;

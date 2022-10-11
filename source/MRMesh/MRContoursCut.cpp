@@ -1286,7 +1286,6 @@ FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
 
 FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 {
-    MR_TIMER
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
@@ -1300,15 +1299,13 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 
 void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, FaceId oldFace, FaceMap* new2OldMap )
 {
-    MR_TIMER
     assert( oldFace.valid() );
     const auto fsz0 = mesh.topology.faceSize();
     executeFillHolePlan( mesh, e, plan );
     if ( new2OldMap )
     {
         const auto fsz = mesh.topology.faceSize();
-        for ( FaceId f{ fsz0 }; f < fsz; ++f )
-            new2OldMap->autoResizeAt( f ) = oldFace;
+        new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
 }
 
@@ -1647,6 +1644,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
     // prepare in parallel the plan to fill every contour
+    Timer t( "get TriangulateContourPlans" );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, holeRepresentativeEdges.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
@@ -1657,10 +1655,24 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     } );
     // fill contours
+
+    t.restart( "run TriangulateContourPlans" );
+    int numNewTris = 0;
+    for ( const auto & hd : holeRepresentativeEdges )
+        numNewTris += hd.plan.numNewTris;
+    const auto expectedTotalTris = mesh.topology.faceSize() + numNewTris;
+
+    mesh.topology.faceReserve( expectedTotalTris );
+    if ( params.new2OldMap )
+        params.new2OldMap->reserve( expectedTotalTris );
+
     for ( auto & hd : holeRepresentativeEdges )
-    {
         executeTriangulateContourPlan( mesh, hd.e, hd.plan, hd.oldf, params.new2OldMap );
-    }
+
+    assert( mesh.topology.faceSize() == expectedTotalTris );
+    if ( params.new2OldMap )
+        assert( params.new2OldMap->size() == expectedTotalTris );
+
     res.resultCut = std::move( preRes.paths );
 
     return res;

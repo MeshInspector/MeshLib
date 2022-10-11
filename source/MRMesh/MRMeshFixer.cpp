@@ -164,13 +164,15 @@ void fixMultipleEdges( Mesh & mesh )
     fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ) );
 }
 
-FaceBitSet findDegenerateFaces( const Mesh& mesh, float criticalAspectRatio /*= FLT_MAX */ )
+FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio /*= FLT_MAX */ )
 {
-    FaceBitSet selection( mesh.topology.getValidFaces().size() );
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    FaceBitSet selection( mp.mesh.topology.getValidFaces().size() );
+    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
+        if ( !mp.mesh.topology.hasFace( f ) )
+            return;
         Vector3f vp[3];
-        mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
+        mp.mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
         if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) >= criticalAspectRatio )
             selection.set( f );
     } );

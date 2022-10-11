@@ -1,5 +1,5 @@
-#ifndef __EMSCRIPTEN__
-#include "MRVolumeSegment.h" 
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#include "MRVolumeSegment.h"
 #include "MRVoxelPath.h"
 #include "MRObjectVoxels.h"
 #include "MRVoxelGraphCut.h"

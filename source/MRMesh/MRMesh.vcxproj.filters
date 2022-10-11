@@ -876,6 +876,9 @@
     <ClInclude Include="MRChangePointCloudNormalsAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRUniteManyMeshes.h">
+      <Filter>Source Files\Boolean</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1468,6 +1471,9 @@
     </ClCompile>
     <ClCompile Include="MRVertexAttributeGradient.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUniteManyMeshes.cpp">
+      <Filter>Source Files\Boolean</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

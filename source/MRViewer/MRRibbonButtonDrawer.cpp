@@ -773,21 +773,28 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
 
         const auto& schema = RibbonSchemaHolder::schema();
         auto it = schema.items.find( dropItem->name() );
-        if ( it != schema.items.end() && it->second.caption != "" )
-            caption = it->second.caption;
-        auto pressed = ImGui::MenuItem(
-            ( caption + "##dropItem" ).c_str(),
-            nullptr,
-            dropItem->isActive(),
-            requirements.empty() );
-
-        if ( pressed )
-            onPressAction_( dropItem, requirements.empty() );
-
-        if ( ImGui::IsItemHovered() && menu_ )
+        if ( it == schema.items.end() )
         {
-            if ( it != schema.items.end() )
-                drawTooltip_( it->second, requirements );
+            auto pressed = ImGui::MenuItem( ( caption + "##dropItem" ).c_str(), nullptr, dropItem->isActive(), requirements.empty() );
+            if ( pressed )
+                onPressAction_( dropItem, requirements.empty() );            
+        }
+        else
+        {
+            const auto& item = it->second;
+
+            if ( !item.caption.empty() )
+                caption = item.caption;
+
+            const auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling_;
+            const auto width = calcItemWidth( item, DrawButtonParams::SizeType::SmallText );
+
+            DrawButtonParams params;
+            params.sizeType = DrawButtonParams::SizeType::SmallText;
+            params.iconSize = cSmallIconSize;
+            params.itemSize.y = ySize;
+            params.itemSize.x = width.baseWidth + width.additionalWidth + 2.0f * cRibbonButtonWindowPaddingX * scaling_;
+            drawButtonItem( item, params );
         }
 
         if ( itemWithDrop )

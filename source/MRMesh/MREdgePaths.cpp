@@ -337,6 +337,8 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
 {
     MR_TIMER
 
+    if ( start == finish )
+        return {};
     EdgePathsBuilder bs( topology, metric );
     bs.addStart( topology.edgeWithOrg( start ), 0 );
     EdgePathsBuilder bf( topology, metric );
@@ -528,63 +530,80 @@ EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> 
     return std::move( loops.back() );
 }
 
-void dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation )
+bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto vertRegion = getIncidentVerts( topology, region );
-    dilateRegionByMetric( topology, metric, vertRegion, dilation );
+    if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
+        return false;
+
     region = getInnerFaces( topology, vertRegion );
+    return true;
 }
 
-void dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation )
+bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
 
     EdgePathsBuilder builder( topology, metric );
     builder.addStartRegion( region, 0 );
 
-    while ( !builder.done() && builder.doneDistance() <= dilation )
+    for ( int i = 0; !builder.done() && builder.doneDistance() <= dilation; ++i )
     {
+        if ( ( i % 1024 == 0 ) && callback && !callback( builder.doneDistance() / dilation ) )
+            return false;
+
         auto vinfo = builder.growOneEdge();
         if ( vinfo.back.valid() )
             region.autoResizeSet( topology.org( vinfo.back ) );
     }
+
+    if ( callback && !callback( 1.0f ) )
+        return false;
+
+    return true;
 }
 
-void erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation )
+bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     region = topology.getValidFaces() - region;
-    dilateRegionByMetric( topology, metric, region, dilation );
+    if ( !dilateRegionByMetric( topology, metric, region, dilation, callback ) )
+        return false;
+
     region = topology.getValidFaces() - region;
+    return true;
 }
 
-void erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation )
+bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto faceRegion = getInnerFaces( topology, region );
-    erodeRegionByMetric( topology, metric, faceRegion, dilation );
+    if ( !erodeRegionByMetric( topology, metric, faceRegion, dilation, callback ) )
+        return false;
+
     region = getIncidentVerts( topology, faceRegion );
+    return true;
 }
 
-void dilateRegion( const Mesh & mesh, FaceBitSet & region, float dilation )
+bool dilateRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
-    dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation );
+    return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-void dilateRegion( const Mesh & mesh, VertBitSet & region, float dilation )
+bool dilateRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback )
 {
-    dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation );
+    return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-void erodeRegion( const Mesh & mesh, FaceBitSet & region, float dilation )
+bool erodeRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
-    erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation );
+    return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-void erodeRegion( const Mesh & mesh, VertBitSet & region, float dilation )
+bool erodeRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback )
 {
-    erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation );
+    return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
 int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,

@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MROffset.h"
 #include "MRMesh.h"
 #include "MRBox.h"

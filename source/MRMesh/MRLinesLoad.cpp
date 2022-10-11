@@ -24,7 +24,7 @@ tl::expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromMrLines( in, callback );
+    return addFileNameInError( fromMrLines( in, callback ), file );
 }
 
 tl::expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallback callback )
@@ -60,7 +60,7 @@ tl::expected<MR::Polyline3, std::string> fromPts( const std::filesystem::path& f
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPts( in, callback );
+    return addFileNameInError( fromPts( in, callback ), file );
 }
 
 tl::expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCallback callback /*= {} */ )
@@ -128,14 +128,14 @@ tl::expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCall
 
 tl::expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<Polyline3, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".mrlines" )
+    if ( ext == ".mrlines" )
         res = fromMrLines( file, callback );
-    if ( ext == u8".pts" )
+    if ( ext == ".pts" )
         res = fromPts( file, callback );
     return res;
 }

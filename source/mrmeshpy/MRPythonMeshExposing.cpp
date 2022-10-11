@@ -17,6 +17,8 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRMeshNormals.h"
+#include "MRMesh/MRSphere.h"
+#include "MRMesh/MRUVSphere.h"
 
 using namespace MR;
 
@@ -49,8 +51,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::MeshTopology>( m, "MeshTopology" ).
         def( pybind11::init<>() ).
+        def( "numValidFaces", &MR::MeshTopology::numValidFaces, "returns the number of valid faces" ).
+        def( "numValidVerts", &MR::MeshTopology::numValidVerts, "returns the number of valid vertices" ).
         def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
+        def( "flip", (void (MR::MeshTopology::*)(FaceBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
+        def( "flip", (void (MR::MeshTopology::*)(VertBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
         def( "org", &MR::MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
         def( "dest", &MR::MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
         def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
@@ -82,6 +88,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::VertMap::vec_ );
 
+    pybind11::class_<MR::WholeEdgeMap>( m, "WholeEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::WholeEdgeMap::vec_ );
+
+    pybind11::class_<MR::UndirectedEdgeMap>( m, "UndirectedEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::UndirectedEdgeMap::vec_ );
+
     pybind11::class_<MR::EdgeMap>( m, "EdgeMap" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::EdgeMap::vec_ );
@@ -97,6 +111,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::Vector<Vector2f, VertId>>( m, "VertCoords2" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::Vector<Vector2f, VertId>::vec_ );
+
+    pybind11::class_<MR::Vector<Color, VertId>>( m, "VertColorMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::Vector<Color, VertId>::vec_ );
 } )
 
 MR::MeshTopology topologyFromTriangles( const Triangulation& t, const MeshBuilder::BuildSettings& s )
@@ -168,11 +186,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );
 } )
 
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedMesh, MR::Mesh, std::string )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::MeshPart>( m, "MeshPart", "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)" ).
         def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
         def_readwrite( "region", &MR::MeshPart::region, "nullptr here means whole mesh" );
+
+    pybind11::implicitly_convertible<const Mesh&, MR::MeshPart>();
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
@@ -269,13 +291,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
         def_readwrite( "makeDegenerateBand", &MR::FillHoleParams::makeDegenerateBand,
             "If true creates degenerate faces band around hole to have sharp angle visualization\n"
             "warning: This flag bad for result topology, most likely you do not need it" ).
-        def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" );
+        def_readwrite( "maxPolygonSubdivisions", &MR::FillHoleParams::maxPolygonSubdivisions, "The maximum number of polygon subdivisions on a triangle and two smaller polygons,\n""must be 2 or larger" ).
+        def_readwrite( "outNewFaces", &MR::FillHoleParams::outNewFaces, "If not nullptr accumulate new faces" );
 
     pybind11::class_<MR::StitchHolesParams>( m, "StitchHolesParams", "Structure has some options to control buildCylinderBetweenTwoHoles" ).
         def( pybind11::init<>() ).
         def_readwrite( "metric", &StitchHolesParams::metric,
             "Specifies triangulation metric\n"
-            "default for buildCylinderBetweenTwoHoles: getComplexStitchMetric");
+            "default for buildCylinderBetweenTwoHoles: getComplexStitchMetric").
+        def_readwrite( "outNewFaces", &StitchHolesParams::outNewFaces, "If not nullptr accumulate new faces" );
 
     m.def( "fillHole", &MR::fillHole,
         pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "params" ) = MR::FillHoleParams{},
@@ -334,13 +358,25 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
     m.def( "computePerFaceNormals", &MR::computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
     m.def( "mergeMehses", &pythonMergeMehses, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
-    m.def( "buildBottom", &MR::buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ),
+    m.def( "buildBottom", &MR::buildBottom, pybind11::arg( "mesh" ), pybind11::arg( "a" ), pybind11::arg( "dir" ), pybind11::arg( "holeExtension" ), pybind11::arg( "outNewFaces" ) = nullptr,
         "adds cylindrical extension of given hole represented by one of its edges (having no valid left face)\n"
         "by adding new vertices located in lowest point of the hole -dir*holeExtension and 2 * number_of_hole_edge triangles;\n"
         "return: the edge of new hole opposite to input edge (a)" );
 
     m.def( "makeCube", &MR::makeCube, pybind11::arg( "size" ) = MR::Vector3f::diagonal( 1 ), pybind11::arg( "base" ) = MR::Vector3f::diagonal( -0.5f ),
         "Base is \"lower\" corner of the cube coordinates" );
+    
+    pybind11::class_<MR::SphereParams>( m, "SphereParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "radius", &MR::SphereParams::radius ).
+        def_readwrite( "numMeshVertices", &MR::SphereParams::numMeshVertices );
+
+    m.def( "makeSphere", &MR::makeSphere, pybind11::arg( "params" ),
+        "creates a mesh of sphere with irregular triangulation" );
+    m.def( "makeUVSphere", &MR::makeUVSphere, 
+        pybind11::arg( "radius" ) = 1.0f, 
+        pybind11::arg( "horisontalResolution" ) = 16, pybind11::arg( "verticalResolution" ) = 16,
+        "Z is polar axis of this UVSphere" );
 
     m.def( "makeTorus", &MR::makeTorus,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,

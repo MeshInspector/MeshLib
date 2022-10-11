@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef MRMESH_NO_LABEL
 #include "MRMesh/MRMeshFwd.h"
 #include "MRHistoryAction.h"
 #include "MRMesh/MRPositionedText.h"
@@ -49,3 +51,4 @@ private:
 };
 
 }
+#endif

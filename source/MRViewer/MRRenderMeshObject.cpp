@@ -355,7 +355,6 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
 
     dirty_ &= ~DIRTY_MESH;
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
-    normalsBound_ = true;
 }
 
 void RenderMeshObject::bindMeshPicker_()
@@ -418,7 +417,6 @@ void RenderMeshObject::initBuffers_()
     assert( maxTexSize_ > 0 );
 
     dirty_ = DIRTY_ALL;
-    normalsBound_ = false;
 }
 
 void RenderMeshObject::freeBuffers_()
@@ -444,33 +442,8 @@ void RenderMeshObject::update_( ViewportMask mask )
         else
             dirtyNormalFlag |= DIRTY_CORNERS_RENDER_NORMAL;
     }
-    
-    // purpose of `normalsBound_` flag:
-    //     objDirty == DIRTY_FACES_RENDER_NORMAL
-    // call renderPicker:
-    //     dirty_ = objDirty;
-    //     dirtyNormalFlag == DIRTY_FACES_RENDER_NORMAL | DIRTY_VERTS_RENDER_NORMAL;
-    //     dirty_ -= ( DIRTY_RENDER_NORMALS - dirtyNormalFlag ); // dirty_ -= DIRTY_CORNERS_RENDER_NORMAL
-    //     vertNormalsBufferObj_ = objVertNormals;
-    //     faceNormalsTexture_ = objFaceNormals;
-    //     objMesh_->resetDirty();
-    //     // no bind normals because picker doesn't need it
-    // call render:
-    //     dirty_ = objDirty;
-    //     dirtyNormalFlag == 0; // because we copied normals on `renderPicker` call
-    //     dirty_ -= ( DIRTY_RENDER_NORMALS - dirtyNormalFlag ); // dirty_ -= DIRTY_RENDER_NORMALS
-    //     // no coping of normals (correct)
-    //     objMesh_->resetDirty();
-    //     // missing bind because !(dirty_ & ( DIRTY_VERTS_RENDER_NORMAL | DIRTY_CORNERS_RENDER_NORMAL ))
-    // 
-    // `normalsBound_` flag saves this case
-    if ( dirtyNormalFlag )
-        normalsBound_ = false;
-
+    objDirty &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag );
     dirty_ |= objDirty;
-
-    if ( normalsBound_ )
-        dirty_ &= ~( DIRTY_RENDER_NORMALS - dirtyNormalFlag ); // it does not affect copy, `dirtyNormalFlag` does
 
     if ( objMesh_->getColoringType() != ColoringType::VertsColorMap )
         dirty_ &= ~DIRTY_VERTS_COLORMAP;

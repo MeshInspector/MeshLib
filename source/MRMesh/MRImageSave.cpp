@@ -8,8 +8,12 @@
 #include <string>
 
 #ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PNG
 #include <libpng16/png.h>
+#endif
+#ifndef MRMESH_NO_JPEG
 #include <turbojpeg.h>
+#endif
 #endif
 
 namespace MR
@@ -20,10 +24,14 @@ namespace ImageSave
 const IOFilters Filters =
 {
 #ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
+#endif
+#ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg)",  "*.jpg"},
 #endif
-    {"BitMap Picture (.bmp)",  "*.bmp"}
+#endif
+    {"BitMap Picture (.bmp)",  "*.bmp"},
 };
 
 #pragma pack(push, 1)
@@ -76,6 +84,7 @@ tl::expected<void, std::string> toBmp( const Image& image, const std::filesystem
 
 #ifndef __EMSCRIPTEN__
 
+#ifndef MRMESH_NO_PNG
 tl::expected<void, std::string> toPng( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream fp( file, std::ios::binary );
@@ -148,7 +157,9 @@ tl::expected<void, std::string> toPng( const Image& image, std::ostream& os )
     png_write_end( png.pngPtr, NULL );
     return {};
 }
+#endif
 
+#ifndef MRMESH_NO_JPEG
 struct JpegWriter
 {
     JpegWriter()
@@ -187,23 +198,28 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
 
     return {};
 }
+#endif
 
 #endif
 
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
-    auto ext = file.extension().u8string();
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
     tl::expected<void, std::string> res = tl::make_unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == u8".bmp" )
+    if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
 #ifndef __EMSCRIPTEN__
-    else if ( ext == u8".png" )
+#ifndef MRMESH_NO_PNG
+    else if ( ext == ".png" )
         res = MR::ImageSave::toPng( image, file );
-    else if ( ext == u8".jpg" )
+#endif
+#ifndef MRMESH_NO_JPEG
+    else if ( ext == ".jpg" )
         res = MR::ImageSave::toJpeg( image, file );
+#endif
 #endif
     return res;
 }

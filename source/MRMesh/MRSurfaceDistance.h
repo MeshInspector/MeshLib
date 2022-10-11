@@ -6,7 +6,10 @@
 namespace MR
 {
 
+/// \defgroup SurfacePathGroup Surface Path
+
 /// \defgroup SurfaceDistanceGroup Surface Distance
+/// The functions in this group implement Fast marching method for approximately solving Eikonal equation on mesh.
 /// \ingroup SurfacePathGroup
 /// \{
 

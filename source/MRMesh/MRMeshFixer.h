@@ -24,7 +24,7 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> &
 MRMESH_API void fixMultipleEdges( Mesh & mesh );
 
 /// finds faces which aspect ratio >= criticalAspectRatio
-MRMESH_API FaceBitSet findDegenerateFaces( const Mesh& mesh, float criticalAspectRatio = FLT_MAX );
+MRMESH_API FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio = FLT_MAX );
 
 /// finds vertices in region with complete ring of N edges
 MRMESH_API VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );

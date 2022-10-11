@@ -210,6 +210,7 @@
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />
     <ClInclude Include="MRUnionFind.h" />
+    <ClInclude Include="MRUniteManyMeshes.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
@@ -472,6 +473,7 @@
     <ClCompile Include="MRObjectDistanceMap.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRPolylineRelax.cpp" />
+    <ClCompile Include="MRUniteManyMeshes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
@@ -544,7 +546,7 @@
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
 copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
-copy $(VcpkgCurrentInstalledDir)\bin\python310.dll $(TargetDir)python310.dll
+copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
 copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
 copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
     </PostBuildEvent>

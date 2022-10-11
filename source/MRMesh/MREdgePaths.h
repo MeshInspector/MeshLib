@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRMesh/MRProgressCallback.h"
 #include <cfloat>
 #include <functional>
 #include <vector>
@@ -81,21 +82,21 @@ MRMESH_API void addLeftBand( const MeshTopology & topology, const EdgeLoop & loo
     EdgeBitSet * outNotLoopEdges = nullptr );
 [[nodiscard]] MRMESH_API EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> & inEdges );
 
-/// expands the region (of faces or vertices) on given metric value
-MRMESH_API void dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation );
-MRMESH_API void dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation );
+/// expands the region (of faces or vertices) on given metric value. returns false if callback also returns false
+MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback = {} );
 
-/// shrinks the region (of faces or vertices) on given metric value
-MRMESH_API void erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation );
-MRMESH_API void erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation );
+/// shrinks the region (of faces or vertices) on given metric value. returns false if callback also returns false
+MRMESH_API bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback = {} );
 
-/// expands the region (of faces or vertices) on given value (in meters)
-MRMESH_API void dilateRegion( const Mesh & mesh, FaceBitSet & region, float dilation );
-MRMESH_API void dilateRegion( const Mesh & mesh, VertBitSet & region, float dilation );
+/// expands the region (of faces or vertices) on given value (in meters). returns false if callback also returns false
+MRMESH_API bool dilateRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback = {} );
 
-/// shrinks the region (of faces or vertices) on given value (in meters)
-MRMESH_API void erodeRegion( const Mesh & mesh, FaceBitSet & region, float dilation );
-MRMESH_API void erodeRegion( const Mesh & mesh, VertBitSet & region, float dilation );
+/// shrinks the region (of faces or vertices) on given value (in meters). returns false if callback also returns false
+MRMESH_API bool erodeRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback = {} );
 
 /// finds all intersection points between given path and plane, adds them in outIntersections and returns their number
 MRMESH_API int getPathPlaneIntersections( const Mesh & mesh, const EdgePath & path, const Plane3f & plane,

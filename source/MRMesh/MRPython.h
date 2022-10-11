@@ -1,11 +1,12 @@
 #pragma once
 
-#ifndef __EMSCRIPTEN__
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRMeshFwd.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
+#include <tl/expected.hpp>
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
@@ -43,6 +44,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "size", &vecType::size ).\
         def( "resize", ( void ( vecType::* )( const vecType::size_type ) )& vecType::resize ).\
         def( "clear", &vecType::clear ); \
+} )
+
+#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
+MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
+{\
+    using expectedType = tl::expected<type,errorType>;\
+    pybind11::class_<expectedType>(m, #name ).\
+        def( "has_value", &expectedType::has_value ).\
+        def( "value", ( type& ( expectedType::* )( )& )& expectedType::value, pybind11::return_value_policy::reference_internal ).\
+        def( "error", ( const errorType& ( expectedType::* )( )const& )& expectedType::error );\
 } )
 
 enum StreamType

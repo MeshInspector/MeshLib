@@ -206,6 +206,14 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     assert( a == prev( c.sym() ) );
 }
 
+void MeshTopology::getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const
+{
+    e0 = edgeWithLeft( f );
+    e1 = prev( e0.sym() );
+    e2 = prev( e1.sym() );
+    assert( e0 == prev( e2.sym() ) );
+}
+
 std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER
@@ -1186,7 +1194,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
                     edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
                     if ( map.tgt2srcEdges )
                     {
-                        map.tgt2srcEdges ->push_back( ue );
+                        map.tgt2srcEdges ->push_back( EdgeId{ue} );
                     }
                 }
             }
@@ -1300,7 +1308,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     }
 
     if ( map.tgt2srcEdges )
-        assert( map.tgt2srcEdges->size() == edgeSize() );
+        assert( map.tgt2srcEdges->size() == undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
         assert( map.tgt2srcVerts->size() == vertSize() );
     if ( map.tgt2srcFaces )

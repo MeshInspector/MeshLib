@@ -14,6 +14,8 @@
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRVoxelsSave.h"
+#include "MRMesh/MRDistanceMapSave.h"
+#include "MRMesh/MRDistanceMapLoad.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRImageSave.h"
@@ -69,7 +71,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors oreder 
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
@@ -406,6 +408,8 @@ bool SaveObjectMenuItem::action()
             updateFilters( ObjType::Lines, LinesSave::Filters );
         if ( std::dynamic_pointer_cast< ObjectPoints >( obj ) )
             updateFilters( ObjType::Points, PointsSave::Filters );
+        if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
+            updateFilters( ObjType::DistanceMap, DistanceMapSave::Filters );
 #ifndef __EMSCRIPTEN__
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             updateFilters( ObjType::Voxels, VoxelsSave::Filters );
@@ -419,6 +423,8 @@ bool SaveObjectMenuItem::action()
             sortedFilters = LinesSave::Filters;
         if ( std::dynamic_pointer_cast< ObjectPoints >( obj ) )
             sortedFilters = PointsSave::Filters;
+        if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
+            sortedFilters = DistanceMapSave::Filters;
 #ifndef __EMSCRIPTEN__
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             sortedFilters = VoxelsSave::Filters;

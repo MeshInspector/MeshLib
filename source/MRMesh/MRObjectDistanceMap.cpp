@@ -9,6 +9,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRStringConvert.h"
 
 namespace MR
 {
@@ -163,12 +164,11 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
 
 tl::expected<void, std::string> ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = DistanceMapLoad::loadRaw( path.u8string() + u8".raw" );
+    auto res = DistanceMapLoad::fromRaw( utf8string( path ) + ".raw" );
     if ( !res.has_value() )
         return tl::make_unexpected( res.error() );
     
     dmap_ = std::make_shared<DistanceMap>( res.value() );
-
     return {};
 }
 
@@ -178,12 +178,12 @@ tl::expected<std::future<void>, std::string> ObjectDistanceMap::serializeModel_(
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = path.u8string() + u8".raw"]() { DistanceMapSave::saveRAW( filename, *dmap_ ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { DistanceMapSave::toRAW( filename, *dmap_ ); } );
 }
 
 void ObjectDistanceMap::setDefaultColors_()
 {
-    setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ) );
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectDistanceMap ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 

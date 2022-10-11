@@ -19,6 +19,7 @@
     <ClCompile Include="MRColorTheme.cpp" />
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
+    <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
     <ClCompile Include="MRObjectMeshHistory.cpp" />
     <ClCompile Include="MRObjectTransformWidget.cpp" />
@@ -57,9 +58,7 @@
     <ClCompile Include="MRViewer.cpp" />
     <ClCompile Include="MRViewport.cpp" />
     <ClCompile Include="MRFileDialog.cpp" />
-    <ClCompile Include="MROpen.cpp" />
     <ClCompile Include="MRProgressBar.cpp" />
-    <ClCompile Include="MRSave.cpp" />
     <ClCompile Include="MRSetupViewer.cpp" />
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
@@ -77,6 +76,7 @@
     <ClInclude Include="MRColorTheme.h" />
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />
+    <ClInclude Include="MRGetSystemInfoJson.h" />
     <ClInclude Include="MRGladGlfw.h" />
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
@@ -126,9 +126,7 @@
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />
-    <ClInclude Include="MROpen.h" />
     <ClInclude Include="MRProgressBar.h" />
-    <ClInclude Include="MRSave.h" />
     <ClInclude Include="MRSetupViewer.h" />
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />

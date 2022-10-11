@@ -2,7 +2,7 @@ from helper import *
 import pytest
 
 
-def test_distanceMap():
+def test_distance_map():
     R1 = 2
     R2 = 1
     torus = mrmesh.makeTorus(R1, R2, 10, 10, None)
@@ -13,12 +13,12 @@ def test_distanceMap():
     params.useDistanceLimits = False
     params.allowNegativeValues = False
 
-    params.xRange.x = 2*(R1+R2)
-    params.yRange.y = 2*(R1+R2)
+    params.xRange.x = 2 * (R1 + R2)
+    params.yRange.y = 2 * (R1 + R2)
     params.direction.z = 1
 
-    params.orgPoint.x = -(R1+R2)
-    params.orgPoint.y = -(R1+R2)
+    params.orgPoint.x = -(R1 + R2)
+    params.orgPoint.y = -(R1 + R2)
     params.orgPoint.z = -R2
 
     map = mrmesh.computeDistanceMapD(mrmesh.MeshPart(torus), params)

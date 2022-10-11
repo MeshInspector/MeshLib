@@ -85,6 +85,10 @@ public:
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    /// gets 3 edges of given triangular face, oriented to have it on the left;
+    /// the edges are returned in counter-clockwise order if look from mesh outside
+    MRMESH_API void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const;
+               void getTriEdges( FaceId f, EdgeId (&e)[3] ) const { getTriEdges( f, e[0], e[1], e[2] ); }
     /// returns true if the cell to the left of a is quadrangular
     [[nodiscard]] MRMESH_API bool isLeftQuad( EdgeId a ) const;
 
@@ -108,6 +112,8 @@ public:
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
     /// returns cached set of all valid vertices
     [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
+    /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
+    void flip( VertBitSet & vs ) const { vs = getValidVerts() - vs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
     [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
 
@@ -139,6 +145,8 @@ public:
     [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
     /// returns cached set of all valid faces
     [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
+    /// sets in (fs) all valid faces that were not selected before the call, and resets other bits
+    void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
 

@@ -322,6 +322,8 @@ size_t RenderLabelObject::glBytes() const
 
 void RenderLabelObject::forceBindAll()
 {
+    if ( !getViewerInstance().isGLInitialized() || !loadGL() )
+        return;
     update_();
     bindLabel_();
 }
@@ -334,7 +336,7 @@ void RenderLabelObject::bindLabel_()
     if ( auto mesh = objLabel_->labelRepresentingMesh() )
         bindVertexAttribArray( shader, "position", vertPosBuffer_, mesh->points.vec_, 3, dirty_ & DIRTY_POSITION );
     else
-        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, true );
+        bindVertexAttribArray( shader, "position", vertPosBuffer_, std::vector<Vector3f>{}, 3, false, vertPosBuffer_.valid() );
 
     auto faceIndices = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faceIndices.dirty(), faceIndices );
@@ -363,7 +365,7 @@ void RenderLabelObject::initBuffers_()
 
 void RenderLabelObject::freeBuffers_()
 {
-    if ( !Viewer::constInstance()->isGLInitialized() || !loadGL() )
+    if ( !getViewerInstance().isGLInitialized() || !loadGL() )
         return;
 
     GL_EXEC( glDeleteVertexArrays( 1, &labelArrayObjId_ ) );

@@ -99,7 +99,9 @@ public:
     MRMESH_API virtual void setAllVisualizeProperties( const AllVisualizeProperties& properties );
 
     /// shows/hides labels
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     void showLabels( bool on ) { return setVisualizeProperty( on, unsigned( VisualizeMaskType::Labels ), ViewportMask::all() ); }
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     bool showLabels() const { return getVisualizeProperty( unsigned( VisualizeMaskType::Labels ), ViewportMask::any() ); }
 
     /// shows/hides name
@@ -111,12 +113,13 @@ public:
     MRMESH_API const Color& getFrontColor( bool selected = true ) const;
     /// if selected sets color of object when it is selected
     /// otherwise sets color of object when it is not selected
-    MRMESH_API virtual void setFrontColor( const Color& color, bool selected = true );
+    MRMESH_API virtual void setFrontColor( const Color& color, bool selected );
 
     MRMESH_API const Color& getBackColor() const;
     MRMESH_API virtual void setBackColor( const Color& color );
-
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API const Color& getLabelsColor() const;
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API virtual void setLabelsColor( const Color& color );
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
@@ -155,7 +158,9 @@ public:
     float getShininess() const { return shininess_; }
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     const std::vector<PositionedText>& getLabels() const { return labels_; }
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
     virtual void setLabels( std::vector<PositionedText> labels ) { labels_ = std::move( labels ); needRedraw_ = true; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

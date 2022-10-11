@@ -11,6 +11,7 @@ namespace MR
 
 struct TimeRecord
 {
+    TimeRecord* parent = nullptr;
     int count = 0;
     nanoseconds time = {};
     std::map<std::string, TimeRecord> children;
@@ -82,32 +83,66 @@ void printTimingTreeAtEnd( bool on )
     rootTimeRecord.printTreeInDtor = on;
 }
 
+void printCurrentTimerBranch()
+{
+    Timer t( "Print Timer branch leaf" );
+    const TimeRecord* active = currentRecord;
+    auto& logger = rootTimeRecord.loggerHandle;
+    if ( !logger )
+        return;
+    while ( active )
+    {
+        if ( !active->parent )
+        {
+            logger->info( "Root" );
+            break;
+        }
+        for ( const auto& child : active->parent->children )
+        {
+            if ( &child.second != active )
+                continue;
+            logger->info( child.first );
+            break;
+        }
+        active = active->parent;
+    }
+}
+
 void printTimingTreeAndStop()
 {
     rootTimeRecord.printTree();
     printTimingTreeAtEnd( false );
 }
 
-void Timer::restart( std::string name )
+void Timer::restart( const std::string& name )
 {
     finish();
+    start( name );
+}
+
+void Timer::start( const std::string& name )
+{
     if ( std::this_thread::get_id() != mainThreadId )
         return;
-    name_ = std::move( name );
+    started_ = true;
     start_ = high_resolution_clock::now();
-    parent_ = currentRecord;
-    currentRecord = &currentRecord->children[name_];
+    auto parent = currentRecord;
+    currentRecord = &parent->children[name];
+    currentRecord->parent = parent;
 }
 
 void Timer::finish()
 {
-    if ( !parent_ )
+    if ( !started_ )
+        return;
+    auto currentParent = currentRecord->parent;
+    if ( !currentParent )
         return;
 
     currentRecord->time += high_resolution_clock::now() - start_;
     ++currentRecord->count;
-    currentRecord = parent_;
-    parent_ = nullptr;
+
+    currentRecord = currentParent;
 }
 
 } //namespace MR

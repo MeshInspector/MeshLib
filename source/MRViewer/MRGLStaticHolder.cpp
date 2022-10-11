@@ -1281,13 +1281,11 @@ void main(void)
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
   uniform sampler2D pixels;
-  uniform sampler2D depth;
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
   { 
     outColor = texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 );
-    gl_FragDepth = texelFetch(depth, ivec2( gl_FragCoord.xy ), 0 ).r;
     if (outColor.a == 0.0)
       discard;
   }

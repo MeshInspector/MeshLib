@@ -37,7 +37,6 @@ private:
     unsigned int renderBufferObj_{ 0 };
     unsigned int intermediateFBO_{ 0 };
     unsigned int screenColorTexture_{ 0 };
-    unsigned int screenDepthTexture_{ 0 };
 
     bool enabled_{ false };
 };

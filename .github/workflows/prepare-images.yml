@@ -30,7 +30,7 @@ jobs:
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -118,7 +118,7 @@ jobs:
         run: docker system prune --force --all --volumes
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
 

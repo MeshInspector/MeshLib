@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload Windows Binaries Archive
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: WindowsArchive
           path: MREDist_${{ matrix.config }}.zip

@@ -104,7 +104,7 @@ jobs:
         run: py -3.10 scripts\zip_distribution.py MeshLibDist.zip
 
       - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Distributives
           path: MeshLibDist.zip

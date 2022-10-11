@@ -88,7 +88,7 @@ jobs:
           submodules: recursive
 
       - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: WindowsArchive
 
@@ -130,7 +130,7 @@ jobs:
           submodules: recursive
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: Distributives
 

@@ -7,6 +7,10 @@
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 
+#ifdef _WIN32
+#include <excpt.h>
+#endif
+
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace
 {
@@ -119,6 +123,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 
         instance.progress_ = 0.0f;
 
+        instance.task_ = task;
         instance.currentTask_ = 0;
         if ( taskCount == 1 )
             instance.currentTask_ = 1;
@@ -132,15 +137,15 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
         ImGui::OpenPopup( instance.setupId_ );
         instance.lastPostEvent_ = std::chrono::system_clock::now();
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
-        instance.thread_ = std::thread( [task, &instance] ()
+        instance.thread_ = std::thread( [&instance] ()
         {
             SetCurrentThreadName( "ProgressBar" );
-            instance.tryRunTask_( task );
+            instance.tryRunTaskWithSehHandler_();
         } );
 #else
-        staticTaskForLaterCall = [&instance, task] () 
+        staticTaskForLaterCall = [&instance] () 
         {
-            instance.tryRunTask_( task );
+            instance.tryRunTaskWithSehHandler_();
         };
         emscripten_async_call( asyncCallTask, nullptr, 200 );
 #endif
@@ -249,11 +254,14 @@ ProgressBar::~ProgressBar()
         thread_.join();
 }
 
-void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
+void ProgressBar::tryRunTask_()
 {
+#ifndef NDEBUG
+    onFinish_ = task_();
+#else
     try
     {
-        onFinish_ = task();
+        onFinish_ = task_();
     }
     catch ( const std::bad_alloc& badAllocE )
     {
@@ -273,6 +281,28 @@ void ProgressBar::tryRunTask_( TaskWithMainThreadPostProcessing task )
                 menu->showErrorModal( msg );
         };
     }
+#endif
+}
+
+void ProgressBar::tryRunTaskWithSehHandler_()
+{
+#if !defined(_WIN32) || !defined(NDEBUG)
+    tryRunTask_();
+#else
+    __try
+    {
+        tryRunTask_();
+    }
+    __except ( EXCEPTION_EXECUTE_HANDLER )
+    {
+        onFinish_ = []()
+        {
+            spdlog::error( "Unknown exception occurred" );
+            if ( auto menu = getViewerInstance().getMenuPlugin() )
+                menu->showErrorModal( "Unknown exception occurred" );
+        };
+    }
+#endif
     finish_();
 }
 

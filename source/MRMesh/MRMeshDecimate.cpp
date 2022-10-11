@@ -193,17 +193,26 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
     return qf;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation )
+bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
 {
     MR_TIMER;
     bool meshChanged = false;
     for( int i = 0; i < maxIters; ++i )
     {
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, { .maxDeviationAfterFlip = maxDeviation }, 5 ) > 0;
+        DeloneSettings delone
+        {
+            .maxDeviationAfterFlip = maxDeviation,
+            .maxAngleChange = maxAngleChange,
+            .criticalTriAspectRatio = criticalAspectRatio
+        };
+        bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
-        DecimateSettings settings;
-        settings.maxError = maxDeviation;
-        changedThisIter = decimateMesh( mesh, settings ).vertsDeleted > 0 || changedThisIter;
+        DecimateSettings decimate
+        {
+            .maxError = maxDeviation,
+            .criticalTriAspectRatio = criticalAspectRatio
+        };
+        changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
         meshChanged = meshChanged || changedThisIter;
         if ( !changedThisIter )
             break;
@@ -393,12 +402,15 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( ( po != pd ) || ( po != collapsePos ) )
+    if ( maxOldAspectRatio < settings_.criticalTriAspectRatio )
     {
-        auto n = Vector3f{ sumDblArea_.normalized() };
-        for ( const auto da : triDblAreas_ )
-            if ( dot( da, n ) < 0 )
-                return {};
+        if ( ( po != pd ) || ( po != collapsePos ) )
+        {
+            auto n = Vector3f{ sumDblArea_.normalized() };
+            for ( const auto da : triDblAreas_ )
+                if ( dot( da, n ) < 0 )
+                    return {};
+        }
     }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )

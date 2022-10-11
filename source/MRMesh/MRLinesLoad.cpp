@@ -24,7 +24,7 @@ tl::expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & 
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromMrLines( in, callback );
+    return addFileNameInError( fromMrLines( in, callback ), file );
 }
 
 tl::expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallback callback )
@@ -60,7 +60,7 @@ tl::expected<MR::Polyline3, std::string> fromPts( const std::filesystem::path& f
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPts( in, callback );
+    return addFileNameInError( fromPts( in, callback ), file );
 }
 
 tl::expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCallback callback /*= {} */ )

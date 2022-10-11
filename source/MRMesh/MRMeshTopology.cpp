@@ -1194,7 +1194,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
                     edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
                     if ( map.tgt2srcEdges )
                     {
-                        map.tgt2srcEdges ->push_back( ue );
+                        map.tgt2srcEdges ->push_back( EdgeId{ue} );
                     }
                 }
             }
@@ -1308,7 +1308,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     }
 
     if ( map.tgt2srcEdges )
-        assert( map.tgt2srcEdges->size() == edgeSize() );
+        assert( map.tgt2srcEdges->size() == undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
         assert( map.tgt2srcVerts->size() == vertSize() );
     if ( map.tgt2srcFaces )

@@ -81,20 +81,6 @@ void PostDrawListener::connect( Viewer* viewer, int group, boost::signals2::conn
     connection_ = viewer->postDrawSignal.connect( group, MAKE_SLOT( &PostDrawListener::postDraw_ ), pos );
 }
 
-void SaveListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
-{
-    if ( !viewer )
-        return;
-    connection_ = viewer->saveSignal.connect( group, MAKE_SLOT( &SaveListener::save_ ), pos );
-}
-
-void LoadListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
-{
-    if ( !viewer )
-        return;
-    connection_ = viewer->loadSignal.connect( group, MAKE_SLOT( &LoadListener::load_ ), pos );
-}
-
 void DragDropListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

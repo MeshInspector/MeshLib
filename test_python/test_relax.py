@@ -1,6 +1,7 @@
 from helper import *
 import pytest
 
+
 def test_relax():
     R1 = 2
     R2_1 = 1
@@ -11,4 +12,4 @@ def test_relax():
     params.iterations = 5
     res = mrmesh.relax(torus, params)
 
-    assert(res)
+    assert (res)

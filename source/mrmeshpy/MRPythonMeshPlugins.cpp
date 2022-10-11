@@ -87,7 +87,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
     m.def( "detectBasisTunnels", &MR::detectBasisTunnels, pybind11::arg( "mp" ), "detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh" );
 
     m.def( "findDegenerateFaces", &MR::findDegenerateFaces, 
-        pybind11::arg( "mesh" ), pybind11::arg( "criticalAspectRatio" ) = FLT_MAX,
+        pybind11::arg( "mp" ), pybind11::arg( "criticalAspectRatio" ) = FLT_MAX,
         "finds faces which aspect ratio >= criticalAspectRatio" );
 
     m.def( "fixMultipleEdges", ( void( * )( MR::Mesh& ) )& MR::fixMultipleEdges,

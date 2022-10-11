@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
+#include <cfloat>
 #include <climits>
 #include <functional>
 
@@ -39,6 +40,8 @@ struct DecimateSettings
     float maxEdgeLen = 1;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
+    /// the algorithm will try to eliminate triangles with equal or larger aspect ratio, ignoring normal orientation checks
+    float criticalTriAspectRatio = FLT_MAX;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
@@ -130,7 +133,7 @@ MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, f
  * 
  * \sa \ref decimateMesh
  */
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0 );
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 1e7 );
 
 struct RemeshSettings
 {

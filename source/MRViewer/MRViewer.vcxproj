@@ -58,9 +58,7 @@
     <ClCompile Include="MRViewer.cpp" />
     <ClCompile Include="MRViewport.cpp" />
     <ClCompile Include="MRFileDialog.cpp" />
-    <ClCompile Include="MROpen.cpp" />
     <ClCompile Include="MRProgressBar.cpp" />
-    <ClCompile Include="MRSave.cpp" />
     <ClCompile Include="MRSetupViewer.cpp" />
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
@@ -128,9 +126,7 @@
     <ClInclude Include="MRViewport.h" />
     <ClInclude Include="MRViewerPlugin.h" />
     <ClInclude Include="MRFileDialog.h" />
-    <ClInclude Include="MROpen.h" />
     <ClInclude Include="MRProgressBar.h" />
-    <ClInclude Include="MRSave.h" />
     <ClInclude Include="MRSetupViewer.h" />
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />

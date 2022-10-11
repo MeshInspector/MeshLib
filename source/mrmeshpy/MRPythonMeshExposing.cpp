@@ -55,6 +55,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "numValidVerts", &MR::MeshTopology::numValidVerts, "returns the number of valid vertices" ).
         def( "getValidFaces", &MR::MeshTopology::getValidFaces, pybind11::return_value_policy::copy, "returns cached set of all valid faces" ).
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
+        def( "flip", (void (MR::MeshTopology::*)(FaceBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
+        def( "flip", (void (MR::MeshTopology::*)(VertBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
         def( "org", &MR::MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
         def( "dest", &MR::MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
         def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).
@@ -85,6 +87,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
     pybind11::class_<MR::VertMap>( m, "VertMap" ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &MR::VertMap::vec_ );
+
+    pybind11::class_<MR::WholeEdgeMap>( m, "WholeEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::WholeEdgeMap::vec_ );
+
+    pybind11::class_<MR::UndirectedEdgeMap>( m, "UndirectedEdgeMap" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::UndirectedEdgeMap::vec_ );
 
     pybind11::class_<MR::EdgeMap>( m, "EdgeMap" ).
         def( pybind11::init<>() ).
@@ -183,6 +193,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPart, [] ( pybind11::module_& m )
     pybind11::class_<MR::MeshPart>( m, "MeshPart", "stores reference on whole mesh (if region is nullptr) or on its part (if region pointer is valid)" ).
         def( pybind11::init<const Mesh&, const FaceBitSet*>(), pybind11::arg( "mesh" ), pybind11::arg( "region" ) = nullptr ).
         def_readwrite( "region", &MR::MeshPart::region, "nullptr here means whole mesh" );
+
+    pybind11::implicitly_convertible<const Mesh&, MR::MeshPart>();
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )

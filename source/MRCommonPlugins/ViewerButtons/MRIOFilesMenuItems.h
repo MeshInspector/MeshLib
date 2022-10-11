@@ -44,6 +44,7 @@ class SaveObjectMenuItem : public RibbonMenuItem,
     SceneStateExactCheck<1, ObjectMesh> 
     , SceneStateExactCheck<1, ObjectLines>
     , SceneStateExactCheck<1, ObjectPoints>
+    , SceneStateExactCheck<1, ObjectDistanceMap>
 #ifndef __EMSCRIPTEN__
     , SceneStateExactCheck<1, ObjectVoxels> 
 #endif

@@ -31,6 +31,7 @@ public:
 
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+    bool started_{ false };
 };
 
 /// enables or disables printing of timing tree when application terminates

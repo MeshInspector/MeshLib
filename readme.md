@@ -2,6 +2,7 @@
 
 [![build-test-distribute](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml?branch=master) 
 [![PyPI version](https://badge.fury.io/py/meshlib.svg)](https://badge.fury.io/py/meshlib)
+[![Python](https://img.shields.io/pypi/pyversions/meshlib.svg?style=plastic)](https://badge.fury.io/py/meshlib)
 
 ![MeshInspector/MeshLib](https://user-images.githubusercontent.com/10034350/176395489-6349670a-b9eb-4f53-886a-35a75b55e6ac.png)
 
@@ -111,15 +112,16 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
 Moreover, MeshLib can be easily installed as a python package using `pip install`:
-* On Windows in Python 3.10 via
+* On Windows in Pythons 3.8,3.9,3.10 via
 ```
-py -3.10 -m pip install --upgrade pip meshlib
+py -3 -m pip install --upgrade pip
+py -3 -m pip install meshlib
 ```
 * On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ in Pythons 3.8,3.9,3.10 via
 ```
 sudo apt install python3-pip
 python3 -m pip install --upgrade pip
-python3 -m pip install --upgrade meshlib
+python3 -m pip install meshlib
 ```
 Support for `pip install` on MacOS X is coming.
 
@@ -147,14 +149,13 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
-2. Copy **MeshLib/thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake** to **vcpkg/triplets** folder of vcpkg installation.
-3. Execute install.bat
+2. Execute install.bat
     ```sh
     cd vcpkg # or add vcpkg to PATH
     ../MeshLib/thirdparty/install.bat
     cd ..
     ```
-4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
+3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
 
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
@@ -178,6 +179,32 @@ sudo apt install ./distr/meshrus-dev.deb
 > **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
+
+## Build with Emscripten on Linux
+This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
+
+Install Emscripten (find more on [emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
+```
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+optional git pull # optional
+./emsdk install 3.1.23 # (or enother version / latest)
+./emsdk activate 3.1.23
+source ./emsdk_env.sh
+```
+
+Build
+```
+cd ~/MeshInspectorCode
+./scripts/build_thirdparty.sh # select emscripten in the corresponding question
+./scripts/build_sorces.sh # select emscripten in the corresponding question
+```
+
+Run
+```
+python3 ./scripts/local_server.py
+# open in browser 127.0.0.1:8000
+```
 
 # Integration
 ## Windows

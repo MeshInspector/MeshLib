@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include <filesystem>
 #include <string>
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -63,5 +64,14 @@ inline std::string utf8string( const std::filesystem::path & path )
 /// [1024*1024,1024*1024*1024) -> nnn.nn Mb
 /// ...
 MRMESH_API std::string bytesString( size_t size );
+
+/// if (v) contains an error, then appends given file name to that error
+template<typename T>
+inline tl::expected<T, std::string> addFileNameInError( tl::expected<T, std::string> v, const std::filesystem::path & file )
+{
+    if ( !v.has_value() )
+        v = tl::make_unexpected( v.error() + ": " + utf8string( file ) );
+    return v;
+}
 
 }

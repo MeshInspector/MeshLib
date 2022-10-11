@@ -2,6 +2,8 @@
 #include "MRMeshBoolean.h"
 #include "MRObjectMesh.h"
 #include "MRGTest.h"
+#include "MRCube.h"
+#include "MRUVSphere.h"
 
 namespace MR
 {
@@ -43,8 +45,8 @@ TransformedMesh & operator *= ( TransformedMesh & a, const TransformedMesh& b )
 
 TEST( MRMesh, MeshBooleanFacade )
 {
-    Mesh gingivaCopy;
-    Mesh combinedTooth;
+    Mesh gingivaCopy = makeCube();
+    Mesh combinedTooth = makeUVSphere( 1.1f );
     MeshMeshConverter convert;
 
     auto gingivaGrid = convert( gingivaCopy );

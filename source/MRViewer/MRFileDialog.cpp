@@ -334,6 +334,8 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = false;
+    if ( parameters.filters.empty() )
+        parameters.filters = { { "All files", "*.*" } };
 
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
@@ -357,7 +359,9 @@ void openFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
         if ( !paths.empty() )
             callback( paths[0] );
     };
-    std::string accumFilter = params.filters[0].extension.substr( 1 );
+    std::string accumFilter;
+    if ( !params.filters.empty() )
+        accumFilter = params.filters[0].extension.substr( 1 );
     for ( int i = 1; i < params.filters.size(); ++i )
     {
         const auto& filter = params.filters[i];
@@ -377,6 +381,8 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     parameters.folderDialog = false;
     parameters.multiselect = true;
     parameters.saveDialog = false;
+    if ( parameters.filters.empty() )
+        parameters.filters = { { "All files", "*.*" } };
 
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
@@ -394,7 +400,9 @@ void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem
     callback( openFilesDialog( params ) );
 #else
     sDialogFilesCallback = callback;
-    std::string accumFilter = params.filters[0].extension.substr( 1 );
+    std::string accumFilter;
+    if ( !params.filters.empty() )
+        accumFilter = params.filters[0].extension.substr( 1 );
     for ( int i = 1; i < params.filters.size(); ++i )
     {
         const auto& filter = params.filters[i];
@@ -456,6 +464,8 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     parameters.folderDialog = false;
     parameters.multiselect = false;
     parameters.saveDialog = true;
+    if ( parameters.filters.empty() )
+        parameters.filters = { { "All files", "*.*" } };
 
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
@@ -484,7 +494,9 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
     {
         return filter.extension == "*.*";
     } ), filters.end() );
-    std::string accumFilter = filters[0].extension.substr( 1 );
+    std::string accumFilter;
+    if ( !params.filters.empty() )
+        accumFilter = params.filters[0].extension.substr( 1 );
     for ( int i = 1; i < filters.size(); ++i )
     {
         const auto& filter = filters[i];

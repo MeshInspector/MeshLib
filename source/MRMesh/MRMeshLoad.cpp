@@ -30,7 +30,7 @@ tl::expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, V
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromMrmesh( in, nullptr, callback );
+    return addFileNameInError( fromMrmesh( in, nullptr, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -72,7 +72,7 @@ tl::expected<Mesh, std::string> fromOff( const std::filesystem::path & file, Vec
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromOff( in, nullptr, callback );
+    return addFileNameInError( fromOff( in, nullptr, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -125,7 +125,7 @@ tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vec
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromObj( in, nullptr, callback );
+    return addFileNameInError( fromObj( in, nullptr, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -147,7 +147,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& fil
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromAnyStl( in, nullptr, callback );
+    return addFileNameInError( fromAnyStl( in, nullptr, callback ), file );
 }
 
 tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -170,7 +170,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & fil
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromBinaryStl( in, nullptr, callback );
+    return addFileNameInError( fromBinaryStl( in, nullptr, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -269,8 +269,7 @@ tl::expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file,
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromASCIIStl( in, nullptr, callback );
-
+    return addFileNameInError( fromASCIIStl( in, nullptr, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromASCIIStl( std::istream& in, Vector<Color, VertId>*, ProgressCallback callback )
@@ -356,7 +355,7 @@ tl::expected<Mesh, std::string> fromPly( const std::filesystem::path& file, Vect
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromPly( in, colors, callback );
+    return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>* colors, ProgressCallback callback )
@@ -471,7 +470,7 @@ tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vec
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return fromCtm( in, colors, callback );
+    return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
 tl::expected<Mesh, std::string> fromCtm( std::istream & in, Vector<Color, VertId>* colors, ProgressCallback callback )

@@ -386,7 +386,7 @@ CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b, 
 {
     Box3d bb;
     bb.include( Box3d( a.mesh.computeBoundingBox() ) );
-    Box3f bMeshBox = transformed( b.mesh.computeBoundingBox(), rigidB2A );
+    Box3f bMeshBox = b.mesh.computeBoundingBox( rigidB2A );
     bb.include( Box3d( bMeshBox ) );
     CoordinateConverters res;
     res.toInt = getToIntConverter( bb );

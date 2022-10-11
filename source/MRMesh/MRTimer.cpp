@@ -124,6 +124,7 @@ void Timer::start( const std::string& name )
 {
     if ( std::this_thread::get_id() != mainThreadId )
         return;
+    started_ = true;
     start_ = high_resolution_clock::now();
     auto parent = currentRecord;
     currentRecord = &parent->children[name];
@@ -132,6 +133,8 @@ void Timer::start( const std::string& name )
 
 void Timer::finish()
 {
+    if ( !started_ )
+        return;
     auto currentParent = currentRecord->parent;
     if ( !currentParent )
         return;

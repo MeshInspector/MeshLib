@@ -17,6 +17,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MRColor.h"
 #include <tl/expected.hpp>
+#include <pybind11/functional.h>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
@@ -373,32 +374,32 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
         pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
         "removes from the region all faces within given number of hops (stars) from the initial region boundary" );
 
-    m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::dilateRegionByMetric,
-       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float, MR::ProgressCallback ) )& MR::dilateRegionByMetric,
+       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
        "expands the region (of faces or vertices) on given metric value" );
-    m.def( "dilateRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float ) )& MR::dilateRegionByMetric,
-       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float, MR::ProgressCallback ) )& MR::dilateRegionByMetric,
+       pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
        "expands the region (of faces or vertices) on given metric value" );
 
-    m.def( "erodeRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float ) )& MR::erodeRegionByMetric,
-        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float, MR::ProgressCallback ) )& MR::erodeRegionByMetric,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given metric value" );
-    m.def( "erodeRegionByMetric", ( void( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float ) )& MR::erodeRegionByMetric,
-        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float, MR::ProgressCallback ) )& MR::erodeRegionByMetric,
+        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given metric value" );
 
-    m.def( "dilateRegion", ( void( * )( const MR::Mesh&, MR::FaceBitSet&, float ) )& MR::dilateRegion,
-        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "dilateRegion", ( bool( * )( const MR::Mesh&, MR::FaceBitSet&, float, MR::ProgressCallback ) )& MR::dilateRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "expands the region (of faces or vertices) on given value (in meters)" );
-    m.def( "dilateRegion", ( void( * )( const MR::Mesh&, MR::VertBitSet&, float ) )& MR::dilateRegion,
-        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "dilateRegion", ( bool( * )( const MR::Mesh&, MR::VertBitSet&, float, MR::ProgressCallback ) )& MR::dilateRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "expands the region (of faces or vertices) on given value (in meters)" );
 
-    m.def( "erodeRegion", ( void( * )( const MR::Mesh&, MR::FaceBitSet&, float ) )& MR::erodeRegion,
-        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "erodeRegion", ( bool( * )( const MR::Mesh&, MR::FaceBitSet&, float, MR::ProgressCallback ) )& MR::erodeRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given value (in meters)" );
-    m.def( "erodeRegion", ( void( * )( const MR::Mesh&, MR::VertBitSet&, float ) )& MR::erodeRegion,
-        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ),
+    m.def( "erodeRegion", ( bool( * )( const MR::Mesh&, MR::VertBitSet&, float, MR::ProgressCallback ) )& MR::erodeRegion,
+        pybind11::arg( "mesh" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given value (in meters)" );
 
     m.def( "fillContourLeft", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath& ) )& MR::fillContourLeft,
@@ -417,6 +418,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
         def( "undirected", &MR::EdgeId::undirected, "returns unique identifier of the edge ignoring its direction" ).
         def( "get", &MR::EdgeId::operator int );
 } )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdges, MR::UndirectedEdgeId )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdges, MR::EdgeId )
 

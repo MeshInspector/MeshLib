@@ -11,6 +11,10 @@
 #include "MRMesh/MRUVSphere.h"
 #include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRLinesLoad.h"
+#include "MRMesh/MRPointsLoad.h"
+#include "MRMesh/MRVoxelsLoad.h"
+#include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRLog.h"
@@ -40,6 +44,7 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/stacktrace.hpp>
 #endif
+#include "MRViewerIO.h"
 
 #ifdef __EMSCRIPTEN__
 #define GLFW_INCLUDE_ES3
@@ -224,7 +229,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     setup.setupSettingsManager( &viewer, params.name );
     setup.setupConfiguration( &viewer );
     setup.setupExtendedLibraries();
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
     return viewer.launch( params );
 #else
     int res = 0;
@@ -235,9 +240,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     catch ( ... )
     {
         spdlog::critical( boost::current_exception_diagnostic_information() );
-        auto stacktrace = boost::stacktrace::stacktrace();
-        for ( const auto& frame : stacktrace )
-            spdlog::critical( "{} {} {}", frame.name(), frame.source_file(), frame.source_line() );
+        spdlog::critical( "Exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
         printCurrentTimerBranch();
         res = 1;
     }
@@ -666,9 +669,9 @@ void Viewer::parseCommandLine_( int argc, char** argv )
             EmbeddedPython::finalize();
             break;
         }
-        if( isKnownMeshFile( argv[i] ) )
+        if( isSupportedFormat( argv[i] ) )
         {
-            if( load_file( argv[i] ) )
+            if( loadFile( argv[i] ) )
                 fitDataRequired = true;
         }
     }
@@ -703,7 +706,7 @@ Viewer::~Viewer()
     alphaSorter_.reset();
 }
 
-bool Viewer::isKnownMeshFile( const std::filesystem::path& mesh_file_name )
+bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
 {
     std::error_code ec;
     if( !std::filesystem::exists( mesh_file_name, ec ) )
@@ -715,30 +718,79 @@ bool Viewer::isKnownMeshFile( const std::filesystem::path& mesh_file_name )
     for( auto& c : ext )
         c = (char) tolower( c );
 
-    auto filts = MeshLoad::getFilters();
-    for( auto& filter : filts )
+    for( auto& filter : MeshLoad::getFilters() )
     {
-        if( filter.extension.find(ext) )
+        if( filter.extension.find( ext ) != std::string::npos )
+            return true;
+    }
+    for ( auto& filter : LinesLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
+            return true;
+    }
+    for ( auto& filter : PointsLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
+            return true;
+    }
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+    for ( auto& filter : VoxelsLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
+            return true;
+    }
+#endif
+    for ( auto& filter : DistanceMapLoad::Filters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
+            return true;
+    }
+    for ( auto& filter : SceneFileFilters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
 
     return false;
 }
 
-bool Viewer::load_file( const std::filesystem::path & path )
+bool Viewer::loadFile( const std::filesystem::path & path )
 {
-    if ( loadSignal( path ) )
-        return true;
+    std::string ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+    bool sceneFile = false;
+    for ( auto& filter : SceneFileFilters )
+    {
+        if ( filter.extension.find( ext ) != std::string::npos )
+            sceneFile = true;
+    }
 
-    return false;
+    auto res = loadObjectFromFile( path );
+    if ( !res.has_value() )
+        return false;
+    if ( sceneFile )
+    {
+        auto newRoot = (*res)[0];
+        std::swap( newRoot, SceneRoot::getSharedPtr() );
+        getViewerInstance().onSceneSaved( path );
+    }
+    else
+    {
+        for ( const auto& obj : *res )
+            SceneRoot::get().addChild( obj );
+    }
+
+    return true;
 }
 
-bool Viewer::save_mesh_to_file( const std::filesystem::path & path )
+bool Viewer::saveToFile( const std::filesystem::path & path )
 {
-    if ( saveSignal( path ) )
-        return true;
-
-    return false;
+    auto obj = getDepthFirstObject<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    auto res = saveObjectToFile( *obj, path );
+    if ( !res.has_value() )
+        return false;
+    return true;
 }
 
 bool Viewer::key_pressed( unsigned int unicode_key, int modifiers )

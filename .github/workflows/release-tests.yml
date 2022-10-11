@@ -1,14 +1,8 @@
-
-name: Nightly Tests
+name: Post Release Tests
 
 on:
   workflow_dispatch:
   workflow_call:
-    inputs:
-      config:
-        required: false
-        type: string
-        default: 'Release'
 
 jobs:
   setup:
@@ -44,10 +38,6 @@ jobs:
           - os: "fedora:35"
             py-version: "3.9"
             py-cmd: "python3.9"
-          - config: Release
-            pip-options: ""
-          - config: Test
-            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -71,19 +61,8 @@ jobs:
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
 
-      - name: Download Meshlib wheel from Artifact
-        if: ${{inputs.config != '' }}
-        uses: actions/download-artifact@v3
-        with:
-          name: ManyLinux-${{ matrix.py-cmd }}
-
       - name: Meshlib wheel install
-        run: |  
-          if [ "${{inputs.config}}" != "" ]; then
-            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
-          else
-            ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} meshlib
-          fi
+        run:  ${{ matrix.py-cmd }} -m pip install meshlib
 
       - name: Run Python tests
         working-directory: test_python
@@ -93,6 +72,10 @@ jobs:
     needs: setup
     timeout-minutes: 20
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        py-version: ["3.8", "3.9", "3.10" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -104,17 +87,16 @@ jobs:
         with:
           python-version: ${{ matrix.py-version }}
 
-      - name: Install pip package
+      - name: Pip setup
         run: |
-          py -3.10 -m pip install --upgrade pip
-          py -3.10 -m pip uninstall -y meshlib
-          py -3.10 -m pip install --upgrade -r ./requirements/python.txt     
-          py -3.10 -m pip install meshlib
+          py -${{matrix.py-version}} -m pip install --upgrade pip
+          py -${{matrix.py-version}} -m pip uninstall -y meshlib
+          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt     
+          py -${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests
         working-directory: test_python
-        run: py -3.10 -m pytest -s -v
-
+        run: py -${{matrix.py-version}} -m pytest -s -v
 
   install-test:
     timeout-minutes: 10
@@ -143,6 +125,23 @@ jobs:
             updateCmd: dnf --refresh -y upgrade
             installCmd: dnf -y install ./*.rpm
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Python setup on Fedora
+        if: ${{ matrix.os == 'Fedroa35'}}
+        run: |
+          dnf -y install python3.9 curl
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
+          python3.9 -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: System setup
+        if: ${{ matrix.os != 'Fedroa35'}}
+        run: |
+          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade -r ./requirements/python.txt
+
       - name: Download Release
         uses: robinraju/release-downloader@v1.5
         with:
@@ -156,7 +155,12 @@ jobs:
           ${{matrix.updateCmd}}
           ${{matrix.installCmd}}
 
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Run Python tests
+        if: ${{ matrix.os != 'Fedroa35'}}
+        working-directory: test_python
+        run: python3 -m pytest -s -v
 
-        #  apt -y update  && apt -y install python3-pip
+      - name: Run Python tests on Fedora
+        if: ${{ matrix.os == 'Fedroa35'}}
+        working-directory: test_python
+        run: python3.9 -m pytest -s -v

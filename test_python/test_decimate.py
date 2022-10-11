@@ -46,7 +46,7 @@ def decimate2(size, pos1, pos2, pos3):
     assert( mesh.topology.getValidVerts().size() == 14 )
     assert( mesh.topology.getValidVerts().count() == 8 )
     assert( mesh.topology.findHoleRepresentiveEdges().size() == 0 )
-
+    mesh.pack()
 
 def test_deciamte():
     size = mrmesh.Vector3f.diagonal( 2 )

@@ -16,7 +16,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX ""
 if(APPLE)
 	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 	target_link_libraries(${PROJECT_NAME} PRIVATE
-	    MRViewer
+        MRViewer
         MRMesh
         fmt
         pybind11::module

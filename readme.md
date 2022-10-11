@@ -181,6 +181,33 @@ sudo apt install ./distr/meshrus-dev.deb
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
 
+## Build with Emscripten on Linux
+This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
+
+Install Emscripten
+```
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+optional git pull # optional
+./emsdk install 3.1.23 # (or enother version / latest)
+./emsdk activate 3.1.23
+cd ~/MeshInspectorCode # path to MeshInspectorCode folder may be different
+source ~/emsdk/emsdk_env.sh
+```
+
+Build
+```
+cd ~/MeshInspectorCode
+./scripts/build_third_party.sh # select emscripten in the corresponding question
+./scripts/build_sorces.sh # select emscripten in the corresponding question
+```
+
+Run
+```
+python3 ./scripts/local_server.py
+# open in browser 127.0.0.1:8000
+```
+
 # Integration
 ## Windows
 There are two general options of integrating MeshLib into your project:

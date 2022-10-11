@@ -184,7 +184,7 @@ sudo apt install ./distr/meshrus-dev.deb
 ## Build with Emscripten on Linux
 This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
 
-Install Emscripten
+Install Emscripten (from https://emscripten.org/docs/getting_started/downloads.html)
 ```
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
@@ -198,7 +198,7 @@ source ~/emsdk/emsdk_env.sh
 Build
 ```
 cd ~/MeshInspectorCode
-./scripts/build_third_party.sh # select emscripten in the corresponding question
+./scripts/build_thirdparty.sh # select emscripten in the corresponding question
 ./scripts/build_sorces.sh # select emscripten in the corresponding question
 ```
 

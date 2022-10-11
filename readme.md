@@ -191,7 +191,7 @@ cd emsdk
 optional git pull # optional
 ./emsdk install 3.1.23 # (or enother version / latest)
 ./emsdk activate 3.1.23
-source ~/emsdk_env.sh
+source ./emsdk_env.sh
 ```
 
 Build

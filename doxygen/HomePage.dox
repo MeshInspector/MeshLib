@@ -56,6 +56,32 @@ $ ./build/Release/bin/MRTest
 \note You could specify build type to Debug by \c export \c MESHRUS_BUILD_TYPE=Debug , \a Release is default.
 \endparblock
 
+\section HomePageBuildWasm Build with Emscripten on Linux
+This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
+
+1. Install Emscripten (find more on [emscripten official page](https://emscripten.org/docs/getting_started/downloads.html))
+\code
+$ git clone https://github.com/emscripten-core/emsdk.git
+$ cd emsdk
+$ git pull # optional
+$ ./emsdk install 3.1.23 # (or enother version / latest)
+$ ./emsdk activate 3.1.23
+$ source ./emsdk_env.sh
+\endcode
+
+2. Build
+\code
+cd ~/MeshInspectorCode
+$ ./scripts/build_thirdparty.sh # select emscripten in the corresponding question
+$ ./scripts/build_sorces.sh # select emscripten in the corresponding question
+\endcode
+
+3. Run
+\code
+$ python3 ./scripts/local_server.py
+$ open in browser 127.0.0.1:8000
+\endcode
+
 \section PythonIntegration Python integration
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.\n
 Moreover, MeshLib can be easily installed as a python package using `pip install`:\n

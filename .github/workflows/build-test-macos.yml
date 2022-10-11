@@ -49,7 +49,7 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create and fix Wheel
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' }}
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel setuptools delocate
@@ -61,17 +61,9 @@ jobs:
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
 
       - name: Upload Wheel to Artifacts
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' }}
         uses: actions/upload-artifact@v2
         with:
           name: Wheelhouse
-          path: meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload Wheel to Distributive
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.config == 'Release' }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: Distributives
           path: meshlib-*.whl
           retention-days: 1

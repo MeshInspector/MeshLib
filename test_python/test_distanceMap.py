@@ -29,4 +29,3 @@ def test_distanceMap():
     assert (map.isValid(10,10) == False)
     assert (map.isValid(13,13) == True)
     assert (map.isValid(19,19) == False)
-

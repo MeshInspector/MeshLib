@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Distributives
           path: meshlib-ubuntu22-dev.deb

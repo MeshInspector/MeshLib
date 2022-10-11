@@ -122,8 +122,6 @@ ELSE()
  include_directories(${PYBIND11_DIR})
 ENDIF()
 
-message("=============${PYTHON_VERSION}")
-
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 

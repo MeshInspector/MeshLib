@@ -780,6 +780,7 @@ bool Viewer::loadFile( const std::filesystem::path & path )
         for ( const auto& obj : *res )
             SceneRoot::get().addChild( obj );
     }
+    getViewerInstance().recentFilesStore.storeFile( path );;
 
     return true;
 }

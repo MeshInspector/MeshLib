@@ -7,18 +7,23 @@ project (mrmeshnumpy CXX)
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
-if(APPLE)
-	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
-endif(APPLE)
-
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX ""
                         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	MRMesh
-	spdlog
-	tbb
-	${PYTHON_LIB}
-)
+if(APPLE)
+	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+        MRMesh
+        spdlog
+        tbb
+        pybind11::module
+    )
+ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        MRMesh
+        spdlog
+        tbb
+    )
+ENDIF()

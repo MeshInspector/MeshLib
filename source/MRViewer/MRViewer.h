@@ -479,7 +479,9 @@ public:
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)
+    RenderSignal preDrawPostViewportSignal; // signal is called before scene draw but after viewport.preDraw()
     RenderSignal drawSignal; // signal is called on scene draw (after objects tree but before viewport.postDraw())
+    RenderSignal postDrawPreViewportSignal; // signal is called after scene draw but after before viewport.postDraw()
     RenderSignal postDrawSignal; // signal is called after scene draw
     // Scene events
     using DragDropSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;

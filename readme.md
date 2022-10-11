@@ -149,14 +149,13 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```
     More details here: [vcpkg](https://github.com/microsoft/vcpkg).
 
-2. Copy **MeshLib/thirdparty/vcpkg/triplets/x64-windows-meshrus.cmake** to **vcpkg/triplets** folder of vcpkg installation.
-3. Execute install.bat
+2. Execute install.bat
     ```sh
     cd vcpkg # or add vcpkg to PATH
     ../MeshLib/thirdparty/install.bat
     cd ..
     ```
-4. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
+3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
 
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.

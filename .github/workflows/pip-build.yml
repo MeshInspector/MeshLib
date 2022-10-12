@@ -19,7 +19,6 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
-    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -104,7 +103,6 @@ jobs:
           retention-days: 1
 
   windows-pip-build:
-    if: ${{ false }}
     needs: setup
     timeout-minutes: 60
     runs-on: windows-2019
@@ -204,12 +202,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["arm64"] #, "x86"]
+        platform: ["arm64", "x86"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
-          #- platform: "x86"
-           # plat-name: macosx_12_0_
-            #instance: macos-12
+          - platform: "x86"
+            plat-name: macosx_12_0_x86_64
+            instance: macos-12
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
@@ -280,7 +278,6 @@ jobs:
           retention-days: 1
 
   linux-pip-test:
-    if: ${{ false }}
     needs: [setup, manylinux-pip-build]
     timeout-minutes: 20
     runs-on: ubuntu-latest
@@ -340,7 +337,6 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   windows-pip-test:
-    if: ${{ false }}
     needs: [setup, windows-pip-build]
     timeout-minutes: 20
     runs-on: windows-latest
@@ -385,12 +381,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["arm64"] # , "x86"]
+        platform: ["arm64", "x86"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
-          #- platform: "x86"
-           # plat-name: macosx_12_0_x86_64
-            #instance: macos-12
+          - platform: "x86"
+            plat-name: macosx_12_0_x86_64
+            instance: macos-12
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
@@ -409,10 +405,8 @@ jobs:
       - name: Python setup
         run: brew install python@${{matrix.py-version}}
 
-      - name: Pip and Venv setup
+      - name: Pip setup
         run: |
-          ${{ matrix.py-cmd }} -m venv ./venv
-          source ./venv/bin/activate
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
@@ -433,7 +427,6 @@ jobs:
         run: deactivate
 
   upload-to-release:
-    if: ${{ false }}
     needs: [linux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -450,7 +443,6 @@ jobs:
         run: twine upload ./meshlib-*.whl -u MeshInspector -p ${{ secrets.PIP_TEST_REPO_PASS }} --skip-existing
 
   post-release-test:
-    if: ${{ false }}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 

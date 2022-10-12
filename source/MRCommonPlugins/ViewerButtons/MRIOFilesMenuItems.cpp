@@ -166,9 +166,16 @@ void OpenFilesMenuItem::setupListUpdate_()
     } );
     recentPathsCache_ = getViewerInstance().recentFilesStore.getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
+    
+    static constexpr size_t fileNameLimit = 50;
+
     for ( int i = 0; i < dropList_.size(); ++i )
     {
         auto pathStr = utf8string( recentPathsCache_[i] );
+        const auto size = pathStr.size();
+        if ( size > fileNameLimit )
+            pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
+        
         auto filesystemPath = recentPathsCache_[i];
         dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
         {

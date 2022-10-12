@@ -177,7 +177,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::ColorEdit4( "Color", &shadowGl_->shadowColor.x,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             ImGui::DragInt2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -100, 100 );
-            ImGui::DragIntValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 100 );
+            ImGui::DragIntValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 25 );
         }
     }
     ImGui::EndCustomStatePlugin();

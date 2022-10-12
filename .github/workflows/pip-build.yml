@@ -247,7 +247,6 @@ jobs:
         run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
 
       - name: Create and fix Wheel
-        if: ${{ matrix.config == 'Release' }}
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip install wheel setuptools delocate

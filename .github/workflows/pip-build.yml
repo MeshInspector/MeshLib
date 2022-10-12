@@ -200,13 +200,19 @@ jobs:
   macos-pip-build:
     needs: setup
     timeout-minutes: 35
-    runs-on: macos-12
+    runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86"] # "ARM"
+        platform: ["x86", "Arm64"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
+          - platform: "x86"
+            plat-name: macosx_12_0_x86_64
+            instance: macos-12
+          - platform: "Arm64"
+            plat-name: macosx_12_0_arm64
+            instance: macos-arm-build
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -254,7 +260,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install wheel setuptools delocate
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=macosx_10_15_x86_64 --python-tag=${{matrix.py-tag}}  --version ${{needs.setup.outputs.version_tag}}
+          ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           delocate-path meshlib
           cd ../../..
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
@@ -379,8 +385,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        platform: ["x86", "Arm64"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
+          - platform: "x86"
+            plat-name: macosx_12_0_x86_64
+            instance: macos-12
+          - platform: "Arm64"
+            plat-name: macosx_12_0_arm64
+            instance: macos-arm-build
           - py-version: "3.8"
             py-cmd: "python3.8"
           - py-version: "3.9"
@@ -396,8 +409,10 @@ jobs:
       - name: Python setup
         run: brew install python@${{matrix.py-version}}
 
-      - name: Pip setup
+      - name: Pip and Venv setup
         run: |
+          ${{ matrix.py-cmd }} -m venv ./venv
+          source ./venv/bin/activate
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
@@ -413,6 +428,9 @@ jobs:
       - name: Run Python tests
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+      - name: Venv Deactivate
+        run: deactivate
 
   upload-to-release:
     if: ${{ false }}

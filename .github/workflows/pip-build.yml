@@ -204,13 +204,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["Arm64"] # "x86",
+        platform: ["arm64"] #, "x86"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
-          - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
-          - platform: "Arm64"
+          #- platform: "x86"
+           # plat-name: macosx_12_0_
+            #instance: macos-12
+          - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
           - py-version: "3.8"
@@ -385,13 +385,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ "Arm64"] # "x86",
+        platform: ["arm64"] # , "x86"]
         py-version: ["3.8", "3.9", "3.10" ]
         include:
-          - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
-          - platform: "Arm64"
+          #- platform: "x86"
+           # plat-name: macosx_12_0_x86_64
+            #instance: macos-12
+          - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
           - py-version: "3.8"

@@ -6,6 +6,7 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRViewer/MRCommandLoop.h"
 #include <GLFW/glfw3.h>
 
 namespace MR
@@ -14,6 +15,7 @@ namespace MR
 ViewerSettingsPlugin::ViewerSettingsPlugin() :
     StatePlugin( "Viewer settings" )
 {
+    shadowGl_ = std::make_unique<ShadowsGL>();
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -160,6 +162,22 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             RibbonButtonDrawer::GradientCheckbox( "Alpha Sort", &alphaBoxVal );
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
+        }
+        if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
+        {
+            bool isEnableShadows = shadowGl_->isEnabled();
+            RibbonButtonDrawer::GradientCheckbox( "Enabled", &isEnableShadows );
+            if ( isEnableShadows != shadowGl_->isEnabled() )
+            {
+                CommandLoop::appendCommand( [shadowGl = shadowGl_.get(), isEnableShadows] ()
+                {
+                    shadowGl->enable( isEnableShadows );
+                } );
+            }
+            ImGui::ColorEdit4( "Color", &shadowGl_->shadowColor.x,
+                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
+            ImGui::DragInt2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -100, 100 );
+            ImGui::DragIntValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 100 );
         }
     }
     ImGui::EndCustomStatePlugin();

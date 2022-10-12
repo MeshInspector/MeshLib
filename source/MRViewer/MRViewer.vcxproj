@@ -36,6 +36,7 @@
     <ClCompile Include="MRRibbonSchema.cpp" />
     <ClCompile Include="MRSaveOnClose.cpp" />
     <ClCompile Include="MRSelectScreenLasso.cpp" />
+    <ClCompile Include="MRShadowsGL.cpp" />
     <ClCompile Include="MRShortcutManager.cpp" />
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />
@@ -96,6 +97,7 @@
     <ClInclude Include="MRRibbonSchema.h" />
     <ClInclude Include="MRSceneStateCheck.h" />
     <ClInclude Include="MRSelectScreenLasso.h" />
+    <ClInclude Include="MRShadowsGL.h" />
     <ClInclude Include="MRShortcutManager.h" />
     <ClInclude Include="MRSplashWindow.h" />
     <ClInclude Include="MRStatePlugin.h" />

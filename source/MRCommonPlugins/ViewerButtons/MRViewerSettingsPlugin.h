@@ -2,6 +2,7 @@
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRShadowsGL.h"
 
 namespace MR
 {
@@ -36,6 +37,9 @@ private:
     MenuItemsList* quickAccessList_ = nullptr;
     int maxQuickAccessSize_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
+
+    Vector4f shadowColor4f_;
+    std::unique_ptr<ShadowsGL> shadowGl_;
 };
 
 }

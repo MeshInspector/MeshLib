@@ -31,6 +31,8 @@ public:
         AdditionalQuad,
         ViewportBorder,
         TransparencyOverlayQuad,
+        ShadowOverlayQuad,
+        SimpleOverlayQuad,
         Count
     };
 

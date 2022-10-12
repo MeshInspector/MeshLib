@@ -1056,8 +1056,12 @@ void Viewer::drawScene() const
 
     int numTransparent = 0;
     for ( const auto& viewport : viewport_list )
-    {
         viewport.preDraw();
+
+    preDrawPostViewportSignal();
+
+    for ( const auto& viewport : viewport_list )
+    {
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Opaque );
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Transparent, &numTransparent );
     }
@@ -1073,6 +1077,8 @@ void Viewer::drawScene() const
     for ( const auto& viewport : viewport_list )
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::NoDepthTest );
 
+    postDrawPreViewportSignal();
+
     for ( const auto& viewport : viewport_list )
         viewport.postDraw();
 
@@ -1083,8 +1089,8 @@ void Viewer::setupScene() const
 {
     for ( const auto& viewport : viewport_list )
     {
-        viewport.clear_framebuffers();
         viewport.setupView();
+        viewport.clear_framebuffers();
     }
 }
 

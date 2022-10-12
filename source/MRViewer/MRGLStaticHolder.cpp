@@ -28,7 +28,9 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Viewport points shader (no offset)",
         "Immediate tri shader",
         "Viewport border shader",
-        "Alpha-sort overlay shader"
+        "Alpha-sort overlay shader",
+        "Shadow overlay shader",
+        "Simple overlay shader"
     };
     return names[type];
 }
@@ -1135,7 +1137,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   }
 )";
         }
-        else
+        else if ( type == TransparencyOverlayQuad )
         {
             fragmentShader =
                 R"(
@@ -1230,6 +1232,63 @@ void main(void)
     
     gl_FragDepth = frags[count-1].depth;
 }
+)";
+        }
+        else if ( type == ShadowOverlayQuad )
+        {
+        fragmentShader =
+            MR_GLSL_VERSION_LINE R"(
+                precision highp float;
+  uniform sampler2D pixels;
+  uniform vec4 color;
+  uniform ivec2 shift;
+  uniform int blurRadius;
+  out vec4 outColor;                 // (out to render) fragment color
+
+  void main()
+  { 
+    ivec2 texSize = textureSize( pixels, 0 );
+    ivec2 pos = ivec2( gl_FragCoord.xy );
+    pos = pos + shift;
+    float avgValue = 0.0;
+    int numPixels = 0;
+    int minX = max( 0, pos.x-blurRadius );
+    int maxX = min( texSize.x-1, pos.x+blurRadius );
+    int minY = max( 0, pos.y-blurRadius );
+    int maxY = min( texSize.y-1, pos.y+blurRadius );
+    
+    for ( int x=minX; x<=maxX; x=x+1 )
+    {
+        for ( int y=minY; y<=maxY; y=y+1 )
+        {
+            avgValue = avgValue + texelFetch(pixels, ivec2( x,y ), 0 ).a;
+            numPixels = numPixels + 1;
+        }
+    }
+    if (numPixels == 0)
+        discard;
+    avgValue = avgValue / float(numPixels);
+    outColor = vec4(color.rgb,avgValue*color.a);
+    gl_FragDepth = 0.9999;
+    if (outColor.a == 0.0)
+      discard;
+  }
+)";
+        }
+        else if ( type == SimpleOverlayQuad )
+        {
+        fragmentShader =
+            MR_GLSL_VERSION_LINE R"(
+                precision highp float;
+  uniform sampler2D pixels;
+  out vec4 outColor;                 // (out to render) fragment color
+
+  void main()
+  { 
+    outColor = texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 );
+    if (outColor.a == 0.0)
+      discard;
+  }
 )";
         }
     }

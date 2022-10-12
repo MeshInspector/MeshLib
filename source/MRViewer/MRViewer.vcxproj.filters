@@ -220,6 +220,9 @@
     <ClCompile Include="MRGetSystemInfoJson.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRShadowsGL.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -415,6 +418,9 @@
     </ClInclude>
     <ClInclude Include="MRGetSystemInfoJson.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShadowsGL.h">
+      <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

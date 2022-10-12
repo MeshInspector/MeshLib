@@ -506,5 +506,5 @@ jobs:
       - name: Delete Windows Python3.10
         uses: geekyeggo/delete-artifact@v1
         with:
-          name: Macos-Macos.10
+          name: Macos-python3.10
           failOnError: false

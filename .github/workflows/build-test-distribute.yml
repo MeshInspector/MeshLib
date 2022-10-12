@@ -32,7 +32,7 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@master
+    uses: MeshInspector/MeshLib/.github/workflows/build-test-windows.yml@win-build
     with:
       image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -84,8 +84,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with: 
-          submodules: recursive
 
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v3

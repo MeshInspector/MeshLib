@@ -6,7 +6,6 @@ def test_distance_map():
     R1 = 2
     R2 = 1
     torus = mrmesh.makeTorus(R1, R2, 10, 10, None)
-    mrmesh.saveMesh(torus, mrmesh.Path("c:/temp/testTorus_dm.stl"))
 
     params = mrmesh.MeshToDistanceMapParams()
     params.resolution.x = 20
@@ -23,11 +22,10 @@ def test_distance_map():
     params.orgPoint.z = -R2
 
     map = mrmesh.computeDistanceMapD(mrmesh.MeshPart(torus), params)
-    #mrmesh.save_mesh(torus, "c:/temp/torus.mrmesh")
 
-    assert (map.isValid(0, 0) == False)
-    assert (map.isValid(7, 7) == True)
-    assert (map.isValid(9, 9) == False)
-    assert (map.isValid(10, 10) == False)
-    assert (map.isValid(13, 13) == True)
-    assert (map.isValid(19, 19) == False)
+    assert (map.isValid(0,0) == False)
+    assert (map.isValid(7,7) == True)
+    assert (map.isValid(9,9) == False)
+    assert (map.isValid(10,10) == False)
+    assert (map.isValid(13,13) == True)
+    assert (map.isValid(19,19) == False)

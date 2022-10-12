@@ -22,7 +22,6 @@ def decimate_1(size, pos1, pos2, pos3):
     assert (mesh.topology.getValidVerts().count() == 8)
     assert (mesh.topology.findHoleRepresentiveEdges().size() == 0)
 
-
 # TEST 2
 def decimate_2(size, pos1, pos2, pos3):
     meshA = mrmesh.makeCube(size, pos1)
@@ -37,18 +36,9 @@ def decimate_2(size, pos1, pos2, pos3):
 
     result = mrmesh.decimateMesh(mesh, settings)
 
-    assert (
-        is_equal_vector_3(
-            mesh.computeBoundingBox(
-                mesh.topology.getValidFaces(),
-                mrmesh.AffineXf3f()).min,
-            pos1))
-    assert (
-        is_equal_vector_3(
-            mesh.computeBoundingBox(
-                mesh.topology.getValidFaces(),
-                mrmesh.AffineXf3f()).max,
-            pos3))
+
+    assert (is_equal_vector_3(mesh.computeBoundingBox(mesh.topology.getValidFaces(),mrmesh.AffineXf3f()).min,pos1))
+    assert (is_equal_vector_3(mesh.computeBoundingBox(mesh.topology.getValidFaces(),mrmesh.AffineXf3f()).max,pos3))
 
     assert (result.vertsDeleted == 6)
     assert (result.facesDeleted == 12)
@@ -56,7 +46,7 @@ def decimate_2(size, pos1, pos2, pos3):
     assert (mesh.topology.getValidVerts().size() == 14)
     assert (mesh.topology.getValidVerts().count() == 8)
     assert (mesh.topology.findHoleRepresentiveEdges().size() == 0)
-
+    mesh.pack()
 
 def test_deciamte():
     size = mrmesh.Vector3f.diagonal(2)

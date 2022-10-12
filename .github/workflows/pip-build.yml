@@ -262,7 +262,7 @@ jobs:
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ManyLinux-${{ matrix.py-cmd }}
+          name: Macos-${{ matrix.py-cmd }}
           path: meshlib-*.whl
           retention-days: 1
 
@@ -405,7 +405,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ManyLinux-${{ matrix.py-cmd }}
+          name: Macos-${{ matrix.py-cmd }}
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
@@ -482,4 +482,22 @@ jobs:
         uses: geekyeggo/delete-artifact@v1
         with:
           name: Windows-python3.10
+          failOnError: false
+
+      - name: Delete Macos Python3.8
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Macos-python3.8
+          failOnError: false
+
+      - name: Delete Macos Python3.9
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Macos-python3.9
+          failOnError: false
+
+      - name: Delete Windows Python3.10
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Macos-Macos.10
           failOnError: false

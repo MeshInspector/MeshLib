@@ -10,7 +10,7 @@ namespace MR
 
 // This class allows do draw shadows for objects in scene
 // draws scene into texture buffer, than make shadow from:
-// draw shadow and that draw texture with scene
+// draw shadow and than draw texture with scene
 class MRVIEWER_CLASS ShadowsGL
 {
 public:

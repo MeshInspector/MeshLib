@@ -7,6 +7,7 @@ dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/build_source_${dt}.log"
 printf "Project build script started.\nYou could find output in ${logfile}\n"
 
+echo "$OSTYPE"
 if [[ $OSTYPE != 'darwin'* ]]; then
   source /etc/os-release
   printf "${NAME} ${VERSION_ID}\n"

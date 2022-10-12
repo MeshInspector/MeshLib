@@ -204,7 +204,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86", "Arm64"]
+        platform: ["Arm64"] # "x86",
         py-version: ["3.8", "3.9", "3.10" ]
         include:
           - platform: "x86"
@@ -381,11 +381,11 @@ jobs:
   macos-pip-test:
     needs: [setup, macos-pip-build]
     timeout-minutes: 20
-    runs-on: macos-12
+    runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86", "Arm64"]
+        platform: [ "Arm64"] # "x86",
         py-version: ["3.8", "3.9", "3.10" ]
         include:
           - platform: "x86"

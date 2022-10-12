@@ -103,6 +103,10 @@ IF ($ENV{MESHLIB_PYTHON_VERSION})
  SET(PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
 ENDIF()
 
+IF(APPLE)
+ LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${PYTHON_VERSION}/Frameworks/Python.framework/Versions/${PYTHON_VERSION}/lib/)
+ENDIF()
+
 set(PYTHON_VAR "python")
 string(CONCAT PYTHON_LIB ${PYTHON_VAR}${PYTHON_VERSION})
 
@@ -114,7 +118,6 @@ include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
 
 IF(APPLE)
- LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${PYTHON_VERSION}/Frameworks/Python.framework/Versions/${PYTHON_VERSION}/lib/)
  include_directories(${HOMEBREW_PREFIX}/include)
  find_package(pybind11 REQUIRED)
 ELSE()

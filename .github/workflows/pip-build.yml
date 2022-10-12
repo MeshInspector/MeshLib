@@ -423,9 +423,6 @@ jobs:
         working-directory: test_python
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
-      - name: Venv Deactivate
-        run: deactivate
-
   upload-to-release:
     needs: [linux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 10

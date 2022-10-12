@@ -144,8 +144,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     if ( params.useRandomShifts )
     {
         randomShifts.resize( mergedMeshes.size() );
-        std::random_device rd;
-        std::mt19937 mt( rd() );
+        std::mt19937 mt( params.randomShiftsSeed );
         std::uniform_real_distribution<float> dist( -params.maxAllowedError * 0.5f, params.maxAllowedError * 0.5f );
         for ( auto& shift : randomShifts )
             for ( int i = 0; i < 3; ++i )
@@ -154,7 +153,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
 
     // parallel reduce unite merged meshes
     BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations );
-    tbb::parallel_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
+    tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
         return tl::make_unexpected( "Error while uniting meshes: " + reducer.error );
 

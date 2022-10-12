@@ -19,6 +19,8 @@ struct UniteManyMeshesParams
     // Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing
     // not used if both flags (useRandomShifts,fixDegenerations) are false
     float maxAllowedError{ 1e-5f };
+    // Seed that is used for random shifts
+    unsigned int randomShiftsSeed{ 0 };
 };
 
 // Computes the surface of objects' union each of which is defined by its own surface mesh

@@ -32,6 +32,16 @@ if [[ $OSTYPE != 'darwin'* ]]; then
     CMAKE_CXX_COMPILER=/usr/bin/g++-10
    fi
   fi
+else # darwin
+  PYTHON_PREFIX=$(python3-config --prefix)
+  PYTHON_VERSION="3.10"
+  if [ "${MESHLIB_PYTHON_VERSION}" != "" ]; then
+    PYTHON_PREFIX=$(python"${MESHLIB_PYTHON_VERSION}"-config --prefix)
+    PYTHON_VERSION="${MESHLIB_PYTHON_VERSION}"
+  fi
+  echo "PYTHON_PREFIX=${PYTHON_PREFIX}"
+  PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
+  PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
@@ -102,7 +112,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
  fi
  cd Release
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.10.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.10 | tee ${logfile}
+    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
@@ -125,7 +135,8 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  fi
  cd Debug
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY=$(python3-config --prefix)/lib/libpython3.10.dylib -DPYTHON_INCLUDE_DIR=$(python3-config --prefix)/include/python3.10 | tee ${logfile}
+    # shellcheck disable=SC2086
+    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}

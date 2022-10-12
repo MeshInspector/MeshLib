@@ -199,7 +199,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 35
     runs-on: macos-12
     strategy:
       fail-fast: false

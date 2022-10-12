@@ -172,11 +172,10 @@ void OpenFilesMenuItem::setupListUpdate_()
     for ( int i = 0; i < dropList_.size(); ++i )
     {
         auto pathStr = utf8string( recentPathsCache_[i] );
-        if ( pathStr.size() > fileNameLimit )
-        {
-            const auto firstDirPos = pathStr.find_first_of( "\\/", 1 );
-            pathStr = pathStr.substr( 0, firstDirPos + 1) + " ... " + pathStr.substr( pathStr.size() - fileNameLimit );
-        }
+        const auto size = pathStr.size();
+        if ( size > fileNameLimit )
+            pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
+        
         auto filesystemPath = recentPathsCache_[i];
         dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
         {

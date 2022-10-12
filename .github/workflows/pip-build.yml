@@ -417,7 +417,7 @@ jobs:
           name: Macos-${{ matrix.py-cmd }}
 
       - name: Meshlib wheel install
-        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
 
       - name: Run Python tests
         working-directory: test_python

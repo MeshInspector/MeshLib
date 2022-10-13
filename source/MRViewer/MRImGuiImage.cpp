@@ -1,6 +1,7 @@
 #include "MRImGuiImage.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRFloatGrid.h"
+#include "MRMesh/MRImageSave.h"
 #include "MRGLMacro.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
@@ -92,6 +93,52 @@ void MarkedVoxelSlice::forceUpdate()
                 texture[i] = foreMark.color;
     }
     update( { { texture, { textureWidth , textureHeight } } } );
+}
+
+void MarkedVoxelSlice::saveCurrentSliceToFile( const std::filesystem::path& path )
+{
+    ImageSave::toAnySupportedFormat( getMeshTexture(), path );
+}
+
+void MarkedVoxelSlice::saveAllSlicesToDirectory( const std::filesystem::path& path )
+{
+    const auto& box = getActiveBox();
+    const auto& v = getActiveVoxel();
+
+    switch ( getActivePlane() )
+    {
+    case SlicePlain::XY:
+    {
+        for ( int i = box.min.z; i <= box.max.z; ++i )
+        {
+            setActiveVoxel( { v.x, v.y, i } );
+            ImageSave::toAnySupportedFormat( getMeshTexture(), path.string() + "/slice_" + std::to_string( i ) + ".png" );
+        }
+        break;
+    }
+    case SlicePlain::YZ:
+    {
+        for ( int i = box.min.x; i <= box.max.x; ++i )
+        {
+            setActiveVoxel( { i, v.y, v.z } );
+            ImageSave::toAnySupportedFormat( getMeshTexture(), path.string() + "/slice_" + std::to_string( i ) + ".png" );
+        }
+        break;
+    }
+    case SlicePlain::ZX:
+    {
+        for ( int i = box.min.y; i <= box.max.y; ++i )
+        {
+            setActiveVoxel( { v.x, i, v.z } );
+            ImageSave::toPng( getMeshTexture(), path.string() + "/slice_" + std::to_string( i ) + ".png" );
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    setActiveVoxel( v );
 }
 
 #endif

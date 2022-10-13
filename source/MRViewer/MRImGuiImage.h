@@ -140,6 +140,11 @@ public:
     // Set current slice with marks to texture, do not abuse this
     MRVIEWER_API void forceUpdate();
 
+    //save the slice by the active plane through the current voxel to an image file
+    MRVIEWER_API void saveCurrentSliceToFile( const std::filesystem::path& path );
+    //save all slices by the active plane through all voxels along the active axis to an image file
+    MRVIEWER_API void saveAllSlicesToDirectory( const std::filesystem::path& path );
+
 private:
     FloatGrid grid_;
     Vector3i dims_;

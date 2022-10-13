@@ -1239,11 +1239,24 @@ void main(void)
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+  #define MIN_SAMPLES_PER_RAD 6
+  #define MIN_RADIUS_NUM 6
+  #define MAX_SAMPLES_PER_RAD 15
+  #define MAX_RADIUS_NUM 15
+
   uniform sampler2D pixels;
   uniform vec4 color;
   uniform ivec2 shift;
-  uniform int blurRadius;
+  uniform float blurRadius;
   out vec4 outColor;                 // (out to render) fragment color
+
+
+  #define PI 3.14159265
+
+  float weight(float raduisSq, float maxRadSq)
+  {
+      return exp(-raduisSq*4.0/maxRadSq);
+  }
 
   void main()
   { 
@@ -1251,23 +1264,38 @@ void main(void)
     ivec2 pos = ivec2( gl_FragCoord.xy );
     pos = pos + shift;
     float avgValue = 0.0;
-    int numPixels = 0;
-    int minX = max( 0, pos.x-blurRadius );
-    int maxX = min( texSize.x-1, pos.x+blurRadius );
-    int minY = max( 0, pos.y-blurRadius );
-    int maxY = min( texSize.y-1, pos.y+blurRadius );
-    
-    for ( int x=minX; x<=maxX; x=x+1 )
+    float sumWeight = 0.0;
+    float maxRadiusSq = blurRadius*blurRadius;
+
+    if ( pos.x >= 0 && pos.y >= 0 && pos.x < texSize.x && pos.y < texSize.y )
     {
-        for ( int y=minY; y<=maxY; y=y+1 )
+        sumWeight = weight(0.0,maxRadiusSq);
+        avgValue = sumWeight*texelFetch(pixels, pos, 0 ).a;
+    }
+    int RADIUS_NUM = min(max( int(blurRadius/3.0),MIN_RADIUS_NUM ),MAX_RADIUS_NUM);
+    int SAMPLES_PER_RAD = min(max( int(blurRadius/3.0),MIN_SAMPLES_PER_RAD ),MAX_SAMPLES_PER_RAD);
+    for ( int r = 1; r <= RADIUS_NUM; r = r + 1 )
+    {
+        float radius = float(r)*blurRadius / float(RADIUS_NUM);
+        for ( int ang = 0; ang < SAMPLES_PER_RAD; ang = ang + 1 )
         {
-            avgValue = avgValue + texelFetch(pixels, ivec2( x,y ), 0 ).a;
-            numPixels = numPixels + 1;
+            float realAng = float(ang)*2.0*PI/float(SAMPLES_PER_RAD);
+            if (r % 2 == 0)
+                realAng = realAng + PI/float(SAMPLES_PER_RAD);
+            ivec2 addPos = ivec2(int(cos(realAng)*radius), int(sin(realAng)*radius));
+            ivec2 newPos = pos + addPos;
+            float realRadiusSq = float(addPos.x*addPos.x+addPos.y*addPos.y);
+            if ( realRadiusSq != 0.0 && newPos.x >= 0 && newPos.y >= 0 && newPos.x < texSize.x && newPos.y < texSize.y )
+            {
+                float newWeight = weight(realRadiusSq,maxRadiusSq);
+                sumWeight = sumWeight + newWeight;
+                avgValue = avgValue + newWeight*texelFetch(pixels, newPos, 0 ).a;
+            }
         }
     }
-    if (numPixels == 0)
+    if ( sumWeight == 0.0 )
         discard;
-    avgValue = avgValue / float(numPixels);
+    avgValue = avgValue / sumWeight;
     outColor = vec4(color.rgb,avgValue*color.a);
     gl_FragDepth = 0.9999;
     if (outColor.a == 0.0)

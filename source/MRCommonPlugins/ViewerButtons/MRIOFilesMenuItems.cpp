@@ -150,7 +150,26 @@ void OpenFilesMenuItem::setupListUpdate_()
     if ( recentStoreConnection_.connected() )
         return;
 
-    recentStoreConnection_ = getViewerInstance().recentFilesStore.storageUpdateSignal.connect( [this] ( const FileNamesStack& fileNamesStack ) mutable
+    const auto cutLongFileNames = [this]
+    {
+        static constexpr size_t fileNameLimit = 50;
+
+        for ( int i = 0; i < dropList_.size(); ++i )
+        {
+            auto pathStr = utf8string( recentPathsCache_[i] );
+            const auto size = pathStr.size();
+            if ( size > fileNameLimit )
+                pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
+
+            auto filesystemPath = recentPathsCache_[i];
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
+            {
+                loadFiles_( { filesystemPath } );
+            } );
+        }
+    };
+
+    recentStoreConnection_ = getViewerInstance().recentFilesStore.storageUpdateSignal.connect( [this, cutLongFileNames] ( const FileNamesStack& fileNamesStack ) mutable
     {
         recentPathsCache_ = fileNamesStack;
         dropList_.resize( recentPathsCache_.size() );
@@ -162,26 +181,13 @@ void OpenFilesMenuItem::setupListUpdate_()
             {
                 loadFiles_( { filesystemPath } );
             } );
+
+            cutLongFileNames();
         }
     } );
     recentPathsCache_ = getViewerInstance().recentFilesStore.getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
-    
-    static constexpr size_t fileNameLimit = 50;
-
-    for ( int i = 0; i < dropList_.size(); ++i )
-    {
-        auto pathStr = utf8string( recentPathsCache_[i] );
-        const auto size = pathStr.size();
-        if ( size > fileNameLimit )
-            pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
-        
-        auto filesystemPath = recentPathsCache_[i];
-        dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
-        {
-            loadFiles_( { filesystemPath } );
-        } );
-    }
+    cutLongFileNames();    
 }
 
 void OpenFilesMenuItem::loadFiles_( const std::vector<std::filesystem::path>& paths )

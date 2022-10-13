@@ -177,7 +177,19 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::ColorEdit4( "Color", &shadowGl_->shadowColor.x,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             ImGui::DragInt2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200, 200 );
+            auto prevRadius = shadowGl_->blurRadius;
             ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200 );
+            if (prevRadius != shadowGl_->blurRadius)
+            {
+                unsigned expectedSamples = std::abs(int(shadowGl_->blurRadius)) / 3;
+#ifndef __EMSCRIPTEN__
+                shadowGl_->radiusSamlpes = std::clamp( expectedSamples , 5u , 15u );
+                shadowGl_->perRadiusSamlpes = std::clamp( expectedSamples , 5u , 15u );
+#else
+                shadowGl_->radiusSamlpes = std::clamp( expectedSamples , 3u , 11u );
+                shadowGl_->perRadiusSamlpes = std::clamp( expectedSamples , 3u , 11u );
+#endif
+            }
         }
     }
     ImGui::EndCustomStatePlugin();

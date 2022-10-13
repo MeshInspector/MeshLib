@@ -1239,14 +1239,11 @@ void main(void)
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
-  #define MIN_SAMPLES_PER_RAD 6
-  #define MIN_RADIUS_NUM 6
-  #define MAX_SAMPLES_PER_RAD 15
-  #define MAX_RADIUS_NUM 15
-
   uniform sampler2D pixels;
   uniform vec4 color;
   uniform ivec2 shift;
+  uniform int samplesRadius;
+  uniform int samplesPerRadius;
   uniform float blurRadius;
   out vec4 outColor;                 // (out to render) fragment color
 
@@ -1272,16 +1269,15 @@ void main(void)
         sumWeight = weight(0.0,maxRadiusSq);
         avgValue = sumWeight*texelFetch(pixels, pos, 0 ).a;
     }
-    int RADIUS_NUM = min(max( int(blurRadius/3.0),MIN_RADIUS_NUM ),MAX_RADIUS_NUM);
-    int SAMPLES_PER_RAD = min(max( int(blurRadius/3.0),MIN_SAMPLES_PER_RAD ),MAX_SAMPLES_PER_RAD);
-    for ( int r = 1; r <= RADIUS_NUM; r = r + 1 )
+
+    for ( int r = 1; r <= samplesRadius; r = r + 1 )
     {
-        float radius = float(r)*blurRadius / float(RADIUS_NUM);
-        for ( int ang = 0; ang < SAMPLES_PER_RAD; ang = ang + 1 )
+        float radius = float(r)*blurRadius / float(samplesRadius);
+        for ( int ang = 0; ang < samplesPerRadius; ang = ang + 1 )
         {
-            float realAng = float(ang)*2.0*PI/float(SAMPLES_PER_RAD);
+            float realAng = float(ang)*2.0*PI/float(samplesPerRadius);
             if (r % 2 == 0)
-                realAng = realAng + PI/float(SAMPLES_PER_RAD);
+                realAng = realAng + PI/float(samplesPerRadius);
             ivec2 addPos = ivec2(int(cos(realAng)*radius), int(sin(realAng)*radius));
             ivec2 newPos = pos + addPos;
             float realRadiusSq = float(addPos.x*addPos.x+addPos.y*addPos.y);

@@ -25,6 +25,9 @@ public:
     Vector2i shadowShift = Vector2i( 0, 0 );
     Vector4f shadowColor = Vector4f( Color::yellow() );
     float blurRadius{ 3.0f };
+    // more samples - better quality, but do not make too mach samples for emscripten
+    unsigned radiusSamlpes{ 10 };
+    unsigned perRadiusSamlpes{ 10 };
 private:
     void preDraw_();
     void postDraw_();

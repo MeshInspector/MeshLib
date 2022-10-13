@@ -42,7 +42,15 @@ elif platformSystem == 'Darwin':
 if args.cmd:
     python_cmd = str(args.cmd).strip() + " "
 
-directory = os.path.dirname(os.path.abspath(__file__))
+directory = os.getcwd()
+try:
+    directory = os.path.dirname(os.path.abspath(__file__))
+except NameError:  # embedded python exception
+    print("trying to resolve path manually...")
+    directory = os.path.join(directory, "../../../MeshLib/")
+    directory = os.path.join(directory, "test_python")
+    print(directory)
+
 if args.dir:
     directory = os.path.join(directory, args.dir)
 else:

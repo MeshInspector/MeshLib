@@ -33,8 +33,8 @@ private:
     boost::signals2::connection postDrawConnection_;
 
     unsigned int framebufferId_{ 0 };
-    unsigned int textureColorBufferMultiSampled_{ 0 };
-    unsigned int renderBufferObj_{ 0 };
+    unsigned int colorRenderBufferMultiSampled_{ 0 };
+    unsigned int depthRenderBufferMultiSampled_{ 0 };
     unsigned int intermediateFBO_{ 0 };
     unsigned int screenColorTexture_{ 0 };
 

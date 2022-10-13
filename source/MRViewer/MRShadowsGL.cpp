@@ -41,37 +41,27 @@ void ShadowsGL::preDraw_()
     int width, height;
     glfwGetFramebufferSize( getViewerInstance().window, &width, &height );
 
-#ifndef __EMSCRIPTEN__
     int samples;
     GL_EXEC( glGetIntegerv( GL_SAMPLES, &samples ) );
-#endif
 
     // Create an initial multisampled framebuffer
     GL_EXEC( glGenFramebuffers( 1, &framebufferId_ ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, framebufferId_ ) );
-    // create a multisampled color attachment texture
-    GL_EXEC( glGenTextures( 1, &textureColorBufferMultiSampled_ ) );
-#ifndef __EMSCRIPTEN__
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled_ ) );
-    GL_EXEC( glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGBA, width, height, GL_TRUE ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, 0 ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled_, 0 ) );
-#else
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, textureColorBufferMultiSampled_ ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, 0 ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBufferMultiSampled_, 0 ) );
-#endif
-    // create a (also multisampled) renderbuffer object for depth and stencil attachments
-    GL_EXEC( glGenRenderbuffers( 1, &renderBufferObj_ ) );
-    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, renderBufferObj_ ) );
-#ifndef __EMSCRIPTEN__
-    GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, GL_DEPTH_COMPONENT32F, width, height ) );
-#else
-    GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT32F, width, height ) );
-#endif
+
+    // create a multisampled color renderbuffer
+    GL_EXEC( glGenRenderbuffers( 1, &colorRenderBufferMultiSampled_ ) );
+    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, colorRenderBufferMultiSampled_ ) );
+    GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, GL_RGBA8, width, height ) );
     GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
-    GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderBufferObj_ ) );
+    GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorRenderBufferMultiSampled_ ) );
+    assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
+
+    // create a (also multisampled) renderbuffer object for depth attachments
+    GL_EXEC( glGenRenderbuffers( 1, &depthRenderBufferMultiSampled_ ) );
+    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, depthRenderBufferMultiSampled_ ) );
+    GL_EXEC( glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, GL_DEPTH_COMPONENT32F, width, height ) );
+    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
+    GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRenderBufferMultiSampled_ ) );
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 
@@ -180,10 +170,10 @@ void ShadowsGL::postDraw_()
 
     // Clean up
     GL_EXEC( glDeleteTextures( 1, &screenColorTexture_ ) );
-    GL_EXEC( glDeleteTextures( 1, &textureColorBufferMultiSampled_ ) );
     GL_EXEC( glDeleteFramebuffers( 1, &framebufferId_ ) );
     GL_EXEC( glDeleteFramebuffers( 1, &intermediateFBO_ ) );
-    GL_EXEC( glDeleteRenderbuffers( 1, &renderBufferObj_ ) );
+    GL_EXEC( glDeleteRenderbuffers( 1, &depthRenderBufferMultiSampled_ ) );
+    GL_EXEC( glDeleteRenderbuffers( 1, &colorRenderBufferMultiSampled_ ) );
 }
 
 }

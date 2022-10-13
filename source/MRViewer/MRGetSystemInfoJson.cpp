@@ -22,6 +22,7 @@ Json::Value GetSystemInfoJson()
     auto& cpuInfo = root["CPU Info"];
     cpuInfo["CPU"] = GetCpuId();
     cpuInfo["Concurrent threads"] = ( Json::UInt64 )tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    auto& windowInfo = root["Window Info"];
     if ( getViewerInstance().isGLInitialized() )
     {
         auto& glInfo = root["OpenGL Info"];
@@ -32,15 +33,18 @@ Json::Value GetSystemInfoJson()
         GL_EXEC();
         glInfo["OpenGL Version"] = std::string( ( const char* )glGetString( GL_VERSION ) );
         GL_EXEC();
-    }
 
-    int frameBufferSizeX, frameBufferSizeY;
-    int windowSizeX, windowSizeY;
-    glfwGetFramebufferSize( getViewerInstance().window, &frameBufferSizeX, &frameBufferSizeY );
-    glfwGetWindowSize( getViewerInstance().window, &windowSizeX, &windowSizeY );
-    auto& windowInfo = root["Window Info"];
-    windowInfo["Framebuffer size"] = fmt::format( "{} x {}", frameBufferSizeX, frameBufferSizeY );
-    windowInfo["Window size"] = fmt::format( "{} x {}", windowSizeX, windowSizeY );
+        int frameBufferSizeX, frameBufferSizeY;
+        int windowSizeX, windowSizeY;
+        glfwGetFramebufferSize( getViewerInstance().window, &frameBufferSizeX, &frameBufferSizeY );
+        glfwGetWindowSize( getViewerInstance().window, &windowSizeX, &windowSizeY );
+        windowInfo["Framebuffer size"] = fmt::format( "{} x {}", frameBufferSizeX, frameBufferSizeY );
+        windowInfo["Window size"] = fmt::format( "{} x {}", windowSizeX, windowSizeY );
+    }
+    else
+    {
+        windowInfo["Mode"] = "No Window mode";
+    }
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         windowInfo["Pixel ratio"] = fmt::format( "{}", menu->pixel_ratio() );

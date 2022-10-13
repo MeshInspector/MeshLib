@@ -225,6 +225,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         run: |
@@ -277,7 +278,7 @@ jobs:
           path: meshlib-*.whl
           retention-days: 1
 
-  linux-pip-test:
+  manylinux-pip-test:
     needs: [setup, manylinux-pip-build]
     timeout-minutes: 20
     runs-on: ubuntu-latest
@@ -424,7 +425,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   upload-to-release:
-    needs: [linux-pip-test, windows-pip-test, macos-pip-test]
+    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:

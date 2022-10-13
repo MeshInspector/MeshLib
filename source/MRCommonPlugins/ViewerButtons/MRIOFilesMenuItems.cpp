@@ -173,6 +173,7 @@ void OpenFilesMenuItem::setupListUpdate_()
     {
         recentPathsCache_ = fileNamesStack;
         dropList_.resize( recentPathsCache_.size() );
+        
         for ( int i = 0; i < dropList_.size(); ++i )
         {
             auto pathStr = utf8string( recentPathsCache_[i] );
@@ -180,10 +181,10 @@ void OpenFilesMenuItem::setupListUpdate_()
             dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
             {
                 loadFiles_( { filesystemPath } );
-            } );
-
-            cutLongFileNames();
+            } );           
         }
+
+        cutLongFileNames();
     } );
     recentPathsCache_ = getViewerInstance().recentFilesStore.getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );

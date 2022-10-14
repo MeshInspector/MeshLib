@@ -135,12 +135,13 @@ void ShadowsGL::postDraw_()
     
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "color" ), shadowColor.x, shadowColor.y, shadowColor.z, shadowColor.w ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "blurRadius" ), blurRadius ) );
-    GL_EXEC( glUniform2i( glGetUniformLocation( shader, "shift" ), shadowShift.x, shadowShift.y ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "samplesRadius" ), int(radiusSamlpes) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "samplesPerRadius" ), int(perRadiusSamlpes) ) );
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shadowShift.x, shadowShift.y ) );
     
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     GL_EXEC( glBindTexture( GL_TEXTURE_2D, sceneResTexture_ ) );
+    GL_EXEC( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR) );
+    GL_EXEC( glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR) );
+    GL_EXEC( glGenerateMipmap(GL_TEXTURE_2D) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
     
     GL_EXEC( glBindVertexArray( quadVao ) );

@@ -1241,57 +1241,47 @@ void main(void)
                 precision highp float;
   uniform sampler2D pixels;
   uniform vec4 color;
-  uniform ivec2 shift;
-  uniform int samplesRadius;
-  uniform int samplesPerRadius;
+  uniform vec2 shift;
   uniform float blurRadius;
   out vec4 outColor;                 // (out to render) fragment color
 
-
-  #define PI 3.14159265
-
-  float weight(float raduisSq, float maxRadSq)
-  {
-      return exp(-raduisSq*4.0/maxRadSq);
-  }
+  #define NUM_DIRECTIONS 16
+  #define QUALITY 3
+  
+  #define PI2 6.28318530718
+  #define DIR_STEP 0.3926990817
+  #define INV_QUALITY 0.33333334
+  #define INV_NUM_SAMPLES 0.020833333
 
   void main()
   { 
     ivec2 texSize = textureSize( pixels, 0 );
-    ivec2 pos = ivec2( gl_FragCoord.xy );
-    pos = pos + shift;
+    vec2 pos = gl_FragCoord.xy + shift;
+    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
+
+    if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
+      discard;
+
+    if ( textureLod(pixels,pos,log2(blurRadius)+1.0).a == 0.0 )
+      discard;
+
     float avgValue = 0.0;
-    float sumWeight = 0.0;
     float maxRadiusSq = blurRadius*blurRadius;
 
-    if ( pos.x >= 0 && pos.y >= 0 && pos.x < texSize.x && pos.y < texSize.y )
-    {
-        sumWeight = weight(0.0,maxRadiusSq);
-        avgValue = sumWeight*texelFetch(pixels, pos, 0 ).a;
-    }
+    avgValue = texture(pixels, pos).a;
 
-    for ( int r = 1; r <= samplesRadius; r = r + 1 )
+    for ( int r = 1; r <= QUALITY; r = r + 1 )
     {
-        float radius = float(r)*blurRadius / float(samplesRadius);
-        for ( int ang = 0; ang < samplesPerRadius; ang = ang + 1 )
+        float radius = float(r)*(blurRadius-0.5)*INV_QUALITY;
+        vec2 normRad = vec2(radius/float(texSize.x),radius/float(texSize.y));
+        for ( int ang = 0; ang < NUM_DIRECTIONS; ang = ang + 1 )
         {
-            float realAng = float(ang)*2.0*PI/float(samplesPerRadius);
-            if (r % 2 == 0)
-                realAng = realAng + PI/float(samplesPerRadius);
-            ivec2 addPos = ivec2(int(cos(realAng)*radius), int(sin(realAng)*radius));
-            ivec2 newPos = pos + addPos;
-            float realRadiusSq = float(addPos.x*addPos.x+addPos.y*addPos.y);
-            if ( realRadiusSq != 0.0 && newPos.x >= 0 && newPos.y >= 0 && newPos.x < texSize.x && newPos.y < texSize.y )
-            {
-                float newWeight = weight(realRadiusSq,maxRadiusSq);
-                sumWeight = sumWeight + newWeight;
-                avgValue = avgValue + newWeight*texelFetch(pixels, newPos, 0 ).a;
-            }
+            float realAng = float(ang)*DIR_STEP;
+            vec2 addPos = vec2(cos(realAng)*normRad.x, sin(realAng)*normRad.y);
+            avgValue = avgValue + texture(pixels, pos+addPos).a;
         }
     }
-    if ( sumWeight == 0.0 )
-        discard;
-    avgValue = avgValue / sumWeight;
+    avgValue = avgValue * INV_NUM_SAMPLES;
     outColor = vec4(color.rgb,avgValue*color.a);
     gl_FragDepth = 0.9999;
     if (outColor.a == 0.0)

@@ -109,8 +109,6 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
 {
     const auto& bounds = voxelsObject.getActiveBounds();
     const auto dims = bounds.size();
-    const auto dimX = dims.x;
-    const auto dimXY = dimX * dims.y;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
     const int textureHeight = dims[( slicePlain + 2 ) % 3];
 
@@ -154,15 +152,17 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
         const float normedValue = ( val - min ) / ( max - min );
         texture[i] = Color( Vector3f::diagonal( normedValue ) );
 
-        if ( callback )
-            callback( 1.0f / texture.size() );
+        if ( ( i % 100 ) && callback && !callback( float( i ) / texture.size() ) )
+            return {};
     }
 
-    MeshTexture meshTexture{ std::move( texture ), {textureWidth, textureHeight} };
-    ImageSave::toAnySupportedFormat( meshTexture, path );
+    MeshTexture meshTexture ( { std::move( texture ), {textureWidth, textureHeight} } );
+    if ( !ImageSave::toAnySupportedFormat( meshTexture, path ) )
+        return  tl::make_unexpected( "Unable to save image" );
     
     if ( callback )
-        callback( 1.f );
+        callback( 1.0f );
+
     return {};
 }
 
@@ -175,25 +175,34 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
     case SlicePlain::XY:
         for ( int z = bounds.min.z; z < bounds.max.z; ++z )
         {
-            saveSliceToImage( path.string() + "/slice_" + std::to_string( z ) + ".png", voxelsObject, slicePlain, z, min, max );
-            if ( callback )
-                callback( 1.0f / bounds.size().z );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( z ) + ".png", voxelsObject, slicePlain, z, min, max );
+            if ( !res )
+                return res;
+
+            if ( ( z % 100 ) && callback && !callback( float( z ) / bounds.size().z ) )
+                return {};                
         }
         break;
     case SlicePlain::YZ:
         for ( int x = bounds.min.x; x < bounds.max.x; ++x )
         {
-            saveSliceToImage( path.string() + "/slice_" + std::to_string( x ) + ".png", voxelsObject, slicePlain, x, min, max );
-            if ( callback )
-                callback( 1.0f / bounds.size().x );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( x ) + ".png", voxelsObject, slicePlain, x, min, max );
+            if ( !res )
+                return res;
+
+            if ( ( x % 100 ) && callback && !callback( float( x ) / bounds.size().x ) )
+                return {};
         }
         break;
     case SlicePlain::ZX:
         for ( int y = bounds.min.y; y < bounds.max.y; ++y )
         {
-            saveSliceToImage( path.string() + "/slice_" + std::to_string( y ) + ".png", voxelsObject, slicePlain, y, min, max );
-            if ( callback )
-                callback( 1.0f / bounds.size().y );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( y ) + ".png", voxelsObject, slicePlain, y, min, max );
+            if ( !res )
+                return res;
+
+            if ( ( y % 100 ) && callback && callback( float( y ) / bounds.size().y ) )
+                return {};
         }
         break;
     default:

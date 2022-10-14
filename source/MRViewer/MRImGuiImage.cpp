@@ -1,7 +1,6 @@
 #include "MRImGuiImage.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRFloatGrid.h"
-#include "MRMesh/MRImageSave.h"
 #include "MRGLMacro.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"

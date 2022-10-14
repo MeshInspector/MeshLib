@@ -180,7 +180,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
             if ( !res )
                 return res;
 
-            if ( ( z % 100 ) && callback && !callback( float( z ) / bounds.size().z ) )
+            if ( callback && !callback( float( z ) / bounds.size().z ) )
                 return tl::make_unexpected("Operation was canceled");
         }
         break;
@@ -191,8 +191,8 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
             if ( !res )
                 return res;
 
-            if ( ( x % 100 ) && callback && !callback( float( x ) / bounds.size().x ) )
-                return {};
+            if ( callback && !callback( float( x ) / bounds.size().x ) )
+                return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     case SlicePlain::ZX:
@@ -202,8 +202,8 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
             if ( !res )
                 return res;
 
-            if ( ( y % 100 ) && callback && callback( float( y ) / bounds.size().y ) )
-                return {};
+            if ( callback && callback( float( y ) / bounds.size().y ) )
+                return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     default:

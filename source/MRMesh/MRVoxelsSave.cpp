@@ -156,7 +156,7 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
             return tl::make_unexpected("Operation was canceled");
     }
 
-    MeshTexture meshTexture ( { std::move( texture ), {textureWidth, textureHeight} } );
+    MeshTexture meshTexture( { { std::move( texture ), {textureWidth, textureHeight} } } );
     auto saveRes = ImageSave::toAnySupportedFormat( meshTexture, path );
     if ( !saveRes.has_value() )
         return tl::make_unexpected( saveRes.error() );

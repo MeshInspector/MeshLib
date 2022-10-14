@@ -153,7 +153,7 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
         texture[i] = Color( Vector3f::diagonal( normedValue ) );
 
         if ( ( i % 100 ) && callback && !callback( float( i ) / texture.size() ) )
-            return {};
+            return tl::make_unexpected("Operation was canceled");
     }
 
     MeshTexture meshTexture ( { std::move( texture ), {textureWidth, textureHeight} } );

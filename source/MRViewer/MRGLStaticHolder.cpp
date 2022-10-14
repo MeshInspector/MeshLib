@@ -1241,33 +1241,46 @@ void main(void)
                 precision highp float;
   uniform sampler2D pixels;
   uniform vec4 color;
-  uniform ivec2 shift;
-  uniform int blurRadius;
+  uniform vec2 shift;
+  uniform float blurRadius;
   out vec4 outColor;                 // (out to render) fragment color
+
+  #define NUM_DIRECTIONS 12
+  #define QUALITY 3
+  
+  #define DIR_STEP 0.5235987756
+  #define INV_QUALITY 0.33333334
+  #define INV_NUM_SAMPLES 0.020833333
 
   void main()
   { 
     ivec2 texSize = textureSize( pixels, 0 );
-    ivec2 pos = ivec2( gl_FragCoord.xy );
-    pos = pos + shift;
+    vec2 pos = gl_FragCoord.xy + shift;
+    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
+
+    if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
+      discard;
+
+    if ( textureLod(pixels,pos,max(10.0,log2(blurRadius)+2.0)).a == 0.0 )
+      discard;
+
     float avgValue = 0.0;
-    int numPixels = 0;
-    int minX = max( 0, pos.x-blurRadius );
-    int maxX = min( texSize.x-1, pos.x+blurRadius );
-    int minY = max( 0, pos.y-blurRadius );
-    int maxY = min( texSize.y-1, pos.y+blurRadius );
-    
-    for ( int x=minX; x<=maxX; x=x+1 )
+    float maxRadiusSq = blurRadius*blurRadius;
+
+    avgValue = texture(pixels, pos).a;
+
+    for ( int r = 1; r <= QUALITY; r = r + 1 )
     {
-        for ( int y=minY; y<=maxY; y=y+1 )
+        float radius = float(r)*(blurRadius-0.5)*INV_QUALITY;
+        vec2 normRad = vec2(radius/float(texSize.x),radius/float(texSize.y));
+        for ( int ang = 0; ang < NUM_DIRECTIONS; ang = ang + 1 )
         {
-            avgValue = avgValue + texelFetch(pixels, ivec2( x,y ), 0 ).a;
-            numPixels = numPixels + 1;
+            float realAng = float(ang)*DIR_STEP;
+            vec2 addPos = vec2(cos(realAng)*normRad.x, sin(realAng)*normRad.y);
+            avgValue = avgValue + texture(pixels, pos+addPos).a;
         }
     }
-    if (numPixels == 0)
-        discard;
-    avgValue = avgValue / float(numPixels);
+    avgValue = avgValue * INV_NUM_SAMPLES;
     outColor = vec4(color.rgb,avgValue*color.a);
     gl_FragDepth = 0.9999;
     if (outColor.a == 0.0)

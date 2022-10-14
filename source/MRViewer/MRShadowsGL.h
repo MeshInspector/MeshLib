@@ -22,9 +22,9 @@ public:
     bool isEnabled() const { return enabled_; }
 
     // shift in screen space
-    Vector2i shadowShift = Vector2i( 0, 0 );
+    Vector2f shadowShift = Vector2f( 0.0, 0.0 );
     Vector4f shadowColor = Vector4f( Color::yellow() );
-    int blurRadius{ 3 };
+    float blurRadius{ 3.0f };
 private:
     void preDraw_();
     void postDraw_();
@@ -32,11 +32,13 @@ private:
     boost::signals2::connection preDrawConnection_;
     boost::signals2::connection postDrawConnection_;
 
-    unsigned int framebufferId_{ 0 };
-    unsigned int textureColorBufferMultiSampled_{ 0 };
-    unsigned int renderBufferObj_{ 0 };
-    unsigned int intermediateFBO_{ 0 };
-    unsigned int screenColorTexture_{ 0 };
+    Vector2i sceneSize_;
+
+    unsigned int sceneFramebuffer_{ 0 };
+    unsigned int sceneColorRenderbufferMultisampled_{ 0 };
+    unsigned int sceneDepthRenderbufferMultisampled_{ 0 };
+    unsigned int sceneCopyFramebuffer_{ 0 };
+    unsigned int sceneResTexture_{ 0 };
 
     bool enabled_{ false };
 };

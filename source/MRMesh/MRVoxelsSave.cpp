@@ -202,7 +202,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
             if ( !res )
                 return res;
 
-            if ( callback && callback( float( y ) / bounds.size().y ) )
+            if ( callback && !callback( float( y ) / bounds.size().y ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;

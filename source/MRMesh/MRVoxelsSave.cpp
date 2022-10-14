@@ -157,8 +157,9 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     }
 
     MeshTexture meshTexture ( { std::move( texture ), {textureWidth, textureHeight} } );
-    if ( !ImageSave::toAnySupportedFormat( meshTexture, path ) )
-        return  tl::make_unexpected( "Unable to save image" );
+    auto saveRes = ImageSave::toAnySupportedFormat( meshTexture, path );
+    if ( !saveRes.has_value() )
+        return tl::make_unexpected( saveRes.error() );
     
     if ( callback )
         callback( 1.0f );

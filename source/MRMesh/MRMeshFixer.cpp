@@ -131,6 +131,8 @@ VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet
             if ( counter > n )
                 return;
         }
+        if ( counter < n )
+            return;
         assert( counter == n );
         result.set( v );
     } );

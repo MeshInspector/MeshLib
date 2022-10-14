@@ -181,7 +181,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
                 return res;
 
             if ( ( z % 100 ) && callback && !callback( float( z ) / bounds.size().z ) )
-                return {};                
+                return tl::make_unexpected("Operation was canceled");
         }
         break;
     case SlicePlain::YZ:

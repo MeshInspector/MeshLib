@@ -1245,11 +1245,10 @@ void main(void)
   uniform float blurRadius;
   out vec4 outColor;                 // (out to render) fragment color
 
-  #define NUM_DIRECTIONS 16
+  #define NUM_DIRECTIONS 12
   #define QUALITY 3
   
-  #define PI2 6.28318530718
-  #define DIR_STEP 0.3926990817
+  #define DIR_STEP 0.5235987756
   #define INV_QUALITY 0.33333334
   #define INV_NUM_SAMPLES 0.020833333
 
@@ -1262,7 +1261,7 @@ void main(void)
     if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
       discard;
 
-    if ( textureLod(pixels,pos,log2(blurRadius)+1.0).a == 0.0 )
+    if ( textureLod(pixels,pos,max(10.0,log2(blurRadius)+2.0)).a == 0.0 )
       discard;
 
     float avgValue = 0.0;

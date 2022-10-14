@@ -1,5 +1,6 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelsSave.h"
+#include "MRImageSave.h"
 #include "MRFloatGrid.h"
 #include "MRObjectVoxels.h"
 #include "MRStringConvert.h"
@@ -96,6 +97,117 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         std::stringstream ss;
         ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
         return tl::make_unexpected( ss.str() );
+    }
+
+    if ( callback )
+        callback( 1.f );
+    return {};
+}
+
+tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const ObjectVoxels& voxelsObject,
+                                                             SlicePlain slicePlain, int sliceNumber, float min, float max, ProgressCallback callback/* = {} */)
+{
+    const auto& bounds = voxelsObject.getActiveBounds();
+    const auto dims = bounds.size();
+    const int textureWidth = dims[( slicePlain + 1 ) % 3];
+    const int textureHeight = dims[( slicePlain + 2 ) % 3];
+
+    std::vector<Color> texture( textureWidth * textureHeight );
+    Vector3i activeVoxel;
+    switch ( slicePlain )
+    {
+    case SlicePlain::XY:
+        if ( sliceNumber > bounds.max.z )
+            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+
+        activeVoxel = { bounds.min.x, bounds.min.y, sliceNumber };
+        break;
+    case SlicePlain::YZ:
+        if ( sliceNumber > bounds.max.x )
+            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+
+        activeVoxel = { sliceNumber, bounds.min.y, bounds.min.z };
+        break;
+    case SlicePlain::ZX:
+        if ( sliceNumber > bounds.max.y )
+            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+
+        activeVoxel = { bounds.min.x, sliceNumber, bounds.min.z };
+        break;
+    default:
+        return  tl::make_unexpected( "Slice plain is invalid" );
+    }
+ 
+    const auto& grid = voxelsObject.grid();
+    const auto accessor = grid->getConstAccessor();
+  
+    for ( int i = 0; i < int( texture.size() ); ++i )
+    {
+        openvdb::Coord coord;
+        coord[slicePlain] = sliceNumber;
+        coord[( slicePlain + 1 ) % 3] = ( i % textureWidth ) + bounds.min[( slicePlain + 1 ) % 3];
+        coord[( slicePlain + 2 ) % 3] = ( i / textureWidth ) + bounds.min[( slicePlain + 2 ) % 3];
+
+        const auto val = accessor.getValue( coord );
+        const float normedValue = ( val - min ) / ( max - min );
+        texture[i] = Color( Vector3f::diagonal( normedValue ) );
+
+        if ( ( i % 100 ) && callback && !callback( float( i ) / texture.size() ) )
+            return tl::make_unexpected("Operation was canceled");
+    }
+
+    MeshTexture meshTexture( { { std::move( texture ), {textureWidth, textureHeight} } } );
+    auto saveRes = ImageSave::toAnySupportedFormat( meshTexture, path );
+    if ( !saveRes.has_value() )
+        return tl::make_unexpected( saveRes.error() );
+    
+    if ( callback )
+        callback( 1.0f );
+
+    return {};
+}
+
+tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const ObjectVoxels& voxelsObject,
+                                                             SlicePlain slicePlain, float min, float max, ProgressCallback callback/* = {}*/)
+{
+    const auto& bounds = voxelsObject.getActiveBounds();
+    switch ( slicePlain )
+    {
+    case SlicePlain::XY:
+        for ( int z = bounds.min.z; z < bounds.max.z; ++z )
+        {
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( z ) + ".png", voxelsObject, slicePlain, z, min, max );
+            if ( !res )
+                return res;
+
+            if ( callback && !callback( float( z ) / bounds.size().z ) )
+                return tl::make_unexpected("Operation was canceled");
+        }
+        break;
+    case SlicePlain::YZ:
+        for ( int x = bounds.min.x; x < bounds.max.x; ++x )
+        {
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( x ) + ".png", voxelsObject, slicePlain, x, min, max );
+            if ( !res )
+                return res;
+
+            if ( callback && !callback( float( x ) / bounds.size().x ) )
+                return tl::make_unexpected( "Operation was canceled" );
+        }
+        break;
+    case SlicePlain::ZX:
+        for ( int y = bounds.min.y; y < bounds.max.y; ++y )
+        {
+            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( y ) + ".png", voxelsObject, slicePlain, y, min, max );
+            if ( !res )
+                return res;
+
+            if ( callback && !callback( float( y ) / bounds.size().y ) )
+                return tl::make_unexpected( "Operation was canceled" );
+        }
+        break;
+    default:
+        return  tl::make_unexpected( "Slice plain is invalid" );
     }
 
     if ( callback )

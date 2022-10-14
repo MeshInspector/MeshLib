@@ -41,7 +41,6 @@ void ShadowsGL::preDraw_()
     glfwGetFramebufferSize( getViewerInstance().window, &sceneSize_.x, &sceneSize_.y );
     if ( sceneSize_.x == 0 || sceneSize_.y == 0 )
         return;
-    shadowSize_ = Vector2i( Vector2d( sceneSize_ ) / double( 2 * std::abs( blurRadius ) + 1 ) );
 
     int samples;
     GL_EXEC( glGetIntegerv( GL_SAMPLES, &samples ) );

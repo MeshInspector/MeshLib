@@ -33,7 +33,6 @@ private:
     boost::signals2::connection postDrawConnection_;
 
     Vector2i sceneSize_;
-    Vector2i shadowSize_;
 
     unsigned int sceneFramebuffer_{ 0 };
     unsigned int sceneColorRenderbufferMultisampled_{ 0 };

@@ -2,6 +2,7 @@ import os
 import sys
 import platform
 import argparse
+import pytest
 
 parser = argparse.ArgumentParser(description="Python Test Script")
 
@@ -57,10 +58,18 @@ else:
     directory = os.path.join(directory, "..")
     directory = os.path.join(directory, "test_python")
 
+retcode = pytest.main(["-x", directory])
+print(retcode)
+
 os.environ["MeshLibPyModulesPath"] = os.getcwd()
-os.chdir(directory)
 
-res = os.system(python_cmd + "-m pytest -s -v")
+if args.cmd:
+    os.chdir(directory)
 
-if res != 0:
-    sys.exit(1)
+    res = os.system(python_cmd + "-m pytest -s -v")
+
+    if res != 0:
+        sys.exit(1)
+else:
+    retcode = pytest.main(["-x", directory])
+    print(retcode)

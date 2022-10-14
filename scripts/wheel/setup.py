@@ -51,6 +51,7 @@ setuptools.setup(
         "License :: Free For Educational Use",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS :: MacOS X",
     ],
     python_requires='>=3.8',
     install_requires=[

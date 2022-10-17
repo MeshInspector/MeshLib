@@ -695,9 +695,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     bool menuOpened = ImGui::IsPopupOpen( nameWindow.c_str() );
     ImGui::SetItemAllowOverlap();
 
-    bool dropBtnEnabled = false;
-    for ( const auto& dropItem : item.item->dropItems() )
-        dropBtnEnabled |= getRequirements_( dropItem ).empty();
+    bool dropBtnEnabled = !item.item->dropItems().empty();
 
     int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.rootType );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );

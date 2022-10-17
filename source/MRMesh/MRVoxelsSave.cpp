@@ -171,12 +171,20 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
                                                              SlicePlain slicePlain, float min, float max, ProgressCallback callback/* = {}*/)
 {
     const auto& bounds = voxelsObject.getActiveBounds();
+    size_t maxDigitCount = 0;
+    auto formatNumber = [&maxDigitCount] ( int num )
+    {
+        const auto numStr = std::to_string( num );
+        return numStr.size() < maxDigitCount ? std::string( maxDigitCount - numStr.size() , '0' ) + numStr : numStr;
+    };
+
     switch ( slicePlain )
     {
     case SlicePlain::XY:
+        maxDigitCount = std::to_string( bounds.max.z ).size();
         for ( int z = bounds.min.z; z < bounds.max.z; ++z )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( z ) + ".png", voxelsObject, slicePlain, z, min, max );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( z ) + ".png", voxelsObject, slicePlain, z, min, max );
             if ( !res )
                 return res;
 
@@ -185,9 +193,10 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         }
         break;
     case SlicePlain::YZ:
+        maxDigitCount = std::to_string( bounds.max.x ).size();
         for ( int x = bounds.min.x; x < bounds.max.x; ++x )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( x ) + ".png", voxelsObject, slicePlain, x, min, max );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( x ) + ".png", voxelsObject, slicePlain, x, min, max );
             if ( !res )
                 return res;
 
@@ -196,9 +205,10 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         }
         break;
     case SlicePlain::ZX:
+        maxDigitCount = std::to_string( bounds.max.y ).size();
         for ( int y = bounds.min.y; y < bounds.max.y; ++y )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + std::to_string( y ) + ".png", voxelsObject, slicePlain, y, min, max );
+            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( y ) + ".png", voxelsObject, slicePlain, y, min, max );
             if ( !res )
                 return res;
 

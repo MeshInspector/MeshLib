@@ -65,7 +65,7 @@ jobs:
       - name: Get branch names
         if: ${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
         id: branch-name
-        uses: tj-actions/branch-names@v6.1
+        uses: tj-actions/branch-names@v6.2
 
       # if nothing to rebuild: "latest"
       # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/

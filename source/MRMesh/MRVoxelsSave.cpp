@@ -184,7 +184,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         maxDigitCount = std::to_string( bounds.max.z ).size();
         for ( int z = bounds.min.z; z < bounds.max.z; ++z )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( z ) + ".png", voxelsObject, slicePlain, z, min, max );
+const auto res = saveSliceToImage( path / fmt::format("slice_{0:0{1}}.png",z, maxNumChars), voxelsObject, slicePlain, z, min, max );
             if ( !res )
                 return res;
 

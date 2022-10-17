@@ -89,7 +89,7 @@ public:
     void setScaling( float scaling ) { scaling_ = scaling; };
 
 private:
-    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params, bool enabled );
+    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params );
     void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem );
     void drawTooltip_( const MenuItemInfo& item, const std::string& requirements );
 

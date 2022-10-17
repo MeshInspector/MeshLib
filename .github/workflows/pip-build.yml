@@ -451,61 +451,61 @@ jobs:
     if: always()
     steps:
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Wheelhouse
           failOnError: false
 
       - name: Delete ManyLinux Python3.8
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: ManyLinux-python3.8
           failOnError: false
 
       - name: Delete ManyLinux Python3.9
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: ManyLinux-python3.9
           failOnError: false
 
       - name: Delete ManyLinux Python3.10
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: ManyLinux-python3.10
           failOnError: false
 
       - name: Delete Windows Python3.8
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Windows-python3.8
           failOnError: false
 
       - name: Delete Windows Python3.9
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Windows-python3.9
           failOnError: false
 
       - name: Delete Windows Python3.10
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Windows-python3.10
           failOnError: false
 
       - name: Delete Macos Python3.8
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Macos-python3.8
           failOnError: false
 
       - name: Delete Macos Python3.9
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Macos-python3.9
           failOnError: false
 
       - name: Delete Windows Python3.10
-        uses: geekyeggo/delete-artifact@v1
+        uses: geekyeggo/delete-artifact@v2
         with:
           name: Macos-python3.10
           failOnError: false

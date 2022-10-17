@@ -565,14 +565,15 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
             ratio * Vector2f( float( x1 ), float( y1 ) ) + Vector2f::diagonal( 0.5f );
     };
     // fill separationPoints
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, resY ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        for ( size_t y = range.begin(); y < range.end(); ++y )
         {
-            size_t x = i % resX;
-            size_t y = i / resX;
-            setupSeparation( x, y, x, y + 1 );
-            setupSeparation( x, y, x + 1, y );
+            for ( size_t x = 0; x < resX; x++ )
+            {
+                setupSeparation( x, y, x, y + 1 );
+                setupSeparation( x, y, x + 1, y );
+            }
         }
     } );
     // calc valid separations

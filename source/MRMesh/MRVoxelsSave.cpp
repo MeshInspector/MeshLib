@@ -5,6 +5,7 @@
 #include "MRObjectVoxels.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
 
@@ -171,32 +172,29 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
                                                              SlicePlain slicePlain, float min, float max, ProgressCallback callback/* = {}*/)
 {
     const auto& bounds = voxelsObject.getActiveBounds();
-    size_t maxDigitCount = 0;
-    auto formatNumber = [&maxDigitCount] ( int num )
-    {
-        const auto numStr = std::to_string( num );
-        return numStr.size() < maxDigitCount ? std::string( maxDigitCount - numStr.size() , '0' ) + numStr : numStr;
-    };
 
     switch ( slicePlain )
     {
     case SlicePlain::XY:
-        maxDigitCount = std::to_string( bounds.max.z ).size();
+    {
+        const size_t maxNumChars = std::to_string( bounds.max.z ).size();
         for ( int z = bounds.min.z; z < bounds.max.z; ++z )
         {
-const auto res = saveSliceToImage( path / fmt::format("slice_{0:0{1}}.png",z, maxNumChars), voxelsObject, slicePlain, z, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", z, maxNumChars ), voxelsObject, slicePlain, z, min, max );
             if ( !res )
                 return res;
 
             if ( callback && !callback( float( z ) / bounds.size().z ) )
-                return tl::make_unexpected("Operation was canceled");
+                return tl::make_unexpected( "Operation was canceled" );
         }
         break;
+    }
     case SlicePlain::YZ:
-        maxDigitCount = std::to_string( bounds.max.x ).size();
+    {
+        const size_t maxNumChars = std::to_string( bounds.max.x ).size();
         for ( int x = bounds.min.x; x < bounds.max.x; ++x )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( x ) + ".png", voxelsObject, slicePlain, x, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", x, maxNumChars ), voxelsObject, slicePlain, x, min, max );
             if ( !res )
                 return res;
 
@@ -204,11 +202,13 @@ const auto res = saveSliceToImage( path / fmt::format("slice_{0:0{1}}.png",z, ma
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
+    }
     case SlicePlain::ZX:
-        maxDigitCount = std::to_string( bounds.max.y ).size();
+    {
+        const size_t maxNumChars = std::to_string( bounds.max.y ).size();
         for ( int y = bounds.min.y; y < bounds.max.y; ++y )
         {
-            const auto res = saveSliceToImage( path.string() + "/slice_" + formatNumber( y ) + ".png", voxelsObject, slicePlain, y, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", y, maxNumChars ), voxelsObject, slicePlain, y, min, max );
             if ( !res )
                 return res;
 
@@ -216,6 +216,7 @@ const auto res = saveSliceToImage( path / fmt::format("slice_{0:0{1}}.png",z, ma
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
+    }
     default:
         return  tl::make_unexpected( "Slice plain is invalid" );
     }

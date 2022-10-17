@@ -9,7 +9,6 @@
 
 namespace MR
 {
-struct SimpleVolume;
 // closed surface is required
 // surfaceOffset - number voxels around surface to calculate distance in (should be positive)
 // returns null if was canceled by progress callback

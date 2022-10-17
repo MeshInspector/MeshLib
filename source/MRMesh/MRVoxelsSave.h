@@ -18,7 +18,7 @@ namespace VoxelsSave
 
 MRMESH_API extern const IOFilters Filters;
 
-MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const ObjectVoxels& voxelsObject,
+MRMESH_API tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                     ProgressCallback callback = {} );
 
 //save the slice by the active plane through the sliceNumber to an image file

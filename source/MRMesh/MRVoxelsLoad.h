@@ -60,12 +60,12 @@ struct RawParameters
     } scalarType{ ScalarType::Float32 };
 };
 /// Load raw voxels file with provided parameters
-MRMESH_API tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
-                                                      const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+                                                         const ProgressCallback& cb = {} );
 
 /// Load raw voxels file, parsing parameters from name 
-MRMESH_API tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path,
-                                                      const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
+                                                         const ProgressCallback& cb = {} );
 
 /// \}
 

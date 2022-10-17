@@ -6,12 +6,15 @@
 
 namespace MR
 {
-struct SimpleVolume
+
+template <typename T>
+struct VoxelsVolume
 {
-    std::vector<float> data;
+    T data;
     Vector3i dims;
     Vector3f voxelSize;
     float min = FLT_MAX;
     float max = -FLT_MAX;
 };
+
 }

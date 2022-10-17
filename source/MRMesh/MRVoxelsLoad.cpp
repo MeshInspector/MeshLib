@@ -532,7 +532,7 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
     return std::make_shared<ObjectVoxels>( std::move( voxels ) );
 }
 
-tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path,
+tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -620,7 +620,7 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )
 {
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 ||
@@ -747,7 +747,14 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
         outVolume.min = *minmaxIt.first;
         outVolume.max = *minmaxIt.second;
     }
-    return outVolume;
+
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( outVolume );
+    res.dims = outVolume.dims;
+    res.voxelSize = outVolume.voxelSize;
+    res.min = outVolume.min;
+    outVolume.max = outVolume.max;
+    return res;
 }
 
 }

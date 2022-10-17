@@ -5,6 +5,7 @@
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
 #include "MRVolumeIndexer.h"
+#include "MRMesh/MRSimpleVolume.h"
 
 namespace MR
 {
@@ -27,12 +28,14 @@ public:
     /// Returns iso surface, empty if iso value is not set
     const std::shared_ptr<Mesh>& surface() const { return mesh_; }
 
+    /// Return VdbVolume
+    const VdbVolume& vdbVolume() const { return vdbVolume_; };
     /// Returns Float grid which contains voxels data, see more on openvdb::FloatGrid
     const FloatGrid& grid() const
-    { return grid_; }
+    { return vdbVolume_.data; }
     /// Returns dimensions of voxel objects
     const Vector3i& dimensions() const
-    { return dimensions_; }
+    { return vdbVolume_.dims; }
     /// Returns current iso value
     float getIsoValue() const
     { return isoValue_; }
@@ -41,7 +44,7 @@ public:
     { return histogram_; }
 
     const Vector3f& voxelSize() const
-    { return voxelSize_; }
+    { return vdbVolume_.voxelSize; }
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Voxels"; }
@@ -107,15 +110,13 @@ public:
 
 private:
     int maxSurfaceTriangles_{ 10000000 };
-    FloatGrid grid_;
-    Vector3i dimensions_;
+    VdbVolume vdbVolume_;
     float isoValue_{0.0f};
     Histogram histogram_;
-    Vector3f voxelSize_;
     Box3i activeBox_;
 
     /// Service data
-    VolumeIndexer indexer_ = VolumeIndexer( dimensions_ );
+    VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );
     Vector3f reverseVoxelSize_;
 
     void updateHistogram_( float min, float max );

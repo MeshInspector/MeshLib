@@ -630,7 +630,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
         drawTooltip_( item, requirements );
 
     if ( dropItem )
-        drawButtonDropItem_( item, params, requirements.empty() );
+        drawButtonDropItem_( item, params );
     ImGui::EndChild();
     ImGui::PopStyleVar();
 }
@@ -662,7 +662,7 @@ bool RibbonButtonDrawer::drawCustomStyledButton( const char* icon, const ImVec2&
     return pressed;
 }
 
-void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params, bool enabled )
+void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params )
 {
     float iconSize = params.iconSize * 0.5f;
     ImVec2 itemSize = ImVec2( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
@@ -695,9 +695,11 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     bool menuOpened = ImGui::IsPopupOpen( nameWindow.c_str() );
     ImGui::SetItemAllowOverlap();
 
-    bool dropBtnEnabled = enabled && !item.item->dropItems().empty();
+    bool dropBtnEnabled = false;
+    for ( const auto& dropItem : item.item->dropItems() )
+        dropBtnEnabled |= getRequirements_( dropItem ).empty();
 
-    int pushedColors = pushRibbonButtonColors_( enabled, menuOpened, params.rootType );
+    int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.rootType );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     bool comboPressed = ImGui::Button( name.c_str(), itemSize ) && dropBtnEnabled;
 

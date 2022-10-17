@@ -1255,11 +1255,7 @@ void main(void)
     ivec2 texSize = textureSize( pixels, 0 );
     vec2 pos = gl_FragCoord.xy;
     if ( !convX )
-    {
-      if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
-        discard;
       pos = pos + shift;
-    }
     pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
     vec2 posShift = vec2(0.0);
     if ( convX )

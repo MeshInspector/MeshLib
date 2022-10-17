@@ -1243,46 +1243,46 @@ void main(void)
   uniform vec4 color;
   uniform vec2 shift;
   uniform float blurRadius;
+  uniform bool convX;
   out vec4 outColor;                 // (out to render) fragment color
 
-  #define NUM_DIRECTIONS 12
-  #define QUALITY 3
-  
-  #define DIR_STEP 0.5235987756
-  #define INV_QUALITY 0.33333334
-  #define INV_NUM_SAMPLES 0.020833333
+  const float gaussWeights[] = float[6] (0.923, 0.726, 0.4867, 0.278, 0.135, 0.056);
+  const float invNorm = 0.161046;
 
   void main()
   { 
-    ivec2 texSize = textureSize( pixels, 0 );
-    vec2 pos = gl_FragCoord.xy + shift;
-    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
-
-    if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
-      discard;
-
-    if ( textureLod(pixels,pos,max(10.0,log2(blurRadius)+2.0)).a == 0.0 )
-      discard;
-
-    float avgValue = 0.0;
-    float maxRadiusSq = blurRadius*blurRadius;
-
-    avgValue = texture(pixels, pos).a;
-
-    for ( int r = 1; r <= QUALITY; r = r + 1 )
-    {
-        float radius = float(r)*(blurRadius-0.5)*INV_QUALITY;
-        vec2 normRad = vec2(radius/float(texSize.x),radius/float(texSize.y));
-        for ( int ang = 0; ang < NUM_DIRECTIONS; ang = ang + 1 )
-        {
-            float realAng = float(ang)*DIR_STEP;
-            vec2 addPos = vec2(cos(realAng)*normRad.x, sin(realAng)*normRad.y);
-            avgValue = avgValue + texture(pixels, pos+addPos).a;
-        }
-    }
-    avgValue = avgValue * INV_NUM_SAMPLES;
-    outColor = vec4(color.rgb,avgValue*color.a);
     gl_FragDepth = 0.9999;
+    ivec2 texSize = textureSize( pixels, 0 );
+    vec2 pos = gl_FragCoord.xy;
+    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
+    if ( convX )
+    {
+      vec2 posShift = vec2(blurRadius /(6* float(texSize.x)),0.0);
+      float convSum = texture(pixels, pos).a;
+      for (int i=0;i<6;i=i+1)
+      {
+        vec2 fulShift = float(i+1)*posShift;
+        convSum = convSum + gaussWeights[i]*texture(pixels, pos+fulShift).a;
+        convSum = convSum + gaussWeights[i]*texture(pixels, pos-fulShift).a;
+      }
+      outColor = vec4(color.rgb,convSum*invNorm);
+    }
+    else
+    {
+      if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
+        discard;
+      
+      pos = pos + vec2(shift.x/float(texSize.x),shift.y/float(texSize.y));
+      vec2 posShift = vec2(0.0,blurRadius /(6* float(texSize.y)));
+      float convSum = texture(pixels, pos).a;
+      for (int i=0;i<6;i=i+1)
+      {
+        vec2 fulShift = float(i+1)*posShift;
+        convSum = convSum + gaussWeights[i]*texture(pixels, pos+fulShift).a;
+        convSum = convSum + gaussWeights[i]*texture(pixels, pos-fulShift).a;
+      }
+      outColor = vec4(color.rgb,convSum*invNorm*color.a);
+    }
     if (outColor.a == 0.0)
       discard;
   }

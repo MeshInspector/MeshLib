@@ -29,16 +29,44 @@ private:
     void preDraw_();
     void postDraw_();
 
+    void convolveX_();
+    void drawShadow_( bool convX );
+    void drawScene_();
+
     boost::signals2::connection preDrawConnection_;
     boost::signals2::connection postDrawConnection_;
 
     Vector2i sceneSize_;
 
-    unsigned int sceneFramebuffer_{ 0 };
-    unsigned int sceneColorRenderbufferMultisampled_{ 0 };
-    unsigned int sceneDepthRenderbufferMultisampled_{ 0 };
-    unsigned int sceneCopyFramebuffer_{ 0 };
-    unsigned int sceneResTexture_{ 0 };
+    class FramebufferData
+    {
+    public:
+        void gen( const Vector2i& size, bool multisample );
+        void copyTexture();
+        void del();
+        unsigned getTexture() const { return resTexture_; }
+    private:
+        unsigned mainFramebuffer_{ 0 };
+        unsigned colorRenderbuffer_{ 0 };
+        unsigned depthRenderbuffer_{ 0 };
+        unsigned copyFramebuffer_{ 0 };
+        unsigned resTexture_{ 0 };
+        Vector2i size_;
+    };
+
+    class QuadTextureVertexObject
+    {
+    public:
+        void gen();
+        void bind();
+        void del();
+    private:
+        unsigned vao_;
+        unsigned vbo_;
+    } quadObject_;
+
+    FramebufferData sceneFramebuffer_;
+    FramebufferData convolveFramebuffer_;
 
     bool enabled_{ false };
 };

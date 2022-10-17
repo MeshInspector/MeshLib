@@ -259,7 +259,27 @@ bool SetViewportConfigPresetMenuItem::action()
     for ( int i = int( viewer.viewport_list.size() ) - 1; i > 0; --i )
         viewer.erase_viewport( i );
 
+    auto allObjs = getAllObjectsInTree<>( &SceneRoot::get(), ObjectSelectivityType::Any );
+
     ViewportRectangle rect;
+    const ViewportId activeViewportId = viewer.viewport().id;
+
+    const auto updateMasks = [&allObjs, &viewer, activeViewportId] ()
+    {
+        const auto lastViewportId = viewer.viewport_list.back().id;
+
+        for ( auto& obj : allObjs )
+        {
+            auto mask = obj->visibilityMask();
+            if ( mask.contains( activeViewportId ) )
+                mask |= lastViewportId;
+            else
+                mask &= ~ ViewportMask { lastViewportId };
+
+            obj->setVisibilityMask( mask );
+        }
+    };
+
     switch ( type_ )
     {
         case Type::Vertical:
@@ -274,6 +294,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width * 0.5f;
             rect.max.y = rect.min.y + height;
             viewer.append_viewport( rect );
+            updateMasks();
+
             break;
         case Type::Horizontal:
             rect.min.x = bounds.min.x;
@@ -287,6 +309,8 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width;
             rect.max.y = rect.min.y + height * 0.5f;
             viewer.append_viewport( rect );
+            updateMasks();
+
             break;
         case Type::Quad:
             rect.min.x = bounds.min.x;
@@ -300,18 +324,22 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width * 0.5f;
             rect.max.y = rect.min.y + height * 0.5f;
             viewer.append_viewport( rect );
+            updateMasks();
 
             rect.min.x = bounds.min.x + width * 0.5f;
             rect.min.y = bounds.min.y;
             rect.max.x = rect.min.x + width * 0.5f;
             rect.max.y = rect.min.y + height * 0.5f;
             viewer.append_viewport( rect );
+            updateMasks();
 
             rect.min.x = bounds.min.x + width * 0.5f;
             rect.min.y = bounds.min.y + height * 0.5f;
             rect.max.x = rect.min.x + width * 0.5f;
             rect.max.y = rect.min.y + height * 0.5f;
             viewer.append_viewport( rect );
+            updateMasks();
+
             break;
         case Type::Single:
         default:

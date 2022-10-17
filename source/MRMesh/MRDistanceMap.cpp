@@ -533,8 +533,6 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     std::vector<SeparationPoint> separationPoints( horizontalEdgesSize + resX * ( resY - 1 ) );
     auto setupSeparation = [&] ( size_t x0, size_t y0, size_t x1, size_t y1 )
     {
-        if ( x1 == resX || y1 == resY )
-            return;
         const auto v0 = distMap.getValue( x0, y0 );
         const auto v1 = distMap.getValue( x1, y1 );
         if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
@@ -567,14 +565,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     // fill separationPoints
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, resY ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( size_t y = range.begin(); y < range.end(); ++y )
-        {
+        for ( size_t y = range.begin(); y < range.end() && y + 1 < resY; ++y )
             for ( size_t x = 0; x < resX; x++ )
-            {
                 setupSeparation( x, y, x, y + 1 );
+        for ( size_t y = range.begin(); y < range.end(); ++y )
+            for ( size_t x = 0; x + 1 < resX; x++ )
                 setupSeparation( x, y, x + 1, y );
-            }
-        }
     } );
     // calc valid separations
     class SumValidCalc

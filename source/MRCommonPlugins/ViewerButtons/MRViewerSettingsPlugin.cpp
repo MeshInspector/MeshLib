@@ -178,6 +178,10 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             ImGui::DragFloat2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200.0f, 200.0f );
             ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200 );
+            float quality = shadowGl_->getQuality();
+            ImGui::DragFloatValid( "Quality", &quality, 0.01f, 0.01f, 1.0f );
+            ImGui::SetTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
+            shadowGl_->setQuality( quality );
         }
     }
     ImGui::EndCustomStatePlugin();

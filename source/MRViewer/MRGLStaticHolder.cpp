@@ -1254,35 +1254,29 @@ void main(void)
     gl_FragDepth = 0.9999;
     ivec2 texSize = textureSize( pixels, 0 );
     vec2 pos = gl_FragCoord.xy;
-    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
-    if ( convX )
-    {
-      vec2 posShift = vec2(blurRadius /(6* float(texSize.x)),0.0);
-      float convSum = texture(pixels, pos).a;
-      for (int i=0;i<6;i=i+1)
-      {
-        vec2 fulShift = float(i+1)*posShift;
-        convSum = convSum + gaussWeights[i]*texture(pixels, pos+fulShift).a;
-        convSum = convSum + gaussWeights[i]*texture(pixels, pos-fulShift).a;
-      }
-      outColor = vec4(color.rgb,convSum*invNorm);
-    }
-    else
+    if ( !convX )
     {
       if ( texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 ).a == 1.0 )
         discard;
-      
-      pos = pos + vec2(shift.x/float(texSize.x),shift.y/float(texSize.y));
-      vec2 posShift = vec2(0.0,blurRadius /(6* float(texSize.y)));
-      float convSum = texture(pixels, pos).a;
-      for (int i=0;i<6;i=i+1)
-      {
-        vec2 fulShift = float(i+1)*posShift;
-        convSum = convSum + gaussWeights[i]*texture(pixels, pos+fulShift).a;
-        convSum = convSum + gaussWeights[i]*texture(pixels, pos-fulShift).a;
-      }
-      outColor = vec4(color.rgb,convSum*invNorm*color.a);
+      pos = pos + shift;
     }
+    pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
+    vec2 posShift = vec2(0.0);
+    if ( convX )
+      posShift = vec2(blurRadius /(6.0* float(texSize.x)),0.0);
+    else
+      posShift = vec2(0.0,blurRadius /(6.0* float(texSize.y)));
+    
+    float convSum = texture(pixels, pos).a;
+    for (int i=0;i<6;i=i+1)
+    {
+      vec2 fullShift = float(i+1)*posShift;
+      convSum = convSum + gaussWeights[i]*texture(pixels, pos+fullShift).a;
+      convSum = convSum + gaussWeights[i]*texture(pixels, pos-fullShift).a;
+    }
+    outColor = vec4(color.rgb,convSum*invNorm);
+    if ( !convX )
+      outColor.a = outColor.a*color.a;
     if (outColor.a == 0.0)
       discard;
   }
@@ -1294,11 +1288,16 @@ void main(void)
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
   uniform sampler2D pixels;
+  uniform vec2 viewportSize;
+  uniform float depth;
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
   { 
-    outColor = texelFetch(pixels, ivec2( gl_FragCoord.xy ), 0 );
+    gl_FragDepth = depth;
+    vec2 pos = gl_FragCoord.xy;
+    pos = vec2( pos.x/float(viewportSize.x),pos.y/float(viewportSize.y) );
+    outColor = texture(pixels, pos );
     if (outColor.a == 0.0)
       discard;
   }

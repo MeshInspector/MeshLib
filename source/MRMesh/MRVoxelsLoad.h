@@ -44,6 +44,7 @@ struct RawParameters
 {
     Vector3i dimensions;
     Vector3f voxelSize;
+    bool gridLevelSet{ false }; ///< OpenVDB GridClass set as GRID_LEVEL_SET (need to set right surface normals direction)
     enum class ScalarType
     {
         UInt8,
@@ -60,12 +61,12 @@ struct RawParameters
     } scalarType{ ScalarType::Float32 };
 };
 /// Load raw voxels file with provided parameters
-MRMESH_API tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
-                                                      const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+                                                         const ProgressCallback& cb = {} );
 
 /// Load raw voxels file, parsing parameters from name 
-MRMESH_API tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path,
-                                                      const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
+                                                         const ProgressCallback& cb = {} );
 
 /// \}
 

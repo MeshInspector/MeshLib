@@ -5,6 +5,7 @@
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
+#include "MRFloatGrid.h"
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
@@ -532,7 +533,7 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
     return std::make_shared<ObjectVoxels>( std::move( voxels ) );
 }
 
-tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path,
+tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -614,13 +615,20 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
             return tl::make_unexpected( "Cannot parse filename: " + filename );
         auto zvString = filename.substr( yvEndChar + 1, zvEndChar - ( yvEndChar + 1 ) );
         outParams.voxelSize.z = float( std::atof( zvString.c_str() ) / 1000 ); // convert mm to meters
+
+        auto gtEndChar = filename.find( "_", zvEndChar + 1 );
+        if ( gtEndChar != std::string::npos )
+        {
+            auto gtString = filename.substr( zvEndChar + 1, gtEndChar - ( zvEndChar + 1 ) );
+            outParams.gridLevelSet = gtString == "1"; // convert mm to meters
+        }
     }
     outParams.scalarType = RawParameters::ScalarType::Float32;
 
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )
 {
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 ||
@@ -747,7 +755,16 @@ tl::expected<SimpleVolume, std::string> loadRaw( const std::filesystem::path& pa
         outVolume.min = *minmaxIt.first;
         outVolume.max = *minmaxIt.second;
     }
-    return outVolume;
+
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( outVolume );
+    if ( params.gridLevelSet )
+        res.data->setGridClass( openvdb::GRID_LEVEL_SET );
+    res.dims = outVolume.dims;
+    res.voxelSize = outVolume.voxelSize;
+    res.min = outVolume.min;
+    outVolume.max = outVolume.max;
+    return res;
 }
 
 }

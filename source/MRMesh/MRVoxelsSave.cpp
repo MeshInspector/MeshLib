@@ -19,7 +19,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const ObjectVoxels& voxelsObject, ProgressCallback callback )
+tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
 {
     if ( path.empty() )
     {
@@ -37,7 +37,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         return tl::make_unexpected( ss.str() );
     }
 
-    const auto& dims = voxelsObject.dimensions();
+    const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
     {
         return tl::make_unexpected(  "ObjectVoxels is empty" );
@@ -60,8 +60,9 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     std::stringstream prefix;
     prefix.precision( 3 );
     prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
-    const auto& voxSize = voxelsObject.voxelSize();
-    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f << "_F "; // voxel size "_F" for float
+    const auto& voxSize = vdbVolume.voxelSize;
+    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
+    prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
     prefix << utf8string( path.filename() );                        // name
 
     std::filesystem::path outPath = parentPath / prefix.str();
@@ -73,7 +74,7 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
         return tl::make_unexpected( ss.str() );
     }
 
-    const auto& grid = voxelsObject.grid();
+    const auto& grid = vdbVolume.data;
     auto accessor = grid->getConstAccessor();
 
     // this coping block allow us to write data to disk faster

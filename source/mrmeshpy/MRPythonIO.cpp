@@ -4,12 +4,12 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRVoxelsSave.h"
+#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsSave.h"
@@ -225,6 +225,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
     m.def( "loadLines", ( tl::expected<Polyline3, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadLinesFromAnyFormat,
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load lines from python file handler, second arg: extension (`*.ext` format)" );
 } )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
     m.def( "savePoints", ( tl::expected<void, std::string>( * )( const MR::PointCloud&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat,
@@ -240,4 +241,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         "detects the format from file extension and loads points from it" );
     m.def( "loadPoints", ( tl::expected<PointCloud, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadPointCloudFromAnyFormat,
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
+{
+    m.def( "saveVoxels", &MR::VoxelsSave::saveRaw,
+        pybind11::arg( "VdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Save raw voxels file, writing parameters in name." );
+} )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
+{
+    m.def( "loadVoxels", ( tl::expected<VdbVolume, std::string>( * )( const std::filesystem::path&, const ProgressCallback& ) )& MR::VoxelsLoad::loadRaw,
+        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Load raw voxels file, parsing parameters from name." );
 } )

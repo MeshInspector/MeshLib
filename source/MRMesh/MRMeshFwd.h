@@ -303,13 +303,17 @@ class LineObject;
 class CircleObject;
 class PlaneObject;
 class SphereObject;
-struct SimpleVolume;
+
+template <typename T>
+struct VoxelsVolume;
+using SimpleVolume = VoxelsVolume<std::vector<float>>;
 
 #ifndef MRMESH_NO_VOXEL
 class ObjectVoxels;
 
 struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
+using VdbVolume = VoxelsVolume<FloatGrid>;
 #endif
 
 class HistoryAction;

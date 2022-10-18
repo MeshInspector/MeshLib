@@ -86,7 +86,7 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
 
         if ( ext == u8".raw" )
         {
-            result = VoxelsSave::saveRAW( filename, *objVoxels, callback );
+            result = VoxelsSave::saveRaw( filename, objVoxels->vdbVolume(), callback );
         }
     }
 #endif

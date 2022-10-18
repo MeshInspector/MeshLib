@@ -68,7 +68,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
             {
                 ProgressBar::nextTask( "Load file" );
-                tl::expected<SimpleVolume, std::string> res;
+                tl::expected<VdbVolume, std::string> res;
                 if ( autoMode )
                     res = VoxelsLoad::loadRaw( path, ProgressBar::callBackSetProgress );
                 else
@@ -78,7 +78,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     ProgressBar::nextTask( "Create object" );
                     std::shared_ptr<ObjectVoxels> object = std::make_shared<ObjectVoxels>();
                     object->setName( utf8string( path.stem() ) );
-                    object->construct( *res, ProgressBar::callBackSetProgress );
+                    object->construct( res->data, res->voxelSize, ProgressBar::callBackSetProgress );
                     auto bins = object->histogram().getBins();
                     auto minMax = object->histogram().getBinMinMax( bins.size() / 3 );
 

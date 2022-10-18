@@ -1247,7 +1247,13 @@ void main(void)
   out vec4 outColor;                 // (out to render) fragment color
 
   const float gaussWeights[] = float[7] (0.161046, 0.148645, 0.116919, 0.078381, 0.044771, 0.021742, 0.009019);
-
+  
+  float getValue( vec2 pos )
+  {
+    if ( pos.x < 0.0 || pos.x > 1.0 || pos.y < 0.0 || pos.y > 1.0 )
+      return 0.0;    
+    return texture(pixels,pos).a;
+  }
   void main()
   { 
     gl_FragDepth = 0.9999;
@@ -1262,12 +1268,12 @@ void main(void)
     else
       posShift = vec2(0.0,blurRadius /(6.0* float(texSize.y)));
     
-    float convSum = gaussWeights[0]*texture(pixels, pos).a;
+    float convSum = gaussWeights[0]*getValue(pos);
     for ( int i=1; i<=6; ++i )
     {
       vec2 fullShift = float(i)*posShift;
-      convSum = convSum + gaussWeights[i]*texture(pixels, pos+fullShift).a;
-      convSum = convSum + gaussWeights[i]*texture(pixels, pos-fullShift).a;
+      convSum = convSum + gaussWeights[i]*getValue(pos+fullShift);
+      convSum = convSum + gaussWeights[i]*getValue(pos-fullShift);
     }
     outColor = vec4(color.rgb,convSum);
     if ( !convX )

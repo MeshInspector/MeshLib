@@ -176,9 +176,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             }
             ImGui::ColorEdit4( "Color", &shadowGl_->shadowColor.x,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
-            ImGui::DragFloat2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200.0f, 200.0f );
-            ImGui::SetTooltipIfHovered( "X, Y shift in screen coordinates:\nX going right\nY going up", menuScaling );
-            ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200 );
+            
+            const char* tooltipsShift[2] = {
+                "Shift along Ox-axis to the left",
+                "Shift along Oy-axis to the top"
+            };
+            ImGui::DragFloatValid2( "Shift", &shadowGl_->shadowShift.x, 0.4f, -200.0f, 200.0f, "%.3f px", 0, &tooltipsShift );
+            ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200, "%.3f px" );
             float quality = shadowGl_->getQuality();
             ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
             ImGui::SetTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );

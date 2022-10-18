@@ -5,6 +5,7 @@
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
+#include "MRFloatGrid.h"
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
@@ -614,6 +615,13 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
             return tl::make_unexpected( "Cannot parse filename: " + filename );
         auto zvString = filename.substr( yvEndChar + 1, zvEndChar - ( yvEndChar + 1 ) );
         outParams.voxelSize.z = float( std::atof( zvString.c_str() ) / 1000 ); // convert mm to meters
+
+        auto gtEndChar = filename.find( "_", zvEndChar + 1 );
+        if ( gtEndChar != std::string::npos )
+        {
+            auto gtString = filename.substr( zvEndChar + 1, gtEndChar - ( zvEndChar + 1 ) );
+            outParams.gridLevelSet = gtString == "1"; // convert mm to meters
+        }
     }
     outParams.scalarType = RawParameters::ScalarType::Float32;
 
@@ -750,6 +758,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
 
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( outVolume );
+    res.data->setGridClass( openvdb::GRID_LEVEL_SET );
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;

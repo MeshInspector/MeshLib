@@ -19,7 +19,7 @@ const IOFilters Filters =
     {"Raw (.raw)","*.raw"}
 };
 
-tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
+tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
 {
     if ( path.empty() )
     {
@@ -61,7 +61,8 @@ tl::expected<void, std::string> saveRAW( const std::filesystem::path& path, cons
     prefix.precision( 3 );
     prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
     const auto& voxSize = vdbVolume.voxelSize;
-    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f << "_F "; // voxel size "_F" for float
+    prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
+    prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
     prefix << utf8string( path.filename() );                        // name
 
     std::filesystem::path outPath = parentPath / prefix.str();

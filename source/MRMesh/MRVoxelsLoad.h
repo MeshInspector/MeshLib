@@ -44,6 +44,7 @@ struct RawParameters
 {
     Vector3i dimensions;
     Vector3f voxelSize;
+    bool gridLevelSet{ false };
     enum class ScalarType
     {
         UInt8,

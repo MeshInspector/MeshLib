@@ -243,10 +243,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
-    m.def( "saveVoxels", &MR::VoxelsSave::saveRAW,
+    m.def( "saveVoxels", &MR::VoxelsSave::saveRaw,
         pybind11::arg( "VdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
 } )
@@ -256,4 +255,3 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load raw voxels file, parsing parameters from name." );
 } )
-#endif

@@ -26,11 +26,8 @@ MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
-    pybind11::class_<MR::FloatGrid>( m, "FloatGrid", "Smart pointer to OpenVdbFloatGrid" ).
+    pybind11::class_<MR::OpenVdbFloatGrid, MR::FloatGrid>( m, "FloatGrid", "Smart pointer to OpenVdbFloatGrid" ).
         def( pybind11::init<>() );
-    pybind11::class_<MR::OpenVdbFloatGrid>( m, "OpenVdbFloatGrid", "Wrapper OpenVDB Float Grid" ).
-        def( pybind11::init<>() );
-
 
     m.def( "meshToLevelSet", &MR::meshToLevelSet,
         pybind11::arg( "mp" ), pybind11::arg( "xf" ), pybind11::arg( "voxelSize" ), pybind11::arg( "surfaceOffset" ) = 3, pybind11::arg( "cb" ) = MR::ProgressCallback{},

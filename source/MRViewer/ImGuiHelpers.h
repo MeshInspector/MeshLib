@@ -100,6 +100,16 @@ struct MultiDragRes
     explicit operator bool() const { return valueChanged; }
 };
 
+/// similar to ImGui::DragFloat2 - three drag-float controls in a row, but
+/// 1) returns information whether an item was deactivated;
+/// 2) calls DragFloatValid inside instead of DragFloat;
+/// 3) permits showing tooltip for each item
+MRVIEWER_API MultiDragRes DragFloatValid2( const char* label, float v[2], float v_speed = 1.0f,
+    float min = std::numeric_limits<float>::lowest(),
+    float max = std::numeric_limits<float>::max(),
+    const char* format = "%.3f", ImGuiSliderFlags flags = 0,
+    const char* ( *tooltips )[2] = nullptr );
+
 /// similar to ImGui::DragFloat3 - three drag-float controls in a row, but
 /// 1) returns information whether an item was deactivated;
 /// 2) calls DragFloatValid inside instead of DragFloat;

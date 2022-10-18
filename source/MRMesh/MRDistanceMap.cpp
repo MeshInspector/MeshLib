@@ -531,20 +531,17 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     auto horizontalEdgesSize = ( resX - 1 ) * resY;
     std::vector<SeparationPoint> separationPoints( horizontalEdgesSize + resX * ( resY - 1 ) );
+    tbb::enumerable_thread_specific<size_t> numValidVertsPerThread( 0 );
     auto setupSeparation = [&] ( size_t x0, size_t y0, size_t x1, size_t y1 )
     {
-        if ( x1 == resX || y1 == resY )
-            return;
-        const auto v0opt = distMap.get( x0, y0 );
-        const auto v1opt = distMap.get( x1, y1 );
-        if ( !v0opt || !v1opt )
-            return;
-        const auto v0 = *v0opt;
-        const auto v1 = *v1opt;
+        const auto v0 = distMap.getValue( x0, y0 );
+        const auto v1 = distMap.getValue( x1, y1 );
+        if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
+            return 0;
         const bool low0 = v0 < isoValue;
         const bool low1 = v1 < isoValue;
         if ( low0 == low1 )
-            return;
+            return 0;
 
         const float ratio = std::abs( isoValue - v0 ) / std::abs( v1 - v0 );
         size_t index = 0;
@@ -565,44 +562,23 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         separationPoints[index].low = low0;
         separationPoints[index].coord = ( 1.0f - ratio ) * Vector2f( float( x0 ), float( y0 ) ) +
             ratio * Vector2f( float( x1 ), float( y1 ) ) + Vector2f::diagonal( 0.5f );
+        return 1;
     };
     // fill separationPoints
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, resY ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            size_t x = i % resX;
-            size_t y = i / resX;
-            setupSeparation( x, y, x, y + 1 );
-            setupSeparation( x, y, x + 1, y );
-        }
+        size_t counter{ 0 };
+        for ( size_t y = range.begin(); y < range.end() && y + 1 < resY; ++y )
+            for ( size_t x = 0; x < resX; x++ )
+                counter += setupSeparation( x, y, x, y + 1 );
+        for ( size_t y = range.begin(); y < range.end(); ++y )
+            for ( size_t x = 0; x + 1 < resX; x++ )
+                counter += setupSeparation( x, y, x + 1, y );
+        numValidVertsPerThread.local() += counter;
     } );
-    // calc valid separations
-    class SumValidCalc
-    {
-    public:
-        SumValidCalc( const std::vector<SeparationPoint>& data ) : data_{ data } {}
-        SumValidCalc( SumValidCalc& x, tbb::split ) : data_( x.data_ ) {}
-        void join( const SumValidCalc& y )
-        {
-            count_ += y.count_;
-        }
-        void operator()( const tbb::blocked_range<size_t>& r )
-        {
-            for ( size_t i = r.begin(); i < r.end(); ++i )
-            {
-                if ( data_[i].id )
-                    ++count_;
-            }
-        }
-        size_t res() const { return count_; }
-    private:
-        size_t count_ = 0;
-        const std::vector<SeparationPoint>& data_;
-    };
-    SumValidCalc sumValidVertsCalc( separationPoints );
-    tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, separationPoints.size() ), sumValidVertsCalc );
-    size_t numValidVerts = sumValidVertsCalc.res();
+    size_t numValidVerts = 0;
+    for ( const auto& num : numValidVertsPerThread )
+        numValidVerts += num;
 
     Polyline2 polyline;
     polyline.points.resize( numValidVerts );

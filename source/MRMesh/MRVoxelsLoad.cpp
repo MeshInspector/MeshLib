@@ -758,7 +758,8 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
 
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( outVolume );
-    res.data->setGridClass( openvdb::GRID_LEVEL_SET );
+    if ( params.gridLevelSet )
+        res.data->setGridClass( openvdb::GRID_LEVEL_SET );
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;

@@ -44,7 +44,7 @@ struct RawParameters
 {
     Vector3i dimensions;
     Vector3f voxelSize;
-    bool gridLevelSet{ false };
+    bool gridLevelSet{ false }; ///< OpenVDB GridClass set as GRID_LEVEL_SET (need to set right surface normals direction)
     enum class ScalarType
     {
         UInt8,

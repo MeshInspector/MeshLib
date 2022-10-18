@@ -111,19 +111,23 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
-Moreover, MeshLib can be easily installed as a python package using `pip install`:
-* On Windows in Pythons 3.8,3.9,3.10 via
+Moreover, MeshLib can be easily installed as a Python 3.8 - 3.10 package using `pip install`:
+* On Windows via
 ```
 py -3 -m pip install --upgrade pip
 py -3 -m pip install meshlib
 ```
-* On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ in Pythons 3.8,3.9,3.10 via
+* On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ via
 ```
 sudo apt install python3-pip
 python3 -m pip install --upgrade pip
 python3 -m pip install meshlib
 ```
-Support for `pip install` on MacOS X is coming.
+* On macOS 12.0+ via
+```
+pip install --upgrade pip
+pip install meshlib
+```
 
 
 # Build

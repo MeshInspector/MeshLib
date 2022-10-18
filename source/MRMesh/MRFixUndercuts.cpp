@@ -295,8 +295,8 @@ Vector3f improveDirectionInternal( const Mesh& mesh, const DistMapImproveDirecti
     auto& perp1 = perp.first;
     auto& perp2 = perp.second;
 
-    int baseAngNum = int( params.maxBaseAngle / params.baseAngleStep );
-    int polarAngNum = int( 2.0f * PI_F / params.polarAngleStep );
+    const int baseAngNum = ( params.baseAngleStep != 0.0f && params.maxBaseAngle >= params.baseAngleStep ) ? int( params.maxBaseAngle / params.baseAngleStep ) : 1;
+    const int polarAngNum = (params.polarAngleStep != 0.0f && 2.0f * PI_F >= params.polarAngleStep) ? int( 2.0f * PI_F / params.polarAngleStep ) : 1;
 
     std::vector<double> metrics( size_t( baseAngNum ) * polarAngNum );
     std::vector<Vector3f> dirs( size_t( baseAngNum ) * polarAngNum );

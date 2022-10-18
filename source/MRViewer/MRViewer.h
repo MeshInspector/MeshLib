@@ -115,15 +115,15 @@ public:
     MRVIEWER_API bool loadFile( const std::filesystem::path& file_name );
     MRVIEWER_API bool saveToFile( const std::filesystem::path & mesh_file_name );
     // Callbacks
-    MRVIEWER_API bool key_pressed( unsigned int unicode_key, int modifier );
-    MRVIEWER_API bool key_down( int key, int modifier );
-    MRVIEWER_API bool key_up( int key, int modifier );
-    MRVIEWER_API bool key_repeat( int key, int modifier );
-    MRVIEWER_API bool mouse_down( MouseButton button, int modifier );
-    MRVIEWER_API bool mouse_up( MouseButton button, int modifier );
-    MRVIEWER_API bool mouse_move( int mouse_x, int mouse_y );
-    MRVIEWER_API bool mouse_scroll( float delta_y );
-    MRVIEWER_API bool drag_drop( const std::vector<std::filesystem::path>& paths  );
+    MRVIEWER_API bool keyPressed( unsigned int unicode_key, int modifier );
+    MRVIEWER_API bool keyDown( int key, int modifier );
+    MRVIEWER_API bool keyUp( int key, int modifier );
+    MRVIEWER_API bool keyRepeat( int key, int modifier );
+    MRVIEWER_API bool mouseDown( MouseButton button, int modifier );
+    MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
+    MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
+    MRVIEWER_API bool mouseScroll( float delta_y );
+    MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
 
@@ -135,12 +135,12 @@ public:
     MRVIEWER_API void setupScene() const;
     // OpenGL context resize
     MRVIEWER_API void resize( int w, int h ); // explicitly set window size
-    MRVIEWER_API void post_resize( int w, int h ); // external resize due to user interaction
+    MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction
     MRVIEWER_API void postSetPosition( int xPos, int yPos ); // external set position due to user interaction
     MRVIEWER_API void postSetMaximized( bool maximized ); // external set maximized due to user interaction
     MRVIEWER_API void postSetIconified( bool iconified ); // external set iconified due to user interaction
     MRVIEWER_API void postFocus( bool focused ); // external focus handler due to user interaction
-    MRVIEWER_API void post_rescale( float x, float y ); // external rescale due to user interaction
+    MRVIEWER_API void postRescale( float x, float y ); // external rescale due to user interaction
 
     ////////////////////////
     // Multi-mesh methods //
@@ -469,6 +469,9 @@ public:
     MouseUpDownSignal mouseUpSignal; // signal is called on mouse up
     MouseMoveSignal mouseMoveSignal; // signal is called on mouse move, note that input x and y are in screen space
     MouseScrollSignal mouseScrollSignal; // signal is called on mouse is scrolled
+    // Cursor enters/leaves
+    using CursorEntranceSignal = boost::signals2::signal<void(bool)>;
+    CursorEntranceSignal cursorEntranceSignal;
     // Keyboard event
     using CharPressedSignal = boost::signals2::signal<bool( unsigned unicodeKey, int modifier ), SignalStopHandler>;
     using KeySignal = boost::signals2::signal<bool( int key, int modifier ), SignalStopHandler>;

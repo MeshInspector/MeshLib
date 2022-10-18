@@ -576,7 +576,6 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
                 counter += setupSeparation( x, y, x + 1, y );
         numValidVertsPerThread.local() += counter;
     } );
-    }
     size_t numValidVerts = 0;
     for ( const auto& num : numValidVertsPerThread )
         numValidVerts += num;

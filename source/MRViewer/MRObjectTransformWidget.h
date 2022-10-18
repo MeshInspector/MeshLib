@@ -76,8 +76,8 @@ public:
     // Changes controls xf (controls will affect object in basis of new xf)
     // note that rotation is applied around 0 coordinate in world space, so use xfAround to process rotation around user defined center
     // non-uniform scale will be converted to uniform one based on initial box diagonal
-    MRVIEWER_API void setControlsXf( const AffineXf3f& xf );
-    MRVIEWER_API AffineXf3f getControlsXf() const;
+    MRVIEWER_API void setControlsXf( const AffineXf3f& xf, ViewportId id = {} );
+    MRVIEWER_API AffineXf3f getControlsXf( ViewportId id = {} ) const;
 
     // Returns threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
     float getThresholdDot() const { return thresholdDot_; }
@@ -115,7 +115,7 @@ public:
         {
             if ( widget_.controlsRoot_ )
             {
-                xf_ = widget_.controlsRoot_->xf();
+                xf_ = widget_.controlsRoot_->xfsForAllViewports();
                 scaledXf_ = widget_.scaledXf_;
             }
         }
@@ -129,8 +129,8 @@ public:
         {
             if ( !widget_.controlsRoot_ )
                 return;
-            auto tmpXf = widget_.controlsRoot_->xf();
-            widget_.controlsRoot_->setXf( xf_ );
+            auto tmpXf = widget_.controlsRoot_->xfsForAllViewports();
+            widget_.controlsRoot_->setXfsForAllViewports( xf_ );
             xf_ = tmpXf;
 
             std::swap( scaledXf_, widget_.scaledXf_ );
@@ -143,8 +143,8 @@ public:
 
     private:
         ObjectTransformWidget& widget_;
-        AffineXf3f xf_;
-        AffineXf3f scaledXf_;
+        ViewportProperty<AffineXf3f> xf_;
+        ViewportProperty<AffineXf3f> scaledXf_;
         std::string name_;
     };
 
@@ -162,7 +162,7 @@ private:
     void processTranslation_( Axis ax, bool press );
     void processRotation_( Axis ax, bool press );
 
-    void setControlsXf_( const AffineXf3f& xf, bool updateScaled );
+    void setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id = {} );
 
     std::weak_ptr<Object> visibilityParent_;
     std::shared_ptr<ObjectMesh> currentObj_;
@@ -209,7 +209,7 @@ private:
     // it is needed to correctly convert non-uniform scaling to uniform one and apply it to this widget
     Vector3f boxDiagonal_;
     // same as controlsRoot_->xf() but with non uniform scaling applied
-    AffineXf3f scaledXf_;
+    ViewportProperty<AffineXf3f> scaledXf_;
     // this is needed for tooltip only
     float currentScaling_ = 1.0f;
 

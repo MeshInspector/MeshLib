@@ -3,6 +3,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRColor.h"
+#include "MRRenderGLHelpers.h"
 #include <boost/signals2/connection.hpp>
 
 namespace MR
@@ -24,21 +25,64 @@ public:
     // shift in screen space
     Vector2f shadowShift = Vector2f( 0.0, 0.0 );
     Vector4f shadowColor = Vector4f( Color::yellow() );
-    float blurRadius{ 3.0f };
+    float blurRadius{ 40.0f };
+    // value that describes blur quality, blur texture downscaling coefficient
+    // (0,1] 1 - is maximum quality, but it can affect performance on embedded systems
+    // 0.25 - recommended value
+    float getQuality() const { return quality_; }
+    MRVIEWER_API void setQuality( float quality );
 private:
+    float quality_{ 0.25f };
     void preDraw_();
     void postDraw_();
+    void postResize_( int x, int y );
+    
+    void drawLowSize_();
+    void convolveX_();
+    void convolveY_();
+    void drawShadow_( bool convX );
+    void drawTexture_( bool scene, bool downsample );
 
     boost::signals2::connection preDrawConnection_;
     boost::signals2::connection postDrawConnection_;
+    boost::signals2::connection postResizeConnection_;
 
     Vector2i sceneSize_;
+    Vector2i lowSize_;
 
-    unsigned int sceneFramebuffer_{ 0 };
-    unsigned int sceneColorRenderbufferMultisampled_{ 0 };
-    unsigned int sceneDepthRenderbufferMultisampled_{ 0 };
-    unsigned int sceneCopyFramebuffer_{ 0 };
-    unsigned int sceneResTexture_{ 0 };
+    class FramebufferData
+    {
+    public:
+        void gen( const Vector2i& size, bool multisample );
+        void bind();
+        void copyTexture();
+        void del();
+        unsigned getTexture() const { return resTexture_.getId(); }
+    private:
+        void resize_( const Vector2i& size, bool multisample );
+
+        unsigned mainFramebuffer_{ 0 };
+        unsigned colorRenderbuffer_{ 0 };
+        unsigned depthRenderbuffer_{ 0 };
+        unsigned copyFramebuffer_{ 0 };
+        GlTexture2 resTexture_;
+        Vector2i size_;
+    };
+
+    class QuadTextureVertexObject
+    {
+    public:
+        void gen();
+        void bind();
+        void del();
+    private:
+        unsigned vao_;
+        unsigned vbo_;
+    } quadObject_;
+
+    FramebufferData sceneFramebuffer_;
+    FramebufferData lowSizeFramebuffer_;
+    FramebufferData convolutionXFramebuffer_;
 
     bool enabled_{ false };
 };

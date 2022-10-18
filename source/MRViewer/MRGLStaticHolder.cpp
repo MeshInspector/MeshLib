@@ -1246,8 +1246,7 @@ void main(void)
   uniform bool convX;
   out vec4 outColor;                 // (out to render) fragment color
 
-  const float gaussWeights[] = float[6] (0.923, 0.726, 0.4867, 0.278, 0.135, 0.056);
-  const float invNorm = 0.161046;
+  const float gaussWeights[] = float[7] (0.161046, 0.148645, 0.116919, 0.078381, 0.044771, 0.021742, 0.009019);
 
   void main()
   { 
@@ -1255,7 +1254,7 @@ void main(void)
     ivec2 texSize = textureSize( pixels, 0 );
     vec2 pos = gl_FragCoord.xy;
     if ( !convX )
-      pos = pos + shift;
+      pos = pos - shift;
     pos = vec2( pos.x/float(texSize.x),pos.y/float(texSize.y) );
     vec2 posShift = vec2(0.0);
     if ( convX )
@@ -1263,14 +1262,14 @@ void main(void)
     else
       posShift = vec2(0.0,blurRadius /(6.0* float(texSize.y)));
     
-    float convSum = texture(pixels, pos).a;
-    for (int i=0;i<6;i=i+1)
+    float convSum = gaussWeights[0]*texture(pixels, pos).a;
+    for ( int i=1; i<=6; ++i )
     {
-      vec2 fullShift = float(i+1)*posShift;
+      vec2 fullShift = float(i)*posShift;
       convSum = convSum + gaussWeights[i]*texture(pixels, pos+fullShift).a;
       convSum = convSum + gaussWeights[i]*texture(pixels, pos-fullShift).a;
     }
-    outColor = vec4(color.rgb,convSum*invNorm);
+    outColor = vec4(color.rgb,convSum);
     if ( !convX )
       outColor.a = outColor.a*color.a;
     if (outColor.a == 0.0)

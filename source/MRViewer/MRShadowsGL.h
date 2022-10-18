@@ -3,6 +3,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRColor.h"
+#include "MRRenderGLHelpers.h"
 #include <boost/signals2/connection.hpp>
 
 namespace MR
@@ -27,7 +28,7 @@ public:
     float blurRadius{ 40.0f };
     // value that describes blur quality, blur texture downscaling coefficient
     // (0,1] 1 - is maximum quality, but it can affect performance on embedded systems
-    // 0.25 - recomended value
+    // 0.25 - recommended value
     float getQuality() const { return quality_; }
     MRVIEWER_API void setQuality( float quality );
 private:
@@ -56,7 +57,7 @@ private:
         void bind();
         void copyTexture();
         void del();
-        unsigned getTexture() const { return resTexture_; }
+        unsigned getTexture() const { return resTexture_.getId(); }
     private:
         void resize_( const Vector2i& size, bool multisample );
 
@@ -64,7 +65,7 @@ private:
         unsigned colorRenderbuffer_{ 0 };
         unsigned depthRenderbuffer_{ 0 };
         unsigned copyFramebuffer_{ 0 };
-        unsigned resTexture_{ 0 };
+        GlTexture2 resTexture_;
         Vector2i size_;
     };
 
@@ -81,7 +82,7 @@ private:
 
     FramebufferData sceneFramebuffer_;
     FramebufferData lowSizeFramebuffer_;
-    FramebufferData convolveXFramebuffer_;
+    FramebufferData convolutionXFramebuffer_;
 
     bool enabled_{ false };
 };

@@ -36,7 +36,7 @@ void ShadowsGL::enable( bool on )
         quadObject_.gen();
         sceneFramebuffer_.gen( sceneSize_, true );
         lowSizeFramebuffer_.gen( lowSize_, false );
-        convolveXFramebuffer_.gen( lowSize_, false );
+        convolutionXFramebuffer_.gen( lowSize_, false );
     }
     else
     {
@@ -46,7 +46,7 @@ void ShadowsGL::enable( bool on )
         
         quadObject_.del();
         sceneFramebuffer_.del();
-        convolveXFramebuffer_.del();
+        convolutionXFramebuffer_.del();
         lowSizeFramebuffer_.del();
     }
 }
@@ -58,12 +58,12 @@ void ShadowsGL::postResize_( int, int )
         return;
     lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );
     sceneFramebuffer_.del();
-    convolveXFramebuffer_.del();
+    convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
         
     sceneFramebuffer_.gen( sceneSize_, true );
     lowSizeFramebuffer_.gen( lowSize_, false );
-    convolveXFramebuffer_.gen( lowSize_, false );
+    convolutionXFramebuffer_.gen( lowSize_, false );
 }
 
 void ShadowsGL::preDraw_()
@@ -80,7 +80,7 @@ void ShadowsGL::postDraw_()
     GL_EXEC( glDisable( GL_MULTISAMPLE ) );
 #endif
     sceneFramebuffer_.copyTexture();
-    drawLowSize_(); // draw scene texture in low size for further convolve
+    drawLowSize_(); // draw scene texture in low size for further convolution
     convolveX_(); // draw shadow with x convolution to other texture (low res)
     convolveY_(); // draw shadow with y convolution to other texture (low res)
     drawTexture_( false, false ); // draw shadow in real size to main framebuffer
@@ -100,9 +100,9 @@ void ShadowsGL::drawLowSize_()
 
 void ShadowsGL::convolveX_()
 {
-    convolveXFramebuffer_.bind();
+    convolutionXFramebuffer_.bind();
     drawShadow_( true );
-    convolveXFramebuffer_.copyTexture();
+    convolutionXFramebuffer_.copyTexture();
 }
 
 void ShadowsGL::convolveY_()
@@ -133,7 +133,7 @@ void ShadowsGL::drawShadow_( bool convX )
     else
     {
         // draw X convolution texture to screen
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolveXFramebuffer_.getTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, convolutionXFramebuffer_.getTexture() ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
@@ -187,11 +187,11 @@ void ShadowsGL::setQuality( float quality )
         return;
 
     lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );
-    convolveXFramebuffer_.del();
+    convolutionXFramebuffer_.del();
     lowSizeFramebuffer_.del();
     
     lowSizeFramebuffer_.gen( lowSize_, false );
-    convolveXFramebuffer_.gen( lowSize_, false );    
+    convolutionXFramebuffer_.gen( lowSize_, false );
 }
 
 void ShadowsGL::FramebufferData::gen( const Vector2i& size, bool multisample )
@@ -215,8 +215,7 @@ void ShadowsGL::FramebufferData::gen( const Vector2i& size, bool multisample )
     GL_EXEC( glGenFramebuffers( 1, &copyFramebuffer_ ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
     // create a color attachment texture
-    GL_EXEC( glGenTextures( 1, &resTexture_ ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, resTexture_ ) );
+    resTexture_.gen();
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 
     resize_( size, multisample );
@@ -261,11 +260,8 @@ void ShadowsGL::FramebufferData::resize_( const Vector2i& size, bool multisample
     
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
 
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, resTexture_ ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
-    GL_EXEC( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resTexture_, 0 ) );
+    resTexture_.loadData( { .resolution = size, .wrap = WrapType::Clamp,.filter = FilterType::Linear }, ( const char* ) nullptr );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resTexture_.getId(), 0 ) );
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 }
@@ -293,7 +289,7 @@ void ShadowsGL::FramebufferData::copyTexture()
 
 void ShadowsGL::FramebufferData::del()
 {
-    GL_EXEC( glDeleteTextures( 1, &resTexture_ ) );
+    resTexture_.del();
     GL_EXEC( glDeleteFramebuffers( 1, &mainFramebuffer_ ) );
     GL_EXEC( glDeleteFramebuffers( 1, &copyFramebuffer_ ) );
     GL_EXEC( glDeleteRenderbuffers( 1, &depthRenderbuffer_ ) );

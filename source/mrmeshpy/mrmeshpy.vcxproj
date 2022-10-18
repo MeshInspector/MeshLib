@@ -35,6 +35,7 @@
     <ClCompile Include="MRPythonRegularMapMesh.cpp" />
     <ClCompile Include="MRPythonSampling.cpp" />
     <ClCompile Include="MRPythonSegmentation.cpp" />
+    <ClCompile Include="MRPythonVoxels.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

@@ -180,7 +180,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::SetTooltipIfHovered( "X, Y shift in screen coordinates:\nX going right\nY going up", menuScaling );
             ImGui::DragFloatValid( "Blur radius", &shadowGl_->blurRadius, 0.2f, 0, 200 );
             float quality = shadowGl_->getQuality();
-            ImGui::DragFloatValid( "Quality", &quality, 0.0625f, 0.001f, 1.0f );
+            ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
             ImGui::SetTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
             shadowGl_->setQuality( quality );
         }

@@ -175,15 +175,15 @@ void ShadowsGL::setQuality( float quality )
 {
     if ( quality_ == quality )
         return;
-    if ( sceneSize_.x == 0 || sceneSize_.y == 0 )
-        return;
-
+    
     quality_ = quality;
     if ( quality_ <= 0.0f )
         quality_ = 0.125f;
     else if ( quality_ > 1.0f )
         quality_ = 1.0f;
     if ( !enabled_ )
+        return;
+    if ( sceneSize_.x == 0 || sceneSize_.y == 0 )
         return;
 
     lowSize_ = Vector2i( Vector2f( sceneSize_ ) * quality_ );

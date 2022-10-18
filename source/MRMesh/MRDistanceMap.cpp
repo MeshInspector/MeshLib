@@ -531,7 +531,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     };
     auto horizontalEdgesSize = ( resX - 1 ) * resY;
     std::vector<SeparationPoint> separationPoints( horizontalEdgesSize + resX * ( resY - 1 ) );
-    std::atomic_size_t validVertCounter{ 0 };
+    tbb::enumerable_thread_specific<size_t> numValidVertsPerThread( 0 );
     auto setupSeparation = [&] ( size_t x0, size_t y0, size_t x1, size_t y1 )
     {
         const auto v0 = distMap.getValue( x0, y0 );
@@ -574,9 +574,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         for ( size_t y = range.begin(); y < range.end(); ++y )
             for ( size_t x = 0; x + 1 < resX; x++ )
                 counter += setupSeparation( x, y, x + 1, y );
-        validVertCounter += counter;
+        numValidVertsPerThread.local() += counter;
     } );
-    size_t numValidVerts = validVertCounter;
+    }
+    size_t numValidVerts = 0;
+    for ( const auto& num : numValidVertsPerThread )
+        numValidVerts += num;
 
     Polyline2 polyline;
     polyline.points.resize( numValidVerts );

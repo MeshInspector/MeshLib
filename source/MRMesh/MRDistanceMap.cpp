@@ -537,11 +537,11 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         const auto v0 = distMap.getValue( x0, y0 );
         const auto v1 = distMap.getValue( x1, y1 );
         if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
-            return false;
+            return 0;
         const bool low0 = v0 < isoValue;
         const bool low1 = v1 < isoValue;
         if ( low0 == low1 )
-            return false;
+            return 0;
 
         const float ratio = std::abs( isoValue - v0 ) / std::abs( v1 - v0 );
         size_t index = 0;
@@ -562,7 +562,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         separationPoints[index].low = low0;
         separationPoints[index].coord = ( 1.0f - ratio ) * Vector2f( float( x0 ), float( y0 ) ) +
             ratio * Vector2f( float( x1 ), float( y1 ) ) + Vector2f::diagonal( 0.5f );
-        return true;
+        return 1;
     };
     // fill separationPoints
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, resY ), [&] ( const tbb::blocked_range<size_t>& range )

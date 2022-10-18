@@ -59,6 +59,8 @@ public:
     ViewportMask & operator |= ( ViewportMask b ) { mask_ |= b.mask_; return * this;  }
     ViewportMask & operator ^= ( ViewportMask b ) { mask_ ^= b.mask_; return * this;  }
 
+    void set( ViewportId id, bool on = true ) { on ? ( mask_ |= id.value() ) : ( mask_ &= ~id.value() ); }
+
 private:
     unsigned mask_ = 0;
 };

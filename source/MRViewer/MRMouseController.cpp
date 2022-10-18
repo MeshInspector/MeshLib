@@ -88,6 +88,13 @@ void MouseController::connect()
     viewer.mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
+    viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
+}
+
+void MouseController::cursorEntrance_( bool entered )
+{
+    isCursorInside_ = entered;
+    spdlog::info(" cursor entered {}",entered);
 }
 
 bool MouseController::preMouseDown_( MouseButton btn, int )
@@ -115,7 +122,7 @@ void MouseController::resetAll_()
         return;
     for ( auto btn : downState_ )
     {
-        getViewerInstance().mouse_up( MouseButton( btn ), 0 );
+        getViewerInstance().mouseUp( MouseButton( btn ), 0 );
     }
 }
 #endif

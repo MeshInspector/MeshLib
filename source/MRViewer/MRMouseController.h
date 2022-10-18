@@ -41,6 +41,8 @@ public:
     // returns state of mouse button
     MRVIEWER_API bool isPressed( MouseButton button ) const;
 
+    bool isCursorInside() const { return isCursorInside_; }    
+
     // returns nullopt if no control is present for given mode, otherwise returns associated control
     MRVIEWER_API std::optional<MouseControlKey> findControlByMode( MouseMode mode ) const;
     // make string from mouse button and modifier
@@ -62,6 +64,9 @@ private:
     bool preMouseUp_( MouseButton button, int modifier );
     bool preMouseMove_( int x, int y );
     bool mouseScroll_( float delta );
+
+    bool isCursorInside_{ false };
+    void cursorEntrance_( bool entered );
 
     Vector3f downTranslation_;
     // screen space

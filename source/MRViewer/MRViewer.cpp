@@ -62,7 +62,7 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     if ( sEmsPixelRatio != pixelRatio )
     {
         sEmsPixelRatio = pixelRatio;
-        MR::getViewerInstance().post_rescale( float( sEmsPixelRatio ), float( sEmsPixelRatio ) );
+        MR::getViewerInstance().postRescale( float( sEmsPixelRatio ), float( sEmsPixelRatio ) );
     }
     float newWidth = width * pixelRatio;
     float newHeight = height * pixelRatio;
@@ -88,12 +88,12 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
     if ( action == GLFW_PRESS )
         MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [mb, modifier] ()
     {
-        MR::Viewer::instanceRef().mouse_down( mb, modifier );
+        MR::Viewer::instanceRef().mouseDown( mb, modifier );
     } );        
     else
         MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [mb, modifier] ()
     {
-        MR::Viewer::instanceRef().mouse_up( mb, modifier );
+        MR::Viewer::instanceRef().mouseUp( mb, modifier );
     } );
 }
 
@@ -104,22 +104,22 @@ static void glfw_error_callback( int /*error*/, const char* description )
 
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
 {
-    MR::Viewer::instanceRef().key_pressed( codepoint, 0 );
+    MR::Viewer::instanceRef().keyPressed( codepoint, 0 );
 }
 
 static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int modifier )
 {
     if ( action == GLFW_PRESS )
-        MR::Viewer::instanceRef().key_down( key, modifier );
+        MR::Viewer::instanceRef().keyDown( key, modifier );
     else if ( action == GLFW_RELEASE )
-        MR::Viewer::instanceRef().key_up( key, modifier );
+        MR::Viewer::instanceRef().keyUp( key, modifier );
     else if ( action == GLFW_REPEAT )
-        MR::Viewer::instanceRef().key_repeat( key, modifier );
+        MR::Viewer::instanceRef().keyRepeat( key, modifier );
 }
 
 static void glfw_window_size( GLFWwindow* /*window*/, int width, int height )
 {
-    MR::Viewer::instanceRef().post_resize( width, height );
+    MR::Viewer::instanceRef().postResize( width, height );
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
@@ -129,6 +129,11 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
     auto& viewer = MR::Viewer::instanceRef();
     viewer.windowOldPos = viewer.windowSavePos;
     viewer.postSetPosition( xPos, yPos );
+}
+
+static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
+{
+    MR::getViewerInstance().cursorEntranceSignal( bool( entered ) );
 }
 
 #ifndef __EMSCRIPTEN__
@@ -150,14 +155,14 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
 {
-    MR::Viewer::instanceRef().post_rescale( xscale, yscale );
+    MR::Viewer::instanceRef().postRescale( xscale, yscale );
 }
 
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 {
     auto eventCall = [x, y] ()
     {
-        MR::Viewer::instanceRef().mouse_move( int( x ), int( y ) );
+        MR::Viewer::instanceRef().mouseMove( int( x ), int( y ) );
         MR::Viewer::instanceRef().draw();
     };
     if ( MR::Viewer::instanceRef().mouseEventQueue.empty() || 
@@ -174,7 +179,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
-    MR::Viewer::instanceRef().mouse_scroll( float( y ) );
+    MR::Viewer::instanceRef().mouseScroll( float( y ) );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -189,7 +194,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     }
     MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Drop, [paths] ()
     {
-        MR::Viewer::instanceRef().drag_drop( paths );
+        MR::Viewer::instanceRef().dragDrop( paths );
     } );
 }
 
@@ -460,6 +465,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetCursorPosCallback( window, glfw_mouse_move );
         glfwSetWindowSizeCallback( window, glfw_window_size );
         glfwSetWindowPosCallback( window, glfw_window_pos );
+        glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
 #ifndef __EMSCRIPTEN__
         glfwSetWindowMaximizeCallback( window, glfw_window_maximize );
         glfwSetWindowIconifyCallback( window, glfw_window_iconify );
@@ -794,7 +800,7 @@ bool Viewer::saveToFile( const std::filesystem::path & path )
     return true;
 }
 
-bool Viewer::key_pressed( unsigned int unicode_key, int modifiers )
+bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
     incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
@@ -804,7 +810,7 @@ bool Viewer::key_pressed( unsigned int unicode_key, int modifiers )
     return charPressedSignal( unicode_key, modifiers );
 }
 
-bool Viewer::key_down( int key, int modifiers )
+bool Viewer::keyDown( int key, int modifiers )
 {
     incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
 
@@ -816,7 +822,7 @@ bool Viewer::key_down( int key, int modifiers )
     return false;
 }
 
-bool Viewer::key_up( int key, int modifiers )
+bool Viewer::keyUp( int key, int modifiers )
 {
     incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
 
@@ -828,7 +834,7 @@ bool Viewer::key_up( int key, int modifiers )
     return false;
 }
 
-bool Viewer::key_repeat( int key, int modifiers )
+bool Viewer::keyRepeat( int key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
     incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
@@ -841,7 +847,7 @@ bool Viewer::key_repeat( int key, int modifiers )
     return false;
 }
 
-bool Viewer::mouse_down( MouseButton button, int modifier )
+bool Viewer::mouseDown( MouseButton button, int modifier )
 {
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
@@ -856,7 +862,7 @@ bool Viewer::mouse_down( MouseButton button, int modifier )
     return true;
 }
 
-bool Viewer::mouse_up( MouseButton button, int modifier )
+bool Viewer::mouseUp( MouseButton button, int modifier )
 {
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
@@ -871,7 +877,7 @@ bool Viewer::mouse_up( MouseButton button, int modifier )
     return true;
 }
 
-bool Viewer::mouse_move( int mouse_x, int mouse_y )
+bool Viewer::mouseMove( int mouse_x, int mouse_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseMove )]++;
 
@@ -881,7 +887,7 @@ bool Viewer::mouse_move( int mouse_x, int mouse_y )
     return false;
 }
 
-bool Viewer::mouse_scroll( float delta_y )
+bool Viewer::mouseScroll( float delta_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
@@ -891,7 +897,7 @@ bool Viewer::mouse_scroll( float delta_y )
     return true;
 }
 
-bool Viewer::drag_drop( const std::vector<std::filesystem::path>& paths )
+bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 {
     if ( dragDropSignal( paths ) )
         return true;
@@ -1100,10 +1106,10 @@ void Viewer::resize( int w, int h )
     {
         glfwSetWindowSize( window, w, h );
     }
-    post_resize( w, h );
+    postResize( w, h );
 }
 
-void Viewer::post_resize( int w, int h )
+void Viewer::postResize( int w, int h )
 {
     if ( w == 0 || h == 0 )
         return;
@@ -1178,7 +1184,7 @@ void Viewer::postFocus( bool focused )
         MR::Viewer::instanceRef().draw( true );
 }
 
-void Viewer::post_rescale( float x, float y )
+void Viewer::postRescale( float x, float y )
 {
     postRescaleSignal( x, y );
 }

@@ -135,7 +135,7 @@ static int mainInternal( int argc, char **argv )
         return 1;
     }
     auto mesh = std::move( loadRes.value() );
-    std::cout << "loaded successfully in " << t.secondsPassed() << "\n"
+    std::cout << "loaded successfully in " << t.secondsPassed().count() << "s\n"
         << "num vertices: " << mesh.topology.numValidVerts() << "\n"
         << "num edges:    " << mesh.topology.computeNotLoneUndirectedEdges() << "\n"
         << "num faces:    " << mesh.topology.numValidFaces() << std::endl;
@@ -159,7 +159,7 @@ static int mainInternal( int argc, char **argv )
         std::cerr << "Mesh save error: " << saveRes.error() << "\n";
         return 1;
     }
-    std::cout << "saved successfully in " << t.secondsPassed() << "\n";
+    std::cout << "saved successfully in " << t.secondsPassed().count() << "s\n";
     t.finish();
 
     return 0;

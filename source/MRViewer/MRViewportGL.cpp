@@ -479,7 +479,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
         if ( !objPtr )
             continue;
         auto& obj = *objPtr;
-        auto modelTemp = Matrix4f( obj.worldXf() );
+        auto modelTemp = Matrix4f( obj.worldXf( params.viewportId ) );
         obj.renderForPicker( { params.baseRenderParams.viewMatrixPtr, modelTemp.data(), params.baseRenderParams.projMatrixPtr ,nullptr,
                              params.viewportId, params.clippingPlane,params.baseRenderParams.viewport }, i );
     }

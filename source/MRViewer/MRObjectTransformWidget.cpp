@@ -244,14 +244,14 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask )
     updateVisualTransformMode_( transformModeMask_, visMask );
 }
 
-void ObjectTransformWidget::setControlsXf( const AffineXf3f &xf )
+void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
 {
-    setControlsXf_( xf, true );
+    setControlsXf_( xf, true, id );
 }
 
-AffineXf3f ObjectTransformWidget::getControlsXf() const
+AffineXf3f ObjectTransformWidget::getControlsXf( ViewportId id ) const
 {
-    return controlsRoot_->xf();
+    return controlsRoot_->xf( id );
 }
 
 void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& obj )
@@ -319,7 +319,7 @@ void ObjectTransformWidget::preDraw_()
 
         if ( thresholdDot_ > 0.0f )
         {
-            const auto& xf = controlsRoot_->xf();
+            const auto& xf = controlsRoot_->xf( vpId );
             auto transformedCenter = xf( center_ );
             auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
             auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
@@ -602,7 +602,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     auto& viewport = getViewerInstance().viewport();
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
-    auto xf = controlsRoot_->xf();
+    auto xf = controlsRoot_->xf( viewport.id );
     auto newScaling = findClosestPointOfSkewLines(
         xf( translateLines_[int( ax )]->polyline()->points.vec_[0] ),
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
@@ -643,7 +643,7 @@ void ObjectTransformWidget::processTranslation_( Axis ax, bool press )
     auto& viewport = getViewerInstance().viewport();
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
-    auto xf = controlsRoot_->xf();
+    auto xf = controlsRoot_->xf( viewport.id );
     auto newTranslation = findClosestPointOfSkewLines(
         xf( translateLines_[int( ax )]->polyline()->points.vec_[0] ),
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
@@ -671,7 +671,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     auto viewportPoint = getViewerInstance().screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
     auto line = viewport.unprojectPixelRay( Vector2f( viewportPoint.x, viewportPoint.y ) );
 
-    auto prevXf = controlsRoot_->xf();
+    auto prevXf = controlsRoot_->xf( viewport.id );
     auto zeroPoint = prevXf( rotateLines_[int( ax )]->polyline()->points.vec_[0] );
     auto norm = prevXf.A * translateLines_[int( ax )]->polyline()->edgeVector( 0_e );
     auto centerTransformed = prevXf( center_ );
@@ -739,19 +739,19 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
 }
 
 
-void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateScaled )
+void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id )
 {
     if ( updateScaled )
-        scaledXf_ = xf;
+        scaledXf_.set( xf, id );
     Matrix3f rotation, scaling;
-    decomposeMatrix3( scaledXf_.A, rotation, scaling );
+    decomposeMatrix3( scaledXf_.get( id ).A, rotation, scaling );
 
-    auto scaledBoxDiagonal = scaledXf_.A * boxDiagonal_;
+    auto scaledBoxDiagonal = scaledXf_.get( id ).A * boxDiagonal_;
     float uniformScaling = scaledBoxDiagonal.length() / boxDiagonal_.length();
     Vector3f invScaling{ 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
 
     approvedChange_ = true;
-    controlsRoot_->setXf( scaledXf_ * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), center_ ) );
+    controlsRoot_->setXf( scaledXf_.get( id ) * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), center_ ), id );
     approvedChange_ = false;
 }
 
@@ -802,8 +802,18 @@ void ObjectTransformWidget::addXf_( const AffineXf3f& addXf )
     if ( addXfCallback_ )
         addXfCallback_( addXf );
 
-    scaledXf_ = addXf * scaledXf_;
-    setControlsXf_( scaledXf_, false );
+    auto& defaultXf = scaledXf_.get();
+    scaledXf_.set( addXf * defaultXf );
+    setControlsXf_( scaledXf_.get(), false );
+    for ( auto vpId : ViewportMask::all() )
+    {
+        bool isDef = false;
+        const auto& xf = scaledXf_.get( vpId, &isDef );
+        if ( isDef )
+            continue;
+        scaledXf_.set( addXf * xf, vpId );
+        setControlsXf_( scaledXf_.get( vpId ), false, vpId );
+    }
 
     approvedChange_ = false;
 }

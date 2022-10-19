@@ -1,6 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRFloatGrid.h"
 #include "MRMesh/MRVDBConversions.h"
 #include "MRMesh/MRMesh.h"
@@ -60,6 +61,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "isoValue can be negative only in level set grids.\n"
         "adaptivity - [0.0;1.0] Ratio of combining small triangles into bigger ones.\n"
         "(Curvature can be lost on high values.)" );
+
+    m.def( "saveSliceToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage,
+        pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        "Save the slice by the active plane through the sliceNumber to an image file.\n" );
+
+    m.def( "saveAllSlicesToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage,
+       pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+       "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 } )
 
 MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedVdbVolume, MR::VdbVolume, std::string )

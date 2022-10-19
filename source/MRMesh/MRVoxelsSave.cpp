@@ -106,11 +106,9 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
     return {};
 }
 
-tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const ObjectVoxels& voxelsObject,
-                                                             SlicePlain slicePlain, int sliceNumber, float min, float max, ProgressCallback callback/* = {} */)
+tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback )
 {
-    const auto& bounds = voxelsObject.getActiveBounds();
-    const auto dims = bounds.size();
+    const auto& dims = vdbVolume.dims;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
     const int textureHeight = dims[( slicePlain + 2 ) % 3];
 
@@ -119,39 +117,39 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     switch ( slicePlain )
     {
     case SlicePlain::XY:
-        if ( sliceNumber > bounds.max.z )
+        if ( sliceNumber > dims.z )
             return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
-        activeVoxel = { bounds.min.x, bounds.min.y, sliceNumber };
+        activeVoxel = { 0, 0, sliceNumber };
         break;
     case SlicePlain::YZ:
-        if ( sliceNumber > bounds.max.x )
+        if ( sliceNumber > dims.x )
             return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
-        activeVoxel = { sliceNumber, bounds.min.y, bounds.min.z };
+        activeVoxel = { sliceNumber, 0, 0 };
         break;
     case SlicePlain::ZX:
-        if ( sliceNumber > bounds.max.y )
+        if ( sliceNumber > dims.y )
             return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
-        activeVoxel = { bounds.min.x, sliceNumber, bounds.min.z };
+        activeVoxel = { 0, sliceNumber, 0 };
         break;
     default:
         return  tl::make_unexpected( "Slice plain is invalid" );
     }
  
-    const auto& grid = voxelsObject.grid();
+    const auto& grid = vdbVolume.data;
     const auto accessor = grid->getConstAccessor();
   
     for ( int i = 0; i < int( texture.size() ); ++i )
     {
         openvdb::Coord coord;
         coord[slicePlain] = sliceNumber;
-        coord[( slicePlain + 1 ) % 3] = ( i % textureWidth ) + bounds.min[( slicePlain + 1 ) % 3];
-        coord[( slicePlain + 2 ) % 3] = ( i / textureWidth ) + bounds.min[( slicePlain + 2 ) % 3];
+        coord[( slicePlain + 1 ) % 3] = ( i % textureWidth );
+        coord[( slicePlain + 2 ) % 3] = ( i / textureWidth );
 
         const auto val = accessor.getValue( coord );
-        const float normedValue = ( val - min ) / ( max - min );
+        const float normedValue = ( val - vdbVolume.min ) / ( vdbVolume.max - vdbVolume.min );
         texture[i] = Color( Vector3f::diagonal( normedValue ) );
 
         if ( ( i % 100 ) && callback && !callback( float( i ) / texture.size() ) )
@@ -169,51 +167,48 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const ObjectVoxels& voxelsObject,
-                                                             SlicePlain slicePlain, float min, float max, ProgressCallback callback/* = {}*/)
+tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, ProgressCallback callback )
 {
-    const auto& bounds = voxelsObject.getActiveBounds();
-
     switch ( slicePlain )
     {
     case SlicePlain::XY:
     {
-        const size_t maxNumChars = std::to_string( bounds.max.z ).size();
-        for ( int z = bounds.min.z; z < bounds.max.z; ++z )
+        const size_t maxNumChars = std::to_string( vdbVolume.dims.z ).size();
+        for ( int z = 0; z < vdbVolume.dims.z; ++z )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", z, maxNumChars ), voxelsObject, slicePlain, z, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", z, maxNumChars ), vdbVolume, slicePlain, z );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( z ) / bounds.size().z ) )
+            if ( callback && !callback( float( z ) / vdbVolume.dims.z ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     }
     case SlicePlain::YZ:
     {
-        const size_t maxNumChars = std::to_string( bounds.max.x ).size();
-        for ( int x = bounds.min.x; x < bounds.max.x; ++x )
+        const size_t maxNumChars = std::to_string( vdbVolume.dims.x ).size();
+        for ( int x = 0; x < vdbVolume.dims.x; ++x )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", x, maxNumChars ), voxelsObject, slicePlain, x, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", x, maxNumChars ), vdbVolume, slicePlain, x );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( x ) / bounds.size().x ) )
+            if ( callback && !callback( float( x ) / vdbVolume.dims.x ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     }
     case SlicePlain::ZX:
     {
-        const size_t maxNumChars = std::to_string( bounds.max.y ).size();
-        for ( int y = bounds.min.y; y < bounds.max.y; ++y )
+        const size_t maxNumChars = std::to_string( vdbVolume.dims.y ).size();
+        for ( int y = 0; y < vdbVolume.dims.y; ++y )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", y, maxNumChars ), voxelsObject, slicePlain, y, min, max );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", y, maxNumChars ), vdbVolume, slicePlain, y );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( y ) / bounds.size().y ) )
+            if ( callback && !callback( float( y ) / vdbVolume.dims.y ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;

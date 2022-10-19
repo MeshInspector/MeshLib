@@ -62,6 +62,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "adaptivity - [0.0;1.0] Ratio of combining small triangles into bigger ones.\n"
         "(Curvature can be lost on high values.)" );
 
+    pybind11::enum_<MR::SlicePlain>( m, "SlicePlain" ).
+        value( "XY", MR::SlicePlain::XY, "XY plain" ).
+        value( "YZ", MR::SlicePlain::YZ, "YZ plain" ).
+        value( "XZ", MR::SlicePlain::YZ, "XZ plain" ).
+        value( "None", MR::SlicePlain::None, "None" );
+
     m.def( "saveSliceToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage,
         pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Save the slice by the active plane through the sliceNumber to an image file.\n" );

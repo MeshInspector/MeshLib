@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshDecimate.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRConvexHull.h"
+#include "MRMesh/MRTimer.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
@@ -125,6 +126,8 @@ static int mainInternal( int argc, char **argv )
         return 1;
     }
 
+    std::cout << "Loading " << inFilePath << "..." << std::endl;
+    MR::Timer t("LoadMesh");
     auto loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
     if ( !loadRes.has_value() )
     {
@@ -132,7 +135,11 @@ static int mainInternal( int argc, char **argv )
         return 1;
     }
     auto mesh = std::move( loadRes.value() );
-    std::cout << inFilePath << " loaded successfully\n";
+    std::cout << "loaded successfully in " << t.secondsPassed() << "\n"
+        << "num vertices: " << mesh.topology.numValidVerts() << "\n"
+        << "num edges:    " << mesh.topology.computeNotLoneUndirectedEdges() << "\n"
+        << "num faces:    " << mesh.topology.numValidFaces() << std::endl;
+    t.finish();
 
     std::vector<std::vector<std::string>> lists;
     for ( const po::option& o : parsedCommands.options )
@@ -144,14 +151,16 @@ static int mainInternal( int argc, char **argv )
         }
     }
 
-
+    std::cout << "Saving " << outFilePath << "..." << std::endl;
+    t.restart("SaveMesh");
     auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, outFilePath );
     if ( !saveRes.has_value() )
     {
-        std::cerr << "Mesh save error:" << saveRes.error() << "\n";
+        std::cerr << "Mesh save error: " << saveRes.error() << "\n";
         return 1;
     }
-    std::cout << outFilePath << " saved successfully\n";
+    std::cout << "saved successfully in " << t.secondsPassed() << "\n";
+    t.finish();
 
     return 0;
 }

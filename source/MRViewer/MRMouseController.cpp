@@ -5,7 +5,6 @@
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
 namespace MR
@@ -94,7 +93,6 @@ void MouseController::connect()
 void MouseController::cursorEntrance_( bool entered )
 {
     isCursorInside_ = entered;
-    spdlog::info(" cursor entered {}",entered);
 }
 
 bool MouseController::preMouseDown_( MouseButton btn, int )

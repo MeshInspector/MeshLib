@@ -114,20 +114,20 @@ void printTimingTreeAndStop()
     printTimingTreeAtEnd( false );
 }
 
-void Timer::restart( const std::string& name )
+void Timer::restart( std::string name )
 {
     finish();
-    start( name );
+    start( std::move( name ) );
 }
 
-void Timer::start( const std::string& name )
+void Timer::start( std::string name )
 {
     if ( std::this_thread::get_id() != mainThreadId )
         return;
     started_ = true;
     start_ = high_resolution_clock::now();
     auto parent = currentRecord;
-    currentRecord = &parent->children[name];
+    currentRecord = &parent->children[ std::move( name ) ];
     currentRecord->parent = parent;
 }
 

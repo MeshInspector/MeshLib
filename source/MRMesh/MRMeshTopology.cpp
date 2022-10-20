@@ -5,6 +5,7 @@
 #include "MREdgePaths.h"
 #include "MRphmap.h"
 #include "MRTimer.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 
@@ -1052,21 +1053,37 @@ void MeshTopology::computeValidsFromEdges()
 {
     MR_TIMER
 
-    numValidVerts_ = 0;
-    for ( VertId v{0}; v < edgePerVertex_.size(); ++v )
+    BitSetParallelForAll( validVerts_, [&]( VertId v )
+    {
         if ( edgePerVertex_[v].valid() )
-        {
             validVerts_.set( v );
-            ++numValidVerts_;
-        }
+    } );
 
-    numValidFaces_ = 0;
-    for ( FaceId f{0}; f < edgePerFace_.size(); ++f )
+    numValidVerts_ = parallel_reduce( tbb::blocked_range( 0_v, VertId{ vertSize() } ), 0,
+    [&] ( const auto & range, int curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( validVerts_.test( v ) )
+                ++curr;
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+
+    BitSetParallelForAll( validFaces_, [&]( FaceId f )
+    {
         if ( edgePerFace_[f].valid() )
-        {
             validFaces_.set( f );
-            ++numValidFaces_;
-        }
+    } );
+
+    numValidFaces_ = parallel_reduce( tbb::blocked_range( 0_f, FaceId{ faceSize() } ), 0,
+    [&] ( const auto & range, int curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( validFaces_.test( f ) )
+                ++curr;
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
 }
 
 void MeshTopology::computeAllFromEdges_()

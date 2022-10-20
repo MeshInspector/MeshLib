@@ -1,4 +1,5 @@
 #include "miniply.h"
+#include "MRTimer.h"
 #include <fstream>
 #include <cassert>
 #include <cctype>
@@ -1062,6 +1063,7 @@ namespace miniply {
 
   bool PLYReader::requires_triangulation(uint32_t propIdx) const
   {
+    MR_TIMER
     const uint32_t* counts = get_list_counts(propIdx);
     if (counts == nullptr) {
       return false;
@@ -1477,6 +1479,7 @@ namespace miniply {
 
   bool PLYReader::load_fixed_size_element(PLYElement& elem)
   {
+    MR_TIMER
     size_t numBytes = elem.count * elem.rowStride;
 
     m_elementData.resize(numBytes);
@@ -1548,6 +1551,7 @@ namespace miniply {
 
   bool PLYReader::load_variable_size_element(PLYElement& elem)
   {
+    MR_TIMER
     m_elementData.resize(elem.count * elem.rowStride);
 
     // Preallocate enough space for each row in the property to contain three

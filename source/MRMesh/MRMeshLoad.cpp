@@ -380,17 +380,19 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
     
     for ( int i = 0; reader.has_element() && ( !gotVerts || !gotFaces ); reader.next_element(), ++i )
     {
-        if ( reader.element_is(miniply::kPLYVertexElement) && reader.load_element()  ) 
+        if ( reader.element_is(miniply::kPLYVertexElement) && reader.load_element() )
         {
             auto numVerts = reader.num_rows();
             if ( reader.find_pos( indecies ) )
             {
+                Timer t( "extractPoints" );
                 res.points.resize( numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.points.data() );
                 gotVerts = true;
             }
             if ( colors && reader.find_color( indecies ) )
             {
+                Timer t( "extractColors" );
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
@@ -407,23 +409,24 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
             if ( polys && !gotVerts )
                 return tl::make_unexpected( std::string( "PLY file open: need vertex positions to triangulate faces" ) );
 
-            std::vector<VertId> vertTriples;
+            std::vector<VertId> vertTriples; //< timers show some slowness here
             if (polys) 
             {
+                Timer t( "extractTriangles" );
                 auto numIndices = reader.num_triangles( indecies[0] ) * 3;
                 vertTriples.resize( numIndices );
                 reader.extract_triangles( indecies[0], &res.points.front().x, (std::uint32_t)res.points.size(), miniply::PLYPropertyType::Int, &vertTriples.front() );
             }
             else 
             {
+                Timer t( "extractTriples" );
                 auto numIndices = reader.num_rows() * 3;
                 vertTriples.resize( numIndices );
                 reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &vertTriples.front() );
             }
             const auto posCurent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
-            float progress = ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize;
-            if ( callback && !callback( progress ) )
+            if ( callback && !callback( ( float( posLast ) + ( posCurent - posLast ) * 0.1f - posStart ) / streamSize ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
             bool isCanceled = false;
             ProgressCallback partedProgressCb = callback ? [callback, posLast, posCurent, posStart, streamSize, &isCanceled] ( float v )
@@ -433,8 +436,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
                 return res;
             } : callback;
             res.topology = MeshBuilder::fromVertexTriples( vertTriples, partedProgressCb );
-            progress = float( posCurent - posStart ) / streamSize;
-            if ( callback && ( !callback( progress ) || isCanceled ) )
+            if ( callback && ( !callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
         }

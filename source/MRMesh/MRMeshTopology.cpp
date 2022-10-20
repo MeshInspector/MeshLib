@@ -970,10 +970,23 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
     return edges_ == b.edges_;
 }
 
+template<class V>
+void resizeNoInit( V & v, size_t targetSize )
+{
+    // allocate enough memory
+    v.reserve( targetSize );
+    // resize without memory access
+    while ( v.size() < targetSize )
+        v.emplace_back( noInit );
+    // in case initial size was larger
+    v.resize( targetSize );
+}
+
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
 {
     MR_TIMER
-    edges_.resize( edgeSize );
+
+    resizeNoInit( edges_, edgeSize );
 
     edgePerVertex_.resize( vertSize );
     validVerts_.resize( vertSize );
@@ -1024,10 +1037,8 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
         HalfEdgeRecord & to = edges_[emap( i )];
         to.next = emap( fromEdge.next );
         to.prev = emap( fromEdge.prev );
-        if ( fromEdge.org.valid() )
-            to.org  = vmap[fromEdge.org];
-        if ( fromEdge.left.valid() )
-            to.left = fmap[fromEdge.left];
+        to.org = fromEdge.org.valid() ? vmap[fromEdge.org] : VertId{};
+        to.left = fromEdge.left.valid() ? fmap[fromEdge.left] : FaceId{};
     }
 }
 

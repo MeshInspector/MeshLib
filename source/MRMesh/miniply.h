@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include "MRBuffer.h"
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -272,7 +273,7 @@ namespace miniply {
     std::vector<PLYElement> m_elements;         //!< Element descriptors for this file.
 
     size_t m_currentElement = 0;
-    std::vector<uint8_t> m_elementData;
+    MR::Buffer<uint8_t> m_elementData;
 
     char* m_tmpBuf = nullptr;
     bool m_inDataSection  = false;

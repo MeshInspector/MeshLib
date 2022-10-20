@@ -67,12 +67,18 @@ void MeshTopology::excludeLoneEdges( UndirectedEdgeBitSet & edges ) const
 size_t MeshTopology::computeNotLoneUndirectedEdges() const
 {
     MR_TIMER
-    size_t res = 0;
-    for ( [[maybe_unused]] auto ue : undirectedEdges( *this ) )
+
+    return parallel_reduce( tbb::blocked_range( 0_ue, UndirectedEdgeId{ undirectedEdgeSize() } ), size_t(0),
+    [&] ( const auto & range, size_t curr )
     {
-        ++res;
-    }
-    return res;
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            if ( !isLoneEdge( ue ) )
+                ++curr;
+        }
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
 }
 
 size_t MeshTopology::heapBytes() const

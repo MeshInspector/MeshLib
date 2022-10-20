@@ -15,11 +15,11 @@ struct TimeRecord;
 class Timer
 {
 public:
-    Timer( const std::string& name ) { start( name ); }
+    Timer( std::string name ) { start( std::move( name ) ); }
     ~Timer() { finish(); }
 
-    MRMESH_API void restart( const std::string& name );
-    MRMESH_API void start( const std::string& name );
+    MRMESH_API void restart( std::string name );
+    MRMESH_API void start( std::string name );
     MRMESH_API void finish();
 
     Timer( const Timer & ) = delete;

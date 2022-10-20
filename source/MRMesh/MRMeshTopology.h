@@ -259,7 +259,8 @@ public:
     [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;
 
     /// These function are for parallel mesh creation from different threads. If you are not sure, do not use them.
-    /// \details resizes all internal vectors and sets the numbers of valid elements in preparation for addPackedPart
+    /// \details resizes all internal vectors and sets the numbers of valid elements in preparation for addPackedPart;
+    /// edges are resized without initialization (so the user must initialize them using addPackedPart)
     MRMESH_API void resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize );
     /// copies topology (from) into this;
     /// \param from edges must be tightly packes without any lone edges, and they are mapped [0, from.edges.size()) -> [toEdgeId, toEdgeId + from.edges.size());
@@ -295,10 +296,9 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord & b ) const
-            { return next == b.next && prev == b.prev && org == b.org && left == b.left; }
-        bool operator !=( const HalfEdgeRecord & b ) const
-            { return !( *this == b ); }
+        bool operator ==( const HalfEdgeRecord & b ) const = default;
+        HalfEdgeRecord() noexcept = default;
+        HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,

@@ -18,8 +18,11 @@
 #include "MRMesh/MRColor.h"
 #include <tl/expected.hpp>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, []( pybind11::module_& m )\
 {
@@ -78,7 +81,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( pybind11::self == pybind11::self ).\
         def( "length", &VectorType::length ).\
         def( "lengthSq", &VectorType::lengthSq ).\
-        def( "normalized", &VectorType::normalized );\
+        def( "normalized", &VectorType::normalized ).\
+        def( "__repr__", [](const VectorType& data){\
+            std::stringstream ss;\
+            ss << #name << "[" << data.x << ", " << data.y << "]";\
+            return ss.str();\
+        } );\
 } )
 
 MR_ADD_PYTHON_VECTOR2( Vector2i, int )
@@ -118,7 +126,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( -pybind11::self ).\
         def( pybind11::self == pybind11::self ).\
         def_static( "diagonal", &VectorType::diagonal ).\
-        def( "lengthSq", &VectorType::lengthSq );\
+        def( "lengthSq", &VectorType::lengthSq ).\
+        def( "__repr__", [](const VectorType& data){\
+            std::stringstream ss;\
+            ss << #name << "[" << data.x << ", " << data.y << ", " << data.z << "]";\
+            return ss.str();\
+        } );\
     if constexpr ( !std::is_same_v<type, int> ) \
     {\
         vectorClass.def( "length", &VectorType::length ).\
@@ -154,7 +167,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& m )
         def_readwrite( "r", &MR::Color::r ).
         def_readwrite( "g", &MR::Color::g ).
         def_readwrite( "b", &MR::Color::b ).
-        def_readwrite( "a", &MR::Color::a );
+        def_readwrite( "a", &MR::Color::a ).
+        def( "__repr__", [] ( const MR::Color& data )
+        {
+            std::stringstream ss;
+            ss << "Color[" << data.r << ", " << data.g << ", " << data.b << ", " << data.a << "]";
+            return ss.str();
+        } );
 } )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 

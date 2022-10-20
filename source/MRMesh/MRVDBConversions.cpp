@@ -14,7 +14,7 @@ constexpr float denseVolumeToGridTolerance = 1e-6f;
 
 struct Interrupter
 {
-    Interrupter( const ProgressCallback& cb ) :
+    Interrupter( ProgressCallback cb ) :
         cb_{ cb }
     {};
 
@@ -139,7 +139,7 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
 
 FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
                           const Vector3f& voxelSize, float surfaceOffset,
-                          const ProgressCallback& cb )
+                          ProgressCallback cb )
 {
     MR_TIMER;
     if ( surfaceOffset <= 0.0f )
@@ -163,7 +163,7 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
 
 FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     const Vector3f& voxelSize, float surfaceOffset /*= 3 */,
-    const ProgressCallback& cb )
+    ProgressCallback cb )
 {
     MR_TIMER;
     if ( surfaceOffset <= 0.0f )
@@ -188,7 +188,7 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
-                                   const ProgressCallback& cb )
+                                   ProgressCallback cb )
 {
     MR_TIMER;
     if ( cb )
@@ -206,10 +206,17 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
     return MakeFloatGrid( std::move( grid ) );
 }
 
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolue, ProgressCallback cb /*= {} */ )
+{
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( simpleVolue, cb );
+    res.dims = simpleVolue.dims;
+    res.voxelSize = simpleVolue.voxelSize;
+    return res;
+}
+
 tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
-    int maxFaces,
-    float offsetVoxels, float adaptivity,
-    const ProgressCallback& cb )
+    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
 {
     MR_TIMER;
     if ( cb )
@@ -237,14 +244,26 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     return convertFromVDMMesh( voxelSize, pointsRes, trisRes, quadRes, passCallback );
 }
 
+tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
+{
+    return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, maxFaces, isoValue, adaptivity, cb );
+}
+
 tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, const ProgressCallback& cb /*= {} */ )
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb );
 }
 
+tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
+{
+    return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, isoValue, adaptivity, cb );
+}
+
 tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
-    float offsetA, float offsetB, float adaptivity, const ProgressCallback& cb /*= {} */ )
+    float offsetA, float offsetB, float adaptivity, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
 

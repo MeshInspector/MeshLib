@@ -100,7 +100,15 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             int a = readVert();
             int b = readVert();
             int c = readVert();
+            if ( !in )
+                return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
             t.push_back( { VertId( a-1 ), VertId( b-1 ), VertId( c-1 ) } );
+
+            readVert();
+            if ( !in.fail() )
+                return tl::make_unexpected( std::string( "Face with more than 3 vertices in OBJ-file" ) );
+            if ( !in.bad() && !in.eof() )
+                in.clear();
         }
         else if ( ch == 'o' )
         {

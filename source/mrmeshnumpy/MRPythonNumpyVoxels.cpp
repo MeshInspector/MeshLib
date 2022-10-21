@@ -17,17 +17,26 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
     size_t countPoints = res.dims.x * res.dims.y * res.dims.z;
     res.data.resize( countPoints );
 
+    const size_t cX = res.dims.x;
+    const size_t cXY = res.dims.x * res.dims.y;
+    const size_t cZ = res.dims.z;
+    const size_t cZY = res.dims.z * res.dims.y;
+
     if ( info.format == pybind11::format_descriptor<double>::format() )
     {
         double* data = reinterpret_cast< double* >( info.ptr );
-        for ( size_t i = 0; i < countPoints; ++i )
-            res.data[i] = float( data[i] );
+        for ( size_t x = 0; x < res.dims.x; ++x )
+        for ( size_t y = 0; y < res.dims.y; ++y )
+        for ( size_t z = 0; z < res.dims.z; ++z )
+            res.data[x + y * cX + z * cXY] = float( data[x * cZY + y * cZ + z] );
     }
     else if ( info.format == pybind11::format_descriptor<float>::format() )
     {
         float* data = reinterpret_cast< float* >( info.ptr );
-        for ( size_t i = 0; i < countPoints; ++i )
-            res.data[i] = data[i];
+        for ( size_t x = 0; x < res.dims.x; ++x )
+        for ( size_t y = 0; y < res.dims.y; ++y )
+        for ( size_t z = 0; z < res.dims.z; ++z )
+            res.data[x + y * cX + z * cXY] = data[x * cZY + y * cZ + z];
     }
     else
     {
@@ -44,8 +53,16 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     // Allocate and initialize some data;
     const size_t size = simpleVolume.dims.x * simpleVolume.dims.y * simpleVolume.dims.z;
     double* data = new double[size];
-    for ( size_t i = 0; i < size; ++i )
-        data[i] = simpleVolume.data[i];
+
+    const size_t cX = simpleVolume.dims.x;
+    const size_t cXY = simpleVolume.dims.x * res.dims.y;
+    const size_t cZ = simpleVolume.dims.z;
+    const size_t cZY = simpleVolume.dims.z * res.dims.y;
+    
+    for ( size_t x = 0; x < res.dims.x; ++x )
+    for ( size_t y = 0; y < res.dims.y; ++y )
+    for ( size_t z = 0; z < res.dims.z; ++z )
+        data[x * cZY + y * cZ + z] = simpleVolume.data[x + y * cX + z * cXY];
 
     // Create a Python object that will free the allocated
     // memory when destroyed:

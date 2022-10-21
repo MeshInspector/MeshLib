@@ -12,7 +12,7 @@ struct VoxelsVolume
 {
     T data;
     Vector3i dims;
-    Vector3f voxelSize{1.f, 1.f, 1.f};
+    Vector3f voxelSize;
     float min = FLT_MAX;
     float max = -FLT_MAX;
 };

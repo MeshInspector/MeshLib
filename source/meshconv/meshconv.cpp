@@ -5,6 +5,8 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRLog.h"
+#include "MRPch/MRSpdlog.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
@@ -75,6 +77,7 @@ static int mainInternal( int argc, char **argv )
     po::options_description generalOptions( "General options" );
     generalOptions.add_options()
         ("help", "produce help message")
+        ("timings", "print performance timings in the end")
         ("input-file", po::value<std::filesystem::path>( &inFilePath ), "filename of input mesh")
         ("output-file", po::value<std::filesystem::path>( &outFilePath ), "filename of output mesh")
         ;
@@ -124,6 +127,15 @@ static int mainInternal( int argc, char **argv )
             "Usage: meshconv input-file output-file [options]\n"
             << allCommands << "\n";
         return 1;
+    }
+
+    if ( vm.count("timings") )
+    {
+        // write log to console
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        console_sink->set_level( spdlog::level::trace );
+        console_sink->set_pattern( "%v" );
+        MR::Logger::instance().addSink( console_sink );
     }
 
     std::cout << "Loading " << inFilePath << "..." << std::endl;

@@ -55,13 +55,13 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     double* data = new double[size];
 
     const size_t cX = simpleVolume.dims.x;
-    const size_t cXY = simpleVolume.dims.x * res.dims.y;
+    const size_t cXY = simpleVolume.dims.x * simpleVolume.dims.y;
     const size_t cZ = simpleVolume.dims.z;
-    const size_t cZY = simpleVolume.dims.z * res.dims.y;
+    const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
     
-    for ( size_t x = 0; x < res.dims.x; ++x )
-    for ( size_t y = 0; y < res.dims.y; ++y )
-    for ( size_t z = 0; z < res.dims.z; ++z )
+    for ( size_t x = 0; x < simpleVolume.dims.x; ++x )
+    for ( size_t y = 0; y < simpleVolume.dims.y; ++y )
+    for ( size_t z = 0; z < simpleVolume.dims.z; ++z )
         data[x * cZY + y * cZ + z] = simpleVolume.data[x + y * cX + z * cXY];
 
     // Create a Python object that will free the allocated

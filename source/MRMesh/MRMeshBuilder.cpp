@@ -3,6 +3,8 @@
 #include "MRRingIterator.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsInBall.h"
+#include "MRBuffer.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
@@ -447,11 +449,31 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 
     const size_t vertsInPart = ( (int)maxVertId + numParts ) / numParts;
     std::vector<MeshPiece> parts( numParts );
-    FaceBitSet borderTris( t.size() ); // triangles having vertices in distinct parts, computed by thread 0
+    Buffer<int> tri2part( t.size() ); // part number for each triangle, or -1 for border triangles
 
-    Timer timer("parallel parts");
-    // construct mesh parts
+    Timer timer("partition triangles");
     if ( progressCb && !progressCb( 0.33f ) )
+        return {};
+    FaceBitSet borderTris( t.size() ); // triangles having vertices in distinct parts
+    BitSetParallelForAll( borderTris, [&]( FaceId f )
+    {
+        if ( settings.region && !settings.region->test( f ) )
+            return;
+        const auto & vs = t[f];
+        auto v0p = int( vs[0] / vertsInPart );
+        auto v1p = int( vs[1] / vertsInPart );
+        auto v2p = int( vs[2] / vertsInPart );
+        if ( v0p == v1p && v0p == v2p )
+        {
+            tri2part[f] = v0p;
+            return;
+        }
+        tri2part[f] = -1;
+        borderTris.set( f );
+    } );
+
+    timer.restart("parallel parts");
+    if ( progressCb && !progressCb( 0.4f ) )
         return {};
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
     {
@@ -466,22 +488,9 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
             {
                 if ( settings.region && !settings.region->test( f ) )
                     continue;
-                const auto & vs = t[f];
-                auto v0p = vs[0] / vertsInPart;
-                auto v1p = vs[1] / vertsInPart;
-                auto v2p = vs[2] / vertsInPart;
-
-                if ( v0p != myPartId || v1p != myPartId || v2p != myPartId )
-                {
-                    // not my triangle
-
-                    // thread 0 has to process border triangles
-                    if ( myPartId == 0 && ( v0p != v1p || v1p != v2p || v2p != v0p ) )
-                        borderTris.set( f );
-
+                if ( (int)myPartId != tri2part[f] )
                     continue;
-                }
-
+                const auto & vs = t[f];
                 VertId v[3] = {
                     VertId( vs[0] % vertsInPart ),
                     VertId( vs[1] % vertsInPart ),
@@ -499,6 +508,7 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
             parts[myPartId] = std::move( part );
         }
     } );
+    tri2part.clear(); // also frees the memory
 
     auto joinSettings = settings;
     joinSettings.region = &borderTris;

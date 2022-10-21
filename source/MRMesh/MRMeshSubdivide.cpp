@@ -137,12 +137,12 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 
 TEST(MRMesh, SubdivideMesh) 
 {
-    std::vector<VertId> v{ 
-        VertId{0}, VertId{1}, VertId{2}, 
-        VertId{0}, VertId{2}, VertId{3}
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v }
     };
     Mesh mesh;
-    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.topology = MeshBuilder::fromTriangles( t );
     mesh.points.emplace_back( 0.f, 0.f, 0.f );
     mesh.points.emplace_back( 1.f, 0.f, 0.f );
     mesh.points.emplace_back( 1.f, 1.f, 0.f );

@@ -103,15 +103,14 @@ void PlaneObject::serializeFields_( Json::Value& root ) const
 
 void PlaneObject::constructMesh_()
 {
-
-    std::vector<VertId> v{
-        VertId{0}, VertId{1}, VertId{2},
-        VertId{2}, VertId{1}, VertId{3}
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 2_v, 1_v, 3_v }
     };
 
     // create object Mesh cube
     Mesh meshObj;
-    meshObj.topology = MeshBuilder::fromVertexTriples( v );
+    meshObj.topology = MeshBuilder::fromTriangles( t );
     meshObj.points.emplace_back( -1, -1, 0 ); // VertId{0}
     meshObj.points.emplace_back( 1, -1, 0 ); // VertId{1}
     meshObj.points.emplace_back( -1, 1, 0 ); // VertId{2}

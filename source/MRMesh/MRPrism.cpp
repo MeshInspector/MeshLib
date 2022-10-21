@@ -22,20 +22,20 @@ Mesh makePrism( float c, float alp, float bet, float height )
         { c / 2, 0}
     };
     // all triangles (8)
-    std::vector<VertId> v
+    Triangulation t
     {
-    VertId{0}, VertId{1}, VertId{2},
-    VertId{3}, VertId{5}, VertId{4},
-    VertId{0}, VertId{3}, VertId{1},
-    VertId{1}, VertId{3}, VertId{4},
-    VertId{1}, VertId{4}, VertId{5},
-    VertId{1}, VertId{5}, VertId{2},
-    VertId{0}, VertId{2}, VertId{5},
-    VertId{0}, VertId{5}, VertId{3}
+        { VertId{0}, VertId{1}, VertId{2} },
+        { VertId{3}, VertId{5}, VertId{4} },
+        { VertId{0}, VertId{3}, VertId{1} },
+        { VertId{1}, VertId{3}, VertId{4} },
+        { VertId{1}, VertId{4}, VertId{5} },
+        { VertId{1}, VertId{5}, VertId{2} },
+        { VertId{0}, VertId{2}, VertId{5} },
+        { VertId{0}, VertId{5}, VertId{3} }
     };
 
     Mesh meshObj;
-    meshObj.topology = MeshBuilder::fromVertexTriples( v );
+    meshObj.topology = MeshBuilder::fromTriangles( t );
     meshObj.points.reserve( 6 );
     meshObj.points.emplace_back( points[0].x, points[0].y, -height * 0.5f ); // VertId{0}
     meshObj.points.emplace_back( points[1].x, points[1].y, -height * 0.5f ); // VertId{1}

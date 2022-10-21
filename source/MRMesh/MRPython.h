@@ -40,6 +40,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
 {\
     using vecType = std::vector<type>;\
     pybind11::bind_vector<vecType>(m, #name ).\
+        def( pybind11::init<>() ).\
+        def( pybind11::init<size_t>(), pybind11::arg( "size" ) ).\
         def( "empty", &vecType::empty ).\
         def( "size", &vecType::size ).\
         def( "resize", ( void ( vecType::* )( const vecType::size_type ) )& vecType::resize ).\

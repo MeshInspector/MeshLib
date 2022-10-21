@@ -35,24 +35,6 @@ static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region 
     } );
 }
 
-static FaceId findMaxFaceId( const std::vector<Triangle> & tris )
-{
-    MR_TIMER
-    return parallel_reduce( tbb::blocked_range( tris.begin(), tris.end() ), FaceId{},
-    [&] ( const auto & range, FaceId currMax )
-    {
-        for ( const Triangle & t : range )
-        {
-            currMax = std::max( currMax, t.f );
-        }
-        return currMax;
-    },
-    [] ( FaceId a, FaceId b )
-    {
-        return a > b ? a : b;
-    } );
-}
-
 // returns the edge with the origin in a if it is the only such edge with invalid left face;
 // otherwise returns invalid edge
 static EdgeId edgeWithOrgAndOnlyLeftHole( const MeshTopology & m, VertId a )
@@ -401,31 +383,6 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     if ( settings0.region )
         *settings0.region = std::move( region );
 
-    return res;
-}
-
-MeshTopology fromTriangles( const std::vector<Triangle> & tris, std::vector<Triangle> * skippedTris )
-{
-    if ( tris.empty() )
-        return {};
-    MR_TIMER
-
-    const auto maxFaceId = findMaxFaceId( tris );
-    Triangulation triangulation( maxFaceId + 1 );
-    FaceBitSet region( maxFaceId + 1 );
-    for ( const auto & t : tris )
-    {
-        triangulation[t.f] = t.v;
-        region.set( t.f );
-    }
-
-    auto res = fromTriangles( triangulation, { .region = &region } );
-    if ( skippedTris )
-    {
-        skippedTris->clear();
-        for ( auto f : region )
-            skippedTris->push_back( tris[f] );
-    }
     return res;
 }
 

@@ -10,8 +10,8 @@ namespace MR
 
 TEST(MRMesh, BuildTri) 
 {
-    std::vector<VertId> v{ 0_v, 1_v, 2_v };
-    auto topology = MeshBuilder::fromVertexTriples( v );
+    Triangulation t{ { 0_v, 1_v, 2_v } };
+    auto topology = MeshBuilder::fromTriangles( t );
 
     EXPECT_EQ( topology.numValidVerts(), 3 );
     EXPECT_EQ( topology.numValidFaces(), 1 );
@@ -50,11 +50,11 @@ TEST(MRMesh, fromFaceSoup)
 
 TEST(MRMesh, BuildQuadDelete) 
 {
-    std::vector<VertId> v{ 
-        VertId{0}, VertId{1}, VertId{2}, 
-        VertId{0}, VertId{2}, VertId{3}
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v }
     };
-    auto topology = MeshBuilder::fromVertexTriples( v );
+    auto topology = MeshBuilder::fromTriangles( t );
 
     EXPECT_EQ( topology.numValidVerts(), 4 );
     EXPECT_EQ( topology.getValidVerts().count(), 4 );
@@ -107,11 +107,11 @@ TEST(MRMesh, BuildQuadDelete)
 
 TEST(MRMesh, FlipEdge) 
 {
-    std::vector<VertId> v{ 
-        VertId{0}, VertId{1}, VertId{2}, 
-        VertId{0}, VertId{2}, VertId{3}
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v }
     };
-    auto topology = MeshBuilder::fromVertexTriples( v );
+    auto topology = MeshBuilder::fromTriangles( t );
 
     auto e = topology.findEdge( VertId{0}, VertId{2} );
     EXPECT_TRUE( e.valid() );

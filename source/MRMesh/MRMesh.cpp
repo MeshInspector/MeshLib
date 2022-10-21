@@ -805,12 +805,12 @@ TEST( MRMesh, BasicExport )
 
 TEST(MRMesh, SplitEdge) 
 {
-    std::vector<VertId> v{ 
-        VertId{0}, VertId{1}, VertId{2}, 
-        VertId{0}, VertId{2}, VertId{3}
+    Triangulation t{
+        { VertId{0}, VertId{1}, VertId{2} },
+        { VertId{0}, VertId{2}, VertId{3} }
     };
     Mesh mesh;
-    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.topology = MeshBuilder::fromTriangles( t );
     mesh.points.emplace_back( 0.f, 0.f, 0.f );
     mesh.points.emplace_back( 1.f, 0.f, 0.f );
     mesh.points.emplace_back( 1.f, 1.f, 0.f );
@@ -873,11 +873,11 @@ TEST(MRMesh, SplitEdge1)
 
 TEST(MRMesh, SplitFace) 
 {
-    std::vector<VertId> v{ 
-        VertId{0}, VertId{1}, VertId{2}
+    Triangulation t{
+        { VertId{0}, VertId{1}, VertId{2} }
     };
     Mesh mesh;
-    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.topology = MeshBuilder::fromTriangles( t );
     mesh.points.emplace_back( 0.f, 0.f, 0.f );
     mesh.points.emplace_back( 0.f, 0.f, 1.f );
     mesh.points.emplace_back( 0.f, 1.f, 0.f );

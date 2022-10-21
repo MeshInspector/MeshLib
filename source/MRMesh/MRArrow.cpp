@@ -13,37 +13,25 @@ Mesh makeArrow(const Vector3f& base, const Vector3f& vert, const float& thicknes
     Mesh meshObj;
 
     //topology
-    std::vector<VertId> v;
-    v.reserve(qual * 18ull);
+    Triangulation t;
+    t.reserve(qual * 6ull);
     //first 2 points are base and vert
     for (int i = 0; i < qual; i++)
     {
         // base tri
-        v.emplace_back(VertId{ 0 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 2 });
-        v.emplace_back(VertId{ 3 * i + 2 });
+        t.push_back( { VertId{ 0 }, VertId{ 3 * ((i + 1) % qual) + 2 }, VertId{ 3 * i + 2 } } );
         // cap tri
-        v.emplace_back(VertId{ 1 });
-        v.emplace_back(VertId{ 3 * i + 4 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 4 });
+        t.push_back( { VertId{ 1 }, VertId{ 3 * i + 4 }, VertId{ 3 * ((i + 1) % qual) + 4 } } );
 
         // length
-        v.emplace_back(VertId{ 3 * i + 2 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 3 });
-        v.emplace_back(VertId{ 3 * i + 3 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 3 });
-        v.emplace_back(VertId{ 3 * i + 2 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 2 });
+        t.push_back( { VertId{ 3 * i + 2 }, VertId{ 3 * ((i + 1) % qual) + 3 }, VertId{ 3 * i + 3 } } );
+        t.push_back( { VertId{ 3 * ((i + 1) % qual) + 3 }, VertId{ 3 * i + 2 }, VertId{ 3 * ((i + 1) % qual) + 2 } } );
 
         // under
-        v.emplace_back(VertId{ 3 * i + 3 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 4 });
-        v.emplace_back(VertId{ 3 * i + 4 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 4 });
-        v.emplace_back(VertId{ 3 * i + 3 });
-        v.emplace_back(VertId{ 3 * ((i + 1) % qual) + 3 });
+        t.push_back( { VertId{ 3 * i + 3 }, VertId{ 3 * ((i + 1) % qual) + 4 }, VertId{ 3 * i + 4 } } );
+        t.push_back( { VertId{ 3 * ((i + 1) % qual) + 4 }, VertId{ 3 * i + 3 }, VertId{ 3 * ((i + 1) % qual) + 3 } } );
     }
-    meshObj.topology = MeshBuilder::fromVertexTriples(v);
+    meshObj.topology = MeshBuilder::fromTriangles( t );
 
     //geometry
     auto& p = meshObj.points;

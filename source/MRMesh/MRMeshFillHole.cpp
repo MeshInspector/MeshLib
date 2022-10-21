@@ -941,12 +941,12 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
 
 TEST( MRMesh, buildCylinderBetweenTwoHoles )
 {
-    std::vector<VertId> v{
-        VertId{0}, VertId{1}, VertId{2},
-        VertId{3}, VertId{4}, VertId{5}
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 4_v, 5_v }
     };
     Mesh mesh;
-    mesh.topology = MeshBuilder::fromVertexTriples( v );
+    mesh.topology = MeshBuilder::fromTriangles( t );
     EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
 

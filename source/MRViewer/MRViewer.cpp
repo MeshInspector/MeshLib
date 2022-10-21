@@ -1295,13 +1295,8 @@ bool Viewer::windowShouldClose()
         return true;
 
     if ( window )
-    {
         glfwSetWindowShouldClose( window, false );
-    }
-    else
-    {
-        stopEventLoop_ = false;
-    }
+    stopEventLoop_ = false;
     return false;
 }
 

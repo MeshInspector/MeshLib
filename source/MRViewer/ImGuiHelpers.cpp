@@ -1177,7 +1177,7 @@ void Image( const MR::ImGuiImage& image, const ImVec2& size, const ImVec4& multC
 MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos )
 {
     const auto& io = ImGui::GetIO();
-    return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
+    return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( imagePos.y - io.MousePos.y ) / size.y * image.getImageHeight() ) };
 }
 
 void SetTooltipIfHovered( const std::string& text, float scaling )

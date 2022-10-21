@@ -409,20 +409,20 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
             if ( polys && !gotVerts )
                 return tl::make_unexpected( std::string( "PLY file open: need vertex positions to triangulate faces" ) );
 
-            std::vector<VertId> vertTriples; //< timers show some slowness here
+            Triangulation tris;
             if (polys) 
             {
                 Timer t( "extractTriangles" );
-                auto numIndices = reader.num_triangles( indecies[0] ) * 3;
-                vertTriples.resize( numIndices );
-                reader.extract_triangles( indecies[0], &res.points.front().x, (std::uint32_t)res.points.size(), miniply::PLYPropertyType::Int, &vertTriples.front() );
+                auto numIndices = reader.num_triangles( indecies[0] );
+                tris.resize( numIndices );
+                reader.extract_triangles( indecies[0], &res.points.front().x, (std::uint32_t)res.points.size(), miniply::PLYPropertyType::Int, &tris.front() );
             }
             else 
             {
                 Timer t( "extractTriples" );
-                auto numIndices = reader.num_rows() * 3;
-                vertTriples.resize( numIndices );
-                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &vertTriples.front() );
+                auto numIndices = reader.num_rows();
+                tris.resize( numIndices );
+                reader.extract_list_property( indecies[0], miniply::PLYPropertyType::Int, &tris.front() );
             }
             const auto posCurent = in.tellg();
             // suppose  that reading is 10% of progress and building mesh is 90% of progress
@@ -435,7 +435,7 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
                 isCanceled |= !res;
                 return res;
             } : callback;
-            res.topology = MeshBuilder::fromVertexTriples( vertTriples, partedProgressCb );
+            res.topology = MeshBuilder::fromTriangles( tris, {}, partedProgressCb );
             if ( callback && ( !callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return tl::make_unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;

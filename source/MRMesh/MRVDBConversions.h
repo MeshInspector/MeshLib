@@ -26,8 +26,8 @@ MRMESH_API FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& 
 // make FloatGrid from SimpleVolume
 // make copy of data
 // grid can be used to make iso-surface later with gridToMesh function
-MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue, ProgressCallback cb = {} );
-MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolue, ProgressCallback cb = {} );
+MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 
 // isoValue - layer of grid with this value would be converted in mesh
 // isoValue can be negative only in level set grids

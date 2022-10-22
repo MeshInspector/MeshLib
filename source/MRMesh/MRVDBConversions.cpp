@@ -187,16 +187,16 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     return resGrid;
 }
 
-FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
+FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
                                    ProgressCallback cb )
 {
     MR_TIMER;
     if ( cb )
         cb( 0.0f );
     openvdb::math::Coord minCoord( 0, 0, 0 );
-    openvdb::math::Coord dimsCoord( simpleVolue.dims.x, simpleVolue.dims.y, simpleVolue.dims.z );
+    openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
     openvdb::math::CoordBBox denseBBox( minCoord, minCoord + dimsCoord.offsetBy( -1 ) );
-    openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolue.data.data() ) );
+    openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolume.data.data() ) );
     if ( cb )
         cb( 0.5f );
     std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>();
@@ -206,12 +206,12 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolue,
     return MakeFloatGrid( std::move( grid ) );
 }
 
-VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolue, ProgressCallback cb /*= {} */ )
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb /*= {} */ )
 {
     VdbVolume res;
-    res.data = simpleVolumeToDenseGrid( simpleVolue, cb );
-    res.dims = simpleVolue.dims;
-    res.voxelSize = simpleVolue.voxelSize;
+    res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
+    res.dims = simpleVolume.dims;
+    res.voxelSize = simpleVolume.voxelSize;
     return res;
 }
 

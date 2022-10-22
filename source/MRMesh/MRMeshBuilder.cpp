@@ -406,11 +406,11 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 
     const size_t vertsInPart = ( (int)maxVertId + numParts ) / numParts;
     std::vector<MeshPiece> parts( numParts );
-    Buffer<int> tri2part( t.size() ); // part number for each triangle, or -1 for border triangles
 
     Timer timer("partition triangles");
     if ( progressCb && !progressCb( 0.33f ) )
         return {};
+    Buffer<signed char> tri2part( t.size() ); // part number for each triangle, or -1 for border triangles
     FaceBitSet borderTris( t.size() ); // triangles having vertices in distinct parts
     BitSetParallelForAll( borderTris, [&]( FaceId f )
     {
@@ -422,7 +422,7 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
         auto v2p = int( vs[2] / vertsInPart );
         if ( v0p == v1p && v0p == v2p )
         {
-            tri2part[f] = v0p;
+            tri2part[f] = (signed char)v0p;
             return;
         }
         tri2part[f] = -1;

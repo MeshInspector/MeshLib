@@ -564,6 +564,17 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
     return true;
 }
 
+bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    MR_TIMER
+    auto vertRegion = getIncidentVerts( topology, region );
+    if ( !dilateRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
+        return false;
+
+    region = getInnerEdges( topology, vertRegion );
+    return true;
+}
+
 bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
@@ -575,7 +586,7 @@ bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metr
     return true;
 }
 
-bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback )
+bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, VertBitSet& region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto faceRegion = getInnerFaces( topology, region );
@@ -586,22 +597,43 @@ bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metr
     return true;
 }
 
-bool dilateRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
+bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    MR_TIMER
+    auto vertRegion = getIncidentVerts( topology, region );
+    if ( !erodeRegionByMetric( topology, metric, vertRegion, dilation, callback ) )
+        return false;
+
+    region = getInnerEdges( topology, vertRegion );
+    return true;
+}
+
+bool dilateRegion( const Mesh& mesh, FaceBitSet& region, float dilation, ProgressCallback callback )
 {
     return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-bool dilateRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback )
+bool dilateRegion( const Mesh& mesh, VertBitSet& region, float dilation, ProgressCallback callback )
 {
     return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-bool erodeRegion( const Mesh & mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
+bool dilateRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+{
+    return dilateRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
+}
+
+bool erodeRegion( const Mesh& mesh, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }
 
-bool erodeRegion( const Mesh & mesh, VertBitSet & region, float dilation, ProgressCallback callback )
+bool erodeRegion( const Mesh& mesh, VertBitSet & region, float dilation, ProgressCallback callback )
+{
+    return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
+}
+
+bool erodeRegion( const Mesh& mesh, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
     return erodeRegionByMetric( mesh.topology, edgeLengthMetric( mesh ), region, dilation, callback );
 }

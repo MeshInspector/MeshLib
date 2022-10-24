@@ -96,7 +96,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
        "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 
     m.def( "floatGridToVdbVolume", &MR::floatGridToVdbVolume, pybind11::arg( "grid" ),
-        "fills VdbVolume data from FlaotGrid (does not fill voxels size, cause we expect it outside)" );
+        "fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)" );
 
     pybind11::enum_<MR::MeshToVolumeParams::Type>( m, "MeshToVolumeParamsType", "Conversion type" ).
         value( "Signed", MR::MeshToVolumeParams::Type::Signed, "only closed meshes can be converted with signed type" ).
@@ -108,7 +108,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         def_readwrite( "surfaceOffset", &MR::MeshToVolumeParams::surfaceOffset, "the number of voxels around surface to calculate distance in (should be positive)" ).
         def_readwrite( "voxelSize", &MR::MeshToVolumeParams::voxelSize, "Conversion type" ).
         def_readwrite( "worldXf", &MR::MeshToVolumeParams::worldXf, "mesh initial transform" ).
-        def_readwrite( "outXf", &MR::MeshToVolumeParams::worldXf, "optional output: xf to original mesh (respecting worldXf)" );
+        def_readwrite( "outXf", &MR::MeshToVolumeParams::outXf, "optional output: xf to original mesh (respecting worldXf)" );
 
     m.def( "meshToVolume", &MR::meshToVolume,
         pybind11::arg( "mesh" ),

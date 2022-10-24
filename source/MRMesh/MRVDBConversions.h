@@ -40,10 +40,13 @@ struct MeshToVolumeParams
     ProgressCallback cb;
 };
 
+// eval min max value from FloatGrid
+MRMESH_API void evalGridMinMax( const FloatGrid& grid, float& min, float& max );
+
 // convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
 MRMESH_API tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
 
-// fills VdbVolume data from FlaotGrid (does not fill voxels size, cause we expect it outside)
+// fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
 MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
 
 // make FloatGrid from SimpleVolume

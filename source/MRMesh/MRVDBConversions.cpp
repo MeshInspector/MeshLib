@@ -186,6 +186,20 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     return resGrid;
 }
 
+void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
+{
+    if ( !grid )
+        return;
+#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
+    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
+    auto minMax = openvdb::tools::minMax( grid->tree() );
+    min = minMax.min();
+    max = minMax.max();
+#else
+    grid->evalMinMax( min, max );
+#endif
+}
+
 tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
 {
     if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
@@ -220,14 +234,7 @@ tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshT
 
     VdbVolume res;
     res.data = targetGrid;
-#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
-    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
-    auto minMax = openvdb::tools::minMax( targetGrid->tree() );
-    res.min = minMax.min();
-    res.max = minMax.max();
-#else
-    targetGrid->evalMinMax( res.min, res.max );
-#endif
+    evalGridMinMax( targetGrid, res.min, res.max );
     auto dim = gridBB.extents();
     res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
     res.voxelSize = params.voxelSize;
@@ -241,14 +248,7 @@ VdbVolume floatGridToVdbVolume( const FloatGrid& grid )
         return {};
     VdbVolume res;
     res.data = grid;
-#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
-    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
-    auto minMax = openvdb::tools::minMax( grid->tree() );
-    res.min = minMax.min();
-    res.max = minMax.max();
-#else
-    grid->evalMinMax( res.min, res.max );
-#endif
+    evalGridMinMax( grid, res.min, res.max );
     auto dim = grid->evalActiveVoxelDim();
     res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
     return res;

@@ -3,7 +3,6 @@
 #include "MRFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
-#include "MRAffineXf3.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
@@ -185,6 +184,74 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     if ( interrupter.getWasInterrupted() )
         return {};
     return resGrid;
+}
+
+void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
+{
+    if ( !grid )
+        return;
+#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
+    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
+    auto minMax = openvdb::tools::minMax( grid->tree() );
+    min = minMax.min();
+    max = minMax.max();
+#else
+    grid->evalMinMax( min, max );
+#endif
+}
+
+tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+{
+    if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
+        return tl::make_unexpected( "Only closed mesh can be converted to signed volume" );
+
+    FloatGrid grid;
+    if ( params.type == MeshToVolumeParams::Type::Signed )
+        grid = meshToLevelSet( mesh, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+    else
+        grid = meshToDistanceField( mesh, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+
+    if ( !grid )
+        return tl::make_unexpected( "Operation canceled" );
+
+    auto gridBB = grid->evalActiveVoxelBoundingBox();
+    auto minCorner = gridBB.min();
+
+    Vector3f shift( float( -minCorner.x() + 1 ), float( -minCorner.y() + 1 ), float( -minCorner.z() + 1 ) );
+
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    xform->preTranslate( { shift.x,shift.y,shift.z } );
+    openvdb::tools::GridTransformer transformer( xform->baseMap()->getAffineMap()->getMat4() );
+
+    FloatGrid targetGrid = std::make_shared<OpenVdbFloatGrid>();
+    // to get proper normal orientation both for signed and unsigned cases
+    targetGrid->setGridClass( openvdb::GRID_LEVEL_SET );
+
+    transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>( *grid, *targetGrid );
+    targetGrid->tree().prune();
+    if ( params.outXf )
+        *params.outXf = AffineXf3f::translation( -mult( shift, params.voxelSize ) );
+
+    VdbVolume res;
+    res.data = targetGrid;
+    evalGridMinMax( targetGrid, res.min, res.max );
+    auto dim = gridBB.extents();
+    res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    res.voxelSize = params.voxelSize;
+
+    return res;
+}
+
+VdbVolume floatGridToVdbVolume( const FloatGrid& grid )
+{
+    if ( !grid )
+        return {};
+    VdbVolume res;
+    res.data = grid;
+    evalGridMinMax( grid, res.min, res.max );
+    auto dim = grid->evalActiveVoxelDim();
+    res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    return res;
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,

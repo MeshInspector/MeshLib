@@ -4,6 +4,7 @@
 #include "MRMeshFwd.h"
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
+#include "MRAffineXf3.h"
 #include <tl/expected.hpp>
 #include <string>
 
@@ -17,11 +18,33 @@ MRMESH_API FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
                                      ProgressCallback cb = {} );
 
 // does not require closed surface, resulting grid cannot be used for boolean operations,
-// surfaceOffset - the number voxels around surface to calculate distance in (should be positive)
+// surfaceOffset - the number of voxels around surface to calculate distance in (should be positive)
 // returns null if was canceled by progress callback
 MRMESH_API FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
                                           const Vector3f& voxelSize, float surfaceOffset = 3,
                                           ProgressCallback cb = {} );
+
+// Parameters structure for meshToVolume function
+struct MeshToVolumeParams
+{
+    // Conversion type
+    enum class Type
+    {
+        Signed, // only closed meshes can be converted with signed type
+        Unsigned // this type leads to shell like iso-surfaces
+    } type{ Type::Unsigned };
+    float surfaceOffset{ 3.0 }; // the number of voxels around surface to calculate distance in (should be positive)
+    Vector3f voxelSize = Vector3f::diagonal( 1.0f );
+    AffineXf3f worldXf; // mesh initial transform
+    AffineXf3f* outXf{ nullptr }; // optional output: xf to original mesh (respecting worldXf)
+    ProgressCallback cb;
+};
+
+// convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
+MRMESH_API tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
+
+// fills VdbVolume data from FlaotGrid (does not fill voxels size, cause we expect it outside)
+MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
 
 // make FloatGrid from SimpleVolume
 // make copy of data

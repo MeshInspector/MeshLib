@@ -94,6 +94,26 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
     m.def( "saveAllSlicesToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage,
        pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
        "Save the slice by the active plane through the sliceNumber to an image file.\n" );
+
+    m.def( "floatGridToVdbVolume", &MR::floatGridToVdbVolume, pybind11::arg( "grid" ),
+        "fills VdbVolume data from FlaotGrid (does not fill voxels size, cause we expect it outside)" );
+
+    pybind11::enum_<MR::MeshToVolumeParams::Type>( m, "MeshToVolumeParamsType", "Conversion type" ).
+        value( "Signed", MR::MeshToVolumeParams::Type::Signed, "only closed meshes can be converted with signed type" ).
+        value( "Unsigned", MR::MeshToVolumeParams::Type::Unsigned, "this type leads to shell like iso-surfaces" );
+
+    pybind11::class_<MR::MeshToVolumeParams>( m, "MeshToVolumeParams", "Parameters structure for meshToVolume function" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "type", &MR::MeshToVolumeParams::type, "Conversion type" ).
+        def_readwrite( "surfaceOffset", &MR::MeshToVolumeParams::surfaceOffset, "the number of voxels around surface to calculate distance in (should be positive)" ).
+        def_readwrite( "voxelSize", &MR::MeshToVolumeParams::voxelSize, "Conversion type" ).
+        def_readwrite( "worldXf", &MR::MeshToVolumeParams::worldXf, "mesh initial transform" ).
+        def_readwrite( "outXf", &MR::MeshToVolumeParams::worldXf, "optional output: xf to original mesh (respecting worldXf)" );
+
+    m.def( "meshToVolume", &MR::meshToVolume,
+        pybind11::arg( "mesh" ),
+        pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
+        "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
 } )
 
 MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedVdbVolume, MR::VdbVolume, std::string )

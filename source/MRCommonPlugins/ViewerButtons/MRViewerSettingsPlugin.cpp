@@ -75,7 +75,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             backgroundColor_.w = -1.0f;
         viewer->viewport().setBackgroundColor( Color( backgroundColor ) );
 
-        if ( RibbonButtonDrawer::CustomCollapsingHeader( "Clipping plane" ) )
+        if ( viewer->isDeveloperFeaturesEnabled() &&
+            RibbonButtonDrawer::CustomCollapsingHeader( "Clipping plane" ) )
         {
             auto plane = viewportParameters.clippingPlane;
             auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );

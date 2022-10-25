@@ -24,7 +24,7 @@ struct NodeNode
 };
 
 PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
-    ConvertToIntVector conv, const AffineXf3f * rigidB2A )
+    ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
     MR_TIMER;
 
@@ -170,6 +170,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         }
     };
 
+    std::atomic<bool> anyIntersectionAtm{ false };
     // checks subtasks in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
@@ -181,6 +182,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
             PreciseCollisionResult myRes;
             while ( !mySubtasks.empty() )
             {
+                if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
+                    break;
                 const auto s = mySubtasks.back();
                 mySubtasks.pop_back();
                 const auto & aNode = aTree[s.aNode];
@@ -202,6 +205,11 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     if ( b.region && !b.region->test( bFace ) )
                         continue;
                     checkTwoTris( aFace, bFace, myRes );
+                    if ( anyIntersection && ( !myRes.edgesAtrisB.empty() || !myRes.edgesBtrisA.empty() ) )
+                    {
+                        anyIntersectionAtm.store( true, std::memory_order_relaxed );
+                        break;
+                    }
                     continue;
                 }
         

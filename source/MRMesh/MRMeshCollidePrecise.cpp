@@ -207,8 +207,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     checkTwoTris( aFace, bFace, myRes );
                     if ( anyIntersection && ( !myRes.edgesAtrisB.empty() || myRes.edgesBtrisA.empty() ) )
                     {
-                        bool replaceVal = false;
-                        anyIntersectionAtm.compare_exchange_strong( replaceVal, true );
+                        anyIntersectionAtm.store( true, std::memory_order_relaxed );
                         break;
                     }
                     continue;

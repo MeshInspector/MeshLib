@@ -45,7 +45,7 @@ struct CoordinateConverters
 /**
  * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param anyIntersection if true then the function returns as fast as it found any intersection
+ * \param anyIntersection if true then the function returns as fast as it finds any intersection
  */
 MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );

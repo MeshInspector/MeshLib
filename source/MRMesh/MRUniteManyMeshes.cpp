@@ -96,10 +96,10 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
 
     // find non intersecting groups for simple merge instead of union
     std::vector<std::vector<int>> nonIntersectingGroups;
-    std::vector<Box3d> meshesBoxes( meshes.size() );
+    std::vector<Box3d> meshBoxes( meshes.size() );
     for ( int m = 0; m < meshes.size(); ++m )
         if ( meshes[m] )
-            meshesBoxes[m] = Box3d( meshes[m]->computeBoundingBox() );
+            meshBoxes[m] = Box3d( meshes[m]->getBoundingBox() );
     for ( int m = 0; m < meshes.size(); ++m )
     {
         const auto& mesh = meshes[m];
@@ -117,8 +117,8 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     return;
                 for ( int i = range.begin(); i < range.end(); ++i )
                 {
-                    Box3d box = meshesBoxes[m];
-                    box.include( meshesBoxes[group[i]] );
+                    Box3d box = meshBoxes[m];
+                    box.include( meshBoxes[group[i]] );
                     auto intConverter = getToIntConverter( box );
                     auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *meshes[group[i]], intConverter, nullptr, true );
                     localIntersect = !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty();

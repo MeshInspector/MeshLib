@@ -85,7 +85,6 @@ jobs:
           curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.15.0.tar.gz -L -o patchelf-0.15.0.tar.gz
           tar xf patchelf-0.15.0.tar.gz
           cd patchelf-0.15.0
-          ./bootstrap.sh
           ./configure
           make
           make check

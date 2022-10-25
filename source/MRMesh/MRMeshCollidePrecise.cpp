@@ -99,10 +99,9 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     };
 
     const int aVertsSize = (int)a.mesh.topology.vertSize();
-    auto checkTwoTris = [&]( FaceId aTri, FaceId bTri, PreciseCollisionResult & res )->bool
+    auto checkTwoTris = [&]( FaceId aTri, FaceId bTri, PreciseCollisionResult & res )
     {
         PreciseVertCoords avc[3], bvc[3];
-        bool intersectionFound = false;
         a.mesh.topology.getTriVerts( aTri, avc[0].id, avc[1].id, avc[2].id );
         b.mesh.topology.getTriVerts( bTri, bvc[0].id, bvc[1].id, bvc[2].id );
 
@@ -129,22 +128,17 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         if ( auto e = aEdgeCheck( 0, 1 ) )
         {
             res.edgesAtrisB.emplace_back( e, bTri );
-            intersectionFound = true;
         }
         aEdge = a.mesh.topology.prev( aEdge.sym() );
         if ( auto e = aEdgeCheck( 1, 2 ) )
         {
             res.edgesAtrisB.emplace_back( e, bTri );
-            intersectionFound = true;
         }
         aEdge = a.mesh.topology.prev( aEdge.sym() );
         if ( numA < 2 )
         {
             if ( auto e = aEdgeCheck( 2, 0 ) )
-            {
                 res.edgesAtrisB.emplace_back( e, bTri );
-                intersectionFound = true;
-            }
         }
 
         // check edges from B
@@ -162,24 +156,18 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
         if ( auto e = bEdgeCheck( 0, 1 ) )
         {
             res.edgesBtrisA.emplace_back( e, aTri );
-            intersectionFound = true;
         }
         bEdge = b.mesh.topology.prev( bEdge.sym() );
         if ( auto e = bEdgeCheck( 1, 2 ) )
         {
             res.edgesBtrisA.emplace_back( e, aTri );
-            intersectionFound = true;
         }
         bEdge = b.mesh.topology.prev( bEdge.sym() );
         if ( numB < 2 )
         {
             if ( auto e = bEdgeCheck( 2, 0 ) )
-            {
                 res.edgesBtrisA.emplace_back( e, aTri );
-                intersectionFound = true;
-            }
         }
-        return intersectionFound;
     };
 
     std::atomic<bool> anyIntersectionAtm{ false };
@@ -216,7 +204,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
                     const auto bFace = bNode.leafId();
                     if ( b.region && !b.region->test( bFace ) )
                         continue;
-                    if ( checkTwoTris( aFace, bFace, myRes ) && anyIntersection )
+                    checkTwoTris( aFace, bFace, myRes );
+                    if ( anyIntersection && ( !myRes.edgesAtrisB.empty() || myRes.edgesBtrisA.empty() ) )
                     {
                         bool replaceVal = false;
                         anyIntersectionAtm.compare_exchange_strong( replaceVal, true );

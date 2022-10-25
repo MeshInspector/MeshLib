@@ -45,6 +45,10 @@
 #include <boost/stacktrace.hpp>
 #endif
 #include "MRViewerIO.h"
+#include "MRProgressBar.h"
+#include "MRMesh/MRChangeSceneAction.h"
+#include "MRAppendHistory.h"
+#include "MRSwapRootAction.h"
 
 #ifdef __EMSCRIPTEN__
 #define GLFW_INCLUDE_ES3
@@ -655,7 +659,7 @@ void Viewer::shutdownPlugins_()
 void Viewer::parseCommandLine_( int argc, char** argv )
 {
 #ifndef __EMSCRIPTEN__
-    bool fitDataRequired = false;
+    std::vector<std::filesystem::path> supportedFiles;
     for ( int i = 1; i < argc; ++i )
     {
         if( EmbeddedPython::isPythonScript( argv[i] ) )
@@ -675,14 +679,10 @@ void Viewer::parseCommandLine_( int argc, char** argv )
             EmbeddedPython::finalize();
             break;
         }
-        if( isSupportedFormat( argv[i] ) )
-        {
-            if( loadFile( argv[i] ) )
-                fitDataRequired = true;
-        }
+        if ( isSupportedFormat( argv[i] ) )
+            supportedFiles.push_back( argv[i] );
     }
-    if (fitDataRequired)
-        fitDataViewport();
+    loadFiles( supportedFiles );
 #endif
 }
 
@@ -760,33 +760,83 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
-bool Viewer::loadFile( const std::filesystem::path & path )
+bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
 {
-    std::string ext = utf8string( path.extension() );
-    for ( auto& c : ext )
-        c = ( char )tolower( c );
-    bool sceneFile = false;
-    for ( auto& filter : SceneFileFilters )
-    {
-        if ( filter.extension.find( ext ) != std::string::npos )
-            sceneFile = true;
-    }
-
-    auto res = loadObjectFromFile( path );
-    if ( !res.has_value() )
+    if ( filesList.empty() )
         return false;
-    if ( sceneFile )
+
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList] ()->std::function<void()>
     {
-        auto newRoot = (*res)[0];
-        std::swap( newRoot, SceneRoot::getSharedPtr() );
-        getViewerInstance().onSceneSaved( path );
-    }
-    else
-    {
-        for ( const auto& obj : *res )
-            SceneRoot::get().addChild( obj );
-    }
-    getViewerInstance().recentFilesStore.storeFile( path );;
+        std::vector<std::filesystem::path> loadedFiles;
+        std::vector<std::string> errorList;
+        std::vector<std::shared_ptr<Object>> loadedObjects;
+        for ( int i = 0; i < filesList.size(); ++i )
+        {
+            const auto& filename = filesList[i];
+            if ( filename.empty() )
+                continue;
+
+            auto res = loadObjectFromFile( filename, [callback = ProgressBar::callBackSetProgress, i, number = filesList.size()]( float v )
+            {
+                return callback( ( i + v ) / number );
+            } );
+            if ( !res.has_value() )
+            {
+                errorList.push_back( std::move( res.error() ) );
+                continue;
+            }
+
+            auto& newObjs = *res;
+            bool anyObjLoaded = false;
+            for ( auto& obj : newObjs )
+            {
+                if ( !obj )
+                    continue;
+
+                anyObjLoaded = true;
+                loadedObjects.push_back( obj );
+            }
+            if ( anyObjLoaded )
+                loadedFiles.push_back( filename );
+            else
+                errorList.push_back( "No objects found in the file \"" + utf8string( filename ) + "\"" );
+        }
+        return [loadedObjects, loadedFiles, errorList]
+        {
+            if ( !loadedObjects.empty() )
+            {
+                if ( loadedObjects.size() == 1 && std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() ) )
+                {
+                    AppendHistory<SwapRootAction>( "Load Scene File" );
+                    auto newRoot = loadedObjects[0];
+                    std::swap( newRoot, SceneRoot::getSharedPtr() );
+                    getViewerInstance().onSceneSaved( loadedFiles[0] );
+                }
+                else
+                {
+                    std::string historyName = loadedObjects.size() == 1 ? "Open file" : "Open files";
+                    SCOPED_HISTORY( historyName );
+                    for ( auto& obj : loadedObjects )
+                    {
+                        AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
+                    auto& viewerInst = getViewerInstance();
+                    for ( const auto& file : loadedFiles )
+                        viewerInst.recentFilesStore.storeFile( file );
+                }
+                getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            }
+            auto menu = getViewerInstance().getMenuPlugin();
+            if ( menu && !errorList.empty() )
+            {
+                std::string errorAll;
+                for ( auto& error : errorList )
+                    errorAll += "\n" + error;
+                menu->showErrorModal( errorAll.substr( 1 ) );
+            }
+        };
+    } );
 
     return true;
 }

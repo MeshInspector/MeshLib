@@ -2065,16 +2065,7 @@ void ImGuiMenu::draw_mr_menu()
         if ( ImGui::Button( "Load##Main", ImVec2( ( w - p ) / 2.f - p - ImGui::GetFrameHeight(), 0 ) ) )
         {
             auto filenames = openFilesDialog( { {},{},MeshLoad::getFilters() | PointsLoad::Filters | SceneFileFilters } );
-            if ( !filenames.empty() )
-            {
-                SCOPED_HISTORY( "Load files" );
-                for ( const auto& filename : filenames )
-                {
-                    if ( !filename.empty() )
-                        viewer->loadFile( filename );
-                }
-                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-            }
+            viewer->loadFiles( filenames );
         }
         ImGui::SameLine( 0, p );
         draw_open_recent_button_();
@@ -2442,12 +2433,7 @@ void ImGuiMenu::draw_open_recent_button_()
         for ( const auto& file : filenames )
         {
             if ( ImGui::Selectable( utf8string( file ).c_str() ) )
-            {
-                if ( viewer->loadFile( file ) )
-                {
-                    viewer->fitDataViewport();
-                }
-            }
+                viewer->loadFiles( std::vector<std::filesystem::path>( { file } ) );
         }
         ImGui::GetStyle().Colors[ImGuiCol_Header] = storedColor;
         ImGui::EndCombo();

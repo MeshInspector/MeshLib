@@ -112,7 +112,7 @@ public:
 
     // Mesh IO
     MRVIEWER_API bool isSupportedFormat( const std::filesystem::path& file_name );
-    MRVIEWER_API bool loadFile( const std::filesystem::path& file_name );
+    MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList );
     MRVIEWER_API bool saveToFile( const std::filesystem::path & mesh_file_name );
     // Callbacks
     MRVIEWER_API bool keyPressed( unsigned int unicode_key, int modifier );

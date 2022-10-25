@@ -303,8 +303,8 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
-    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters,
+tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePathApprox( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
@@ -344,10 +344,20 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
         curr = b.findPrevPoint( *curr );
     }
     assert( !res.empty() );
-    reducePath( mp.mesh, start, res, end, numPostProcessIters );
 
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );
+    return res;
+}
+
+tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters,
+    const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
+{
+    MR_TIMER;
+    auto res = computeSurfacePathApprox( mp, start, end, vertRegion, outSurfaceDistances );
+    if ( res.has_value() && !res.value().empty() )
+        reducePath( mp.mesh, start, res.value(), end, numPostProcessIters );
     return res;
 }
 

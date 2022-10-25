@@ -18,9 +18,16 @@ enum class PathError
 };
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
-/// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
+/// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.
+/// It is the same as calling computeSurfacePathApprox() then reducePath()
 MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters = 5, const VertBitSet* vertRegion = nullptr,
+    Vector<float, VertId> * outSurfaceDistances = nullptr );
+
+/// returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
+/// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
+MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePathApprox( const MeshPart & mp, 
+    const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 
 /// for each vertex from (starts) finds the closest vertex from (ends) in geodesic sense

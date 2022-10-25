@@ -17,7 +17,7 @@ namespace MR
 MRMESH_API bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & start, VertId v, const MeshTriPoint & end, 
     std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp, std::vector<MeshEdgePoint>& cachePath );
 
-/// reduces the length of given surface path: start-path-end
+/// converts any input surface path into geodesic path (so reduces its length): start-path-end
 MRMESH_API void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter = 5 );
 
 /// \}

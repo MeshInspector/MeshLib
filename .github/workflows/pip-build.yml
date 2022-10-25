@@ -82,11 +82,14 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          curl http://nixos.org/releases/patchelf/patchelf-0.10/patchelf-0.10.tar.bz2 -L -o patchelf-0.10.tar.bz2
-          tar xf patchelf-0.10.tar.bz2
-          cd patchelf-0.10
+          curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.15.0.tar.gz -L -o patchelf-0.15.0.tar.gz
+          tar xf patchelf-0.15.0.tar.gzv
+          cd patchelf-0.15.0
+          ./bootstrap.sh
           ./configure
-          make install
+          make
+          make check
+          sudo make install
           cd ..
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 

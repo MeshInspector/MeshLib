@@ -24,6 +24,7 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFixer.h"
+#include "MRMesh/MROffset.h"
 #include <pybind11/functional.h>
 #include <tl/expected.hpp>
 
@@ -347,4 +348,27 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "egdeWeightsType" ) = MR::Laplacian::EdgeWeights::Cotan,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
+{
+    pybind11::enum_<MR::OffsetParameters::Type>( m, "OffsetParametersType", "Type of offsetting" ).
+        value( "Offset", MR::OffsetParameters::Type::Offset, "can be positive or negative, input mesh should be closed" ).
+        value( "Shell", MR::OffsetParameters::Type::Shell, "can be only positive, offset in both directions of surface" );
+
+    pybind11::class_<MR::OffsetParameters>( m, "OffsetParameters", "This struct represents parameters for offsetting with voxels conversions" ).
+        def_readwrite( "voxelSize", &MR::OffsetParameters::voxelSize,
+            "Size of voxel in grid conversions\n"
+            "if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)" ).
+        def_readwrite( "adaptivity", &MR::OffsetParameters::adaptivity,
+            "Decimation ratio of result mesh [0..1], this is applied on conversion from voxels to mesh\n"
+            "note: it does not work good, better use common decimation after offsetting" ).
+        def_readwrite( "type", &MR::OffsetParameters::type, "Type of offsetting" );
+
+    m.def( "offsetMesh", &MR::offsetMesh,
+        pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
+        "Offsets mesh by converting it to voxels and back\n"
+        "use Shell type for non closed meshes\n"
+        "so result mesh is always closed" );
+
 } )

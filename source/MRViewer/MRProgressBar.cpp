@@ -86,6 +86,7 @@ void ProgressBar::setup( float scaling )
         }
         ImGui::EndPopup();
     }
+    instance.isInit_ = true;
 }
 
 void ProgressBar::order( const char* name, const std::function<void()>& task, int taskCount )
@@ -103,6 +104,13 @@ void ProgressBar::order( const char* name, const std::function<void()>& task, in
 void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
     auto& instance = instance_();
+    if ( !instance.isInit_ )
+    {
+        auto res = task();
+        res();
+        return;
+    }
+
     if ( isFinished() && instance.thread_.joinable() )
     {
         instance.thread_.join();

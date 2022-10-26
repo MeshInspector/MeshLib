@@ -9,6 +9,7 @@ namespace MR
 {
 
 // This class shows application progress bar for long operations
+// note! if class don't setup, then order and orderWithMainThreadPostProcessing methods call task directly
 class ProgressBar
 {
 public:
@@ -74,6 +75,8 @@ private:
     std::atomic<bool> canceled_;
     std::atomic<bool> finished_;
     ImGuiID setupId_ = ImGuiID( -1 );
+
+    bool isInit_{ false };
 };
 
 }

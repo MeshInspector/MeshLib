@@ -55,6 +55,14 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# install patchelf
+RUN curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.15.0.tar.gz -L -o patchelf-0.15.0.tar.gz \
+ && tar xf patchelf-0.15.0.tar.gz \
+ && cd patchelf-0.15.0 \
+ && ./configure \
+ && make && make check && sudo make install \
+ && cd .. && rm patchelf-0.15.0.tar.gz && rm -rf patchelf-0.15.0
+
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig

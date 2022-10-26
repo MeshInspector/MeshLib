@@ -164,7 +164,7 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath, this] ()
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [filesystemPath] ()
             {
                 getViewerInstance().loadFiles( { filesystemPath } );
             } );

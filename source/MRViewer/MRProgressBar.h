@@ -74,6 +74,8 @@ private:
     std::atomic<bool> canceled_;
     std::atomic<bool> finished_;
     ImGuiID setupId_ = ImGuiID( -1 );
+
+    static bool isInit_{ false };
 };
 
 }

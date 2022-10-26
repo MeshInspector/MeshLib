@@ -46,7 +46,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl patchelf \
+        tzdata git sudo time python3-pip xvfb curl \
  && ./scripts/install_apt_requirements.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
@@ -54,6 +54,14 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -y gh \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+# install patchelf
+RUN curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.15.0.tar.gz -L -o patchelf-0.15.0.tar.gz \
+ && tar xf patchelf-0.15.0.tar.gz \
+ && cd patchelf-0.15.0 \
+ && ./configure \
+ && make && make check && sudo make install \
+ && cd .. && rm patchelf-0.15.0.tar.gz && rm -rf patchelf-0.15.0
 
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \

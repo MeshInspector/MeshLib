@@ -62,8 +62,10 @@ struct [[nodiscard]] Mesh
 
     // returns one of three face vertices, closest to given point
     MRMESH_API VertId getClosestVertex( const PointOnFace & p ) const;
+    VertId getClosestVertex( const MeshTriPoint & p ) const { return getClosestVertex( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
     // returns one of three face edges, closest to given point
     MRMESH_API UndirectedEdgeId getClosestEdge( const PointOnFace & p ) const;
+    UndirectedEdgeId getClosestEdge( const MeshTriPoint & p ) const { return getClosestEdge( PointOnFace{ topology.left( p.e ), triPoint( p ) } ); }
 
     // returns vector equal to edge destination point minus edge origin point
     Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }

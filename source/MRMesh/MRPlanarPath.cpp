@@ -534,10 +534,10 @@ void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(f
     strip_.find( e2, edgeCrossPosition );
 }
 
-void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter )
+int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter )
 {
     if ( maxIter <= 0 )
-        return;
+        return 0;
     MR_TIMER;
 
     std::vector<MeshEdgePoint> cacheOneSideUnfold;
@@ -629,8 +629,9 @@ void reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<Mesh
         }
    
         if ( !pathTopologyChanged )
-            return;
+            return i + 1;
     }
+    return maxIter;
 }
 
 } //namespace MR

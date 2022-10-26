@@ -114,7 +114,7 @@ public:
     // Check the supported file format
     MRVIEWER_API bool isSupportedFormat( const std::filesystem::path& file_name );
     // Load objects / scenes from files
-    // Note! function uses progress bar
+    // Note! load files with progress bar in next frame if it possible, otherwise load directly inside this function
     MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList );
     // Save first selected objects to file
     MRVIEWER_API bool saveToFile( const std::filesystem::path & mesh_file_name );

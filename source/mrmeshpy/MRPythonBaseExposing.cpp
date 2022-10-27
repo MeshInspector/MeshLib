@@ -16,8 +16,11 @@
 #include "MRMesh/MRFillContour.h"
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRLineSegm.h"
+#include "MRMesh/MRIntersection.h"
 #include <tl/expected.hpp>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
@@ -86,6 +89,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
             ss << #name << "[" << data.x << ", " << data.y << "]";\
             return ss.str();\
         } );\
+    m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
+    m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
 } )
 
 MR_ADD_PYTHON_VECTOR2( Vector2i, int )
@@ -212,6 +217,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
         def( pybind11::self *= float() ).
         def( pybind11::self /= float() ).
         def( pybind11::self == pybind11::self );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm2f, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::LineSegm2f>( m, "LineSegm2f", "a segment of 2-dimensional line" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<const MR::Vector2f&, const MR::Vector2f&>() ).
+        def_readwrite( "a", &MR::LineSegm2f::a ).
+        def_readwrite( "b", &MR::LineSegm2f::b );
+
+    m.def( "intersection", ( std::optional<MR::Vector2f>( * )( const MR::LineSegm2f&, const MR::LineSegm2f& ) )& MR::intersection,
+        pybind11::arg( "segm1" ), pybind11::arg( "segm2" ),
+        "finds an intersection between a segm1 and a segm2\n"
+        "return null if they don't intersect (even if they match)" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3f, [] ( pybind11::module_& m )
@@ -431,6 +450,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& m )
     pybind11::class_<MR::EdgeId>( m, "EdgeId" ).
         def( pybind11::init<>() ).
         def( pybind11::init<int>() ).
+        def( pybind11::init<MR::UndirectedEdgeId>() ).
         def( "valid", &MR::EdgeId::valid ).
         def( "sym", &MR::EdgeId::sym, "returns identifier of the edge with same ends but opposite orientation" ).
         def( "undirected", &MR::EdgeId::undirected, "returns unique identifier of the edge ignoring its direction" ).

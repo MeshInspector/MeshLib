@@ -3,6 +3,7 @@
 #include "MRPlane3.h"
 #include "MRLine3.h"
 #include "MRLineSegm.h"
+#include "MRVector2.h"
 #include <optional>
 
 namespace MR
@@ -66,8 +67,20 @@ std::optional<Vector3<T>> intersection( const Line3<T>& line1, const Line3<T>& l
     return line1.p + dot( ( line2.p - line1.p ), n2 ) / den * line1.d;
 }
 
-
-
+/// finds an intersection between a segm1 and a segm2
+/// \return nullopt if they don't intersect (even if they match)
+std::optional<Vector2f> intersection( const LineSegm2f& segm1, const LineSegm2f& segm2 )
+{
+    auto avec = segm1.b - segm1.a;
+    if ( cross( avec, segm2.a - segm1.a ) * cross( segm2.b - segm1.a, avec ) <= 0 )
+        return {};
+    auto bvec = segm2.b - segm2.a;
+    auto cda = cross( bvec, segm1.a - segm2.a );
+    auto cbd = cross( segm1.b - segm2.a, bvec );
+    if ( cda * cbd <= 0 )
+        return {};
+    return ( segm1.b * cda + segm1.a * cbd ) / ( cda + cbd );
+}
 
 /// finds distance between a plane1 and a plane2
 /// \return nullopt if they intersect

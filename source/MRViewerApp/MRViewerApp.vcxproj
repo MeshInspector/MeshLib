@@ -98,9 +98,6 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)pluginLibraryList.json $(TargetDir)pluginLibraryList.json
-		if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
-		copy /Y $(TargetDir)*.py* $(TargetDir)meshlib
-		copy $(SolutionDir)..\test_python\helper\win_init.py $(TargetDir)meshlib\__init__.py
 	  </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -130,9 +127,6 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)pluginLibraryList.json $(TargetDir)pluginLibraryList.json
-		if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
-		copy /Y $(TargetDir)*.py* $(TargetDir)meshlib
-		copy $(SolutionDir)..\test_python\helper\win_init.py $(TargetDir)meshlib\__init__.py
 	  </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

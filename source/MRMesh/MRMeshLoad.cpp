@@ -56,10 +56,10 @@ tl::expected<Mesh, std::string> fromMrmesh( std::istream& in, Vector<Color, Vert
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading the number of points from mrmesh-file" ) );
     mesh.points.resize( numPoints );
-    readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback ? [callback] ( float v )
-    {
-        return callback( v / 2.f + 0.5f );
-    } : callback );
+    if ( !readByBlocks( in, ( char* )mesh.points.data(), mesh.points.size() * sizeof( Vector3f ), callback ? [callback] ( float v )
+        { return callback( v / 2.f + 0.5f ); } : callback ) )
+        return tl::make_unexpected( std::string( "Loading canceled" ) );
+
     if ( !in )
         return tl::make_unexpected( std::string( "Error reading  points from mrmesh-file" ) );
 

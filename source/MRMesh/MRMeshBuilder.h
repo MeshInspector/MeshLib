@@ -15,8 +15,8 @@ namespace MR
   * 
   * Simple example with key steps
   * \code
-  * MR::MeshBuilder::Triangulation t;
-  * // add siple plane triangles
+  * MR::Triangulation t;
+  * // add simple plane triangles
   * t.push_back({0_v,1_v,2_v}); // face #0
   * t.push_back({2_v,1_v,3_v}); // face #1
   * // make topology

@@ -219,13 +219,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Matrix3f, [] ( pybind11::module_& m )
         def( pybind11::self == pybind11::self );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm2f, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::LineSegm2f>( m, "LineSegm2f", "a segment of 2-dimensional line" ).
         def( pybind11::init<>() ).
         def( pybind11::init<const MR::Vector2f&, const MR::Vector2f&>() ).
         def_readwrite( "a", &MR::LineSegm2f::a ).
         def_readwrite( "b", &MR::LineSegm2f::b );
+
+    pybind11::class_<MR::LineSegm3f>( m, "LineSegm3f", "a segment of 3-dimensional line" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>() ).
+        def_readwrite( "a", &MR::LineSegm3f::a ).
+        def_readwrite( "b", &MR::LineSegm3f::b );
 
     m.def( "intersection", ( std::optional<MR::Vector2f>( * )( const MR::LineSegm2f&, const MR::LineSegm2f& ) )& MR::intersection,
         pybind11::arg( "segm1" ), pybind11::arg( "segm2" ),

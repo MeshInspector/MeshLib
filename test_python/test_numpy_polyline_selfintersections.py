@@ -11,8 +11,8 @@ def test_numpy_polyline_selfintersections():
     polyline = mrmeshnumpy.polyline2FromPoints(points)
     selfInters = mrmesh.findSelfCollidingEdges(polyline)
     assert (selfInters.size() == 1)
-    segm1 = mrmesh.LineSegm2f(polyline.orgPnt(mrmesh.EdgeId(selfInters[0].aUndirEdge)),polyline.destPnt(mrmesh.EdgeId(selfInters[0].aUndirEdge)))
-    segm2 = mrmesh.LineSegm2f(polyline.orgPnt(mrmesh.EdgeId(selfInters[0].bUndirEdge)),polyline.destPnt(mrmesh.EdgeId(selfInters[0].bUndirEdge)))
+    segm1 = polyline.edgeSegment(mrmesh.EdgeId(selfInters[0].aUndirEdge))
+    segm2 = polyline.edgeSegment(mrmesh.EdgeId(selfInters[0].bUndirEdge))
     inter = mrmesh.intersection(segm1,segm2)
     assert (abs(inter.x - 2.0/3.0) < 0.001 and inter.y == 0)
     

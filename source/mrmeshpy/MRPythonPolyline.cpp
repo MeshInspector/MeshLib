@@ -48,6 +48,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, []( pybind11::module_& 
         def( "edgeCenter", &PolylineType::edgeCenter, pybind11::arg( "e" ), "Returns edge's centroid." ).\
 \
         def( "edgeVector", &PolylineType::edgeVector, pybind11::arg( "e" ), "Returns vector equal to edge destination point minus edge origin point." ).\
+        def( "edgeSegment", &PolylineType::edgeSegment, pybind11::arg( "e" ), "Returns line segment of given edge." ).\
         def( "edgeLength", &PolylineType::edgeLength, pybind11::arg( "e" ), "Returns Euclidean length of the edge." ).\
         def( "edgeLengthSq", &PolylineType::edgeLengthSq, pybind11::arg( "e" ), "Returns squared Euclidean length of the edge (faster to compute than length)." ).\
         def( "totalLength", &PolylineType::totalLength, "Returns total length of the polyline." ).\

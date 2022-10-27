@@ -160,6 +160,9 @@ public:
     void addStartRegion( const VertBitSet & region, float startMetric );
     // include one more edge in the edge forest, returning vertex-info for the newly reached vertex
     VertPathInfo growOneEdge();
+    // whether new candidates are added in growOneEdge (true), or only old candidates are returned (false)
+    bool keepGrowing() const { return keepGrowing_; }
+    void stopGrowing() { keepGrowing_ = false; }
 
 public:
     // returns true if further edge forest growth is impossible
@@ -179,6 +182,7 @@ private:
     EdgeMetric metric_;
     VertPathInfoMap vertPathInfoMap_;
     std::priority_queue<VertPathInfo> nextSteps_;
+    bool keepGrowing_ = true;
 
     // compares proposed step with the value known for org( c.back );
     // if proposed step is smaller then adds it in the queue and returns true;
@@ -283,7 +287,8 @@ auto EdgePathsBuilder::growOneEdge() -> VertPathInfo
             continue;
         }
         assert( vi.metric == c.metric );
-        addOrgRingSteps_( c.metric, c.back );
+        if ( keepGrowing_ )
+            addOrgRingSteps_( c.metric, c.back );
         return c;
     }
     return {};
@@ -350,8 +355,11 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
     {
         auto ds = bs.doneDistance();
         auto df = bf.doneDistance();
-        if ( join && joinPathMetric <= ds + df )
-            break;
+        if ( bs.keepGrowing() && join && joinPathMetric <= ds + df )
+        {
+            bs.stopGrowing();
+            bf.stopGrowing();
+        }
         if ( ds <= df )
         {
             if ( ds >= FLT_MAX )
@@ -387,23 +395,6 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
     std::vector<EdgeId> res;
     if ( join )
     {
-        //check not finally reached vertices
-        auto ds = bs.doneDistance();
-        for ( const auto & [v, c] : bs.vertPathInfoMap() )
-        {
-            if ( c.metric < ds )
-                continue;
-            if ( auto info = bf.getVertInfo( v ) )
-            {
-                auto newMetric = c.metric + info->metric;
-                if ( newMetric < joinPathMetric )
-                {
-                    join = v;
-                    joinPathMetric = newMetric;
-                }
-            }
-        }
-
         res = bs.getPathBack( join );
         reverse( res );
         auto tail = bf.getPathBack( join );

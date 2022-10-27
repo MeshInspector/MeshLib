@@ -2,10 +2,12 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVertexAttributeGradient.h"
+#include "MRMesh/MRPolyline2.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
@@ -136,6 +138,51 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
 
     res.validPoints = MR::VertBitSet( res.points.size() );
     res.validPoints.flip();
+
+    return res;
+}
+
+MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
+{
+    pybind11::buffer_info infoPoints = points.request();
+    if ( infoPoints.ndim != 2 || infoPoints.shape[1] != 2 )
+    {
+        PyErr_SetString( PyExc_RuntimeError, "shape of input python vector 'points' should be (n,2)" );
+        assert( false );
+    }
+
+    MR::Polyline2 res;
+
+    auto fillFloatVec = [] ( MR::Contour2f& vec, const pybind11::buffer_info& bufInfo )
+    {
+        vec.resize( bufInfo.shape[0] );
+        if ( bufInfo.format == pybind11::format_descriptor<double>::format() )
+        {
+            double* data = reinterpret_cast< double* >( bufInfo.ptr );
+            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
+            {
+                vec[i] = MR::Vector2f( float( data[2 * i] ), float( data[2 * i + 1] ) );
+            }
+        }
+        else if ( bufInfo.format == pybind11::format_descriptor<float>::format() )
+        {
+            float* data = reinterpret_cast< float* >( bufInfo.ptr );
+            for ( auto i = 0; i < bufInfo.shape[0]; i++ )
+            {
+                vec[i] = MR::Vector2f( data[2 * i], data[2 * i + 1] );
+            }
+        }
+        else
+        {
+            PyErr_SetString( PyExc_RuntimeError, "dtype of input python vector should be float32 or float64" );
+            assert( false );
+        }
+    };
+    
+    // verts to points part
+    MR::Contour2f inputContour;
+    fillFloatVec( inputContour, infoPoints );
+    res.addFromPoints( inputContour.data(), inputContour.size() );
 
     return res;
 }
@@ -333,6 +380,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::modu
     m.def( "pointCloudFromPoints", &pointCloudFromNP, 
         pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, 
         "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, Polyline2FromPoints, [] ( pybind11::module_& m )
+{
+    m.def( "polyline2FromPoints", &polyline2FromNP,
+        pybind11::arg( "points" ),
+        "creates polyline2 object from numpy array" );
 } )
 
 template<typename T>

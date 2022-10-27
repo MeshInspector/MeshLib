@@ -10,6 +10,8 @@
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MRSymbolMesh.h"
+#include "MRMesh/MRFaceFace.h"
+#include "MRMesh/MRPolyline2Collide.h"
 
 #define CONCAT(a, b) 
 
@@ -46,6 +48,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, []( pybind11::module_& 
         def( "edgeCenter", &PolylineType::edgeCenter, pybind11::arg( "e" ), "Returns edge's centroid." ).\
 \
         def( "edgeVector", &PolylineType::edgeVector, pybind11::arg( "e" ), "Returns vector equal to edge destination point minus edge origin point." ).\
+        def( "edgeSegment", &PolylineType::edgeSegment, pybind11::arg( "e" ), "Returns line segment of given edge." ).\
         def( "edgeLength", &PolylineType::edgeLength, pybind11::arg( "e" ), "Returns Euclidean length of the edge." ).\
         def( "edgeLengthSq", &PolylineType::edgeLengthSq, pybind11::arg( "e" ), "Returns squared Euclidean length of the edge (faster to compute than length)." ).\
         def( "totalLength", &PolylineType::totalLength, "Returns total length of the polyline." ).\
@@ -106,4 +109,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolsMesh, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg( "zOffset" ) = 1.0f,
         "Given a planar mesh with boundary on input located in plane XY, packs and extends it along Z on zOffset to make a volumetric closed mesh.\n"
         "Note! zOffset should be > 0.\n" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::UndirectedEdgeUndirectedEdge>( m, "UndirectedEdgeUndirectedEdge" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<MR::UndirectedEdgeId, MR::UndirectedEdgeId>() ).
+        def_readwrite( "aUndirEdge", &MR::UndirectedEdgeUndirectedEdge::aUndirEdge ).
+        def_readwrite( "bUndirEdge", &MR::UndirectedEdgeUndirectedEdge::bUndirEdge );
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdgeUndirectedEdge, MR::UndirectedEdgeUndirectedEdge )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, findSelfCollidingEdges, [] ( pybind11::module_& m )
+{
+    m.def( "findSelfCollidingEdges", &MR::findSelfCollidingEdges, pybind11::arg( "polyline" ), "finds all pairs of colliding edges from 2d polyline" );
 } )

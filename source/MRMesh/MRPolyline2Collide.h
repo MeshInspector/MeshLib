@@ -20,9 +20,9 @@ MRMESH_API std::pair<UndirectedEdgeBitSet, UndirectedEdgeBitSet> findCollidingEd
     const AffineXf2f* rigidB2A = nullptr );
 
 /// finds all pairs of colliding edges from 2d polyline
-MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline2& mp );
+MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline2& polyline );
 /// the same as \ref findSelfCollidingEdges, but returns the union of all self-intersecting edges
-MRMESH_API UndirectedEdgeBitSet findSelfCollidingEdgesBS( const Polyline2& mp );
+MRMESH_API UndirectedEdgeBitSet findSelfCollidingEdgesBS( const Polyline2& polyline );
 
 /**
  * \brief checks that arbitrary 2d polyline A is inside of closed 2d polyline B

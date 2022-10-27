@@ -3,6 +3,7 @@
 #include "MRPolylineTopology.h"
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRPlane3.h"
+#include "MRLineSegm.h"
 
 namespace MR
 {
@@ -50,6 +51,8 @@ public:
 
     /// returns vector equal to edge destination point minus edge origin point
     V edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+    /// returns line segment of given edge
+    LineSegm<V> edgeSegment( EdgeId e ) const { return LineSegm<V>( orgPnt( e ), destPnt( e ) ); }
     /// returns Euclidean length of the edge
     float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
     /// returns squared Euclidean length of the edge (faster to compute than length)

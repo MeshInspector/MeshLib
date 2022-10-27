@@ -12,6 +12,7 @@ namespace
 using namespace MR;
 bool doSegmentsIntersect( const Vector2d& a0, const Vector2d& a1, const Vector2d& b0, const Vector2d& b1 )
 {
+    // mb use intersection (LineSegm2f)
     auto avec = a1 - a0;
     if ( cross( avec, b0 - a0 ) * cross( avec, b1 - a0 ) > 0 )
         return false;

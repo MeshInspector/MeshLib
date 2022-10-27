@@ -365,6 +365,8 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
             if ( ds >= FLT_MAX )
                 break;
             auto c = bs.growOneEdge();
+            if ( !c.back )
+                continue;
             auto v = topology.org( c.back );
             if ( auto info = bf.getVertInfo( v ) )
             {
@@ -379,6 +381,8 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
         else
         {
             auto c = bf.growOneEdge();
+            if ( !c.back )
+                continue;
             auto v = topology.org( c.back );
             if ( auto info = bs.getVertInfo( v ) )
             {

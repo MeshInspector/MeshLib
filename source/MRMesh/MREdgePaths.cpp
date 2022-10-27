@@ -150,10 +150,11 @@ inline bool operator <( const VertPathInfo & a, const VertPathInfo & b )
 
 using VertPathInfoMap = ParallelHashMap<VertId, VertPathInfo>;
 
-class EdgePathsBuilder
+template<class MetricToPenalty>
+class EdgePathsBuilderT
 {
 public:
-    EdgePathsBuilder( const MeshTopology & topology, const EdgeMetric & metric );
+    EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric );
     // registers start vertex for paths
     void addStart( EdgeId edgeFromStart, float startMetric );
     // registers start region for paths, only boundary vertices are actually added and only outside steps
@@ -177,6 +178,9 @@ public:
     // returns the path in the forest from given vertex to one of start vertices
     std::vector<EdgeId> getPathBack( VertId backpathStart ) const;
 
+protected:
+    [[no_unique_address]] MetricToPenalty metricToPenalty_;
+
 private:
     const MeshTopology & topology_;
     EdgeMetric metric_;
@@ -193,13 +197,22 @@ private:
     bool addOrgRingSteps_( float orgMetric, EdgeId back, const VertBitSet * skipRegion = nullptr );
 };
 
-EdgePathsBuilder::EdgePathsBuilder( const MeshTopology & topology, const EdgeMetric & metric )
+struct TrivialMetricToPenalty
+{
+    float operator()( float metric, VertId ) const { return metric; }
+};
+
+using EdgePathsBuilder = EdgePathsBuilderT<TrivialMetricToPenalty>;
+
+template<class MetricToPenalty>
+EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric )
     : topology_( topology )
     , metric_( metric )
 {
 }
 
-void EdgePathsBuilder::addStart( EdgeId edgeFromStart, float startMetric )
+template<class MetricToPenalty>
+void EdgePathsBuilderT<MetricToPenalty>::addStart( EdgeId edgeFromStart, float startMetric )
 {
     auto & vi = vertPathInfoMap_[topology_.org( edgeFromStart )];
     if ( vi.metric <= startMetric )
@@ -207,7 +220,8 @@ void EdgePathsBuilder::addStart( EdgeId edgeFromStart, float startMetric )
     addOrgRingSteps_( vi.metric = startMetric, edgeFromStart );
 }
 
-void EdgePathsBuilder::addStartRegion( const VertBitSet & region, float startMetric )
+template<class MetricToPenalty>
+void EdgePathsBuilderT<MetricToPenalty>::addStartRegion( const VertBitSet & region, float startMetric )
 {
     MR_TIMER
     for ( auto v : region )
@@ -221,13 +235,15 @@ void EdgePathsBuilder::addStartRegion( const VertBitSet & region, float startMet
     }
 }
 
-const VertPathInfo * EdgePathsBuilder::getVertInfo( VertId v ) const
+template<class MetricToPenalty>
+const VertPathInfo * EdgePathsBuilderT<MetricToPenalty>::getVertInfo( VertId v ) const
 {
     auto it = vertPathInfoMap_.find( v );
     return ( it != vertPathInfoMap_.end() ) ? &it->second : nullptr;
 }
 
-std::vector<EdgeId> EdgePathsBuilder::getPathBack( VertId v ) const
+template<class MetricToPenalty>
+std::vector<EdgeId> EdgePathsBuilderT<MetricToPenalty>::getPathBack( VertId v ) const
 {
     std::vector<EdgeId> res;
     for (;;)
@@ -247,19 +263,22 @@ std::vector<EdgeId> EdgePathsBuilder::getPathBack( VertId v ) const
     return res;
 }
 
-bool EdgePathsBuilder::addNextStep_( const VertPathInfo & c )
+template<class MetricToPenalty>
+bool EdgePathsBuilderT<MetricToPenalty>::addNextStep_( const VertPathInfo & c )
 {
-    auto & vi = vertPathInfoMap_[topology_.org( c.back )];
+    const auto vert = topology_.org( c.back );
+    auto & vi = vertPathInfoMap_[vert];
     if ( vi.metric > c.metric )
     {
         vi = c;
-        nextSteps_.push( c );
+        nextSteps_.push( VertPathInfo{ c.back, metricToPenalty_( c.metric, vert ) } );
         return true;
     }
     return false;
 }
 
-bool EdgePathsBuilder::addOrgRingSteps_( float orgMetric, EdgeId back, const VertBitSet * skipRegion )
+template<class MetricToPenalty>
+bool EdgePathsBuilderT<MetricToPenalty>::addOrgRingSteps_( float orgMetric, EdgeId back, const VertBitSet * skipRegion )
 {
     bool aNextStepAdded = false;
     for ( EdgeId e : orgRing( topology_, back ) )
@@ -274,21 +293,23 @@ bool EdgePathsBuilder::addOrgRingSteps_( float orgMetric, EdgeId back, const Ver
     return aNextStepAdded;
 }
 
-auto EdgePathsBuilder::growOneEdge() -> VertPathInfo
+template<class MetricToPenalty>
+auto EdgePathsBuilderT<MetricToPenalty>::growOneEdge() -> VertPathInfo
 {
     while ( !nextSteps_.empty() )
     {
         const auto c = nextSteps_.top();
         nextSteps_.pop();
-        auto & vi = vertPathInfoMap_[topology_.org( c.back )];
-        if ( vi.metric < c.metric )
+        const auto vert = topology_.org( c.back );
+        auto & vi = vertPathInfoMap_[vert];
+        if ( metricToPenalty_( vi.metric, vert ) < c.metric )
         {
             // shorter path to the vertex was found
             continue;
         }
-        assert( vi.metric == c.metric );
+        assert( metricToPenalty_( vi.metric, vert ) == c.metric );
         if ( keepGrowing_ )
-            addOrgRingSteps_( c.metric, c.back );
+            addOrgRingSteps_( vi.metric, vi.back );
         return c;
     }
     return {};
@@ -297,7 +318,7 @@ auto EdgePathsBuilder::growOneEdge() -> VertPathInfo
 // internal version with pre-initialized builder
 static EdgePath buildSmallestMetricPath( const MeshTopology& topology, VertId start, EdgePathsBuilder& b, float maxPathMetric )
 {
-    for ( ;;)
+    for (;;)
     {
         auto vinfo = b.growOneEdge();
         if ( !vinfo.back.valid() )
@@ -423,6 +444,50 @@ std::vector<EdgeId> buildShortestPathBiDir( const Mesh & mesh, VertId start, Ver
 EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen /*= FLT_MAX */ )
 {
     return buildSmallestMetricPath( mesh.topology, edgeLengthMetric( mesh ), start, finish, maxPathLen );
+}
+
+struct MetricToAStarPenalty
+{
+    const VertCoords * points = nullptr;
+    Vector3f target;
+    float operator()( float metric, VertId v ) const
+    {
+        return metric + ( (*points)[v] - target ).length();
+    }
+};
+
+class EdgePathsAStarBuilder: public EdgePathsBuilderT<MetricToAStarPenalty>
+{
+public:
+    EdgePathsAStarBuilder( const Mesh & mesh, VertId target, VertId start ) :
+        EdgePathsBuilderT( mesh.topology, edgeLengthMetric( mesh ) )
+    {
+        metricToPenalty_.points = &mesh.points;
+        metricToPenalty_.target = mesh.points[target];
+        addStart( mesh.topology.edgeWithOrg( start ), 0 );
+    }
+};
+
+std::vector<EdgeId> buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
+{
+    EdgePathsAStarBuilder b( mesh, start, finish );
+    for (;;)
+    {
+        auto vinfo = b.growOneEdge();
+        if ( !vinfo.back.valid() )
+        {
+            // unable to find the path
+            return {};
+        }
+        if ( vinfo.metric > maxPathLen )
+        {
+            // unable to find the path within given metric limitation
+            return {};
+        }
+        if ( mesh.topology.org( vinfo.back ) == start )
+            break;
+    }
+    return b.getPathBack( start );
 }
 
 std::vector<VertId> getVertexOrdering( const MeshTopology & topology, VertBitSet region )

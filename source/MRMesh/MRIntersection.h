@@ -69,7 +69,7 @@ std::optional<Vector3<T>> intersection( const Line3<T>& line1, const Line3<T>& l
 
 /// finds an intersection between a segm1 and a segm2
 /// \return nullopt if they don't intersect (even if they match)
-std::optional<Vector2f> intersection( const LineSegm2f& segm1, const LineSegm2f& segm2 )
+inline std::optional<Vector2f> intersection( const LineSegm2f& segm1, const LineSegm2f& segm2 )
 {
     auto avec = segm1.b - segm1.a;
     if ( cross( avec, segm2.a - segm1.a ) * cross( segm2.b - segm1.a, avec ) <= 0 )

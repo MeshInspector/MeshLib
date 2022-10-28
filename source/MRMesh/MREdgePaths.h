@@ -54,10 +54,17 @@ inline void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh 
 /// adds all faces incident to loop vertices and located to the left from the loop to given FaceBitSet
 MRMESH_API void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitSet & addHere );
 
-/// builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned
+/// finds the shortest path in euclidean metric from start to finish vertices using Dijkstra algorithm;
+/// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
-/// same, but constructs the path from both start and finish, which is faster for long paths
+/// finds the shortest path in euclidean metric from start to finish vertices using bidirectional modification of Dijkstra algorithm,
+/// constructing the path simultaneously from both start and finish, which is faster for long paths;
+/// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+/// finds the shortest path in euclidean metric from start to finish vertices using A* modification of Dijkstra algorithm,
+/// which is faster for near linear path;
+/// if no path can be found then empty path is returned
+[[nodiscard]] MRMESH_API EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
 
 /// builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen = FLT_MAX );

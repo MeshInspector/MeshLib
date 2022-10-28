@@ -18,6 +18,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRLineSegm.h"
 #include "MRMesh/MRIntersection.h"
+#include "MRMesh/MRPointOnFace.h"
 #include <tl/expected.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
@@ -239,6 +240,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LineSegm, [] ( pybind11::module_& m )
         "return null if they don't intersect (even if they match)" );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointOnFace, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::PointOnFace>( m, "PointOnFace", "point located on some mesh face" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "face", &MR::PointOnFace::face ).
+        def_readwrite( "point", &MR::PointOnFace::point );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3f, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::AffineXf3f>( m, "AffineXf3f", "affine transformation: y = A*x + b, where A in VxV, and b in V" ).
@@ -257,15 +266,25 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, AffineXf3f, [] ( pybind11::module_& m )
         def( pybind11::self == pybind11::self );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3f, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Line3, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::Line3f>( m, "Line3f", "3-dimensional line: cross( x - p, d ) = 0" ).
         def( pybind11::init<>() ).
+        def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
         def_readwrite( "p", &MR::Line3f::p ).
         def_readwrite( "d", &MR::Line3f::d ).
         def( "distanceSq", &MR::Line3f::distanceSq, pybind11::arg( "x" ), "returns squared distance from given point to this line" ).
         def( "normalized", &MR::Line3f::normalized, "returns same line represented with unit d-vector" ).
         def( "project", &MR::Line3f::project, pybind11::arg( "x" ), "finds the closest point on line" );
+
+    pybind11::class_<MR::Line3d>( m, "Line3d", "3-dimensional line: cross( x - p, d ) = 0" ).
+        def( pybind11::init<>() ).
+        def( pybind11::init<const MR::Vector3d&, const MR::Vector3d&>(), pybind11::arg( "p" ), pybind11::arg( "d" ) ).
+        def_readwrite( "p", &MR::Line3d::p ).
+        def_readwrite( "d", &MR::Line3d::d ).
+        def( "distanceSq", &MR::Line3d::distanceSq, pybind11::arg( "x" ), "returns squared distance from given point to this line" ).
+        def( "normalized", &MR::Line3d::normalized, "returns same line represented with unit d-vector" ).
+        def( "project", &MR::Line3d::project, pybind11::arg( "x" ), "finds the closest point on line" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Plane3f, [] ( pybind11::module_& m )

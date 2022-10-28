@@ -29,6 +29,7 @@
     <ClCompile Include="MRPythonIO.cpp" />
     <ClCompile Include="MRPythonMeshExposing.cpp" />
     <ClCompile Include="MRPythonMeshICPExposing.cpp" />
+    <ClCompile Include="MRPythonMeshIntersect.cpp" />
     <ClCompile Include="MRPythonMeshPlugins.cpp" />
     <ClCompile Include="MRPythonPointCloudExposing.cpp" />
     <ClCompile Include="MRPythonPolyline.cpp" />

@@ -515,6 +515,8 @@ void serializeToJson( const Color& col, Json::Value& root )
 
 void serializeToJson( const Matrix3f& matrix, Json::Value& root )
 {
+    if ( matrix == Matrix3f() )
+        return; // skip saving, it will initialized as Matrix3f() anyway
     serializeToJson( matrix.x, root["rowX"] );
     serializeToJson( matrix.y, root["rowY"] );
     serializeToJson( matrix.z, root["rowZ"] );
@@ -522,6 +524,8 @@ void serializeToJson( const Matrix3f& matrix, Json::Value& root )
 
 void serializeToJson( const AffineXf3f& xf, Json::Value& root )
 {
+    if ( xf == AffineXf3f() )
+        return; // skip saving, it will initialized as AffineXf3f() anyway
     serializeToJson( xf.A, root["A"] );
     serializeToJson( xf.b, root["b"] );
 }

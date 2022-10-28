@@ -115,7 +115,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( pybind11:
 {
     pybind11::class_<MR::UndirectedEdgeUndirectedEdge>( m, "UndirectedEdgeUndirectedEdge" ).
         def( pybind11::init<>() ).
-        def( pybind11::init<MR::UndirectedEdgeId, MR::UndirectedEdgeId>() ).
+        def( pybind11::init<MR::UndirectedEdgeId, MR::UndirectedEdgeId>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def_readwrite( "aUndirEdge", &MR::UndirectedEdgeUndirectedEdge::aUndirEdge ).
         def_readwrite( "bUndirEdge", &MR::UndirectedEdgeUndirectedEdge::bUndirEdge );
 } )

@@ -80,10 +80,11 @@ This list is not full and updating each day
    - Guaranteed fix via voxels, 
    - Fix via Relax (mesh smoothing).
 ### Functions on 3D data
+ - BVH hierarchies (AABB trees) for meshes and polylines to accelerate all other operations
  - Projection
-   - Projecting a point onto a mesh
+   - Projecting a point onto a mesh - closest point queries
  - Intersection
-   - Intersection of a ray with a mesh,
+   - Intersection of a ray with a mesh (ray tracing),
    - Intersection of a plane with a mesh, result is a contour,
    - Finding a contour representing intersection of two meshes, meshes remain unchanged,
  - Distance

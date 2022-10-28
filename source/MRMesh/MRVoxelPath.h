@@ -41,15 +41,14 @@ struct VoxelMetricParameters
 };
 
 /// e^(modifier*(dens1+dens2))
-[[nodiscard]] MRMESH_API VoxelsMetric voxelsExponentMetric( const ObjectVoxels& voxels, const VoxelMetricParameters& parameters,
+[[nodiscard]] MRMESH_API VoxelsMetric voxelsExponentMetric( const VdbVolume& voxels, const VoxelMetricParameters& parameters,
                                                            float modifier = -1.0f );
 
 /// sum of dense differences with start and stop voxels
-[[nodiscard]] MRMESH_API VoxelsMetric voxelsSumDiffsMetric( const ObjectVoxels& voxels, const VoxelMetricParameters& parameters );
+[[nodiscard]] MRMESH_API VoxelsMetric voxelsSumDiffsMetric( const VdbVolume& voxels, const VoxelMetricParameters& parameters );
 
 /// builds shortest path in given metric from start to finish voxels; if no path can be found then empty path is returned
-[[nodiscard]] MRMESH_API std::vector<size_t> buildSmallestMetricPath( const ObjectVoxels & voxels, 
-                                                                     const VoxelsMetric & metric,
+[[nodiscard]] MRMESH_API std::vector<size_t> buildSmallestMetricPath( const VdbVolume & voxels,  const VoxelsMetric & metric,
                                                                      size_t start, size_t finish );
 
 /// \}

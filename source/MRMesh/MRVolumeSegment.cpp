@@ -159,8 +159,8 @@ VolumeSegmenter::VolumeSegmenter( const ObjectVoxels& volume ):
 
 void VolumeSegmenter::addPathSeeds( const VoxelMetricParameters& metricParameters, SeedType seedType, float exponentModifier /*= -1.0f */ )
 {
-    auto metric = voxelsExponentMetric( volume_, metricParameters, exponentModifier );
-    auto path = buildSmallestMetricPath( volume_, metric, metricParameters.start, metricParameters.stop );
+    auto metric = voxelsExponentMetric( volume_.vdbVolume(), metricParameters, exponentModifier );
+    auto path = buildSmallestMetricPath( volume_.vdbVolume(), metric, metricParameters.start, metricParameters.stop );
 
     auto& curSeeds = seeds_[seedType];
     auto shift = curSeeds.size();

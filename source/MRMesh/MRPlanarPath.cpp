@@ -490,17 +490,14 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
     strip_.reset( s2, d2, { 0, 0 } );
 }
 
-void TriangleStipUnfolder::nextEdge( MeshEdgePoint & ei )
+void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
-   // orient ei to have last edge at left
-    MeshTriPoint e1{ lastEdge_.sym(), { 0.5f, 0 } };
-    MeshTriPoint e2{ ei };
+   // orient e2 to have last edge at left
+    MeshEdgePoint e1{ lastEdge_.sym(), 0.5f };
     if( !fromSameTriangle( mesh_.topology, e1, e2 ) )
         assert( false );
-    assert( e2.bary.b == 0 );
     assert( mesh_.topology.left( e1.e ) == mesh_.topology.left( e2.e ) );
     assert( lastEdge_ == e1.e.sym() ); // no return to old triangle
-    ei = MeshEdgePoint{ e2.e, e2.bary.a };
 
     Vector2f o2, d2;
     strip_.getLastEdge( d2, o2 );

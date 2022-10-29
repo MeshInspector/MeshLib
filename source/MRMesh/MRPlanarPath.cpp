@@ -492,29 +492,38 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
 
 void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
-   // orient e2 to have last edge at left
-    MeshEdgePoint e1{ lastEdge_.sym(), 0.5f };
-    if( !fromSameTriangle( mesh_.topology, e1, e2 ) )
-        assert( false );
-    assert( mesh_.topology.left( e1.e ) == mesh_.topology.left( e2.e ) );
-    assert( lastEdge_ == e1.e.sym() ); // no return to old triangle
+    assert( !e2.inVertex( mesh_.topology ) );
 
     Vector2f o2, d2;
     strip_.getLastEdge( d2, o2 );
     Vector3f v[3];
-    mesh_.getLeftTriPoints( e2.e, v[0], v[1], v[2] );
-    if ( mesh_.topology.next( e2.e ) == lastEdge_ )
+    const EdgeId pl = mesh_.topology.prev( lastEdge_ );
+   // orient e2 to have last edge at left
+    if ( pl == e2.e.sym() )
+        e2 = e2.sym();
+    if ( pl == e2.e )
     {
+        mesh_.getLeftTriPoints( e2.e, v[0], v[1], v[2] );
         Vector2f x2 = o2 + unfoldOnPlane( v[2] - v[0], v[1] - v[0], d2 - o2, false );
         strip_.nextEdgeNewLeft( x2 );
+        lastEdge_ = pl;
+        return;
     }
-    else
+
+    const EdgeId nl = mesh_.topology.next( lastEdge_.sym() ).sym();
+   // orient e2 to have last edge at left
+    if ( nl == e2.e.sym() )
+        e2 = e2.sym();
+    if ( nl == e2.e )
     {
-        assert( mesh_.topology.prev( e2.e.sym() ).sym() == lastEdge_ );
+        mesh_.getLeftTriPoints( e2.e, v[0], v[1], v[2] );
         Vector2f x2 = o2 + unfoldOnPlane( v[1] - v[2], v[0] - v[2], d2 - o2, false );
         strip_.nextEdgeNewRight( x2 );
+        lastEdge_ = nl;
+        return;
     }
-    lastEdge_ = e2.e;
+
+    assert( false );
 }
 
 void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
@@ -616,6 +625,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
                 }
                 continue;
             }
+            // path[j] is an ordinary point not in a vertex
             if ( strip.empty() )
             {
                 MeshTriPoint prev = j == 0 ? start : MeshTriPoint{ path[j - 1] };

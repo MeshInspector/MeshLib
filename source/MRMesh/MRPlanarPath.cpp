@@ -13,20 +13,14 @@ namespace MR
 // returns (0,0) if |0b|=0
 static Vector2f unfoldOnPlane( const Vector3f & b, const Vector3f & c, const Vector2f & d, bool toLeftFrom0d )
 {
-    auto bDb = Vector3d( b );
-    auto cDb = Vector3d( c );
-    auto dDb = Vector2d( d );
-    const double bb = dot( bDb, bDb );
-    if ( bb <= 0 )
+    const auto dotBC = dot( b, c );
+    const auto crsBC = cross( b, c ).length();
+    const auto dd = dot( d, d );
+    if ( dd <= 0 )
         return {};
-    const double bc = dot( bDb, cDb );
-    const double cc = dot( cDb, cDb );
-    const double c_ort = std::sqrt( std::max( 0.0, cc - bc * bc / bb ) );
-
     // o is a vector of same length as d and orthogonal to d
-    const Vector2d o = toLeftFrom0d ? Vector2d( -dDb.y, dDb.x ) : Vector2d( dDb.y, -dDb.x );
-    const Vector2d e = dDb * ( bc / bb ) + o.normalized() * c_ort;
-    return Vector2f( e );
+    const Vector2f o = toLeftFrom0d ? Vector2f( -d.y, d.x ) : Vector2f( d.y, -d.x );
+    return ( dotBC * d + crsBC * o ) / dd;
 }
 
 // finds an edge originated from v, which is located in the same triangle as p

@@ -357,6 +357,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         value( "Shell", MR::OffsetParameters::Type::Shell, "can be only positive, offset in both directions of surface" );
 
     pybind11::class_<MR::OffsetParameters>( m, "OffsetParameters", "This struct represents parameters for offsetting with voxels conversions" ).
+        def( pybind11::init<>() ).
         def_readwrite( "voxelSize", &MR::OffsetParameters::voxelSize,
             "Size of voxel in grid conversions\n"
             "if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)" ).

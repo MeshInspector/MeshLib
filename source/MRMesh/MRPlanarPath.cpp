@@ -543,6 +543,30 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
     std::vector<MeshEdgePoint> cacheOneSideUnfold;
     std::vector<MeshEdgePoint> newPath;
     newPath.reserve( path.size() );
+
+    //eliminate 3rd (and next) point per triangle
+    for ( int j = 0; j < path.size(); ++j )
+    {
+        MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
+        MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
+        if ( fromSameTriangle( mesh.topology, prev, next ) )
+        {
+            // skipping path[j] can only decrease the path length
+            while ( !newPath.empty() )
+            {
+                MeshTriPoint prevprev = newPath.size() <= 1 ? start : MeshTriPoint{ newPath[ newPath.size() - 2 ] };
+                if ( fromSameTriangle( mesh.topology, prevprev, next ) )
+                    newPath.pop_back();
+                else
+                    break;
+            }
+            continue; 
+        }
+        newPath.push_back( path[j] );
+    }
+    path.swap( newPath );
+    newPath.clear();
+
     std::vector<Vector2f> tmp;
     TriangleStipUnfolder strip( mesh );
     for ( int i = 0; i < maxIter; ++i )
@@ -552,21 +576,6 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         // try to exit from vertices and remove repeating locations
         for ( int j = 0; j < path.size(); ++j )
         {
-            MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
-            MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-            if ( fromSameTriangle( mesh.topology, prev, next ) )
-            {
-                // skipping path[j] can only decrease the path length
-                while ( !newPath.empty() )
-                {
-                    MeshTriPoint prevprev = newPath.size() <= 1 ? start : MeshTriPoint{ newPath[ newPath.size() - 2 ] };
-                    if ( fromSameTriangle( mesh.topology, prevprev, next ) )
-                        newPath.pop_back();
-                    else
-                        break;
-                }
-                continue; 
-            }
             auto v = path[j].inVertex( mesh.topology );
             if ( !v && mesh.edgeLengthSq( path[j].e ) <= 0 )
             {
@@ -578,6 +587,8 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
                 newPath.push_back( path[j] );
                 continue;
             }
+            MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
+            MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
             if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
             {
                 //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };

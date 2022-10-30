@@ -4,6 +4,8 @@
 #include "MRMeshTriPoint.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
+#include "MRPch/MRTBB.h"
+#include <atomic>
 
 namespace MR
 {
@@ -568,10 +570,11 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
     newPath.clear();
 
     std::vector<Vector2f> tmp;
-    TriangleStipUnfolder strip( mesh );
+    std::vector<std::pair<int,int>> vertSpans;
+    tbb::enumerable_thread_specific<TriangleStipUnfolder> stripPerThread( std::cref( mesh ) );
     for ( int i = 0; i < maxIter; ++i )
     {
-        bool pathTopologyChanged = false;
+        std::atomic<bool> pathTopologyChanged{false};
 
         // try to exit from vertices and remove repeating locations
         for ( int j = 0; j < path.size(); ++j )
@@ -593,54 +596,66 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             {
                 //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
                 //assert( fromSameTriangle( mesh.topology, prev, next ) );
-                pathTopologyChanged = true;
+                pathTopologyChanged.store( true, std::memory_order_relaxed );
             }
         }
 
         path.swap( newPath );
         newPath.clear();
 
-        // straighten path in triangle strip
-        strip.clear();
-        for ( int j = 0; j <= path.size(); ++j )
+        // find all spans where points are not in a vertex
+        vertSpans.clear();
+        int spanStart = -1;
+        for ( int j = 0; j < path.size(); ++j )
         {
-            if ( j >= path.size() || path[j].inVertex( mesh.topology ) )
-            {
-                if ( !strip.empty() )
-                {
-                    MeshTriPoint curr = j < path.size() ? MeshTriPoint{ path[j] } : end;
-                    int pos = j;
-                    strip.find( curr, [&]( float v ) 
-                    {
-                        assert( pos > 0 );
-                        auto & edgePoint = path[ --pos ];
-                        if ( pathTopologyChanged )
-                        {
-                            edgePoint.a = 1 - v;
-                        }
-                        else
-                        {
-                            auto wasInVertex = edgePoint.inVertex( mesh.topology );
-                            edgePoint.a = 1 - v;
-                            auto nowInVertex = edgePoint.inVertex( mesh.topology );
-                            pathTopologyChanged = nowInVertex != wasInVertex;
-                        }
-                    } );
-                    strip.clear();
-                }
+            if ( !path[j].inVertex( mesh.topology ) )
                 continue;
-            }
-            // path[j] is an ordinary point not in a vertex
-            if ( strip.empty() )
-            {
-                MeshTriPoint prev = j == 0 ? start : MeshTriPoint{ path[j - 1] };
-                strip.reset( prev, path[j] );
-            }
-            else
-                strip.nextEdge( path[j] );
+            if ( spanStart + 1 < j )
+                vertSpans.emplace_back( spanStart, j );
+            spanStart = j;
         }
-   
-        if ( !pathTopologyChanged )
+        if ( spanStart + 1 < path.size() )
+            vertSpans.emplace_back( spanStart, (int)path.size() );
+
+        // straighten path in each triangle strip
+        tbb::parallel_for( tbb::blocked_range( 0, (int)vertSpans.size(), 1 ),
+            [&]( const tbb::blocked_range<int> & range )
+        {
+            for ( int i = range.begin(); i < range.end(); ++i )
+            {
+                const auto span = vertSpans[i];
+                auto & strip = stripPerThread.local();
+                strip.clear();
+                const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
+                strip.reset( first, path[span.first + 1] );
+                for ( int j = span.first + 2; j < span.second; ++j )
+                {
+                    // path[j] is an ordinary point not in a vertex
+                    strip.nextEdge( path[j] );
+                }
+                const MeshTriPoint last = span.second < path.size() ? MeshTriPoint{ path[span.second] } : end;
+                int pos = span.second;
+                strip.find( last, [&]( float v ) 
+                {
+                    assert( pos > 0 );
+                    auto & edgePoint = path[ --pos ];
+                    if ( pathTopologyChanged.load( std::memory_order_relaxed ) )
+                    {
+                        edgePoint.a = 1 - v;
+                    }
+                    else
+                    {
+                        auto wasInVertex = edgePoint.inVertex( mesh.topology );
+                        edgePoint.a = 1 - v;
+                        auto nowInVertex = edgePoint.inVertex( mesh.topology );
+                        if ( nowInVertex != wasInVertex )
+                            pathTopologyChanged.store( true, std::memory_order_relaxed );
+                    }
+                } );
+            }
+        } );
+
+        if ( !pathTopologyChanged.load( std::memory_order_relaxed ) )
             return i + 1;
     }
     return maxIter;

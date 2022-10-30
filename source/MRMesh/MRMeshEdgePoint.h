@@ -19,7 +19,7 @@ struct MeshEdgePoint
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
     /// returns one of two edge vertices, closest to this point
     [[nodiscard]] MRMESH_API VertId getClosestVertex( const MeshTopology & topology ) const;
-    /// just returns true of false
+    /// returns true if the point is in a vertex
     [[nodiscard]] MRMESH_API bool inVertex() const;
 
     /// represents the same point relative to sym edge in

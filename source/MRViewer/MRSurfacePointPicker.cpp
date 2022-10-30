@@ -181,7 +181,7 @@ void SurfacePointWidget::updatePositionAndRadius_()
         }
         case PositionType::Verts:
         {
-            if ( !currentPos_.inVertex( mesh.topology ) )
+            if ( !currentPos_.inVertex() )
             {
                 auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( currentPos_ ) } );
                 for ( auto e : orgRing( mesh.topology, closestVert ) )

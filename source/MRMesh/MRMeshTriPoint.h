@@ -34,6 +34,8 @@ struct MeshTriPoint
 
     /// returns valid vertex id if the point is in vertex, otherwise returns invalid id
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
+    /// returns true if the point is in a vertex
+    [[nodiscard]] bool inVertex() const { return bary.inVertex() >= 0; }
     /// returns valid value if the point is on edge, otherwise returns null optional
     [[nodiscard]] MRMESH_API std::optional<MeshEdgePoint> onEdge( const MeshTopology & topology ) const;
     /// returns true if the point is in vertex on on edge, and that location is on the boundary of the region

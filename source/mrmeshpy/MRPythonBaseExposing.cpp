@@ -349,7 +349,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
         def_readwrite( "a", &MR::MeshEdgePoint::a, "a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )" ).
         def( "inVertex", ( MR::VertId( MR::MeshEdgePoint::* )( const MR::MeshTopology& )const )& MR::MeshEdgePoint::inVertex,
             pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
-        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex, "just returns true of false" ).
+        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex, "returns true if the point is in a vertex" ).
         def( "getClosestVertex", &MR::MeshEdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
         def( "sym", &MR::MeshEdgePoint::sym, "represents the same point relative to sym edge in" ).
         def( pybind11::self == pybind11::self );
@@ -390,7 +390,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
             "b in [0,1], b=0 => point is on e edge, b=1 => point is in dest( next( e ) )\n"
             "a+b in [0,1], a+b=0 => point is in org( e ), a+b=1 => point is on prev( e.sym() ) edge" ).
         def( "onEdge", &MR::MeshTriPoint::onEdge, pybind11::arg( "topology" ), "returns valid value if the point is on edge, otherwise returns null optional" ).
-        def( "inVertex", &MR::MeshTriPoint::inVertex, pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
+        def( "inVertex", ( MR::VertId( MR::MeshTriPoint::* )( const MR::MeshTopology& )const )& MR::MeshTriPoint::inVertex,
+            pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
+        def( "inVertex", ( bool( MR::MeshTriPoint::* )( )const )& MR::MeshTriPoint::inVertex, "returns true if the point is in a vertex" ).
         def( "isBd", &MR::MeshTriPoint::isBd, pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr, "returns true if the point is in vertex on on edge, and that location is on the boundary of the region" );
 } )
 

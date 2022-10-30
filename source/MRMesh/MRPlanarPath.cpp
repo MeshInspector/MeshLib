@@ -488,7 +488,7 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
 
 void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
-    assert( !e2.inVertex( mesh_.topology ) );
+    assert( !e2.inVertex() );
 
     Vector2f o2, d2;
     strip_.getLastEdge( d2, o2 );
@@ -608,7 +608,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         int spanStart = -1;
         for ( int j = 0; j < path.size(); ++j )
         {
-            if ( !path[j].inVertex( mesh.topology ) )
+            if ( !path[j].inVertex() )
                 continue;
             if ( spanStart + 1 < j )
                 vertSpans.emplace_back( spanStart, j );
@@ -645,10 +645,8 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
                     }
                     else
                     {
-                        auto wasInVertex = edgePoint.inVertex( mesh.topology );
                         edgePoint.a = 1 - v;
-                        auto nowInVertex = edgePoint.inVertex( mesh.topology );
-                        if ( nowInVertex != wasInVertex )
+                        if ( edgePoint.inVertex() )
                             pathTopologyChanged.store( true, std::memory_order_relaxed );
                     }
                 } );

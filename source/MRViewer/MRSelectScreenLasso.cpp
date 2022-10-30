@@ -198,7 +198,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet
             }
         }
 
-        tbb::enumerable_thread_specific<std::vector<Line3fMesh>> tlsLineMeshes( lineMeshes );
+        tbb::enumerable_thread_specific<std::vector<Line3fMesh>> tlsLineMeshes( std::cref( lineMeshes ) );
         auto isPointHidden = [&]( const Vector3f& point )
         {
             auto & myLineMeshes = tlsLineMeshes.local();

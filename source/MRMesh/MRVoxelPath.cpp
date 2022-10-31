@@ -120,7 +120,7 @@ using VoxelPathInfoMap = ParallelHashMap<size_t, VoxelPathInfo>;
 class VoxelsPathsBuilder
 {
 public:
-    VoxelsPathsBuilder( const ObjectVoxels& voxels, const VoxelsMetric & metric );
+    VoxelsPathsBuilder( const VdbVolume& voxels, const VoxelsMetric & metric );
     void addPathStart( size_t voxelFromStart, float startMetric );
     // include one more voxel in the voxels forest, returning newly reached voxel
     size_t growOneVoxel();
@@ -136,9 +136,8 @@ public:
     std::vector<size_t> getPathBack( size_t backpathStart ) const;
 
 private:
-    const FloatGrid & grid_;
+    const VdbVolume& vdbVolume_;
     openvdb::tree::ValueAccessor<const openvdb::FloatTree, true> accessor_;
-    Vector3i dimensions_;
     size_t dimXY_;
     VoxelsMetric metric_;
     VoxelPathInfoMap voxelPathInfoMap_;
@@ -151,13 +150,12 @@ private:
     void addNeigboursSteps_( float orgMetric, size_t back );
 };
 
-VoxelsPathsBuilder::VoxelsPathsBuilder( const ObjectVoxels& voxels, const VoxelsMetric & metric ) :
-    grid_{voxels.grid()},
-    accessor_{voxels.grid()->getConstAccessor()},
+VoxelsPathsBuilder::VoxelsPathsBuilder( const VdbVolume& voxels, const VoxelsMetric & metric ) :
+    vdbVolume_{voxels},
+    accessor_{voxels.data->getConstAccessor()},
     metric_{metric}
 {
-    dimensions_ = voxels.dimensions();
-    dimXY_ = size_t( dimensions_.x )*dimensions_.y;
+    dimXY_ = size_t( voxels.dims.x ) * voxels.dims.y;
 }
 
 void VoxelsPathsBuilder::addPathStart( size_t voxelFromStart, float startMetric )
@@ -221,20 +219,20 @@ void VoxelsPathsBuilder::addNextStep_( const VoxelPathInfo & c )
 
 void VoxelsPathsBuilder::addNeigboursSteps_( float orgMetric, size_t back )
 {
-    auto coord = getCoord( dimXY_, dimensions_.x, back );
+    auto coord = getCoord( dimXY_, vdbVolume_.dims.x, back );
     std::vector<size_t> candidates;
     candidates.reserve( 6 );
     if ( coord.x() > 0 )
         candidates.push_back( back - 1 );
-    if ( coord.x() < dimensions_.x - 1 )
+    if ( coord.x() < vdbVolume_.dims.x - 1 )
         candidates.push_back( back + 1 );
     if ( coord.y() > 0 )
-        candidates.push_back( back - dimensions_.x );
-    if ( coord.y() < dimensions_.y - 1 )
-        candidates.push_back( back + dimensions_.x );
+        candidates.push_back( back - vdbVolume_.dims.x );
+    if ( coord.y() < vdbVolume_.dims.y - 1 )
+        candidates.push_back( back + vdbVolume_.dims.x );
     if ( coord.z() > 0 )
         candidates.push_back( back - dimXY_ );
-    if ( coord.z() < dimensions_.z - 1 )
+    if ( coord.z() < vdbVolume_.dims.z - 1 )
         candidates.push_back( back + dimXY_ );
 
     for ( const auto& c : candidates )
@@ -247,10 +245,10 @@ void VoxelsPathsBuilder::addNeigboursSteps_( float orgMetric, size_t back )
     }
 }
 
-VoxelsMetric voxelsExponentMetric( const ObjectVoxels& voxels, const VoxelMetricParameters& parameters, float modifier )
+VoxelsMetric voxelsExponentMetric( const VdbVolume& voxels, const VoxelMetricParameters& parameters, float modifier )
 {
-    const auto& accessor = voxels.grid()->getConstAccessor();
-    const auto& dims = voxels.dimensions();
+    const auto& accessor = voxels.data->getConstAccessor();
+    const auto& dims = voxels.dims;
     const int dimsX = dims.x;
     const size_t dimsXY = dimsX * dims.y;
     const auto quaterParams = setupQuaterParams( dimsXY, dimsX, parameters.start, parameters.stop );
@@ -271,10 +269,10 @@ VoxelsMetric voxelsExponentMetric( const ObjectVoxels& voxels, const VoxelMetric
     };
 }
 
-VoxelsMetric voxelsSumDiffsMetric( const ObjectVoxels& voxels, const VoxelMetricParameters& parameters )
+VoxelsMetric voxelsSumDiffsMetric( const VdbVolume& voxels, const VoxelMetricParameters& parameters )
 {
-    const auto& accessor = voxels.grid()->getConstAccessor();
-    const auto& dims = voxels.dimensions();
+    const auto& accessor = voxels.data->getConstAccessor();
+    const auto& dims = voxels.dims;
     const int dimsX = dims.x;
     const size_t dimsXY = dimsX * dims.y;
     const auto quaterParams = setupQuaterParams( dimsXY, dimsX, parameters.start, parameters.stop );
@@ -299,9 +297,7 @@ VoxelsMetric voxelsSumDiffsMetric( const ObjectVoxels& voxels, const VoxelMetric
     };
 }
 
-std::vector<size_t> buildSmallestMetricPath( const ObjectVoxels & voxels, 
-                                             const VoxelsMetric & metric,
-                                             size_t start, size_t finish )
+std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const VoxelsMetric& metric, size_t start, size_t finish )
 {
     MR_TIMER;
     VoxelsPathsBuilder b( voxels, metric );

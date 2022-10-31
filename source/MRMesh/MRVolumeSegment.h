@@ -23,7 +23,7 @@ class ObjectVoxels;
  * \param mask in space of whole volume
  *  density inside mask is expected to be higher then outside
  */
-MRMESH_API tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask );
+MRMESH_API tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask );
 
  /**
   * \brief Parameters for volume segmentation
@@ -48,7 +48,7 @@ struct VolumeSegmentationParameters
  * 3. Mark volume part edges as outside part seeds \n
  * 4. Return mesh from segmented inside part
  */
-MRMESH_API tl::expected<MR::Mesh, std::string> segmentVolume( const ObjectVoxels& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+MRMESH_API tl::expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                               const VolumeSegmentationParameters& params = VolumeSegmentationParameters() );
 
 struct VoxelMetricParameters;
@@ -65,7 +65,7 @@ struct VoxelMetricParameters;
 class VolumeSegmenter
 {
 public:
-    MRMESH_API VolumeSegmenter( const ObjectVoxels& volume );
+    MRMESH_API VolumeSegmenter( const VdbVolume& volume );
 
     enum SeedType
     {
@@ -98,7 +98,7 @@ public:
     /// Min voxel of volume part box in whole volume space, filled after segmentation
     MRMESH_API const Vector3i& getMinVoxel() const;
 private:
-    const ObjectVoxels& volume_;
+    const VdbVolume& volume_;
 
     SimpleVolume volumePart_;
 

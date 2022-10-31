@@ -1,7 +1,9 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVolumeSegment.h"
 #include "MRVoxelPath.h"
-#include "MRObjectVoxels.h"
+#include "MRSimpleVolume.h"
+#include "MRVolumeIndexer.h"
+#include "MRBox.h"
 #include "MRVoxelGraphCut.h"
 #include "MRVDBConversions.h"
 #include "MRFloatGrid.h"
@@ -30,15 +32,15 @@ tl::expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& vo
 }
 
 // returns block of volume and new mask in space of new block, and shift of block
-std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask, int expansion )
+std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask, int expansion )
 {
-    assert( volume.grid() );
+    assert( volume.data );
     assert( mask.any() );
 
     SimpleVolume volumePart;
-    volumePart.voxelSize = volume.voxelSize();
+    volumePart.voxelSize = volume.voxelSize;
     auto expandedMask = mask;
-    const auto& indexer = volume.getVolumeIndexer();
+    const auto& indexer = VolumeIndexer( volume.dims );
     expandVoxelsMask( expandedMask, indexer, expansion );
 
     Box3i partBox;
@@ -55,7 +57,7 @@ std::tuple<SimpleVolume, VoxelBitSet, Vector3i> simpleVolumeFromVoxelsMask( cons
 
     auto partIndexer = VolumeIndexer( volumePart.dims );
     VoxelBitSet volumePartMask( volumePart.data.size() );
-    auto accessor = volume.grid()->getConstAccessor();
+    auto accessor = volume.data->getConstAccessor();
     for ( VoxelId i = VoxelId( 0 ); i < volumePart.data.size(); ++i )
     {
         auto pos = partIndexer.toPos( i ) + partBox.min;
@@ -114,9 +116,9 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
     }
 }
 
-tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volume, const VoxelBitSet& mask )
+tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask )
 {
-    if ( !volume.grid() )
+    if ( !volume.data )
         return tl::make_unexpected( "Cannot create mesh from empty volume." );
     if ( mask.none() )
         return tl::make_unexpected( "Cannot create mesh from empty mask." );
@@ -128,15 +130,17 @@ tl::expected<MR::Mesh, std::string> meshFromVoxelsMask( const ObjectVoxels& volu
     return meshFromSimpleVolume( volumePart, minVoxel );
 }
 
-tl::expected<MR::Mesh, std::string> segmentVolume( const ObjectVoxels& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+tl::expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                    const VolumeSegmentationParameters& params )
 {
     VolumeSegmenter segmentator( volume );
+    VolumeIndexer indexer( volume.dims );
+    Vector3f reverseVoxelsSize( 1.f / volume.voxelSize.x, 1.f / volume.voxelSize.y, 1.f / volume.voxelSize.z );
     for ( const auto& [start, stop] : pairs )
     {
         VoxelMetricParameters metricParams;
-        metricParams.start = size_t( volume.getVoxelIdByPoint( start ) );
-        metricParams.stop = size_t( volume.getVoxelIdByPoint( stop ) );
+        metricParams.start = size_t( indexer.toVoxelId( Vector3i( mult( start, reverseVoxelsSize ) ) ) );
+        metricParams.stop = size_t( indexer.toVoxelId( Vector3i( mult( stop, reverseVoxelsSize ) ) ) );
         constexpr char mask = 1;
         for ( int i = 0; i < 4; ++i )
         {
@@ -152,7 +156,7 @@ tl::expected<MR::Mesh, std::string> segmentVolume( const ObjectVoxels& volume, c
 
 // Class implementation
 
-VolumeSegmenter::VolumeSegmenter( const ObjectVoxels& volume ):
+VolumeSegmenter::VolumeSegmenter( const VdbVolume& volume ):
     volume_{volume}
 {
 }
@@ -165,9 +169,10 @@ void VolumeSegmenter::addPathSeeds( const VoxelMetricParameters& metricParameter
     auto& curSeeds = seeds_[seedType];
     auto shift = curSeeds.size();
     curSeeds.resize( shift + path.size() );
+    VolumeIndexer indexer( volume_.dims );
     for ( int p = 0; p < path.size(); ++p )
     {
-        curSeeds[shift + p] = volume_.getCoordinateByVoxelId( VoxelId( int( path[p] ) ) );
+        curSeeds[shift + p] = indexer.toPos( VoxelId( int( path[p] ) ) );
     }
     seedsChanged_ = true;
 }
@@ -196,7 +201,7 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
     if ( seeds_[Inside].empty() )
         return tl::make_unexpected( "No seeds presented" );
 
-    if ( !volume_.grid() )
+    if ( !volume_.data )
         return tl::make_unexpected( "Volume contain no grid" );
 
     if ( seedsChanged_ )
@@ -212,7 +217,7 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
 tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
 {
     auto segmentBlockCopy = volumePart_;
-    segmentBlockCopy.voxelSize = volume_.voxelSize();
+    segmentBlockCopy.voxelSize = volume_.voxelSize;
     prepareVolumePart( segmentBlockCopy, segmentation, VolumeMaskMeshingMode::Simple );
     return meshFromSimpleVolume( segmentBlockCopy, minVoxel_ );
 }
@@ -253,7 +258,7 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
     minVoxel -= Vector3i::diagonal( voxelsExpansion );
 
 
-    const auto& dims = volume_.dimensions();
+    const auto& dims = volume_.dims;
 
     maxVoxel.x = std::min( maxVoxel.x, dims.x );
     maxVoxel.y = std::min( maxVoxel.y, dims.y );
@@ -281,7 +286,7 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
         const int newDimX = volumePart_.dims.x;
         const size_t newDimXY = size_t( newDimX ) * volumePart_.dims.y;
         volumePart_.data.resize( newDimXY * volumePart_.dims.z );
-        const auto& accessor = volume_.grid()->getConstAccessor();
+        const auto& accessor = volume_.data->getConstAccessor();
         for ( int z = minVoxel.z; z <= maxVoxel.z; ++z )
             for ( int y = minVoxel.y; y <= maxVoxel.y; ++y )
                 for ( int x = minVoxel.x; x <= maxVoxel.x; ++x )

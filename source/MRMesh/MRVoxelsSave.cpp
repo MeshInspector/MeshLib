@@ -1,10 +1,13 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#include "MRMeshFwd.h"
 #include "MRVoxelsSave.h"
 #include "MRImageSave.h"
 #include "MRFloatGrid.h"
-#include "MRObjectVoxels.h"
+#include "MRSimpleVolume.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRColor.h"
+#include "MRMeshTexture.h"
 #include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
@@ -40,7 +43,7 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
     const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
     {
-        return tl::make_unexpected(  "ObjectVoxels is empty" );
+        return tl::make_unexpected(  "VdbVolume is empty" );
     }
 
     auto parentPath = path.parent_path();

@@ -2,7 +2,7 @@
 
 namespace MR
 {
-constexpr float cGradientButtonFramePadding = 9.0f;
+constexpr float cGradientButtonFramePadding = 8.0f;
 
 constexpr float cTabYOffset = 4.0f;
 constexpr float cTabsInterval = 8.0f;

@@ -564,6 +564,12 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             }
             continue; 
         }
+        // consider points on degenerate edges as points in vertices
+        if ( !path[j].inVertex() && mesh.edgeLengthSq( path[j].e ) <= 0 )
+        {
+            path[j].a = 0;
+            assert( path[j].inVertex() );
+        }
         newPath.push_back( path[j] );
     }
     path.swap( newPath );
@@ -639,16 +645,10 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
                 {
                     assert( pos > 0 );
                     auto & edgePoint = path[ --pos ];
-                    if ( pathTopologyChanged.load( std::memory_order_relaxed ) )
-                    {
-                        edgePoint.a = 1 - v;
-                    }
-                    else
-                    {
-                        edgePoint.a = 1 - v;
-                        if ( edgePoint.inVertex() )
-                            pathTopologyChanged.store( true, std::memory_order_relaxed );
-                    }
+                    assert( !edgePoint.inVertex() );
+                    edgePoint.a = 1 - v;
+                    if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+                        pathTopologyChanged.store( true, std::memory_order_relaxed );
                 } );
             }
         } );

@@ -2,7 +2,7 @@
 
 namespace MR
 {
-constexpr float cGradientButtonFramePadding = 8.0f;
+constexpr float cGradientButtonFramePadding = 7.5f;
 
 constexpr float cTabYOffset = 4.0f;
 constexpr float cTabsInterval = 8.0f;
@@ -13,7 +13,7 @@ constexpr float cTabLabelMinPadding = 12.0f;
 constexpr float cTopPanelScrollStep = 50.0f;
 constexpr float cTopPanelScrollBtnSize = 20.0f;
 constexpr float cTopPanelAditionalButtonSize = cTabHeight - cTabYOffset;
-constexpr float cSeparateBlocksSpacing = 16.0f;
+constexpr float cSeparateBlocksSpacing = 12.0f;
 
 constexpr float cRibbonItemInterval = 4.0f; 
 constexpr float cRibbonItemMinWidth = 86.0f;

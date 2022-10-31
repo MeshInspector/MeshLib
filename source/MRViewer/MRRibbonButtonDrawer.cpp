@@ -370,15 +370,15 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     }
 
     const float halfHeight = arrowBox.GetHeight() * 0.5f;
-    const float seventhHeight = arrowBox.GetHeight() / 7.0f;
-    const float sixthWidth = arrowBox.GetWidth() / 6.0f;
+    const float arrowHeight = arrowBox.GetHeight() * 5.0f / 42.0f;
+    const float arrowWidth = arrowBox.GetWidth() * 2.0f / 15.0f;
 
-    const float thickness = ImMax( arrowBox.GetHeight() * 0.1f, 1.0f );
+    const float thickness = ImMax( arrowBox.GetHeight() * 0.075f, 1.0f );
     
     const ImVec2 arrowPos{ arrowBox.Min.x, arrowBox.Min.y - thickness };
-    const ImVec2 startPoint{ arrowPos.x + sixthWidth, arrowPos.y + halfHeight };
-    const ImVec2 midPoint{ arrowPos.x + 2 * sixthWidth, arrowPos.y + halfHeight + seventhHeight };
-    const ImVec2 endPoint{ arrowPos.x + 3 * sixthWidth, arrowPos.y + halfHeight };
+    const ImVec2 startPoint{ arrowPos.x + arrowWidth, arrowPos.y + halfHeight };
+    const ImVec2 midPoint{ arrowPos.x + 2 * arrowWidth, arrowPos.y + halfHeight + arrowHeight };
+    const ImVec2 endPoint{ arrowPos.x + 3 * arrowWidth, arrowPos.y + halfHeight };
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 

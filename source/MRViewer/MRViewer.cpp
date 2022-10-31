@@ -54,7 +54,7 @@ namespace
     double sEmsPixelRatio = 1.0f;
 }
 
-extern "C" 
+extern "C"
 {
 EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
 {
@@ -89,7 +89,7 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
         MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [mb, modifier] ()
     {
         MR::Viewer::instanceRef().mouseDown( mb, modifier );
-    } );        
+    } );
     else
         MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [mb, modifier] ()
     {
@@ -165,7 +165,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
         MR::Viewer::instanceRef().mouseMove( int( x ), int( y ) );
         MR::Viewer::instanceRef().draw();
     };
-    if ( MR::Viewer::instanceRef().mouseEventQueue.empty() || 
+    if ( MR::Viewer::instanceRef().mouseEventQueue.empty() ||
          MR::Viewer::instanceRef().mouseEventQueue.back().type != MR::Viewer::MouseQueueEvent::Type::Move )
     {
         MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, std::move( eventCall ) );
@@ -553,7 +553,7 @@ void Viewer::launchEventLoop()
     // Rendering loop
     while ( !windowShouldClose() )
     {
-        do 
+        do
         {
             draw( true );
             glfwPollEvents();
@@ -619,7 +619,7 @@ void Viewer::init_()
 {
     initBasisAxesObject_();
     initClippingPlaneObject_();
-    initRotationCenterObject_(); 
+    initRotationCenterObject_();
     initGlobalBasisAxesObject_();
 
     initPlugins_();
@@ -1041,15 +1041,14 @@ void Viewer::draw( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
+    if ( forceRedrawFramesWithoutSwap_ > 0 )
+        forceRedrawFramesWithoutSwap_--;
     bool swapped = false;
     if ( window )
     {
-        swapped = !swapOnLastForcedFrameOnly_ || forceRedrawFrames_ <= 0;
+        swapped = forceRedrawFramesWithoutSwap_ == 0;
         if ( swapped )
-        {
             glfwSwapBuffers( window );
-            swapOnLastForcedFrameOnly_ = false;
-        }
     }
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
@@ -1180,7 +1179,7 @@ void Viewer::postSetIconified( bool iconified )
 void Viewer::postFocus( bool focused )
 {
     // it is needed ImGui to correctly capture events after refocusing
-    if ( focused && focusRedrawReady_ && !isInDraw_ ) 
+    if ( focused && focusRedrawReady_ && !isInDraw_ )
         MR::Viewer::instanceRef().draw( true );
 }
 
@@ -1255,11 +1254,11 @@ void Viewer::initBasisAxesObject_()
         colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
     }
     const float labelPos = size + 0.2f;
-   
+
     addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() );
     addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
     addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
-    
+
     basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
@@ -1498,12 +1497,13 @@ void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*=
     if ( isInDraw_ )
         ++i;
     forceRedrawFrames_ = std::max( i, forceRedrawFrames_ );
-    swapOnLastForcedFrameOnly_ = swapOnLastOnly;
+    if ( swapOnLastOnly )
+        forceRedrawFramesWithoutSwap_ = std::max( i, forceRedrawFramesWithoutSwap_ );
 }
 
 bool Viewer::isCurrentFrameSwapping() const
 {
-    return !swapOnLastForcedFrameOnly_ || forceRedrawFrames_ <= 1;
+    return forceRedrawFramesWithoutSwap_ <= 1;
 }
 
 size_t Viewer::getEventsCount( EventType type ) const
@@ -1539,7 +1539,7 @@ Image Viewer::captureScreenShot( const Vector2i& pos /*= Vector2i()*/, const Vec
         size.y = window_height - pos.y;
     else
         size.y = std::min( window_height - pos.y, size.y );
-        
+
     std::vector<Color> pixels( size.x * size.x );
 
     setupScene();

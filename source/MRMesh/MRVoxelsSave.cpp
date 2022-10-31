@@ -40,7 +40,7 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
     const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
     {
-        return tl::make_unexpected(  "ObjectVoxels is empty" );
+        return tl::make_unexpected(  "VdbVolume is empty" );
     }
 
     auto parentPath = path.parent_path();

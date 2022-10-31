@@ -65,7 +65,7 @@ struct VoxelMetricParameters;
 class VolumeSegmenter
 {
 public:
-    MRMESH_API VolumeSegmenter( const ObjectVoxels& volume );
+    MRMESH_API VolumeSegmenter( const VdbVolume& volume );
 
     enum SeedType
     {
@@ -98,7 +98,7 @@ public:
     /// Min voxel of volume part box in whole volume space, filled after segmentation
     MRMESH_API const Vector3i& getMinVoxel() const;
 private:
-    const ObjectVoxels& volume_;
+    const VdbVolume& volume_;
 
     SimpleVolume volumePart_;
 

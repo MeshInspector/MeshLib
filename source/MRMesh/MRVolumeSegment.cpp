@@ -1,7 +1,9 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVolumeSegment.h"
 #include "MRVoxelPath.h"
-#include "MRObjectVoxels.h"
+#include "MRSimpleVolume.h"
+#include "MRVolumeIndexer.h"
+#include "MRBox.h"
 #include "MRVoxelGraphCut.h"
 #include "MRVDBConversions.h"
 #include "MRFloatGrid.h"

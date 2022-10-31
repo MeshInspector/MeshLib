@@ -1,13 +1,16 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#include "MRMeshFwd.h"
 #include "MRVoxelsSave.h"
 #include "MRImageSave.h"
 #include "MRFloatGrid.h"
-#include "MRObjectVoxels.h"
+#include "MRSimpleVolume.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
+#include "MRColor.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {

@@ -548,8 +548,8 @@ private:
     int forceRedrawMinimumIncrement_{ 4 };
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
-    // if this flag is true, only last forced frame will be present on screen
-    bool swapOnLastForcedFrameOnly_{ false };
+    // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
+    int forceRedrawFramesWithoutSwap_{ 0 };
 
     // if this flag is set shows some developer features useful for debugging
     bool enableDeveloperFeatures_{ false };

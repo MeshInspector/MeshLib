@@ -6,11 +6,11 @@
 #include "MRSimpleVolume.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRColor.h"
+#include "MRMeshTexture.h"
 #include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
-#include "MRColor.h"
-#include "MRMeshTexture.h"
 
 namespace MR
 {

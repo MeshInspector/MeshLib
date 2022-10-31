@@ -135,11 +135,12 @@ tl::expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, cons
 {
     VolumeSegmenter segmentator( volume );
     VolumeIndexer indexer( volume.dims );
+    Vector3f reverseVoxelsSize( 1.f / volume.voxelSize.x, 1.f / volume.voxelSize.y, 1.f / volume.voxelSize.z );
     for ( const auto& [start, stop] : pairs )
     {
         VoxelMetricParameters metricParams;
-        metricParams.start = size_t( indexer.toVoxelId( Vector3i( Vector3f( start.x / volume.voxelSize.x, start.y / volume.voxelSize.y , start.z / volume.voxelSize.z ) ) ) );
-        metricParams.stop = size_t( indexer.toVoxelId( Vector3i( Vector3f( stop.x / volume.voxelSize.x, stop.y / volume.voxelSize.y, stop.z / volume.voxelSize.z ) ) ) );
+        metricParams.start = size_t( indexer.toVoxelId( Vector3i( mult( start, reverseVoxelsSize ) ) ) );
+        metricParams.stop = size_t( indexer.toVoxelId( Vector3i( mult( stop, reverseVoxelsSize ) ) ) );
         constexpr char mask = 1;
         for ( int i = 0; i < 4; ++i )
         {

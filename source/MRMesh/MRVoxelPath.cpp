@@ -137,9 +137,7 @@ public:
 
 private:
     const VdbVolume& vdbVolume_;
-    //const FloatGrid & grid_;
     openvdb::tree::ValueAccessor<const openvdb::FloatTree, true> accessor_;
-    //Vector3i dimensions_;
     size_t dimXY_;
     VoxelsMetric metric_;
     VoxelPathInfoMap voxelPathInfoMap_;

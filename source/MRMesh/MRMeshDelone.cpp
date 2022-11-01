@@ -104,9 +104,7 @@ bool checkUnfoldQuadrangleConvexT( const Vector3<T>& a, const Vector3<T>& b, con
     auto unfoldC = unfoldOnPlane( vecB, vecC, unfoldB, true );
     auto unfoldD = unfoldOnPlane( vecC, vecD, unfoldC, true );
     auto unfoldBD = unfoldD - unfoldB;
-    return
-        cross( unfoldB, unfoldC ) * cross( unfoldC, unfoldD ) >= T( 0 ) &&
-        cross( unfoldC - unfoldB, unfoldBD ) * cross( unfoldBD, -unfoldB ) >= T( 0 );
+    return cross( unfoldC - unfoldB, unfoldBD ) * cross( unfoldBD, -unfoldB ) >= T( 0 );
 }
 
 bool checkUnfoldQuadrangleConvex( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )

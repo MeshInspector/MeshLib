@@ -19,7 +19,7 @@ Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector
     const auto dotBC = dot( b, c );
     const auto crsBC = cross( b, c ).length();
     const auto dd = dot( d, d );
-    if ( dd <= T( 0 ) )
+    if ( dd <= 0 )
         return {};
     // o is a vector of same length as d and orthogonal to d
     const Vector2<T> o = toLeftFrom0d ? Vector2<T>( -d.y, d.x ) : Vector2<T>( d.y, -d.x );

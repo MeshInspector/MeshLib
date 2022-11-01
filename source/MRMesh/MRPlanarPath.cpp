@@ -80,169 +80,6 @@ static EdgeId firstCommonEdge( const MeshTopology & topology, VertId v, const Me
     return e0;
 }
 
-// finds position x on line x*b intersected by line containing segment [c,d]
-static float lineIsect( const Vector2f & b, const Vector2f & c, const Vector2f & d )
-{
-    const auto c1 = cross( d, c );
-    const auto c2 = cross( c - b, d - b );
-    const auto cc = c1 + c2;
-    if ( cc == 0 )
-        return 0; // degenerate case
-    return c1 / cc;
-}
-
-bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 
-    std::vector<MeshEdgePoint> & outPath, std::vector<Vector2f> & tmp, std::vector<MeshEdgePoint>& cachePath )
-{
-    MeshTriPoint stp( s );
-    MeshTriPoint etp( e );
-    if ( fromSameTriangle( mesh.topology, stp, etp ) )
-    {
-        // line segment from s to e is the shortest path
-        return true;
-    }
-
-    const auto vp = mesh.points[ v ];
-    const auto sp = mesh.triPoint( s ) - vp;
-    const auto ep = mesh.triPoint( e ) - vp;
-    const auto dist0 = sp.length() + ep.length();
-    const auto sz0 = outPath.size();
-    float distOneSide = FLT_MAX;
-
-    EdgeId e0 = lastCommonEdge( mesh.topology, v, s );
-    assert( e0 );
-    EdgeId e1 = firstCommonEdge( mesh.topology, v, e );
-    assert( e1 );
-    if ( e0 && e1 )
-    {
-        tmp.clear();
-        cachePath.clear();
-        auto dp = mesh.destPnt( e0 ) - vp;
-        tmp.push_back( Vector2f( 0, dp.length() ) );
-        const Vector2f s2 = unfoldOnPlane( dp, sp, tmp.back(), false );
-        if ( e0 != e1 )
-        {
-            for ( EdgeId ei = mesh.topology.next( e0 ); ; ei = mesh.topology.next( ei ) )
-            {
-                auto np = mesh.destPnt( ei ) - vp;
-                tmp.push_back( unfoldOnPlane( dp, np, tmp.back(), true ) );
-                dp = np;
-                if ( ei == e1 )
-                    break;
-            }
-        }
-        const Vector2f e2 = unfoldOnPlane( dp, ep, tmp.back(), true );
-        if ( tmp.back() != Vector2f() )
-        {
-            // no zero-length edges were encountered
-            int i = 0;
-            distOneSide = 0;
-            for ( EdgeId ei = e0; i < tmp.size(); ei = mesh.topology.next( ei ), ++i )
-            {
-                if ( !mesh.topology.left( ei ) )
-                {
-                    // do not allow pass via hole space
-                    distOneSide = FLT_MAX;
-                    break;
-                }
-                auto & d = tmp[i];
-                const auto x = std::clamp( lineIsect( d, s2, e2 ), 0.0f, 1.0f );
-                if ( x <= TriPointf::eps )
-                {
-                    // passing via the same vertex
-                    distOneSide = FLT_MAX;
-                    break;
-                }
-                d *= x;
-                cachePath.emplace_back( ei, x );
-                if ( i == 0 )
-                    distOneSide = ( d - s2 ).length();
-                else
-                    distOneSide += ( d - tmp[i-1] ).length();
-                if ( i + 1 == tmp.size() )
-                    distOneSide += ( d - e2 ).length();
-            }
-        }
-    }
-
-    e0 = firstCommonEdge( mesh.topology, v, s );
-    assert( e0 );
-    e1 = lastCommonEdge( mesh.topology, v, e );
-    assert( e1 );
-    if ( e0 && e1 )
-    {
-        tmp.clear();
-        auto dp = mesh.destPnt( e0 ) - vp;
-        tmp.push_back( Vector2f( 0, -dp.length() ) );
-        const Vector2f s2 = unfoldOnPlane( dp, sp, tmp.back(), true );
-        if ( e0 != e1 )
-        {
-            for ( EdgeId ei = mesh.topology.prev( e0 ); ; ei = mesh.topology.prev( ei ) )
-            {
-                auto np = mesh.destPnt( ei ) - vp;
-                tmp.push_back( unfoldOnPlane( dp, np, tmp.back(), false ) );
-                dp = np;
-                if ( ei == e1 )
-                    break;
-            }
-        }
-        const Vector2f e2 = unfoldOnPlane( dp, ep, tmp.back(), false );
-        if ( tmp.back() != Vector2f() )
-        {
-            // no zero-length edges were encountered
-            int i = 0;
-            float dist = 0;
-            for ( EdgeId ei = e0; i < tmp.size(); ei = mesh.topology.prev( ei ), ++i )
-            {
-                if ( !mesh.topology.left( ei ) )
-                {
-                    // do not allow pass via hole space
-                    dist = FLT_MAX;
-                    break;
-                }
-                auto & d = tmp[i];
-                const auto x = std::clamp( lineIsect( d, s2, e2 ), 0.0f, 1.0f );
-                if ( x <= TriPointf::eps )
-                {
-                    // passing via the same vertex
-                    dist = FLT_MAX;
-                    break;
-                }
-                d *= x;
-                outPath.emplace_back( ei, x );
-                if ( i == 0 )
-                    dist = ( d - s2 ).length();
-                else
-                    dist += ( d - tmp[i-1] ).length();
-                if ( i + 1 == tmp.size() )
-                    dist += ( d - e2 ).length();
-            }
-            if ( dist < dist0 || distOneSide < dist0 )
-            {
-                if ( distOneSide < dist )
-                {
-                    outPath.resize( sz0 );
-                    outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
-                }
-                return true;
-            }
-            outPath.resize( sz0 );
-        }
-    }
-
-    // in case of second side was not unfold successfully but first side was
-    if ( distOneSide < dist0 )
-    {
-        assert( outPath.size() == sz0 );
-        outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
-        return true;
-    }
-
-    // failed to reduce path and avoid passing via the vertex
-    outPath.push_back( MeshEdgePoint( mesh.topology.edgeWithOrg( v ), 0 ) );
-    return false;
-}
-
 class PntTag;
 using PntId = Id<PntTag>;
 
@@ -447,16 +284,27 @@ void PathInPlanarTriangleStrip::find( const Vector2f & end, std::function< void(
     }
 }
 
-class TriangleStipUnfolder
+class TriangleStripUnfolder
 {
 public:
-    TriangleStipUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
+    TriangleStripUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
 
     void clear();
     bool empty() const { return !lastEdge_; }
 
+    // starts new unfolding, e1 will be oriented to have start in the left triangle
     void reset( MeshTriPoint start, MeshEdgePoint & e1 );
+    // starts new unfolding, e1 must be oriented to have start in the left triangle
+    void reset( const Vector3f & start, EdgeId e1 );
+
+    // the path shall cross next the edge ei.e, ei will be oriented to have previous edge in the left triangle
     void nextEdge( MeshEdgePoint & ei );
+    // the path shall cross next the edge ei, which must be oriented to have previous edge in the left triangle,
+    // and have common origin vertex with it
+    void nextEdgeO( EdgeId ei );
+    // the path shall cross next the edge ei, which must be oriented to have previous edge in the left triangle,
+    // and have common destination vertex with it
+    void nextEdgeD( EdgeId ei );
 
     void find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition );
 
@@ -466,13 +314,13 @@ private:
     PathInPlanarTriangleStrip strip_;
 };
 
-void TriangleStipUnfolder::clear()
+void TriangleStripUnfolder::clear()
 {
     lastEdge_ = EdgeId{};
     strip_.clear();
 }
 
-void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
+void TriangleStripUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
 {
     // orient e1 to have start at left
     MeshTriPoint etp{ e1 };
@@ -480,33 +328,32 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
         assert( false );
     assert( etp.bary.b == 0 );
     e1 = MeshEdgePoint{ etp.e, etp.bary.a };
-    lastEdge_ = e1.e;
+    reset( mesh_.triPoint( start ), e1.e );
+}
+
+void TriangleStripUnfolder::reset( const Vector3f & start, EdgeId e1 )
+{
+    lastEdge_ = e1;
 
     auto op = mesh_.orgPnt( lastEdge_ );
     auto dp = mesh_.destPnt( lastEdge_ ) - op;
-    auto sp = mesh_.triPoint( start ) - op;
+    auto sp = start - op;
     const Vector2f d2{ 0, mesh_.edgeLength( lastEdge_ ) };
     const Vector2f s2 = unfoldOnPlane( dp, sp, d2, true );
     strip_.reset( s2, d2, { 0, 0 } );
 }
 
-void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
+void TriangleStripUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
     assert( !e2.inVertex() );
 
-    Vector2f o2, d2;
-    strip_.getLastEdge( d2, o2 );
-    Vector3f v[3];
     const EdgeId pl = mesh_.topology.prev( lastEdge_ );
    // orient e2 to have last edge at left
     if ( pl == e2.e.sym() )
         e2 = e2.sym();
     if ( pl == e2.e )
     {
-        mesh_.getLeftTriPoints( e2.e, v[0], v[1], v[2] );
-        Vector2f x2 = o2 + unfoldOnPlane( v[2] - v[0], v[1] - v[0], d2 - o2, false );
-        strip_.nextEdgeNewLeft( x2 );
-        lastEdge_ = pl;
+        nextEdgeO( pl );
         return;
     }
 
@@ -516,17 +363,38 @@ void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
         e2 = e2.sym();
     if ( nl == e2.e )
     {
-        mesh_.getLeftTriPoints( e2.e, v[0], v[1], v[2] );
-        Vector2f x2 = o2 + unfoldOnPlane( v[1] - v[2], v[0] - v[2], d2 - o2, false );
-        strip_.nextEdgeNewRight( x2 );
-        lastEdge_ = nl;
+        nextEdgeD( nl );
         return;
     }
 
     assert( false );
 }
 
-void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
+void TriangleStripUnfolder::nextEdgeO( EdgeId ei )
+{
+    assert( mesh_.topology.prev( lastEdge_ ) == ei );
+    Vector2f o2, d2;
+    strip_.getLastEdge( d2, o2 );
+    Vector3f v[3];
+    mesh_.getLeftTriPoints( ei, v[0], v[1], v[2] );
+    Vector2f x2 = o2 + unfoldOnPlane( v[2] - v[0], v[1] - v[0], d2 - o2, false );
+    strip_.nextEdgeNewLeft( x2 );
+    lastEdge_ = ei;
+}
+
+void TriangleStripUnfolder::nextEdgeD( EdgeId ei )
+{
+    assert( mesh_.topology.next( lastEdge_.sym() ).sym() == ei );
+    Vector2f o2, d2;
+    strip_.getLastEdge( d2, o2 );
+    Vector3f v[3];
+    mesh_.getLeftTriPoints( ei, v[0], v[1], v[2] );
+    Vector2f x2 = o2 + unfoldOnPlane( v[1] - v[2], v[0] - v[2], d2 - o2, false );
+    strip_.nextEdgeNewRight( x2 );
+    lastEdge_ = ei;
+}
+
+void TriangleStripUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
 {
     assert( !empty() );
     auto op = mesh_.orgPnt( lastEdge_ );
@@ -538,6 +406,152 @@ void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(f
     Vector2f e2 = o2 + unfoldOnPlane( dp, ep, d2 - o2, false );
 
     strip_.find( e2, edgeCrossPosition );
+}
+
+/// given path s-v-e, tries to decrease its length by moving away from v
+/// \param outPath intermediate locations between s and e will be added here
+/// \param tmp elements will be temporary allocated here
+/// \param cachePath as far as we need two sides unfold, cache one to reduce allocations
+bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 
+    std::vector<MeshEdgePoint> & outPath, TriangleStripUnfolder & strip, std::vector<MeshEdgePoint>& cachePath )
+{
+    MeshTriPoint stp( s );
+    MeshTriPoint etp( e );
+    if ( fromSameTriangle( mesh.topology, stp, etp ) )
+    {
+        // line segment from s to e is the shortest path
+        return true;
+    }
+
+    const auto vp = mesh.points[ v ];
+    const auto sp = mesh.triPoint( s );
+    const auto ep = mesh.triPoint( e );
+    const auto dist0 = ( sp - vp ).length() + ( ep - vp ).length();
+    const auto sz0 = outPath.size();
+    float distOneSide = FLT_MAX;
+
+    EdgeId e0 = lastCommonEdge( mesh.topology, v, s );
+    assert( e0 );
+    EdgeId e1 = firstCommonEdge( mesh.topology, v, e );
+    assert( e1 );
+    if ( e0 && e1 && mesh.topology.right( e0 ) )
+    {
+        distOneSide = 0;
+        strip.clear();
+        cachePath.clear();
+        strip.reset( sp, e0.sym() );
+        cachePath.emplace_back( e0.sym(), 0.5f );
+        if ( e0 != e1 )
+        {
+            for ( EdgeId ei = mesh.topology.next( e0 ); ; ei = mesh.topology.next( ei ) )
+            {
+                if ( !mesh.topology.right( ei ) )
+                {
+                    // do not allow pass via hole space
+                    distOneSide = FLT_MAX;
+                    break;
+                }
+                cachePath.emplace_back( ei.sym(), 0.5f );
+                strip.nextEdgeD( ei.sym() );
+                if ( ei == e1 )
+                    break;
+            }
+        }
+        if ( distOneSide < FLT_MAX )
+        {
+            auto pos = cachePath.size();
+            auto prevPt = ep;
+            strip.find( e, [&]( float v )
+            {
+                if ( !( distOneSide < FLT_MAX ) )
+                    return;
+                if ( v <= TriPointf::eps )
+                {
+                    // passing via the same vertex
+                    distOneSide = FLT_MAX;
+                    return;
+                }
+                auto & edgePoint = cachePath[ --pos ];
+                edgePoint.a = 1 - v;
+                auto cp = mesh.edgePoint( edgePoint );
+                distOneSide += ( prevPt - cp ).length();
+                prevPt = cp;
+            } );
+            distOneSide += ( prevPt - sp ).length();
+        }
+    }
+
+    e0 = firstCommonEdge( mesh.topology, v, s );
+    assert( e0 );
+    e1 = lastCommonEdge( mesh.topology, v, e );
+    assert( e1 );
+    if ( e0 && e1 && mesh.topology.left( e0 ) )
+    {
+        float dist = 0;
+        strip.clear();
+        strip.reset( sp, e0 );
+        outPath.emplace_back( e0, 0.5f );
+        if ( e0 != e1 )
+        {
+            for ( EdgeId ei = mesh.topology.prev( e0 ); ; ei = mesh.topology.prev( ei ) )
+            {
+                if ( !mesh.topology.left( ei ) )
+                {
+                    // do not allow pass via hole space
+                    dist = FLT_MAX;
+                    break;
+                }
+                outPath.emplace_back( ei, 0.5f );
+                strip.nextEdgeO( ei );
+                if ( ei == e1 )
+                    break;
+            }
+        }
+        if ( dist < FLT_MAX )
+        {
+            auto pos = outPath.size();
+            auto prevPt = ep;
+            strip.find( e, [&]( float v )
+            {
+                if ( !( dist < FLT_MAX ) )
+                    return;
+                if ( 1 - v <= TriPointf::eps )
+                {
+                    // passing via the same vertex
+                    dist = FLT_MAX;
+                    return;
+                }
+                auto & edgePoint = outPath[ --pos ];
+                edgePoint.a = 1 - v;
+                auto cp = mesh.edgePoint( edgePoint );
+                dist += ( prevPt - cp ).length();
+                prevPt = cp;
+            } );
+            dist += ( prevPt - sp ).length();
+        }
+        if ( dist < dist0 || distOneSide < dist0 )
+        {
+            if ( distOneSide < dist )
+            {
+                outPath.resize( sz0 );
+                outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
+            }
+            return true;
+        }
+        outPath.resize( sz0 );
+    }
+
+    // in case of second side was not unfold successfully but first side was
+    if ( distOneSide < dist0 )
+    {
+        assert( outPath.size() == sz0 );
+        outPath.insert( outPath.end(), cachePath.begin(), cachePath.end() );
+        return true;
+    }
+
+    // failed to reduce path and avoid passing via the vertex
+    outPath.push_back( MeshEdgePoint( mesh.topology.edgeWithOrg( v ), 0 ) );
+    return false;
 }
 
 int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshEdgePoint> & path, const MeshTriPoint & end, int maxIter )
@@ -581,7 +595,8 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
 
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
-    tbb::enumerable_thread_specific<TriangleStipUnfolder> stripPerThread( std::cref( mesh ) );
+    tbb::enumerable_thread_specific<TriangleStripUnfolder> stripPerThread( std::cref( mesh ) );
+    auto & masterStrip = stripPerThread.local();
     for ( int i = 0; i < maxIter; ++i )
     {
         std::atomic<bool> pathTopologyChanged{false};
@@ -600,7 +615,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             while ( j + 1 < path.size() && path[j + 1].inVertex( mesh.topology ) == v )
                 ++j;
             MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-            if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
+            if ( reducePathViaVertex( mesh, prev, v, next, newPath, masterStrip, cacheOneSideUnfold ) )
             {
                 //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
                 //assert( fromSameTriangle( mesh.topology, prev, next ) );

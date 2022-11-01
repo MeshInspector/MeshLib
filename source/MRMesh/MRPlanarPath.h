@@ -6,6 +6,12 @@
 namespace MR
 {
 
+/// given triangle 0bc in 3D and line segment 0d in 2D, and |0b|=|0d|;
+/// finds e, such that triangle 0bc is equal to 0de;
+/// returns (0,0) if |0b|=0
+template<typename T>
+Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector2<T>& d, bool toLeftFrom0d );
+
 /// \defgroup PlanarPathGroup Planar Path
 /// \ingroup SurfacePathGroup
 /// \{

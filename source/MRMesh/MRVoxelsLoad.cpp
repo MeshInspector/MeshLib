@@ -383,11 +383,11 @@ std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
                                              const ProgressCallback& cb )
 {
     MR_TIMER;
-    if ( cb )
-        if ( !cb( 0.0f ) )
-            return {};
+    if ( cb && !cb( 0.0f ) )
+        return {};
 
     SimpleVolume data;
+    data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
@@ -513,12 +513,12 @@ std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, co
         if ( !cb( 0.0f ) )
             return {};
     SimpleVolume simpleVolume;
+    simpleVolume.voxelSize = Vector3f();
     simpleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
     if ( !fileRes.success )
         return {};
-    if ( cb )
-        if ( !cb( 0.5f ) )
+    if ( cb && !cb( 0.5f ) )
             return {};
     simpleVolume.max = fileRes.max;
     simpleVolume.min = fileRes.min; ObjectVoxels voxels;

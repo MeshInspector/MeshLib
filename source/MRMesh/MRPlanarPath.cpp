@@ -13,7 +13,8 @@ namespace MR
 // given triangle 0bc in 3D and line segment 0d in 2D, and |0b|=|0d|;
 // finds e, such that triangle 0bc is equal to 0de;
 // returns (0,0) if |0b|=0
-static Vector2f unfoldOnPlane( const Vector3f & b, const Vector3f & c, const Vector2f & d, bool toLeftFrom0d )
+template <typename T>
+Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector2<T>& d, bool toLeftFrom0d )
 {
     const auto dotBC = dot( b, c );
     const auto crsBC = cross( b, c ).length();
@@ -21,9 +22,12 @@ static Vector2f unfoldOnPlane( const Vector3f & b, const Vector3f & c, const Vec
     if ( dd <= 0 )
         return {};
     // o is a vector of same length as d and orthogonal to d
-    const Vector2f o = toLeftFrom0d ? Vector2f( -d.y, d.x ) : Vector2f( d.y, -d.x );
+    const Vector2<T> o = toLeftFrom0d ? Vector2<T>( -d.y, d.x ) : Vector2<T>( d.y, -d.x );
     return ( dotBC * d + crsBC * o ) / dd;
 }
+
+template MRMESH_API Vector2<float> unfoldOnPlane( const Vector3<float>& b, const Vector3<float>& c, const Vector2<float>& d, bool toLeftFrom0d );
+template MRMESH_API Vector2<double> unfoldOnPlane( const Vector3<double>& b, const Vector3<double>& c, const Vector2<double>& d, bool toLeftFrom0d );
 
 // finds an edge originated from v, which is located in the same triangle as p
 static EdgeId commonEdge( const MeshTopology & topology, VertId v, const MeshTriPoint & p )

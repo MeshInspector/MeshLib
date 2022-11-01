@@ -4,6 +4,8 @@
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRTriMath.h"
+#include "MRVector2.h"
+#include "MRPlanarPath.h"
 
 namespace MR
 {
@@ -92,6 +94,29 @@ bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const 
     return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
 }
 
+template<typename T>
+bool checkUnfoldQuadrangleConvexT( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d )
+{
+    auto vecB = b - a;
+    auto vecC = c - a;
+    auto vecD = d - a;
+    Vector2<T> unfoldB = Vector2<T>::plusX()*vecB.length();
+    auto unfoldC = unfoldOnPlane( vecB, vecC, unfoldB, true );
+    auto unfoldD = unfoldOnPlane( vecC, vecD, unfoldC, true );
+    auto unfoldBD = unfoldD - unfoldB;
+    return cross( unfoldC - unfoldB, unfoldBD ) * cross( unfoldBD, -unfoldB ) >= T( 0 );
+}
+
+bool checkUnfoldQuadrangleConvex( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+{
+    return checkUnfoldQuadrangleConvexT( a, b, c, d );
+}
+
+bool checkUnfoldQuadrangleConvex( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d )
+{
+    return checkUnfoldQuadrangleConvexT( a, b, c, d );
+}
+
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings )
 {
     if ( settings.notFlippable && settings.notFlippable->test( edge.undirected() ) )
@@ -149,6 +174,9 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
         if ( dist > settings.maxDeviationAfterFlip )
             return true; // flipping of given edge will change the surface shape too much
     }
+
+    if ( !checkUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
+        return true; // cannot flip because 2d quadrangle is concave
 
     if ( settings.criticalTriAspectRatio < FLT_MAX )
         return checkAspectRatiosInQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );

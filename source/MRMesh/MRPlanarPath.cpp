@@ -586,17 +586,15 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         for ( int j = 0; j < path.size(); ++j )
         {
             auto v = path[j].inVertex( mesh.topology );
-            if ( !v && mesh.edgeLengthSq( path[j].e ) <= 0 )
-            {
-                path[j].a = 0;
-                v = mesh.topology.org( path[j].e );
-            }
             if ( !v )
             {
                 newPath.push_back( path[j] );
                 continue;
             }
             MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
+            // skip next points if they are in the same vertex
+            while ( j + 1 < path.size() && path[j + 1].inVertex( mesh.topology ) == v )
+                ++j;
             MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
             if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
             {

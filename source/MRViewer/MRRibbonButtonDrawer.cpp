@@ -267,12 +267,14 @@ bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, 
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )
 {
     auto& texture = GetGradientTexture();
-    if ( !texture || ( value && ( *value != v_button ) ) )
+    if ( !texture )
         return ImGui::RadioButton( label, value, v_button );
+
+    const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0f );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const float clickSize = ImGui::GetFrameHeight();
@@ -280,14 +282,15 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     ImVec2 pos = window->DC.CursorPos;
     const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
 
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), clickSize * 0.5f );
+    if ( *value == v_button )
+        ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
+            texture->getImTextureId(),
+            bb.Min, bb.Max,
+            ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
+            Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = []( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [bgColor]( const char* label, int* v, int v_button )
     {     
         if ( !ImGui::GetCurrentContext() )
             return false;
@@ -315,22 +318,29 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( total_bb, id, &hovered, &held );
         if ( pressed )
+        {
             ImGui::MarkItemEdited( id );
+            *v = v_button;
+        }
 
         ImGui::RenderNavHighlight( total_bb, id );
-        window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
 
         const bool active = *v == v_button;
         if ( active )
         {
+            window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
             const float pad = ImMax( 1.0f, IM_FLOOR( square_sz * 0.3f ) );
             window->DrawList->AddCircleFilled( center, radius - pad, ImGui::GetColorU32( ImGuiCol_CheckMark ), 16 );
         }
-
-        if ( style.FrameBorderSize > 0.0f )
+        else
         {
-            window->DrawList->AddCircle( ImVec2( center.x + 1, center.y + 1 ), radius, ImGui::GetColorU32( ImGuiCol_BorderShadow ), 16, style.FrameBorderSize );
-            window->DrawList->AddCircle( center, radius, ImGui::GetColorU32( ImGuiCol_Border ), 16, style.FrameBorderSize );
+            window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), 16 );
+            if ( style.FrameBorderSize > 0.0f )
+            {
+                const auto menu = getViewerInstance().getMenuPlugin();
+                const float thickness = menu ? 1.5f * menu->menu_scaling() : 1.5f;
+                window->DrawList->AddCircle( center, radius, ImGui::GetColorU32( ImGuiCol_Border ), 16, style.FrameBorderSize * thickness );
+            }
         }
 
         ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );

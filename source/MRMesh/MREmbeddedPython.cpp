@@ -50,7 +50,10 @@ bool EmbeddedPython::setupArgv( int argc, char** argv )
         wargv[i] = utf8ToWide( argv[i] );
         wargvPtr[i] = wargv[i].data();
     }
+    _Py_COMP_DIAG_PUSH
+    _Py_COMP_DIAG_IGNORE_DEPR_DECLS
     PySys_SetArgv( argc, wargvPtr.data() );
+    _Py_COMP_DIAG_POP
     return true;
 }
 

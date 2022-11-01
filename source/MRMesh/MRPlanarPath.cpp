@@ -447,16 +447,19 @@ void PathInPlanarTriangleStrip::find( const Vector2f & end, std::function< void(
     }
 }
 
-class TriangleStipUnfolder
+class TriangleStripUnfolder
 {
 public:
-    TriangleStipUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
+    TriangleStripUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
 
     void clear();
     bool empty() const { return !lastEdge_; }
 
+    // starts new unfolding, e1 will be oriented to have start in the left triangle
     void reset( MeshTriPoint start, MeshEdgePoint & e1 );
-    void nextEdge( MeshEdgePoint & ei );
+    // the path shall cross next the edge ei.e, ei will be oriented to have previous edge in the left triangle;
+    // returns false if the edge cannot be added to the strip
+    bool nextEdge( MeshEdgePoint & ei );
 
     void find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition );
 
@@ -466,13 +469,13 @@ private:
     PathInPlanarTriangleStrip strip_;
 };
 
-void TriangleStipUnfolder::clear()
+void TriangleStripUnfolder::clear()
 {
     lastEdge_ = EdgeId{};
     strip_.clear();
 }
 
-void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
+void TriangleStripUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
 {
     // orient e1 to have start at left
     MeshTriPoint etp{ e1 };
@@ -490,7 +493,7 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
     strip_.reset( s2, d2, { 0, 0 } );
 }
 
-void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
+bool TriangleStripUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
     assert( !e2.inVertex() );
 
@@ -507,7 +510,7 @@ void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
         Vector2f x2 = o2 + unfoldOnPlane( v[2] - v[0], v[1] - v[0], d2 - o2, false );
         strip_.nextEdgeNewLeft( x2 );
         lastEdge_ = pl;
-        return;
+        return true;
     }
 
     const EdgeId nl = mesh_.topology.next( lastEdge_.sym() ).sym();
@@ -520,13 +523,12 @@ void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
         Vector2f x2 = o2 + unfoldOnPlane( v[1] - v[2], v[0] - v[2], d2 - o2, false );
         strip_.nextEdgeNewRight( x2 );
         lastEdge_ = nl;
-        return;
+        return true;
     }
-
-    assert( false );
+    return false;
 }
 
-void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
+void TriangleStripUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
 {
     assert( !empty() );
     auto op = mesh_.orgPnt( lastEdge_ );
@@ -581,7 +583,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
 
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
-    tbb::enumerable_thread_specific<TriangleStipUnfolder> stripPerThread( std::cref( mesh ) );
+    tbb::enumerable_thread_specific<TriangleStripUnfolder> stripPerThread( std::cref( mesh ) );
     for ( int i = 0; i < maxIter; ++i )
     {
         std::atomic<bool> pathTopologyChanged{false};
@@ -631,27 +633,33 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         {
             for ( int i = range.begin(); i < range.end(); ++i )
             {
-                const auto span = vertSpans[i];
+                auto span = vertSpans[i];
                 auto & strip = stripPerThread.local();
-                strip.clear();
-                const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
-                strip.reset( first, path[span.first + 1] );
-                for ( int j = span.first + 2; j < span.second; ++j )
+                while ( span.first + 1 < span.second )
                 {
-                    // path[j] is an ordinary point not in a vertex
-                    strip.nextEdge( path[j] );
+                    strip.clear();
+                    const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
+                    strip.reset( first, path[span.first + 1] );
+                    int j = span.first + 2;
+                    for ( ; j < span.second; ++j )
+                    {
+                        // path[j] is an ordinary point not in a vertex
+                        if ( !strip.nextEdge( path[j] ) )
+                            break;
+                    }
+                    const MeshTriPoint last = j < path.size() ? MeshTriPoint{ path[j] } : end;
+                    int pos = j;
+                    strip.find( last, [&]( float v ) 
+                    {
+                        assert( pos > 0 );
+                        auto & edgePoint = path[ --pos ];
+                        assert( !edgePoint.inVertex() );
+                        edgePoint.a = 1 - v;
+                        if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+                            pathTopologyChanged.store( true, std::memory_order_relaxed );
+                    } );
+                    span.first = j;
                 }
-                const MeshTriPoint last = span.second < path.size() ? MeshTriPoint{ path[span.second] } : end;
-                int pos = span.second;
-                strip.find( last, [&]( float v ) 
-                {
-                    assert( pos > 0 );
-                    auto & edgePoint = path[ --pos ];
-                    assert( !edgePoint.inVertex() );
-                    edgePoint.a = 1 - v;
-                    if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
-                        pathTopologyChanged.store( true, std::memory_order_relaxed );
-                } );
             }
         } );
 

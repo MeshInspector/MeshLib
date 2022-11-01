@@ -137,12 +137,14 @@ bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, con
 bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
     auto& texture = GetGradientTexture();
-    if ( !texture || ( value && !*value ) )
+    if ( !texture )
         return  ImGui::Checkbox( label, value );
+
+    const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const ImGuiStyle& style = ImGui::GetStyle();
@@ -151,16 +153,17 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     ImVec2 pos = window->DC.CursorPos;
     const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
 
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), style.FrameRounding );
+    if ( value && *value )
+        ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
+            texture->getImTextureId(),
+            bb.Min, bb.Max,
+            ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
+            Color::white().getUInt32(), style.FrameRounding );
 
     //code of this lambda is copied from ImGui::Checkbox in order to decrease thickness and change appearance of the check mark
-    auto drawCustomCheckbox = [] ( const char* label, bool* v )
+    auto drawCustomCheckbox = [bgColor] ( const char* label, bool* v )
     {
-        if ( !ImGui::GetCurrentContext() )
+        if ( !ImGui::GetCurrentContext() || !v)
             return false;
 
         ImGuiContext& g = *ImGui::GetCurrentContext();
@@ -192,7 +195,12 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 
         const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
         ImGui::RenderNavHighlight( total_bb, id );
-        ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding );
+
+        if ( *v )
+            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
+        else
+            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), true, style.FrameRounding * 0.5f );
+
         ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );
         bool mixed_value = ( g.LastItemData.InFlags & ImGuiItemFlags_MixedValue ) != 0;
         if ( mixed_value )

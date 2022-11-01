@@ -282,7 +282,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     ImVec2 pos = window->DC.CursorPos;
     const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
 
-    if ( *value == v_button )
+    if ( value && *value == v_button )
         ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
             texture->getImTextureId(),
             bb.Min, bb.Max,
@@ -292,7 +292,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
     auto drawCustomRadioButton = [bgColor]( const char* label, int* v, int v_button )
     {     
-        if ( !ImGui::GetCurrentContext() )
+        if ( !ImGui::GetCurrentContext() || !v )
             return false;
 
         ImGuiContext& g = *ImGui::GetCurrentContext();

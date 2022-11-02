@@ -1276,10 +1276,11 @@ FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
         Vector3d cP = Vector3d( mesh.points[c] );
 
         auto faceNorm = cross( bP - aP, cP - aP );
-        if ( dot( norm, faceNorm ) < 0.0 )
+        auto faceDblArea = faceNorm.length();
+        if ( dot( norm, faceNorm ) < 0.5f * faceDblArea )
             return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
 
-        return faceNorm.length(); // area
+        return faceDblArea; // area
     };
     return metric;
 }

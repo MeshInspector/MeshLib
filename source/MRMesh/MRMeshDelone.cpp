@@ -6,6 +6,7 @@
 #include "MRTriMath.h"
 #include "MRVector2.h"
 #include "MRPlanarPath.h"
+#include "MRTriDist.h"
 
 namespace MR
 {
@@ -165,13 +166,12 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
 
     if ( settings.maxDeviationAfterFlip < FLT_MAX )
     {
-        // two possible diagonals in the quadrangle
-        auto diag0 = cp - ap;
-        auto diag1 = dp - bp;
-        // distance between them
-        double dist = fabs( dot( cross( diag0, diag1 ).normalized(), bp - ap ) );
-        // TODO: this actually does not work if one of the diagonals is collapsed in point, where the formula gives 0, which is wrong
-        if ( dist > settings.maxDeviationAfterFlip )
+        Vector3f vec, closestOnAC, closestOnBD;
+        SegPoints( vec, closestOnAC, closestOnBD,
+            ap, cp - ap,   // first diagonal segment
+            bp, dp - bp ); // second diagonal segment
+        double distSq = ( closestOnAC - closestOnBD ).lengthSq();
+        if ( distSq > sqr( settings.maxDeviationAfterFlip ) )
             return true; // flipping of given edge will change the surface shape too much
     }
 

@@ -37,7 +37,7 @@ if platformSystem == 'Linux':
             python_cmd = "python3.9 "
 
 elif platformSystem == 'Darwin':
-    python_cmd = "python3 "
+    python_cmd = "python3.10 "
 
 if args.cmd:
     python_cmd = str(args.cmd).strip() + " "

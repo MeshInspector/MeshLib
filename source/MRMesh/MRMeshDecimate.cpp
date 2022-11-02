@@ -193,24 +193,26 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
     return qf;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
     bool meshChanged = false;
-    for( int i = 0; i < maxIters; ++i )
+    for( int i = 0; i < settings.maxIters; ++i )
     {
         DeloneSettings delone
         {
-            .maxDeviationAfterFlip = maxDeviation,
-            .maxAngleChange = maxAngleChange,
-            .criticalTriAspectRatio = criticalAspectRatio
+            .maxDeviationAfterFlip = settings.maxDeviation,
+            .maxAngleChange = settings.maxAngleChange,
+            .criticalTriAspectRatio = settings.criticalAspectRatio,
+            .region = settings.region
         };
         bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
         DecimateSettings decimate
         {
-            .maxError = maxDeviation,
-            .criticalTriAspectRatio = criticalAspectRatio
+            .maxError = settings.maxDeviation,
+            .criticalTriAspectRatio = settings.criticalAspectRatio,
+            .region = settings.region
         };
         changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
         meshChanged = meshChanged || changedThisIter;
@@ -218,6 +220,18 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation,
             break;
     }
     return meshChanged;
+}
+
+bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+{
+    ResolveMeshDegenSettings settings
+    {
+        .maxIters = maxIters,
+        .maxDeviation = maxDeviation,
+        .maxAngleChange = maxAngleChange,
+        .criticalAspectRatio = criticalAspectRatio
+    };
+    return resolveMeshDegenerations( mesh, settings );
 }
 
 bool MeshDecimator::initializeQueue_()

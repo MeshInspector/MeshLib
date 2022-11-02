@@ -125,6 +125,21 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  */
 MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
 
+struct ResolveMeshDegenSettings
+{
+    /// the number of times the whole algorithm is repeated
+    int maxIters = 1;
+    /// maximum permitted deviation from the original surface
+    float maxDeviation = 0;
+    /// Permit edge flips if it does change dihedral angle more than on this value
+    float maxAngleChange = PI_F / 3;
+    /// if this value is less than FLT_MAX then the algorithm will try to minimize maximal triangle aspect ratio,
+    /// and ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value
+    float criticalAspectRatio = 1e7f;
+    /// degenerations will be fixed only in given region, which is updated during the processing
+    FaceBitSet * region = nullptr;
+};
+
 /**
  * \brief Resolves degenerate triangles in given mesh
  * \details This function performs decimation, so it can affect topology
@@ -133,7 +148,10 @@ MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, f
  * 
  * \sa \ref decimateMesh
  */
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters = 1, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 1e7 );
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
+[[deprecated(" use the version with parameter struct instead" )]]
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 1e7 );
+
 
 struct RemeshSettings
 {

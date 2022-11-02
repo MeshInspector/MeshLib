@@ -565,6 +565,24 @@ EdgeId MeshTopology::sharedVertInOrg( FaceId l, FaceId r ) const
     return {};
 }
 
+FaceId MeshTopology::sharedFace( EdgeId a, EdgeId b ) const
+{
+    assert( a && b );
+    const auto al = left( a );
+    const auto bl = left( b );
+    if ( al && al == bl )
+        return al;
+    const auto ar = right( a );
+    if ( ar && ar == bl )
+        return ar;
+    const auto br = right( b );
+    if ( al && al == br )
+        return al;
+    if ( ar && ar == br )
+        return ar;
+    return {};
+}
+
 FaceId MeshTopology::lastValidFace() const
 {
     if ( numValidFaces_ <= 0 )

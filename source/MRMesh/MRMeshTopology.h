@@ -127,6 +127,8 @@ public:
     [[nodiscard]] MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
     /// if two valid faces share the same vertex then it is found and returned as Edge with this vertex in origin
     [[nodiscard]] MRMESH_API EdgeId sharedVertInOrg( FaceId l, FaceId r ) const;
+    /// if two valid edges belong to same valid face then it is found and returned
+    [[nodiscard]] MRMESH_API FaceId sharedFace( EdgeId a, EdgeId b ) const;
     /// returns the number of valid faces
     [[nodiscard]] int numValidFaces() const{ return numValidFaces_; }
     /// returns last valid face id, or invalid id if no single valid face exists

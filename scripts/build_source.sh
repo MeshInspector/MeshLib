@@ -33,12 +33,11 @@ if [[ $OSTYPE != 'darwin'* ]]; then
    fi
   fi
 else # darwin
-  PYTHON_PREFIX=$(python3-config --prefix)
   PYTHON_VERSION="3.10"
   if [ "${MESHLIB_PYTHON_VERSION}" != "" ]; then
-    PYTHON_PREFIX=$(python"${MESHLIB_PYTHON_VERSION}"-config --prefix)
     PYTHON_VERSION="${MESHLIB_PYTHON_VERSION}"
   fi
+  PYTHON_PREFIX=$(python"${PYTHON_VERSION}"-config --prefix)
   echo "PYTHON_PREFIX=${PYTHON_PREFIX}"
   PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}

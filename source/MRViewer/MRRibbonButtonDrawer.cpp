@@ -146,6 +146,10 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
 
+    const auto menu = getViewerInstance().getMenuPlugin();
+    const float scaling = menu ? menu->menu_scaling() : 1.0f;
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
+
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const ImGuiStyle& style = ImGui::GetStyle();
     const float clickSize = ImGui::GetFrameHeight();
@@ -250,7 +254,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 
     auto res = drawCustomCheckbox( label, value );
 
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor( 2 );
     return res;
 }
@@ -285,7 +289,10 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0f );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const float clickSize = ImGui::GetFrameHeight();
+    const auto menu = getViewerInstance().getMenuPlugin();
+    const float scaling = menu ? menu->menu_scaling() : 1.0f;
+
+    const float clickSize = cRadioButtonSize * scaling;
 
     ImVec2 pos = window->DC.CursorPos;
     const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
@@ -298,7 +305,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
             Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = [bgColor]( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [bgColor, scaling, clickSize]( const char* label, int* v, int v_button )
     {     
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -312,16 +319,16 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
-        const float square_sz = ImGui::GetFrameHeight();
+        const auto menu = getViewerInstance().getMenuPlugin();
         const ImVec2 pos = window->DC.CursorPos;
-        const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
-        const ImRect total_bb( pos, ImVec2( pos.x + square_sz + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
+        const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
+        const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
         ImGui::ItemSize( total_bb, style.FramePadding.y );
         if ( !ImGui::ItemAdd( total_bb, id ) )
             return false;
 
         ImVec2 center = check_bb.GetCenter();
-        const float radius = ( square_sz - 1.0f ) * 0.5f;
+        const float radius = clickSize * 0.5f;
 
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( total_bb, id, &hovered, &held );
@@ -337,7 +344,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         if ( active )
         {
             window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), 16 );
-            const float pad = ImMax( 1.0f, IM_FLOOR( square_sz * 0.3f ) );
+            const float pad = ImMax( 1.0f, IM_FLOOR( clickSize * 0.3f ) );
             window->DrawList->AddCircleFilled( center, radius - pad, ImGui::GetColorU32( ImGuiCol_CheckMark ), 16 );
         }
         else
@@ -345,8 +352,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
             window->DrawList->AddCircleFilled( center, radius, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), 16 );
             if ( style.FrameBorderSize > 0.0f )
             {
-                const auto menu = getViewerInstance().getMenuPlugin();
-                const float thickness = menu ? 1.5f * menu->menu_scaling() : 1.5f;
+                const float thickness = 1.5f * scaling;
                 window->DrawList->AddCircle( center, radius, ImGui::GetColorU32( ImGuiCol_Border ), 16, style.FrameBorderSize * thickness );
             }
         }

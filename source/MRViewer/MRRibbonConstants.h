@@ -19,7 +19,7 @@ constexpr float cRibbonItemInterval = 4.0f;
 constexpr float cRibbonItemMinWidth = 86.0f;
 constexpr float cRibbonButtonWindowPaddingX = 6.0f;
 constexpr float cRibbonButtonWindowPaddingY = 4.0f;
-constexpr float cCheckboxPadding = 3.0f;
+constexpr float cCheckboxPadding = 2.0f;
 constexpr float cButtonPadding = 8.0f;
 constexpr float cInputPadding = 9.0f;
 constexpr float cDefaultItemSpacing = 8.0f;
@@ -47,5 +47,7 @@ constexpr int cBigFontSize = 15;
 constexpr int cHeadlineFontSize = 24;
 
 constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
+
+constexpr float cRadioButtonSize = 20.0f;
 
 }

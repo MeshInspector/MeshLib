@@ -10,6 +10,9 @@
 #include "MRLog.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRFillContour.h"
+#include "MRPrecisePredicates3.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -228,6 +231,93 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     else
         result.errorString = res.error();
     return result;
+}
+
+std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+{
+    const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
+    const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
+
+    std::vector<Vector3f> results;
+    results.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
+
+    FaceBitSet collFacesA, collFacesB;
+    VertBitSet collOuterVertsA, collOuterVertsB;
+    collFacesA.resize( meshA.topology.lastValidFace() + 1 );
+    collFacesB.resize( meshB.topology.lastValidFace() + 1 );
+    collOuterVertsA.resize( meshA.topology.lastValidVert() + 1 );
+    collOuterVertsB.resize( meshB.topology.lastValidVert() + 1 );
+    for ( const auto& et : intersections.edgesAtrisB )
+    {
+        collFacesA.set( meshA.topology.left( et.edge ) );
+        collFacesA.set( meshA.topology.right( et.edge ) );
+        collFacesB.set( et.tri );
+        collOuterVertsA.set( meshA.topology.dest( et.edge ) );
+
+        Vector3f ev0, ev1;
+        ev0 = meshA.orgPnt( et.edge );
+        ev1 = meshA.destPnt( et.edge );
+
+        Vector3f fv0, fv1, fv2;
+        meshB.getTriPoints( et.tri, fv0, fv1, fv2 );
+        if ( rigidB2A )
+        {
+            fv0 = ( *rigidB2A )( fv0 );
+            fv1 = ( *rigidB2A )( fv1 );
+            fv2 = ( *rigidB2A )( fv2 );
+        }
+
+        results.emplace_back( findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters ) );
+    }
+    for ( const auto& et : intersections.edgesBtrisA )
+    {
+        collFacesB.set( meshB.topology.left( et.edge ) );
+        collFacesB.set( meshB.topology.right( et.edge ) );
+        collFacesA.set( et.tri );
+        collOuterVertsB.set( meshB.topology.dest( et.edge ) );
+
+        Vector3f fv0, fv1, fv2;
+        meshA.getTriPoints( et.tri, fv0, fv1, fv2 );
+
+        Vector3f ev0, ev1;
+        ev0 = meshB.orgPnt( et.edge );
+        ev1 = meshB.destPnt( et.edge );
+        if ( rigidB2A )
+        {
+            ev0 = ( *rigidB2A )( ev0 );
+            ev1 = ( *rigidB2A )( ev1 );
+        }
+
+        results.emplace_back( findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters ) );
+    }
+
+    auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
+    auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
+    // filter out contours not lying outside the other mesh
+    std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+    {
+        return std::none_of( edgeLoop.begin(), edgeLoop.end(), [&] ( EdgeId e )
+        {
+            return collOuterVertsA.test( meshA.topology.dest( e ) );
+        } );
+    } );
+    std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+    {
+        return std::none_of( edgeLoop.begin(), edgeLoop.end(), [&] ( EdgeId e )
+        {
+            return collOuterVertsB.test( meshB.topology.dest( e ) );
+        } );
+    } );
+
+    collFacesA = fillContourLeft( meshA.topology, collBordersA );
+    collFacesB = fillContourLeft( meshB.topology, collBordersB );
+
+    for ( auto v : getInnerVerts( meshA.topology, collFacesA ) )
+        results.emplace_back( meshA.points[v] );
+    for ( auto v : getInnerVerts( meshB.topology, collFacesB ) )
+        results.emplace_back( rigidB2A ? ( *rigidB2A )( meshB.points[v] ) : meshB.points[v] );
+
+    return results;
 }
 
 TEST( MRMesh, MeshBoolean )

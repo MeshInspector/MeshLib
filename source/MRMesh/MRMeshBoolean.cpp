@@ -298,17 +298,11 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
     // filter out contours not lying outside the other mesh
     std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
     {
-        return std::none_of( edgeLoop.begin(), edgeLoop.end(), [&] ( EdgeId e )
-        {
-            return collOuterVertsA.test( meshA.topology.dest( e ) );
-        } );
+        return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
     } );
     std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
     {
-        return std::none_of( edgeLoop.begin(), edgeLoop.end(), [&] ( EdgeId e )
-        {
-            return collOuterVertsB.test( meshB.topology.dest( e ) );
-        } );
+        return !collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
     } );
 
     collFacesA = fillContourLeft( meshA.topology, collBordersA );

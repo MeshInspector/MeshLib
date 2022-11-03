@@ -235,6 +235,8 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 
 std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
 {
+    MR_TIMER
+
     const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
 

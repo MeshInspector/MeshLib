@@ -55,7 +55,7 @@ struct BooleanResult
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
 
-/** \brief Returns points that represents the vertices of mesh intersection
+/** \brief Returns the points of mesh intersection's result mesh
  *
  * \ingroup BooleanGroup
  * Returns vertex coordinates of mesh that is result of intersection of mesh `A` and mesh `B`.

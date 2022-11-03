@@ -1212,7 +1212,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                         if ( !prevFaceIncidentLeft )
                         {
                             // iterate backward to find removed face info
-                            prevFaceIncidentLeft = iterateRemovedFacesInfoToFindLeftEdge( mesh.topology, res.removedFaces, contourId, intersectionId, f, newVertId );
+                            prevFaceIncidentLeft = iterateRemovedFacesInfoToFindLeftEdge( mesh.topology, res.removedFaces, contourId, intersectionId, f, currVert );
                         }
                         assert( prevFaceIncidentLeft );
                         invalidateFace( mesh.topology, res.removedFaces, contourId, intersectionId - 1, prevFaceIncidentLeft, oldEdgesSize );

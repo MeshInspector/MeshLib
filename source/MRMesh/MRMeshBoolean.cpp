@@ -260,9 +260,13 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return result;
 }
 
-std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
+
+    BooleanResultPoints result;
+    result.meshAVerts.resize( meshA.topology.lastValidVert() + 1 );
+    result.meshBVerts.resize( meshB.topology.lastValidVert() + 1 );
 
     const auto convertersB2A = getVectorConverters( meshA, meshB, rigidB2A );
 
@@ -271,9 +275,7 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
     const auto convertersA2B = getVectorConverters( meshB, meshA, rigidB2A );
 
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, convertersB2A.toInt, rigidB2A );
-
-    std::vector<Vector3f> results;
-    results.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
+    result.intersectionPoints.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
 
     FaceBitSet collFacesA, collFacesB;
     VertBitSet collOuterVertsA, collOuterVertsB;
@@ -289,7 +291,7 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
         collOuterVertsA.set( meshA.topology.dest( et.edge ) );
 
         const auto isect = findEdgeTriIntersectionPoint( meshB, et.tri, meshA, et.edge, rigidA2B, &convertersA2B );
-        results.emplace_back( rigidB2A ? ( *rigidB2A )( isect ) : isect );
+        result.intersectionPoints.emplace_back( rigidB2A ? ( *rigidB2A )( isect ) : isect );
     }
     for ( const auto& et : intersections.edgesBtrisA )
     {
@@ -299,7 +301,7 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
         collOuterVertsB.set( meshB.topology.dest( et.edge ) );
 
         const auto isect = findEdgeTriIntersectionPoint( meshA, et.tri, meshB, et.edge, rigidB2A, &convertersB2A );
-        results.emplace_back( isect );
+        result.intersectionPoints.emplace_back( isect );
     }
 
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
@@ -317,12 +319,10 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
     collFacesA = fillContourLeft( meshA.topology, collBordersA );
     collFacesB = fillContourLeft( meshB.topology, collBordersB );
 
-    for ( auto v : getInnerVerts( meshA.topology, collFacesA ) )
-        results.emplace_back( meshA.points[v] );
-    for ( auto v : getInnerVerts( meshB.topology, collFacesB ) )
-        results.emplace_back( rigidB2A ? ( *rigidB2A )( meshB.points[v] ) : meshB.points[v] );
+    result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+    result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
 
-    return results;
+    return result;
 }
 
 TEST( MRMesh, MeshBoolean )

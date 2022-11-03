@@ -74,6 +74,7 @@
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
+#include "MRRibbonConstants.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -879,12 +880,19 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
+            auto ctx = ImGui::GetCurrentContext();
+            assert( ctx );
+            auto window = ctx->CurrentWindow;
+            assert( window );
+            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
                     object.select( false );
             }
+            window->DC.CursorPosPrevLine.y -= diff;
             ImGui::SameLine();
         }
         {

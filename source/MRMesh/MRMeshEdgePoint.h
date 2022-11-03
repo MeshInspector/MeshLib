@@ -32,5 +32,9 @@ struct MeshEdgePoint
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related MeshEdgePoint
 [[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshEdgePoint & a, MeshEdgePoint & b );
+/// returns true if points a and b are located on a boundary of the same triangle;
+/// \details if true a.e and b.e are updated to have that triangle on the left
+/// \related MeshEdgePoint
+[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshEdgePoint && a, MeshEdgePoint && b ) { return fromSameTriangle( topology, a, b ); }
 
 } // namespace MR

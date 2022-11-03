@@ -547,9 +547,9 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         return 0;
     MR_TIMER;
 
+    // consider points on degenerate edges as points in vertices
     for ( auto & e : path )
     {
-        // consider points on degenerate edges as points in vertices
         if ( !e.inVertex() && mesh.edgeLengthSq( e.e ) <= 0 )
         {
             e.a = 0;
@@ -558,8 +558,8 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
     }
 
     std::vector<MeshEdgePoint> newPath;
-    std::vector<MeshEdgePoint> cacheOneSideUnfold;
     newPath.reserve( path.size() );
+    std::vector<MeshEdgePoint> cacheOneSideUnfold;
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
     std::vector<MeshEdgePoint> rpoints; // to be added next in the new path in reverse order
@@ -570,10 +570,12 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
 
         // try to exit from vertices and remove repeating locations
         int j = 0;
+        // there are points to add in newPath
         auto hasNext = [&]()
         {
             return !rpoints.empty() || j < path.size();
         };
+        // returns next point to add in newPath, if extract=false then it will be returned again next time
         auto takeNext = [&]( bool extract )
         {
             MeshEdgePoint res;
@@ -591,31 +593,29 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             }
             return res;
         };
+        // remove last point from newPath and mark topology as changed
+        auto newPathPopBack = [&]()
+        {
+            newPath.pop_back();
+            pathTopologyChanged.store( true, std::memory_order_relaxed );
+        };
+        // add all points in newPath, trying to walk around vertices
         while ( hasNext() )
         {
             auto np = takeNext( true );
             auto v = np.inVertex( mesh.topology );
             if ( !v )
             {
-                // remove returns from newPath
+                // remove last point of new path if the path does not break (and becomes only shorter)
                 while ( newPath.size() >= 2 )
                 {
                     auto pp = newPath[ newPath.size() - 2 ];
                     if ( pp.inVertex() || !mesh.topology.sharedFace( np.e, pp.e ) )
                         break;
-                    newPath.pop_back();
-                    pathTopologyChanged.store( true, std::memory_order_relaxed );
+                    newPathPopBack();
                 }
-                if ( newPath.size() == 1 )
-                {
-                    MeshTriPoint s = start;
-                    MeshTriPoint n = np;
-                    if ( fromSameTriangle( mesh.topology, s, n ) )
-                    {
-                        newPath.pop_back();
-                        pathTopologyChanged.store( true, std::memory_order_relaxed );
-                    }
-                }
+                if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ np } ) )
+                    newPathPopBack();
                 newPath.push_back( np );
                 continue;
             }
@@ -624,34 +624,23 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             while ( hasNext() && takeNext( false ).inVertex( mesh.topology ) == v )
                 np = takeNext( true );
             MeshTriPoint next = hasNext() ? MeshTriPoint{ takeNext( false ) } : end;
+            newPath.push_back( np );
+            // put points of new path around vertex v in rpoints
             if ( reducePathViaVertex( mesh, next, v, prev, rpoints, tmp, cacheOneSideUnfold ) )
-                pathTopologyChanged.store( true, std::memory_order_relaxed );
-            else
-                newPath.push_back( np );
+                newPathPopBack();
         }
-        // remove returns from newPath at the very end
-        while ( newPath.size() >= 2 )
-        {
-            MeshTriPoint p = newPath[ newPath.size() - 2 ];
-            MeshTriPoint e = end;
-            if ( !fromSameTriangle( mesh.topology, p, e ) )
-                break;
-            newPath.pop_back();
-            pathTopologyChanged.store( true, std::memory_order_relaxed );
-        }
-        if ( newPath.size() == 1 )
-        {
-            MeshTriPoint s = start;
-            MeshTriPoint e = end;
-            if ( fromSameTriangle( mesh.topology, s, e ) )
-            {
-                newPath.pop_back();
-                pathTopologyChanged.store( true, std::memory_order_relaxed );
-            }
-        }
+        // remove last point of new path if the path does not break (and becomes only shorter)
+        while ( newPath.size() >= 2 && fromSameTriangle( mesh.topology, MeshTriPoint{ newPath[ newPath.size() - 2 ] }, MeshTriPoint{ end } ) )
+            newPathPopBack();
+        if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+            newPathPopBack();
 
         path.swap( newPath );
         newPath.clear();
+
+        // stop processing if path topology has not changed and straightening was done at least once
+        if ( i > 0 && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+            return i + 1;
 
         // find all spans where points are not in a vertex
         vertSpans.clear();
@@ -703,6 +692,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             }
         } );
 
+        // stop processing if path topology has not changed
         if ( !pathTopologyChanged.load( std::memory_order_relaxed ) )
             return i + 1;
     }

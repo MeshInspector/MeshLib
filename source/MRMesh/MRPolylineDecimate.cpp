@@ -248,11 +248,29 @@ VertId PolylineDecimator<V>::collapse_( EdgeId edgeToCollapse, const V & collaps
         vo = topology.org( edgeToCollapse );
     }
 
-    const auto e1 = topology.next( edgeToCollapse ).sym();
-    const auto e2 = topology.next( e1 ).sym();
-    const auto e3 = topology.next( e2 ).sym();
-    if ( e1 != edgeToCollapse.sym() && e2 != e1.sym() && e3 != e2.sym() && e3 == edgeToCollapse )
-        return {}; // keep at least a triangle from every closed contour
+    const auto ep = topology.next( edgeToCollapse ).sym();
+    if ( ep != edgeToCollapse.sym() )
+    {
+        const auto epp = topology.next( ep ).sym();
+        const auto eppp = topology.next( epp ).sym();
+        if ( epp != ep.sym() && eppp != epp.sym() && eppp == edgeToCollapse )
+            return {}; // keep at least a triangle from every closed contour
+
+        const auto en = topology.next( edgeToCollapse.sym() );
+        if ( en != edgeToCollapse.sym() )
+        {
+            const auto po = polyline_.orgPnt( ep );
+            const auto nd = polyline_.destPnt( en );
+            if ( dot( po - collapsePos, nd - collapsePos ) > 0 )
+            {
+                // after the collapse the line will make a sharp turn in remaining vertex
+                const auto o = polyline_.orgPnt( edgeToCollapse );
+                const auto d = polyline_.destPnt( edgeToCollapse );
+                if ( dot( po - o, d - o ) <= 0 && dot( o - d, nd - d ) <= 0 )
+                    return {}; // there are no sharp turns before the collapse, so prohibit it
+            }
+        }
+    }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return {}; // user prohibits the collapse

@@ -1525,7 +1525,15 @@ float ImGuiMenu::drawTransform_()
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
             }
             ImGui::SameLine( 0, uniformScale_ ? -1 : 2 * scaling );
+
+            auto ctx = ImGui::GetCurrentContext();
+            assert( ctx );
+            auto window = ctx->CurrentWindow;
+            assert( window );
+            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
+            window->DC.CursorPosPrevLine.y -= diff;
             ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 

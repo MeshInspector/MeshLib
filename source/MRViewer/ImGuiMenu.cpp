@@ -57,7 +57,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"
@@ -2091,9 +2090,14 @@ void ImGuiMenu::draw_mr_menu()
                     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
                     {
                         ProgressBar::nextTask( "Load DICOM Folder" );
-                        auto voxelsObject = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                        if ( voxelsObject && !ProgressBar::isCanceled() )
+                        auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
+                        if ( loadRes.has_value() && !ProgressBar::isCanceled() )
                         {
+                            std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
+                            voxelsObject->setName( loadRes->name );
+                            ProgressBar::setTaskCount( 2 );
+                            ProgressBar::nextTask( "Construct ObjectVoxels" );
+                            voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
                             auto bins = voxelsObject->histogram().getBins();
                             auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
@@ -2107,7 +2111,13 @@ void ImGuiMenu::draw_mr_menu()
                                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                             };
                         }
-                        return {};
+                        else
+                            return [error = loadRes.error()] ()
+                            {
+                                auto menu = getViewerInstance().getMenuPlugin();
+                                if ( menu )
+                                    menu->showErrorModal( error );
+                            };
                     }, 2 );
                 }
 #endif

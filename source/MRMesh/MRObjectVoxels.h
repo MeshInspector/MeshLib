@@ -50,16 +50,18 @@ public:
     virtual std::string getClassName() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram
-    MRMESH_API void construct( const SimpleVolume& volume, const ProgressCallback& cb = {} );
+    MRMESH_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram
-    MRMESH_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, const ProgressCallback& cb = {} );
+    MRMESH_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
+    /// Clears all internal data and calculates histogram
+    MRMESH_API void construct( const VdbVolume& vdbVolume, ProgressCallback cb = {} );
     /// Updates histogram, by stored grid (evals min and max values from grid)
     /// rebuild iso surface if it is present
-    MRMESH_API void updateHistogramAndSurface( const ProgressCallback& cb = {} );
+    MRMESH_API void updateHistogramAndSurface( ProgressCallback cb = {} );
 
     /// Sets iso value and updates iso-surfaces if needed: 
     /// Returns true if iso-value was updated, false - otherwise
-    MRMESH_API virtual bool setIsoValue( float iso, const ProgressCallback& cb = {}, bool updateSurface = true );
+    MRMESH_API virtual bool setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
 
     /// Sets external surface mesh for this object
     /// and returns back previous mesh of this
@@ -67,11 +69,11 @@ public:
 
     /// Calculates and return new mesh
     /// returns empty pointer if no volume is present
-    MRMESH_API std::shared_ptr<Mesh> recalculateIsoSurface( float iso, const ProgressCallback& cb = {} );
+    MRMESH_API std::shared_ptr<Mesh> recalculateIsoSurface( float iso, ProgressCallback cb = {} );
 
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
-    MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, const ProgressCallback& cb = {}, bool updateSurface = true );
+    MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
     const Box3i& getActiveBounds() const

@@ -13,6 +13,7 @@
 #include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -378,23 +379,23 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
     }
 }
 
-std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
-                                             unsigned maxNumThreads,
-                                             const ProgressCallback& cb )
+tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+                                                    unsigned maxNumThreads, ProgressCallback cb )
 {
     MR_TIMER;
-    if ( cb && !cb( 0.0f ) )
-        return {};
+    ProgressCallback newCb{};
+    if ( cb )
+        newCb = [&cb](float f) { return cb( 0.5f * f ); };
+    if ( newCb && !newCb( 0.0f ) )
+        return tl::make_unexpected( "Loading canceled" );
 
     SimpleVolume data;
     data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
-    {
-        spdlog::error( "loadDCMFolder: path is not directory" );
-        return {};
-    }
+        return tl::make_unexpected( "loadDCMFolder: path is not directory" );
+
     int filesNum = 0;
     std::vector<std::filesystem::path> files;
     const std::filesystem::directory_iterator dirEnd;
@@ -411,34 +412,32 @@ std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
         auto filePath = it->path();
         if ( it->is_regular_file( ec ) && isDICOMFile( filePath ) )
             files.push_back( filePath );
-        if ( cb )
-            cb( 0.3f * float( fCounter ) / float( filesNum ) );
+        if ( newCb && !newCb( 0.3f * float( fCounter ) / float( filesNum ) ) )
+            tl::make_unexpected( "Loading canceled" );
     }
     if ( files.empty() )
     {
-        spdlog::error( "loadDCMFolder: there is no dcm file in folder: {}", utf8string( path ) );
-        return {};
+        return tl::make_unexpected( "loadDCMFolder: there is no dcm file in folder: " + utf8string( path ) );
     }
     if ( files.size() == 1 )
-        return loadDCMFile( files[0], [&]( float proc )
     {
-        if ( cb )
-            cb( 0.4f + 0.6f * proc );
-        return true;
-    } );
+        ProgressCallback localCb{};
+        if ( newCb )
+            localCb = [&newCb]( float f ) { return newCb( 0.3f + 0.7f * f ); };
+        return loadDCMFile( files[0], localCb );
+    }
     sortDICOMFiles( files, maxNumThreads, data.voxelSize );
     data.dims.z = (int) files.size();
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
-        return {};
+        return tl::make_unexpected( "loadDCMFolder: error" );
     data.min = firstRes.min;
     data.max = firstRes.max;
     size_t dimXY = data.dims.x * data.dims.y;
 
-    if ( cb )
-        if ( !cb( 0.4f ) )
-            return {};
+    if ( newCb && !newCb( 0.4f ) )
+        return tl::make_unexpected( "Loading canceled" );
 
     // other slices
     auto mainThreadId = std::this_thread::get_id();
@@ -455,13 +454,13 @@ std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
             {
                 slicesRes[i] = loadSingleFile( files[i + 1], data, ( i + 1 ) * dimXY );
                 ++numLoadedSlices;
-                if ( cb && std::this_thread::get_id() == mainThreadId )
-                    cancelCalled = !cb( 0.4f + 0.3f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
+                if ( newCb && std::this_thread::get_id() == mainThreadId )
+                    cancelCalled = !newCb( 0.4f + 0.6f * ( float( numLoadedSlices ) / float( slicesRes.size() ) ) );
             }
         } );
     } );
     if ( cancelCalled )
-        return {};
+        return tl::make_unexpected( "Loading canceled" );
 
     for ( const auto& sliceRes : slicesRes )
     {
@@ -471,66 +470,90 @@ std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
         data.max = std::max( sliceRes.max, data.max );
     }
 
-    ObjectVoxels voxels;
-    voxels.construct( data, [&]( float proc )
-    {
-        if ( cb )
-            cb( 0.7f + 0.3f*proc );
-        return true;
-    } );
+    if ( cb )
+        newCb = [&cb] ( float f ) { return cb( 0.5f + 0.5f * f ); };
+    LoadDCMResult res;
+    res.vdbVolume = simpleVolumeToVdbVolume( data, newCb );
     if ( firstRes.seriesDescription.empty() )
-        voxels.setName( utf8string( files.front().stem() ) );
+        res.name = utf8string( files.front().stem() );
     else
-        voxels.setName( firstRes.seriesDescription );
-    return std::make_shared<ObjectVoxels>( std::move( voxels ) );
+        res.name = firstRes.seriesDescription;
+    return res;
 }
 
-std::vector<std::shared_ptr<ObjectVoxels>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, ProgressCallback cb )
 {
     MR_TIMER;
-    std::vector<std::shared_ptr<ObjectVoxels>> res;
+    std::vector<tl::expected<LoadDCMResult, std::string>> res;
+    bool anySuccessLoad{ false };
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
-        if ( auto obj = loadDCMFolder( dir, maxNumThreads, cb ) )
-            res.push_back( std::move( obj ) );
+        auto loadRes = loadDCMFolder( dir, maxNumThreads, cb );
+        if ( loadRes.has_value() )
+        {
+            res.push_back( *loadRes );
+            anySuccessLoad = true;
+        }
+        else
+        {
+            const std::string str = "loadDCMFolder: there is no dcm file in folder:";
+            if ( anySuccessLoad && loadRes.error().substr( 0, str.size() ) == str )
+                return true;
+            res.push_back( loadRes );
+            if ( loadRes.error() == "Loading cancelled" )
+                return false;
+        }
+        return true;
     };
-    tryLoadDir( path );
+    if ( !tryLoadDir( path ) )
+        return { tl::make_unexpected( "Loading cancelled" ) };
 
     const std::filesystem::recursive_directory_iterator dirEnd;
     std::error_code ec;
     for ( auto it = std::filesystem::recursive_directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
     {
-        if ( it->is_directory( ec ) )
-            tryLoadDir( *it );
+        if ( it->is_directory( ec ) && !tryLoadDir( *it ) )
+            break;
     }
     return res;
 }
 
-std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb )
+tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, ProgressCallback cb )
 {
     MR_TIMER;
+    ProgressCallback newCb{};
     if ( cb )
-        if ( !cb( 0.0f ) )
-            return {};
+        newCb = [&cb]( float f ) { return 0.5f * cb( f ); };
+    if ( newCb && !newCb( 0.0f ) )
+        return tl::make_unexpected( "Loading cancelled" );
+
     SimpleVolume simpleVolume;
     simpleVolume.voxelSize = Vector3f();
     simpleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
     if ( !fileRes.success )
-        return {};
-    if ( cb && !cb( 0.5f ) )
-            return {};
+        return tl::make_unexpected( "loadDCMFile: error load file: " + utf8string( path ) );
+    if ( newCb && !newCb( 0.5f ) )
+        return tl::make_unexpected( "Loading cancelled" );
     simpleVolume.max = fileRes.max;
-    simpleVolume.min = fileRes.min; ObjectVoxels voxels;
-
-    voxels.construct( simpleVolume, [&]( float proc )
-    {
-        if ( cb )
-            cb( 0.5f + 0.5f * proc );
-        return true;
-    } );
-    voxels.setName( utf8string( path.stem() ) );
-    return std::make_shared<ObjectVoxels>( std::move( voxels ) );
+    simpleVolume.min = fileRes.min;
+    
+    if ( cb )
+        newCb = [&cb] ( float f ) { return cb( 0.5f + 0.5f * f ); };
+    LoadDCMResult res;
+    res.vdbVolume = simpleVolumeToVdbVolume( simpleVolume, newCb );
+    res.name = utf8string( path.stem() );
+    return res;
+//     ProgressCallback localCb{};
+//     if ( newCb )
+//         localCb = [&cb]( float f ) {
+//             cb( 0.5f + 0.5f * f );
+//             return true;
+//         };
+//     ObjectVoxels voxels;
+//     voxels.construct( simpleVolume, localCb );
+//     voxels.setName(  );
+//     return std::make_shared<ObjectVoxels>( std::move( voxels ) );
 }
 
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,

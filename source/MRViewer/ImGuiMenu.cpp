@@ -30,6 +30,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRRibbonButtonDrawer.h"
+#include "MRRibbonConstants.h"
 #include "MRMesh/MRObjectLabel.h"
 
 #include "MRMesh/MRChangeXfAction.h"
@@ -875,10 +876,13 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
     bool isOpen{ false };
     if ( ( hasRealChildren || isObjSelectable ) )
     {
+        const float indent = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+
         makeDragDropTarget_( object, true, true, counter );
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + indent );
             if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
@@ -886,6 +890,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                     object.select( false );
             }
             ImGui::SameLine();
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - indent );
         }
         {
             // custom prefix
@@ -908,6 +913,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - indent );
         isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
@@ -1517,6 +1523,7 @@ float ImGuiMenu::drawTransform_()
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
             }
             ImGui::SameLine( 0, uniformScale_ ? -1 : 2 * scaling );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling() );
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
             ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
@@ -1651,6 +1658,7 @@ bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObjec
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling() );
     const bool res = RibbonButtonDrawer::GradientCheckboxMixed( label, &checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
     {

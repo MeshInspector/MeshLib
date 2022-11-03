@@ -326,4 +326,20 @@ VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) co
     return res;
 }
 
+FaceBitSet BooleanResultMapper::newFaces() const
+{
+    FaceBitSet res( std::max( maps[0].cut2newFaces.size(), maps[1].cut2newFaces.size() ) );
+    for ( const auto& map : maps )
+    {
+        for ( FaceId newF = 0_f; newF < map.cut2origin.size(); ++newF )
+        {
+            if ( newF == map.cut2origin[newF] )
+                continue;
+            if ( auto resF = map.cut2newFaces[newF] )
+                res.autoResizeSet( resF );
+        }
+    }
+    return res;
+}
+
 } //namespace MR

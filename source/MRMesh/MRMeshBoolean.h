@@ -55,7 +55,7 @@ struct BooleanResult
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
 
-///
+/// vertices and points representing mesh intersection result
 struct BooleanResultPoints
 {
     VertBitSet meshAVerts;

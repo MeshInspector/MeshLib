@@ -14,6 +14,33 @@
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
 
+namespace
+{
+
+using namespace MR;
+
+Vector3f findEdgeTriIntersectionPoint( const Mesh& meshA, FaceId triA, const Mesh& meshB, EdgeId edgeB,
+                                       const AffineXf3f* rigidB2A = nullptr,
+                                       const CoordinateConverters* converters = nullptr )
+{
+    Vector3f fv0, fv1, fv2;
+    meshA.getTriPoints( triA, fv0, fv1, fv2 );
+
+    Vector3f ev0, ev1;
+    ev0 = meshB.orgPnt( edgeB );
+    ev1 = meshB.destPnt( edgeB );
+    if ( rigidB2A )
+    {
+        ev0 = ( *rigidB2A )( ev0 );
+        ev1 = ( *rigidB2A )( ev1 );
+    }
+
+    return findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1,
+                                                   converters ? *converters : getVectorConverters( meshA, meshB, rigidB2A ) );
+}
+
+}
+
 namespace MR
 {
 
@@ -237,8 +264,13 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
 {
     MR_TIMER
 
-    const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
-    const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
+    const auto convertersB2A = getVectorConverters( meshA, meshB, rigidB2A );
+
+    const auto xfB2A = rigidB2A ? rigidB2A->inverse() : AffineXf3f{};
+    const auto* rigidA2B = rigidB2A ? &xfB2A : nullptr;
+    const auto convertersA2B = getVectorConverters( meshB, meshA, rigidB2A );
+
+    const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, convertersB2A.toInt, rigidB2A );
 
     std::vector<Vector3f> results;
     results.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
@@ -256,20 +288,8 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
         collFacesB.set( et.tri );
         collOuterVertsA.set( meshA.topology.dest( et.edge ) );
 
-        Vector3f ev0, ev1;
-        ev0 = meshA.orgPnt( et.edge );
-        ev1 = meshA.destPnt( et.edge );
-
-        Vector3f fv0, fv1, fv2;
-        meshB.getTriPoints( et.tri, fv0, fv1, fv2 );
-        if ( rigidB2A )
-        {
-            fv0 = ( *rigidB2A )( fv0 );
-            fv1 = ( *rigidB2A )( fv1 );
-            fv2 = ( *rigidB2A )( fv2 );
-        }
-
-        results.emplace_back( findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters ) );
+        const auto isect = findEdgeTriIntersectionPoint( meshB, et.tri, meshA, et.edge, rigidA2B, &convertersA2B );
+        results.emplace_back( rigidB2A ? ( *rigidB2A )( isect ) : isect );
     }
     for ( const auto& et : intersections.edgesBtrisA )
     {
@@ -278,19 +298,8 @@ std::vector<Vector3f> intersectionPoints( const Mesh& meshA, const Mesh& meshB, 
         collFacesA.set( et.tri );
         collOuterVertsB.set( meshB.topology.dest( et.edge ) );
 
-        Vector3f fv0, fv1, fv2;
-        meshA.getTriPoints( et.tri, fv0, fv1, fv2 );
-
-        Vector3f ev0, ev1;
-        ev0 = meshB.orgPnt( et.edge );
-        ev1 = meshB.destPnt( et.edge );
-        if ( rigidB2A )
-        {
-            ev0 = ( *rigidB2A )( ev0 );
-            ev1 = ( *rigidB2A )( ev1 );
-        }
-
-        results.emplace_back( findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters ) );
+        const auto isect = findEdgeTriIntersectionPoint( meshA, et.tri, meshB, et.edge, rigidB2A, &convertersB2A );
+        results.emplace_back( isect );
     }
 
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );

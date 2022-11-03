@@ -239,7 +239,6 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
     }
 
     // failed to reduce path and avoid passing via the vertex
-    outPath.push_back( MeshEdgePoint( mesh.topology.edgeWithOrg( v ), 0 ) );
     return false;
 }
 
@@ -548,75 +547,105 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         return 0;
     MR_TIMER;
 
-    std::vector<MeshEdgePoint> cacheOneSideUnfold;
+    // consider points on degenerate edges as points in vertices
+    for ( auto & e : path )
+    {
+        if ( !e.inVertex() && mesh.edgeLengthSq( e.e ) <= 0 )
+        {
+            e.a = 0;
+            assert( e.inVertex() );
+        }
+    }
+
     std::vector<MeshEdgePoint> newPath;
     newPath.reserve( path.size() );
-
-    //eliminate 3rd (and next) point per triangle
-    for ( int j = 0; j < path.size(); ++j )
-    {
-        MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
-        MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-        if ( fromSameTriangle( mesh.topology, prev, next ) )
-        {
-            // skipping path[j] can only decrease the path length
-            while ( !newPath.empty() )
-            {
-                MeshTriPoint prevprev = newPath.size() <= 1 ? start : MeshTriPoint{ newPath[ newPath.size() - 2 ] };
-                if ( fromSameTriangle( mesh.topology, prevprev, next ) )
-                    newPath.pop_back();
-                else
-                    break;
-            }
-            continue; 
-        }
-        // consider points on degenerate edges as points in vertices
-        if ( !path[j].inVertex() && mesh.edgeLengthSq( path[j].e ) <= 0 )
-        {
-            path[j].a = 0;
-            assert( path[j].inVertex() );
-        }
-        newPath.push_back( path[j] );
-    }
-    path.swap( newPath );
-    newPath.clear();
-
+    std::vector<MeshEdgePoint> cacheOneSideUnfold;
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
+    std::vector<MeshEdgePoint> rpoints; // to be added next in the new path in reverse order
     tbb::enumerable_thread_specific<TriangleStripUnfolder> stripPerThread( std::cref( mesh ) );
     for ( int i = 0; i < maxIter; ++i )
     {
         std::atomic<bool> pathTopologyChanged{false};
 
         // try to exit from vertices and remove repeating locations
-        for ( int j = 0; j < path.size(); ++j )
+        int j = 0;
+        // there are points to add in newPath
+        auto hasNext = [&]()
         {
-            auto v = path[j].inVertex( mesh.topology );
+            return !rpoints.empty() || j < path.size();
+        };
+        // returns next point to add in newPath, if extract=false then it will be returned again next time
+        auto takeNext = [&]( bool extract )
+        {
+            MeshEdgePoint res;
+            if ( !rpoints.empty() )
+            {
+                res = rpoints.back();
+                if ( extract )
+                    rpoints.pop_back();
+            }
+            else
+            {
+                res = path[j];
+                if ( extract )
+                    ++j;
+            }
+            return res;
+        };
+        // remove last point from newPath and mark topology as changed
+        auto newPathPopBack = [&]()
+        {
+            newPath.pop_back();
+            pathTopologyChanged.store( true, std::memory_order_relaxed );
+        };
+        // add all points in newPath, trying to walk around vertices
+        while ( hasNext() )
+        {
+            auto np = takeNext( true );
+            auto v = np.inVertex( mesh.topology );
             if ( !v )
             {
-                newPath.push_back( path[j] );
+                // remove last point of new path if the path does not break (and becomes only shorter)
+                while ( newPath.size() >= 2 )
+                {
+                    auto pp = newPath[ newPath.size() - 2 ];
+                    if ( pp.inVertex() || !mesh.topology.sharedFace( np.e, pp.e ) )
+                        break;
+                    newPathPopBack();
+                }
+                if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ np } ) )
+                    newPathPopBack();
+                newPath.push_back( np );
                 continue;
             }
             MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
             // skip next points if they are in the same vertex
-            while ( j + 1 < path.size() && path[j + 1].inVertex( mesh.topology ) == v )
-                ++j;
-            MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-            if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
-            {
-                //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
-                //assert( fromSameTriangle( mesh.topology, prev, next ) );
-                pathTopologyChanged.store( true, std::memory_order_relaxed );
-            }
+            while ( hasNext() && takeNext( false ).inVertex( mesh.topology ) == v )
+                np = takeNext( true );
+            MeshTriPoint next = hasNext() ? MeshTriPoint{ takeNext( false ) } : end;
+            newPath.push_back( np );
+            // put points of new path around vertex v in rpoints
+            if ( reducePathViaVertex( mesh, next, v, prev, rpoints, tmp, cacheOneSideUnfold ) )
+                newPathPopBack();
         }
+        // remove last point of new path if the path does not break (and becomes only shorter)
+        while ( newPath.size() >= 2 && fromSameTriangle( mesh.topology, MeshTriPoint{ newPath[ newPath.size() - 2 ] }, MeshTriPoint{ end } ) )
+            newPathPopBack();
+        if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+            newPathPopBack();
 
         path.swap( newPath );
         newPath.clear();
 
+        // stop processing if path topology has not changed and straightening was done at least once
+        if ( i > 0 && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+            return i + 1;
+
         // find all spans where points are not in a vertex
         vertSpans.clear();
         int spanStart = -1;
-        for ( int j = 0; j < path.size(); ++j )
+        for ( j = 0; j < path.size(); ++j )
         {
             if ( !path[j].inVertex() )
                 continue;
@@ -663,6 +692,7 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
             }
         } );
 
+        // stop processing if path topology has not changed
         if ( !pathTopologyChanged.load( std::memory_order_relaxed ) )
             return i + 1;
     }

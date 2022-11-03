@@ -53,6 +53,9 @@ struct MeshTriPoint
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
 [[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriPoint & b );
+/// returns true if points a and b are located insides or on a boundary of the same triangle;
+/// if true a.e and b.e are updated to have that triangle on the left
+[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint && a, MeshTriPoint && b ) { return fromSameTriangle( topology, a, b ); }
 
 /// returns MeshTriPoint representation of given vertex with given edge field; or null if it is not possible
 [[nodiscard]] MRMESH_API std::optional<MeshTriPoint> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v );

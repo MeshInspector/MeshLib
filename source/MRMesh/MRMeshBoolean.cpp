@@ -10,6 +10,61 @@
 #include "MRLog.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include "MRFillContour.h"
+#include "MRPrecisePredicates3.h"
+#include "MRRegionBoundary.h"
+
+namespace
+{
+
+using namespace MR;
+
+enum class EdgeTriComponent
+{
+    Edge,
+    Tri,
+};
+
+Vector3f findEdgeTriIntersectionPoint( const Mesh& edgeMesh, EdgeId edge, const Mesh& triMesh, FaceId tri,
+                                       const CoordinateConverters& converters,
+                                       const AffineXf3f* rigidB2A = nullptr,
+                                       EdgeTriComponent meshBComponent = EdgeTriComponent::Edge )
+{
+    Vector3f ev0, ev1;
+    ev0 = edgeMesh.orgPnt( edge );
+    ev1 = edgeMesh.destPnt( edge );
+
+    Vector3f fv0, fv1, fv2;
+    triMesh.getTriPoints( tri, fv0, fv1, fv2 );
+
+    if ( rigidB2A )
+    {
+        const auto& xf = *rigidB2A;
+        switch ( meshBComponent )
+        {
+        case EdgeTriComponent::Edge:
+            ev0 = xf( ev0 );
+            ev1 = xf( ev1 );
+            break;
+        case EdgeTriComponent::Tri:
+            fv0 = xf( fv0 );
+            fv1 = xf( fv1 );
+            fv2 = xf( fv2 );
+            break;
+        }
+    }
+
+    return findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters );
+}
+
+void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, VertBitSet& dests )
+{
+    faces.set( topology.left( e ) );
+    faces.set( topology.right( e ) );
+    dests.set( topology.dest( e ) );
+}
+
+}
 
 namespace MR
 {
@@ -227,6 +282,62 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         result.mesh = std::move( res.value() );
     else
         result.errorString = res.error();
+    return result;
+}
+
+BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+{
+    MR_TIMER
+
+    BooleanResultPoints result;
+    result.meshAVerts.resize( meshA.topology.lastValidVert() + 1 );
+    result.meshBVerts.resize( meshB.topology.lastValidVert() + 1 );
+
+    const auto converters = getVectorConverters( meshA, meshB, rigidB2A );
+    const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
+    result.intersectionPoints.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
+
+    FaceBitSet collFacesA, collFacesB;
+    VertBitSet collOuterVertsA, collOuterVertsB;
+    collFacesA.resize( meshA.topology.lastValidFace() + 1 );
+    collFacesB.resize( meshB.topology.lastValidFace() + 1 );
+    collOuterVertsA.resize( meshA.topology.lastValidVert() + 1 );
+    collOuterVertsB.resize( meshB.topology.lastValidVert() + 1 );
+    for ( const auto& et : intersections.edgesAtrisB )
+    {
+        gatherEdgeInfo( meshA.topology, et.edge, collFacesA, collOuterVertsA );
+        collFacesB.set( et.tri );
+
+        const auto isect = findEdgeTriIntersectionPoint( meshA, et.edge, meshB, et.tri, converters, rigidB2A, EdgeTriComponent::Tri );
+        result.intersectionPoints.emplace_back( isect );
+    }
+    for ( const auto& et : intersections.edgesBtrisA )
+    {
+        gatherEdgeInfo( meshB.topology, et.edge, collFacesB, collOuterVertsB );
+        collFacesA.set( et.tri );
+
+        const auto isect = findEdgeTriIntersectionPoint( meshB, et.edge, meshA, et.tri, converters, rigidB2A, EdgeTriComponent::Edge );
+        result.intersectionPoints.emplace_back( isect );
+    }
+
+    auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
+    auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
+    // filter out contours not lying outside the other mesh
+    std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+    {
+        return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+    } );
+    std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+    {
+        return !collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
+    } );
+
+    collFacesA = fillContourLeft( meshA.topology, collBordersA );
+    collFacesB = fillContourLeft( meshB.topology, collBordersB );
+
+    result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+    result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+
     return result;
 }
 

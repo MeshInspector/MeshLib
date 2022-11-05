@@ -10,6 +10,7 @@
 #include "MRMeshLoad.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshBuilder.h"
+#include "MREdgePaths.h"
 
 namespace MR
 {
@@ -303,7 +304,39 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePathApprox( const MeshPart & mp,
+tl::expected<SurfacePath, PathError> computeSurfacePathApprox( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
+{
+    MR_TIMER;
+    if ( atype == GeodesicPathApprox::FastMarching )
+        return computeFastMarchingPath( mesh, start, end );
+
+    SurfacePath res;
+    if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+    {
+        const VertId v1 = mesh.getClosestVertex( start );
+        const VertId v2 = mesh.getClosestVertex( end );
+        const auto edgePath = atype == GeodesicPathApprox::DijkstraBiDir
+            ? buildShortestPathBiDir( mesh, v1, v2 ) :
+              buildShortestPathAStar( mesh, v1, v2 );
+        if ( edgePath.empty() )
+        {
+            if ( v1 != v2 )
+                return tl::make_unexpected( PathError::StartEndNotConnected );
+            res = { MeshEdgePoint( mesh.topology.edgeWithOrg( v1 ), 0.0f ) };
+        }
+        else
+        {
+            res.reserve( edgePath.size() + 1 );
+            for ( EdgeId e : edgePath )
+                res.emplace_back( e, 0.0f );
+            res.emplace_back( edgePath.back(), 1.0f );
+        }
+    }
+    return res;
+}
+
+tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
@@ -355,7 +388,7 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const Me
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
-    auto res = computeSurfacePathApprox( mp, start, end, vertRegion, outSurfaceDistances );
+    auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
     if ( res.has_value() && !res.value().empty() )
         reducePath( mp.mesh, start, res.value(), end, numPostProcessIters );
     return res;

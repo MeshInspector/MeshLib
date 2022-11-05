@@ -24,9 +24,25 @@ MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePath( const MeshPa
     const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters = 5, const VertBitSet* vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 
-/// returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
+/// the algorithm to compute approximately geodesic path
+enum class GeodesicPathApprox : char
+{
+    /// compute edge-only path by building it from start and end simultaneously
+    DijkstraBiDir,
+    /// compute edge-only path using A*-search algorithm
+    DijkstraAStar,
+    /// use Fast Marching algorithm
+    FastMarching
+};
+
+/// computes by given method and returns intermediate points of approximately geodesic path from start to end,
+/// every next point is located in the same triangle with the previous point
+MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePathApprox( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype );
+
+/// computes by Fast Marching method and returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
-MRMESH_API tl::expected<SurfacePath, PathError> computeSurfacePathApprox( const MeshPart & mp, 
+MRMESH_API tl::expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 

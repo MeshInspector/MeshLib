@@ -304,7 +304,7 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<SurfacePath, PathError> computeSurfacePathApprox( const Mesh & mesh,
+tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
 {
     MR_TIMER;
@@ -384,13 +384,24 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( con
 }
 
 tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
-    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters,
+    const MeshTriPoint & start, const MeshTriPoint & end, int maxGeodesicIters,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
     auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
     if ( res.has_value() && !res.value().empty() )
-        reducePath( mp.mesh, start, res.value(), end, numPostProcessIters );
+        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+    return res;
+}
+
+tl::expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype,
+    int maxGeodesicIters )
+{
+    MR_TIMER;
+    auto res = computeGeodesicPathApprox( mesh, start, end, atype );
+    if ( res.has_value() && !res.value().empty() )
+        reducePath( mesh, start, res.value(), end, maxGeodesicIters );
     return res;
 }
 

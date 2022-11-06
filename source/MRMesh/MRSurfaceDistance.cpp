@@ -92,4 +92,18 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
     return b.takeDistanceMap();
 }
 
+Vector<float,VertId> computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist,
+                                              const VertBitSet* region )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.addStart( start );
+    while ( b.doneDistance() < maxDist )
+    {
+        b.growOne();
+    }
+    return b.takeDistanceMap();
+}
+
 } //namespace MR

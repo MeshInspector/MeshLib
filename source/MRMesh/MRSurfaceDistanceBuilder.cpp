@@ -74,27 +74,11 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
 
 void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
 {
-    if ( auto v = start.inVertex( mesh_.topology ) )
-    {
-        suggestVertDistance_( { v, 0 } );
-        return;
-    }
     const auto pt = mesh_.triPoint( start );
-    if ( auto e = start.onEdge( mesh_.topology ) )
+    mesh_.topology.forEachVertex( start, [&]( VertId v )
     {
-        auto o = mesh_.topology.org( e->e );
-        auto d = mesh_.topology.dest( e->e );
-        suggestVertDistance_( { o, ( mesh_.points[o] - pt ).length() } );
-        suggestVertDistance_( { d, ( mesh_.points[d] - pt ).length() } );
-        return;
-    }
-
-    VertId v[3];
-    mesh_.topology.getLeftTriVerts( start.e, v );
-    for ( int i = 0; i < 3; ++i )
-    {
-        suggestVertDistance_( { v[i], ( mesh_.points[v[i]] - pt ).length() } );    
-    }
+        suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() } );
+    } );
 }
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( const VertDistance & c )

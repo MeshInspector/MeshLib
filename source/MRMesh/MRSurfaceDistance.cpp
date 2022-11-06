@@ -64,24 +64,10 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
 
     VertId stopVerts[3];
     int numStopVerts = 0;
-    if ( auto v = end.inVertex( mesh.topology ) )
+    mesh.topology.forEachVertex( end, [&]( VertId v )
     {
-        stopVerts[0] = v;
-        numStopVerts = 1;
-    }
-    else if ( auto e = end.onEdge( mesh.topology ) )
-    {
-        auto o = mesh.topology.org( e->e );
-        auto d = mesh.topology.dest( e->e );
-        stopVerts[0] = o;
-        stopVerts[1] = d;
-        numStopVerts = 2;
-    }
-    else
-    {
-        mesh.topology.getLeftTriVerts( end.e, stopVerts );
-        numStopVerts = 3;
-    }
+        stopVerts[ numStopVerts++ ] = v;
+    } );
 
     if ( endReached )
         *endReached = true;

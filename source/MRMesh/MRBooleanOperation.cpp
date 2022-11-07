@@ -23,7 +23,7 @@ bool isCompInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigid
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
 
-    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX );
+    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
     return signDist && signDist < 0;
 }
 

@@ -10,23 +10,6 @@
 namespace MR
 {
 
-// almost the same as MR::isInside but without collision check (it should be cheked already in this context)
-bool isCompInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
-{
-    assert( b.mesh.topology.isClosed( b.region ) );
-
-    auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
-    if ( !aFace )
-        return true; //consider empty mesh always inside
-
-    Vector3f aPoint = a.mesh.triCenter( aFace );
-    if ( rigidB2A )
-        aPoint = rigidB2A->inverse()( aPoint );
-
-    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
-    return signDist && signDist < 0;
-}
-
 // Finds need mesh part based on components relative positions (inside/outside)
 // leftPart - left part of cut contours
 FaceBitSet preparePart( const Mesh& origin, const std::vector<FaceBitSet>& components,
@@ -43,7 +26,7 @@ FaceBitSet preparePart( const Mesh& origin, const std::vector<FaceBitSet>& compo
     {
         if ( !( comp & leftPart ).any() )
         {
-            if ( isCompInside( {origin,&comp}, otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
+            if ( isNonIntersectingInside( {origin,&comp}, otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
                 res |= comp;
         }
         else if ( needRightPart )

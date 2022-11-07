@@ -298,6 +298,22 @@ bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB
     return signDist && signDist < 0;
 }
 
+bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
+{
+    assert( b.mesh.topology.isClosed( b.region ) );
+
+    auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
+    if ( !aFace )
+        return true; //consider empty mesh always inside
+
+    Vector3f aPoint = a.mesh.triCenter( aFace );
+    if ( rigidB2A )
+        aPoint = rigidB2A->inverse()( aPoint );
+
+    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
+    return signDist && signDist < 0;
+}
+
 TEST( MRMesh, DegenerateTrianglesIntersect )
 {
     Vector3f a{-24.5683002f,-17.7052994f,-21.3701000f};

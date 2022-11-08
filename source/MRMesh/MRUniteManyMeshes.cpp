@@ -111,22 +111,18 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
         bool merged = false;
         for ( auto& group : nonIntersectingGroups )
         {
-            struct MergeInfo
-            {
-                // mesh intersects with current group
-                bool intersects{ false };
-                // mesh is included in one of group meshes
-                bool included{ false };
-                // mesh contains some group meshes
-                std::vector<int> includes;
-            };
-            tbb::enumerable_thread_specific<MergeInfo> mergeInfoPerThread;
+            // mesh intersects with current group
+            std::atomic_bool intersects{ false };
+            // mesh is included in one of group meshes
+            std::atomic_bool included{ false };
+            // mesh contains some group meshes
+            tbb::enumerable_thread_specific<BitSet> nestedPerThread( meshes.size() );
             tbb::parallel_for( tbb::blocked_range<int>( 0, int( group.size() ) ),
                                [&] ( const tbb::blocked_range<int>& range )
             {
-                auto& mergeInfo = mergeInfoPerThread.local();
-                if ( mergeInfo.intersects || mergeInfo.included )
+                if ( intersects.load( std::memory_order::acquire ) || included.load( std::memory_order::acquire ) )
                     return;
+                auto& nested = nestedPerThread.local();
 
                 for ( int i = range.begin(); i < range.end(); ++i )
                 {
@@ -138,42 +134,33 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
                     if ( !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty() )
                     {
-                        mergeInfo.intersects = true;
+                        intersects.store( true, std::memory_order::release );
                         break;
                     }
 
                     if ( isInside( *mesh, *groupMesh ) )
                     {
-                        mergeInfo.included = true;
+                        included.store( true, std::memory_order::release );
                         break;
                     }
                     else if ( isInside( *groupMesh, *mesh ) )
                     {
-                        mergeInfo.includes.emplace_back( group[i] );
+                        nested.set( group[i] );
                     }
                 }
             } );
-            MergeInfo mergeInfo;
-            for ( auto&& mipt : mergeInfoPerThread )
-            {
-                mergeInfo.intersects |= mipt.intersects;
-                mergeInfo.included |= mipt.included;
-                std::copy( mipt.includes.begin(), mipt.includes.end(), std::back_inserter( mergeInfo.includes ) );
-            }
-            if ( mergeInfo.intersects )
+            BitSet nestedMeshes( meshes.size() );
+            for ( auto&& nested : nestedPerThread )
+                nestedMeshes |= nested;
+            if ( intersects )
                 continue;
-            if ( mergeInfo.included )
+            if ( included )
             {
-                assert( mergeInfo.includes.empty() );
+                assert( nestedMeshes.count() == 0 );
                 break;
             }
-            if ( !mergeInfo.includes.empty() )
-            {
-                std::erase_if( group, [&] ( int groupIndex )
-                {
-                    return std::find( mergeInfo.includes.begin(), mergeInfo.includes.end(), groupIndex ) != mergeInfo.includes.end();
-                } );
-            }
+            if ( nestedMeshes.count() != 0 )
+                std::erase_if( group, [&] ( int groupIndex ) { return nestedMeshes.test( groupIndex ); } );
             group.emplace_back( m );
             break;
         }

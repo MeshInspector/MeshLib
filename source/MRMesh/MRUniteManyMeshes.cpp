@@ -138,12 +138,12 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                         break;
                     }
 
-                    if ( isInside( *mesh, *groupMesh ) )
+                    if ( isNonIntersectingInside( *mesh, *groupMesh ) )
                     {
                         included.store( true, std::memory_order::relaxed );
                         break;
                     }
-                    else if ( isInside( *groupMesh, *mesh ) )
+                    else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
                     {
                         nested.set( group[i] );
                     }

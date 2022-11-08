@@ -314,11 +314,28 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
     SurfacePath res;
     if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
     {
-        const VertId v1 = mesh.getClosestVertex( start );
-        const VertId v2 = mesh.getClosestVertex( end );
-        const auto edgePath = atype == GeodesicPathApprox::DijkstraBiDir
+        VertId v1 = mesh.getClosestVertex( start );
+        VertId v2 = mesh.getClosestVertex( end );
+        auto edgePath = atype == GeodesicPathApprox::DijkstraBiDir
             ? buildShortestPathBiDir( mesh, v1, v2 ) :
               buildShortestPathAStar( mesh, v1, v2 );
+
+        // remove last segment from the path if end-point and the origin of last segment belong to one triangle
+        while( !edgePath.empty()
+            && fromSameTriangle( mesh.topology, MeshTriPoint{ end }, MeshTriPoint{ MeshEdgePoint{ edgePath.back(), 0 } } ) )
+        {
+            v2 = mesh.topology.org( edgePath.back() );
+            edgePath.pop_back();
+        }
+
+        // remove first segment from the path if start-point and the destination of first segment belong to one triangle
+        while( !edgePath.empty()
+            && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ MeshEdgePoint{ edgePath.front(), 1 } } ) )
+        {
+            v1 = mesh.topology.dest( edgePath.front() );
+            edgePath.erase( edgePath.begin() );
+        }
+
         if ( edgePath.empty() )
         {
             if ( v1 != v2 )

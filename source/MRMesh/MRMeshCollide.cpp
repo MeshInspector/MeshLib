@@ -280,22 +280,11 @@ FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp )
 
 bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A )
 {
-    assert( b.mesh.topology.isClosed( b.region ) );
-
-    auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
-    if ( !aFace )
-        return true; //consider empty mesh always inside
-
     auto cols = findCollidingTriangles( a, b, rigidB2A );
     if ( !cols.empty() )
         return false; // meshes intersect
 
-    Vector3f aPoint = a.mesh.triCenter( aFace );
-    if ( rigidB2A )
-        aPoint = rigidB2A->inverse()( aPoint );
-
-    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
-    return signDist && signDist < 0;
+    return isNonIntersectingInside( a, b, rigidB2A );
 }
 
 bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )

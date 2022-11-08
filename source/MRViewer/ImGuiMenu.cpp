@@ -1068,14 +1068,13 @@ float ImGuiMenu::drawSelectionInformation_()
             totalSelectedPoints += pObj->numSelectedPoints();
         }
 
-        auto drawPrimitivesInfo = [&style] ( std::string title, size_t value, size_t selected = 0 )
+        auto drawPrimitivesInfo = [&style, this] ( std::string title, size_t value, size_t selected = 0 )
         {
             if ( value )
             {
                 ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
                 std::string valueStr;
                 std::string labelStr;
-                const float width = ( ImGui::CalcItemWidth() - style.ItemInnerSpacing.x * 2.f ) / 3.f;
                 if ( selected )
                 {
                     valueStr = std::to_string( selected ) + " / ";
@@ -1084,8 +1083,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 valueStr += std::to_string( value );
                 labelStr += title;
 
-                ImGui::SetNextItemWidth( width * 2 + style.ItemInnerSpacing.x );
-                ImGui::InputText( ( "##" + labelStr ).c_str(), valueStr, ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+                RibbonButtonDrawer::TextBoxReadOnlyCentered( valueStr.c_str(), getSceneInfoItemWidth_() );
                 ImGui::PopStyleColor();
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::Text( "%s", labelStr.c_str() );
@@ -1104,8 +1102,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 renameBuffer_ = pObj->name();
                 lastRenameObj_ = pObj;
             }
-
-            if ( !ImGui::InputText( "Object Name", renameBuffer_, ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
             {
                 if ( renameBuffer_ == pObj->name() )
                 {
@@ -1174,18 +1171,26 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         if ( selectionBbox_.valid() )
         {
-            auto drawVec3 = [&style] ( std::string title, Vector3f& value )
+            auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
             {
                 ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-                ImGui::InputFloat3( ( "##" + title ).c_str(), &value.x, "%.3f", ImGuiInputTextFlags_ReadOnly );
+
+                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format("{:.3f}", value.x).c_str(), width );
+                ImGui::SameLine();
+                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format( "{:.3f}", value.y ).c_str(), width );
+                ImGui::SameLine();
+                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format( "{:.3f}", value.z ).c_str(), width );
+                ImGui::SameLine();
                 ImGui::PopStyleColor();
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::Text( "%s", title.c_str() );
             };
-            drawVec3( "Box min", selectionBbox_.min );
-            drawVec3( "Box max", selectionBbox_.max );
+
+            const float fieldWidth = getSceneInfoItemWidth_();
+            drawVec3( "Box min", selectionBbox_.min, fieldWidth );
+            drawVec3( "Box max", selectionBbox_.max, fieldWidth );
             auto bsize = selectionBbox_.size();
-            drawVec3( "Box size", bsize );
+            drawVec3( "Box size", bsize, fieldWidth );
 
             if ( selectionWorldBox_.valid() )
             {
@@ -1193,7 +1198,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 const std::string bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z);
                 const std::string wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
                 if ( bsizeStr != wbsizeStr )
-                    drawVec3( "World box size", wbsize );
+                    drawVec3( "World box size", wbsize, ImGui::CalcTextSize( "World box size" ).x );
             }
         }
 
@@ -1504,7 +1509,7 @@ float ImGuiMenu::drawTransform_()
             bool inputDeactivated = false;
             bool inputChanged = false;
 
-            ImGui::PushItemWidth( ( ImGui::GetContentRegionAvail().x - 85 * scaling - style.ItemInnerSpacing.x * 2 ) / 3.f );
+            ImGui::PushItemWidth( getSceneInfoItemWidth_() );
             if ( uniformScale_ )
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
@@ -2488,6 +2493,11 @@ void ImGuiMenu::drawShortcutsWindow_()
             ImGui::Text( "%s - %s", ShortcutManager::getKeyFullString( key ).c_str(), name.c_str() );
     }
     ImGui::End();
+}
+
+float ImGuiMenu::getSceneInfoItemWidth_()
+{
+    return ( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * 2 ) / 3.f;
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

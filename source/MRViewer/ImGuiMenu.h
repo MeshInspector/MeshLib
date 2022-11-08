@@ -321,6 +321,8 @@ protected:
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
+
+    float getSceneInfoItemWidth_();
 };
 
 } // end namespace

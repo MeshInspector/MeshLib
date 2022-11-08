@@ -231,6 +231,22 @@ void PlotCustomHistogram( const char* str_id,
     }
 }
 
+bool InputTextCentered( const char* label, std::string& str, float width, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    const auto& style = ImGui::GetStyle();
+    const auto& viewer = MR::Viewer::instanceRef();
+    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
+    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const auto actualWidth = ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width;
+    
+    SetNextItemWidth( actualWidth );
+    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );    
+    bool res =  InputText( label, str, flags, callback, user_data );
+    PopStyleVar();
+    return res;
+}
+
 MRVIEWER_API void TransparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );

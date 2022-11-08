@@ -94,7 +94,10 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     if ( meshes.empty() )
         return Mesh{};
 
-    // find non-intersecting groups for simple merge instead of union
+    /*
+     * find non-intersecting groups for simple merge instead of union
+     */
+    // mesh groups represented with indices of input meshes
     std::vector<std::vector<int>> nonIntersectingGroups;
     std::vector<Box3d> meshBoxes( meshes.size() );
     for ( int m = 0; m < meshes.size(); ++m )
@@ -110,8 +113,11 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
         {
             struct MergeInfo
             {
+                // mesh intersects with current group
                 bool intersects{ false };
+                // mesh is included in one of group meshes
                 bool included{ false };
+                // mesh contains some group meshes
                 std::vector<int> includes;
             };
             tbb::enumerable_thread_specific<MergeInfo> mergeInfoPerThread;
@@ -178,7 +184,9 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
         }
     }
 
-    // merge non-intersecting groups
+    /*
+     * merge non-intersecting groups
+     */
     std::vector<Mesh> mergedMeshes( nonIntersectingGroups.size() );
     tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
                        [&] ( const tbb::blocked_range<int>& range )
@@ -203,7 +211,9 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                 shift[i] = dist( mt );
     }
 
-    // parallel reduce unite merged meshes
+    /*
+     * parallel reduce unite merged meshes
+     */
     BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )

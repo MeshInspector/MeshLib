@@ -196,14 +196,18 @@ bool PlaneWidget::onMouseMove_( int mouse_x, int mouse_y )
     
     auto viewer = Viewer::instance();
     auto& viewport = viewer->viewport();
-    auto viewportStart = viewer->screenToViewport( to3dim( startMousePos_ ), viewport.id );
+
+    const auto viewportOrigin = viewport.projectToViewportSpace( box_.center() );
+    const auto screenOrigin = viewer->viewportToScreen( viewportOrigin, viewport.id );
+
+    auto viewportStart = viewer->screenToViewport( { startMousePos_.x, startMousePos_.y, screenOrigin.z }, viewport.id );
     auto start = viewport.unprojectFromViewportSpace( viewportStart );
 
-    auto viewportStop = viewer->screenToViewport( to3dim( endMousePos_ ), viewport.id );
+    auto viewportStop = viewer->screenToViewport(  { endMousePos_.x, endMousePos_.y, screenOrigin.z } , viewport.id );
     auto stop = viewport.unprojectFromViewportSpace( viewportStop );
     const Polyline3 polyline( { { start, stop } } );
    
-    line_->setPolyline( std::make_shared<Polyline3>( polyline ) );    
+    line_->setPolyline( std::make_shared<Polyline3>( polyline ) );
 
     return true;
 }

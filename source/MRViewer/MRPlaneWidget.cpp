@@ -137,8 +137,11 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     startMousePos_ = endMousePos_ = Vector2f( float ( mousePos.x ), float ( mousePos.y ) );
     pressed_ = true;
 
-    line_->detachFromParent();
-    line_.reset();
+    if ( line_ )
+    {
+        line_->detachFromParent();
+        line_.reset();
+    }
 
     line_ = std::make_shared<ObjectLines>();
     line_->setName( "PlaneLine" );

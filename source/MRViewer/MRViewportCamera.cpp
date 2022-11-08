@@ -189,6 +189,12 @@ const float Viewport::getPixelSize() const
     return ( tan( params_.cameraViewAngle * MR::PI_F / 360.0f ) * params_.cameraDnear * 2.0f ) / ( height( viewportRect_ ) * params_.cameraZoom );
 }
 
+
+Vector3f Viewport::getRotationPivot() const
+{
+    return rotationPivot_;
+}
+
 void Viewport::setRotationPivot_( const Vector3f& point )
 {
     rotationPivot_ = point;

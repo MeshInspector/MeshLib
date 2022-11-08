@@ -120,7 +120,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
             tbb::parallel_for( tbb::blocked_range<int>( 0, int( group.size() ) ),
                                [&] ( const tbb::blocked_range<int>& range )
             {
-                if ( intersects.load( std::memory_order::acquire ) || included.load( std::memory_order::acquire ) )
+                if ( intersects.load( std::memory_order::relaxed ) || included.load( std::memory_order::relaxed ) )
                     return;
                 auto& nested = nestedPerThread.local();
 
@@ -134,13 +134,13 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
                     if ( !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty() )
                     {
-                        intersects.store( true, std::memory_order::release );
+                        intersects.store( true, std::memory_order::relaxed );
                         break;
                     }
 
                     if ( isInside( *mesh, *groupMesh ) )
                     {
-                        included.store( true, std::memory_order::release );
+                        included.store( true, std::memory_order::relaxed );
                         break;
                     }
                     else if ( isInside( *groupMesh, *mesh ) )

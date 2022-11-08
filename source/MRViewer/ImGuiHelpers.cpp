@@ -899,6 +899,9 @@ PaletteChanges Palette(
         }
     }
 
+    if ( fabs( speed ) < std::numeric_limits<float>::epsilon() )
+        speed = 0.01f;
+
     bool rangesChanged = false;
     if ( paletteRangeMode == 0 )
     {

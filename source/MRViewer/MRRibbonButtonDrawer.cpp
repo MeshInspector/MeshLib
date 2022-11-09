@@ -489,7 +489,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     return res;
 }
 
-void RibbonButtonDrawer::TextBoxReadOnlyCentered( const char* label, float width )
+void RibbonButtonDrawer::TextBoxReadOnlyCentered( const char* label, float width, const char* title, const char* tooltip )
 {
     ImGuiContext& g = *ImGui::GetCurrentContext();
     ImGuiWindow* window = g.CurrentWindow;
@@ -510,6 +510,16 @@ void RibbonButtonDrawer::TextBoxReadOnlyCentered( const char* label, float width
     ImGui::RenderText( textPos, label );
 
     ImGui::ItemSize( actualSize );
+
+    if ( title )
+    {
+        ImGui::SameLine();
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().FramePadding.y * scaling );
+        ImGui::Text( "%s", title );
+    }
+
+    if ( tooltip )
+        ImGui::SetTooltipIfHovered( tooltip, scaling );
 }
 
 RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType )

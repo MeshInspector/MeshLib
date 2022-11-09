@@ -65,8 +65,6 @@ public:
 
     /// draw custom collapsing header
     MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0 );
-    /// draw read-only text box with text aligned by center
-    MRVIEWER_API static void TextBoxReadOnlyCentered( const char* label, float width = 0.0f, const char* title = nullptr, const char* tooltip = nullptr );
 
     struct ButtonItemWidth
     {

@@ -61,6 +61,9 @@ fi
 if ! [ -d "./lib/" ]; then
  mkdir -p lib
 fi
+if ! [ -d "./include/" ]; then
+ mkdir -p include
+fi
 
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cd lib

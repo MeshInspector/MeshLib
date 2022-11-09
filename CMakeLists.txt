@@ -44,7 +44,8 @@ IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
-set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
 
@@ -120,9 +121,6 @@ ENDIF() # NOT MR_EMSCRIPTEN
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
  find_package(pybind11 REQUIRED)
-ELSE()
- set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
- include_directories(${PYBIND11_DIR})
 ENDIF()
 
 set(PROJECT_SOURCE_DIR ./source)
@@ -130,23 +128,14 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
-  link_directories(${THIRDPARTY_LIB_DIR}/lib)
-  link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
-  include_directories(${THIRDPARTY_LIB_DIR}/libzip)
+  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasm)
+  link_directories(${MESHLIB_THIRDPARTY_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
   ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_RUNTIME_METHODS=[ccall] -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1 -s USE_WEBGL2=1 -s USE_GLFW=3 -s USE_ZLIB=1 -s FULL_ES3=1 -s USE_LIBPNG=1")
 ENDIF() # MR_EMSCRIPTEN
-
-set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-include_directories(${IMGUI_DIR})
 
 enable_testing()
 
@@ -158,10 +147,6 @@ pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
 IF(NOT APPLE)
- IF(NOT ${MR_FEDORA})
-  set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
-  include_directories(${OPENVDB_DIR})
- ENDIF()
  IF(${MR_FEDORA} OR ${MR_UBUNTU22})
   add_compile_definitions(SPDLOG_FMT_EXTERNAL)
  ENDIF()

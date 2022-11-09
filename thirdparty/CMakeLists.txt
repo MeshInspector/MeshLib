@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project (MeshRUs_thirdparty CXX)
+project (MeshLib_thirdparty CXX)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -67,7 +67,6 @@ ELSE()
 ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
-add_subdirectory(./parallel-hashmap ./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
@@ -85,3 +84,24 @@ ELSE()
 ENDIF()
 
 add_subdirectory(./glad ./glad)
+
+# copy heeaders
+file(COPY parallel-hashmap/parallel_hashmap DESTINATION ../include)
+file(COPY pybind11/include/pybind11 DESTINATION ../include)
+file(COPY eigen/Eigen DESTINATION ../include)
+
+file(GLOB IMGUI_HEADERS "imgui/*.h")
+file(COPY ${IMGUI_HEADERS} DESTINATION ../include/imgui)
+
+IF(APPLE)
+    file(COPY expected/include/tl DESTINATION ../include)
+ELSEIF(MR_EMSCRIPTEN)
+    file(COPY wasmtbb/include DESTINATION ../include/wasm)
+    file(COPY spdlog/include DESTINATION ../include/wasm)
+    file(COPY jsoncpp/include DESTINATION ../include/wasm)
+    file(COPY googletest/googletest/include DESTINATION ../include/wasm)
+    file(COPY libzip/lib DESTINATION ../include/wasm)
+    file(COPY libzip DESTINATION ../include/wasm)
+ELSE() #linux
+    file(COPY openvdb/openvdb DESTINATION ../include)
+ENDIF()

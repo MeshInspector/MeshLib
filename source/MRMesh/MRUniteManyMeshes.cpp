@@ -160,6 +160,7 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
             if ( nestedMeshes.count() != 0 )
                 std::erase_if( group, [&] ( int groupIndex ) { return nestedMeshes.test( groupIndex ); } );
             group.emplace_back( m );
+            merged = true;
             break;
         }
         if ( !merged )

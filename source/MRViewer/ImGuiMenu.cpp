@@ -475,7 +475,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 
     for ( const auto& viewport : viewer->viewport_list )
     {
-        if ( !obj.isVisible( viewport.id ) )
+        if ( !obj.globalVisibilty( viewport.id ) )
             continue;
         AffineXf3f xf = obj.worldXf();
         bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );

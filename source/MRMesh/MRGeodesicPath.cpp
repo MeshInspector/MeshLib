@@ -10,9 +10,6 @@
 namespace MR
 {
 
-// given triangle 0bc in 3D and line segment 0d in 2D, and |0b|=|0d|;
-// finds e, such that triangle 0bc is equal to 0de;
-// returns (0,0) if |0b|=0
 template <typename T>
 Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector2<T>& d, bool toLeftFrom0d )
 {
@@ -28,6 +25,33 @@ Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector
 
 template MRMESH_API Vector2<float> unfoldOnPlane( const Vector3<float>& b, const Vector3<float>& c, const Vector2<float>& d, bool toLeftFrom0d );
 template MRMESH_API Vector2<double> unfoldOnPlane( const Vector3<double>& b, const Vector3<double>& c, const Vector2<double>& d, bool toLeftFrom0d );
+
+// finds position x on line x*b intersected by line containing segment [c,d]
+template<typename T>
+static T lineIsect( const Vector2<T> & b, const Vector2<T> & c, const Vector2<T> & d )
+{
+    const auto c1 = cross( d, c );
+    const auto c2 = cross( c - b, d - b );
+    const auto cc = c1 + c2;
+    if ( cc == 0 )
+        return 0; // degenerate case
+    return c1 / cc;
+}
+
+template<typename T>
+T shortestPathInQuadrangle( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d )
+{
+    auto vecB = b - a;
+    auto vecC = c - a;
+    auto vecD = d - a;
+    Vector2<T> unfoldB{ vecB.length(), 0 };
+    auto unfoldC = unfoldOnPlane( vecB, vecC, unfoldB, true );
+    auto unfoldD = unfoldOnPlane( vecC, vecD, unfoldC, true );
+    return std::clamp( lineIsect( unfoldC, unfoldB, unfoldD ), T(0), T(1) );
+}
+
+template MRMESH_API float shortestPathInQuadrangle( const Vector3<float>& a, const Vector3<float>& b, const Vector3<float>& c, const Vector3<float>& d );
+template MRMESH_API double shortestPathInQuadrangle( const Vector3<double>& a, const Vector3<double>& b, const Vector3<double>& c, const Vector3<double>& d );
 
 // finds an edge originated from v, which is located in the same triangle as p
 static EdgeId commonEdge( const MeshTopology & topology, VertId v, const MeshTriPoint & p )
@@ -78,17 +102,6 @@ static EdgeId firstCommonEdge( const MeshTopology & topology, VertId v, const Me
             break;
     }
     return e0;
-}
-
-// finds position x on line x*b intersected by line containing segment [c,d]
-static float lineIsect( const Vector2f & b, const Vector2f & c, const Vector2f & d )
-{
-    const auto c1 = cross( d, c );
-    const auto c2 = cross( c - b, d - b );
-    const auto cc = c1 + c2;
-    if ( cc == 0 )
-        return 0; // degenerate case
-    return c1 / cc;
 }
 
 bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 

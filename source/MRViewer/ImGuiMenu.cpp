@@ -1068,7 +1068,7 @@ float ImGuiMenu::drawSelectionInformation_()
             totalSelectedPoints += pObj->numSelectedPoints();
         }
 
-        auto drawPrimitivesInfo = [&style, this] ( std::string title, size_t value, size_t selected = 0 )
+        auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
         {
             if ( value )
             {
@@ -1083,10 +1083,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 valueStr += std::to_string( value );
                 labelStr += title;
 
-                RibbonButtonDrawer::TextBoxReadOnlyCentered( valueStr.c_str(), getSceneInfoItemWidth_() );
+                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_() );
                 ImGui::PopStyleColor();
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::Text( "%s", labelStr.c_str() );
             }
         };
 
@@ -1175,11 +1173,11 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
 
-                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format("{:.3f}", value.x).c_str(), width );
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
                 ImGui::SameLine();
-                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format( "{:.3f}", value.y ).c_str(), width );
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
                 ImGui::SameLine();
-                RibbonButtonDrawer::TextBoxReadOnlyCentered( fmt::format( "{:.3f}", value.z ).c_str(), width );
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
                 ImGui::SameLine();
                 ImGui::PopStyleColor();
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );

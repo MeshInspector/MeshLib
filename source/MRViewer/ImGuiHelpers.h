@@ -80,6 +80,9 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
 
 MRVIEWER_API bool InputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL );
 
+/// draw read-only text box with text aligned by center
+MRVIEWER_API void InputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f );
+
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void TransparentText( const char* fmt, ... );
 /// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5

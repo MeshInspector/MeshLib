@@ -1,4 +1,4 @@
-name: Check images
+name: Prepare images
 
 on:
   workflow_call:
@@ -29,6 +29,9 @@ jobs:
       need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
+      - name: Test
+        run: echo "test"
+
       - name: Checkout
         uses: actions/checkout@v3
         with:

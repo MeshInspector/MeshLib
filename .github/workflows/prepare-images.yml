@@ -1,4 +1,4 @@
-name: Prepare images
+name: Check images
 
 on:
   workflow_call:

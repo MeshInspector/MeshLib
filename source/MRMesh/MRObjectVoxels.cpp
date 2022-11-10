@@ -94,19 +94,18 @@ std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh
 
 }
 
-VdbVolume ObjectVoxels::updateVdbVolume( const VdbVolume& vdbVolume )
+VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
-    auto oldVdbVolume = vdbVolume_;
-    vdbVolume_ = vdbVolume;
+    auto oldVdbVolume = std::move( vdbVolume_ );
+    vdbVolume_ = std::move( vdbVolume );
     setDirtyFlags( DIRTY_ALL );
     return oldVdbVolume;
 }
 
-Histogram ObjectVoxels::updateHistogram( const Histogram& histogram )
+Histogram ObjectVoxels::updateHistogram( Histogram histogram )
 {
-    auto oldHistogram = histogram_;
-    histogram_ = histogram;
-    setDirtyFlags( DIRTY_ALL );
+    auto oldHistogram = std::move( histogram_ );
+    histogram_ = std::move( histogram );
     return oldHistogram;
 }
 

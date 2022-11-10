@@ -4,6 +4,7 @@
 #include "MRObjectVoxels.h"
 #include "MRMesh.h"
 #include "MRHeapBytes.h"
+#include "MRFloatGrid.h"
 #include <memory>
 
 namespace MR
@@ -150,6 +151,55 @@ public:
 private:
     std::shared_ptr<ObjectVoxels> objVoxels_;
     std::shared_ptr<Mesh> cloneSurface_;
+
+    std::string name_;
+};
+
+// Undo action for ObjectVoxels surface change (need for faster undo redo)
+class ChangeGridAction : public HistoryAction
+{
+public:
+    using Obj = ObjectVoxels;
+    /// use this constructor to remember object's surface before making any changes in it
+    ChangeGridAction( std::string name, const std::shared_ptr<ObjectVoxels>& obj ) :
+    objVoxels_{ obj },
+    name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            grid_ = obj->grid();
+            voxelSize_ = obj->voxelSize();
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objVoxels_ )
+            return;
+
+        objVoxels_->construct( grid_, voxelSize_ );
+    }
+
+    static void setObjectDirty( const std::shared_ptr<Obj>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_ALL );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + ( grid_ ? grid_->memUsage() : 0);
+    }
+
+private:
+    std::shared_ptr<ObjectVoxels> objVoxels_;
+    FloatGrid grid_;
+    Vector3f voxelSize_;
 
     std::string name_;
 };

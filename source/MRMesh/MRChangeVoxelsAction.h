@@ -162,13 +162,15 @@ public:
     using Obj = ObjectVoxels;
     /// use this constructor to remember object's grid before making any changes in it
     ChangeGridAction( std::string name, const std::shared_ptr<ObjectVoxels>& obj ) :
-    objVoxels_{ obj },
+    objVoxels_{ obj },    
+    changeIsoAction_( name, obj ),
+    changeSurfaceAction_(name, obj),
     name_{ std::move( name ) }
     {
         if ( obj )
         {
-            grid_ = obj->grid();
-            voxelSize_ = obj->voxelSize();
+            vdbVolume_ = obj->vdbVolume();
+            histogram_ = obj->histogram();
         }
     }
 
@@ -177,12 +179,15 @@ public:
         return name_;
     }
 
-    virtual void action( HistoryAction::Type ) override
+    virtual void action( HistoryAction::Type obj ) override
     {
         if ( !objVoxels_ )
             return;
 
-        objVoxels_->construct( grid_, voxelSize_ );
+        vdbVolume_ = objVoxels_->updateVdbVolume( vdbVolume_ );
+        histogram_ = objVoxels_->updateHistogram( histogram_ );
+        changeIsoAction_.action( obj );
+        changeSurfaceAction_.action( obj );
     }
 
     static void setObjectDirty( const std::shared_ptr<Obj>& obj )
@@ -193,13 +198,15 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + ( grid_ ? grid_->memUsage() : 0);
+        return name_.capacity() + histogram_.heapBytes() + vdbVolume_.data->memUsage() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes();
     }
 
 private:
     std::shared_ptr<ObjectVoxels> objVoxels_;
-    FloatGrid grid_;
-    Vector3f voxelSize_;
+    VdbVolume vdbVolume_;
+    Histogram histogram_;
+    ChangeIsoAction changeIsoAction_;
+    ChangeSurfaceAction changeSurfaceAction_;
 
     std::string name_;
 };

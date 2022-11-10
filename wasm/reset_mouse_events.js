@@ -38,11 +38,7 @@ var getTouchesDistance = function (touches, rect) {
     return Math.sqrt(xDist * xDist + yDist * yDist);
 }
 
-var updateCalculateMouseEvent = function () {
-    if (hasMouse())
-        return;
-
-
+var updateTouchEvents = function () {
     var getMouseButtonIdByEvent = function (event) {
         if (event.type === "touchend" || event.type === "touchcancel") {
             if (event.touches.length > 1)
@@ -146,4 +142,36 @@ var updateCalculateMouseEvent = function () {
         }
         return delta
     };
+}
+
+var updateMouseEvents = function () {
+    Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
+    Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
+
+    Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
+    Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
+
+    GLFW.onMouseButtonChanged = function (event, status) {
+        if (!GLFW.active) return;
+        Browser.calculateMouseEvent(event);
+        if (event.target != Module["canvas"]) return;
+        var eventButton = GLFW.DOMToGLFWMouseButton(event);
+        if (status == 1) {
+            GLFW.active.buttons |= 1 << eventButton;
+            try {
+                event.target.setPointerCapture(event.pointerId);
+            } catch (e) { }
+        } else {
+            GLFW.active.buttons &= ~(1 << eventButton);
+        }
+        if (!GLFW.active.mouseButtonFunc) return;
+        getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+    }
+}
+
+var updateCalculateMouseEvent = function () {
+    if (hasMouse())
+        updateMouseEvents();
+    else
+        updateTouchEvents();
 }

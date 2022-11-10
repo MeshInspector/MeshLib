@@ -64,7 +64,13 @@ public:
     /// Sets external surface mesh for this object
     /// and returns back previous mesh of this
     MRMESH_API std::shared_ptr<Mesh> updateIsoSurface( std::shared_ptr<Mesh> mesh );
+    /// Sets external vdb volume for this object
+    /// and returns back previous vdb volume of this
+    MRMESH_API VdbVolume updateVdbVolume( VdbVolume vdbVolume );
 
+    /// Sets external histogram for this object
+   /// and returns back previous histogram of this
+    MRMESH_API Histogram updateHistogram( Histogram histogram );
     /// Calculates and return new mesh
     /// returns empty pointer if no volume is present
     MRMESH_API std::shared_ptr<Mesh> recalculateIsoSurface( float iso, const ProgressCallback& cb = {} );

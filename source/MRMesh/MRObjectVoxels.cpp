@@ -94,6 +94,21 @@ std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh
 
 }
 
+VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
+{
+    auto oldVdbVolume = std::move( vdbVolume_ );
+    vdbVolume_ = std::move( vdbVolume );
+    setDirtyFlags( DIRTY_ALL );
+    return oldVdbVolume;
+}
+
+Histogram ObjectVoxels::updateHistogram( Histogram histogram )
+{
+    auto oldHistogram = std::move( histogram_ );
+    histogram_ = std::move( histogram );
+    return oldHistogram;
+}
+
 std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, const ProgressCallback& cb /*= {} */ )
 {
     if ( !vdbVolume_.data )

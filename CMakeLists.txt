@@ -89,8 +89,6 @@ ELSE()
  IF( ${distro} STREQUAL "Fedora Linux")
   SET(MR_FEDORA TRUE)
  ENDIF() # Fedora
-
- include_directories(/usr/include)
 ENDIF() # APPLE
 
 IF(${MR_UBUNTU22} OR APPLE)
@@ -128,7 +126,6 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasm)
   link_directories(${MESHLIB_THIRDPARTY_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0")

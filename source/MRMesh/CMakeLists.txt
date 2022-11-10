@@ -47,8 +47,6 @@ IF(NOT MR_EMSCRIPTEN)
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr)
 
 		IF(NOT APPLE)
-			set(CPR_DIR ${MESHLIB_THIRDPARTY_DIR}/cpr)
-			target_include_directories(${PROJECT_NAME} PUBLIC ${CPR_DIR}/include)
 			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/cpr/cpr_generated_includes)
 
 			set(CURL_INCLUDES ${THIRDPARTY_LIB_DIR}/_deps/curl-src/include/)

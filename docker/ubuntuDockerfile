@@ -29,13 +29,15 @@ RUN ./scripts/build_thirdparty.sh
 FROM ubuntu:20.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+RUN mkdir /usr/local/include/meshlib-thirdparty-include/
+
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+COPY --from=build /home/MeshLib/include /usr/local/include/meshlib-thirdparty-include/include
+
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
-COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
-
-COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -62,7 +64,3 @@ RUN curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.1
  && ./configure \
  && make && make check && sudo make install \
  && cd .. && rm patchelf-0.15.0.tar.gz && rm -rf patchelf-0.15.0
-
-RUN ./scripts/install_thirdparty.sh && \
-    echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
-    sudo ldconfig

@@ -4,7 +4,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MeshLib_thirdparty CXX)
 
-# all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -85,23 +84,28 @@ ENDIF()
 
 add_subdirectory(./glad ./glad)
 
-# copy heeaders
-file(COPY parallel-hashmap/parallel_hashmap DESTINATION ../include)
-file(COPY pybind11/include/pybind11 DESTINATION ../include)
-file(COPY eigen/Eigen DESTINATION ../include)
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../include")
 
-file(GLOB IMGUI_HEADERS "imgui/*.h")
-file(COPY ${IMGUI_HEADERS} DESTINATION ../include/imgui)
+# copy heeaders
+file(COPY parallel-hashmap/parallel_hashmap DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+file(COPY pybind11/include/pybind11 DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+file(COPY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+file(COPY imgui DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
 IF(APPLE)
-    file(COPY expected/include/tl DESTINATION ../include)
+    file(COPY expected/include/tl DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSEIF(MR_EMSCRIPTEN)
-    file(COPY wasmtbb/include DESTINATION ../include/wasm)
-    file(COPY spdlog/include DESTINATION ../include/wasm)
-    file(COPY jsoncpp/include DESTINATION ../include/wasm)
-    file(COPY googletest/googletest/include DESTINATION ../include/wasm)
-    file(COPY libzip/lib DESTINATION ../include/wasm)
-    file(COPY libzip DESTINATION ../include/wasm)
+    file(COPY wasmtbb/include DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY spdlog/include DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY jsoncpp/include DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY googletest/googletest/include DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY libzip/lib DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY libzip DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSE() #linux
-    file(COPY openvdb/openvdb DESTINATION ../include)
+    file(COPY cpr/include/cpr DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY openvdb/openvdb/openvdb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(COPY OpenCTM DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+    file(GLOB CLIP_HEADERS "clip/*.h")
+    file(COPY ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 ENDIF()

@@ -37,6 +37,7 @@ jobs:
           MESHRUS_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
         run: |
           ln -s /usr/local/lib/${{ env.MESHRUS_THIRDPATY_DIR }}/lib ./lib
+          ln -s /usr/local/include/${{ env.MESHRUS_THIRDPATY_DIR }}/include ./include
           cp -rv /usr/local/lib/${{ env.MESHRUS_THIRDPATY_DIR }}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release ./thirdparty/wasmtbb/build
 
       - name: Build

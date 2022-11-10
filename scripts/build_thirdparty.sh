@@ -81,4 +81,10 @@ else
   cd ..
 fi
 
+if [[ $OSTYPE != 'darwin'* ]]; then
+  cp -r ./lib_/openvdb/openvdb/openvdb/* ./include/
+fi
+cp -r ./lib/glad/include/* ./include/
+cp -r ./lib/cpr/cpr_generated_includes/* ./include/
+
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

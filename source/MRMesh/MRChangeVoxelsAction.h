@@ -184,8 +184,8 @@ public:
         if ( !objVoxels_ )
             return;
 
-        vdbVolume_ = objVoxels_->updateVdbVolume( vdbVolume_ );
-        histogram_ = objVoxels_->updateHistogram( histogram_ );
+        vdbVolume_ = objVoxels_->updateVdbVolume( std::move( vdbVolume_ ) );
+        histogram_ = objVoxels_->updateHistogram( std::move( histogram_ ) );
         changeIsoAction_.action( obj );
         changeSurfaceAction_.action( obj );
     }
@@ -198,7 +198,10 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + histogram_.heapBytes() + vdbVolume_.data->memUsage() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes();
+        size_t res = name_.capacity() + histogram_.heapBytes() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes();
+        if ( vdbVolume_.data )
+            res += vdbVolume_.data->memUsage();
+        return res;
     }
 
 private:

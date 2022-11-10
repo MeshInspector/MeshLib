@@ -63,12 +63,7 @@ cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
 #copy headers
-cd "${MR_LIB_DIR}"
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
-cd thirdparty/eigen
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
+cp -r include "${MR_INSTALL_INCLUDE_DIR}"
 cd source
 find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_INCLUDE_DIR}" \;
 cd -

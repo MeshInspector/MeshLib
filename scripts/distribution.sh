@@ -30,7 +30,6 @@ MR_INSTALL_BIN_DIR="/usr/local/bin/"
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib/"
 MR_INSTALL_PYLIB_DIR="/usr/local/lib/MeshLib/meshlib/"
 MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib/"
-MR_INSTALL_THIRDPARTY_INCLUDE_DIR="/usr/local/include/"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib/"
 PYTHON_DIR="/usr/lib/python3"
 
@@ -40,7 +39,6 @@ mkdir -p "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 mkdir -p "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
-mkdir -p "distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}"
 
 if [ ${1} ]; then
   echo ${1:1} > build/Release/bin/mr.version
@@ -111,14 +109,9 @@ cp build/Release/bin/mr.version "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
 #copy headers
-cd "${MR_LIB_DIR}"
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
-cd thirdparty/eigen
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
+cp -r include "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
 cd source
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
+find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
 cd -
 printf "Headers copy done\n"
 

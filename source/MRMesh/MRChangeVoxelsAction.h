@@ -155,12 +155,12 @@ private:
     std::string name_;
 };
 
-// Undo action for ObjectVoxels surface change (need for faster undo redo)
+// Undo action for ObjectVoxels grid change (need for faster undo redo)
 class ChangeGridAction : public HistoryAction
 {
 public:
     using Obj = ObjectVoxels;
-    /// use this constructor to remember object's surface before making any changes in it
+    /// use this constructor to remember object's grid before making any changes in it
     ChangeGridAction( std::string name, const std::shared_ptr<ObjectVoxels>& obj ) :
     objVoxels_{ obj },
     name_{ std::move( name ) }

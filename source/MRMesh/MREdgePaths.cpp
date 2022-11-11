@@ -361,17 +361,54 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
     const MeshTopology & topology, const EdgeMetric & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
-    MR_TIMER
+    TerminalVertex s{ start, 0 };
+    TerminalVertex f{ finish, 0 };
+    return buildSmallestMetricPathBiDir( topology, metric, &s, 1, &f, 1, nullptr, nullptr, maxPathMetric );
+}
 
-    if ( start == finish )
-        return {};
-    EdgePathsBuilder bs( topology, metric );
-    bs.addStart( topology.edgeWithOrg( start ), 0 );
-    EdgePathsBuilder bf( topology, metric );
-    bf.addStart( topology.edgeWithOrg( finish ), 0 );
+EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
+    const TerminalVertex * starts, int numStarts,
+    const TerminalVertex * finishes, int numFinishes,
+    VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
+{
+    MR_TIMER
+    assert( numStarts > 0 && numFinishes > 0 );
 
     VertId join;
     float joinPathMetric = maxPathMetric;
+
+    for ( int si = 0; si < numStarts; ++si )
+    {
+        for ( int fi = 0; fi < numFinishes; ++fi )
+        {
+            if ( starts[si].v != finishes[fi].v )
+                continue;
+            auto m = starts[si].metric + finishes[fi].metric;
+            if ( m < joinPathMetric )
+            {
+                join = starts[si].v;
+                joinPathMetric = m;
+            }
+        }
+    }
+    std::vector<EdgeId> res;
+    if ( join )
+    {
+        if ( outPathStart )
+            *outPathStart = join;
+        if ( outPathFinish )
+            *outPathFinish = join;
+        return res;
+    }
+
+    EdgePathsBuilder bs( topology, metric );
+    for ( int si = 0; si < numStarts; ++si )
+        bs.addStart( topology.edgeWithOrg( starts[si].v ), starts[si].metric );
+
+    EdgePathsBuilder bf( topology, metric );
+    for ( int fi = 0; fi < numFinishes; ++fi )
+        bf.addStart( topology.edgeWithOrg( finishes[fi].v ), finishes[fi].metric );
+
     for (;;)
     {
         auto ds = bs.doneDistance();
@@ -417,7 +454,6 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
         }
     }
 
-    std::vector<EdgeId> res;
     if ( join )
     {
         res = bs.getPathBack( join );
@@ -425,20 +461,51 @@ std::vector<EdgeId> buildSmallestMetricPathBiDir(
         auto tail = bf.getPathBack( join );
         res.insert( res.end(), tail.begin(), tail.end() );
         assert( isEdgePath( topology, res ) );
-        assert( topology.org( res.front() ) == start );
-        assert( topology.dest( res.back() ) == finish );
+        assert( numStarts > 1 || topology.org( res.front() ) == starts[0].v );
+        assert( numFinishes > 1 || topology.dest( res.back() ) == finishes[0].v );
+
+        if ( outPathStart )
+            *outPathStart = topology.org( res.front() );
+        if ( outPathFinish )
+            *outPathFinish = topology.dest( res.back() );
     }
     return res;
 }
 
-std::vector<EdgeId> buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
+EdgePath buildShortestPath( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
 {
     return buildSmallestMetricPath( mesh.topology, edgeLengthMetric( mesh ), start, finish, maxPathLen );
 }
 
-std::vector<EdgeId> buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
+EdgePath buildShortestPathBiDir( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
 {
     return buildSmallestMetricPathBiDir( mesh.topology, edgeLengthMetric( mesh ), start, finish, maxPathLen );
+}
+
+EdgePath buildShortestPathBiDir( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & finish,
+    VertId * outPathStart, VertId * outPathFinish, float maxPathLen )
+{
+    const auto startPt = mesh.triPoint( start );
+    TerminalVertex starts[3];
+    int numStarts = 0;
+    mesh.topology.forEachVertex( start, [&]( VertId v )
+    {
+        starts[ numStarts++ ] = { v, ( mesh.points[v] - startPt ).length() };
+    } );
+
+    const auto finishPt = mesh.triPoint( finish );
+    TerminalVertex finishes[3];
+    int numFinishes = 0;
+    mesh.topology.forEachVertex( finish, [&]( VertId v )
+    {
+        finishes[ numFinishes++ ] = { v, ( mesh.points[v] - finishPt ).length() };
+    } );
+
+    return buildSmallestMetricPathBiDir( mesh.topology, edgeLengthMetric( mesh ),
+        starts, numStarts,
+        finishes, numFinishes,
+        outPathStart, outPathFinish, maxPathLen );
 }
 
 EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen /*= FLT_MAX */ )

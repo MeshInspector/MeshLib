@@ -412,13 +412,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     m.def( "buildShortestPath", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) )& MR::buildShortestPath,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
         "builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned" );
-    m.def( "buildShortestPathBiDir", &MR::buildShortestPathBiDir,
+    m.def( "buildShortestPathBiDir", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) )& MR::buildShortestPathBiDir,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
         "builds shortest path in euclidean metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) )& MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
-    m.def( "buildSmallestMetricPathBiDir", &MR::buildSmallestMetricPathBiDir,
+    m.def( "buildSmallestMetricPathBiDir", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) )& MR::buildSmallestMetricPathBiDir,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
     m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) )& MR::buildSmallestMetricPath,

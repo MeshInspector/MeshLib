@@ -314,11 +314,20 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
     SurfacePath res;
     if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
     {
-        VertId v1 = mesh.getClosestVertex( start );
-        VertId v2 = mesh.getClosestVertex( end );
-        auto edgePath = atype == GeodesicPathApprox::DijkstraBiDir
-            ? buildShortestPathBiDir( mesh, v1, v2 ) :
-              buildShortestPathAStar( mesh, v1, v2 );
+        VertId v1, v2;
+        EdgePath edgePath;
+        if ( atype == GeodesicPathApprox::DijkstraBiDir )
+        {
+            edgePath = buildShortestPathBiDir( mesh, start, end, &v1, &v2 );
+            if ( !v1 || !v2 )
+                return tl::make_unexpected( PathError::StartEndNotConnected );
+        }
+        else
+        {
+            v1 = mesh.getClosestVertex( start );
+            v2 = mesh.getClosestVertex( end );
+            edgePath = buildShortestPathAStar( mesh, v1, v2 );
+        }
 
         // remove last segment from the path if end-point and the origin of last segment belong to one triangle
         while( !edgePath.empty()

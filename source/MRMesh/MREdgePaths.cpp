@@ -549,36 +549,42 @@ EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish,
 }
 
 EdgePath buildShortestPathAStar( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & finish,
-    VertId * /*outPathStart*/, VertId * /*outPathFinish*/, float /*maxPathLen*/ )
+    VertId * outPathStart, VertId * outPathFinish, float maxPathLen )
 {
     MR_TIMER
     EdgePathsAStarBuilder b( mesh, start, finish );
 
-    const auto startPt = mesh.triPoint( start );
-    TerminalVertex starts[3];
+    VertId starts[3];
     int numStarts = 0;
     mesh.topology.forEachVertex( start, [&]( VertId v )
     {
-        starts[ numStarts++ ] = { v, ( mesh.points[v] - startPt ).length() };
+        starts[ numStarts++ ] = v;
     } );
 
-/*    for (;;)
+    for (;;)
     {
         auto vinfo = b.growOneEdge();
-        if ( !vinfo )
+        if ( !vinfo.v )
         {
             // unable to find the path
             return {};
         }
-        if ( vinfo->metric > maxPathLen )
+        if ( vinfo.metric > maxPathLen )
         {
             // unable to find the path within given metric limitation
             return {};
         }
-        if ( mesh.topology.org( vinfo->back ) == start )
-            break;
-    }*/
-    return b.getPathBack( starts[0].v ); //!!!
+        auto it = std::find( starts, starts + numStarts, vinfo.v );
+        if ( it != starts + numStarts )
+        {
+            if ( outPathStart )
+                *outPathStart = vinfo.v;
+            EdgePath res = b.getPathBack( vinfo.v );
+            if ( outPathFinish )
+                *outPathFinish = res.empty() ? vinfo.v : mesh.topology.dest( res.back() );
+            return res;
+        }
+    }
 }
 
 std::vector<VertId> getVertexOrdering( const MeshTopology & topology, VertBitSet region )

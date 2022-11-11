@@ -2498,6 +2498,7 @@ void ImGuiMenu::drawShortcutsWindow_()
 
 float ImGuiMenu::getSceneInfoItemWidth_()
 {
+    /// 110 is the widest label's size
     return ( ImGui::GetContentRegionAvail().x - 110 * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * 2 ) / 3.f;
 }
 

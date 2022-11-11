@@ -493,17 +493,15 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( changedSize )
     {
         if ( collapsed && *collapsed )
-        {
             SetNextWindowSize( { changedSize->x, height }, ImGuiCond_Always );
-        }
         else
-        {
             SetNextWindowSize( *changedSize, ImGuiCond_Always );
-        }
-        
     }
     else
-        SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Always );
+    {
+        SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Appearing );
+        SetNextWindowSizeConstraints( ImVec2( width, -1.0f ), ImVec2( width, -1.0f ) );
+    }
 
     auto context = ImGui::GetCurrentContext();
     if ( collapsed && *collapsed )
@@ -511,6 +509,17 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
         ImGui::SetNextWindowSizeConstraints( { context->NextWindowData.SizeVal.x, titleBarHeight }, { context->NextWindowData.SizeVal.x, titleBarHeight } );
         flags |= ImGuiWindowFlags_NoResize;
+    }
+
+    // needed for manual scrollbar 
+    bool hasPrevData = false;
+    float prevCursorMaxPos = FLT_MAX;
+    float prevIdealMaxPos = FLT_MAX;
+    if ( window )
+    {
+        hasPrevData = true;
+        prevCursorMaxPos = window->DC.CursorMaxPos.y;
+        prevIdealMaxPos = window->DC.IdealMaxPos.y;
     }
 
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
@@ -523,6 +532,37 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     }
 
     window = context->CurrentWindow;
+    // Manually draw Y scroll bar if window cannot be big enough
+    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
+    {
+        // Set scrollbar size
+        window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
+        // Prevent "tremor" on holding scrollbar near bottom 
+        // (if skip this code window->ContentSize change beacuse of outside scrollbar)
+        auto backUpContSizeY = window->ContentSize.y;
+        if ( hasPrevData )
+        {
+            window->ContentSize.y = ( ( -window->ContentSizeIdeal.y + window->ContentSize.y ) +
+                prevCursorMaxPos - window->DC.CursorStartPos.y ) - ( titleBarHeight );
+        }
+        // Determine scrollbar position
+        window->InnerRect.Min.y += ( titleBarHeight - borderSize );
+        window->InnerRect.Max.y -= borderSize;
+        window->Size.x -= borderSize;
+        // Needed for ImGui::GetAvailableContent functuions
+        window->WorkRect.Min.y += ( titleBarHeight - borderSize );
+        window->WorkRect.Max.x -= window->ScrollbarSizes.x;
+        window->ContentRegionRect.Min.y += ( titleBarHeight + borderSize );
+        window->ContentRegionRect.Max.x -= window->ScrollbarSizes.x;
+        // Enable scroll by mouse if manual scrollbar
+        window->Flags &= ~ImGuiWindowFlags_NoScrollWithMouse;
+        // Draw scrollbar
+        window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+        Scrollbar( ImGuiAxis_Y );
+        window->DrawList->PopClipRect();
+        // Reset old values
+        window->ContentSize.y = backUpContSizeY;
+    }
 
     if ( changedSize && collapsed && !*collapsed )
     {
@@ -580,13 +620,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( iconsFont )
         ImGui::PopFont();
 
+    auto cursorScreenPos = ImGui::GetCursorScreenPos();
     if ( titleFont )
     {
         ImGui::PushFont( titleFont );
-        ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + scaling } );
+        //ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
     }
     else
-        ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
+        //ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
 
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
@@ -648,10 +691,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     }
     ImGui::PopStyleVar();
 
-    ImGui::TableNextColumn();    
-    window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+    ImGui::TableNextColumn();
+    window->ClipRect = window->InnerRect;
+    window->DrawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
 
-   return true;
+    return true;
 }
 
 void EndCustomStatePlugin()

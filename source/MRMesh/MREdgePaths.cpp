@@ -376,7 +376,6 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
 
     VertId join;
     float joinPathMetric = maxPathMetric;
-
     for ( int si = 0; si < numStarts; ++si )
     {
         for ( int fi = 0; fi < numFinishes; ++fi )
@@ -391,16 +390,6 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
             }
         }
     }
-    std::vector<EdgeId> res;
-    if ( join )
-    {
-        if ( outPathStart )
-            *outPathStart = join;
-        if ( outPathFinish )
-            *outPathFinish = join;
-        return res;
-    }
-
     EdgePathsBuilder bs( topology, metric );
     for ( int si = 0; si < numStarts; ++si )
         bs.addStart( topology.edgeWithOrg( starts[si].v ), starts[si].metric );
@@ -454,6 +443,7 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         }
     }
 
+    std::vector<EdgeId> res;
     if ( join )
     {
         res = bs.getPathBack( join );
@@ -461,13 +451,24 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         auto tail = bf.getPathBack( join );
         res.insert( res.end(), tail.begin(), tail.end() );
         assert( isEdgePath( topology, res ) );
-        assert( numStarts > 1 || topology.org( res.front() ) == starts[0].v );
-        assert( numFinishes > 1 || topology.dest( res.back() ) == finishes[0].v );
 
-        if ( outPathStart )
-            *outPathStart = topology.org( res.front() );
-        if ( outPathFinish )
-            *outPathFinish = topology.dest( res.back() );
+        if ( res.empty() )
+        {
+            if ( outPathStart )
+                *outPathStart = join;
+            if ( outPathFinish )
+                *outPathFinish = join;
+        }
+        else
+        {
+            assert( numStarts > 1 || topology.org( res.front() ) == starts[0].v );
+            assert( numFinishes > 1 || topology.dest( res.back() ) == finishes[0].v );
+
+            if ( outPathStart )
+                *outPathStart = topology.org( res.front() );
+            if ( outPathFinish )
+                *outPathFinish = topology.dest( res.back() );
+        }
     }
     return res;
 }
@@ -533,12 +534,42 @@ public:
         metricToPenalty_.target = mesh.points[target];
         addStart( mesh.topology.edgeWithOrg( start ), 0 );
     }
+    EdgePathsAStarBuilder( const Mesh & mesh, const MeshTriPoint & target, const MeshTriPoint & start ) :
+        EdgePathsBuilderT( mesh.topology, edgeLengthMetric( mesh ) )
+    {
+        metricToPenalty_.points = &mesh.points;
+        metricToPenalty_.target = mesh.triPoint( target );
+        const auto startPt = mesh.triPoint( start );
+        mesh.topology.forEachVertex( start, [&]( VertId v )
+        {
+            addStart( mesh.topology.edgeWithOrg( v ), ( mesh.points[v] - startPt ).length() );
+        } );
+    }
 };
 
-std::vector<EdgeId> buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
+EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen )
 {
+    return buildShortestPathAStar( mesh,
+        MeshTriPoint( mesh.topology, start ),
+        MeshTriPoint( mesh.topology, finish ),
+        nullptr, nullptr, maxPathLen );
+}
+
+EdgePath buildShortestPathAStar( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & finish,
+    VertId * /*outPathStart*/, VertId * /*outPathFinish*/, float /*maxPathLen*/ )
+{
+    MR_TIMER
     EdgePathsAStarBuilder b( mesh, start, finish );
-    for (;;)
+
+    const auto startPt = mesh.triPoint( start );
+    TerminalVertex starts[3];
+    int numStarts = 0;
+    mesh.topology.forEachVertex( start, [&]( VertId v )
+    {
+        starts[ numStarts++ ] = { v, ( mesh.points[v] - startPt ).length() };
+    } );
+
+/*    for (;;)
     {
         auto vinfo = b.growOneEdge();
         if ( !vinfo.back.valid() )
@@ -553,8 +584,8 @@ std::vector<EdgeId> buildShortestPathAStar( const Mesh & mesh, VertId start, Ver
         }
         if ( mesh.topology.org( vinfo.back ) == start )
             break;
-    }
-    return b.getPathBack( start );
+    }*/
+    return b.getPathBack( starts[0].v ); //!!!
 }
 
 std::vector<VertId> getVertexOrdering( const MeshTopology & topology, VertBitSet region )

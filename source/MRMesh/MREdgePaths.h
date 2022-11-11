@@ -82,6 +82,15 @@ struct TerminalVertex
 /// which is faster for near linear path;
 /// if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPathAStar( const Mesh & mesh, VertId start, VertId finish, float maxPathLen = FLT_MAX );
+/// finds the path from a vertex in start-triangle to a vertex in finish-triangle,
+/// so that the length start-first_vertex-...-last_vertex-finish is shortest in euclidean metric;
+/// using A* modification of Dijkstra algorithm, which is faster for near linear path;
+/// if no path can be found then empty path is returned
+[[nodiscard]] MRMESH_API EdgePath buildShortestPathAStar( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & finish,
+    VertId * outPathStart = nullptr,  // if the path is found then its start vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
+    VertId * outPathFinish = nullptr, // if the path is found then its finish vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
+    float maxPathLen = FLT_MAX );
 
 /// builds shortest path in euclidean metric from start to finish vertices; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen = FLT_MAX );

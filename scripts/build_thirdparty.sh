@@ -54,7 +54,7 @@ if [ $MR_EMSCRIPTEN == "ON" ]; then
  fi
 else
  printf "Check requirements. Running ${FILE_NAME} ...\n"
- ./scripts/$FILE_NAME
+ #./scripts/$FILE_NAME
 fi
 
 #build Third party
@@ -70,7 +70,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR}
   emmake make -j `nproc` #VERBOSE=1
   cd ..
-  
+
   cd thirdparty/wasmtbb
   EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
   cd ../..
@@ -81,7 +81,7 @@ else
   cd ..
 fi
 
-if [ $OSTYPE != 'darwin' ] && [ "${MR_EMSCRIPTEN}" == "OFF" ]; then
+if [[ "${OSTYPE}" != 'darwin'* ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
   cp -r ./lib/openvdb/openvdb/openvdb/* ./include/
   cp -r ./lib/cpr/cpr_generated_includes/* ./include/
 fi

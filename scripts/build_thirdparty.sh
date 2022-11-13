@@ -81,7 +81,7 @@ else
   cd ..
 fi
 
-if [[ "${OSTYPE}" != 'darwin'* ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
+if [[ "${NAME}" == "Ubuntu" ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
   cp -r ./lib/openvdb/openvdb/openvdb/* ./include/
   cp -r ./lib/cpr/cpr_generated_includes/* ./include/
 fi

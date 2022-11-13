@@ -109,6 +109,7 @@ jobs:
     timeout-minutes: 180
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
     env:
       DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}

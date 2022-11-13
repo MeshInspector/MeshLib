@@ -53,6 +53,7 @@ IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
  message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
 ENDIF()
 include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
 link_directories(${THIRDPARTY_LIB_DIR})
 
 find_package(PkgConfig REQUIRED)

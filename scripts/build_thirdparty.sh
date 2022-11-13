@@ -54,7 +54,7 @@ if [ $MR_EMSCRIPTEN == "ON" ]; then
  fi
 else
  printf "Check requirements. Running ${FILE_NAME} ...\n"
- #./scripts/$FILE_NAME
+ ./scripts/$FILE_NAME
 fi
 
 #build Third party

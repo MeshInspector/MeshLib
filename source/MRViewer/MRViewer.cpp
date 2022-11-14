@@ -939,6 +939,9 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
 
 bool Viewer::mouseScroll( float delta_y )
 {
+    // do extra frames to prevent imgui calculations ping
+    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
     if ( mouseScrollSignal( scrollForce * delta_y ) )

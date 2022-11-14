@@ -171,12 +171,29 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
 
+/// Structure that contains parameters for State plugin window with custom style
+struct CustomStatePluginWindowParameters
+{
+    /// current collapsed state of window
+    /// in/out parameter, owned outside of `BeginCustomStatePlugin` function
+    bool* collapsed{ nullptr };
+    /// window width (should be already scaled with menuScaling)
+    float width{ 0.0f };
+    /// window height, usually calculated internally (if value is zero)
+    float height{ 0.0f };
+    /// if this parameter set, window located on bottom part of viewport
+    bool isDown{ false };
+    /// menu scaling, needed to proper scaling of internal window parts
+    float menuScaling{ 1.0f };
+    /// window flags, ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced inside `BeginCustomStatePlugin` function
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
+    /// outside owned parameter for windows with resize option
+    ImVec2* changedSize{ nullptr };
+};
+
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
-/// if the plugin supports resizing, you must pass changedSize argument where are stored resized width and height
-/// \param isDown align window to bottom of main window at start
-MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float menuScaling, float height = 0.0f,
-    bool isDown = false, ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize, ImVec2* changedSize = nullptr );
+MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params = {} );
 /// end state plugin window with custom style
 MRVIEWER_API void EndCustomStatePlugin();
 

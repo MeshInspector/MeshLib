@@ -558,6 +558,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         // Determine scrollbar position
         window->InnerRect.Min.y += ( titleBarHeight - borderSize );
         window->InnerRect.Max.y -= borderSize;
+        window->InnerRect.Max.x -= ( window->ScrollbarSizes.x + borderSize );
         window->Size.x -= borderSize;
         // Needed for ImGui::GetAvailableContent functuions
         window->WorkRect.Min.y += ( titleBarHeight - borderSize );

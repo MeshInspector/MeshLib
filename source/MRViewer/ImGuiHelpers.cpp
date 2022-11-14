@@ -471,7 +471,8 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags, ImVec2* changedSize )
+bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height,
+    bool isDown, ImGuiWindowFlags flags, ImVec2* changedSize )
 {
     const auto& style = ImGui::GetStyle();    
 
@@ -484,8 +485,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( !window )
     {
         auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-        float yPos = 0.0f;       
-        if ( menu )
+        float yPos = 0.0f;
+        if ( isDown )
+            yPos = GetIO().DisplaySize.y - height;
+        else if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
     }

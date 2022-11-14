@@ -30,7 +30,7 @@ MoveObjectByMouse::MoveObjectByMouse() :
 void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 {
     auto menuWidth = 400.f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, &dialogIsCollapsed_, menuWidth, menuScaling ) )
+    if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
     ImGui::Text( "%s", "Click and hold LMB on object to move" );

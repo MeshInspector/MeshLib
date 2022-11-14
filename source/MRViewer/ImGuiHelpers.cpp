@@ -471,14 +471,14 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height,
-    bool isDown, ImGuiWindowFlags flags, ImVec2* changedSize )
+bool BeginCustomStatePlugin( const char* label, bool* open, const CutomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
 
-    const float borderSize = style.WindowBorderSize * scaling;
-    const float titleBarHeight = 2 * MR::cRibbonItemInterval * scaling + ImGui::GetTextLineHeight() + 2 * borderSize;
-    if ( collapsed && *collapsed )
+    const float borderSize = style.WindowBorderSize * params.menuScaling;
+    const float titleBarHeight = 2 * MR::cRibbonItemInterval * params.menuScaling + ImGui::GetTextLineHeight() + 2 * borderSize;
+    auto height = params.height;
+    if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;
 
     ImGuiWindow* window = FindWindowByName( label );
@@ -486,28 +486,29 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     {
         auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
         float yPos = 0.0f;
-        if ( isDown )
+        if ( params.isDown )
             yPos = GetIO().DisplaySize.y - height;
         else if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
-        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver );
     }
 
-    if ( changedSize )
+    if ( params.changedSize )
     {
-        if ( collapsed && *collapsed )
-            SetNextWindowSize( { changedSize->x, height }, ImGuiCond_Always );
+        if ( params.collapsed && *params.collapsed )
+            SetNextWindowSize( { params.changedSize->x, height }, ImGuiCond_Always );
         else
-            SetNextWindowSize( *changedSize, ImGuiCond_Always );
+            SetNextWindowSize( *params.changedSize, ImGuiCond_Always );
     }
     else
     {
-        SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Appearing );
-        SetNextWindowSizeConstraints( ImVec2( width, -1.0f ), ImVec2( width, -1.0f ) );
+        SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
+        SetNextWindowSizeConstraints( ImVec2( params.width, -1.0f ), ImVec2( params.width, -1.0f ) );
     }
 
     auto context = ImGui::GetCurrentContext();
-    if ( collapsed && *collapsed )
+    auto flags = params.flags;
+    if ( params.collapsed && *params.collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
         ImGui::SetNextWindowSizeConstraints( { context->NextWindowData.SizeVal.x, titleBarHeight }, { context->NextWindowData.SizeVal.x, titleBarHeight } );
@@ -529,7 +530,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     {
         *open = false;
         ImGui::PopStyleVar();
-        if ( collapsed && *collapsed )
+        if ( params.collapsed && *params.collapsed )
             ImGui::PopStyleVar();
         return false;
     }
@@ -567,13 +568,13 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
         window->ContentSize.y = backUpContSizeY;
     }
 
-    if ( changedSize && collapsed && !*collapsed )
+    if ( params.changedSize && params.collapsed && !*params.collapsed )
     {
-        changedSize->x = window->Rect().GetWidth();
-        changedSize->y = window->Rect().GetHeight();
+        params.changedSize->x = window->Rect().GetWidth();
+        params.changedSize->y = window->Rect().GetHeight();
     }
 
-    if ( collapsed && *collapsed )
+    if ( params.collapsed && *params.collapsed )
         ImGui::PopStyleVar();
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
@@ -582,9 +583,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f,  0.0f } );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * params.menuScaling );
     
-    const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * scaling - 2 * borderSize;
+    const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * params.menuScaling - 2 * borderSize;
     const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
     ImGui::SetCursorScreenPos( { window->Rect().Min.x + buttonOffset, window->Rect().Min.y + buttonOffset } );
     
@@ -602,11 +603,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
     
-    if ( collapsed )
+    if ( params.collapsed )
     {
-        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
+        if ( ImGui::Button( *params.collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
-            *collapsed = !*collapsed;
+            *params.collapsed = !*params.collapsed;
             ImGui::PopStyleVar( 3 );
             ImGui::PopStyleColor( 2 );
 
@@ -627,7 +628,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( titleFont )
     {
         ImGui::PushFont( titleFont );
-        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + scaling } );
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + params.menuScaling } );
         //ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
     }
     else
@@ -667,7 +668,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
 
     ImGui::PopStyleVar( 3 );
 
-    if ( collapsed && *collapsed )
+    if ( params.collapsed && *params.collapsed )
     {
         ImGui::PopStyleColor( 2 );
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );

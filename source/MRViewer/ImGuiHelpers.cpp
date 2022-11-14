@@ -471,7 +471,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, const CutomStatePluginWindowParameters& params )
+bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
 
@@ -518,12 +518,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CutomStatePlug
     // needed for manual scrollbar 
     bool hasPrevData = false;
     float prevCursorMaxPos = FLT_MAX;
-    float prevIdealMaxPos = FLT_MAX;
     if ( window )
     {
         hasPrevData = true;
         prevCursorMaxPos = window->DC.CursorMaxPos.y;
-        prevIdealMaxPos = window->DC.IdealMaxPos.y;
     }
 
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )

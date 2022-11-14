@@ -172,7 +172,7 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );
 
 /// Structure that contains parameters for State plugin window with custom style
-struct CutomStatePluginWindowParameters
+struct CustomStatePluginWindowParameters
 {
     /// current collapsed state of window
     /// in/out parameter, owned outside of `BeginCustomStatePlugin` function
@@ -193,7 +193,7 @@ struct CutomStatePluginWindowParameters
 
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
-MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CutomStatePluginWindowParameters& params = {} );
+MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params = {} );
 /// end state plugin window with custom style
 MRVIEWER_API void EndCustomStatePlugin();
 

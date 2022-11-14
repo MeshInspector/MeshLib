@@ -55,6 +55,7 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
     if ( gob <= 0 || gob >= god )
         return {};
     const auto a = gob / god;
+    assert( a < FLT_MAX );
     const auto ip = a * c + ( 1 - a ) * b;
     if ( dot( grad, ip ) >= 0 )
         return {}; // (b,c) is intersected in the direction +grad
@@ -115,15 +116,18 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
             const auto eBd = mesh_.topology.prev( e.sym() );
             const auto x = mesh_.topology.dest( eBd );
             const auto px = mesh_.points[x] - pv;
-            const auto vx = field_[x] - vv;
-            const auto triGrad = computeGradient( pd, px, vd, vx );
-            const auto triGradSq = triGrad.lengthSq();
-            if ( triGradSq > maxGradSq )
+            if ( auto fx = field_[x]; fx < FLT_MAX )
             {
-                if ( auto a = computeExitPos( pd, px, triGrad ) )
+                const auto vx = fx - vv;
+                const auto triGrad = computeGradient( pd, px, vd, vx );
+                const auto triGradSq = triGrad.lengthSq();
+                if ( triGradSq > maxGradSq )
                 {
-                    maxGradSq = triGradSq;
-                    res = MeshEdgePoint{ eBd, *a };
+                    if ( auto a = computeExitPos( pd, px, triGrad ) )
+                    {
+                        maxGradSq = triGradSq;
+                        res = MeshEdgePoint{ eBd, *a };
+                    }
                 }
             }
         }

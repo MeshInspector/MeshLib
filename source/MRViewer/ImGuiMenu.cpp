@@ -1107,7 +1107,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 valueStr += std::to_string( value );
                 labelStr += title;
 
-                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_() );                
+                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_() * 2 + ImGui::GetStyle().ItemSpacing.x * menu_scaling() );
             }
         };
 
@@ -1183,15 +1183,12 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-
                 ImGui::InputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
                 ImGui::SameLine();
                 ImGui::InputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
                 ImGui::SameLine();
                 ImGui::InputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
-                ImGui::SameLine();
-                ImGui::PopStyleColor();
+
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::Text( "%s", title.c_str() );
             };

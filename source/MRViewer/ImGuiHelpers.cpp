@@ -258,8 +258,16 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
 
     SetNextItemWidth( actualWidth );
     PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
-    
-    InputText( label, const_cast<std::string&>(str), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    PushStyleColor( ImGuiCol_Text, transparentColor );
+    InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+
+    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
+        ImGui::Text( "%s", label );
+
     PopStyleVar();
 }
 

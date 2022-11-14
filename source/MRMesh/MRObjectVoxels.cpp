@@ -43,7 +43,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     vdbVolume_.data = grid;
 
     auto vdbDims = vdbVolume_.data->evalActiveVoxelDim();
-    vdbVolume_.dims = { vdbDims.x(),vdbDims.y(),vdbDims.z() };
+    vdbVolume_.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
@@ -97,6 +97,21 @@ std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh
     }
     return mesh;
 
+}
+
+VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
+{
+    auto oldVdbVolume = std::move( vdbVolume_ );
+    vdbVolume_ = std::move( vdbVolume );
+    setDirtyFlags( DIRTY_ALL );
+    return oldVdbVolume;
+}
+
+Histogram ObjectVoxels::updateHistogram( Histogram histogram )
+{
+    auto oldHistogram = std::move( histogram_ );
+    histogram_ = std::move( histogram );
+    return oldHistogram;
 }
 
 std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )

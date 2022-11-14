@@ -10,10 +10,8 @@
 namespace MR
 {
 
-// given triangle 0bc in 3D and line segment 0d in 2D, and |0b|=|0d|;
-// finds e, such that triangle 0bc is equal to 0de;
-// returns (0,0) if |0b|=0
-static Vector2f unfoldOnPlane( const Vector3f & b, const Vector3f & c, const Vector2f & d, bool toLeftFrom0d )
+template <typename T>
+Vector2<T> unfoldOnPlane( const Vector3<T>& b, const Vector3<T>& c, const Vector2<T>& d, bool toLeftFrom0d )
 {
     const auto dotBC = dot( b, c );
     const auto crsBC = cross( b, c ).length();
@@ -21,9 +19,39 @@ static Vector2f unfoldOnPlane( const Vector3f & b, const Vector3f & c, const Vec
     if ( dd <= 0 )
         return {};
     // o is a vector of same length as d and orthogonal to d
-    const Vector2f o = toLeftFrom0d ? Vector2f( -d.y, d.x ) : Vector2f( d.y, -d.x );
+    const Vector2<T> o = toLeftFrom0d ? Vector2<T>( -d.y, d.x ) : Vector2<T>( d.y, -d.x );
     return ( dotBC * d + crsBC * o ) / dd;
 }
+
+template MRMESH_API Vector2<float> unfoldOnPlane( const Vector3<float>& b, const Vector3<float>& c, const Vector2<float>& d, bool toLeftFrom0d );
+template MRMESH_API Vector2<double> unfoldOnPlane( const Vector3<double>& b, const Vector3<double>& c, const Vector2<double>& d, bool toLeftFrom0d );
+
+// finds position x on line x*b intersected by line containing segment [c,d]
+template<typename T>
+static T lineIsect( const Vector2<T> & b, const Vector2<T> & c, const Vector2<T> & d )
+{
+    const auto c1 = cross( d, c );
+    const auto c2 = cross( c - b, d - b );
+    const auto cc = c1 + c2;
+    if ( cc == 0 )
+        return 0; // degenerate case
+    return c1 / cc;
+}
+
+template<typename T>
+T shortestPathInQuadrangle( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d )
+{
+    auto vecB = b - a;
+    auto vecC = c - a;
+    auto vecD = d - a;
+    Vector2<T> unfoldB{ vecB.length(), 0 };
+    auto unfoldC = unfoldOnPlane( vecB, vecC, unfoldB, true );
+    auto unfoldD = unfoldOnPlane( vecC, vecD, unfoldC, true );
+    return std::clamp( lineIsect( unfoldC, unfoldB, unfoldD ), T(0), T(1) );
+}
+
+template MRMESH_API float shortestPathInQuadrangle( const Vector3<float>& a, const Vector3<float>& b, const Vector3<float>& c, const Vector3<float>& d );
+template MRMESH_API double shortestPathInQuadrangle( const Vector3<double>& a, const Vector3<double>& b, const Vector3<double>& c, const Vector3<double>& d );
 
 // finds an edge originated from v, which is located in the same triangle as p
 static EdgeId commonEdge( const MeshTopology & topology, VertId v, const MeshTriPoint & p )
@@ -74,17 +102,6 @@ static EdgeId firstCommonEdge( const MeshTopology & topology, VertId v, const Me
             break;
     }
     return e0;
-}
-
-// finds position x on line x*b intersected by line containing segment [c,d]
-static float lineIsect( const Vector2f & b, const Vector2f & c, const Vector2f & d )
-{
-    const auto c1 = cross( d, c );
-    const auto c2 = cross( c - b, d - b );
-    const auto cc = c1 + c2;
-    if ( cc == 0 )
-        return 0; // degenerate case
-    return c1 / cc;
 }
 
 bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, const MeshTriPoint & e, 
@@ -235,7 +252,6 @@ bool reducePathViaVertex( const Mesh & mesh, const MeshTriPoint & s, VertId v, c
     }
 
     // failed to reduce path and avoid passing via the vertex
-    outPath.push_back( MeshEdgePoint( mesh.topology.edgeWithOrg( v ), 0 ) );
     return false;
 }
 
@@ -443,16 +459,19 @@ void PathInPlanarTriangleStrip::find( const Vector2f & end, std::function< void(
     }
 }
 
-class TriangleStipUnfolder
+class TriangleStripUnfolder
 {
 public:
-    TriangleStipUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
+    TriangleStripUnfolder( const Mesh & mesh ) : mesh_( mesh ) { }
 
     void clear();
     bool empty() const { return !lastEdge_; }
 
+    // starts new unfolding, e1 will be oriented to have start in the left triangle
     void reset( MeshTriPoint start, MeshEdgePoint & e1 );
-    void nextEdge( MeshEdgePoint & ei );
+    // the path shall cross next the edge ei.e, ei will be oriented to have previous edge in the left triangle;
+    // returns false if the edge cannot be added to the strip
+    bool nextEdge( MeshEdgePoint & ei );
 
     void find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition );
 
@@ -462,13 +481,13 @@ private:
     PathInPlanarTriangleStrip strip_;
 };
 
-void TriangleStipUnfolder::clear()
+void TriangleStripUnfolder::clear()
 {
     lastEdge_ = EdgeId{};
     strip_.clear();
 }
 
-void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
+void TriangleStripUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
 {
     // orient e1 to have start at left
     MeshTriPoint etp{ e1 };
@@ -486,7 +505,7 @@ void TriangleStipUnfolder::reset( MeshTriPoint start, MeshEdgePoint & e1 )
     strip_.reset( s2, d2, { 0, 0 } );
 }
 
-void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
+bool TriangleStripUnfolder::nextEdge( MeshEdgePoint & e2 )
 {
     assert( !e2.inVertex() );
 
@@ -503,7 +522,7 @@ void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
         Vector2f x2 = o2 + unfoldOnPlane( v[2] - v[0], v[1] - v[0], d2 - o2, false );
         strip_.nextEdgeNewLeft( x2 );
         lastEdge_ = pl;
-        return;
+        return true;
     }
 
     const EdgeId nl = mesh_.topology.next( lastEdge_.sym() ).sym();
@@ -516,13 +535,12 @@ void TriangleStipUnfolder::nextEdge( MeshEdgePoint & e2 )
         Vector2f x2 = o2 + unfoldOnPlane( v[1] - v[2], v[0] - v[2], d2 - o2, false );
         strip_.nextEdgeNewRight( x2 );
         lastEdge_ = nl;
-        return;
+        return true;
     }
-
-    assert( false );
+    return false;
 }
 
-void TriangleStipUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
+void TriangleStripUnfolder::find( const MeshTriPoint & end, std::function< void(float) > edgeCrossPosition )
 {
     assert( !empty() );
     auto op = mesh_.orgPnt( lastEdge_ );
@@ -542,75 +560,105 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         return 0;
     MR_TIMER;
 
-    std::vector<MeshEdgePoint> cacheOneSideUnfold;
+    // consider points on degenerate edges as points in vertices
+    for ( auto & e : path )
+    {
+        if ( !e.inVertex() && mesh.edgeLengthSq( e.e ) <= 0 )
+        {
+            e.a = 0;
+            assert( e.inVertex() );
+        }
+    }
+
     std::vector<MeshEdgePoint> newPath;
     newPath.reserve( path.size() );
-
-    //eliminate 3rd (and next) point per triangle
-    for ( int j = 0; j < path.size(); ++j )
-    {
-        MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
-        MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-        if ( fromSameTriangle( mesh.topology, prev, next ) )
-        {
-            // skipping path[j] can only decrease the path length
-            while ( !newPath.empty() )
-            {
-                MeshTriPoint prevprev = newPath.size() <= 1 ? start : MeshTriPoint{ newPath[ newPath.size() - 2 ] };
-                if ( fromSameTriangle( mesh.topology, prevprev, next ) )
-                    newPath.pop_back();
-                else
-                    break;
-            }
-            continue; 
-        }
-        // consider points on degenerate edges as points in vertices
-        if ( !path[j].inVertex() && mesh.edgeLengthSq( path[j].e ) <= 0 )
-        {
-            path[j].a = 0;
-            assert( path[j].inVertex() );
-        }
-        newPath.push_back( path[j] );
-    }
-    path.swap( newPath );
-    newPath.clear();
-
+    std::vector<MeshEdgePoint> cacheOneSideUnfold;
     std::vector<Vector2f> tmp;
     std::vector<std::pair<int,int>> vertSpans;
-    tbb::enumerable_thread_specific<TriangleStipUnfolder> stripPerThread( std::cref( mesh ) );
+    std::vector<MeshEdgePoint> rpoints; // to be added next in the new path in reverse order
+    tbb::enumerable_thread_specific<TriangleStripUnfolder> stripPerThread( std::cref( mesh ) );
     for ( int i = 0; i < maxIter; ++i )
     {
         std::atomic<bool> pathTopologyChanged{false};
 
         // try to exit from vertices and remove repeating locations
-        for ( int j = 0; j < path.size(); ++j )
+        int j = 0;
+        // there are points to add in newPath
+        auto hasNext = [&]()
         {
-            auto v = path[j].inVertex( mesh.topology );
+            return !rpoints.empty() || j < path.size();
+        };
+        // returns next point to add in newPath, if extract=false then it will be returned again next time
+        auto takeNext = [&]( bool extract )
+        {
+            MeshEdgePoint res;
+            if ( !rpoints.empty() )
+            {
+                res = rpoints.back();
+                if ( extract )
+                    rpoints.pop_back();
+            }
+            else
+            {
+                res = path[j];
+                if ( extract )
+                    ++j;
+            }
+            return res;
+        };
+        // remove last point from newPath and mark topology as changed
+        auto newPathPopBack = [&]()
+        {
+            newPath.pop_back();
+            pathTopologyChanged.store( true, std::memory_order_relaxed );
+        };
+        // add all points in newPath, trying to walk around vertices
+        while ( hasNext() )
+        {
+            auto np = takeNext( true );
+            auto v = np.inVertex( mesh.topology );
             if ( !v )
             {
-                newPath.push_back( path[j] );
+                // remove last point of new path if the path does not break (and becomes only shorter)
+                while ( newPath.size() >= 2 )
+                {
+                    auto pp = newPath[ newPath.size() - 2 ];
+                    if ( pp.inVertex() || !mesh.topology.sharedFace( np.e, pp.e ) )
+                        break;
+                    newPathPopBack();
+                }
+                if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ np } ) )
+                    newPathPopBack();
+                newPath.push_back( np );
                 continue;
             }
             MeshTriPoint prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
             // skip next points if they are in the same vertex
-            while ( j + 1 < path.size() && path[j + 1].inVertex( mesh.topology ) == v )
-                ++j;
-            MeshTriPoint next = ( j + 1 < path.size() ) ? MeshTriPoint{ path[j + 1] } : end;
-            if ( reducePathViaVertex( mesh, prev, v, next, newPath, tmp, cacheOneSideUnfold ) )
-            {
-                //prev = newPath.empty() ? start : MeshTriPoint{ newPath.back() };
-                //assert( fromSameTriangle( mesh.topology, prev, next ) );
-                pathTopologyChanged.store( true, std::memory_order_relaxed );
-            }
+            while ( hasNext() && takeNext( false ).inVertex( mesh.topology ) == v )
+                np = takeNext( true );
+            MeshTriPoint next = hasNext() ? MeshTriPoint{ takeNext( false ) } : end;
+            newPath.push_back( np );
+            // put points of new path around vertex v in rpoints
+            if ( reducePathViaVertex( mesh, next, v, prev, rpoints, tmp, cacheOneSideUnfold ) )
+                newPathPopBack();
         }
+        // remove last point of new path if the path does not break (and becomes only shorter)
+        while ( newPath.size() >= 2 && fromSameTriangle( mesh.topology, MeshTriPoint{ newPath[ newPath.size() - 2 ] }, MeshTriPoint{ end } ) )
+            newPathPopBack();
+        if ( newPath.size() == 1 && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+            newPathPopBack();
 
         path.swap( newPath );
         newPath.clear();
 
+        // stop processing if path topology has not changed and straightening was done at least once
+        if ( i > 0 && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+            return i + 1;
+
         // find all spans where points are not in a vertex
         vertSpans.clear();
         int spanStart = -1;
-        for ( int j = 0; j < path.size(); ++j )
+        for ( j = 0; j < path.size(); ++j )
         {
             if ( !path[j].inVertex() )
                 continue;
@@ -627,30 +675,37 @@ int reducePath( const Mesh & mesh, const MeshTriPoint & start, std::vector<MeshE
         {
             for ( int i = range.begin(); i < range.end(); ++i )
             {
-                const auto span = vertSpans[i];
+                auto span = vertSpans[i];
                 auto & strip = stripPerThread.local();
-                strip.clear();
-                const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
-                strip.reset( first, path[span.first + 1] );
-                for ( int j = span.first + 2; j < span.second; ++j )
+                while ( span.first + 1 < span.second )
                 {
-                    // path[j] is an ordinary point not in a vertex
-                    strip.nextEdge( path[j] );
+                    strip.clear();
+                    const MeshTriPoint first = span.first < 0 ? start : MeshTriPoint{ path[span.first] };
+                    strip.reset( first, path[span.first + 1] );
+                    int j = span.first + 2;
+                    for ( ; j < span.second; ++j )
+                    {
+                        // path[j] is an ordinary point not in a vertex
+                        if ( !strip.nextEdge( path[j] ) )
+                            break;
+                    }
+                    const MeshTriPoint last = j < path.size() ? MeshTriPoint{ path[j] } : end;
+                    int pos = j;
+                    strip.find( last, [&]( float v ) 
+                    {
+                        assert( pos > 0 );
+                        auto & edgePoint = path[ --pos ];
+                        assert( !edgePoint.inVertex() );
+                        edgePoint.a = 1 - v;
+                        if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
+                            pathTopologyChanged.store( true, std::memory_order_relaxed );
+                    } );
+                    span.first = j;
                 }
-                const MeshTriPoint last = span.second < path.size() ? MeshTriPoint{ path[span.second] } : end;
-                int pos = span.second;
-                strip.find( last, [&]( float v ) 
-                {
-                    assert( pos > 0 );
-                    auto & edgePoint = path[ --pos ];
-                    assert( !edgePoint.inVertex() );
-                    edgePoint.a = 1 - v;
-                    if ( edgePoint.inVertex() && !pathTopologyChanged.load( std::memory_order_relaxed ) )
-                        pathTopologyChanged.store( true, std::memory_order_relaxed );
-                } );
             }
         } );
 
+        // stop processing if path topology has not changed
         if ( !pathTopologyChanged.load( std::memory_order_relaxed ) )
             return i + 1;
     }

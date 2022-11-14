@@ -3,10 +3,9 @@
 #include "MRPolyline.h"
 #include "MRAABBTreePolyline.h"
 #include "MRLineSegm.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
-#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-#include <execution>
-#endif
+#include <cfloat>
 
 namespace MR
 {
@@ -125,11 +124,21 @@ PolylineProjectionWithOffsetResult findProjectionOnPolylineWithOffset(
         return res;
     }
 
-#if defined(__APPLE__) || defined(__EMSCRIPTEN__)
-    float maxOffset = *std::max_element( offsetPerEdge.vec_.begin(), offsetPerEdge.vec_.end() );
-#else
-    float maxOffset = *std::max_element( std::execution::par, offsetPerEdge.vec_.begin(), offsetPerEdge.vec_.end() );
-#endif
+    float maxOffset = tbb::parallel_reduce
+    (
+        tbb::blocked_range( 0_ue, offsetPerEdge.endId() ),
+        -FLT_MAX, 
+        [&] ( const tbb::blocked_range<UndirectedEdgeId>& range, float max )
+        {
+            for ( auto i = range.begin(); i < range.end(); ++i )
+                max = std::max( max, offsetPerEdge[i] );
+            return max;
+        }, 
+        [] ( float a, float b ) -> float
+        {
+            return a > b ? a : b;
+        }
+    );
 
     struct SubTask
     {

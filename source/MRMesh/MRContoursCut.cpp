@@ -1212,7 +1212,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                         if ( !prevFaceIncidentLeft )
                         {
                             // iterate backward to find removed face info
-                            prevFaceIncidentLeft = iterateRemovedFacesInfoToFindLeftEdge( mesh.topology, res.removedFaces, contourId, intersectionId, f, newVertId );
+                            prevFaceIncidentLeft = iterateRemovedFacesInfoToFindLeftEdge( mesh.topology, res.removedFaces, contourId, intersectionId, f, currVert );
                         }
                         assert( prevFaceIncidentLeft );
                         invalidateFace( mesh.topology, res.removedFaces, contourId, intersectionId - 1, prevFaceIncidentLeft, oldEdgesSize );
@@ -1276,10 +1276,11 @@ FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
         Vector3d cP = Vector3d( mesh.points[c] );
 
         auto faceNorm = cross( bP - aP, cP - aP );
-        if ( dot( norm, faceNorm ) < 0.0 )
+        auto faceDblArea = faceNorm.length();
+        if ( dot( norm, faceNorm ) < 0.5f * faceDblArea )
             return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
 
-        return faceNorm.length(); // area
+        return faceDblArea; // area
     };
     return metric;
 }

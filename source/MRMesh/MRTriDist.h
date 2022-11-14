@@ -57,4 +57,14 @@ namespace MR
 /// be expected.
 MRMESH_API float TriDist( Vector3f & p, Vector3f & q, const Vector3f s[3], const Vector3f t[3] );
 
+/// Returns closest points between an segment pair.
+MRMESH_API void SegPoints(
+          // if both closest points are in segment endpoints, then directed from closest point 1 to closest point 2,
+          // if both closest points are inner to the segments, then its orthogonal to both segments and directed from 1 to 2,
+          // otherwise it is orthogonal to the segment with inner closest point and rotated toward/away the other closest point in endpoint
+          Vector3f & VEC,
+          Vector3f & X, Vector3f & Y,             // closest points
+          const Vector3f & P, const Vector3f & A, // seg 1 origin, vector
+          const Vector3f & Q, const Vector3f & B);// seg 2 origin, vector
+
 } // namespace MR

@@ -10,6 +10,7 @@
 #include "MRMeshLoad.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshBuilder.h"
+#include "MREdgePaths.h"
 
 namespace MR
 {
@@ -54,6 +55,7 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
     if ( gob <= 0 || gob >= god )
         return {};
     const auto a = gob / god;
+    assert( a < FLT_MAX );
     const auto ip = a * c + ( 1 - a ) * b;
     if ( dot( grad, ip ) >= 0 )
         return {}; // (b,c) is intersected in the direction +grad
@@ -114,15 +116,18 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
             const auto eBd = mesh_.topology.prev( e.sym() );
             const auto x = mesh_.topology.dest( eBd );
             const auto px = mesh_.points[x] - pv;
-            const auto vx = field_[x] - vv;
-            const auto triGrad = computeGradient( pd, px, vd, vx );
-            const auto triGradSq = triGrad.lengthSq();
-            if ( triGradSq > maxGradSq )
+            if ( auto fx = field_[x]; fx < FLT_MAX )
             {
-                if ( auto a = computeExitPos( pd, px, triGrad ) )
+                const auto vx = fx - vv;
+                const auto triGrad = computeGradient( pd, px, vd, vx );
+                const auto triGradSq = triGrad.lengthSq();
+                if ( triGradSq > maxGradSq )
                 {
-                    maxGradSq = triGradSq;
-                    res = MeshEdgePoint{ eBd, *a };
+                    if ( auto a = computeExitPos( pd, px, triGrad ) )
+                    {
+                        maxGradSq = triGradSq;
+                        res = MeshEdgePoint{ eBd, *a };
+                    }
                 }
             }
         }
@@ -303,7 +308,56 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshTriPoi
     return res;
 }
 
-tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePathApprox( const MeshPart & mp,
+tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
+{
+    MR_TIMER;
+    if ( atype == GeodesicPathApprox::FastMarching )
+        return computeFastMarchingPath( mesh, start, end );
+
+    SurfacePath res;
+    if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+    {
+        VertId v1, v2;
+        EdgePath edgePath = ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
+            buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
+            buildShortestPathAStar( mesh, start, end, &v1, &v2 );
+        if ( !v1 || !v2 )
+            return tl::make_unexpected( PathError::StartEndNotConnected );
+
+        // remove last segment from the path if end-point and the origin of last segment belong to one triangle
+        while( !edgePath.empty()
+            && fromSameTriangle( mesh.topology, MeshTriPoint{ end }, MeshTriPoint{ MeshEdgePoint{ edgePath.back(), 0 } } ) )
+        {
+            v2 = mesh.topology.org( edgePath.back() );
+            edgePath.pop_back();
+        }
+
+        // remove first segment from the path if start-point and the destination of first segment belong to one triangle
+        while( !edgePath.empty()
+            && fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ MeshEdgePoint{ edgePath.front(), 1 } } ) )
+        {
+            v1 = mesh.topology.dest( edgePath.front() );
+            edgePath.erase( edgePath.begin() );
+        }
+
+        if ( edgePath.empty() )
+        {
+            assert ( v1 == v2 );
+            res = { MeshEdgePoint( mesh.topology.edgeWithOrg( v1 ), 0.0f ) };
+        }
+        else
+        {
+            res.reserve( edgePath.size() + 1 );
+            for ( EdgeId e : edgePath )
+                res.emplace_back( e, 0.0f );
+            res.emplace_back( edgePath.back(), 1.0f );
+        }
+    }
+    return res;
+}
+
+tl::expected<std::vector<MeshEdgePoint>, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
@@ -351,13 +405,24 @@ tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePathApprox( co
 }
 
 tl::expected<std::vector<MeshEdgePoint>, PathError> computeSurfacePath( const MeshPart & mp,
-    const MeshTriPoint & start, const MeshTriPoint & end, int numPostProcessIters,
+    const MeshTriPoint & start, const MeshTriPoint & end, int maxGeodesicIters,
     const VertBitSet* vertRegion, Vector<float, VertId> * outSurfaceDistances )
 {
     MR_TIMER;
-    auto res = computeSurfacePathApprox( mp, start, end, vertRegion, outSurfaceDistances );
+    auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
     if ( res.has_value() && !res.value().empty() )
-        reducePath( mp.mesh, start, res.value(), end, numPostProcessIters );
+        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+    return res;
+}
+
+tl::expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype,
+    int maxGeodesicIters )
+{
+    MR_TIMER;
+    auto res = computeGeodesicPathApprox( mesh, start, end, atype );
+    if ( res.has_value() && !res.value().empty() )
+        reducePath( mesh, start, res.value(), end, maxGeodesicIters );
     return res;
 }
 

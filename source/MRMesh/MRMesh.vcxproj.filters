@@ -357,7 +357,7 @@
     <ClInclude Include="MRSurfacePath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRPlanarPath.h">
+    <ClInclude Include="MRGeodesicPath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
@@ -879,6 +879,9 @@
     <ClInclude Include="MRUniteManyMeshes.h">
       <Filter>Source Files\Boolean</Filter>
     </ClInclude>
+    <ClInclude Include="MRPlanarPath.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1046,7 +1049,7 @@
     <ClCompile Include="MRSurfacePath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRPlanarPath.cpp">
+    <ClCompile Include="MRGeodesicPath.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">

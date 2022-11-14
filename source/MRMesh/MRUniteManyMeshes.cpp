@@ -27,7 +27,7 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b,
         return tl::make_unexpected( res.errorString );
 
     if ( fixDegenerations )
-        resolveMeshDegenerations( res.mesh, INT_MAX, maxError ); // INT_MAX cause it will stop itself if no changes done
+        resolveMeshDegenerations( res.mesh, { .maxIters = INT_MAX, .maxDeviation = maxError } ); // INT_MAX cause it will stop itself if no changes done
 
     return res.mesh;
 }
@@ -90,11 +90,12 @@ private:
 tl::expected<Mesh, std::string> uniteManyMeshes( 
     const std::vector<const Mesh*>& meshes, const UniteManyMeshesParams& params /*= {} */ )
 {
-    MR_TIMER;
+    MR_TIMER
     if ( meshes.empty() )
         return Mesh{};
 
-    // find non intersecting groups for simple merge instead of union
+    // find non-intersecting groups for simple merge instead of union
+    // the groups are represented with indices of input meshes
     std::vector<std::vector<int>> nonIntersectingGroups;
     std::vector<Box3d> meshBoxes( meshes.size() );
     for ( int m = 0; m < meshes.size(); ++m )
@@ -108,30 +109,59 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
         bool merged = false;
         for ( auto& group : nonIntersectingGroups )
         {
-            tbb::enumerable_thread_specific<bool> intersectPerTread( false );
+            // mesh intersects with current group
+            std::atomic_bool intersects{ false };
+            // mesh is included in one of group meshes
+            std::atomic_bool included{ false };
+            // mesh contains some group meshes
+            tbb::enumerable_thread_specific<BitSet> nestedPerThread( meshes.size() );
             tbb::parallel_for( tbb::blocked_range<int>( 0, int( group.size() ) ),
                                [&] ( const tbb::blocked_range<int>& range )
             {
-                auto& localIntersect = intersectPerTread.local();
-                if ( localIntersect )
+                if ( intersects.load( std::memory_order::relaxed ) || included.load( std::memory_order::relaxed ) )
                     return;
+                auto& nested = nestedPerThread.local();
+
                 for ( int i = range.begin(); i < range.end(); ++i )
                 {
+                    auto& groupMesh = meshes[group[i]];
+
                     Box3d box = meshBoxes[m];
                     box.include( meshBoxes[group[i]] );
                     auto intConverter = getToIntConverter( box );
-                    auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *meshes[group[i]], intConverter, nullptr, true );
-                    localIntersect = !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty();
-                    if ( localIntersect )
-                        return;
+                    auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
+                    if ( !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty() )
+                    {
+                        intersects.store( true, std::memory_order::relaxed );
+                        break;
+                    }
+
+                    if ( isNonIntersectingInside( *mesh, *groupMesh ) )
+                    {
+                        included.store( true, std::memory_order::relaxed );
+                        break;
+                    }
+                    else if ( isNonIntersectingInside( *groupMesh, *mesh ) )
+                    {
+                        nested.set( group[i] );
+                    }
                 }
             } );
-            merged = std::none_of( intersectPerTread.begin(), intersectPerTread.end(), [] ( auto inter ) { return inter; } );
-            if ( merged )
+            BitSet nestedMeshes( meshes.size() );
+            for ( auto&& nested : nestedPerThread )
+                nestedMeshes |= nested;
+            if ( intersects )
+                continue;
+            if ( included )
             {
-                group.emplace_back( m );
+                assert( nestedMeshes.count() == 0 );
                 break;
             }
+            if ( nestedMeshes.count() != 0 )
+                std::erase_if( group, [&] ( int groupIndex ) { return nestedMeshes.test( groupIndex ); } );
+            group.emplace_back( m );
+            merged = true;
+            break;
         }
         if ( !merged )
         {
@@ -140,14 +170,18 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
         }
     }
 
-    // merge non intersecting groups
+    // merge non-intersecting groups
     std::vector<Mesh> mergedMeshes( nonIntersectingGroups.size() );
     tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
                        [&] ( const tbb::blocked_range<int>& range )
     {
         for ( int i = range.begin(); i < range.end(); ++i )
-            for ( int j = 0; j < nonIntersectingGroups[i].size(); ++j )
-                mergedMeshes[i].addPart( *meshes[nonIntersectingGroups[i][j]] );
+        {
+            auto& mergedMesh = mergedMeshes[i];
+            auto& mergeGroup = nonIntersectingGroups[i];
+            for ( auto meshIndex : mergeGroup )
+                mergedMesh.addPart( *meshes[meshIndex] );
+        }
     } );
 
     std::vector<Vector3f> randomShifts;

@@ -329,12 +329,30 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     ImGui::SetNextWindowPos( pose, ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
     ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x, labels_.size() * ImGui::GetTextLineHeightWithSpacing() }, { width( windowSize ), height( windowSize ) } );
-    const auto ctx = ImGui::GetCurrentContext();
-    if ( ctx && ctx->IO.MouseClickedCount[0] == 2 )
-        ctx->IO.MouseClickedCount[0] = 1; // prevent double-click on the corner to change window size
+    
+    auto paletteWindow = ImGui::FindWindowByName( "Gradient palette" );
+
+    if ( paletteWindow )
+    {
+        const auto currentPos = paletteWindow->Pos;
+        const auto currentSize = paletteWindow->Size;
+        constexpr float cornerSize = 50.0f;
+        const auto ctx = ImGui::GetCurrentContext();
+
+        if ( ctx &&
+             ctx->IO.MouseClickedCount[0] == 2 &&
+             ctx->IO.MousePos.x >= currentPos.x &&
+             ctx->IO.MousePos.x < currentPos.x + currentSize.x + cornerSize &&
+             ctx->IO.MousePos.y >= currentPos.y &&
+             ctx->IO.MousePos.y < currentPos.y + currentSize.y
+           )
+           {
+                ctx->IO.MouseClickedCount[0] = 1; // prevent double-click on the corner to change window size
+           }
+    }
 
     ImGui::Begin( "Gradient palette", &isWindowOpen_,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBackground );    
 
     // draw gradient palette
     ImDrawList* drawList = ImGui::GetWindowDrawList();

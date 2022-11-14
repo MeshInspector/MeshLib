@@ -193,24 +193,26 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
     return qf;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
     bool meshChanged = false;
-    for( int i = 0; i < maxIters; ++i )
+    for( int i = 0; i < settings.maxIters; ++i )
     {
         DeloneSettings delone
         {
-            .maxDeviationAfterFlip = maxDeviation,
-            .maxAngleChange = maxAngleChange,
-            .criticalTriAspectRatio = criticalAspectRatio
+            .maxDeviationAfterFlip = settings.maxDeviation,
+            .maxAngleChange = settings.maxAngleChange,
+            .criticalTriAspectRatio = settings.criticalAspectRatio,
+            .region = settings.region
         };
         bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
         DecimateSettings decimate
         {
-            .maxError = maxDeviation,
-            .criticalTriAspectRatio = criticalAspectRatio
+            .maxError = settings.maxDeviation,
+            .criticalTriAspectRatio = settings.criticalAspectRatio,
+            .region = settings.region
         };
         changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
         meshChanged = meshChanged || changedThisIter;
@@ -218,6 +220,18 @@ bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation,
             break;
     }
     return meshChanged;
+}
+
+bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+{
+    ResolveMeshDegenSettings settings
+    {
+        .maxIters = maxIters,
+        .maxDeviation = maxDeviation,
+        .maxAngleChange = maxAngleChange,
+        .criticalAspectRatio = criticalAspectRatio
+    };
+    return resolveMeshDegenerations( mesh, settings );
 }
 
 bool MeshDecimator::initializeQueue_()
@@ -393,7 +407,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             auto da = dirDblArea( eDest, eDest2 );
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, eDest, eDest2 ) );
+            const auto triAspect = triangleAspectRatio( collapsePos, eDest, eDest2 );
+            if ( triAspect >= settings_.criticalTriAspectRatio )
+                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, eDest, eDest2 ) );
     }
@@ -402,15 +419,12 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( maxOldAspectRatio < settings_.criticalTriAspectRatio )
+    if ( ( po != pd ) || ( po != collapsePos ) )
     {
-        if ( ( po != pd ) || ( po != collapsePos ) )
-        {
-            auto n = Vector3f{ sumDblArea_.normalized() };
-            for ( const auto da : triDblAreas_ )
-                if ( dot( da, n ) < 0 )
-                    return {};
-        }
+        auto n = Vector3f{ sumDblArea_.normalized() };
+        for ( const auto da : triDblAreas_ )
+            if ( dot( da, n ) < 0 )
+                return {};
     }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )

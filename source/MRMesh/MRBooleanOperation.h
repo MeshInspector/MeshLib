@@ -65,6 +65,8 @@ struct BooleanResultMapper
     MRMESH_API VertBitSet map( const VertBitSet& oldBS, MapObject obj ) const;
     /// Returns edges bitset of result mesh corresponding input one
     MRMESH_API EdgeBitSet map( const EdgeBitSet& oldBS, MapObject obj ) const;
+    /// Returns only new faces that are created during boolean operation
+    MRMESH_API FaceBitSet newFaces() const;
 
     struct Maps
     {

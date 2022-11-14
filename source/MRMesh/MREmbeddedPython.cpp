@@ -43,14 +43,20 @@ bool EmbeddedPython::setupArgv( int argc, char** argv )
 {
     if ( !instance_().available_ )
         return false;
-    std::vector<std::wstring> wargv( argc );
-    std::vector<wchar_t*> wargvPtr( argc );
-    for ( int i = 0; i < argc; ++i )
-    {
-        wargv[i] = utf8ToWide( argv[i] );
-        wargvPtr[i] = wargv[i].data();
-    }
-    PySys_SetArgv( argc, wargvPtr.data() );
+    PyStatus status;
+
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+    config.isolated = 1;
+
+    // Implicitly preinitialize Python (in isolated mode)
+    status = PyConfig_SetBytesArgv(&config, argc, argv);
+    if (PyStatus_Exception(status))
+        return false;
+
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status))
+        return false;
     return true;
 }
 

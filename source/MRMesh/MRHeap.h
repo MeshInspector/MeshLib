@@ -27,7 +27,7 @@ public:
     };
 
     /// constructs heap for given number of elements, assigning given default value to each element
-    Heap( int size, T def = {}, P pred = {} );
+    explicit Heap( int size, T def = {}, P pred = {} );
     /// returns the size of the heap
     int size() const { return (int)heap_.size(); }
     /// increases the size of the heap by adding elements at the end

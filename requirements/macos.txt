@@ -14,6 +14,7 @@ openexr
 openvdb
 openssl@3
 podofo
+python@3.10
 spdlog
 tbb
 libpng

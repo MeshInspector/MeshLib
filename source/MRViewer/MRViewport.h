@@ -423,6 +423,8 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
+    // Get current rotaion pivot in world space
+    MRVIEWER_API Vector3f getRotationPivot() const;
 private:
     // initializes view matrix based on camera position
     void setupViewMatrix() const;

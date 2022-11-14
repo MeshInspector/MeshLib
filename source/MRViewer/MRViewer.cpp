@@ -39,6 +39,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandlerWindows.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -543,6 +544,8 @@ int Viewer::launchInit_( const LaunchParams& params )
 
     isLaunched_ = true;
 
+    spaceMouseHandler_->initialize();
+
     return EXIT_SUCCESS;
 }
 
@@ -562,6 +565,7 @@ void Viewer::launchEventLoop()
             draw( true );
             glfwPollEvents();
             processMouseEventsQueue_();
+            spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
@@ -576,6 +580,8 @@ void Viewer::launchEventLoop()
             glfwWaitEvents();
             processMouseEventsQueue_();
         }
+        spaceMouseHandler_->handle();
+
     }
 }
 
@@ -704,6 +710,12 @@ Viewer::Viewer() :
     viewport_list.emplace_back();
     viewport_list.front().id = ViewportId{ 1 };
     presentViewportsMask_ |= viewport_list.front().id;
+
+#ifdef _WIN32
+    spaceMouseHandler_ = std::make_shared<SpaceMouseHandlerWindows>();
+#else
+    spaceMouseHandler_ = std::make_shared<SpaceMouseHandler>();
+#endif
 }
 
 Viewer::~Viewer()
@@ -947,6 +959,36 @@ bool Viewer::mouseScroll( float delta_y )
     if ( mouseScrollSignal( scrollForce * delta_y ) )
         return true;
 
+    return true;
+}
+
+bool Viewer::spaceMouseMove( Vector3f translate, Vector3f rotate )
+{
+    auto& viewportRef = viewport();
+    spdlog::info( "spaceMouseMove :   translate = ({}, {}, {})   rotate = ({}, {}, {})",
+        translate.x, translate.y, translate.z, rotate.x, rotate.y, rotate.z );
+    viewportRef.setCameraTranslation( viewportRef.getParameters().cameraTranslation + translate );
+
+    if ( rotate.lengthSq() > 1.e-3f )
+    {
+        auto quat = viewportRef.getParameters().cameraTrackballAngle;
+        //    float maxDimension = float( std::max( window_width, window_height ) );
+        //    auto angle = PI_F * ( Vector2f( currentMousePos_ ) - Vector2f( prevMousePos_ ) ) / maxDimension * 4.0f;
+        quat = (
+            Quaternionf( Vector3f{ 1,0,0 }, rotate.x ) *
+            Quaternionf( Vector3f{ 0,0,1 }, rotate.y ) *
+            Quaternionf( Vector3f{ 0,1,0 }, rotate.z ) *
+            quat
+            ).normalized();
+        viewportRef.setCameraTrackballAngle( quat );
+    }
+
+    return true;
+}
+
+bool Viewer::spaceMouseDown( int key )
+{
+    spdlog::info( "spaceMouseDown :   key = {}", key );
     return true;
 }
 

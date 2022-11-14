@@ -39,6 +39,8 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 namespace MR
 {
 
+class SpaceMouseHandler;
+
 // GLFW-based mesh viewer
 class Viewer
 {
@@ -128,6 +130,8 @@ public:
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
+    MRVIEWER_API bool spaceMouseMove( Vector3f translate, Vector3f rotate );
+    MRVIEWER_API bool spaceMouseDown( int key );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
@@ -627,6 +631,8 @@ private:
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
+
+    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

@@ -225,7 +225,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
 {
     pybind11::class_<SubdivideSettings>( m, "SubdivideSettings" ).
         def( pybind11::init<>() ).
-        def_readwrite( "maxEdgeLen", &SubdivideSettings::maxEdgeLen, "Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value" ).
+        def_readwrite( "maxEdgeLen", &SubdivideSettings::maxEdgeLen, "Maximal possible edge length created during decimation" ).
         def_readwrite( "maxEdgeSplits", &SubdivideSettings::maxEdgeSplits, "Maximum number of edge splits allowed" ).
         def_readwrite( "maxDeviationAfterFlip", &SubdivideSettings::maxDeviationAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation" ).
         def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value" ).

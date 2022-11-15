@@ -1128,7 +1128,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 renameBuffer_ = pObj->name();
                 lastRenameObj_ = pObj;
             }
-            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_( 3 ), ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
             {
                 if ( renameBuffer_ == pObj->name() )
                 {

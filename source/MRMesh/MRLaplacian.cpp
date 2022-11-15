@@ -4,6 +4,7 @@
 #include "MRExpandShrink.h"
 #include "MRRingIterator.h"
 #include "MRUVSphere.h"
+#include "MRMeshComponents.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
@@ -15,6 +16,7 @@ namespace MR
 void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem )
 {
     MR_TIMER;
+    assert( !MeshComponents::hasFullySelectedComponent( mesh_, freeVerts ) );
 
     class SimplicialLDLTSolver final : public Solver
     {

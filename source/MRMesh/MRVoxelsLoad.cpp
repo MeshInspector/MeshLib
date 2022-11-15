@@ -500,13 +500,13 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
             if ( anySuccessLoad && loadRes.error().substr( 0, str.size() ) == str )
                 return true;
             res.push_back( loadRes );
-            if ( loadRes.error() == "Loading cancelled" )
+            if ( loadRes.error() == "Loading canceled" )
                 return false;
         }
         return true;
     };
     if ( !tryLoadDir( path ) )
-        return { tl::make_unexpected( "Loading cancelled" ) };
+        return { tl::make_unexpected( "Loading canceled" ) };
 
     const std::filesystem::recursive_directory_iterator dirEnd;
     std::error_code ec;
@@ -525,7 +525,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     if ( cb )
         newCb = [&cb]( float f ) { return 0.5f * cb( f ); };
     if ( newCb && !newCb( 0.0f ) )
-        return tl::make_unexpected( "Loading cancelled" );
+        return tl::make_unexpected( "Loading canceled" );
 
     SimpleVolume simpleVolume;
     simpleVolume.voxelSize = Vector3f();
@@ -534,7 +534,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     if ( !fileRes.success )
         return tl::make_unexpected( "loadDCMFile: error load file: " + utf8string( path ) );
     if ( newCb && !newCb( 0.5f ) )
-        return tl::make_unexpected( "Loading cancelled" );
+        return tl::make_unexpected( "Loading canceled" );
     simpleVolume.max = fileRes.max;
     simpleVolume.min = fileRes.min;
     
@@ -544,16 +544,6 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     res.vdbVolume = simpleVolumeToVdbVolume( simpleVolume, newCb );
     res.name = utf8string( path.stem() );
     return res;
-//     ProgressCallback localCb{};
-//     if ( newCb )
-//         localCb = [&cb]( float f ) {
-//             cb( 0.5f + 0.5f * f );
-//             return true;
-//         };
-//     ObjectVoxels voxels;
-//     voxels.construct( simpleVolume, localCb );
-//     voxels.setName(  );
-//     return std::make_shared<ObjectVoxels>( std::move( voxels ) );
 }
 
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,

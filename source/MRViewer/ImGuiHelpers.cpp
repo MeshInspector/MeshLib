@@ -1153,21 +1153,23 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f * menuScaling, 0 } ) )
+    float p = ImGui::GetStyle().FramePadding.x;
+    auto width = GetContentRegionAvail().x - 3 * p;    
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
-    ImGui::SameLine();
+    ImGui::SameLine( 0, p );
 
     const bool importPlaneModeOld = planeWidget.importPlaneMode();
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f * menuScaling, 0 } ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
         spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );

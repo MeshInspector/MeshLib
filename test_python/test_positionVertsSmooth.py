@@ -12,7 +12,7 @@ def test_position_vers_smooth():
     #params = mrmesh.LaplacianEdgeWeightsParam.Unit
     params = mrmesh.LaplacianEdgeWeightsParam.Cotan
     verts = torus.topology.getValidVerts()
-    verts.set(mr.VertId(0), False)
+    verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothly(torus, verts, params)
 
     # now all points are in that range from the center

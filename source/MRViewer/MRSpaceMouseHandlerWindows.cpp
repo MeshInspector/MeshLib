@@ -114,8 +114,7 @@ bool InitializeRawInput( HWND hwndTarget )
 }
 
 
-SpaceMouseHandlerWindows::SpaceMouseHandlerWindows() :
-    axesScale_{ 100.f, -100.f, -100.f, 1.f, 1.f, 1.f }
+SpaceMouseHandlerWindows::SpaceMouseHandlerWindows()    
 {
 }
 
@@ -146,8 +145,8 @@ void SpaceMouseHandlerWindows::handle()
     Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
     Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
     std::memcpy( axes_.data(), axesNew, sizeof( float ) * 6 );
-    translate *= 100.f;
-    rotate *= 100.f;
+    translate = mult( translate, translateScale_ );
+    rotate = mult( rotate, rotateScale_ );
     if ( ( translate.lengthSq() > 1.e-3f  && translate.lengthSq() < 1.e+3f ) ||
         ( rotate.lengthSq() > 1.e-3f && rotate.lengthSq() < 1.e+3f ) )
         getViewerInstance().spaceMouseMove( translate, rotate );

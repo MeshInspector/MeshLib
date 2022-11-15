@@ -12,13 +12,6 @@ public:
     SpaceMouseHandler() = default;
     virtual ~SpaceMouseHandler() = default;
 
-    struct MotionEvent
-    {
-        Vector3i translation;
-        Vector3i rotation;
-    };
-    //void setMotionCallback( const std::function<void( const MotionEvent& )>& cb );
-
     enum Button : int
     {
         MENU = 0,
@@ -37,17 +30,6 @@ public:
         ALT = 23,
         LOCK_ROT = 26,
     };
-    enum class ButtonState
-    {
-        RELEASED = 0,
-        PRESSED = 1,
-    };
-    struct ButtonEvent
-    {
-        int code;
-        ButtonState state;
-    };
-    //void setButtonCallback( const std::function<void( const ButtonEvent& )>& cb );
 
     virtual void initialize() {};
     virtual void handle() {};

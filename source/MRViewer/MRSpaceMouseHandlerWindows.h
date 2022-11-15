@@ -14,7 +14,8 @@ public:
 private:
     std::array<float, 6> axes_;
 
-    std::array<float, 6> axesScale_;
+    Vector3f translateScale_{ 100.f, 100.f, 100.f };
+    Vector3f rotateScale_{ 10.f, 10.f, 10.f };
 };
 
 }

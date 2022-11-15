@@ -964,16 +964,13 @@ bool Viewer::mouseScroll( float delta_y )
 
 bool Viewer::spaceMouseMove( Vector3f translate, Vector3f rotate )
 {
+    // TODO test version
     auto& viewportRef = viewport();
-    spdlog::info( "spaceMouseMove :   translate = ({}, {}, {})   rotate = ({}, {}, {})",
-        translate.x, translate.y, translate.z, rotate.x, rotate.y, rotate.z );
     viewportRef.setCameraTranslation( viewportRef.getParameters().cameraTranslation + translate );
 
     if ( rotate.lengthSq() > 1.e-3f )
     {
         auto quat = viewportRef.getParameters().cameraTrackballAngle;
-        //    float maxDimension = float( std::max( window_width, window_height ) );
-        //    auto angle = PI_F * ( Vector2f( currentMousePos_ ) - Vector2f( prevMousePos_ ) ) / maxDimension * 4.0f;
         quat = (
             Quaternionf( Vector3f{ 1,0,0 }, rotate.x ) *
             Quaternionf( Vector3f{ 0,0,1 }, rotate.y ) *
@@ -983,13 +980,17 @@ bool Viewer::spaceMouseMove( Vector3f translate, Vector3f rotate )
         viewportRef.setCameraTrackballAngle( quat );
     }
 
-    return true;
+    return spaceMouseMoveSignal( translate, rotate );
 }
 
 bool Viewer::spaceMouseDown( int key )
 {
-    spdlog::info( "spaceMouseDown :   key = {}", key );
-    return true;
+    return spaceMouseDownSignal( key );
+}
+
+bool Viewer::spaceMouseUp( int key )
+{
+    return spaceMouseUpSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )

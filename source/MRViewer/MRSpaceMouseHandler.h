@@ -33,9 +33,6 @@ public:
 
     virtual void initialize() {};
     virtual void handle() {};
-
-protected:
-    bool initialized_{ false };
 };
 
 }

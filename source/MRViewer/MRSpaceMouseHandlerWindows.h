@@ -12,6 +12,7 @@ public:
     virtual void initialize() override;
     virtual void handle() override;
 private:
+    bool initialized_{ false };
     std::array<float, 6> axes_;
 
     Vector3f translateScale_{ 100.f, 100.f, 100.f };

@@ -16,7 +16,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
             "\tstop the decimation as soon as the estimated distance deviation from the original mesh is more than this value\n"
             "for DecimateStrategy::ShortestEdgeFirst only:\n"
             "\tstop the decimation as soon as the shortest edge in the mesh is greater than this value" ).
-        def_readwrite( "maxEdgeLen", &MR::DecimateSettings::maxEdgeLen, "Edges longer than this value will not be collapsed (but they can appear after collapsing of shorter ones)" ).
+        def_readwrite( "maxEdgeLen", &MR::DecimateSettings::maxEdgeLen, "Maximal possible edge length created during decimation" ).
         def_readwrite( "maxDeletedFaces", &MR::DecimateSettings::maxDeletedFaces, "Limit on the number of deleted faces" ).
         def_readwrite( "maxDeletedVertices", &MR::DecimateSettings::maxDeletedVertices, "Limit on the number of deleted vertices" ).
         def_readwrite( "maxTriangleAspectRatio", &MR::DecimateSettings::maxTriangleAspectRatio, "Maximal possible aspect ratio of a triangle introduced during decimation" ).

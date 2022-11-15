@@ -65,7 +65,7 @@ private:
     // active edges - edges that currently intersect sweep line
     struct ActiveEdgeInfo
     {
-        ActiveEdgeInfo( EdgeId e, float y ) :id{ e }/*, helperId{ e }*/, yPos{ y }{}
+        ActiveEdgeInfo( EdgeId e, float y ) :id{ e }, yPos{ y }{}
         EdgeId id;
         float yPos{ FLT_MAX };
     };

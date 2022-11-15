@@ -93,7 +93,7 @@ void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
     } );
 }
 
-bool SurfaceDistanceBuilder::suggestVertDistance_( const VertDistance & c )
+bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c )
 {
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
@@ -101,6 +101,7 @@ bool SurfaceDistanceBuilder::suggestVertDistance_( const VertDistance & c )
         vi = c.distance;
         if ( region_ && !region_->test( c.vert ) )
             return false;
+        c.distance = metricToPenalty_( c.distance, c.vert );
         nextVerts_.push( c );
         return true;
     }
@@ -164,12 +165,13 @@ VertId SurfaceDistanceBuilder::growOne()
         const auto c = nextVerts_.top();
         nextVerts_.pop();
         auto & vi = vertDistanceMap_[c.vert];
-        if ( vi < c.distance )
+        const auto expectedPenalty = metricToPenalty_( vi, c.vert );
+        if ( expectedPenalty < c.distance )
         {
             // shorter path to the vertex was found
             continue;
         }
-        assert( vi == c.distance );
+        assert( expectedPenalty == c.distance );
         auto & numUpdated = vertUpdatedTimes_[c.vert];
         if ( numUpdated >= cMaxVertUpdates )
         {
@@ -181,6 +183,13 @@ VertId SurfaceDistanceBuilder::growOne()
         return c.vert;
     }
     return VertId();
+}
+
+float SurfaceDistanceBuilder::metricToPenalty_( float metric, VertId v ) const
+{
+    if ( !target_ )
+        return metric;
+    return metric + ( mesh_.points[v] - *target_ ).length();
 }
 
 TEST(MRMesh, SurfaceDistance) 

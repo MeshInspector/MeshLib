@@ -238,7 +238,7 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
     const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
     const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width;
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
     
     SetNextItemWidth( actualWidth );
     PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );    
@@ -254,7 +254,7 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
     const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
     const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width;
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     SetNextItemWidth( actualWidth );
     PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );

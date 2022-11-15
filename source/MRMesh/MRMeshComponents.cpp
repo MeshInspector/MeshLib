@@ -312,7 +312,7 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
     MR_TIMER;
     for ( const auto & component : getAllComponentsVerts( mesh ) )
     {
-        if ( std::all_of( begin( component ), end( component ), [&selection]( VertId v ) { return selection.test( v ); } ) )
+        if ( ( component - selection ).none() )
             return true;
     }
     return false;

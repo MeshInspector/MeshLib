@@ -65,11 +65,8 @@ private:
     // active edges - edges that currently intersect sweep line
     struct ActiveEdgeInfo
     {
-        ActiveEdgeInfo( EdgeId e, float y ) :id{ e }, helperId{ e }, yPos{ y }{}
+        ActiveEdgeInfo( EdgeId e, float y ) :id{ e }, yPos{ y }{}
         EdgeId id;
-        // this is id of rightmost left vertex (it's lower edge) just above this active edge
-        // close to `helper` described here : https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
-        EdgeId helperId;
         float yPos{ FLT_MAX };
     };
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
@@ -360,12 +357,32 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     if ( !hasLeft && activeVPosition != INT_MAX && activeVPosition != -1 && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
         assert( lowestRight != INT_MAX );
+        // find helper:
+        // id of rightmost left vertex (it's lower edge) closest to active vertex
+        // close to `helper` described here : https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
+        EdgeId helperId;
+        auto upper = activeSweepEdges_[activeVPosition + 1].id;
+        auto lower = activeSweepEdges_[activeVPosition].id;
+        if ( loneRightmostLeft_.id && loneRightmostLeft_.upper == upper && loneRightmostLeft_.lower == lower )
+        {
+            helperId = loneRightmostLeft_.id;
+            loneRightmostLeft_.id = EdgeId{};
+        }
+        else
+        {
+            auto compUpper = ComaparableVertId( &mesh_, mesh_.topology.org( upper ) );
+            auto compLower = ComaparableVertId( &mesh_, mesh_.topology.org( lower ) );
+            if ( compUpper > compLower )
+                helperId = mesh_.topology.prev( upper );
+            else
+                helperId = lower;
+        }
+        assert( helperId );
         auto newE = mesh_.topology.makeEdge();
-        mesh_.topology.splice( activeSweepEdges_[activeVPosition].helperId, newE );
+        mesh_.topology.splice( helperId, newE );
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
         windingInfo_.resize( newE.undirected() + 1 );
         windingInfo_[newE.undirected()].winding = 1; // mark inside
-        loneRightmostLeft_.id = EdgeId{};
     }
 
     // connect rightmost left with no right edges to this edge, if needed
@@ -423,7 +440,6 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     else if ( activeVPosition != INT_MAX && activeVPosition != -1 && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
         assert( hasLeft );
-        activeSweepEdges_[activeVPosition].helperId = lowestLeftEdge;
         loneRightmostLeft_.id = lowestLeftEdge;
         loneRightmostLeft_.lower = activeSweepEdges_[activeVPosition].id;
         loneRightmostLeft_.upper = activeSweepEdges_[activeVPosition + 1].id;

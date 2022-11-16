@@ -42,7 +42,8 @@ public:
     };
 
     Laplacian( Mesh & mesh ) : mesh_( mesh ) { }
-    // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed
+    // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
+    // \param freeVerts must not include all vertices of a mesh connected component
     MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem = RememberShape::Yes );
     // notify Laplacian that given vertex has changed after init and must be fixed during apply
     MRMESH_API void fixVertex( VertId v );

@@ -59,7 +59,7 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
 {
     MR_TIMER;
 
-    SurfaceDistanceBuilder b( mesh, region );
+    SurfaceDistanceBuilder b( mesh, mesh.triPoint( end ), region );
     b.addStart( start );
 
     VertId stopVerts[3];

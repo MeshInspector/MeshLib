@@ -4,11 +4,17 @@
 #include "MRViewer.h"
 #include <windows.h>
 #include <GLFW/glfw3.h>
+#include <functional>
 
 namespace MR
 {
 
-static PRAWINPUTDEVICE GetDevicesToRegister( unsigned int* pNumDevices )
+constexpr float axesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
+
+#define LOGITECH_VENDOR_ID 0x46d
+#define CONNEXION_VENDOR_ID  0x256f
+
+PRAWINPUTDEVICE GetDevicesToRegister( unsigned int* pNumDevices )
 {
     // Array of raw input devices to register
     static RAWINPUTDEVICE sRawInputDevices[] = {
@@ -25,9 +31,6 @@ static PRAWINPUTDEVICE GetDevicesToRegister( unsigned int* pNumDevices )
     return sRawInputDevices;
 }
 
-#define LOGITECH_VENDOR_ID 0x46d
-#define CONNEXION_VENDOR_ID  0x256f
-
 bool Is3dmouseAttached()
 {
     unsigned int numDevicesOfInterest = 0;
@@ -36,19 +39,14 @@ bool Is3dmouseAttached()
     unsigned int nDevices = 0;
 
     if ( ::GetRawInputDeviceList( NULL, &nDevices, sizeof( RAWINPUTDEVICELIST ) ) != 0 )
-    {
         return false;
-    }
 
     if ( nDevices == 0 )
         return false;
 
     std::vector<RAWINPUTDEVICELIST> rawInputDeviceList( nDevices );
-    if ( ::GetRawInputDeviceList( &rawInputDeviceList[0], &nDevices, sizeof( RAWINPUTDEVICELIST ) )
-        == static_cast< unsigned int >( -1 ) )
-    {
+    if ( ::GetRawInputDeviceList( &rawInputDeviceList[0], &nDevices, sizeof( RAWINPUTDEVICELIST ) ) == static_cast< unsigned int >( -1 ) )
         return false;
-    }
 
     for ( unsigned int i = 0; i < nDevices; ++i )
     {
@@ -58,18 +56,13 @@ bool Is3dmouseAttached()
         if ( GetRawInputDeviceInfo( rawInputDeviceList[i].hDevice, RIDI_DEVICEINFO, &rdi, &cbSize ) > 0 )
         {
             //skip non HID and non logitec (3DConnexion) devices
-            if ( !( rdi.dwType == RIM_TYPEHID
-                && ( rdi.hid.dwVendorId == LOGITECH_VENDOR_ID
-                    || rdi.hid.dwVendorId == CONNEXION_VENDOR_ID ) ) )
-            {
+            if ( !( rdi.dwType == RIM_TYPEHID && ( rdi.hid.dwVendorId == LOGITECH_VENDOR_ID || rdi.hid.dwVendorId == CONNEXION_VENDOR_ID ) ) )
                 continue;
-            }
 
             //check if devices matches Multi-axis Controller
             for ( unsigned int j = 0; j < numDevicesOfInterest; ++j )
             {
-                if ( devicesToRegister[j].usUsage == rdi.hid.usUsage
-                    && devicesToRegister[j].usUsagePage == rdi.hid.usUsagePage )
+                if ( devicesToRegister[j].usUsage == rdi.hid.usUsage && devicesToRegister[j].usUsagePage == rdi.hid.usUsagePage )
                 {
                     return true;
                 }
@@ -79,16 +72,8 @@ bool Is3dmouseAttached()
     return false;
 }
 
-static HWND fWindow;
-
-bool InitializeRawInput( HWND hwndTarget )
+bool InitializeRawInput()
 {
-    fWindow = hwndTarget;
-
-    // Simply fail if there is no window
-    if ( !hwndTarget )
-        return false;
-
     unsigned int numDevices = 0;
     PRAWINPUTDEVICE devicesToRegister = GetDevicesToRegister( &numDevices );
 
@@ -108,14 +93,8 @@ bool InitializeRawInput( HWND hwndTarget )
         // If Vista or newer, enable receiving the WM_INPUT_DEVICE_CHANGE message.
         //if (osvi.dwMajorVersion >= 6) {
         devicesToRegister[i].dwFlags |= RIDEV_DEVNOTIFY;
-        //}
     }
     return ( ::RegisterRawInputDevices( devicesToRegister, numDevices, cbSize ) != FALSE );
-}
-
-
-SpaceMouseHandlerWindows::SpaceMouseHandlerWindows()    
-{
 }
 
 void SpaceMouseHandlerWindows::initialize()
@@ -125,18 +104,20 @@ void SpaceMouseHandlerWindows::initialize()
 
     if ( is3Dmouse )
     {
-        initialized_ = InitializeRawInput( GetConsoleWindow() );
+        initialized_ = InitializeRawInput();
         spdlog::info( "InitializeRawInput = {}", initialized_ );
     }
+
+    updateConnected_();
 }
 
 void SpaceMouseHandlerWindows::handle()
 {
-    if ( !initialized_ )
+    if ( !initialized_ || joystickIndex_ == -1 )
         return;
 
     int count;
-    const float* axesNew = glfwGetJoystickAxes( GLFW_JOYSTICK_1, &count );
+    const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
     if ( count != 6 )
     {
         spdlog::error( "Error SpaceMouseHandlerWindows : Wrong axes count" );
@@ -145,38 +126,56 @@ void SpaceMouseHandlerWindows::handle()
     Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
     Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
     std::memcpy( axes_.data(), axesNew, sizeof( float ) * 6 );
-    translate = mult( translate, translateScale_ );
-    rotate = mult( rotate, rotateScale_ );
-    if ( ( translate.lengthSq() > 1.e-3f  && translate.lengthSq() < 1.e+3f ) ||
-        ( rotate.lengthSq() > 1.e-3f && rotate.lengthSq() < 1.e+3f ) )
-        getViewerInstance().spaceMouseMove( translate, rotate );
+    translate *= axesScale;
+    rotate *= axesScale;
+
+    auto& viewer = getViewerInstance();
+    if ( translate.lengthSq() > 1.e-3f || rotate.lengthSq() > 1.e-3f )
+        viewer.spaceMouseMove( translate, rotate );
 
 
+    const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
+    for ( int i = 0; i < BUTTON_COUNT; ++i )
+    {
+        if ( !buttons_[i] && buttons[i] ) // button down
+            viewer.spaceMouseDown( i );
+        else if ( buttons_[i] && !buttons[i] ) // button up
+            viewer.spaceMouseUp( i );
+//         else if ( buttons_[i] && buttons[i] &&  ) // button repeat
+//             viewer.spaceMouseRepeat( i );
+    }
+    std::memcpy( buttons_.data(), buttons, sizeof( unsigned char ) * count );
+}
 
+void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
+{
+    updateConnected_();
+}
 
-    //         spdlog::info( "joystick present =====================================" );
-    //         for ( int i = GLFW_JOYSTICK_1; i < GLFW_JOYSTICK_LAST; ++i )
-    //         {
-    //             int present = glfwJoystickPresent( i );
-    //             spdlog::info( "present {} = {}", i, present );
-    //         }
+void SpaceMouseHandlerWindows::updateConnected_()
+{
+    joystickIndex_ = -1;
+    for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
+    {
+        int present = glfwJoystickPresent( i );
+        if ( !present )
+            continue;
+        const char* name = glfwGetJoystickName( i );
+        std::string_view str( name );
+        auto findRes = str.find( "SpaceMouse" );
+        if ( findRes != std::string_view::npos )
+        {
+            joystickIndex_ = i;
+            break;
+        }
+    }
 
-    //         const char* name = glfwGetJoystickName( GLFW_JOYSTICK_1 );
-    //         spdlog::info( "name = {}", name );
-
-//     int count;
-//     const unsigned char* buttons = glfwGetJoystickButtons( GLFW_JOYSTICK_1, &count );
-//     spdlog::info( "joystick buttons ===================================== time = {}", glfwGetTime() );
-//     for ( int i = 0; i < count; ++i )
-//     {
-//         spdlog::info( "button {} = {}", i, int( buttons[i] ) );
-//     }
-
-//         spdlog::info( "joystick axes =====================================" );
-//         for ( int i = 0; i < count; ++i )
-//         {
-//             spdlog::info( "axis {} = {}", i, axesNew[i] );
-//         }
+    if ( joystickIndex_ != -1 )
+    {
+        int count;
+        const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
+        std::memcpy( axes_.data(), axesNew, sizeof( float ) * 6 );
+    }
 }
 
 }

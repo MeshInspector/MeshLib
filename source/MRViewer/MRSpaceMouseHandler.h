@@ -14,25 +14,27 @@ public:
 
     enum Button : int
     {
-        MENU = 0,
-        FIT = 1,
-        TOP = 2,
-        RIGHT = 4,
-        FRONT = 5,
-        ROLL_CW = 8,
-        CUSTOM_1 = 12,
-        CUSTOM_2 = 13,
-        CUSTOM_3 = 14,
-        CUSTOM_4 = 15,
-        ESC = 22,
-        SHIFT = 24,
-        CTRL = 25,
-        ALT = 23,
-        LOCK_ROT = 26,
+        MENU,
+        FIT,
+        TOP,
+        RIGHT,
+        FRONT,
+        ROLL_CW,
+        CUSTOM_1,
+        CUSTOM_2,
+        CUSTOM_3,
+        CUSTOM_4,
+        ESC,
+        SHIFT,
+        CTRL,
+        ALT,
+        LOCK_ROT,
+        BUTTON_COUNT
     };
 
     virtual void initialize() {};
     virtual void handle() {};
+    virtual void updateConnected( int /*jid*/, int /*event*/ ) {};
 };
 
 }

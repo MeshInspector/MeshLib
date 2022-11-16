@@ -7,16 +7,15 @@ namespace MR
 class SpaceMouseHandlerWindows : public SpaceMouseHandler
 {
 public:
-    SpaceMouseHandlerWindows();
-
     virtual void initialize() override;
     virtual void handle() override;
+    virtual void updateConnected( int jid, int event );
 private:
     bool initialized_{ false };
     std::array<float, 6> axes_;
-
-    Vector3f translateScale_{ 100.f, 100.f, 100.f };
-    Vector3f rotateScale_{ 10.f, 10.f, 10.f };
+    std::array<unsigned char, BUTTON_COUNT> buttons_;
+    int joystickIndex_{ -1 };
+    virtual void updateConnected_();
 };
 
 }

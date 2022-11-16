@@ -203,6 +203,11 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     } );
 }
 
+static void glfw_joystick_callback( int jid, int event )
+{
+    MR::Viewer::instanceRef().joystickUpdateConnected( jid, event );
+}
+
 namespace MR
 {
 
@@ -480,6 +485,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetMouseButtonCallback( window, glfw_mouse_press );
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
+        glfwSetJoystickCallback( glfw_joystick_callback );
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );
@@ -545,6 +551,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     isLaunched_ = true;
 
     spaceMouseHandler_->initialize();
+    
 
     return EXIT_SUCCESS;
 }
@@ -962,23 +969,21 @@ bool Viewer::mouseScroll( float delta_y )
     return true;
 }
 
-bool Viewer::spaceMouseMove( Vector3f translate, Vector3f rotate )
+bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
     // TODO test version
     auto& viewportRef = viewport();
     viewportRef.setCameraTranslation( viewportRef.getParameters().cameraTranslation + translate );
 
-    if ( rotate.lengthSq() > 1.e-3f )
-    {
-        auto quat = viewportRef.getParameters().cameraTrackballAngle;
-        quat = (
-            Quaternionf( Vector3f{ 1,0,0 }, rotate.x ) *
-            Quaternionf( Vector3f{ 0,0,1 }, rotate.y ) *
-            Quaternionf( Vector3f{ 0,1,0 }, rotate.z ) *
-            quat
-            ).normalized();
-        viewportRef.setCameraTrackballAngle( quat );
-    }
+    Vector3f rotateScaled = rotate * 0.1f;
+    auto quat = viewportRef.getParameters().cameraTrackballAngle;
+    quat = (
+        Quaternionf( Vector3f{ 1,0,0 }, rotateScaled.x ) *
+        Quaternionf( Vector3f{ 0,0,1 }, rotateScaled.y ) *
+        Quaternionf( Vector3f{ 0,1,0 }, rotateScaled.z ) *
+        quat
+        ).normalized();
+    viewportRef.setCameraTrackballAngle( quat );
 
     return spaceMouseMoveSignal( translate, rotate );
 }
@@ -991,6 +996,11 @@ bool Viewer::spaceMouseDown( int key )
 bool Viewer::spaceMouseUp( int key )
 {
     return spaceMouseUpSignal( key );
+}
+
+bool Viewer::spaceMouseRepeat( int key )
+{
+    return spaceMouseRepeatSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
@@ -1007,6 +1017,11 @@ bool Viewer::interruptWindowClose()
         return true;
 
     return false;
+}
+
+void Viewer::joystickUpdateConnected( int jid, int event )
+{
+    spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )

@@ -226,9 +226,6 @@
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
     </ClCompile>
-    <ClCompile Include="MRSpaceMouseHandler.cpp">
-      <Filter>SpaceMouse</Filter>
-    </ClCompile>
     <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>

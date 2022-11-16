@@ -38,7 +38,6 @@
     <ClCompile Include="MRSelectScreenLasso.cpp" />
     <ClCompile Include="MRShadowsGL.cpp" />
     <ClCompile Include="MRShortcutManager.cpp" />
-    <ClCompile Include="MRSpaceMouseHandler.cpp" />
     <ClCompile Include="MRSpaceMouseHandlerWindows.cpp" />
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />

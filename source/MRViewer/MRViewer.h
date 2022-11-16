@@ -130,12 +130,15 @@ public:
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
-    MRVIEWER_API bool spaceMouseMove( Vector3f translate, Vector3f rotate );
+    MRVIEWER_API bool spaceMouseMove( const Vector3f& translate, const Vector3f& rotate );
     MRVIEWER_API bool spaceMouseDown( int key );
     MRVIEWER_API bool spaceMouseUp( int key );
+    MRVIEWER_API bool spaceMouseRepeat( int key );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
+    // callback to update connected / disconnected joystick
+    MRVIEWER_API void joystickUpdateConnected( int jid, int event );
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
@@ -495,6 +498,7 @@ public:
     SpaceMouseMoveSignal spaceMouseMoveSignal; // signal is called on spacemouse 3d controller (joystick) move
     SpaceMouseKeySignal spaceMouseDownSignal; // signal is called on spacemouse key down
     SpaceMouseKeySignal spaceMouseUpSignal; // signal is called on spacemouse key up
+    SpaceMouseKeySignal spaceMouseRepeatSignal; // signal is called when spacemouse key is pressed for some time
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)

@@ -5,6 +5,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include <string>
 #include <fstream>
@@ -255,7 +256,21 @@ void Palette::setUniformLabels_()
 
     if ( parameters_.ranges.size() == 2 )
     {
-        const int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
+ 
+        int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
+
+        if ( ImGui::GetCurrentContext() )
+        {
+            const auto& viewer = Viewer::instanceRef();
+            const auto maxHeight = viewer.window_height;
+            const auto menu = Viewer::instanceRef().getMenuPlugin();
+            const auto scaling = menu ? menu->menu_scaling() : 1.0f;
+
+            const auto maxLabelCount = int ( maxHeight / ( ImGui::GetTextLineHeightWithSpacing() * scaling ) );
+            if ( num > maxLabelCount )
+                num = maxLabelCount;
+        }       
+        
         labels_.resize( num );
 
         for ( int i = 0; i < num; ++i )

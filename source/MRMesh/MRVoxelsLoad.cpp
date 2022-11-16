@@ -379,7 +379,7 @@ void sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned maxNumT
 }
 
 tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
-                                                    unsigned maxNumThreads, ProgressCallback cb )
+                                                    unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
     ProgressCallback newCb{};
@@ -480,7 +480,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
     return res;
 }
 
-std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, ProgressCallback cb )
+std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
     std::vector<tl::expected<LoadDCMResult, std::string>> res;
@@ -517,7 +517,7 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
     return res;
 }
 
-tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, ProgressCallback cb )
+tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER;
     ProgressCallback newCb{};

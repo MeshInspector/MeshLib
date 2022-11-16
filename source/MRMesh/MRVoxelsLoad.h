@@ -35,14 +35,14 @@ struct LoadDCMResult
 ///                          z - number of pictures loaded
 /// Files in folder are sorted by names
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
-                                                        unsigned maxNumThreads = 4, ProgressCallback cb = {} );
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
 MRMESH_API std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path,
-                                                        unsigned maxNumThreads = 4, ProgressCallback cb = {} );
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Load single DCM file as Object Voxels
-MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, ProgressCallback cb = {} );
+MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
 struct RawParameters
 {

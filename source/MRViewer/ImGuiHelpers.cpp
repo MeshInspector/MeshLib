@@ -241,9 +241,13 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
     
     SetNextItemWidth( actualWidth );
-    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );    
+    if ( actualWidth > estimatedSize.x )
+        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
     bool res =  InputText( label, str, flags, callback, user_data );
-    PopStyleVar();
+
+    if ( actualWidth > estimatedSize.x )
+        PopStyleVar();
     return res;
 }
 

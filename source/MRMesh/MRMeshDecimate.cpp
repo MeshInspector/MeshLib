@@ -181,15 +181,8 @@ public:
 
 MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
 {
-    QuadraticForm3f qf;
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
     qf.addDistToOrigin( stabilizer );
-    for ( EdgeId e : orgRing( mp.mesh.topology, v ) )
-    {
-        if ( mp.mesh.topology.isBdEdge( e, mp.region ) )
-            qf.addDistToLine( mp.mesh.edgeVector( e ).normalized() );
-        if ( mp.mesh.topology.isLeftInRegion( e, mp.region ) )
-            qf.addDistToPlane( mp.mesh.leftNormal( e ) );
-    }
     return qf;
 }
 

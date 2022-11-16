@@ -13,7 +13,6 @@
 #include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
-#include <tl/expected.hpp>
 
 namespace MR
 {

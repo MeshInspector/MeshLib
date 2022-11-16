@@ -6,6 +6,7 @@
 #include "MRSimpleVolume.h"
 #include "MRIOFilters.h"
 #include <filesystem>
+#include <tl/expected.hpp>
 
 namespace MR
 {

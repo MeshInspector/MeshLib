@@ -430,7 +430,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
 
     auto firstRes = loadSingleFile( files.front(), data, 0 );
     if ( !firstRes.success )
-        return tl::make_unexpected( "loadDCMFolder: error" );
+        return tl::make_unexpected( "loadDCMFolder: error loading first file \"" + utf8string( files.front() ) + "\"" );
     data.min = firstRes.min;
     data.max = firstRes.max;
     size_t dimXY = data.dims.x * data.dims.y;

@@ -70,7 +70,9 @@ jobs:
 
       - name: Python Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py
+        run: |
+          export LD_LIBRARY_PATH=${PWD}/../../../lib
+          python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 10' && matrix.config == 'Release'}}

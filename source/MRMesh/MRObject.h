@@ -47,8 +47,11 @@ private:
 
 /// since every object stores a pointer on its parent,
 /// copying of this object is prohibited and moving is taken with care
-struct ObjectChildrenHolder
+class ObjectChildrenHolder
 {
+    // prevent this class to be used anyhow, but only as base for Object
+    friend class Object;
+
     ObjectChildrenHolder() = default;
     ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
     ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;

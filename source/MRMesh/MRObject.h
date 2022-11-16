@@ -45,10 +45,15 @@ private:
 };
 
 
+/// the main purpose of this class is to avoid move-constructor and move-assignment
+/// implementation in Object class, which has too many fields for that;
 /// since every object stores a pointer on its parent,
 /// copying of this object is prohibited and moving is taken with care
-struct ObjectChildrenHolder
+class ObjectChildrenHolder
 {
+    // prevent this class to be used anyhow, but only as base for Object
+    friend class Object;
+
     ObjectChildrenHolder() = default;
     ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
     ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;
@@ -60,7 +65,6 @@ struct ObjectChildrenHolder
     /// including the memory of all recognized children
     [[nodiscard]] size_t heapBytes() const;
 
-protected:
     Object * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; /// recognized ones
     std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic

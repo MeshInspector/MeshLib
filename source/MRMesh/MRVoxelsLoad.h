@@ -6,6 +6,7 @@
 #include "MRSimpleVolume.h"
 #include "MRIOFilters.h"
 #include <filesystem>
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -23,22 +24,25 @@ MRMESH_API extern const IOFilters Filters;
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
+struct LoadDCMResult
+{
+    VdbVolume vdbVolume;
+    std::string name;
+};
+
 /// Loads data from DICOM file(s) to SimpleVolume
 /// SimpleVolume dimensions: x,y equals to x,y dimensions of DICOM picture,
 ///                          z - number of pictures loaded
 /// Files in folder are sorted by names
-MRMESH_API std::shared_ptr<ObjectVoxels> loadDCMFolder( const std::filesystem::path& path,
-                                                        unsigned maxNumThreads = 4,
-                                                        const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
-MRMESH_API std::vector<std::shared_ptr<ObjectVoxels>> loadDCMFolderTree( const std::filesystem::path& path,
-                                                        unsigned maxNumThreads = 4,
-                                                        const ProgressCallback& cb = {} );
+MRMESH_API std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path,
+                                                        unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Load single DCM file as Object Voxels
-MRMESH_API std::shared_ptr<ObjectVoxels> loadDCMFile( const std::filesystem::path& path,
-                                                      const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 
 struct RawParameters
 {

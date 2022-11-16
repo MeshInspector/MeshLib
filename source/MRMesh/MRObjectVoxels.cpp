@@ -24,7 +24,7 @@ MR_ADD_CLASS_FACTORY( ObjectVoxels )
 
 constexpr size_t cVoxelsHistogramBinsNumber = 256;
 
-void ObjectVoxels::construct( const SimpleVolume& volume, const ProgressCallback& cb )
+void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
 {
     mesh_.reset();
     vdbVolume_.data = simpleVolumeToDenseGrid( volume, cb );
@@ -36,7 +36,7 @@ void ObjectVoxels::construct( const SimpleVolume& volume, const ProgressCallback
     updateHistogram_( volume.min, volume.max );
 }
 
-void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, const ProgressCallback& cb )
+void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
 {
     if ( !grid )
         return;
@@ -52,7 +52,12 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     updateHistogramAndSurface( cb );
 }
 
-void ObjectVoxels::updateHistogramAndSurface( const ProgressCallback& cb )
+void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
+{
+    construct( volume.data, volume.voxelSize );
+}
+
+void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 {
     if ( !vdbVolume_.data )
         return;
@@ -69,7 +74,7 @@ void ObjectVoxels::updateHistogramAndSurface( const ProgressCallback& cb )
     }
 }
 
-bool ObjectVoxels::setIsoValue( float iso, const ProgressCallback& cb, bool updateSurface )
+bool ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
 {
     if ( !vdbVolume_.data )
         return false; // no volume presented in this
@@ -109,7 +114,7 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
-std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, const ProgressCallback& cb /*= {} */ )
+std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
 {
     if ( !vdbVolume_.data )
         return {};
@@ -124,7 +129,7 @@ std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, const Prog
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }
 
-void ObjectVoxels::setActiveBounds( const Box3i& activeBox, const ProgressCallback& cb, bool updateSurface )
+void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb, bool updateSurface )
 {
     if ( !vdbVolume_.data )
         return;

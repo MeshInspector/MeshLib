@@ -1,8 +1,8 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelPath.h"
 #include "MRFloatGrid.h"
+#include "MRSimpleVolume.h"
 #include "MRVector3.h"
-#include "MRObjectVoxels.h"
 #include "MRTimer.h"
 #include <cfloat>
 #include <parallel_hashmap/phmap.h>

@@ -20,7 +20,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"

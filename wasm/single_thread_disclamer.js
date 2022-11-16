@@ -11,7 +11,7 @@ var append_disclamer = function () {
 
   var disclamer = document.createElement('p');
   disclamer.setAttribute('style', 'color: #fff;position: absolute;top: 8px;left: 131px;font-size: 14px;font-weight: 600;');
-  disclamer.innerHTML = 'For better experience on MacOS use Firefox browser';
+  disclamer.innerHTML = 'For better experience use Firefox browser';
 
   popup.appendChild(logo);
   popup.appendChild(disclamer);

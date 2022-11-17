@@ -23,24 +23,17 @@ var getTouchPos = function (touch, rect) {
     return coords;
 }
 
-var updateBaseEventsFunctions = function () {
+var updateTouchEvents = function()
+{
     // remove all touch events
     Module["canvas"].removeEventListener("touchmove", GLFW.onMousemove, true);
     Module["canvas"].removeEventListener("touchstart", GLFW.onMouseButtonDown, true);
     Module["canvas"].removeEventListener("touchcancel", GLFW.onMouseButtonUp, true);
     Module["canvas"].removeEventListener("touchend", GLFW.onMouseButtonUp, true);
-    // change mouse events to pointer events
-    if (hasMouse()) {
-        Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
-        Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
-        Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
-        Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
-    }
 
     var oldCalcMovementFunction = Browser.calculateMouseEvent;
 
     Browser.calculateMouseEvent = function (event) {
-        console.log(event)
         event.preventDefault();
         if (Date.now() - lastTouchEvenTime < 200)
             return false;
@@ -56,8 +49,6 @@ var updateBaseEventsFunctions = function () {
         var eventButton = GLFW.DOMToGLFWMouseButton(event);
         if (status == 1) {
             GLFW.active.buttons |= 1 << eventButton;
-            if (hasMouse())
-                event.target.setPointerCapture(event.pointerId);
         } else {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
@@ -78,9 +69,7 @@ var updateBaseEventsFunctions = function () {
             res += Module.ccall(funcName, 'number', ['number', 'number', 'number'],
                 [event.changedTouches[i].identifier, coords.x, coords.y]);
         }
-        //if (res != 0) {
         event.preventDefault();
-        //}
     }
 
     var touchStartEvent = function (event) {
@@ -102,6 +91,33 @@ var updateBaseEventsFunctions = function () {
     Module["canvas"].addEventListener("touchend", touchEndEvent, true);
 }
 
+var updateMouseEvents = function () {
+    // change mouse events to pointer events
+    Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
+    Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
+    Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
+    Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
+
+    // support pointer capture
+    GLFW.onMouseButtonChanged = function (event, status) {
+        if (!GLFW.active) return;
+        Browser.calculateMouseEvent(event);
+        if (event.target != Module["canvas"]) return;
+        var eventButton = GLFW.DOMToGLFWMouseButton(event);
+        if (status == 1) {
+            GLFW.active.buttons |= 1 << eventButton;
+            event.target.setPointerCapture(event.pointerId);
+        } else {
+            GLFW.active.buttons &= ~(1 << eventButton);
+        }
+        if (!GLFW.active.mouseButtonFunc) return;
+        getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+    }
+}
+
 var updateCalculateMouseEvent = function () {
-    updateBaseEventsFunctions();
+    if (hasMouse())
+        updateMouseEvents();
+    else
+        updateTouchEvents();
 }

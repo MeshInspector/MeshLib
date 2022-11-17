@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/multiprecision/cpp_int.hpp>
 
 #include "MRVector3.h"
 

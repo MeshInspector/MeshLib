@@ -3,7 +3,7 @@
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
 #include "MRGTest.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <queue>

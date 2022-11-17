@@ -4,7 +4,7 @@
 #include "MRBitSet.h"
 #include "MRAffineXf3.h"
 #include "MRDistanceMapParams.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRHeapBytes.h"
 #include "MRImage.h"
 #include <tl/expected.hpp>

@@ -1,5 +1,5 @@
 #include "MRAABBTreePolyline.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRAABBTreeMaker.h"
 #include "MRGTest.h"
 

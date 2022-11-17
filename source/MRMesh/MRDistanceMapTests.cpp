@@ -6,7 +6,7 @@
 #include "MRVector2.h"
 #include "MRUVSphere.h"
 #include "MRTimer.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRVector.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"

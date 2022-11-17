@@ -570,9 +570,6 @@
     <ClInclude Include="MRPolylineTopology.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
-    <ClInclude Include="MRPolyline2.h">
-      <Filter>Source Files\Polyline</Filter>
-    </ClInclude>
     <ClInclude Include="MRPolyline2Project.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -1215,9 +1212,6 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline2.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRPolyline2Project.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRAffineXf2.cpp">

@@ -1,6 +1,6 @@
 #pragma once
 #include "MRFaceFace.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 
 namespace MR
 {

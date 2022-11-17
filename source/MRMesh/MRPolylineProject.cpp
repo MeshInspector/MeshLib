@@ -45,7 +45,7 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
         }
     };
 
-    auto getSubTask = [&] ( AABBTreePolyline<V>::NodeId n )
+    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
         return SubTask( n, distSq );
@@ -173,7 +173,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
         }
     };
 
-    auto getSubTask = [&] ( AABBTreePolyline<V>::NodeId n )
+    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
     {
         float dist = ( ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).length() - maxOffset );
         return SubTask( n, dist );

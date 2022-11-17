@@ -94,7 +94,8 @@ void CameraOrientation::drawCameraPresets_( float scaling )
 
     const ImVec2 buttonSize = ImVec2( 60.f * scaling, 0.f );
     const float centerButtonShift = buttonSize.x + ImGui::GetStyle().ItemSpacing.x;
-    const float backShift = 70.f * scaling;
+    auto width = ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x;
+    const float backPosition = width - buttonSize.x;
 
     auto applyCanonicalQuaternions = [&] ( int num )
     {
@@ -114,17 +115,16 @@ void CameraOrientation::drawCameraPresets_( float scaling )
     ImGui::SameLine();
     if ( RibbonButtonDrawer::GradientButton( "Right", buttonSize ) )
         applyCanonicalQuaternions( 6 );
-    ImGui::SameLine( 0.f, backShift );
+    ImGui::SameLine( backPosition );
     if ( RibbonButtonDrawer::GradientButton( "Back", buttonSize ) )
         applyCanonicalQuaternions( 5 );
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() + centerButtonShift );
     if ( RibbonButtonDrawer::GradientButton( "Bottom", buttonSize ) )
         applyCanonicalQuaternions( 3 );
-    ImGui::SameLine();
 
-    const float isometricShift = buttonSize.x + backShift - 20.f * scaling;
-    ImGui::SetCursorPosX( ImGui::GetCursorPosX() + isometricShift );
+    const float isometricPos = width - ( buttonSize.x + 20.f * scaling );
+    ImGui::SameLine( isometricPos );
     if ( RibbonButtonDrawer::GradientButton( "Isometric", ImVec2( buttonSize.x + 20.f * scaling, buttonSize.y ) ) )
     {
         Viewer::instanceRef().viewport().cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1.f, 2.f, -1.f ) );

@@ -111,6 +111,10 @@ public:
 
     // returns formated string for this value of palette
     MRVIEWER_API std::string getStringValue( float value );
+    // returns maximal label count
+    MRVIEWER_API int getMaxLabelCount();
+    // sets maximal label count
+    MRVIEWER_API void setMaxLabelCount( int val );
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
 
@@ -140,6 +144,10 @@ private:
     bool isWindowOpen_ = false;
 
     bool useCustomLabels_ = false;
+
+    int maxLabelCount_ = 0;
+
+    static void resizeCallback_( ImGuiSizeCallbackData* data );
 };
 
 /// Class to save and load user palette presets

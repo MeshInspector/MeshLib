@@ -18,6 +18,7 @@
 #include "MRGTest.h"
 #include "MRCube.h"
 #include "MRTriMath.h"
+#include "MRQuadraticForm.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -486,6 +487,19 @@ float Mesh::leftCotan( EdgeId e ) const
     if ( fabs( nom ) >= maxval * den )
         return maxval * sgn( nom );
     return nom / den;
+}
+
+QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
+{
+    QuadraticForm3f qf;
+    for ( EdgeId e : orgRing( topology, v ) )
+    {
+        if ( topology.isBdEdge( e, region ) )
+            qf.addDistToLine( edgeVector( e ).normalized() );
+        if ( topology.isLeftInRegion( e, region ) )
+            qf.addDistToPlane( leftNormal( e ) );
+    }
+    return qf;
 }
 
 Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const

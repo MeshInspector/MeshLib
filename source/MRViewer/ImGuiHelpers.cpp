@@ -238,12 +238,16 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
     const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
     const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width;
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
     
     SetNextItemWidth( actualWidth );
-    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );    
+    if ( actualWidth > estimatedSize.x )
+        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
     bool res =  InputText( label, str, flags, callback, user_data );
-    PopStyleVar();
+
+    if ( actualWidth > estimatedSize.x )
+        PopStyleVar();
     return res;
 }
 
@@ -254,7 +258,7 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
     const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
     const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width;
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     SetNextItemWidth( actualWidth );
     PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
@@ -1153,21 +1157,23 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f * menuScaling, 0 } ) )
+    float p = ImGui::GetStyle().FramePadding.x;
+    auto width = GetContentRegionAvail().x - 3 * p;    
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
-    ImGui::SameLine();
+    ImGui::SameLine( 0, p );
 
     const bool importPlaneModeOld = planeWidget.importPlaneMode();
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f * menuScaling, 0 } ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
         spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );

@@ -197,8 +197,6 @@ auto PolylineDecimator<V>::computeQueueElement_( UndirectedEdgeId ue, QuadraticF
     const auto d = polyline_.topology.org( e.sym() );
     const auto po = polyline_.points[o];
     const auto pd = polyline_.points[d];
-    if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
-        return {};
     auto [qf, pos] = sum( vertForms_[o], po, vertForms_[d], pd, !settings_.optimizeVertexPos );
 
     QueueElement res;
@@ -248,6 +246,11 @@ VertId PolylineDecimator<V>::collapse_( EdgeId edgeToCollapse, const V & collaps
         vo = topology.org( edgeToCollapse );
     }
 
+    const auto o = polyline_.orgPnt( edgeToCollapse );
+    const auto d = polyline_.destPnt( edgeToCollapse );
+    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), ( o - d ).lengthSq() );
+    float maxNewEdgeLenSq = 0;
+
     const auto ep = topology.next( edgeToCollapse ).sym();
     if ( ep != edgeToCollapse.sym() )
     {
@@ -256,21 +259,28 @@ VertId PolylineDecimator<V>::collapse_( EdgeId edgeToCollapse, const V & collaps
         if ( epp != ep.sym() && eppp != epp.sym() && eppp == edgeToCollapse )
             return {}; // keep at least a triangle from every closed contour
 
+        const auto po = polyline_.orgPnt( ep );
+        maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( o - po ).lengthSq() );
+        maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - po ).lengthSq() );
+
         const auto en = topology.next( edgeToCollapse.sym() );
         if ( en != edgeToCollapse.sym() )
         {
-            const auto po = polyline_.orgPnt( ep );
             const auto nd = polyline_.destPnt( en );
+            maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( d - nd ).lengthSq() );
+            maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - nd ).lengthSq() );
+
             if ( dot( po - collapsePos, nd - collapsePos ) > 0 )
             {
                 // after the collapse the line will make a sharp turn in remaining vertex
-                const auto o = polyline_.orgPnt( edgeToCollapse );
-                const auto d = polyline_.destPnt( edgeToCollapse );
                 if ( dot( po - o, d - o ) <= 0 && dot( o - d, nd - d ) <= 0 )
                     return {}; // there are no sharp turns before the collapse, so prohibit it
             }
         }
     }
+
+    if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
+        return {}; // new edge would be longer than all of old edges and longer than allowed in settings
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return {}; // user prohibits the collapse

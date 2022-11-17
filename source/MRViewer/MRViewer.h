@@ -39,6 +39,8 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 namespace MR
 {
 
+class SpaceMouseHandler;
+
 // GLFW-based mesh viewer
 class Viewer
 {
@@ -128,9 +130,15 @@ public:
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
+    MRVIEWER_API bool spaceMouseMove( const Vector3f& translate, const Vector3f& rotate );
+    MRVIEWER_API bool spaceMouseDown( int key );
+    MRVIEWER_API bool spaceMouseUp( int key );
+    MRVIEWER_API bool spaceMouseRepeat( int key );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
+    // callback to update connected / disconnected joystick
+    MRVIEWER_API void joystickUpdateConnected( int jid, int event );
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
@@ -484,6 +492,13 @@ public:
     KeySignal keyUpSignal; // signal is called on key up
     KeySignal keyDownSignal; // signal is called on key down
     KeySignal keyRepeatSignal; // signal is called when key is pressed for some time
+    // SpaceMouseEvents
+    using SpaceMouseMoveSignal = boost::signals2::signal<bool( const Vector3f& translate, const Vector3f& rotate ), SignalStopHandler>;
+    using SpaceMouseKeySignal = boost::signals2::signal<bool( int ), SignalStopHandler>;
+    SpaceMouseMoveSignal spaceMouseMoveSignal; // signal is called on spacemouse 3d controller (joystick) move
+    SpaceMouseKeySignal spaceMouseDownSignal; // signal is called on spacemouse key down
+    SpaceMouseKeySignal spaceMouseUpSignal; // signal is called on spacemouse key up
+    SpaceMouseKeySignal spaceMouseRepeatSignal; // signal is called when spacemouse key is pressed for some time
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)
@@ -606,6 +621,7 @@ private:
     void initBasisAxesObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
+    void initSpaceMouseHandler_();
 
     bool stopEventLoop_{ false };
 
@@ -627,6 +643,8 @@ private:
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
+
+    std::unique_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

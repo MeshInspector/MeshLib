@@ -502,6 +502,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         }
 
         mouseController.connect();
+        touchesController.connect( this );
     }
 
     std::future<void> splashMinTimer;
@@ -935,6 +936,21 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
         return true;
 
     return false;
+}
+
+bool Viewer::touchStart( int id, int x, int y )
+{
+    return touchStartSignal( id, x, y );
+}
+
+bool Viewer::touchMove( int id, int x, int y )
+{
+    return touchMoveSignal( id, x, y );
+}
+
+bool Viewer::touchEnd( int id, int x, int y )
+{
+    return touchEndSignal( id, x, y );
 }
 
 bool Viewer::mouseScroll( float delta_y )

@@ -21,6 +21,8 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
+    <ClCompile Include="MRTouchesHandler.cpp" />
+    <ClCompile Include="MRTouchesController.cpp" />
     <ClCompile Include="MRObjectMeshHistory.cpp" />
     <ClCompile Include="MRObjectTransformWidget.cpp" />
     <ClCompile Include="MRPickHoleBorderElement.cpp" />
@@ -81,6 +83,7 @@
     <ClInclude Include="MRGladGlfw.h" />
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
+    <ClInclude Include="MRTouchesController.h" />
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />
     <ClInclude Include="MRPickHoleBorderElement.h" />

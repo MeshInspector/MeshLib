@@ -16,6 +16,7 @@
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
+#include "MRTouchesController.h"
 #include <boost/signals2/signal.hpp>
 #include <cstdint>
 #include <queue>
@@ -129,6 +130,10 @@ public:
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
+    // Touch callbacks (now used in EMSCRIPTEN build only)
+    MRVIEWER_API bool touchStart( int id, int x, int y );
+    MRVIEWER_API bool touchMove( int id, int x, int y );
+    MRVIEWER_API bool touchEnd( int id, int x, int y );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
 
@@ -419,6 +424,7 @@ public:
     RecentFilesStore recentFilesStore;
 
     MouseController mouseController;
+    TouchesController touchesController;
 
     int window_width; // current width
     int window_height; // current height
@@ -500,6 +506,11 @@ public:
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale
     InterruptCloseSignal interruptCloseSignal; // signal is called before close window (return true will prevent closing)
+    // Touch signals
+    using TouchSignal = boost::signals2::signal<bool(int,int,int), SignalStopHandler>;
+    TouchSignal touchStartSignal; // signal is called when any touch starts
+    TouchSignal touchMoveSignal; // signal is called when touch moves
+    TouchSignal touchEndSignal; // signal is called when touch stops
 
     // queue to ignore multiple mouse moves in one frame
     struct MouseQueueEvent

@@ -1,10 +1,8 @@
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
 }
-var lastTouches;
-var storedTime = Date.now();
-var fixControlTime = 0;
-var zoomMode = false;
+
+var lastTouchEvenTime = 0;
 
 var getTouchPos = function (touch, rect) {
     var cw = Module["canvas"].width;
@@ -25,153 +23,85 @@ var getTouchPos = function (touch, rect) {
     return coords;
 }
 
-var getTouchesDistance = function (touches, rect) {
-    if (touches === undefined || touches.length !== 2)
-        return -1.0;
-
-    var coord0 = getTouchPos(touches[0], rect);
-    var coord1 = getTouchPos(touches[1], rect);
-
-    var xDist = coord0.x - coord1.x;
-    var yDist = coord0.y - coord1.y;
-
-    return Math.sqrt(xDist * xDist + yDist * yDist);
-}
-
-var updateTouchEvents = function () {
-    var getMouseButtonIdByEvent = function (event) {
-        if (event.type === "touchend" || event.type === "touchcancel") {
-            if (event.touches.length > 1)
-                return -1;
-            return event.touches.length > 0 ? 2 : 0;
-        }
-        if (event.touches.length > 2)
-            return -1;
-        return event.touches.length > 1 ? 2 : 0;
-    };
+var updateBaseEventsFunctions = function () {
+    // remove all touch events
+    Module["canvas"].removeEventListener("touchmove", GLFW.onMousemove, true);
+    Module["canvas"].removeEventListener("touchstart", GLFW.onMouseButtonDown, true);
+    Module["canvas"].removeEventListener("touchcancel", GLFW.onMouseButtonUp, true);
+    Module["canvas"].removeEventListener("touchend", GLFW.onMouseButtonUp, true);
+    // change mouse events to pointer events
+    if (hasMouse()) {
+        Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
+        Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
+        Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
+        Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
+    }
 
     var oldCalcMovementFunction = Browser.calculateMouseEvent;
 
     Browser.calculateMouseEvent = function (event) {
-        var rect = Module["canvas"].getBoundingClientRect();
-        if (event.type === "touchstart" || event.type === "touchend" || event.type === "touchmove") {
-            if (event.touches.length == 0) {
-                return;
-            }
-            fixControlTime += Date.now() - storedTime;
-            storedTime = Date.now();
-
-            if (event.type === "touchstart") {
-                fixControlTime = 0;
-            }
-            var touch = event.touches[0];
-            event["button"] = getMouseButtonIdByEvent(event);
-            var coords = getTouchPos(touch, rect);
-            Browser.mouseX = coords.x;
-            Browser.mouseY = coords.y;
-            if (event.type === "touchstart") {
-                Browser.lastTouches[touch.identifier] = coords;
-                Browser.touches[touch.identifier] = coords
-            } else if (event.type === "touchend" || event.type === "touchmove") {
-                var last = Browser.touches[touch.identifier];
-                if (!last)
-                    last = coords;
-                Browser.lastTouches[touch.identifier] = last;
-                Browser.touches[touch.identifier] = coords
-            }
-            if (lastTouches !== undefined && lastTouches.length === 2 && event.touches.length === 2 &&
-                event.type === "touchmove" && fixControlTime < 500) {
-                var prevDist = getTouchesDistance(lastTouches, rect);
-                var curDist = getTouchesDistance(event.touches, rect);
-                if (prevDist > 0 && curDist > 0) {
-                    var delta = curDist - prevDist;
-                    if (zoomMode || Math.abs(delta) > 30) {
-                        fixControlTime = 0;
-                        zoomMode = true;
-                        event.wheelDelta = -delta * 2;
-                        var coords1 = getTouchPos(event.touches[1], rect);
-                        Browser.mouseX = (Browser.mouseX + coords1.x) * 0.5;
-                        Browser.mouseY = (Browser.mouseY + coords1.y) * 0.5;
-                        GLFW.onMouseWheel(event);
-                        event["button"] = -1;
-                    }
-                }
-            }
-            else {
-                zoomMode = false;
-            }
-            lastTouches = event.touches;
-            event.preventDefault();
-            return
-        }
-        oldCalcMovementFunction(event);
+        console.log(event)
         event.preventDefault();
-        return;
+        if (Date.now() - lastTouchEvenTime < 200)
+            return false;
+        oldCalcMovementFunction(event);
+        return true;
     };
 
-    Browser.getMouseWheelDelta = function (event) {
-        var delta = 0;
-        switch (event.type) {
-            case "DOMMouseScroll":
-                delta = event.detail / 3;
-                break;
-            case "mousewheel":
-                delta = event.wheelDelta / 120;
-                break;
-            case "touchmove":
-                delta = event.wheelDelta / 120;
-                break;
-            case "wheel":
-                delta = event.deltaY;
-                switch (event.deltaMode) {
-                    case 0:
-                        delta /= 100;
-                        break;
-                    case 1:
-                        delta /= 3;
-                        break;
-                    case 2:
-                        delta *= 80;
-                        break;
-                    default:
-                        throw "unrecognized mouse wheel delta mode: " + event.deltaMode
-                }
-                break;
-            default:
-                throw "unrecognized mouse wheel event: " + event.type
-        }
-        return delta
-    };
-}
-
-var updateMouseEvents = function () {
-    Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
-    Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
-
-    Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
-    Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
-
+    // support pointer capture
     GLFW.onMouseButtonChanged = function (event, status) {
         if (!GLFW.active) return;
-        Browser.calculateMouseEvent(event);
+        if (!Browser.calculateMouseEvent(event)) return;
         if (event.target != Module["canvas"]) return;
         var eventButton = GLFW.DOMToGLFWMouseButton(event);
         if (status == 1) {
             GLFW.active.buttons |= 1 << eventButton;
-            try {
+            if (hasMouse())
                 event.target.setPointerCapture(event.pointerId);
-            } catch (e) { }
         } else {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
         if (!GLFW.active.mouseButtonFunc) return;
         getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
     }
+
+    var touchEventProcess = function (event, funcName) {
+        var rect = Module["canvas"].getBoundingClientRect();
+        lastTouchEvenTime = Date.now();
+        var res = 0;
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            var coords = getTouchPos(event.changedTouches[i], rect);
+            if (event.changedTouches[i].identifier == 0) {
+                Browser.mouseX = coords.x;
+                Browser.mouseY = coords.y;
+            }
+            res += Module.ccall(funcName, 'number', ['number', 'number', 'number'],
+                [event.changedTouches[i].identifier, coords.x, coords.y]);
+        }
+        //if (res != 0) {
+        event.preventDefault();
+        //}
+    }
+
+    var touchStartEvent = function (event) {
+        touchEventProcess(event, 'emsTouchStart');
+    }
+
+    var touchMoveEvent = function (event) {
+        touchEventProcess(event, 'emsTouchMove');
+    }
+
+    var touchEndEvent = function (event) {
+        touchEventProcess(event, 'emsTouchEnd');
+    }
+
+    // add new touch events    
+    Module["canvas"].addEventListener("touchmove", touchMoveEvent, true);
+    Module["canvas"].addEventListener("touchstart", touchStartEvent, true);
+    Module["canvas"].addEventListener("touchcancel", touchEndEvent, true);
+    Module["canvas"].addEventListener("touchend", touchEndEvent, true);
 }
 
 var updateCalculateMouseEvent = function () {
-    if (hasMouse())
-        updateMouseEvents();
-    else
-        updateTouchEvents();
+    updateBaseEventsFunctions();
 }

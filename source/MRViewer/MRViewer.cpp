@@ -973,8 +973,20 @@ bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
     // TODO test version
     auto& viewportRef = viewport();
-    viewportRef.setCameraTranslation( viewportRef.getParameters().cameraTranslation + translate );
+    
+    auto viewportParams = viewportRef.getParameters().cameraTranslation;
 
+    //translation
+    Vector3f axisN;
+    Matrix3f matrix;
+    axisN = viewportRef.unprojectFromViewportSpace( axisN );
+    matrix.x = viewportRef.unprojectFromViewportSpace( matrix.x );
+    matrix.y = viewportRef.unprojectFromViewportSpace( matrix.y );
+    matrix.z = viewportRef.unprojectFromViewportSpace( matrix.z );
+
+    viewportRef.setCameraTranslation( viewportParams + matrix * translate );
+
+    //rotation
     Vector3f rotateScaled = rotate * 0.1f;
     auto quat = viewportRef.getParameters().cameraTrackballAngle;
     quat = (

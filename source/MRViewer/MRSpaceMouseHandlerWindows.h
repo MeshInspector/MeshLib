@@ -1,4 +1,5 @@
 #pragma once
+#ifdef _WIN32
 #include "MRSpaceMouseHandler.h"
 
 namespace MR
@@ -15,7 +16,10 @@ private:
     std::array<float, 6> axes_;
     std::array<unsigned char, BUTTON_COUNT> buttons_;
     int joystickIndex_{ -1 };
+
     virtual void updateConnected_();
 };
 
 }
+
+#endif

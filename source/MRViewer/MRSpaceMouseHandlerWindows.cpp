@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "MRSpaceMouseHandlerWindows.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewerInstance.h"
@@ -11,44 +12,36 @@ namespace MR
 
 constexpr float axesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
 
-#define LOGITECH_VENDOR_ID 0x46d
-#define CONNEXION_VENDOR_ID  0x256f
+//constexpr mapButtons2 = {};
+//constexpr mapButtons15 = {};
+//constexpr mapButtons31 = {};
 
-PRAWINPUTDEVICE GetDevicesToRegister( unsigned int* pNumDevices )
+constexpr DWORD logitechId = 0x46d;
+constexpr DWORD connexionId = 0x256f;
+
+// Array of input device examples to register
+RAWINPUTDEVICE inputDevices[] = {
+    {0x01, 0x08, 0x00, 0x00}, // Usage Page = 0x01 Generic Desktop Page, Usage Id = 0x08 Multi-axis Controller
+    {0x01, 0x05, 0x00, 0x00}, // Game Pad
+    {0x01, 0x04, 0x00, 0x00} // Joystick
+};
+constexpr int inputDevicesCount = sizeof( inputDevices ) / sizeof( inputDevices[0] );
+
+bool isSpaceMouseAttached()
 {
-    // Array of raw input devices to register
-    static RAWINPUTDEVICE sRawInputDevices[] = {
-        {0x01, 0x08, 0x00, 0x00} // Usage Page = 0x01 Generic Desktop Page, Usage Id= 0x08 Multi-axis Controller
-       ,{0x01, 0x05, 0x00, 0x00} // game pad
-       ,{0x01, 0x04, 0x00, 0x00} // joystick
-    };
+    unsigned int devicesCount = 0;
 
-    if ( pNumDevices )
-    {
-        *pNumDevices = sizeof( sRawInputDevices ) / sizeof( sRawInputDevices[0] );
-    }
-
-    return sRawInputDevices;
-}
-
-bool Is3dmouseAttached()
-{
-    unsigned int numDevicesOfInterest = 0;
-    PRAWINPUTDEVICE devicesToRegister = GetDevicesToRegister( &numDevicesOfInterest );
-
-    unsigned int nDevices = 0;
-
-    if ( ::GetRawInputDeviceList( NULL, &nDevices, sizeof( RAWINPUTDEVICELIST ) ) != 0 )
+    if ( GetRawInputDeviceList( NULL, &devicesCount, sizeof( RAWINPUTDEVICELIST ) ) != 0 )
         return false;
 
-    if ( nDevices == 0 )
+    if ( devicesCount == 0 )
         return false;
 
-    std::vector<RAWINPUTDEVICELIST> rawInputDeviceList( nDevices );
-    if ( ::GetRawInputDeviceList( &rawInputDeviceList[0], &nDevices, sizeof( RAWINPUTDEVICELIST ) ) == static_cast< unsigned int >( -1 ) )
+    std::vector<RAWINPUTDEVICELIST> rawInputDeviceList( devicesCount );
+    if ( GetRawInputDeviceList( rawInputDeviceList.data(), &devicesCount, sizeof( RAWINPUTDEVICELIST ) ) == unsigned int( -1 ) )
         return false;
 
-    for ( unsigned int i = 0; i < nDevices; ++i )
+    for ( unsigned int i = 0; i < devicesCount; ++i )
     {
         RID_DEVICE_INFO rdi = { sizeof( rdi ) };
         unsigned int cbSize = sizeof( rdi );
@@ -56,13 +49,13 @@ bool Is3dmouseAttached()
         if ( GetRawInputDeviceInfo( rawInputDeviceList[i].hDevice, RIDI_DEVICEINFO, &rdi, &cbSize ) > 0 )
         {
             //skip non HID and non logitec (3DConnexion) devices
-            if ( !( rdi.dwType == RIM_TYPEHID && ( rdi.hid.dwVendorId == LOGITECH_VENDOR_ID || rdi.hid.dwVendorId == CONNEXION_VENDOR_ID ) ) )
+            if ( !( rdi.dwType == RIM_TYPEHID && ( rdi.hid.dwVendorId == logitechId || rdi.hid.dwVendorId == connexionId ) ) )
                 continue;
 
             //check if devices matches Multi-axis Controller
-            for ( unsigned int j = 0; j < numDevicesOfInterest; ++j )
+            for ( unsigned int j = 0; j < inputDevicesCount; ++j )
             {
-                if ( devicesToRegister[j].usUsage == rdi.hid.usUsage && devicesToRegister[j].usUsagePage == rdi.hid.usUsagePage )
+                if ( inputDevices[j].usUsage == rdi.hid.usUsage && inputDevices[j].usUsagePage == rdi.hid.usUsagePage )
                 {
                     return true;
                 }
@@ -74,39 +67,31 @@ bool Is3dmouseAttached()
 
 bool InitializeRawInput()
 {
-    unsigned int numDevices = 0;
-    PRAWINPUTDEVICE devicesToRegister = GetDevicesToRegister( &numDevices );
-
-    if ( numDevices == 0 )
-        return false;
-
-    // Get OS version.
-    //OSVERSIONINFO osvi = { sizeof(OSVERSIONINFO), 0 };
-    //::GetVersionEx(&osvi);
-
-    unsigned int cbSize = sizeof( devicesToRegister[0] );
-    for ( size_t i = 0; i < numDevices; i++ )
+    unsigned int cbSize = sizeof( inputDevices[0] );
+    for ( size_t i = 0; i < inputDevicesCount; i++ )
     {
         // Set the target window to use
-        //devicesToRegister[i].hwndTarget = hwndTarget;
+        //inputDevices[i].hwndTarget = hwndTarget;
 
-        // If Vista or newer, enable receiving the WM_INPUT_DEVICE_CHANGE message.
-        //if (osvi.dwMajorVersion >= 6) {
-        devicesToRegister[i].dwFlags |= RIDEV_DEVNOTIFY;
+        // enable receiving the WM_INPUT_DEVICE_CHANGE message.
+        inputDevices[i].dwFlags |= RIDEV_DEVNOTIFY;
     }
-    return ( ::RegisterRawInputDevices( devicesToRegister, numDevices, cbSize ) != FALSE );
+    return ( RegisterRawInputDevices( inputDevices, inputDevicesCount, cbSize ) != FALSE );
 }
 
 void SpaceMouseHandlerWindows::initialize()
 {
-    bool is3Dmouse = Is3dmouseAttached();
-    spdlog::info( "Is3dmouseAttached = {}", is3Dmouse );
-
-    if ( is3Dmouse )
+    bool spaceMouseAttached = isSpaceMouseAttached();
+    if ( spaceMouseAttached )
+        spdlog::info( "Found attached spacemouse" );
+    else
     {
-        initialized_ = InitializeRawInput();
-        spdlog::info( "InitializeRawInput = {}", initialized_ );
+        spdlog::info( "Not found any attached spacemouse" );
+        return;
     }
+
+    initialized_ = InitializeRawInput();
+    spdlog::info( "InitializeRawInput = {}", initialized_ );
 
     updateConnected_();
 }
@@ -135,7 +120,7 @@ void SpaceMouseHandlerWindows::handle()
 
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
-    for ( int i = 0; i < BUTTON_COUNT; ++i )
+    for ( int i = 0; i < count; ++i )
     {
         if ( !buttons_[i] && buttons[i] ) // button down
             viewer.spaceMouseDown( i );
@@ -179,3 +164,5 @@ void SpaceMouseHandlerWindows::updateConnected_()
 }
 
 }
+
+#endif

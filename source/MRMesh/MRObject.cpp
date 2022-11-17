@@ -13,6 +13,10 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( Object )
 
+#ifdef __GNUC__
+// Silence the sanitizer warning about `static_cast` downcast in the constructor, which appears to be legal.
+__attribute__((__no_sanitize__("undefined")))
+#endif
 ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept 
     : children_( std::move( b.children_ ) )
     , bastards_( std::move( b.bastards_ ) )

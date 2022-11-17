@@ -47,6 +47,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         "License :: Free for non-commercial use",
         "License :: Free For Educational Use",
         "Operating System :: Microsoft :: Windows",

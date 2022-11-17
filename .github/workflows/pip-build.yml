@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -39,12 +39,15 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}
@@ -109,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -124,6 +127,11 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-short-version: "310"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-short-version: "311"
+            py-dir: "Python311"
+            py-file: "python311"
     steps:
       - name: Clear workspace
         run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
@@ -132,7 +140,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Start container
         run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
@@ -203,7 +211,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -220,16 +228,22 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          ref: ${{needs.setup.outputs.version_tag}}
+          #ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Install Python
+        if: ${{ !(matrix.platform == "x86" and matrix.py-version == "3.11") }}
+        run: brew install python@${{matrix.py-version}}
 
       - name: Python setup
         run: |
-          brew install python@${{matrix.py-version}}
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 
@@ -293,16 +307,15 @@ jobs:
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"
-          - os: "ubuntu:22.04"
-            py-version: "3.10"
-            py-cmd: "python3.10"
           - os: "fedora:35"
             py-version: "3.9"
             py-cmd: "python3.9"
-          - config: Release
-            pip-options: ""
-          - config: Test
-            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+          - os: "ubuntu:22.04"
+            py-version: "3.10"
+            py-cmd: "python3.10"
+          - os: "fedora:37"
+            py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -310,13 +323,13 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
-        if: ${{ matrix.os == 'fedora:35'}}
+        if: ${{ matrix.os == 'fedora:35' || matrix.os == 'fedora:37'}}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.py-version }}
 
       - name: System setup
-        if: ${{ matrix.os != 'fedora:35'}}
+        if: ${{ matrix.os != 'fedora:35' and matrix.os != 'fedora:37'}}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Pip setup
@@ -344,7 +357,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -383,7 +396,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -397,6 +410,8 @@ jobs:
             py-cmd: "python3.9"
           - py-version: "3.10"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -404,6 +419,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
+        if: ${{ !(matrix.platform == "x86" and matrix.py-version == "3.11") }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Pip setup

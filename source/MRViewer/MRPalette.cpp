@@ -5,6 +5,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include <string>
 #include <fstream>
@@ -254,8 +255,11 @@ void Palette::setUniformLabels_()
     labels_.clear();
 
     if ( parameters_.ranges.size() == 2 )
-    {
-        const int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
+    { 
+        int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
+        if ( maxLabelCount_ && maxLabelCount_ < num )
+            num = maxLabelCount_;
+
         labels_.resize( num );
 
         for ( int i = 0; i < num; ++i )
@@ -266,7 +270,10 @@ void Palette::setUniformLabels_()
     }
     else
     {
-        const int num = texture_.filter == FilterType::Linear ? 3 : parameters_.discretization + 1;
+        int num = texture_.filter == FilterType::Linear ? 3 : parameters_.discretization + 1;
+        if ( maxLabelCount_ && maxLabelCount_ / 2 < num )
+            num = maxLabelCount_ / 2;
+
         labels_.resize( num * 2 );
 
         if ( texture_.filter == FilterType::Linear )
@@ -325,10 +332,15 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     }
     
     const auto& style = ImGui::GetStyle();
-    const auto& windowSize = Viewer::instance()->viewport().getViewportRect();
+    const auto& viewer = getViewerInstance();
+    const auto menu = viewer.getMenuPlugin();
+    const auto& windowSize = viewer.viewport().getViewportRect();
+    const auto fontSize = ImGui::GetFontSize();
+    
     ImGui::SetNextWindowPos( pose, ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x, labels_.size() * ImGui::GetTextLineHeightWithSpacing() }, { width( windowSize ), height( windowSize ) } );
+
+    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x, 2 * fontSize }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
     
     auto paletteWindow = ImGui::FindWindowByName( "Gradient palette" );
 
@@ -364,27 +376,21 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     if ( showLabels_ )
     {
         if ( labels_.size() == 0 )
-            resetLabels();
-        const auto fontSize = ImGui::GetFontSize();
-        const auto pixRange = actualSize.y - fontSize;
-        auto lastPixPose = -fontSize;
-        
-        for ( int i = 0; i < labels_.size(); i++ )
         {
-            auto pixPose = labels_[i].value * pixRange;
-            if ( ( std::abs( lastPixPose - pixPose ) > fontSize && // avoid digits overlapping
-                   std::abs( labels_.back().value * pixRange - pixPose ) > fontSize ) || // avoid overlapping with the last label
-                 ( i == labels_.size() - 1 ) || ( i == 0 ) ) //always show last label
-            {
-                auto text = labels_[i].text;
-                lastPixPose = pixPose;
-                drawList->AddText( ImGui::GetFont(), fontSize,
-                                   { actualPose.x + style.WindowPadding.x, 
-                                   actualPose.y + labels_[i].value * pixRange },
-                                   ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
-                                   text.c_str() );                
-            }
+            setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
+            resetLabels();
         }
+        
+        const auto pixRange = actualSize.y - fontSize;
+
+        for ( int i = 0; i < labels_.size(); ++i )
+        {
+            drawList->AddText( ImGui::GetFont(), fontSize,
+                                { actualPose.x + style.WindowPadding.x,
+                                actualPose.y + labels_[i].value * pixRange },
+                                ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
+                                labels_[i].text.c_str() );
+        }       
     }
 
     if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
@@ -535,6 +541,16 @@ void Palette::sortLabels_()
     } );
 }
 
+void Palette::resizeCallback_( ImGuiSizeCallbackData* data )
+{
+    auto palette = ( Palette* )data->UserData;
+    if ( !palette )
+        return;
+
+    palette->setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
+    palette->resetLabels();
+}
+
 
 std::string Palette::getStringValue( float value )
 {
@@ -548,6 +564,16 @@ std::string Palette::getStringValue( float value )
         return fmt::format( "{0: .2e}", value );
     else
         return fmt::format( "{0: .4f}", value );
+}
+
+int Palette::getMaxLabelCount()
+{
+    return maxLabelCount_;
+}
+
+void Palette::setMaxLabelCount( int val )
+{
+    maxLabelCount_ = val;
 }
 
 Palette::Label::Label( float val, std::string text_ )

@@ -148,6 +148,12 @@
     <ClCompile Include="MRRibbonFontManager.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRTouchesHandler.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTouchesController.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
     <ClCompile Include="MRMouseController.cpp">
       <Filter>ShortcutManager</Filter>
     </ClCompile>
@@ -360,6 +366,9 @@
       <Filter>RibbonMenu</Filter>
     </ClInclude>
     <ClInclude Include="MRMouseController.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTouchesController.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
     <ClInclude Include="MRRibbonButtonDrawer.h">

@@ -28,6 +28,7 @@ FloatGrid resampled( const FloatGrid & grid, const Vector3f& voxelScale )
     openvdb::tools::resampleToMatch<openvdb::tools::BoxSampler>( grid_, *dest );
     // restore normal scale
     dest->setTransform( openvdb::math::Transform::createLinearTransform( 1.0f ) );
+    dest->setGridClass( grid->getGridClass() );
 
     return MakeFloatGrid( std::move( dest ) );
 }

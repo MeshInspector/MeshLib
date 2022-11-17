@@ -154,7 +154,7 @@ tl::expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, Vector<Color, 
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in, nullptr, callback );
-    if ( resBin.has_value() )
+    if ( resBin.has_value() || resBin.error() == "Loading canceled" )
         return resBin;
     in.clear();
     in.seekg( pos );

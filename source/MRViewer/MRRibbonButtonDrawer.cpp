@@ -489,29 +489,6 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     return res;
 }
 
-void RibbonButtonDrawer::TextBoxReadOnlyCentered( const char* label, float width )
-{
-    ImGuiContext& g = *ImGui::GetCurrentContext();
-    ImGuiWindow* window = g.CurrentWindow;
-    if ( !window || window->SkipItems )
-        return;
-
-    const auto& style = ImGui::GetStyle();    
-    
-    const auto estimatedSize = ImGui::CalcTextSize( label );
-    const float scaling = getViewerInstance().getMenuPlugin() ? getViewerInstance().getMenuPlugin()->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const ImVec2 actualSize{ ( ( width < estimatedSize.x + padding.x ) ? estimatedSize.x + padding.x : width ), estimatedSize.y + padding.y };
-    
-    const auto upperLeft = window->DC.CursorPos;
-    ImGui::RenderFrame( upperLeft, { upperLeft.x + actualSize.x, upperLeft.y + actualSize.y }, ImGui::GetColorU32( ImGuiCol_FrameBg ), true, style.FrameRounding );
-
-    const ImVec2 textPos{ upperLeft.x + ( actualSize.x - estimatedSize.x ) * 0.5f, upperLeft.y + style.FramePadding.y * scaling };   
-    ImGui::RenderText( textPos, label );
-
-    ImGui::ItemSize( actualSize );
-}
-
 RibbonButtonDrawer::ButtonItemWidth RibbonButtonDrawer::calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType )
 {
     ButtonItemWidth res;

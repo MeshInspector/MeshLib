@@ -94,7 +94,7 @@ var open_files = function (e) {
     return;
   }
   e.preventDefault();
-  var filenames = _malloc(new Array(e.target.files.length * 4));
+  var filenames = _malloc(e.target.files.length * 4);
   var filenamesArray = [];
   var count = e.target.files.length;
   var written = 0;
@@ -103,7 +103,7 @@ var open_files = function (e) {
   function save(file) {
     var path = "/" + drop_dir + "/" + file.name.replace(/\//g, "_");
     var reader = new FileReader();
-    reader.onloadend = (e => {
+    reader.onloadend = e => {
       if (reader.readyState != 2) {
         ++written;
         out("failed to read opened file: " + file.name + ": " + reader.error);
@@ -112,18 +112,18 @@ var open_files = function (e) {
       var data = e.target.result;
       FS.writeFile(path, new Uint8Array(data));
       if (++written === count) {
-        const res = Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, filenames]);
+        Module.ccall('emsOpenFiles', 'number', ['number', 'Int8Array'], [count, filenames]);
         for (var i = 0; i < filenamesArray.length; ++i) {
           _free(filenamesArray[i]);
         }
         _free(filenames);
       }
-    });
+    };
     reader.readAsArrayBuffer(file);
     var filename = allocateUTF8(path);
     filenamesArray.push(filename);
-    if (typeof GROWABLE_HEAP_I32 !== 'undefined')
-      GROWABLE_HEAP_I32()[filenames + i * 4 >> 2] = filename;
+    if (typeof GROWABLE_HEAP_U32 !== 'undefined')
+      GROWABLE_HEAP_U32()[filenames + i * 4 >> 2] = filename;
     else
       HEAP32[filenames + i * 4 >> 2] = filename;
   }

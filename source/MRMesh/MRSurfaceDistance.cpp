@@ -59,29 +59,15 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
 {
     MR_TIMER;
 
-    SurfaceDistanceBuilder b( mesh, region );
+    SurfaceDistanceBuilder b( mesh, mesh.triPoint( end ), region );
     b.addStart( start );
 
     VertId stopVerts[3];
     int numStopVerts = 0;
-    if ( auto v = end.inVertex( mesh.topology ) )
+    mesh.topology.forEachVertex( end, [&]( VertId v )
     {
-        stopVerts[0] = v;
-        numStopVerts = 1;
-    }
-    else if ( auto e = end.onEdge( mesh.topology ) )
-    {
-        auto o = mesh.topology.org( e->e );
-        auto d = mesh.topology.dest( e->e );
-        stopVerts[0] = o;
-        stopVerts[1] = d;
-        numStopVerts = 2;
-    }
-    else
-    {
-        mesh.topology.getLeftTriVerts( end.e, stopVerts );
-        numStopVerts = 3;
-    }
+        stopVerts[ numStopVerts++ ] = v;
+    } );
 
     if ( endReached )
         *endReached = true;
@@ -102,6 +88,20 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
                 *it = *(it + 1);
             --numStopVerts;
         }
+    }
+    return b.takeDistanceMap();
+}
+
+Vector<float,VertId> computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist,
+                                              const VertBitSet* region )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.addStart( start );
+    while ( b.doneDistance() < maxDist )
+    {
+        b.growOne();
     }
     return b.takeDistanceMap();
 }

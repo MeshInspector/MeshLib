@@ -57,7 +57,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"
@@ -74,6 +73,7 @@
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
+#include "MRRibbonConstants.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -474,7 +474,7 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
 
     for ( const auto& viewport : viewer->viewport_list )
     {
-        if ( !obj.isVisible( viewport.id ) )
+        if ( !obj.globalVisibilty( viewport.id ) )
             continue;
         AffineXf3f xf = obj.worldXf();
         bool clip = obj.getVisualizeProperty( VisualizeMaskType::CropLabelsByViewportRect, viewport.id );
@@ -879,12 +879,19 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
+            auto ctx = ImGui::GetCurrentContext();
+            assert( ctx );
+            auto window = ctx->CurrentWindow;
+            assert( window );
+            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
                     object.select( false );
             }
+            window->DC.CursorPosPrevLine.y -= diff;
             ImGui::SameLine();
         }
         {
@@ -989,12 +996,17 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * menu_scaling() );
+            ImGui::Indent();
+
             for ( const auto& str : lines )
             {
                 ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
                 ImGui::TreePop();
             }
-            ImGui::PopStyleVar( 3 );
+
+            ImGui::Unindent();
+            ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor();
         }
 
@@ -1022,12 +1034,45 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
+        int fieldCount = 6;
 
-        const float smallFramePaddingY = 2.f;
-        const float smallItemSpacingY = 2.f;
-        const float infoHeight = ImGui::GetTextLineHeight() * 8 +
-            style.FramePadding.y * 2 + smallFramePaddingY * 14 +
-            style.ItemSpacing.y * 2 + smallItemSpacingY * 5;
+        size_t totalPoints = 0;
+        size_t totalSelectedPoints = 0;
+        for ( auto pObj : getAllObjectsInTree<ObjectPoints>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        {
+            totalPoints += pObj->numValidPoints();
+            totalSelectedPoints += pObj->numSelectedPoints();
+        }
+        if ( totalPoints )
+            ++fieldCount;
+
+        selectionBbox_ = Box3f{};
+        selectionWorldBox_ = {};
+        for ( auto pObj : selectedVisualObjs )
+        {
+            selectionBbox_.include( pObj->getBoundingBox() );
+            selectionWorldBox_.include( pObj->getWorldBox() );
+        }
+        
+        Vector3f bsize;
+        Vector3f wbsize;
+        std::string bsizeStr;
+        std::string wbsizeStr;        
+
+        if ( selectionWorldBox_.valid() )
+        {
+            bsize = selectionBbox_.size();
+            bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
+            wbsize = selectionWorldBox_.size();
+            wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
+            if ( bsizeStr != wbsizeStr )
+                ++fieldCount;
+        }            
+
+        const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
+        const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
+            style.FramePadding.y * fieldCount * 2 +
+            style.ItemSpacing.y * 2 + smallItemSpacingY * (fieldCount - 3);
         resultHeight += infoHeight + style.ItemSpacing.y;
 
         ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
@@ -1050,24 +1095,14 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 totalVerts += polyline->topology.numValidVerts();
             }
-        }
+        }        
 
-        size_t totalPoints = 0;
-        size_t totalSelectedPoints = 0;
-        for ( auto pObj : getAllObjectsInTree<ObjectPoints>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
-        {
-            totalPoints += pObj->numValidPoints();
-            totalSelectedPoints += pObj->numSelectedPoints();
-        }
-
-        auto drawPrimitivesInfo = [&style] ( std::string title, size_t value, size_t selected = 0 )
+        auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
         {
             if ( value )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
                 std::string valueStr;
                 std::string labelStr;
-                const float width = ( ImGui::CalcItemWidth() - style.ItemInnerSpacing.x * 2.f ) / 3.f;
                 if ( selected )
                 {
                     valueStr = std::to_string( selected ) + " / ";
@@ -1076,11 +1111,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 valueStr += std::to_string( value );
                 labelStr += title;
 
-                ImGui::SetNextItemWidth( width * 2 + style.ItemInnerSpacing.x );
-                ImGui::InputText( ( "##" + labelStr ).c_str(), valueStr, ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
-                ImGui::PopStyleColor();
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::Text( "%s", labelStr.c_str() );
+                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
             }
         };
 
@@ -1096,8 +1127,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 renameBuffer_ = pObj->name();
                 lastRenameObj_ = pObj;
             }
-
-            if ( !ImGui::InputText( "Object Name", renameBuffer_, ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
             {
                 if ( renameBuffer_ == pObj->name() )
                 {
@@ -1145,53 +1175,40 @@ float ImGuiMenu::drawSelectionInformation_()
         else
             lastRenameObj_.reset();
 
-        const float itemSpacingY = style.ItemSpacing.y;
-        style.ItemSpacing.y = 2.f;
-        const float framePaddingY = style.FramePadding.y;
-        style.FramePadding.y = 2.f;
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, MR::cDefaultItemSpacing * 0.25f * menu_scaling() } );
 
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
 
-        const float prevItemSpacingY = totalFaces || totalVerts || totalPoints ? style.ItemSpacing.y : itemSpacingY;
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - prevItemSpacingY + itemSpacingY );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 0.5f * MR::cDefaultItemSpacing * menu_scaling() );
 
-        selectionBbox_ = Box3f{};
-        selectionWorldBox_ = {};
-        for ( auto pObj : selectedVisualObjs )
-        {
-            selectionBbox_.include( pObj->getBoundingBox() );
-            selectionWorldBox_.include( pObj->getWorldBox() );
-        }
         if ( selectionBbox_.valid() )
         {
-            auto drawVec3 = [&style] ( std::string title, Vector3f& value )
+            auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, Color::gray().getUInt32() );
-                ImGui::InputFloat3( ( "##" + title ).c_str(), &value.x, "%.3f", ImGuiInputTextFlags_ReadOnly );
-                ImGui::PopStyleColor();
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
+                ImGui::SameLine();
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
+                ImGui::SameLine();
+                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
+
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::Text( "%s", title.c_str() );
             };
-            drawVec3( "Box min", selectionBbox_.min );
-            drawVec3( "Box max", selectionBbox_.max );
-            auto bsize = selectionBbox_.size();
-            drawVec3( "Box size", bsize );
 
-            if ( selectionWorldBox_.valid() )
-            {
-                auto wbsize = selectionWorldBox_.size();
-                const std::string bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z);
-                const std::string wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
-                if ( bsizeStr != wbsizeStr )
-                    drawVec3( "World box size", wbsize );
-            }
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
+            const float fieldWidth = getSceneInfoItemWidth_( 3 );
+            drawVec3( "Box min", selectionBbox_.min, fieldWidth );
+            drawVec3( "Box max", selectionBbox_.max, fieldWidth );
+            drawVec3( "Box size", bsize, fieldWidth );
+            ImGui::PopStyleVar();
+
+            if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+                drawVec3( "World box size", wbsize, fieldWidth );
         }
 
-        style.ItemSpacing.y = itemSpacingY;
-        style.FramePadding.y = framePaddingY;
-
+        ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::PopStyleVar();
     }
@@ -1496,7 +1513,7 @@ float ImGuiMenu::drawTransform_()
             bool inputDeactivated = false;
             bool inputChanged = false;
 
-            ImGui::PushItemWidth( ( ImGui::GetContentRegionAvail().x - 85 * scaling - style.ItemInnerSpacing.x * 2 ) / 3.f );
+            ImGui::PushItemWidth( getSceneInfoItemWidth_( 3 ) );
             if ( uniformScale_ )
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
@@ -1504,6 +1521,7 @@ float ImGuiMenu::drawTransform_()
                 if ( inputChanged )
                     scale.x = scale.y = scale.z = midScale;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+                ImGui::SameLine();
             }
             else
             {
@@ -1515,9 +1533,17 @@ float ImGuiMenu::drawTransform_()
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 inputChanged = ImGui::DragFloatValid( "##scaleZ", &scale.z, scale.z * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
             }
-            ImGui::SameLine( 0, uniformScale_ ? -1 : 2 * scaling );
+
+            auto ctx = ImGui::GetCurrentContext();
+            assert( ctx );
+            auto window = ctx->CurrentWindow;
+            assert( window );
+            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
+            window->DC.CursorPosPrevLine.y -= diff;
             ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
@@ -1526,7 +1552,7 @@ float ImGuiMenu::drawTransform_()
                 "Rotation around Oy-axis, degrees",
                 "Rotation around Oz-axis, degrees"
             };
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
+            ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
             inputChanged = inputChanged || resultRotation.valueChanged;
             inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
@@ -1564,7 +1590,7 @@ float ImGuiMenu::drawTransform_()
             };
             const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
 
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 85 * scaling );
+            ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             auto wbsize = selectionWorldBox_.valid() ? selectionWorldBox_.size() : Vector3f::diagonal( 1.f );
             auto minSizeDim = wbsize.length();
             if ( minSizeDim == 0 )
@@ -2091,9 +2117,14 @@ void ImGuiMenu::draw_mr_menu()
                     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
                     {
                         ProgressBar::nextTask( "Load DICOM Folder" );
-                        auto voxelsObject = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                        if ( voxelsObject && !ProgressBar::isCanceled() )
+                        auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
+                        if ( loadRes.has_value() && !ProgressBar::isCanceled() )
                         {
+                            std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
+                            voxelsObject->setName( loadRes->name );
+                            ProgressBar::setTaskCount( 2 );
+                            ProgressBar::nextTask( "Construct ObjectVoxels" );
+                            voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
                             auto bins = voxelsObject->histogram().getBins();
                             auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
@@ -2107,7 +2138,13 @@ void ImGuiMenu::draw_mr_menu()
                                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                             };
                         }
-                        return {};
+                        else
+                            return [error = loadRes.error()] ()
+                            {
+                                auto menu = getViewerInstance().getMenuPlugin();
+                                if ( menu )
+                                    menu->showErrorModal( error );
+                            };
                     }, 2 );
                 }
 #endif
@@ -2472,6 +2509,14 @@ void ImGuiMenu::drawShortcutsWindow_()
             ImGui::Text( "%s - %s", ShortcutManager::getKeyFullString( key ).c_str(), name.c_str() );
     }
     ImGui::End();
+}
+
+float ImGuiMenu::getSceneInfoItemWidth_(size_t itemCount)
+{
+    if ( itemCount == 0 )
+        return 0;
+    /// 85 is the widest label's size
+    return ( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

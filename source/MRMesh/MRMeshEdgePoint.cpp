@@ -6,6 +6,10 @@ namespace MR
 
 static constexpr auto eps = 10 * std::numeric_limits<float>::epsilon();
 
+MeshEdgePoint::MeshEdgePoint( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
+{
+}
+
 VertId MeshEdgePoint::inVertex( const MeshTopology & topology ) const
 {
     if ( a <= eps )

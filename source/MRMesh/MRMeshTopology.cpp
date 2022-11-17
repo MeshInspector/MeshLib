@@ -553,6 +553,27 @@ EdgeId MeshTopology::sharedEdge( FaceId l, FaceId r ) const
     return {};
 }
 
+EdgeId MeshTopology::sharedVertInOrg( EdgeId a, EdgeId b ) const
+{
+    assert ( a && b );
+    if ( a == b || a == b.sym() )
+        return a;
+    const auto ao = org( a );
+    const auto bo = org( b );
+    assert( ao && bo );
+    if ( ao == bo )
+        return a;
+    const auto ad = dest( a );
+    if ( ad == bo )
+        return a.sym();
+    const auto bd = dest( b );
+    if ( ao == bd )
+        return a;
+    if ( ad == bd )
+        return a.sym();
+    return {}; // no shared vertex found
+}
+
 EdgeId MeshTopology::sharedVertInOrg( FaceId l, FaceId r ) const
 {
     assert( l && r && l != r );

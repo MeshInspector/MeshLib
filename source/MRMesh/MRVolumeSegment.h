@@ -9,7 +9,6 @@
 
 namespace MR
 {
-class ObjectVoxels;
 
 /**
  * \defgroup VolumeSegmentationGroup Volume (Voxel) Segmentation

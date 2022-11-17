@@ -231,6 +231,50 @@ void PlotCustomHistogram( const char* str_id,
     }
 }
 
+bool InputTextCentered( const char* label, std::string& str, float width, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    const auto& style = ImGui::GetStyle();
+    const auto& viewer = MR::Viewer::instanceRef();
+    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
+    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
+    
+    SetNextItemWidth( actualWidth );
+    if ( actualWidth > estimatedSize.x )
+        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
+    bool res =  InputText( label, str, flags, callback, user_data );
+
+    if ( actualWidth > estimatedSize.x )
+        PopStyleVar();
+    return res;
+}
+
+void InputTextCenteredReadOnly( const char* label, const std::string& str, float width )
+{
+    const auto& style = ImGui::GetStyle();
+    const auto& viewer = MR::Viewer::instanceRef();
+    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
+    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
+
+    SetNextItemWidth( actualWidth );
+    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    PushStyleColor( ImGuiCol_Text, transparentColor );
+    InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+
+    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
+        ImGui::Text( "%s", label );
+
+    PopStyleVar();
+}
+
 MRVIEWER_API void TransparentText( const char* fmt, ... )
 {
     auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
@@ -439,66 +483,109 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     return Begin( label, open, flags );
 }
 
-bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, float width, float scaling, float height, ImGuiWindowFlags flags, ImVec2* changedSize )
+bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();    
 
-    const float borderSize = style.WindowBorderSize * scaling;
-    const float titleBarHeight = 2 * MR::cRibbonItemInterval * scaling + ImGui::GetTextLineHeight() + 2 * borderSize;
-    if ( collapsed && *collapsed )
+    const float borderSize = style.WindowBorderSize * params.menuScaling;
+    const float titleBarHeight = 2 * MR::cRibbonItemInterval * params.menuScaling + ImGui::GetTextLineHeight() + 2 * borderSize;
+    auto height = params.height;
+    if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;
 
     ImGuiWindow* window = FindWindowByName( label );
     if ( !window )
     {
         auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-        float yPos = 0.0f;       
-        if ( menu )
+        float yPos = 0.0f;
+        if ( params.isDown )
+            yPos = GetIO().DisplaySize.y - height;
+        else if ( menu )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
-        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
+        SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver );
     }
 
-    if ( changedSize )
+    if ( params.changedSize )
     {
-        if ( collapsed && *collapsed )
-        {
-            SetNextWindowSize( { changedSize->x, height }, ImGuiCond_Always );
-        }
+        if ( params.collapsed && *params.collapsed )
+            SetNextWindowSize( { params.changedSize->x, height }, ImGuiCond_Always );
         else
-        {
-            SetNextWindowSize( *changedSize, ImGuiCond_Always );
-        }
-        
+            SetNextWindowSize( *params.changedSize, ImGuiCond_Always );
     }
     else
-        SetNextWindowSize( ImVec2( width, height ), ImGuiCond_Always );
+    {
+        SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
+        SetNextWindowSizeConstraints( ImVec2( params.width, -1.0f ), ImVec2( params.width, -1.0f ) );
+    }
 
     auto context = ImGui::GetCurrentContext();
-    if ( collapsed && *collapsed )
+    auto flags = params.flags;
+    if ( params.collapsed && *params.collapsed )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_WindowMinSize, { 0, 0 } );
         ImGui::SetNextWindowSizeConstraints( { context->NextWindowData.SizeVal.x, titleBarHeight }, { context->NextWindowData.SizeVal.x, titleBarHeight } );
         flags |= ImGuiWindowFlags_NoResize;
     }
 
+    // needed for manual scrollbar 
+    bool hasPrevData = false;
+    float prevCursorMaxPos = FLT_MAX;
+    if ( window )
+    {
+        hasPrevData = true;
+        prevCursorMaxPos = window->DC.CursorMaxPos.y;
+    }
+
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
         ImGui::PopStyleVar();
-        if ( collapsed && *collapsed )
+        if ( params.collapsed && *params.collapsed )
             ImGui::PopStyleVar();
         return false;
     }
 
     window = context->CurrentWindow;
-
-    if ( changedSize && collapsed && !*collapsed )
+    // Manually draw Y scroll bar if window cannot be big enough
+    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
     {
-        changedSize->x = window->Rect().GetWidth();
-        changedSize->y = window->Rect().GetHeight();
+        // Set scrollbar size
+        window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
+        // Prevent "tremor" on holding scrollbar near bottom 
+        // (if skip this code window->ContentSize change beacuse of outside scrollbar)
+        auto backUpContSizeY = window->ContentSize.y;
+        if ( hasPrevData )
+        {
+            window->ContentSize.y = ( ( -window->ContentSizeIdeal.y + window->ContentSize.y ) +
+                prevCursorMaxPos - window->DC.CursorStartPos.y ) - ( titleBarHeight );
+        }
+        // Determine scrollbar position
+        window->InnerRect.Min.y += ( titleBarHeight - borderSize );
+        window->InnerRect.Max.y -= borderSize;
+        window->InnerRect.Max.x -= ( window->ScrollbarSizes.x + borderSize );
+        window->Size.x -= borderSize;
+        // Needed for ImGui::GetAvailableContent functuions
+        window->WorkRect.Min.y += ( titleBarHeight - borderSize );
+        window->WorkRect.Max.x -= window->ScrollbarSizes.x;
+        window->ContentRegionRect.Min.y += ( titleBarHeight + borderSize );
+        window->ContentRegionRect.Max.x -= window->ScrollbarSizes.x;
+        // Enable scroll by mouse if manual scrollbar
+        window->Flags &= ~ImGuiWindowFlags_NoScrollWithMouse;
+        // Draw scrollbar
+        window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+        Scrollbar( ImGuiAxis_Y );
+        window->DrawList->PopClipRect();
+        // Reset old values
+        window->ContentSize.y = backUpContSizeY;
     }
 
-    if ( collapsed && *collapsed )
+    if ( params.changedSize && params.collapsed && !*params.collapsed )
+    {
+        params.changedSize->x = window->Rect().GetWidth();
+        params.changedSize->y = window->Rect().GetHeight();
+    }
+
+    if ( params.collapsed && *params.collapsed )
         ImGui::PopStyleVar();
 
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
@@ -507,9 +594,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     ImGui::PushStyleColor( ImGuiCol_Border, bgColor );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f,  0.0f } );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * params.menuScaling );
     
-    const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * scaling - 2 * borderSize;
+    const float buttonSize = titleBarHeight - 2 * MR::cRibbonItemInterval * params.menuScaling - 2 * borderSize;
     const auto buttonOffset = ( titleBarHeight - buttonSize ) * 0.5f;
     ImGui::SetCursorScreenPos( { window->Rect().Min.x + buttonOffset, window->Rect().Min.y + buttonOffset } );
     
@@ -527,11 +614,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
     window->DrawList->AddRectFilled( boundingBox.Min, boundingBox.Max, bgColor );
     
-    if ( collapsed )
+    if ( params.collapsed )
     {
-        if ( ImGui::Button( *collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
+        if ( ImGui::Button( *params.collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
-            *collapsed = !*collapsed;
+            *params.collapsed = !*params.collapsed;
             ImGui::PopStyleVar( 3 );
             ImGui::PopStyleColor( 2 );
 
@@ -548,13 +635,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     if ( iconsFont )
         ImGui::PopFont();
 
+    auto cursorScreenPos = ImGui::GetCursorScreenPos();
     if ( titleFont )
     {
         ImGui::PushFont( titleFont );
-        ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + params.menuScaling } );
+        //ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
     }
     else
-        ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
+        //ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
 
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
@@ -589,7 +679,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
 
     ImGui::PopStyleVar( 3 );
 
-    if ( collapsed && *collapsed )
+    if ( params.collapsed && *params.collapsed )
     {
         ImGui::PopStyleColor( 2 );
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
@@ -616,10 +706,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, bool* collapsed, flo
     }
     ImGui::PopStyleVar();
 
-    ImGui::TableNextColumn();    
-    window->DrawList->PushClipRect( window->Rect().Min, window->Rect().Max );
+    ImGui::TableNextColumn();
+    window->ClipRect = window->InnerRect;
+    window->DrawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
 
-   return true;
+    return true;
 }
 
 void EndCustomStatePlugin()
@@ -1066,21 +1157,23 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f * menuScaling, 0 } ) )
+    float p = ImGui::GetStyle().FramePadding.x;
+    auto width = GetContentRegionAvail().x - 3 * p;    
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
-    ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f * menuScaling, 0 } ) )
+    ImGui::SameLine( 0, p );
+    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
-    ImGui::SameLine();
+    ImGui::SameLine( 0, p );
 
     const bool importPlaneModeOld = planeWidget.importPlaneMode();
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f * menuScaling, 0 } ) )
+    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
         spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );

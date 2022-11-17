@@ -4,6 +4,7 @@
 #include "MRVector.h"
 #include "MRBitSet.h"
 #include "MRPartMapping.h"
+#include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
 #include <fstream>
 #include <tl/expected.hpp>
@@ -85,6 +86,12 @@ public:
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    /// if given point is
+    /// 1) in vertex, then invokes callback once with it;
+    /// 2) on edge, then invokes callback twice with every vertex of the edge;
+    /// 3) inside triangle, then invokes callback trice with every vertex of the triangle
+    template <typename T>
+    void forEachVertex( const MeshTriPoint & p, T && callback ) const;
     /// gets 3 edges of given triangular face, oriented to have it on the left;
     /// the edges are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getTriEdges( FaceId f, EdgeId & e0, EdgeId & e1, EdgeId & e2 ) const;
@@ -125,6 +132,8 @@ public:
     [[nodiscard]] bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
     /// if two valid faces share the same edge then it is found and returned
     [[nodiscard]] MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
+    /// if two valid edges share the same vertex then it is found and returned as Edge with this vertex in origin
+    [[nodiscard]] MRMESH_API EdgeId sharedVertInOrg( EdgeId a, EdgeId b ) const;
     /// if two valid faces share the same vertex then it is found and returned as Edge with this vertex in origin
     [[nodiscard]] MRMESH_API EdgeId sharedVertInOrg( FaceId l, FaceId r ) const;
     /// if two valid edges belong to same valid face then it is found and returned
@@ -326,6 +335,27 @@ private:
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 };
+
+template <typename T>
+void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
+{
+    if ( auto v = p.inVertex( *this ) )
+    {
+        callback( v );
+        return;
+    }
+    if ( auto e = p.onEdge( *this ) )
+    {
+        callback( org( e->e ) );
+        callback( dest( e->e ) );
+        return;
+    }
+
+    VertId v[3];
+    getLeftTriVerts( p.e, v );
+    for ( int i = 0; i < 3; ++i )
+        callback( v[i] );
+}
 
 inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )
 {

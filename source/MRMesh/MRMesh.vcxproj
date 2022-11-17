@@ -96,6 +96,7 @@
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
+    <ClInclude Include="MRPlanarPath.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPointCloudTriangulation.h" />
@@ -179,7 +180,7 @@
     <ClInclude Include="MRObjectsAccess.h" />
     <ClInclude Include="MRObjectsAccess.hpp" />
     <ClInclude Include="MROffset.h" />
-    <ClInclude Include="MRPlanarPath.h" />
+    <ClInclude Include="MRGeodesicPath.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRPointCloudMakeNormals.h" />
     <ClInclude Include="MRPointCloudRadius.h" />
@@ -396,7 +397,7 @@
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMakePlane.cpp" />
     <ClCompile Include="MROffset.cpp" />
-    <ClCompile Include="MRPlanarPath.cpp" />
+    <ClCompile Include="MRGeodesicPath.cpp" />
     <ClCompile Include="MRPrimitiveMapsComposition.cpp" />
     <ClCompile Include="MRPython.cpp" />
     <ClCompile Include="MRRegularMapMesher.cpp" />

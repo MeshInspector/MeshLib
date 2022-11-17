@@ -67,7 +67,11 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
                 b = (*xf)( b );
                 c = (*xf)( c );
             }
-            auto [proj, bary] = closestPointInTriangle( pt, a, b, c );
+            
+            // compute the closest point in double-precision, because float might be not enough
+            const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
+            const Vector3f proj( projD );
+            const TriPointf bary( baryD );
 
             float distSq = ( proj - pt ).lengthSq();
             if ( distSq < res.distSq )

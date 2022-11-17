@@ -332,7 +332,7 @@ void Palette::draw( const ImVec2& pose, const ImVec2& size )
     }
     
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = Viewer::instanceRef();
+    const auto& viewer = getViewerInstance();
     const auto menu = viewer.getMenuPlugin();
     const auto& windowSize = viewer.viewport().getViewportRect();
     const auto fontSize = ImGui::GetFontSize();

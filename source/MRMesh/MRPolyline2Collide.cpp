@@ -7,25 +7,25 @@
 #include "MRPch/MRTBB.h"
 #include <atomic>
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
-bool doSegmentsIntersect( const Vector2d& a0, const Vector2d& a1, const Vector2d& b0, const Vector2d& b1 )
+
+// returns true if two segments intersect
+bool doSegmentsIntersect( const LineSegm2d & x, const LineSegm2d & y )
 {
-    // mb use intersection (LineSegm2f)
-    auto avec = a1 - a0;
-    if ( cross( avec, b0 - a0 ) * cross( avec, b1 - a0 ) > 0 )
+    auto xvec = x.b - x.a;
+    if ( cross( xvec, y.a - x.a ) * cross( xvec, y.b - x.a ) > 0 )
         return false;
-    auto bvec = b1 - b0;
-    if ( cross( bvec, a0 - b0 ) * cross( bvec, a1 - b0 ) > 0 )
+    auto yvec = y.b - y.a;
+    if ( cross( yvec, x.a - y.a ) * cross( yvec, x.b - y.a ) > 0 )
         return false;
     return true;
 }
 
 }
-
-namespace MR
-{
 
 struct NodeNodePoly
 {
@@ -91,15 +91,15 @@ std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a
             int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
             if ( firstIntersectionOnly && knownIntersection < i )
                 break;
-            Vector2f av[2], bv[2];
-            av[0] = a.orgPnt( res[i].aUndirEdge ); av[1] = a.destPnt( res[i].aUndirEdge );
-            bv[0] = b.orgPnt( res[i].bUndirEdge ); bv[1] = b.destPnt( res[i].bUndirEdge );
+
+            auto as = a.edgeSegment( res[i].aUndirEdge );
+            auto bs = b.edgeSegment( res[i].bUndirEdge );
             if ( rigidB2A )
             {
-                bv[0] = ( *rigidB2A )( bv[0] );
-                bv[1] = ( *rigidB2A )( bv[1] );
+                bs.a = ( *rigidB2A )( bs.a );
+                bs.b = ( *rigidB2A )( bs.b );
             }
-            if ( doSegmentsIntersect( Vector2d{ av[0] }, Vector2d{ av[1] }, Vector2d{ bv[0] }, Vector2d{ bv[1] } ) )
+            if ( doSegmentsIntersect( LineSegm2d{ as }, LineSegm2d{ bs } ) )
             {
                 if ( firstIntersectionOnly )
                 {
@@ -238,10 +238,9 @@ std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
-            Vector2f av[2], bv[2];
-            av[0] = polyline.orgPnt( res[i].aUndirEdge ); av[1] = polyline.destPnt( res[i].aUndirEdge );
-            bv[0] = polyline.orgPnt( res[i].bUndirEdge ); bv[1] = polyline.destPnt( res[i].bUndirEdge );
-            if ( !doSegmentsIntersect( Vector2d{ av[0] }, Vector2d{ av[1] }, Vector2d{ bv[0] }, Vector2d{ bv[1] } ) )
+            if ( !doSegmentsIntersect( 
+                LineSegm2d{ polyline.edgeSegment( res[i].aUndirEdge ) },
+                LineSegm2d{ polyline.edgeSegment( res[i].bUndirEdge ) } ) )
                 res[i].aUndirEdge = UndirectedEdgeId{}; //invalidate
         }
     } );

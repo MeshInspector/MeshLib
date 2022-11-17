@@ -11,7 +11,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRPolyline2.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
 
 #include <tbb/enumerable_thread_specific.h>

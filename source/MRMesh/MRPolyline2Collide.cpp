@@ -1,7 +1,7 @@
 #include "MRPolyline2Collide.h"
 #include "MRAABBTreePolyline.h"
-#include "MRPolyline2.h"
-#include "MRPolyline2Project.h"
+#include "MRPolyline.h"
+#include "MRPolylineProject.h"
 #include "MRTimer.h"
 #include "MRMatrix2.h"
 #include "MRPch/MRTBB.h"
@@ -281,6 +281,9 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
     Vector2f aPoint = a.orgPnt( aEdge );
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
+
+    // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
+    static PolylineProjectionResult2 unused;
 
     auto projRes = findProjectionOnPolyline2( aPoint, b );
 

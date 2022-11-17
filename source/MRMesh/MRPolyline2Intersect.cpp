@@ -1,5 +1,5 @@
 #include "MRPolyline2Intersect.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRVector2.h"
 #include "MRAABBTreePolyline.h"
 #include "MRPch/MRSpdlog.h"

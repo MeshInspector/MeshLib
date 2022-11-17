@@ -239,7 +239,7 @@ jobs:
           #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Install Python
-        if: ${{ !(matrix.platform == "x86" and matrix.py-version == "3.11") }}
+        if: ${{ !(matrix.platform == 'x86' and matrix.py-version == '3.11') }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Python setup
@@ -329,7 +329,7 @@ jobs:
           python-version: ${{ matrix.py-version }}
 
       - name: System setup
-        if: ${{ matrix.os != 'fedora:35' and matrix.os != 'fedora:37'}}
+        if: ${{ matrix.os != 'fedora:35' && matrix.os != 'fedora:37'}}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Pip setup
@@ -419,7 +419,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
-        if: ${{ !(matrix.platform == "x86" and matrix.py-version == "3.11") }}
+        if: ${{ !(matrix.platform == 'x86' and matrix.py-version == '3.11') }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Pip setup

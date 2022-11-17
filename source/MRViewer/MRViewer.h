@@ -621,6 +621,7 @@ private:
     void initBasisAxesObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
+    void initSpaceMouseHandler_();
 
     bool stopEventLoop_{ false };
 
@@ -643,7 +644,7 @@ private:
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
 
-    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
+    std::unique_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

@@ -110,7 +110,7 @@ void SpaceMouseHandlerWindows::handle()
     }
     Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
     Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
-    std::memcpy( axes_.data(), axesNew, sizeof( float ) * 6 );
+    std::copy( axesNew, axesNew + 6, axes_.begin() );
     translate *= axesScale;
     rotate *= axesScale;
 
@@ -129,7 +129,7 @@ void SpaceMouseHandlerWindows::handle()
 //         else if ( buttons_[i] && buttons[i] &&  ) // button repeat
 //             viewer.spaceMouseRepeat( i );
     }
-    std::memcpy( buttons_.data(), buttons, sizeof( unsigned char ) * count );
+    std::copy( buttons, buttons + count, buttons_.begin() );
 }
 
 void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
@@ -159,7 +159,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
     {
         int count;
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-        std::memcpy( axes_.data(), axesNew, sizeof( float ) * 6 );
+        std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
 }
 

@@ -39,6 +39,7 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerWindows.h"
 
 #ifndef __EMSCRIPTEN__
@@ -548,10 +549,9 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
 
-    isLaunched_ = true;
+    initSpaceMouseHandler_();
 
-    spaceMouseHandler_->initialize();
-    
+    isLaunched_ = true;
 
     return EXIT_SUCCESS;
 }
@@ -717,12 +717,6 @@ Viewer::Viewer() :
     viewport_list.emplace_back();
     viewport_list.front().id = ViewportId{ 1 };
     presentViewportsMask_ |= viewport_list.front().id;
-
-#ifdef _WIN32
-    spaceMouseHandler_ = std::make_shared<SpaceMouseHandlerWindows>();
-#else
-    spaceMouseHandler_ = std::make_shared<SpaceMouseHandler>();
-#endif
 }
 
 Viewer::~Viewer()
@@ -1416,6 +1410,17 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setFrontColor( color, false );
     rotationSphere->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     rotationSphere->setAncillary( true );
+}
+
+void Viewer::initSpaceMouseHandler_()
+{
+#ifdef _WIN32
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+#else
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+#endif
+
+    spaceMouseHandler_->initialize();
 }
 
 bool Viewer::windowShouldClose()

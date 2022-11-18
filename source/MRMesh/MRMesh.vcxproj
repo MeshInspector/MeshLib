@@ -70,6 +70,7 @@
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />
+    <ClInclude Include="MRIntersectionPrecomputes2.h" />
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
     <ClInclude Include="MRLine3.h" />
@@ -117,6 +118,7 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
+    <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />

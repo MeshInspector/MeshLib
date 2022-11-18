@@ -879,6 +879,12 @@
     <ClInclude Include="MRPlanarPath.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
+    <ClInclude Include="MRIntersectionPrecomputes2.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRayBoxIntersection2.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

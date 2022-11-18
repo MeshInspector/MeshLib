@@ -429,9 +429,6 @@
     <ClInclude Include="MRMeshIntersect.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRIntersectionPrecomputes.h">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
     <ClInclude Include="MRRayBoxIntersection.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -878,6 +875,9 @@
     </ClInclude>
     <ClInclude Include="MRPlanarPath.h">
       <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIntersectionPrecomputes.h">
+      <Filter>Source Files\Math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

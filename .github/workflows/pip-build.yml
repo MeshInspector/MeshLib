@@ -159,7 +159,6 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
-          docker exec meshlib-win powershell.exe -c "set PYTHONHOME=C:\${{matrix.py-dir}}"
 
       - name: Build
         run: |
@@ -170,8 +169,14 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
-      - name: Unit Tests
+      - name: Unit Tests Default
+        if: ${{ matrix.py-version == '3.10' }}
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
+
+
+      - name: Unit Tests
+        if: ${{ matrix.py-version != '3.10' }}
+        run: docker exec meshlib-win powershell.exe -c "$Env:PYTHONHOME="C:\Python311" ; py -3 scripts\run_unit_test_script.py Release"
 
       - name: Python Tests
         run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"
@@ -334,8 +339,14 @@ jobs:
         if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04'}}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
-      - name: Fedora system setup
-        if: ${{ matrix.os == 'fedora:35' || matrix.os == 'fedora:37'}}
+      - name: Fedora 35 system setup
+        if: ${{ matrix.os == 'fedora:35'}}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Fedora 37 system setup
+        if: ${{matrix.os == 'fedora:37'}}
         run: dnf -y install python3 pip
 
       - name: Pip setup

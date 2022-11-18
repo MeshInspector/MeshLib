@@ -235,6 +235,9 @@
     <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>
+    <ClCompile Include="MRSpaceMouseController.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -442,6 +445,9 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandlerWindows.h">
       <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseController.h">
+      <Filter>ShortcutManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

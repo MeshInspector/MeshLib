@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRViewerFwd.h"
+#include "MRMesh/MRVector3.h"
 #include <boost/signals2/signal.hpp>
 #include <filesystem>
 #include <vector>
@@ -203,6 +204,36 @@ struct MRVIEWER_CLASS TouchEndListener : ConnectionHolder
     MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
 protected:
     virtual bool onTouchEnd_( int id, int x, int y ) = 0;
+};
+
+/// class to subscribe on SpaceMouseMoveSignal
+struct MRVIEWER_CLASS SpaceMouseMoveListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( SpaceMouseMoveListener );
+    virtual ~SpaceMouseMoveListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate ) = 0;
+};
+
+/// class to subscribe on SpaceMouseDownSgnal
+struct MRVIEWER_CLASS SpaceMouseDownListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( SpaceMouseDownListener );
+    virtual ~SpaceMouseDownListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool spaceMouseDown_( int key ) = 0;
+};
+
+/// class to subscribe on SpaceMouseUpSignal
+struct MRVIEWER_CLASS SpaceMouseUpListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( SpaceMouseUpListener );
+    virtual ~SpaceMouseUpListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool spaceMouseUp_( int key ) = 0;
 };
 
 }

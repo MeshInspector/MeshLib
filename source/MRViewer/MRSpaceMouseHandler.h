@@ -6,53 +6,54 @@
 namespace MR
 {
 
+/// enumeration all spacemouse buttons
+enum SpaceMouseButtons : int
+{
+    SMB_MENU,
+
+    SMB_ESC,
+    SMB_ENTER,
+    SMB_TAB,
+    SMB_SHIFT,
+    SMB_CTRL,
+    SMB_ALT,
+    SMB_SPACE,
+    SMB_DELETE,
+
+    SMB_CUSTOM_1,
+    SMB_CUSTOM_2,
+    SMB_CUSTOM_3,
+    SMB_CUSTOM_4,
+    SMB_CUSTOM_5,
+    SMB_CUSTOM_6,
+    SMB_CUSTOM_7,
+    SMB_CUSTOM_8,
+    SMB_CUSTOM_9,
+    SMB_CUSTOM_10,
+    SMB_CUSTOM_11,
+    SMB_CUSTOM_12,
+
+    SMB_FIT,
+    SMB_TOP,
+    SMB_RIGHT,
+    SMB_FRONT,
+    SMB_ROLL_CW, // roll clockwise
+    SMB_LOCK_ROT,
+
+    SMB_BTN_V1,
+    SMB_BTN_V2,
+    SMB_BTN_V3,
+    SMB_ISO1,
+
+    SMB_BUTTON_COUNT
+};
+
+
 /// class to handle spacemouse
 class SpaceMouseHandler
 {
 public:
-    SpaceMouseHandler() = default;
     virtual ~SpaceMouseHandler() = default;
-
-    enum Button : int
-    {
-        MENU,
-
-        ESC,
-        ENTER,
-        TAB,
-        SHIFT,
-        CTRL,
-        ALT,
-        SPACE,
-        //DELETE,
-
-        CUSTOM_1,
-        CUSTOM_2,
-        CUSTOM_3,
-        CUSTOM_4,
-        CUSTOM_5,
-        CUSTOM_6,
-        CUSTOM_7,
-        CUSTOM_8,
-        CUSTOM_9,
-        CUSTOM_10,
-        CUSTOM_11,
-        CUSTOM_12,
-
-        FIT,
-        TOP,
-        RIGHT,
-        FRONT,
-        ROLL_CW, // roll clockwise
-        LOCK_ROT,
-
-        BTN_V1,
-        BTN_V2,
-        BTN_V3,
-        ISO1,
-
-        BUTTON_COUNT
-    };
 
     /// initialize device
     virtual void initialize() {};

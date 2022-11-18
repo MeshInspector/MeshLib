@@ -240,7 +240,8 @@ jobs:
           #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Fix links
-        run: rm /usr/local/bin/*${{matrix.py-version}} || true
+        if: ${{ matrix.py-version == '3.11' }}
+        run: rm '/usr/local/bin/*${{matrix.py-version}}*'
 
       - name: Install Python
         run: brew install python@${{matrix.py-version}}

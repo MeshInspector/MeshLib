@@ -159,6 +159,7 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
+          docker exec meshlib-win set PYTHONHOME=C:\${{matrix.py-dir}}
 
       - name: Build
         run: |
@@ -210,8 +211,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        platform: ["x86"] # "arm64",
+        py-version: [ "3.10", "3.11"] # "3.8", "3.9",
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -239,7 +240,6 @@ jobs:
           #ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Install Python
-        if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Python setup
@@ -302,7 +302,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -322,15 +322,13 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Python setup
-        if: ${{ matrix.os == 'fedora:35' || matrix.os == 'fedora:37'}}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.py-version }}
-
-      - name: System setup
-        if: ${{ matrix.os != 'fedora:35' && matrix.os != 'fedora:37'}}
+      - name: Ubuntu system setup
+        if: ${{ matrix.os == 'ubuntu:20.04' && matrix.os == 'ubuntu:22.04'}}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+      - name: Fedora system setup
+        if: ${{ matrix.os == 'fedora:35' && matrix.os == 'fedora:37'}}
+        run: dnf -y install python3 pip
 
       - name: Pip setup
         run: |

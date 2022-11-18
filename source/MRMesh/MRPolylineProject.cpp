@@ -247,6 +247,12 @@ PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const M
 template<typename V>
 void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radius, const FoundEdgeCallback<V>& foundCallback, AffineXf<V>* xf )
 {
+    if ( !foundCallback )
+    {
+        assert( false );
+        return;
+    }
+
     const auto & tree = polyline.getAABBTree();
     if ( tree.nodes().empty() )
         return;

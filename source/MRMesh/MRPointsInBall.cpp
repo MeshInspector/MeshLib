@@ -5,7 +5,6 @@
 namespace MR
 {
 
-
 void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius, const FoundPointCallback& foundCallback )
 {
     findPointsInBall( pointCloud.getAABBTree(), center, radius, foundCallback );
@@ -28,39 +27,23 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
     const auto& orderedPoints = tree.orderedPoints();
     const float radiusSq = sqr( radius );
 
-    struct SubTask
-    {
-        AABBTreePoints::NodeId n;
-        float distSq = 0;
-        SubTask() = default;
-        SubTask( AABBTreePoints::NodeId n, float dd ) : n( n ), distSq( dd ){}
-    };
-
     constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize];
+    AABBTreePoints::NodeId subtasks[MaxStackSize];
     int stackSize = 0;
 
-    auto addSubTask = [&]( const SubTask& s )
-    {
-        if ( s.distSq < radiusSq )
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = s;
-        }
-    };
-
-    auto getSubTask = [&]( AABBTreePoints::NodeId n )
+    auto addSubTask = [&]( AABBTreePoints::NodeId n )
     {
         float distSq = ( tree.nodes()[n].box.getBoxClosestPointTo( center ) - center ).lengthSq();
-        return SubTask( n, distSq );
+        if ( distSq <= radiusSq )
+            subtasks[stackSize++] = n;
     };
 
-    addSubTask( getSubTask( tree.rootNodeId() ) );
+    addSubTask( tree.rootNodeId() );
 
     while ( stackSize > 0 )
     {
-        const auto s = subtasks[--stackSize];
-        const auto& node = tree[s.n];
+        const auto n = subtasks[--stackSize];
+        const auto& node = tree[n];
 
         if ( node.leaf() )
         {
@@ -71,14 +54,9 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
             continue;
         }
 
-        auto s1 = getSubTask( node.leftOrFirst );
-        auto s2 = getSubTask( node.rightOrLast );
-        if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        addSubTask( node.rightOrLast ); // look at right node later
+        addSubTask( node.leftOrFirst ); // look at left node first
     }
 }
 
-}
+} //namespace MR

@@ -511,6 +511,8 @@ int Viewer::launchInit_( const LaunchParams& params )
 
         mouseController.connect();
         touchesController.connect( this );
+        spaceMouseController.connect();
+        initSpaceMouseHandler_();
     }
 
     std::future<void> splashMinTimer;
@@ -549,8 +551,6 @@ int Viewer::launchInit_( const LaunchParams& params )
     // important to be after splash
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
-
-    initSpaceMouseHandler_();
 
     isLaunched_ = true;
 
@@ -981,42 +981,6 @@ bool Viewer::mouseScroll( float delta_y )
 
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
-    // TODO test version
-    auto& viewportRef = viewport();
-
-    const auto& viewportParams = viewportRef.getParameters();
-
-    //translation
-    Vector3f axisN;
-    Vector3f axisX = Vector3f::plusX();
-    Vector3f axisY = Vector3f::plusY();
-    axisN = viewportRef.unprojectFromViewportSpace( axisN );
-    axisX = ( viewportRef.unprojectFromViewportSpace( axisX ) - axisN ).normalized();
-    axisY = ( viewportRef.unprojectFromViewportSpace( axisY ) - axisN ).normalized();
-    Vector3f diff( translate.x * axisX + translate.z * axisY );
-
-    viewportRef.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.1f );
-
-    //zoom
-    float  mult = pow( 0.95f, fabs( translate.y ) * translate.y );
-    constexpr float min_angle = 0.001f;
-    constexpr float max_angle = 179.99f;
-    constexpr float  d2r = PI_F / 360.0f;
-    float angle = viewportParams.cameraViewAngle;
-    angle = float( atan( tan( ( angle )*d2r ) * mult ) / d2r );
-    angle = std::clamp( angle, min_angle, max_angle );
-    viewportRef.setCameraViewAngle( angle );
-
-    //rotation
-    Vector3f rotateScaled = rotate * 0.05f;
-    Quaternionf quat = (
-        Quaternionf( Vector3f{ 1,0,0 }, rotateScaled.x ) *
-        Quaternionf( Vector3f{ 0,0,1 }, rotateScaled.y ) *
-        Quaternionf( Vector3f{ 0,-1,0 }, rotateScaled.z ) *
-        viewportParams.cameraTrackballAngle
-        ).normalized();
-    viewportRef.setCameraTrackballAngle( quat );
-
     return spaceMouseMoveSignal( translate, rotate );
 }
 

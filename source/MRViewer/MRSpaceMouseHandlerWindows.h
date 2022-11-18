@@ -14,7 +14,7 @@ public:
 private:
     bool initialized_{ false };
     std::array<float, 6> axes_;
-    std::array<unsigned char, BUTTON_COUNT> buttons_;
+    std::array<unsigned char, SMB_BUTTON_COUNT> buttons_;
     int joystickIndex_{ -1 };
 
     virtual void updateConnected_();

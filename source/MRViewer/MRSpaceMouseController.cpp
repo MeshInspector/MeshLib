@@ -40,9 +40,9 @@ bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vec
     float  mult = pow( 0.95f, fabs( translate.y ) * translate.y );
     constexpr float min_angle = 0.001f;
     constexpr float max_angle = 179.99f;
-    constexpr float  d2r = PI_F / 360.0f;
+    constexpr float d2r = PI_F / 180.0f;
     float angle = viewportParams.cameraViewAngle;
-    angle = float( atan( tan( ( angle )*d2r ) * mult ) / d2r );
+    angle = float( atan( tan( ( angle ) * ( d2r / 2.f ) ) * mult ) / ( d2r / 2.f ) );
     angle = std::clamp( angle, min_angle, max_angle );
     viewport.setCameraViewAngle( angle );
 

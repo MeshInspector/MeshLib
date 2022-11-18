@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRViewerFwd.h"
+#include "MRMesh/MRVector3.h"
 #include <boost/signals2/signal.hpp>
 #include <filesystem>
 #include <vector>
@@ -205,6 +206,7 @@ protected:
     virtual bool onTouchEnd_( int id, int x, int y ) = 0;
 };
 
+/// class to subscribe on SpaceMouseMoveSignal
 struct MRVIEWER_CLASS SpaceMouseMoveListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( SpaceMouseMoveListener );
@@ -214,6 +216,7 @@ protected:
     virtual bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate ) = 0;
 };
 
+/// class to subscribe on SpaceMouseDownSgnal
 struct MRVIEWER_CLASS SpaceMouseDownListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( SpaceMouseDownListener );
@@ -223,6 +226,7 @@ protected:
     virtual bool spaceMouseDown_( int key ) = 0;
 };
 
+/// class to subscribe on SpaceMouseUpSignal
 struct MRVIEWER_CLASS SpaceMouseUpListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( SpaceMouseUpListener );

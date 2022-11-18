@@ -1,12 +1,11 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewerFwd.h"
-//#include "MRViewerEventsListener.h"
 
 namespace MR
 {
 
-// this class stores maps spacemouse event - programm action
+// this class stores maps spacemouse event - program action
 class SpaceMouseController
 {
 public:

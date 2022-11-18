@@ -53,7 +53,6 @@ enum SpaceMouseButtons : int
 class SpaceMouseHandler
 {
 public:
-    SpaceMouseHandler() = default;
     virtual ~SpaceMouseHandler() = default;
 
     /// initialize device

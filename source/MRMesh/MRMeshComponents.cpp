@@ -371,7 +371,8 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
             return region->test( v );
     };
 
-    UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
+    static_assert( vertsRegion.npos + 1 == 0 );
+    UnionFind<VertId> unionFindStructure( vertsRegion.find_last() + 1 );
 
     VertId v1;
     for ( auto v0 : vertsRegion )

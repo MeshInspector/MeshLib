@@ -212,14 +212,14 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86"] # "arm64",
-        py-version: [ "3.10", "3.11"] # "3.8", "3.9",
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
             instance: macos-12
-          - platform: "arm64"
-            plat-name: macosx_12_0_arm64
-            instance: macos-arm-build
+          #- platform: "arm64"
+           # plat-name: macosx_12_0_arm64
+            #instance: macos-arm-build
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"

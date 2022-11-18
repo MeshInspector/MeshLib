@@ -28,8 +28,11 @@ template struct Matrix3<double>;
 template struct Matrix4<float>;
 template struct Matrix4<double>;
 
-template struct Line3<float>;
-template struct Line3<double>;
+template struct Line<Vector2f>;
+template struct Line<Vector2d>;
+
+template struct Line<Vector3f>;
+template struct Line<Vector3d>;
 
 template struct LineSegm<Vector2f>;
 template struct LineSegm<Vector2d>;

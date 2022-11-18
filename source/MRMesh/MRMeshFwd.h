@@ -153,7 +153,12 @@ template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
 using AffineXf3f = AffineXf3<float>;
 using AffineXf3d = AffineXf3<double>;
 
-template <typename T> struct Line3;
+template <typename V> struct Line;
+template <typename T> using Line2 = Line<Vector2<T>>;
+using Line2f = Line2<float>;
+using Line2d = Line2<double>;
+
+template <typename T> using Line3 = Line<Vector3<T>>;
 using Line3f = Line3<float>;
 using Line3d = Line3<double>;
 

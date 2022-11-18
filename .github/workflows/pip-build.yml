@@ -159,7 +159,7 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
-          docker exec meshlib-win set PYTHONHOME=C:\${{matrix.py-dir}}
+          docker exec meshlib-win powershell.exe -c "set PYTHONHOME=C:\${{matrix.py-dir}}"
 
       - name: Build
         run: |
@@ -238,6 +238,9 @@ jobs:
         with:
           submodules: recursive
           #ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Fix links
+        run: rm '/usr/local/bin/2to3-${{matrix.py-version}}'
 
       - name: Install Python
         run: brew install python@${{matrix.py-version}}
@@ -323,11 +326,11 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Ubuntu system setup
-        if: ${{ matrix.os == 'ubuntu:20.04' && matrix.os == 'ubuntu:22.04'}}
+        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04'}}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Fedora system setup
-        if: ${{ matrix.os == 'fedora:35' && matrix.os == 'fedora:37'}}
+        if: ${{ matrix.os == 'fedora:35' || matrix.os == 'fedora:37'}}
         run: dnf -y install python3 pip
 
       - name: Pip setup

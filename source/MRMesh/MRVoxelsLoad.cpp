@@ -13,7 +13,11 @@
 #include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
+
+#ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
+#endif
+
 namespace MR
 {
 
@@ -647,7 +651,7 @@ struct TiffParams
     int width = 0;
     int height = 0;
 
-    bool operator==( const TiffParams& other )
+    bool operator==( const TiffParams& other ) const
     {
         return bitsPerSample == other.bitsPerSample &&
             samplesPerPixel == other.samplesPerPixel &&
@@ -655,7 +659,7 @@ struct TiffParams
             height == other.height;
     }
 
-    bool operator !=( const TiffParams& other )
+    bool operator !=( const TiffParams& other ) const
     {
         return !( *this == other );
     }
@@ -677,7 +681,7 @@ std::tuple<TIFF*, TiffParams> OpenTiff( const std::filesystem::path& path )
 }
 
 template<typename SampleType>
-bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp )
+bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
 {
     assert( sizeof( SampleType ) == tp.bitsPerSample >> 3 );
     constexpr float maxSample = float( std::numeric_limits<SampleType>::max() );
@@ -688,29 +692,34 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     for ( uint32_t i = 0; i < uint32_t(tp.height); ++i )
     {
         TIFFReadScanline( tif, ( void* )( &scanline[0] ), i );
-        switch ( tp.samplesPerPixel )
+        for ( size_t j = 0; j < tp.width; ++j )
         {
-        case 1:
-            for ( size_t j = 0; j < tp.width; ++j )
+            float voxel = 0;
+
+            switch ( tp.samplesPerPixel )
             {
-                const float voxel = outVolume.max - ( outVolume.max - outVolume.min ) * float( scanline[j] ) / maxSample;
-                pData[j] = voxel;
+            case 1:
+                voxel = maxSample - float( scanline[j] );
+                break;
+            case 3:
+            case 4:            
+                voxel = maxSample - 
+                    ( 0.299f * scanline[tp.samplesPerPixel * j] +
+                    0.587f * scanline[tp.samplesPerPixel * j + 1] +
+                    0.114f * scanline[tp.samplesPerPixel * j + 2] );
+                break;
+            
+            default:
+                return false;
             }
-            break;
-        case 3:
-        case 4:
-            for ( size_t j = 0; j < tp.width; ++j )
-            {
-                const SampleType r = scanline[tp.samplesPerPixel * j];
-                const SampleType g = scanline[tp.samplesPerPixel * j + 1];
-                const SampleType b = scanline[tp.samplesPerPixel * j + 2];
-                const float gray = 0.299f * r + 0.587f * g + 0.114f * b;
-                const float voxel = outVolume.max - ( outVolume.max - outVolume.min ) * gray / maxSample;
-                pData[j] = voxel;
-            }
-            break;
-        default:
-            return false;
+
+            if ( voxel < min )
+                min = voxel;
+
+            if ( voxel > max )
+                max = voxel;
+
+            pData[j] = voxel;
         }
 
         pData += tp.width;
@@ -719,7 +728,7 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& dir, GridType gridType, const Vector3f& voxelSize, float min, float max, const ProgressCallback& cb)
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& dir, GridType gridType, const Vector3f& voxelSize, const ProgressCallback& cb)
 {
     const auto dirEnd = std::filesystem::directory_iterator{};
     const auto fileCount = std::distance( std::filesystem::directory_iterator( dir ), dirEnd );
@@ -729,8 +738,9 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesyst
 
     SimpleVolume outVolume;
     outVolume.dims = { tp.width, tp.height, int (fileCount) };
-    outVolume.min = min;
-    outVolume.max = max;
+    outVolume.min = FLT_MAX;
+    outVolume.max = FLT_MIN;
+
     outVolume.voxelSize = voxelSize;
     outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
     
@@ -742,11 +752,11 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesyst
         switch ( tp.bitsPerSample )
         {
         case 8:
-            if ( !ReadVoxels<uint8_t>( outVolume, layerIndex, tif, tp ) )
+            if ( !ReadVoxels<uint8_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
                 return tl::make_unexpected( "unsupported pixel format " );
             break;
         case 16:
-            if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp ) )
+            if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
                 return tl::make_unexpected( "unsupported pixel format " );
             break;
         default:

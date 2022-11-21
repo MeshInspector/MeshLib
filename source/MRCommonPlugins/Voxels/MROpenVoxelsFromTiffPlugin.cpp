@@ -16,8 +16,6 @@ namespace MR
 class OpenVoxelsFromTiffPlugin : public StatePlugin
 {
     Vector3f voxelSize_;
-    float min_ = 0.0f;
-    float max_ = 1.0f;
     VoxelsLoad::GridType gridType_ = VoxelsLoad::GridType::DenseGrid;
 
 public:
@@ -33,8 +31,6 @@ public:
 bool OpenVoxelsFromTiffPlugin::onEnable_()
 {
     voxelSize_ = Vector3f::diagonal( 1.0f );
-    min_ = 0.0f;
-    max_ = 1.0f;
     gridType_ = VoxelsLoad::GridType::DenseGrid;
     return true;
 }
@@ -50,8 +46,6 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
     ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 0.0f );
-    ImGui::DragFloatValid( "Min", &min_, 0.01f );
-    ImGui::DragFloatValid( "Max", &max_, 0.01f );
 
     RibbonButtonDrawer::GradientRadioButton( "Dense Grid", ( int* )( &gridType_ ), 0 );
     ImGui::SameLine();
@@ -69,7 +63,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
-            auto loadRes = VoxelsLoad::loadTiffDir( directory, gridType_, voxelSize_, min_, max_, ProgressBar::callBackSetProgress );
+            auto loadRes = VoxelsLoad::loadTiffDir( directory, gridType_, voxelSize_, ProgressBar::callBackSetProgress );
             if ( loadRes.has_value() && !ProgressBar::isCanceled() )
             {
                 std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();

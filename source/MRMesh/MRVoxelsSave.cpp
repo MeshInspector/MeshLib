@@ -170,7 +170,7 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, ProgressCallback callback )
+tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const std::string& extension, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, ProgressCallback callback )
 {
     switch ( slicePlain )
     {
@@ -179,7 +179,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         const size_t maxNumChars = std::to_string( vdbVolume.dims.z ).size();
         for ( int z = 0; z < vdbVolume.dims.z; ++z )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.tif", z, maxNumChars ), vdbVolume, slicePlain, z );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}{2}", z, maxNumChars, extension ), vdbVolume, slicePlain, z );
             if ( !res )
                 return res;
 

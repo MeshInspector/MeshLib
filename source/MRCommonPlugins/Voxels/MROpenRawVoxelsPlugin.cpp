@@ -9,6 +9,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRStatePlugin.h"
 
 namespace
 {

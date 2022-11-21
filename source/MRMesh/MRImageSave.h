@@ -34,6 +34,11 @@ MRMESH_API tl::expected<void, std::string> toPng( const Image& image, std::ostre
 /// saves in .jpg format
 MRMESH_API tl::expected<void, std::string> toJpeg( const Image& image, const std::filesystem::path& path );
 #endif
+
+#ifndef MRMESH_NO_TIFF
+MRMESH_API tl::expected<void, std::string> toTiff( const Image& image, const std::filesystem::path& path );
+#endif
+
 #endif
 
 /// detects the format from file extension and save image to it  

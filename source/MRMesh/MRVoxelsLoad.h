@@ -74,6 +74,14 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::
 
 /// \}
 
+enum class GridType
+{
+    DenseGrid = 0,
+    LevelSet = 1
+};
+/// Load voxels from a set of TIFF files
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& path, GridType gridType = GridType::DenseGrid, const Vector3f& voxelSize = { 1.0f, 1.0f, 1.0f }, float min = 0.0f, float max = 1.0f, const ProgressCallback& cb = {} );
+
 }
 
 }

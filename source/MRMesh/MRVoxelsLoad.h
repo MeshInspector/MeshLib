@@ -74,7 +74,7 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::
 
 /// \}
 
-//need to set right surface normals direction
+// Determines iso-surface orientation
 enum class GridType
 {
     // consider values less than iso as inner area

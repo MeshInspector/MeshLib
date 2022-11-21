@@ -577,7 +577,7 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
+      <Command>copy $(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip $(TargetDir)python$(PythonVersion).zip</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -119,11 +119,13 @@ jobs:
             py-short-version: "38"
             py-dir: "Python38"
             py-file: "python38"
+            embed-version: "3.8.8"
           - py-version: "3.9"
             py-tag: "cp39"
             py-short-version: "39"
             py-dir: "Python39"
             py-file: "python39"
+            embed-version: "3.9.8"
           - py-version: "3.10"
             py-tag: "cp310"
             py-short-version: "310"
@@ -132,6 +134,7 @@ jobs:
             py-short-version: "311"
             py-dir: "Python311"
             py-file: "python311"
+            embed-version: "3.11.0"
     steps:
       - name: Clear workspace
         run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
@@ -159,6 +162,8 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
+          docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
+          docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
       - name: Build
         run: |
@@ -216,15 +221,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86"] # "arm64",
+        platform: ["x86", "arm64"]
         py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
             instance: macos-12
-          #- platform: "arm64"
-           # plat-name: macosx_12_0_arm64
-            #instance: macos-arm-build
+          - platform: "arm64"
+            plat-name: macosx_12_0_arm64
+            instance: macos-arm-build
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"

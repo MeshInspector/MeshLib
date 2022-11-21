@@ -18,8 +18,8 @@ struct LineSegm
     [[nodiscard]] constexpr explicit LineSegm( const LineSegm<U> & p ) noexcept : a( p.a ), b( p.b ) { }
 };
 
-template <typename T> 
-[[nodiscard]] inline bool operator == ( const LineSegm<T> & a, const LineSegm<T> & b )
+template <typename V> 
+[[nodiscard]] inline bool operator == ( const LineSegm<V> & a, const LineSegm<V> & b )
 {
     return a.a == b.a && a.b == b.b;
 }
@@ -36,6 +36,19 @@ template <typename V>
         return l.b;
     auto ratio = dt / abLengthSq;
     return l.a * ( 1 - ratio ) + l.b * ratio;
+}
+
+// returns true if two 2D segments intersect
+template <typename V> 
+[[nodiscard]] bool doSegmentsIntersect( const LineSegm<V> & x, const LineSegm<V> & y )
+{
+    auto xvec = x.b - x.a;
+    if ( cross( xvec, y.a - x.a ) * cross( xvec, y.b - x.a ) > 0 )
+        return false;
+    auto yvec = y.b - y.a;
+    if ( cross( yvec, x.a - y.a ) * cross( yvec, x.b - y.a ) > 0 )
+        return false;
+    return true;
 }
 
 } //namespace MR

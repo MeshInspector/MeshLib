@@ -750,7 +750,7 @@
     <ClInclude Include="MRMeshFillHole.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshEdgePoint.h">
+    <ClInclude Include="MREdgePoint.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDiff.h">
@@ -881,6 +881,9 @@
     </ClInclude>
     <ClInclude Include="MRLine.h">
       <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshEdgePoint.h">
+      <Filter>Source Files\Mesh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1379,7 +1382,7 @@
     <ClCompile Include="MRMeshFixer.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshEdgePoint.cpp">
+    <ClCompile Include="MREdgePoint.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBoundary.cpp">

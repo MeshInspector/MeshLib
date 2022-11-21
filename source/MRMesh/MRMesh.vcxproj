@@ -88,6 +88,7 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
+    <ClInclude Include="MRMeshEdgePoint.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
     <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
@@ -165,7 +166,7 @@
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDiff.h" />
     <ClInclude Include="MRMeshDistance.h" />
-    <ClInclude Include="MRMeshEdgePoint.h" />
+    <ClInclude Include="MREdgePoint.h" />
     <ClInclude Include="MRMeshFixer.h" />
     <ClInclude Include="MRPositionedText.h" />
     <ClInclude Include="MRMeshMetrics.h" />
@@ -390,7 +391,7 @@
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDistance.cpp" />
-    <ClCompile Include="MRMeshEdgePoint.cpp" />
+    <ClCompile Include="MREdgePoint.cpp" />
     <ClCompile Include="MRMeshMetrics.cpp" />
     <ClCompile Include="MRMeshProject.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />

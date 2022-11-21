@@ -1,16 +1,21 @@
 #include "MRMeshEdgePoint.h"
 #include "MRMeshTopology.h"
+#include "MRPolylineTopology.h"
 
 namespace MR
 {
 
 static constexpr auto eps = 10 * std::numeric_limits<float>::epsilon();
 
-MeshEdgePoint::MeshEdgePoint( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
+EdgePoint::EdgePoint( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
 {
 }
 
-VertId MeshEdgePoint::inVertex( const MeshTopology & topology ) const
+EdgePoint::EdgePoint( const PolylineTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
+{
+}
+
+VertId EdgePoint::inVertex( const MeshTopology & topology ) const
 {
     if ( a <= eps )
         return topology.org( e );
@@ -19,7 +24,16 @@ VertId MeshEdgePoint::inVertex( const MeshTopology & topology ) const
     return {};
 }
 
-VertId MeshEdgePoint::getClosestVertex( const MeshTopology & topology ) const
+VertId EdgePoint::inVertex( const PolylineTopology & topology ) const
+{
+    if ( a <= eps )
+        return topology.org( e );
+    if ( a + eps >= 1 )
+        return topology.dest( e );
+    return {};
+}
+
+VertId EdgePoint::getClosestVertex( const MeshTopology & topology ) const
 {
     if ( 2 * a <= 1 )
         return topology.org( e );
@@ -27,38 +41,46 @@ VertId MeshEdgePoint::getClosestVertex( const MeshTopology & topology ) const
         return topology.dest( e );
 }
 
-bool MeshEdgePoint::inVertex() const
+VertId EdgePoint::getClosestVertex( const PolylineTopology & topology ) const
+{
+    if ( 2 * a <= 1 )
+        return topology.org( e );
+    else
+        return topology.dest( e );
+}
+
+bool EdgePoint::inVertex() const
 {
     return a <= eps || a + eps >= 1;
 }
 
-static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, MeshEdgePoint & a, MeshEdgePoint & b )
+static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, EdgePoint & a, EdgePoint & b )
 {
     if ( topology.org( b.e ) == av )
     {
-        a = MeshEdgePoint( b.e, 0 );
+        a = EdgePoint( b.e, 0 );
         return true;
     }
     if ( topology.dest( b.e ) == av )
     {
-        a = MeshEdgePoint( b.e, 1 );
+        a = EdgePoint( b.e, 1 );
         return true;
     }
     if ( topology.left( b.e ) && topology.dest( topology.next( b.e ) ) == av )
     {
-        a = MeshEdgePoint( topology.next( b.e ).sym(), 0 );
+        a = EdgePoint( topology.next( b.e ).sym(), 0 );
         return true;
     }
     if ( topology.right( b.e ) && topology.dest( topology.prev( b.e ) ) == av )
     {
-        a = MeshEdgePoint( topology.prev( b.e ).sym(), 0 );
+        a = EdgePoint( topology.prev( b.e ).sym(), 0 );
         b = b.sym();
         return true;
     }
     return false;
 }
 
-bool fromSameTriangle( const MeshTopology & topology, MeshEdgePoint & a, MeshEdgePoint & b )
+bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint & b )
 {
     if ( auto av = a.inVertex( topology ) )
     {
@@ -67,13 +89,13 @@ bool fromSameTriangle( const MeshTopology & topology, MeshEdgePoint & a, MeshEdg
             // a in vertex, b in vertex
             if ( av == bv )
             {
-                a = b = MeshEdgePoint( topology.edgeWithOrg( av ), 0 );
+                a = b = EdgePoint( topology.edgeWithOrg( av ), 0 );
                 return true;
             }
             if ( auto e = topology.findEdge( av, bv ) )
             {
-                a = MeshEdgePoint( e, 0 );
-                b = MeshEdgePoint( e, 1 );
+                a = EdgePoint( e, 0 );
+                b = EdgePoint( e, 1 );
                 return true;
             }
             return false;

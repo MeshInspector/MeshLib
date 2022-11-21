@@ -226,11 +226,13 @@ using Quaterniond = Quaternion<double>;
 
 class PointAccumulator;
 
+struct EdgePoint;
+using MeshEdgePoint = EdgePoint;
+
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 struct PointOnFace;
-struct MeshEdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 struct MeshTriPoint;
 struct MeshProjectionResult;

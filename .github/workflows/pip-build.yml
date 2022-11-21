@@ -145,12 +145,6 @@ jobs:
           submodules: recursive
           #ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Python3.9 fix
-        if: ${{ matrix.py-version == '3.9' }}
-        working-directory: thirdparty\python
-        run: ren python310.zip python39.zip
-        shell: cmd
-
       - name: Start container
         run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
 
@@ -168,10 +162,6 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
-
-      - name: Embedded python update
-        if: ${{ matrix.py-version == '3.8' || matrix.py-version == '3.11' }}
-        run: |
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
@@ -179,6 +169,12 @@ jobs:
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
+
+      - name: Python3.9 fix
+        if: ${{ matrix.py-version == '3.9' }}
+        working-directory: source\x64\Release
+        run: del python39.zip
+        shell: cmd
 
       - name: Run Test
         working-directory: source\x64\Release

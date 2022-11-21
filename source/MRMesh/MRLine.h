@@ -17,6 +17,9 @@ struct Line
     template <typename U>
     constexpr explicit Line( const Line<U> & l ) noexcept : p( l.p ), d( l.d ) { }
 
+    /// returns point on the line, where param=0 returns p and param=1 returns p+d
+    [[nodiscard]] V operator()( T param ) const { return p + param * d; }
+
     /// returns squared distance from given point to this line
     [[nodiscard]] T distanceSq( const V & x ) const 
         { return ( x - project( x ) ).lengthSq(); }

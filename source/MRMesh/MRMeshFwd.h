@@ -291,6 +291,9 @@ class MRMESH_CLASS AABBTreePolyline;
 using AABBTreePolyline2 = AABBTreePolyline<Vector2f>;
 using AABBTreePolyline3 = AABBTreePolyline<Vector3f>;
 
+template<typename T> struct IntersectionPrecomputes;
+template<typename T> struct IntersectionPrecomputes2;
+
 template<typename V> struct [[nodiscard]] PolylineProjectionResult;
 using PolylineProjectionResult2 = PolylineProjectionResult<Vector2f>;
 using PolylineProjectionResult3 = PolylineProjectionResult<Vector3f>;

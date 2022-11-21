@@ -10,23 +10,6 @@
 namespace MR
 {
 
-namespace
-{
-
-// returns true if two segments intersect
-bool doSegmentsIntersect( const LineSegm2d & x, const LineSegm2d & y )
-{
-    auto xvec = x.b - x.a;
-    if ( cross( xvec, y.a - x.a ) * cross( xvec, y.b - x.a ) > 0 )
-        return false;
-    auto yvec = y.b - y.a;
-    if ( cross( yvec, x.a - y.a ) * cross( yvec, x.b - y.a ) > 0 )
-        return false;
-    return true;
-}
-
-}
-
 struct NodeNodePoly
 {
     AABBTreePolyline2::NodeId aNode;

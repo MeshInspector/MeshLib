@@ -44,6 +44,11 @@ public:
     MRMESH_API void addStartVertices( const HashMap<VertId, float>& startVertices );
     /// initiates distance construction from triangle vertices surrounding given start point (they all will be returned by growOne)
     MRMESH_API void addStart( const MeshTriPoint & start );
+
+    /// the maximum amount of times vertex distance can be updated in [1,255], 3 by default;
+    /// the more the better obtuse triangles are handled
+    MRMESH_API void setMaxVertUpdates( int v );
+
     /// processes one more candidate vertex, which is returned
     MRMESH_API VertId growOne();
     /// takes ownership over constructed distance map
@@ -62,6 +67,7 @@ private:
     Vector<char,VertId> vertUpdatedTimes_;
     std::priority_queue<VertDistance> nextVerts_;
     std::optional<Vector3f> target_;
+    int maxVertUpdates_ = 3;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n

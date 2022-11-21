@@ -59,7 +59,7 @@ inline bool rayBoxIntersect( const Box3f& box, const RayOrigin<float> & rayOrigi
 #endif
 
 template<typename T>
-bool rayBoxIntersect( const Box3f& box, const RayOrigin<T> & rayOrigin, T & t0, T & t1, const IntersectionPrecomputes<T>& prec )
+bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0, T & t1, const IntersectionPrecomputes<T>& prec )
 {
     const Vector3i& sign = prec.sign;
 

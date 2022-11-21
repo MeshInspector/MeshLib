@@ -17,6 +17,7 @@
 #include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
 #include "MRTouchesController.h"
+#include "MRSpaceMouseController.h"
 #include <boost/signals2/signal.hpp>
 #include <cstdint>
 #include <queue>
@@ -433,6 +434,7 @@ public:
 
     MouseController mouseController;
     TouchesController touchesController;
+    SpaceMouseController spaceMouseController;
 
     int window_width; // current width
     int window_height; // current height

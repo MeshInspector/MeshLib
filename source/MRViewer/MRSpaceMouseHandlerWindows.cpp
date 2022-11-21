@@ -12,9 +12,25 @@ namespace MR
 
 constexpr float axesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
 
-//constexpr mapButtons2 = {};
-//constexpr mapButtons15 = {};
-//constexpr mapButtons31 = {};
+constexpr int mapButtonsCompact[2] = {
+    SMB_CUSTOM_1, SMB_CUSTOM_2
+};
+constexpr int mapButtonsPro[15] = {
+    SMB_MENU, SMB_FIT,
+    SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW,
+    SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4,
+    SMB_ESC, SMB_ALT, SMB_SHIFT, SMB_CTRL,
+    SMB_LOCK_ROT
+};
+// TODO !!! NOT TESTED !!!
+constexpr int mapButtonsEnterprise[31] = {
+    SMB_MENU, SMB_FIT,
+    SMB_TOP, SMB_RIGHT, SMB_FRONT, SMB_ROLL_CW, SMB_LOCK_ROT,
+    SMB_ISO1, SMB_BTN_V1, SMB_BTN_V2, SMB_BTN_V3,
+    SMB_CUSTOM_1, SMB_CUSTOM_2, SMB_CUSTOM_3, SMB_CUSTOM_4, SMB_CUSTOM_5, SMB_CUSTOM_6,
+    SMB_CUSTOM_7, SMB_CUSTOM_8, SMB_CUSTOM_9, SMB_CUSTOM_10, SMB_CUSTOM_11, SMB_CUSTOM_12,
+    SMB_ESC, SMB_ENTER, SMB_ALT, SMB_SHIFT, SMB_CTRL, SMB_TAB, SMB_SPACE, SMB_DELETE
+};
 
 constexpr DWORD logitechId = 0x46d;
 constexpr DWORD connexionId = 0x256f;
@@ -101,12 +117,15 @@ void SpaceMouseHandlerWindows::handle()
     if ( !initialized_ || joystickIndex_ == -1 )
         return;
 
+
     int count;
     const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
     if ( count != 6 )
     {
         spdlog::error( "Error SpaceMouseHandlerWindows : Wrong axes count" );
+        // TODO disconect device
         assert( false );
+        return;
     }
     Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
     Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
@@ -120,14 +139,29 @@ void SpaceMouseHandlerWindows::handle()
 
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
+    if ( count != 2 && count != 15 && count != 31 )
+    {
+        spdlog::error( "Error SpaceMouseHandlerWindows : Wrong buttons count" );
+        // TODO disconect device
+        assert( false );
+        return;
+    }
+    const int* mapButtons = mapButtonsPro;
+    if ( count == 2 )
+        mapButtons = mapButtonsCompact;
+    else if ( count == 15 )
+        mapButtons = mapButtonsPro;
+    else
+        mapButtons = mapButtonsEnterprise;
     for ( int i = 0; i < count; ++i )
     {
+        int button = mapButtons[i];
         if ( !buttons_[i] && buttons[i] ) // button down
-            viewer.spaceMouseDown( i );
+            viewer.spaceMouseDown( button );
         else if ( buttons_[i] && !buttons[i] ) // button up
-            viewer.spaceMouseUp( i );
+            viewer.spaceMouseUp( button );
 //         else if ( buttons_[i] && buttons[i] &&  ) // button repeat
-//             viewer.spaceMouseRepeat( i );
+//             viewer.spaceMouseRepeat( button );
     }
     std::copy( buttons, buttons + count, buttons_.begin() );
 }

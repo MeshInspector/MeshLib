@@ -4,12 +4,10 @@
 #include "MRTimer.h"
 #include "MRphmap.h"
 #include "MRGTest.h"
+#include <algorithm>
 
 namespace MR
 {
-
-// the maximum amount of times vertex distance can be updated
-static constexpr int cMaxVertUpdates = 3;
 
 // consider triangle 0bc, where a linear scalar field is defined in two points: v(0) = 0, v(b) = b;
 // computes the field in c-point;
@@ -93,6 +91,12 @@ void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
     } );
 }
 
+void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
+{
+    assert( v >= 1 && v <= 255 );
+    maxVertUpdates_ = std::clamp( v, 1, 255 );
+}
+
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c )
 {
     auto & vi = vertDistanceMap_[c.vert];
@@ -173,7 +177,7 @@ VertId SurfaceDistanceBuilder::growOne()
         }
         assert( expectedPenalty == c.distance );
         auto & numUpdated = vertUpdatedTimes_[c.vert];
-        if ( numUpdated >= cMaxVertUpdates )
+        if ( numUpdated >= maxVertUpdates_ )
         {
             // stop updating to avoid infinite loops
             continue;

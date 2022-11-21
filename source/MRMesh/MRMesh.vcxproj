@@ -73,6 +73,7 @@
     <ClInclude Include="MRIntersectionPrecomputes2.h" />
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
+    <ClInclude Include="MRLine.h" />
     <ClInclude Include="MRLine3.h" />
     <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />

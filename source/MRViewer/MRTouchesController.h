@@ -19,9 +19,32 @@ private:
     virtual bool onTouchMove_( int id, int x, int y ) override;
     virtual bool onTouchEnd_( int id, int x, int y ) override;
 
-    void setPos_( int id, int x, int y, bool on );
+    struct Info
+    {
+        int id{-1};
+        Vector2f position;
+    };
 
-    std::vector<std::optional<Vector2i>> positions_;
+    class MultiInfo
+    {
+    public:
+        bool update( Info info, bool remove = false );
+        enum class Finger
+        {
+            First,
+            Second
+        };
+        std::optional<Vector2f> getPosition( Finger fing ) const;
+        std::optional<Vector2f> getPosition( int id ) const;
+        std::optional<Finger> getFingerById( int id ) const;
+        std::optional<int> getIdByFinger( Finger fing ) const;
+        int getNumPressed() const;
+    private:
+        std::array<Info,2> info_;
+    };
+
+    MultiInfo multiInfo_;
+
     MouseButton mode_{MouseButton::Count}; // invalid value
     size_t secondTouchStartTime_{ 0 };
     float startDist_{0.0f};

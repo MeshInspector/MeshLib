@@ -145,6 +145,12 @@ jobs:
           submodules: recursive
           #ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Python3.9 fix
+        if: ${{ matrix.py-version == '3.9' }}
+        working-directory: thirdparty\python
+        run: ren python310.zip python39.zip
+        shell: cmd
+
       - name: Start container
         run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
 
@@ -168,10 +174,6 @@ jobs:
         run: |
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win tar -xf python-embed.zip ${{matrix.py-file}}.zip
-
-      - name: Python3.9 fix
-        if: ${{ matrix.py-version == '3.9' }}
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win ren python310.zip python39.zip
 
       - name: Build
         run: |

@@ -19,6 +19,7 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -119,13 +120,13 @@ jobs:
             py-short-version: "38"
             py-dir: "Python38"
             py-file: "python38"
-            embed-version: "3.8.8"
+            embed-version: "3.8.9"
           - py-version: "3.9"
             py-tag: "cp39"
             py-short-version: "39"
             py-dir: "Python39"
             py-file: "python39"
-            embed-version: "3.9.8"
+            embed-version: "3.9.9"
           - py-version: "3.10"
             py-tag: "cp310"
             py-short-version: "310"
@@ -209,6 +210,7 @@ jobs:
         run: docker rm -f meshlib-win
 
   macos-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 40
     runs-on: ${{ matrix.instance }}

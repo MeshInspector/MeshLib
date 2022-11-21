@@ -39,6 +39,8 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseHandlerWindows.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -200,6 +202,11 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         MR::Viewer::instanceRef().dragDrop( paths );
     } );
+}
+
+static void glfw_joystick_callback( int jid, int event )
+{
+    MR::Viewer::instanceRef().joystickUpdateConnected( jid, event );
 }
 
 namespace MR
@@ -479,6 +486,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetMouseButtonCallback( window, glfw_mouse_press );
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
+        glfwSetJoystickCallback( glfw_joystick_callback );
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );
@@ -502,6 +510,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         }
 
         mouseController.connect();
+        touchesController.connect( this );
     }
 
     std::future<void> splashMinTimer;
@@ -541,6 +550,8 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
 
+    initSpaceMouseHandler_();
+
     isLaunched_ = true;
 
     return EXIT_SUCCESS;
@@ -562,6 +573,7 @@ void Viewer::launchEventLoop()
             draw( true );
             glfwPollEvents();
             processMouseEventsQueue_();
+            spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
@@ -576,6 +588,8 @@ void Viewer::launchEventLoop()
             glfwWaitEvents();
             processMouseEventsQueue_();
         }
+        spaceMouseHandler_->handle();
+
     }
 }
 
@@ -937,6 +951,21 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
     return false;
 }
 
+bool Viewer::touchStart( int id, int x, int y )
+{
+    return touchStartSignal( id, x, y );
+}
+
+bool Viewer::touchMove( int id, int x, int y )
+{
+    return touchMoveSignal( id, x, y );
+}
+
+bool Viewer::touchEnd( int id, int x, int y )
+{
+    return touchEndSignal( id, x, y );
+}
+
 bool Viewer::mouseScroll( float delta_y )
 {
     // do extra frames to prevent imgui calculations ping
@@ -948,6 +977,62 @@ bool Viewer::mouseScroll( float delta_y )
         return true;
 
     return true;
+}
+
+bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
+{
+    // TODO test version
+    auto& viewportRef = viewport();
+
+    const auto& viewportParams = viewportRef.getParameters();
+
+    //translation
+    Vector3f axisN;
+    Vector3f axisX = Vector3f::plusX();
+    Vector3f axisY = Vector3f::plusY();
+    axisN = viewportRef.unprojectFromViewportSpace( axisN );
+    axisX = ( viewportRef.unprojectFromViewportSpace( axisX ) - axisN ).normalized();
+    axisY = ( viewportRef.unprojectFromViewportSpace( axisY ) - axisN ).normalized();
+    Vector3f diff( translate.x * axisX + translate.z * axisY );
+
+    viewportRef.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.1f );
+
+    //zoom
+    float  mult = pow( 0.95f, fabs( translate.y ) * translate.y );
+    constexpr float min_angle = 0.001f;
+    constexpr float max_angle = 179.99f;
+    constexpr float  d2r = PI_F / 360.0f;
+    float angle = viewportParams.cameraViewAngle;
+    angle = float( atan( tan( ( angle )*d2r ) * mult ) / d2r );
+    angle = std::clamp( angle, min_angle, max_angle );
+    viewportRef.setCameraViewAngle( angle );
+
+    //rotation
+    Vector3f rotateScaled = rotate * 0.05f;
+    Quaternionf quat = (
+        Quaternionf( Vector3f{ 1,0,0 }, rotateScaled.x ) *
+        Quaternionf( Vector3f{ 0,0,1 }, rotateScaled.y ) *
+        Quaternionf( Vector3f{ 0,-1,0 }, rotateScaled.z ) *
+        viewportParams.cameraTrackballAngle
+        ).normalized();
+    viewportRef.setCameraTrackballAngle( quat );
+
+    return spaceMouseMoveSignal( translate, rotate );
+}
+
+bool Viewer::spaceMouseDown( int key )
+{
+    return spaceMouseDownSignal( key );
+}
+
+bool Viewer::spaceMouseUp( int key )
+{
+    return spaceMouseUpSignal( key );
+}
+
+bool Viewer::spaceMouseRepeat( int key )
+{
+    return spaceMouseRepeatSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
@@ -964,6 +1049,11 @@ bool Viewer::interruptWindowClose()
         return true;
 
     return false;
+}
+
+void Viewer::joystickUpdateConnected( int jid, int event )
+{
+    spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
@@ -1336,6 +1426,17 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setFrontColor( color, false );
     rotationSphere->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     rotationSphere->setAncillary( true );
+}
+
+void Viewer::initSpaceMouseHandler_()
+{
+#ifdef _WIN32
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+#else
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+#endif
+
+    spaceMouseHandler_->initialize();
 }
 
 bool Viewer::windowShouldClose()

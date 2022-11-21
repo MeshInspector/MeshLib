@@ -244,4 +244,61 @@ PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const M
     } );
 }
 
+template<typename V>
+void findEdgesInBallT( const Polyline<V>& polyline, const V& center, float radius, const FoundEdgeCallback<V>& foundCallback, AffineXf<V>* xf )
+{
+    const auto & tree = polyline.getAABBTree();
+    if ( tree.nodes().empty() )
+        return;
+
+    const auto radiusSq = sqr( radius );
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    typename AABBTreePolyline<V>::NodeId subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto addSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
+    {
+        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( center ) - center ).lengthSq();
+        if ( distSq <= radiusSq )
+            subtasks[stackSize++] = n;
+    };
+
+    addSubTask( tree.rootNodeId() );
+
+    while ( stackSize > 0 )
+    {
+        const auto n = subtasks[--stackSize];
+        const auto& node = tree[n];
+
+        if ( node.leaf() )
+        {
+            auto segm = polyline.edgeSegment( node.leafId() );
+            if ( xf )
+            {
+                segm.a = ( *xf )( segm.a );
+                segm.b = ( *xf )( segm.b );
+            }
+            auto proj = closestPointOnLineSegm( center, segm );
+
+            float distSq = ( proj - center ).lengthSq();
+            if ( distSq <= radiusSq )
+                foundCallback( node.leafId(), proj, distSq );
+            continue;
+        }
+
+        addSubTask( node.r ); // look at right node later
+        addSubTask( node.l ); // look at left node first
+    }
+}
+
+void findEdgesInBall( const Polyline2& polyline, const Vector2f& center, float radius, const FoundEdgeCallback2& foundCallback, AffineXf2f* xf )
+{
+    findEdgesInBallT( polyline, center, radius, foundCallback, xf );
+}
+
+void findEdgesInBall( const Polyline3& polyline, const Vector3f& center, float radius, const FoundEdgeCallback3& foundCallback, AffineXf3f* xf )
+{
+    findEdgesInBallT( polyline, center, radius, foundCallback, xf );
+}
+
 } //namespace MR

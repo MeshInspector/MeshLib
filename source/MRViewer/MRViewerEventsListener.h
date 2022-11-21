@@ -178,4 +178,31 @@ protected:
     virtual void postRescale_( float x, float y ) = 0;
 };
 
+struct MRVIEWER_CLASS TouchStartListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchStartListener );
+    virtual ~TouchStartListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onTouchStart_( int id, int x, int y ) = 0;
+};
+
+struct MRVIEWER_CLASS TouchMoveListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchMoveListener );
+    virtual ~TouchMoveListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onTouchMove_( int id, int x, int y ) = 0;
+};
+
+struct MRVIEWER_CLASS TouchEndListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( TouchEndListener );
+    virtual ~TouchEndListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onTouchEnd_( int id, int x, int y ) = 0;
+};
+
 }

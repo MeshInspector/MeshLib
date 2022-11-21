@@ -97,33 +97,12 @@ void MouseController::cursorEntrance_( bool entered )
 
 bool MouseController::preMouseDown_( MouseButton btn, int )
 {
-#ifdef __EMSCRIPTEN__
-    resetAll_();
-    // this is needed in case of touch disappears and then appears in other place, 
-    // not to mix up current pos, that is updated only on passive move events by default
-    double x, y;
-    glfwGetCursorPos( getViewerInstance().window, &x, &y );
-    currentMousePos_ = Vector2i( int( x ), int( y ) );
-#endif
     if ( !downState_.any() )
         downMousePos_ = currentMousePos_;
 
     downState_.set( int( btn ) );
     return false;
 }
-
-#ifdef __EMSCRIPTEN__
-void MouseController::resetAll_()
-{
-    bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
-    if ( hasMouse )
-        return;
-    for ( auto btn : downState_ )
-    {
-        getViewerInstance().mouseUp( MouseButton( btn ), 0 );
-    }
-}
-#endif
 
 bool MouseController::mouseDown_( MouseButton btn, int mod )
 {
@@ -216,14 +195,6 @@ bool MouseController::preMouseMove_( int x, int y)
 
 bool MouseController::mouseScroll_( float delta )
 {
-#ifdef __EMSCRIPTEN__
-    resetAll_();
-    // this is needed in case of touch disappears and then appears in other place, 
-    // not to mix up current pos, that is updated only on passive move events by default
-    double x, y;
-    glfwGetCursorPos( getViewerInstance().window, &x, &y );
-    currentMousePos_ = Vector2i( int( x ), int( y ) );
-#endif
     if ( currentMode_ != MouseMode::None )
         return false;
 

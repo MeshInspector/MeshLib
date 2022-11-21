@@ -1,7 +1,10 @@
 #pragma once
-#include <boost/multiprecision/cpp_int.hpp>
 
 #include "MRVector3.h"
+
+#if defined(__x86_64__) || defined(_M_X64)
+#include <xmmintrin.h> //SSE instructions
+#endif
 
 namespace MR
 {

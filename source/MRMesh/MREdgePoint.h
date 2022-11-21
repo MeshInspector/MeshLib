@@ -33,6 +33,16 @@ struct EdgePoint
         (( e == rhs.e.sym() ) && ( a == (1.f - rhs.a) ))); }
 };
 
+/// two edge-points (e.g. representing collision point of two edges)
+struct EdgePointPair
+{
+    EdgePoint a;
+    EdgePoint b;
+    EdgePointPair() = default;
+    EdgePointPair( EdgePoint ia, EdgePoint ib ) : a( ia ), b( ib ) {}
+    bool operator==( const EdgePointPair& rhs ) const = default;
+};
+
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint

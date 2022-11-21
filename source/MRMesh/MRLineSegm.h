@@ -38,16 +38,38 @@ template <typename V>
     return l.a * ( 1 - ratio ) + l.b * ratio;
 }
 
-// returns true if two 2D segments intersect
+/// returns true if two 2D segments intersect,
+/// optionally outputs intersection point as a parameter on both segments
 template <typename V> 
-[[nodiscard]] bool doSegmentsIntersect( const LineSegm<V> & x, const LineSegm<V> & y )
+[[nodiscard]] bool doSegmentsIntersect( const LineSegm<V> & x, const LineSegm<V> & y,
+    typename V::ValueType * xPos = nullptr, typename V::ValueType * yPos = nullptr )
 {
-    auto xvec = x.b - x.a;
-    if ( cross( xvec, y.a - x.a ) * cross( xvec, y.b - x.a ) > 0 )
+    // check whether infinite line x intersect segment y
+    const auto xvec = x.b - x.a;
+    const auto ya = cross( xvec, y.a - x.a );
+    const auto yb = cross( xvec, y.b - x.a );
+    if ( ya * yb > 0 )
         return false;
-    auto yvec = y.b - y.a;
-    if ( cross( yvec, x.a - y.a ) * cross( yvec, x.b - y.a ) > 0 )
+
+    // check whether infinite line y intersect segment x
+    const auto yvec = y.b - y.a;
+    const auto xa = cross( yvec, x.a - y.a );
+    const auto xb = cross( yvec, x.b - y.a );
+    if ( xa * xb > 0 )
         return false;
+
+    if ( xPos )
+    {
+        // calculates intersection position on segment x
+        const auto denom = xa - xb;
+        *xPos = denom == 0 ? 0 : xa / denom;
+    }
+    if ( yPos )
+    {
+        // calculates intersection position on segment y
+        const auto denom = ya - yb;
+        *yPos = denom == 0 ? 0 : ya / denom;
+    }
     return true;
 }
 

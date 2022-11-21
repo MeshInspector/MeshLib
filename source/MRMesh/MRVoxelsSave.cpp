@@ -193,7 +193,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         const size_t maxNumChars = std::to_string( vdbVolume.dims.x ).size();
         for ( int x = 0; x < vdbVolume.dims.x; ++x )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.tif", x, maxNumChars ), vdbVolume, slicePlain, x );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}{2}", x, maxNumChars, extension ), vdbVolume, slicePlain, x );
             if ( !res )
                 return res;
 
@@ -207,7 +207,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         const size_t maxNumChars = std::to_string( vdbVolume.dims.y ).size();
         for ( int y = 0; y < vdbVolume.dims.y; ++y )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.tif", y, maxNumChars ), vdbVolume, slicePlain, y );
+            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}{2}", y, maxNumChars, extension ), vdbVolume, slicePlain, y );
             if ( !res )
                 return res;
 

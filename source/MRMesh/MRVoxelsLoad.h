@@ -77,9 +77,9 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::
 //need to set right surface normals direction
 enum class GridType
 {
-    // consider values less than iso as inner area
-    DenseGrid = 0,
     // consider values less than iso as outer area
+    DenseGrid = 0,
+    // consider values less than iso as inner area
     LevelSet = 1
 };
 /// Load voxels from a set of TIFF files

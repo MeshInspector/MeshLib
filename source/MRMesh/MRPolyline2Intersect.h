@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MREdgePoint.h"
 #include <cfloat>
+#include <optional>
 
 namespace MR
 {

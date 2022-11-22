@@ -530,7 +530,7 @@ public:
     TouchSignal touchEndSignal; // signal is called when touch stops
 
     // queue to ignore multiple mouse moves in one frame
-    class EventsQueue
+    class EventQueue
     {
     public:
         using EventCallback = std::function<void()>;
@@ -542,7 +542,7 @@ public:
     private:
         std::queue<EventCallback> queue_;
         bool lastSkipable_{false};
-    } eventsQueue;
+    } eventQueue;
 private:
     Viewer();
     ~Viewer();

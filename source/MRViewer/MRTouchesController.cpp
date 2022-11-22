@@ -17,7 +17,7 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
         mouseMode_ = true;
-        viewer->eventsQueue.emplace( [x,y,viewer] ()
+        viewer->eventQueue.emplace( [x,y,viewer] ()
         {
             viewer->mouseMove( x, y ); // to setup position in MouseController
             viewer->draw();
@@ -28,7 +28,7 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     if ( mouseMode_ )
     {
         mouseMode_ = false;
-        viewer->eventsQueue.emplace( [viewer] ()
+        viewer->eventQueue.emplace( [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
         } );
@@ -41,7 +41,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
     auto* viewer = &getViewerInstance();
-    Viewer::EventsQueue::EventCallback eventCall;
+    Viewer::EventQueue::EventCallback eventCall;
     if ( mouseMode_ )
     {
         eventCall = [x, y, viewer] ()
@@ -117,7 +117,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     }
     else
         return true;
-    viewer->eventsQueue.emplace( eventCall, true );
+    viewer->eventQueue.emplace( eventCall, true );
     return true;
 }
 
@@ -129,14 +129,14 @@ bool TouchesController::onTouchEnd_( int id, int x, int y )
     if ( mouseMode_ )
     {
         mouseMode_= false;
-        viewer->eventsQueue.emplace( [viewer] ()
+        viewer->eventQueue.emplace( [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
         } );
     }
     else
     {
-        viewer->eventsQueue.emplace( [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
+        viewer->eventQueue.emplace( [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
         {
             *prevInfoPtr = info;
         } );

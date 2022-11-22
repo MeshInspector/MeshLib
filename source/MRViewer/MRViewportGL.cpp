@@ -73,17 +73,22 @@ void ViewportGL::free()
     setLinesWithColors( { {},{} } );
     setPointsWithColors( { {},{} } );
 
-    GL_EXEC( glDeleteVertexArrays( 1, &add_line_vao ) );
-    GL_EXEC( glDeleteBuffers( 1, &add_line_vbo ) );
-    GL_EXEC( glDeleteBuffers( 1, &add_line_colors_vbo ) );
-
-    GL_EXEC( glDeleteVertexArrays( 1, &add_point_vao ) );
-    GL_EXEC( glDeleteBuffers( 1, &add_point_vbo ) );
-    GL_EXEC( glDeleteBuffers( 1, &add_point_colors_vbo ) );
-
-    GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
-    GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
-
+    if ( add_line_vao )
+        GL_EXEC( glDeleteVertexArrays( 1, &add_line_vao ) );
+    if ( add_line_vbo )
+        GL_EXEC( glDeleteBuffers( 1, &add_line_vbo ) );
+    if ( add_line_colors_vbo )
+        GL_EXEC( glDeleteBuffers( 1, &add_line_colors_vbo ) );
+    if ( add_point_vao )
+        GL_EXEC( glDeleteVertexArrays( 1, &add_point_vao ) );
+    if ( add_point_vbo )
+        GL_EXEC( glDeleteBuffers( 1, &add_point_vbo ) );
+    if ( add_point_colors_vbo )
+        GL_EXEC( glDeleteBuffers( 1, &add_point_colors_vbo ) );
+    if ( border_line_vao )
+        GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
+    if ( border_line_vbo )
+        GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
     inited_ = false;
 }
 

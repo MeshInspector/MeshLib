@@ -300,8 +300,9 @@ void Viewport::setupView() const
     setupStaticProjMatrix();
 }
 
-void Viewport::preDraw() const
+void Viewport::preDraw() const 
 {
+    viewportGL_.checkInit();
     if( previewLinesDepthTest_ )
         draw_lines();
     if( previewPointsDepthTest_ )

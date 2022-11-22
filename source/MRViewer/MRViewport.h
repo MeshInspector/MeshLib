@@ -444,7 +444,7 @@ private:
 
     ViewportRectangle viewportRect_;
 
-    ViewportGL viewportGL_;
+    mutable ViewportGL viewportGL_;
 
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;

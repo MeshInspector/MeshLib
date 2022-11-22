@@ -9,32 +9,17 @@
 #include <fstream>
 #include <filesystem>
 
-namespace fmt
-{
 #if FMT_VERSION < 80000
-
-#if FMT_GCC_VERSION && FMT_GCC_VERSION < 409
-// Workaround broken conversion on older gcc.
-template <typename... Args> using format_string = string_view;
-template <typename S> auto runtime( const S& s ) -> basic_string_view<char_t<S>>
+    const std::string & runtime( const std::string & str )
 {
-    return s;
+    return str;
 }
 #else
-template <typename Char> struct basic_runtime {
-    basic_string_view<Char> str;
-};
-template <typename... Args>
-using format_string = basic_format_string<char, type_identity_t<Args>...>;
-// Creates a runtime format string.
-template <typename S> auto runtime( const S& s ) -> basic_runtime<fmt::char_t<S>>
+auto runtime( const std::string & str )
 {
-    return { {s} };
+    return fmt::runtime( str );
 }
 #endif
-
-#endif
-}
 
 namespace MR
 {
@@ -205,7 +190,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.z ).size();
         for ( int z = 0; z < settings.vdbVolume.dims.z; ++z )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
             if ( !res )
                 return res;
 
@@ -219,7 +204,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.x ).size();
         for ( int x = 0; x < settings.vdbVolume.dims.x; ++x )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
             if ( !res )
                 return res;
 
@@ -233,7 +218,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.y ).size();
         for ( int y = 0; y < settings.vdbVolume.dims.y; ++y )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
             if ( !res )
                 return res;
 

@@ -30,8 +30,10 @@ inline std::string asString( std::u8string && s ) { return reinterpret_cast<std:
 inline std::u8string asU8String( std::string && s ) { return reinterpret_cast<std::u8string &&>( s ); }
 
 #if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
+inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( s ); }
 inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( std::string( s ) ); }
 #else
+inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( asU8String( s ) ); }
 inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::path( asU8String( std::string( s ) ) ); }
 #endif
 

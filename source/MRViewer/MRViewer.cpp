@@ -93,12 +93,12 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
 
     auto* viewer = &MR::getViewerInstance();
     if ( action == GLFW_PRESS )
-        viewer->eventQueue.emplace( false, [mb, modifier, viewer] ()
+        viewer->eventsQueue.emplace( [mb, modifier, viewer] ()
     {
         viewer->mouseDown( mb, modifier );
     } );
     else
-        viewer->eventQueue.emplace( false, [mb, modifier, viewer] ()
+        viewer->eventsQueue.emplace( [mb, modifier, viewer] ()
     {
         viewer->mouseUp( mb, modifier );
     } );
@@ -173,16 +173,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
         viewer->mouseMove( int( x ), int( y ) );
         viewer->draw();
     };
-    if ( viewer->eventQueue.empty() ||
-         !viewer->eventQueue.back().skipable )
-    {
-        viewer->eventQueue.emplace( true, std::move( eventCall ) );
-    }
-    else
-    {
-        // if last event in this frame was move - replace it with newer one
-        viewer->eventQueue.back().callEvent = std::move( eventCall );
-    }
+    viewer->eventsQueue.emplace( eventCall, true );
 }
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
@@ -200,7 +191,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
-    MR::getViewerInstance().eventQueue.emplace( false, [paths] ()
+    MR::getViewerInstance().eventsQueue.emplace( [paths] ()
     {
         MR::getViewerInstance().dragDrop( paths );
     } );
@@ -327,7 +318,7 @@ void Viewer::mainLoopFunc_()
 {
     auto& viewer = getViewerInstance();
     viewer.draw( true );
-    viewer.processEventsQueue_();
+    viewer.eventsQueue.execute();
     CommandLoop::processCommands();
 }
 #endif
@@ -575,7 +566,7 @@ void Viewer::launchEventLoop()
         {
             draw( true );
             glfwPollEvents();
-            processEventsQueue_();
+            eventsQueue.execute();
             spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
@@ -584,12 +575,12 @@ void Viewer::launchEventLoop()
         {
             const double minDuration = 1.0 / double( animationMaxFps );
             glfwWaitEventsTimeout( minDuration );
-            processEventsQueue_();
+            eventsQueue.execute();
         }
         else
         {
             glfwWaitEvents();
-            processEventsQueue_();
+            eventsQueue.execute();
         }
         spaceMouseHandler_->handle();
 
@@ -703,12 +694,21 @@ void Viewer::parseCommandLine_( int argc, char** argv )
 #endif
 }
 
-void Viewer::processEventsQueue_()
+void Viewer::EventsQueue::emplace( EventCallback callEvent, bool skipable )
 {
-    while ( !eventQueue.empty() )
+    if ( queue_.empty() || !skipable || !lastSkipable_ )
+        queue_.emplace( callEvent );
+    else
+        queue_.back() = callEvent;
+    lastSkipable_ = skipable;
+}
+
+void Viewer::EventsQueue::execute()
+{
+    while ( !queue_.empty() )
     {
-        eventQueue.front().callEvent();
-        eventQueue.pop();
+        queue_.front()();
+        queue_.pop();
     }
 }
 

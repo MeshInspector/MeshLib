@@ -44,11 +44,7 @@ private:
     };
 
     MultiInfo multiInfo_;
-
-    MouseButton mode_{MouseButton::Count}; // invalid value
-    size_t secondTouchStartTime_{ 0 };
-    float startDist_{0.0f};
-    bool blockZoom_{false};
+    bool mouseMode_{ false };
 };
 
 }

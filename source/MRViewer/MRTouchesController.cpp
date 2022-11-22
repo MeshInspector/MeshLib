@@ -15,106 +15,56 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     auto finger = *multiInfo_.getFingerById( id );
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
-        viewer->eventQueue.emplace( false, [x,y,viewer] ()
+        mouseMode_ = true;
+        viewer->eventsQueue.emplace( [x,y,viewer] ()
         {
             viewer->mouseMove( x, y ); // to setup position in MouseController
             viewer->draw();
-            viewer->mouseDown( MouseButton::Left, 0 ); // to setup position in MouseController
+            viewer->mouseDown( MouseButton::Left, 0 );
         } );
-        mode_ = MouseButton::Left;
+        return true;
     }
-    else if ( finger == MultiInfo::Finger::Second )
+    if ( mouseMode_ )
     {
-        assert( numPressed == 2 );
-        viewer->eventQueue.emplace( false, [x,y,viewer] ()
+        mouseMode_ = false;
+        viewer->eventsQueue.emplace( [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
-            viewer->mouseMove( x, y ); // to setup position in MouseController
-            viewer->draw();
-            viewer->mouseDown( MouseButton::Right, 0 ); // to setup position in MouseController
         } );
-        mode_ = MouseButton::Right;
-        startDist_ = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                       *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-        secondTouchStartTime_ = std::chrono::milliseconds( std::chrono::system_clock::now().time_since_epoch().count() ).count();
-        blockZoom_ = false;
     }
     return true;
 }
 
 bool TouchesController::onTouchMove_( int id, int x, int y )
 {
-    auto oldPos = multiInfo_.getPosition( id );
-    if ( !oldPos )
+    if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
-    multiInfo_.update( { id, Vector2f( float(x), float(y) ) } );
-    if ( mode_ == MouseButton::Right && !blockZoom_ )
-    {
-        assert( multiInfo_.getNumPressed() == 2 );
-        size_t nowTime = std::chrono::milliseconds( std::chrono::system_clock::now().time_since_epoch().count() ).count();
-        if ( nowTime - secondTouchStartTime_ > 7000 )
-        {
-            auto newDist = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                             *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-            auto dist = newDist - startDist_;
-            if ( std::abs( dist ) > 30 )
-                mode_ = MouseButton::Middle;
-            else
-                blockZoom_ = true;
-        }
-    }
     auto* viewer = &getViewerInstance();
-    if ( mode_ == MouseButton::Middle )
+    if ( mouseMode_ )
     {
-        assert( multiInfo_.getNumPressed() == 2 );
-        auto finger = *multiInfo_.getFingerById( id );
-        auto oldDsit = ( *oldPos - 
-                         *multiInfo_.getPosition( MultiInfo::Finger( int( finger )^1 ) ) ).length();
-        auto newDist = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                         *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-        auto dist = newDist - oldDsit;
-        viewer->eventQueue.emplace( false, [x,y,dist,viewer] ()
+        auto eventCall = [x, y, viewer] ()
         {
-            viewer->mouseUp( MouseButton::Right, 0 );
-            viewer->mouseMove( x, y ); // to setup position in MouseController
-            viewer->mouseScroll( dist / 80.0f );
-        } );
-        return true;
-    }
-    if ( mode_ == MouseButton::Right && *multiInfo_.getFingerById( id ) == MultiInfo::Finger::First )
-        return true;
-
-    auto eventCall = [x, y,viewer] ()
-    {
-        viewer->mouseMove( x, y );
-        viewer->draw();
-    };
-    if ( viewer->eventQueue.empty() ||
-         !viewer->eventQueue.back().skipable )
-    {
-        viewer->eventQueue.emplace( true, std::move( eventCall ) );
-    }
-    else
-    {
-        // if last event in this frame was skipable - replace it with newer one
-        viewer->eventQueue.back().callEvent = std::move( eventCall );
+            viewer->mouseMove( x, y );
+            viewer->draw();
+        };
+        viewer->eventsQueue.emplace( eventCall, true );
     }
     return true;
 }
 
 bool TouchesController::onTouchEnd_( int id, int x, int y )
 {
-    mode_ = MouseButton::Count;
-    auto fing = multiInfo_.getFingerById( id );
-    if ( !fing )
+    if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) }, true ) )
         return true;
-    multiInfo_.update( { id, Vector2f( float(x), float(y) ) }, true );
     auto* viewer = &getViewerInstance();
-    viewer->eventQueue.emplace( false, 
-        [mb = int( *fing ),viewer] ()
+    if ( mouseMode_ )
     {
-        viewer->mouseUp( MouseButton( mb ), 0 );
-    } );
+        mouseMode_= false;
+        viewer->eventsQueue.emplace( [viewer] ()
+        {
+            viewer->mouseUp( MouseButton::Left, 0 );
+        } );
+    }
     return true;
 }
 

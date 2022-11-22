@@ -170,7 +170,8 @@ jobs:
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
 
-      - name: Python3.9 fix
+      # cant fix embedded python 3.9 for windows yet, but this embedded python is not used in wheel, so we can just disable it this way
+      - name: Embedded Python3.9 fix
         if: ${{ matrix.py-version == '3.9' }}
         working-directory: source\x64\Release
         run: del python39.zip

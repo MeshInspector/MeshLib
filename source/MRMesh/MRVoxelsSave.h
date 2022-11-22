@@ -33,7 +33,7 @@ struct SavingSettings
     // path to directory where you want to save images
     std::filesystem::path path;
     // format for file names, you should specify a placeholder for number and extension, eg "slice_{0:0{1}}.tif"
-    fmt::format_string<int, int> format = "slice_{0:0{1}}.tif";
+    std::string format = "slice_{0:0{1}}.tif";
     // voxel data
     VdbVolume vdbVolume;
     // Plain which the object is sliced by. XY, XZ, or YZ

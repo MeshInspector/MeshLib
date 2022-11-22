@@ -33,6 +33,12 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg)",  "*.jpg"},
 #endif
+#ifndef MRMESH_NO_TIFF
+    {"TIFF (.tif)",  "*.tif"},
+#endif
+#ifndef MRMESH_NO_TIFF
+    {"TIFF (.tiff)",  "*.tiff"},
+#endif
 #endif
     {"BitMap Picture (.bmp)",  "*.bmp"},
 };
@@ -216,7 +222,7 @@ tl::expected<void, std::string> toTiff( const Image& image, const std::filesyste
     TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, 4 );
     TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB );
-    TIFFSetField( tif, TIFFTAG_EXTRASAMPLES, EXTRASAMPLE_ASSOCALPHA );
+
     for ( int row = 0; row < image.resolution.y; row++ )
         TIFFWriteScanline( tif, ( void* )( &image.pixels[row * image.resolution.x] ), row );
 

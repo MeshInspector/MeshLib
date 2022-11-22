@@ -135,7 +135,7 @@ FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStac
         FileNamesStack res;
         for ( auto& v : val )
         {
-            res.push_back( v.asString() );
+            res.push_back( pathFromUtf8( v.asString() ) );
         }
         return res;
     }

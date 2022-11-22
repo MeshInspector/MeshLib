@@ -194,8 +194,8 @@ public:
 
     // multiplies view-matrix on given transformation from the _right_;
     // so if you at the same time multiplies model transformation from the _left_ on xf.inverse()
-    // and call transform_view( xf ), then the user will see exactly the same picture
-    MRVIEWER_API void transform_view( const AffineXf3f & xf );
+    // and call transformView( xf ), then the user will see exactly the same picture
+    MRVIEWER_API void transformView( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
     ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }

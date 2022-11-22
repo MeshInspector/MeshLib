@@ -226,7 +226,7 @@ bool MouseController::mouseScroll_( float delta )
     float  mult = pow( 0.95f, fabs( delta ) * delta );
     constexpr float min_angle = 0.001f;
     constexpr float max_angle = 179.99f;
-    constexpr float  d2r = PI_F / 360.0f;
+    constexpr float d2r = PI_F / 360.0f;
     viewport.setCameraViewAngle( std::clamp( float( atan( tan( ( viewport.getParameters().cameraViewAngle ) * d2r ) * mult ) / d2r ), min_angle, max_angle ) );
 
     Vector3f diff = ( ps - pc ) * ( mult - 1.0f );

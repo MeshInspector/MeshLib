@@ -171,7 +171,7 @@ void Viewport::rotateView_() const
     viewM.setTranslation( shift );
 }
 
-void Viewport::transform_view( const AffineXf3f & xf )
+void Viewport::transformView( const AffineXf3f & xf )
 {
     auto newAngle = params_.cameraTrackballAngle * Quaternionf( xf.A );
     auto newTrans = xf.A.inverse() * ( params_.cameraTranslation + xf.b );

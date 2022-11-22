@@ -1,6 +1,7 @@
 #include "MRTouchesController.h"
 #include "MRViewer.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MR2to3.h"
 #include <chrono>
 
 namespace MR
@@ -40,15 +41,83 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
     auto* viewer = &getViewerInstance();
+    Viewer::EventsQueue::EventCallback eventCall;
     if ( mouseMode_ )
     {
-        auto eventCall = [x, y, viewer] ()
+        eventCall = [x, y, viewer] ()
         {
             viewer->mouseMove( x, y );
             viewer->draw();
         };
-        viewer->eventsQueue.emplace( eventCall, true );
     }
+    else if ( multiInfo_.getNumPressed() == 2 && ( touchModeMask_ & ModeBit::Any ) )
+    {
+        eventCall = [info = multiInfo_, prevInfoPtr = &multiPrevInfo_, viewer, modeMask = touchModeMask_]() mutable
+        {
+            auto& prevInfoRef = *prevInfoPtr;
+            if ( !prevInfoRef.getIdByFinger( MultiInfo::Finger::First ) || 
+                 !prevInfoRef.getIdByFinger( MultiInfo::Finger::Second ) )
+                 prevInfoRef = info;
+            auto oldPos0 = *prevInfoRef.getPosition( MultiInfo::Finger::First );
+            auto oldPos1 = *prevInfoRef.getPosition( MultiInfo::Finger::Second );
+
+            auto newPos0 = *info.getPosition( MultiInfo::Finger::First );
+            auto newPos1 = *info.getPosition( MultiInfo::Finger::Second );
+
+            auto& vp = viewer->viewport();
+            Vector3f sceneCenter;
+            if ( vp.getSceneBox().valid() )
+                sceneCenter = vp.getSceneBox().center();
+            auto sceneCenterVpZ = vp.projectToViewportSpace( sceneCenter ).z;
+
+            auto oldVpPos0 = viewer->screenToViewport( Vector3f( oldPos0.x, oldPos0.y, sceneCenterVpZ ), vp.id );
+            auto oldVpPos1 = viewer->screenToViewport( Vector3f( oldPos1.x, oldPos1.y, sceneCenterVpZ ), vp.id );
+            auto newVpPos0 = viewer->screenToViewport( Vector3f( newPos0.x, newPos0.y, sceneCenterVpZ ), vp.id );
+            auto newVpPos1 = viewer->screenToViewport( Vector3f( newPos1.x, newPos1.y, sceneCenterVpZ ), vp.id );
+
+            auto oldWorldPos0 = vp.unprojectFromViewportSpace( oldVpPos0 );
+            auto oldWorldPos1 = vp.unprojectFromViewportSpace( oldVpPos1 );
+            auto newWorldPos0 = vp.unprojectFromViewportSpace( newVpPos0 );
+            auto newWorldPos1 = vp.unprojectFromViewportSpace( newVpPos1 );
+
+            AffineXf3f aggregateXf;
+            auto oldWorldCenter = ( oldWorldPos0 + oldWorldPos1 ) * 0.5f;
+            auto newWorldCenter = ( newWorldPos0 + newWorldPos1 ) * 0.5f;
+            // TRANSLATION
+            if ( modeMask & ModeBit::Translate )
+            {
+                aggregateXf = AffineXf3f::translation( newWorldCenter - oldWorldCenter );
+            }
+
+            // ROTATION
+            if ( modeMask & ModeBit::Rotate )
+            {
+                auto a = ( oldWorldPos1 - oldWorldPos0 ).normalized();
+                auto b = ( newWorldPos1 - newWorldPos0 ).normalized();
+                // apply rotation first
+                aggregateXf = aggregateXf * AffineXf3f::xfAround( Matrix3f::rotation( a, b ), oldWorldCenter  );
+            }
+
+            // ZOOM
+            if ( modeMask & ModeBit::Zoom )
+            {
+                auto cameraPoint = vp.getCameraPoint();
+                auto vpCenter = vp.unprojectFromClipSpace( Vector3f( 0.0f, 0.0f, sceneCenterVpZ * 2.0f - 1.0f ) );
+                auto mult = angle( oldWorldPos0 - cameraPoint, oldWorldPos1 - cameraPoint ) /
+                            angle( newWorldPos0 - cameraPoint, newWorldPos1 - cameraPoint );
+                constexpr float minAngle = 0.001f;
+                constexpr float maxAngle = 179.99f;
+                vp.setCameraViewAngle( std::clamp( vp.getParameters().cameraViewAngle * mult, minAngle, maxAngle ) );
+                aggregateXf = AffineXf3f::translation( ( newWorldCenter - vpCenter ) * ( mult - 1.0f ) ) * aggregateXf;
+            }
+
+            vp.transformView( aggregateXf );
+            prevInfoRef = info;
+        };
+    }
+    else
+        return true;
+    viewer->eventsQueue.emplace( eventCall, true );
     return true;
 }
 
@@ -63,6 +132,13 @@ bool TouchesController::onTouchEnd_( int id, int x, int y )
         viewer->eventsQueue.emplace( [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
+        } );
+    }
+    else
+    {
+        viewer->eventsQueue.emplace( [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
+        {
+            *prevInfoPtr = info;
         } );
     }
     return true;

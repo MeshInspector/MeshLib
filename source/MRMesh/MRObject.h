@@ -51,9 +51,7 @@ private:
 /// copying of this object is prohibited and moving is taken with care
 class ObjectChildrenHolder
 {
-    // prevent this class to be used anyhow, but only as base for Object
-    friend class Object;
-
+public:
     ObjectChildrenHolder() = default;
     ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
     ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;
@@ -65,7 +63,8 @@ class ObjectChildrenHolder
     /// including the memory of all recognized children
     [[nodiscard]] size_t heapBytes() const;
 
-    Object * parent_ = nullptr;
+protected:
+    ObjectChildrenHolder * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; /// recognized ones
     std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
 };
@@ -133,8 +132,8 @@ public:
     virtual void setLocked( bool on ) { locked_ = on; }
 
     /// returns parent object in the tree
-    const Object * parent() const { return parent_; }
-    Object * parent() { return parent_; }
+    const Object * parent() const { return static_cast<const Object *>( parent_ ); }
+    Object * parent() { return static_cast<Object *>( parent_ ); }
 
     /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;

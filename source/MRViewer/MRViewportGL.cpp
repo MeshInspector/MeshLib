@@ -60,21 +60,6 @@ void ViewportGL::init()
 
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
-
-    // lines 
-    GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
-    GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
-    GL_EXEC( glGenBuffers( 1, &add_line_colors_vbo ) );
-
-    // points 
-    GL_EXEC( glGenVertexArrays( 1, &add_point_vao ) );
-    GL_EXEC( glGenBuffers( 1, &add_point_vbo ) );
-    GL_EXEC( glGenBuffers( 1, &add_point_colors_vbo ) );
-
-    // border 
-    GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
-    GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
-
     inited_ = true;
 }
 
@@ -124,7 +109,9 @@ void ViewportGL::drawLines( const RenderParams& params ) const
 
     GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
                          (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
+    if ( add_line_vao == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
     GL_EXEC( glBindVertexArray( add_line_vao ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
@@ -137,6 +124,9 @@ void ViewportGL::drawLines( const RenderParams& params ) const
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
 
+
+    if( add_line_colors_vbo == 0  && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenBuffers( 1, &add_line_colors_vbo ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_line_colors_vbo ) );
     if ( lines_dirty )
     {
@@ -147,6 +137,9 @@ void ViewportGL::drawLines( const RenderParams& params ) const
 
 
     GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
+
+    if( add_line_vbo  == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_line_vbo ) );
     if ( lines_dirty )
     {
@@ -156,7 +149,6 @@ void ViewportGL::drawLines( const RenderParams& params ) const
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, previewLines_.lines.size() );
-
     GL_EXEC( glBindVertexArray( add_line_vao ) );
     GL_EXEC( glLineWidth( static_cast <GLfloat> ( params.width ) ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, static_cast <GLsizei> ( previewLines_.lines.size() * 2 ) ) );
@@ -187,6 +179,8 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
                          (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
     // Send points data to GL, install points properties 
+    if ( add_point_vao == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenVertexArrays( 1, &add_point_vao ) );
     GL_EXEC( glBindVertexArray( add_point_vao ) );
 
     // AdditionalPointsNoOffset exists for old intel gpu (Intel HD 4000)
@@ -202,7 +196,8 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     }
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
-
+    if( add_point_colors_vbo  == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenBuffers( 1, &add_point_colors_vbo ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_point_colors_vbo ) );
     if ( points_dirty )
     {
@@ -212,6 +207,8 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
     GL_EXEC( GLint positionId = glGetAttribLocation( shader, "position" ) );
+    if ( add_point_vbo  == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenBuffers( 1, &add_point_vbo ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_point_vbo ) );
     if ( points_dirty )
     {
@@ -253,6 +250,8 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
                          (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
 
     // Send lines data to GL, install lines properties 
+    if ( border_line_vao  == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
     GL_EXEC( glBindVertexArray( border_line_vao ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::ViewportBorder );
@@ -265,7 +264,8 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
                           borderColor[1],
                           borderColor[2],
                           borderColor[3] ) );
-
+    if( border_line_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
+        GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, border_line_vbo ) );
     GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( GLfloat ) * 24, border, GL_STATIC_DRAW ) );
 

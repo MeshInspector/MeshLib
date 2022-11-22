@@ -302,7 +302,8 @@ void Viewport::setupView() const
 
 void Viewport::preDraw() const 
 {
-    viewportGL_.checkInit();
+    if ( !viewportGL_.checkInit() )
+        viewportGL_.init();
     if( previewLinesDepthTest_ )
         draw_lines();
     if( previewPointsDepthTest_ )

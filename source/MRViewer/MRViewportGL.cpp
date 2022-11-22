@@ -60,6 +60,21 @@ void ViewportGL::init()
 
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
+
+    // lines 
+    GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
+    GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
+    GL_EXEC( glGenBuffers( 1, &add_line_colors_vbo ) );
+
+    // points 
+    GL_EXEC( glGenVertexArrays( 1, &add_point_vao ) );
+    GL_EXEC( glGenBuffers( 1, &add_point_vbo ) );
+    GL_EXEC( glGenBuffers( 1, &add_point_colors_vbo ) );
+
+    // border 
+    GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
+    GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
+
     inited_ = true;
 }
 
@@ -73,22 +88,17 @@ void ViewportGL::free()
     setLinesWithColors( { {},{} } );
     setPointsWithColors( { {},{} } );
 
-    if ( add_line_vao )
-        GL_EXEC( glDeleteVertexArrays( 1, &add_line_vao ) );
-    if ( add_line_vbo )
-        GL_EXEC( glDeleteBuffers( 1, &add_line_vbo ) );
-    if ( add_line_colors_vbo )
-        GL_EXEC( glDeleteBuffers( 1, &add_line_colors_vbo ) );
-    if ( add_point_vao )
-        GL_EXEC( glDeleteVertexArrays( 1, &add_point_vao ) );
-    if ( add_point_vbo )
-        GL_EXEC( glDeleteBuffers( 1, &add_point_vbo ) );
-    if ( add_point_colors_vbo )
-        GL_EXEC( glDeleteBuffers( 1, &add_point_colors_vbo ) );
-    if ( border_line_vao )
-        GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
-    if ( border_line_vbo )
-        GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
+    GL_EXEC( glDeleteVertexArrays( 1, &add_line_vao ) );
+    GL_EXEC( glDeleteBuffers( 1, &add_line_vbo ) );
+    GL_EXEC( glDeleteBuffers( 1, &add_line_colors_vbo ) );
+
+    GL_EXEC( glDeleteVertexArrays( 1, &add_point_vao ) );
+    GL_EXEC( glDeleteBuffers( 1, &add_point_vbo ) );
+    GL_EXEC( glDeleteBuffers( 1, &add_point_colors_vbo ) );
+
+    GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
+    GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
+
     inited_ = false;
 }
 
@@ -311,25 +321,9 @@ void ViewportGL::fillViewport( const Vector4i& viewport, const Color& color ) co
 
 }
 
-void ViewportGL::checkInit()
+bool ViewportGL::checkInit()
 {
-    if ( add_line_vao == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
-    if ( add_line_colors_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenBuffers( 1, &add_line_colors_vbo ) );
-    if ( add_line_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
-    if ( add_point_vao == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenVertexArrays( 1, &add_point_vao ) );
-    if ( add_point_colors_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenBuffers( 1, &add_point_colors_vbo ) );
-    if ( add_point_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenBuffers( 1, &add_point_vbo ) );
-    if ( border_line_vao == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
-    if ( border_line_vbo == 0 && Viewer::constInstance()->isGLInitialized() )
-        GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
-
+    return inited_;
 }
 
 ViewportGL::PickResults ViewportGL::pickObjects( const PickParameters& params, const std::vector<Vector2i>& picks ) const

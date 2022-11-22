@@ -101,7 +101,7 @@ public:
     void fillViewport( const Vector4i& viewport, const Color& color ) const;
 
     // Check that member have been initialized
-    void checkInit();
+    bool checkInit();
     
     // Parameters of objects picking
     struct PickParameters
@@ -139,16 +139,16 @@ private:
 
     bool inited_ = false;
 
-     GLuint add_line_colors_vbo = 0;
-     GLuint add_line_vbo = 0;
-     GLuint add_line_vao = 0;
+    GLuint add_line_colors_vbo = 0;
+    GLuint add_line_vbo = 0;
+    GLuint add_line_vao = 0;
 
-     GLuint add_point_colors_vbo = 0;
-     GLuint add_point_vbo = 0;
-     GLuint add_point_vao = 0;
+    GLuint add_point_colors_vbo = 0;
+    GLuint add_point_vbo = 0;
+    GLuint add_point_vao = 0;
 
-     GLuint border_line_vbo = 0;
-     GLuint border_line_vao = 0;
+    GLuint border_line_vbo = 0;
+    GLuint border_line_vao = 0;
 
     // Additional lines and points list
     ViewportLinesWithColors previewLines_;

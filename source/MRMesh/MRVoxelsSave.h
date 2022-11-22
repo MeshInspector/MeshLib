@@ -7,6 +7,7 @@
 #include "MRProgressCallback.h"
 #include "MRVoxelPath.h"
 #include "MRSimpleVolume.h"
+#include <fmt/format.h>
 
 namespace MR
 {

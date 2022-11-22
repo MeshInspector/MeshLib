@@ -6,7 +6,6 @@
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"
 #include "MRMeshTexture.h"
-#include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
 

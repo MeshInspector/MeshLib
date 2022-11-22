@@ -177,7 +177,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.z ).size();
         for ( int z = 0; z < settings.vdbVolume.dims.z; ++z )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime(settings.format), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
+            const auto res = saveSliceToImage( settings.path / fmt::format( settings.format, z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
             if ( !res )
                 return res;
 
@@ -191,7 +191,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.x ).size();
         for ( int x = 0; x < settings.vdbVolume.dims.x; ++x )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
+            const auto res = saveSliceToImage( settings.path / fmt::format( settings.format, x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
             if ( !res )
                 return res;
 
@@ -205,7 +205,7 @@ tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& sett
         const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.y ).size();
         for ( int y = 0; y < settings.vdbVolume.dims.y; ++y )
         {
-            const auto res = saveSliceToImage( settings.path / fmt::format( fmt::runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
+            const auto res = saveSliceToImage( settings.path / fmt::format( settings.format, y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
             if ( !res )
                 return res;
 

@@ -158,10 +158,14 @@ public:
     float getShininess() const { return shininess_; }
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
+    /// returns intensity of reflections
     float getSpecularStrength() const { return specularStrength_; }
+    /// sets intensity of reflections
     virtual void setSpecularStrength( float specularStrength ) { specularStrength_ = specularStrength; needRedraw_ = true; }
 
+    /// returns intensity of non-directional light
     float getAmbientStrength() const { return ambientStrength_; }
+    /// sets intensity of non-directional light
     virtual void setAmbientStrength( float ambientStrength ) { specularStrength_ = ambientStrength; needRedraw_ = true; }
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]

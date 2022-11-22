@@ -223,23 +223,38 @@ bool OpenDirectoryMenuItem::action()
         {
             ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
             {
+                ProgressBar::setTaskCount( 3 );
                 ProgressBar::nextTask( "Load DICOM Folder" );
                 auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
                 if ( loadRes.has_value() && !ProgressBar::isCanceled() )
                 {
                     std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
                     voxelsObject->setName( loadRes->name );
-                    ProgressBar::setTaskCount( 2 );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
                     voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                        return [viewer]
+                    {
+                        auto menu = viewer->getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( "Loading canceled." );
+                    };
                     auto bins = voxelsObject->histogram().getBins();
                     auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
                     ProgressBar::nextTask( "Create ISO surface" );
                     voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                        return [viewer]
+                    {
+                        auto menu = viewer->getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( "Loading canceled." );
+                    };
+
                     voxelsObject->select( true );
                     return [viewer, voxelsObject] ()
-                        {
+                    {
                         AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( voxelsObject );
                         viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
@@ -284,10 +299,24 @@ bool OpenDICOMsMenuItem::action()
                     obj->setName( res->name );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
                     obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                        return [viewer]
+                    {
+                        auto menu = viewer->getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( "Loading canceled." );
+                    };
                     auto bins = obj->histogram().getBins();
                     auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
                     ProgressBar::nextTask( "Create ISO surface" );
                     obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                        return [viewer]
+                    {
+                        auto menu = viewer->getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( "Loading canceled." );
+                    };
                     obj->select( true );
                     voxelObjects.push_back( obj );
                 }

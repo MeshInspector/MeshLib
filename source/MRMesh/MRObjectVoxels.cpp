@@ -54,7 +54,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
 {
-    construct( volume.data, volume.voxelSize );
+    construct( volume.data, volume.voxelSize, cb );
 }
 
 void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
@@ -83,7 +83,12 @@ bool ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurfa
 
     isoValue_ = iso;
     if ( updateSurface )
-        updateIsoSurface( recalculateIsoSurface( isoValue_, cb ) );
+    {
+        auto recRes = recalculateIsoSurface( isoValue_, cb );
+        if ( !recRes )
+            return false;
+        updateIsoSurface( recRes );
+    }
     return updateSurface;
 }
 
@@ -119,12 +124,16 @@ std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCa
     if ( !vdbVolume_.data )
         return {};
     auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+    if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
+        return {};
 
     FloatGrid downsampledGrid = vdbVolume_.data;
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
         meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
+            return {};
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }

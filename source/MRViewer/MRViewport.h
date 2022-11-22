@@ -444,7 +444,8 @@ private:
 
     ViewportRectangle viewportRect_;
 
-    mutable ViewportGL viewportGL_;
+    mutable ViewportGL viewportGL_;  //is mutable because if not initialized,
+    //then it will need to be initialized in constant methods (preDraw()).
 
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;

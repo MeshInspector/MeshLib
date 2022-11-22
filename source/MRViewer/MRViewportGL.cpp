@@ -137,7 +137,6 @@ void ViewportGL::drawLines( const RenderParams& params ) const
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
 
-
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_line_colors_vbo ) );
     if ( lines_dirty )
     {
@@ -321,7 +320,7 @@ void ViewportGL::fillViewport( const Vector4i& viewport, const Color& color ) co
 
 }
 
-bool ViewportGL::checkInit()
+bool ViewportGL::checkInit() const 
 {
     return inited_;
 }

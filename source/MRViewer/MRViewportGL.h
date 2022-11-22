@@ -100,8 +100,8 @@ public:
     // Fills viewport with given color (clear frame buffer)
     void fillViewport( const Vector4i& viewport, const Color& color ) const;
 
-    // Check that member have been initialized
-    bool checkInit();
+    // Check that members have been initialized
+    bool checkInit() const;
     
     // Parameters of objects picking
     struct PickParameters

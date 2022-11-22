@@ -530,24 +530,17 @@ public:
     TouchSignal touchEndSignal; // signal is called when touch stops
 
     // queue to ignore multiple mouse moves in one frame
-    struct MouseQueueEvent
+    struct QueueEvent
     {
-        enum Type
-        {
-            Down,
-            Up,
-            Move,
-            Drop // drop is here to know exact drop position 
-            // Scroll is doubtable
-        } type;
+        bool skipable{false};
         std::function<void()> callEvent;
         // Constructor for emplace (for clang support)
-        MouseQueueEvent( Type typeP, std::function<void()> callEventP ) :
-            type{ typeP },
+        QueueEvent( bool skipableP, std::function<void()> callEventP ) :
+            skipable{ skipableP },
             callEvent{ callEventP }
         {}
     };
-    std::queue<MouseQueueEvent> mouseEventQueue;
+    std::queue<QueueEvent> eventQueue;
 private:
     Viewer();
     ~Viewer();
@@ -565,8 +558,8 @@ private:
     // Search for python script to run or file to open on init
     void parseCommandLine_( int argc, char** argv );
 
-    // process all events stored in mouseEventsQueue
-    void processMouseEventsQueue_();
+    // process all events stored in eventsQueue
+    void processEventsQueue_();
 
 #ifdef __EMSCRIPTEN__
     static void mainLoopFunc_();

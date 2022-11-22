@@ -91,15 +91,16 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
     else //if (button == GLFW_MOUSE_BUTTON_3)
         mb = MR::Viewer::MouseButton::Middle;
 
+    auto* viewer = &MR::getViewerInstance();
     if ( action == GLFW_PRESS )
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [mb, modifier] ()
+        viewer->eventQueue.emplace( false, [mb, modifier, viewer] ()
     {
-        MR::Viewer::instanceRef().mouseDown( mb, modifier );
+        viewer->mouseDown( mb, modifier );
     } );
     else
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [mb, modifier] ()
+        viewer->eventQueue.emplace( false, [mb, modifier, viewer] ()
     {
-        MR::Viewer::instanceRef().mouseUp( mb, modifier );
+        viewer->mouseUp( mb, modifier );
     } );
 }
 
@@ -166,26 +167,27 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 {
-    auto eventCall = [x, y] ()
+    auto* viewer = &MR::getViewerInstance();
+    auto eventCall = [x, y,viewer] ()
     {
-        MR::Viewer::instanceRef().mouseMove( int( x ), int( y ) );
-        MR::Viewer::instanceRef().draw();
+        viewer->mouseMove( int( x ), int( y ) );
+        viewer->draw();
     };
-    if ( MR::Viewer::instanceRef().mouseEventQueue.empty() ||
-         MR::Viewer::instanceRef().mouseEventQueue.back().type != MR::Viewer::MouseQueueEvent::Type::Move )
+    if ( viewer->eventQueue.empty() ||
+         !viewer->eventQueue.back().skipable )
     {
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, std::move( eventCall ) );
+        viewer->eventQueue.emplace( true, std::move( eventCall ) );
     }
     else
     {
         // if last event in this frame was move - replace it with newer one
-        MR::Viewer::instanceRef().mouseEventQueue.back().callEvent = std::move( eventCall );
+        viewer->eventQueue.back().callEvent = std::move( eventCall );
     }
 }
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
-    MR::Viewer::instanceRef().mouseScroll( float( y ) );
+    MR::getViewerInstance().mouseScroll( float( y ) );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -198,15 +200,15 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
-    MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Drop, [paths] ()
+    MR::getViewerInstance().eventQueue.emplace( false, [paths] ()
     {
-        MR::Viewer::instanceRef().dragDrop( paths );
+        MR::getViewerInstance().dragDrop( paths );
     } );
 }
 
 static void glfw_joystick_callback( int jid, int event )
 {
-    MR::Viewer::instanceRef().joystickUpdateConnected( jid, event );
+    MR::getViewerInstance().joystickUpdateConnected( jid, event );
 }
 
 namespace MR
@@ -323,8 +325,9 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 #ifdef __EMSCRIPTEN__
 void Viewer::mainLoopFunc_()
 {
-    instanceRef().draw(true);
-    instanceRef().processMouseEventsQueue_();
+    auto& viewer = getViewerInstance();
+    viewer.draw( true );
+    viewer.processEventsQueue_();
     CommandLoop::processCommands();
 }
 #endif
@@ -572,7 +575,7 @@ void Viewer::launchEventLoop()
         {
             draw( true );
             glfwPollEvents();
-            processMouseEventsQueue_();
+            processEventsQueue_();
             spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
@@ -581,12 +584,12 @@ void Viewer::launchEventLoop()
         {
             const double minDuration = 1.0 / double( animationMaxFps );
             glfwWaitEventsTimeout( minDuration );
-            processMouseEventsQueue_();
+            processEventsQueue_();
         }
         else
         {
             glfwWaitEvents();
-            processMouseEventsQueue_();
+            processEventsQueue_();
         }
         spaceMouseHandler_->handle();
 
@@ -700,12 +703,12 @@ void Viewer::parseCommandLine_( int argc, char** argv )
 #endif
 }
 
-void Viewer::processMouseEventsQueue_()
+void Viewer::processEventsQueue_()
 {
-    while ( !mouseEventQueue.empty() )
+    while ( !eventQueue.empty() )
     {
-        mouseEventQueue.front().callEvent();
-        mouseEventQueue.pop();
+        eventQueue.front().callEvent();
+        eventQueue.pop();
     }
 }
 

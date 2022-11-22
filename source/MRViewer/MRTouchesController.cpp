@@ -10,37 +10,28 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
 {
     if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
-    auto& viewer = getViewerInstance();
+    auto* viewer = &getViewerInstance();
     auto numPressed = multiInfo_.getNumPressed();
     auto finger = *multiInfo_.getFingerById( id );
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
+        viewer->eventQueue.emplace( false, [x,y,viewer] ()
         {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-            getViewerInstance().draw();
-        } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [] ()
-        {
-            getViewerInstance().mouseDown( MouseButton::Left, 0 ); // to setup position in MouseController
+            viewer->mouseMove( x, y ); // to setup position in MouseController
+            viewer->draw();
+            viewer->mouseDown( MouseButton::Left, 0 ); // to setup position in MouseController
         } );
         mode_ = MouseButton::Left;
     }
     else if ( finger == MultiInfo::Finger::Second )
     {
         assert( numPressed == 2 );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [] ()
+        viewer->eventQueue.emplace( false, [x,y,viewer] ()
         {
-            getViewerInstance().mouseUp( MouseButton::Left, 0 );
-        } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
-        {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-            getViewerInstance().draw();
-        } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [] ()
-        {
-            getViewerInstance().mouseDown( MouseButton::Right, 0 ); // to setup position in MouseController
+            viewer->mouseUp( MouseButton::Left, 0 );
+            viewer->mouseMove( x, y ); // to setup position in MouseController
+            viewer->draw();
+            viewer->mouseDown( MouseButton::Right, 0 ); // to setup position in MouseController
         } );
         mode_ = MouseButton::Right;
         startDist_ = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
@@ -72,7 +63,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
                 blockZoom_ = true;
         }
     }
-
+    auto* viewer = &getViewerInstance();
     if ( mode_ == MouseButton::Middle )
     {
         assert( multiInfo_.getNumPressed() == 2 );
@@ -82,37 +73,31 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
         auto newDist = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
                          *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
         auto dist = newDist - oldDsit;
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [] ()
+        viewer->eventQueue.emplace( false, [x,y,dist,viewer] ()
         {
-            getViewerInstance().mouseUp( MouseButton::Right, 0 );
-        } );
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
-        {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-        } );
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [dist] ()
-        {
-            getViewerInstance().mouseScroll( dist / 80.0f );
+            viewer->mouseUp( MouseButton::Right, 0 );
+            viewer->mouseMove( x, y ); // to setup position in MouseController
+            viewer->mouseScroll( dist / 80.0f );
         } );
         return true;
     }
     if ( mode_ == MouseButton::Right && *multiInfo_.getFingerById( id ) == MultiInfo::Finger::First )
         return true;
 
-    auto eventCall = [x, y] ()
+    auto eventCall = [x, y,viewer] ()
     {
-        getViewerInstance().mouseMove( x, y );
-        getViewerInstance().draw();
+        viewer->mouseMove( x, y );
+        viewer->draw();
     };
-    if ( getViewerInstance().mouseEventQueue.empty() ||
-         getViewerInstance().mouseEventQueue.back().type != MR::Viewer::MouseQueueEvent::Type::Move )
+    if ( viewer->eventQueue.empty() ||
+         !viewer->eventQueue.back().skipable )
     {
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, std::move( eventCall ) );
+        viewer->eventQueue.emplace( true, std::move( eventCall ) );
     }
     else
     {
-        // if last event in this frame was move - replace it with newer one
-        getViewerInstance().mouseEventQueue.back().callEvent = std::move( eventCall );
+        // if last event in this frame was skipable - replace it with newer one
+        viewer->eventQueue.back().callEvent = std::move( eventCall );
     }
     return true;
 }
@@ -124,10 +109,11 @@ bool TouchesController::onTouchEnd_( int id, int x, int y )
     if ( !fing )
         return true;
     multiInfo_.update( { id, Vector2f( float(x), float(y) ) }, true );
-    getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, 
-        [mb = int( *fing )] ()
+    auto* viewer = &getViewerInstance();
+    viewer->eventQueue.emplace( false, 
+        [mb = int( *fing ),viewer] ()
     {
-        getViewerInstance().mouseUp( MouseButton( mb ), 0 );
+        viewer->mouseUp( MouseButton( mb ), 0 );
     } );
     return true;
 }

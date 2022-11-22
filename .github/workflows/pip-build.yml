@@ -488,8 +488,26 @@ jobs:
     needs: upload-to-release
     if: always()
     steps:
-      - name: Delete all artifacts
+      - name: Delete Wheelhouse
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: *
+          name: Wheelhouse
+          failOnError: false
+
+      - name: Delete all ManyLinux
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: ManyLinux-*
+          failOnError: false
+
+      - name: Delete all Windows
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: Windows-*
+          failOnError: false
+
+      - name: Delete all Macos
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: Macos-*
           failOnError: false

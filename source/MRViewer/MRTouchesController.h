@@ -21,7 +21,7 @@ public:
         Translate = 0b001,
         Rotate = 0b010,
         Zoom = 0b100,
-        All = Zoom,
+        All = Translate | Rotate | Zoom,
         Any = All
     };
     // mode mask can block some modes when two finger controll camera

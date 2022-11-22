@@ -14,6 +14,9 @@
 #ifndef MRMESH_NO_JPEG
 #include <turbojpeg.h>
 #endif
+#ifndef MRMESH_NO_TIFF
+#include <tiffio.h>
+#endif
 #endif
 
 namespace MR
@@ -29,6 +32,12 @@ const IOFilters Filters =
 #endif
 #ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg)",  "*.jpg"},
+#endif
+#ifndef MRMESH_NO_TIFF
+    {"TIFF (.tif)",  "*.tif"},
+#endif
+#ifndef MRMESH_NO_TIFF
+    {"TIFF (.tiff)",  "*.tiff"},
 #endif
 #endif
     {"BitMap Picture (.bmp)",  "*.bmp"},
@@ -200,7 +209,30 @@ tl::expected<void, std::string> toJpeg( const Image& image, const std::filesyste
 }
 #endif
 
+#ifndef MRMESH_NO_TIFF
+tl::expected<void, std::string> toTiff( const Image& image, const std::filesystem::path& path )
+{
+    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
+    if ( !tif )
+        return tl::make_unexpected("unable to open file");
+
+    TIFFSetField( tif, TIFFTAG_IMAGEWIDTH, image.resolution.x );
+    TIFFSetField( tif, TIFFTAG_IMAGELENGTH, image.resolution.y );
+    TIFFSetField( tif, TIFFTAG_BITSPERSAMPLE, 8 );
+    TIFFSetField( tif, TIFFTAG_SAMPLESPERPIXEL, 4 );
+    TIFFSetField( tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
+    TIFFSetField( tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB );
+
+    for ( int row = 0; row < image.resolution.y; row++ )
+        TIFFWriteScanline( tif, ( void* )( &image.pixels[row * image.resolution.x] ), row );
+
+    TIFFClose( tif );
+    return {};
+}
 #endif
+#endif
+
+
 
 tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
@@ -219,6 +251,10 @@ tl::expected<void, std::string> toAnySupportedFormat( const Image& image, const 
 #ifndef MRMESH_NO_JPEG
     else if ( ext == ".jpg" )
         res = MR::ImageSave::toJpeg( image, file );
+#endif
+#ifndef MRMESH_NO_TIFF
+    else if ( ext == ".tif" || ext == ".tiff" )
+        res = MR::ImageSave::toTiff( image, file );
 #endif
 #endif
     return res;

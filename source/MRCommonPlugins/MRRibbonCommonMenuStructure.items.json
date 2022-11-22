@@ -28,6 +28,11 @@
 			"Icon": "\uF15B"
 		},
 		{
+			"Name": "Open Voxels From TIFF",
+			"Tooltip": "Load voxels from a set of TIFF images",
+			"Icon": "\uF1C5"
+		},
+		{
 			"Name": "Save object",
 			"Caption": "Export",
 			"Tooltip": "Save selected object to file.",

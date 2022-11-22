@@ -9,7 +9,8 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRViewportId.h"
-#include "MRMesh/MRMeshEdgePoint.h"
+#include "MRMesh/MREdgePoint.h"
+#include "MRMesh/MRPolylineTopology.h"
 #include "MRMesh/MRTriPoint.h"
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePaths.h"
@@ -342,16 +343,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ViewportId, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::MeshEdgePoint>( m, "MeshEdgePoint", "encodes a point on a mesh edge" ).
+    pybind11::class_<MR::EdgePoint>( m, "EdgePoint", "encodes a point on a mesh edge" ).
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, float>(), pybind11::arg( "e" ), pybind11::arg( "a" ) ).
-        def_readwrite( "e", &MR::MeshEdgePoint::e ).
-        def_readwrite( "a", &MR::MeshEdgePoint::a, "a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )" ).
-        def( "inVertex", ( MR::VertId( MR::MeshEdgePoint::* )( const MR::MeshTopology& )const )& MR::MeshEdgePoint::inVertex,
+        def_readwrite( "e", &MR::EdgePoint::e ).
+        def_readwrite( "a", &MR::EdgePoint::a, "a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )" ).
+        def( "inVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::MeshTopology& )const )& MR::EdgePoint::inVertex,
             pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
-        def( "inVertex", ( bool( MR::MeshEdgePoint::* )( )const )& MR::MeshEdgePoint::inVertex, "returns true if the point is in a vertex" ).
-        def( "getClosestVertex", &MR::MeshEdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
-        def( "sym", &MR::MeshEdgePoint::sym, "represents the same point relative to sym edge in" ).
+        def( "inVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::PolylineTopology& )const )& MR::EdgePoint::inVertex,
+            pybind11::arg( "topology" ), "returns valid vertex id if the point is in vertex, otherwise returns invalid id" ).
+        def( "inVertex", ( bool( MR::EdgePoint::* )( )const )& MR::EdgePoint::inVertex, "returns true if the point is in a vertex" ).
+        def( "getClosestVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::MeshTopology & ) const )& MR::EdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
+        def( "getClosestVertex", ( MR::VertId( MR::EdgePoint::* )( const MR::PolylineTopology & ) const )& MR::EdgePoint::getClosestVertex, pybind11::arg( "topology" ), "returns one of two edge vertices, closest to this point" ).
+        def( "sym", &MR::EdgePoint::sym, "represents the same point relative to sym edge in" ).
         def( pybind11::self == pybind11::self );
 
     pybind11::class_<MR::TriPointf>( m, "TriPointf", 
@@ -379,7 +383,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& m )
         "\t v2 - the value in dest( next( e ) )" ).
         def( pybind11::init<>() ).
         def( pybind11::init<MR::EdgeId, MR::TriPointf>(), pybind11::arg( "e" ), pybind11::arg( "bary" ) ).
-        def( pybind11::init<const MR::MeshEdgePoint&>(), pybind11::arg( "ep" ) ).
+        def( pybind11::init<const MR::EdgePoint&>(), pybind11::arg( "ep" ) ).
         def( pybind11::init<MR::EdgeId, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
             pybind11::arg( "e" ), pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "given a point coordinates computes its barycentric coordinates" ).

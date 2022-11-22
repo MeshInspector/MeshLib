@@ -91,8 +91,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 
-    m.def( "saveAllSlicesToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage,
-       pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+    m.def( "saveAllSlicesToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const std::string& extension, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage,
+       pybind11::arg( "path" ), pybind11::arg( "extension"), pybind11::arg("vdbVolume"), pybind11::arg("slicePlain"), pybind11::arg("cb") = MR::ProgressCallback{},
        "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 
     m.def( "floatGridToVdbVolume", &MR::floatGridToVdbVolume, pybind11::arg( "grid" ),

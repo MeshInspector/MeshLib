@@ -58,6 +58,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             ImGui::PopStyleVar( 2 );
             ImGui::EndCustomStatePlugin();
+            return;
         }
 
         ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [this, directory, viewer = Viewer::instance()]()->std::function<void()>

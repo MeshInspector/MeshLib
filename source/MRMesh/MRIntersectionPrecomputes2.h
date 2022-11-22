@@ -16,7 +16,7 @@ namespace MR
  * \param[out] dimY index of maximum axis
  */
 template <typename T>
-void findMaxVectorDim( int& dimX, int& dimY, int& dimZ, const Vector2<T>& dir )
+void findMaxVectorDim( int& dimX, int& dimY, const Vector2<T>& dir )
 {
     if( std::abs( dir.x ) >= std::abs( dir.y ) )
     {
@@ -59,12 +59,8 @@ struct IntersectionPrecomputes2
         invDir.x = ( dir.x == 0 ) ? std::numeric_limits<T>::max() : T( 1 ) / dir.x;
         invDir.y = ( dir.y == 0 ) ? std::numeric_limits<T>::max() : T( 1 ) / dir.y;
     }
-
 };
 
 /// \}
 
-#else
-    #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")
-#endif
 }

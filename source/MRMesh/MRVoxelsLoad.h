@@ -74,6 +74,17 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::
 
 /// \}
 
+// Determines iso-surface orientation
+enum class GridType
+{
+    // consider values less than iso as outer area
+    DenseGrid = 0,
+    // consider values less than iso as inner area
+    LevelSet = 1
+};
+/// Load voxels from a set of TIFF files
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& path, GridType gridType = GridType::DenseGrid, const Vector3f& voxelSize = { 1.0f, 1.0f, 1.0f }, const ProgressCallback& cb = {} );
+
 }
 
 }

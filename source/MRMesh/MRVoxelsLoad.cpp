@@ -14,6 +14,10 @@
 #include <compare>
 #include <filesystem>
 
+#ifndef MRMESH_NO_TIFF
+#include <tiffio.h>
+#endif
+
 namespace MR
 {
 
@@ -640,6 +644,153 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
+struct TiffParams
+{
+    int bitsPerSample = 0;
+    int samplesPerPixel = 0;
+    int width = 0;
+    int height = 0;
+
+    bool operator==( const TiffParams& other ) const
+    {
+        return bitsPerSample == other.bitsPerSample &&
+            samplesPerPixel == other.samplesPerPixel &&
+            width == other.width &&
+            height == other.height;
+    }
+
+    bool operator !=( const TiffParams& other ) const
+    {
+        return !( *this == other );
+    }
+};
+
+std::tuple<TIFF*, TiffParams> OpenTiff( const std::filesystem::path& path )
+{
+    TiffParams tp;
+    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "r" );
+    if ( !tif )
+        return { tif, tp };
+
+    TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &tp.bitsPerSample );
+    TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &tp.samplesPerPixel );
+    TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &tp.height );
+    tp.width = int ( TIFFScanlineSize( tif ) / ( tp.samplesPerPixel * ( tp.bitsPerSample >> 3 ) ) );
+
+    return { tif, tp };
+}
+
+template<typename SampleType>
+bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
+{
+    assert( sizeof( SampleType ) == tp.bitsPerSample >> 3 );
+    constexpr float maxSample = float( std::numeric_limits<SampleType>::max() );
+
+    std::vector<SampleType> scanline ( tp.width * tp.samplesPerPixel );
+    float* pData = &outVolume.data[layerIndex * tp.width * tp.height];
+
+    for ( uint32_t i = 0; i < uint32_t(tp.height); ++i )
+    {
+        TIFFReadScanline( tif, ( void* )( &scanline[0] ), i );
+        for ( size_t j = 0; j < tp.width; ++j )
+        {
+            float voxel = 0;
+
+            switch ( tp.samplesPerPixel )
+            {
+            case 1:
+                voxel = maxSample - float( scanline[j] );
+                break;
+            case 3:
+            case 4:            
+                voxel = maxSample - 
+                    ( 0.299f * scanline[tp.samplesPerPixel * j] +
+                    0.587f * scanline[tp.samplesPerPixel * j + 1] +
+                    0.114f * scanline[tp.samplesPerPixel * j + 2] );
+                break;
+            
+            default:
+                return false;
+            }
+
+            if ( voxel < min )
+                min = voxel;
+
+            if ( voxel > max )
+                max = voxel;
+
+            pData[j] = voxel;
+        }
+
+        pData += tp.width;
+    }
+    
+    return true;
+}
+
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& dir, GridType gridType, const Vector3f& voxelSize, const ProgressCallback& cb)
+{
+    const auto dirEnd = std::filesystem::directory_iterator{};
+    const auto fileCount = std::distance( std::filesystem::directory_iterator( dir ), dirEnd );
+    
+    auto dirIt = std::filesystem::directory_iterator( dir );
+    auto [tif, tp] = OpenTiff( dirIt->path() );
+
+    SimpleVolume outVolume;
+    outVolume.dims = { tp.width, tp.height, int (fileCount) };
+    outVolume.min = FLT_MAX;
+    outVolume.max = FLT_MIN;
+
+    outVolume.voxelSize = voxelSize;
+    outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
+    
+    for (size_t layerIndex = 0; tif; ++layerIndex)
+    {
+        if ( cb && !cb( float( layerIndex ) / fileCount ) )
+            return tl::make_unexpected( "loading was cancelled" );
+
+        switch ( tp.bitsPerSample )
+        {
+        case 8:
+            if ( !ReadVoxels<uint8_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
+                return tl::make_unexpected( "unsupported pixel format " );
+            break;
+        case 16:
+            if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
+                return tl::make_unexpected( "unsupported pixel format " );
+            break;
+        default:
+            return tl::make_unexpected( "unsupported pixel format " );
+        }
+        
+        TIFFClose( tif );
+        tif = nullptr;
+        ++dirIt;
+
+        if ( dirIt != dirEnd )
+        {
+            TiffParams currentTiffParams;
+            std::tie(tif, currentTiffParams) = OpenTiff( dirIt->path() );
+            if ( currentTiffParams != tp )
+                return tl::make_unexpected( "unable to process images with different params" );
+        }
+    }
+    
+    if ( cb && !cb( 1.0f ) )
+        return tl::make_unexpected( "loading was cancelled" );
+
+    VdbVolume res;    
+    res.data = simpleVolumeToDenseGrid( outVolume );
+    if ( gridType == GridType::LevelSet )
+        res.data->setGridClass( openvdb::GridClass::GRID_LEVEL_SET );
+
+    res.dims = outVolume.dims;
+    res.voxelSize = outVolume.voxelSize;
+    res.min = outVolume.min;
+    res.max = outVolume.max;    
+    return res;
+}
+
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )
 {
@@ -775,7 +926,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;
-    outVolume.max = outVolume.max;
+    res.max = outVolume.max;
     return res;
 }
 

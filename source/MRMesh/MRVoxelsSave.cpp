@@ -1,16 +1,25 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-#include "MRMeshFwd.h"
 #include "MRVoxelsSave.h"
 #include "MRImageSave.h"
 #include "MRFloatGrid.h"
-#include "MRSimpleVolume.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"
 #include "MRMeshTexture.h"
-#include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
+
+#if FMT_VERSION < 80000
+    const std::string & runtime( const std::string & str )
+{
+    return str;
+}
+#else
+auto runtime( const std::string & str )
+{
+    return fmt::runtime( str );
+}
+#endif
 
 namespace MR
 {
@@ -170,48 +179,50 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, ProgressCallback callback )
+
+
+tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& settings )
 {
-    switch ( slicePlain )
+    switch ( settings.slicePlain )
     {
     case SlicePlain::XY:
     {
-        const size_t maxNumChars = std::to_string( vdbVolume.dims.z ).size();
-        for ( int z = 0; z < vdbVolume.dims.z; ++z )
+        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.z ).size();
+        for ( int z = 0; z < settings.vdbVolume.dims.z; ++z )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", z, maxNumChars ), vdbVolume, slicePlain, z );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( z ) / vdbVolume.dims.z ) )
+            if ( settings.cb && !settings.cb( float( z ) / settings.vdbVolume.dims.z ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     }
     case SlicePlain::YZ:
     {
-        const size_t maxNumChars = std::to_string( vdbVolume.dims.x ).size();
-        for ( int x = 0; x < vdbVolume.dims.x; ++x )
+        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.x ).size();
+        for ( int x = 0; x < settings.vdbVolume.dims.x; ++x )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", x, maxNumChars ), vdbVolume, slicePlain, x );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( x ) / vdbVolume.dims.x ) )
+            if ( settings.cb && !settings.cb( float( x ) / settings.vdbVolume.dims.x ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
     }
     case SlicePlain::ZX:
     {
-        const size_t maxNumChars = std::to_string( vdbVolume.dims.y ).size();
-        for ( int y = 0; y < vdbVolume.dims.y; ++y )
+        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.y ).size();
+        for ( int y = 0; y < settings.vdbVolume.dims.y; ++y )
         {
-            const auto res = saveSliceToImage( path / fmt::format( "slice_{0:0{1}}.png", y, maxNumChars ), vdbVolume, slicePlain, y );
+            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
             if ( !res )
                 return res;
 
-            if ( callback && !callback( float( y ) / vdbVolume.dims.y ) )
+            if ( settings.cb && !settings.cb( float( y ) / settings.vdbVolume.dims.y ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
         break;
@@ -220,8 +231,8 @@ tl::expected<void, std::string> saveAllSlicesToImage( const std::filesystem::pat
         return  tl::make_unexpected( "Slice plain is invalid" );
     }
 
-    if ( callback )
-        callback( 1.f );
+    if ( settings.cb )
+        settings.cb( 1.f );
     return {};
 }
 

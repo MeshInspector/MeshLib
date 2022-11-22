@@ -57,6 +57,9 @@
     <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
+    <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp">
+      <Filter>Voxels</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">

@@ -28,6 +28,9 @@
 							"Name": "Open RAW Voxels"
 						},
 						{
+							"Name": "Open Voxels From TIFF"
+						},
+						{
 							"Name": "Save Scene"
 						},
 						{

@@ -13,15 +13,32 @@ namespace MR
  * \param rigidB2A rigid transformation from B-polyline space to A polyline space, nullptr considered as identity transformation
  * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting edges and returns faster
  */
+MRMESH_API std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Polyline2& b,
+    const AffineXf2f* rigidB2A = nullptr, bool firstIntersectionOnly = false );
+
+/**
+ * \brief finds all pairs of colliding edges from two 2d polylines
+ * \param rigidB2A rigid transformation from B-polyline space to A polyline space, nullptr considered as identity transformation
+ * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting edges and returns faster
+ */
 MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a, const Polyline2& b,
     const AffineXf2f* rigidB2A = nullptr, bool firstIntersectionOnly = false );
-/// the same as \ref findCollidingEdges, but returns one bitset per polyline with colliding edges
+
+/**
+ * \brief finds bitset per polyline with colliding edges
+ * \param rigidB2A rigid transformation from B-polyline space to A polyline space, nullptr considered as identity transformation
+ * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting edges and returns faster
+ */
 MRMESH_API std::pair<UndirectedEdgeBitSet, UndirectedEdgeBitSet> findCollidingEdgesBitsets( const Polyline2& a, const Polyline2& b,
     const AffineXf2f* rigidB2A = nullptr );
 
 /// finds all pairs of colliding edges from 2d polyline
+MRMESH_API std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline );
+
+/// finds all pairs of colliding edges from 2d polyline
 MRMESH_API std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline2& polyline );
-/// the same as \ref findSelfCollidingEdges, but returns the union of all self-intersecting edges
+
+/// finds the union of all self-intersecting edges
 MRMESH_API UndirectedEdgeBitSet findSelfCollidingEdgesBS( const Polyline2& polyline );
 
 /**

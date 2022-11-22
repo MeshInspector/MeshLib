@@ -228,6 +228,7 @@ class PointAccumulator;
 
 struct EdgePoint;
 using MeshEdgePoint = EdgePoint;
+struct EdgePointPair;
 
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;

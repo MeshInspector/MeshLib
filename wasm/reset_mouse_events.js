@@ -1,3 +1,5 @@
+var pointerCounter = 0;
+
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
 }
@@ -42,7 +44,7 @@ var updateEvents = function () {
     var touchEventProcess = function (event, funcName) {
         var rect = Module["canvas"].getBoundingClientRect();
         var coords = getPos(event, rect);
-        if (event.isPrimary) {
+        if (event.isPrimary && pointerCounter == 1) {
             Browser.mouseX = coords.x;
             Browser.mouseY = coords.y;
         }
@@ -59,11 +61,19 @@ var updateEvents = function () {
             oldCalcMovementFunction(event);
         else if (event.pointerType == "touch") {
             if (event.type == "pointerdown")
+            {
+                pointerCounter++;
                 touchEventProcess(event, 'emsTouchStart');
+            }
             else if (event.type == "pointermove")
+            {
                 touchEventProcess(event, 'emsTouchMove');
+            }
             else if (event.type == "pointerup" || event.type == "pointercancel")
+            {
                 touchEventProcess(event, 'emsTouchEnd');
+                pointerCounter--;
+            }
             bubbleUp = false;
         }
         preventFunc(event);

@@ -1,6 +1,7 @@
 #include "MRTouchesController.h"
 #include "MRViewer.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MR2to3.h"
 #include <chrono>
 
 namespace MR
@@ -10,125 +11,136 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
 {
     if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
-    auto& viewer = getViewerInstance();
+    auto* viewer = &getViewerInstance();
     auto numPressed = multiInfo_.getNumPressed();
     auto finger = *multiInfo_.getFingerById( id );
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
+        mouseMode_ = true;
+        viewer->eventQueue.emplace( [x,y,viewer] ()
         {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-            getViewerInstance().draw();
+            viewer->mouseMove( x, y ); // to setup position in MouseController
+            viewer->draw();
+            viewer->mouseDown( MouseButton::Left, 0 );
         } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [] ()
-        {
-            getViewerInstance().mouseDown( MouseButton::Left, 0 ); // to setup position in MouseController
-        } );
-        mode_ = MouseButton::Left;
+        return true;
     }
-    else if ( finger == MultiInfo::Finger::Second )
+    if ( mouseMode_ )
     {
-        assert( numPressed == 2 );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [] ()
+        mouseMode_ = false;
+        viewer->eventQueue.emplace( [viewer] ()
         {
-            getViewerInstance().mouseUp( MouseButton::Left, 0 );
+            viewer->mouseUp( MouseButton::Left, 0 );
         } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
-        {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-            getViewerInstance().draw();
-        } );
-        viewer.mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [] ()
-        {
-            getViewerInstance().mouseDown( MouseButton::Right, 0 ); // to setup position in MouseController
-        } );
-        mode_ = MouseButton::Right;
-        startDist_ = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                       *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-        secondTouchStartTime_ = std::chrono::milliseconds( std::chrono::system_clock::now().time_since_epoch().count() ).count();
-        blockZoom_ = false;
     }
     return true;
 }
 
 bool TouchesController::onTouchMove_( int id, int x, int y )
 {
-    auto oldPos = multiInfo_.getPosition( id );
-    if ( !oldPos )
+    if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) } ) )
         return true;
-    multiInfo_.update( { id, Vector2f( float(x), float(y) ) } );
-    if ( mode_ == MouseButton::Right && !blockZoom_ )
+    auto* viewer = &getViewerInstance();
+    Viewer::EventQueue::EventCallback eventCall;
+    if ( mouseMode_ )
     {
-        assert( multiInfo_.getNumPressed() == 2 );
-        size_t nowTime = std::chrono::milliseconds( std::chrono::system_clock::now().time_since_epoch().count() ).count();
-        if ( nowTime - secondTouchStartTime_ > 7000 )
+        eventCall = [x, y, viewer] ()
         {
-            auto newDist = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                             *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-            auto dist = newDist - startDist_;
-            if ( std::abs( dist ) > 30 )
-                mode_ = MouseButton::Middle;
-            else
-                blockZoom_ = true;
-        }
+            viewer->mouseMove( x, y );
+            viewer->draw();
+        };
     }
+    else if ( multiInfo_.getNumPressed() == 2 && ( touchModeMask_ & ModeBit::Any ) )
+    {
+        eventCall = [info = multiInfo_, prevInfoPtr = &multiPrevInfo_, viewer, modeMask = touchModeMask_]() mutable
+        {
+            auto& prevInfoRef = *prevInfoPtr;
+            if ( !prevInfoRef.getIdByFinger( MultiInfo::Finger::First ) || 
+                 !prevInfoRef.getIdByFinger( MultiInfo::Finger::Second ) )
+                 prevInfoRef = info;
+            auto oldPos0 = *prevInfoRef.getPosition( MultiInfo::Finger::First );
+            auto oldPos1 = *prevInfoRef.getPosition( MultiInfo::Finger::Second );
 
-    if ( mode_ == MouseButton::Middle )
-    {
-        assert( multiInfo_.getNumPressed() == 2 );
-        auto finger = *multiInfo_.getFingerById( id );
-        auto oldDsit = ( *oldPos - 
-                         *multiInfo_.getPosition( MultiInfo::Finger( int( finger )^1 ) ) ).length();
-        auto newDist = ( *multiInfo_.getPosition( MultiInfo::Finger::Second ) - 
-                         *multiInfo_.getPosition( MultiInfo::Finger::First ) ).length();
-        auto dist = newDist - oldDsit;
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [] ()
-        {
-            getViewerInstance().mouseUp( MouseButton::Right, 0 );
-        } );
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [x,y] ()
-        {
-            getViewerInstance().mouseMove( x, y ); // to setup position in MouseController
-        } );
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, [dist] ()
-        {
-            getViewerInstance().mouseScroll( dist / 80.0f );
-        } );
-        return true;
-    }
-    if ( mode_ == MouseButton::Right && *multiInfo_.getFingerById( id ) == MultiInfo::Finger::First )
-        return true;
+            auto newPos0 = *info.getPosition( MultiInfo::Finger::First );
+            auto newPos1 = *info.getPosition( MultiInfo::Finger::Second );
 
-    auto eventCall = [x, y] ()
-    {
-        getViewerInstance().mouseMove( x, y );
-        getViewerInstance().draw();
-    };
-    if ( getViewerInstance().mouseEventQueue.empty() ||
-         getViewerInstance().mouseEventQueue.back().type != MR::Viewer::MouseQueueEvent::Type::Move )
-    {
-        getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, std::move( eventCall ) );
+            auto& vp = viewer->viewport();
+            Vector3f sceneCenter;
+            if ( vp.getSceneBox().valid() )
+                sceneCenter = vp.getSceneBox().center();
+            auto sceneCenterVpZ = vp.projectToViewportSpace( sceneCenter ).z;
+
+            auto oldVpPos0 = viewer->screenToViewport( Vector3f( oldPos0.x, oldPos0.y, sceneCenterVpZ ), vp.id );
+            auto oldVpPos1 = viewer->screenToViewport( Vector3f( oldPos1.x, oldPos1.y, sceneCenterVpZ ), vp.id );
+            auto newVpPos0 = viewer->screenToViewport( Vector3f( newPos0.x, newPos0.y, sceneCenterVpZ ), vp.id );
+            auto newVpPos1 = viewer->screenToViewport( Vector3f( newPos1.x, newPos1.y, sceneCenterVpZ ), vp.id );
+
+            auto oldWorldPos0 = vp.unprojectFromViewportSpace( oldVpPos0 );
+            auto oldWorldPos1 = vp.unprojectFromViewportSpace( oldVpPos1 );
+            auto newWorldPos0 = vp.unprojectFromViewportSpace( newVpPos0 );
+            auto newWorldPos1 = vp.unprojectFromViewportSpace( newVpPos1 );
+
+            AffineXf3f aggregateXf;
+            auto oldWorldCenter = ( oldWorldPos0 + oldWorldPos1 ) * 0.5f;
+            auto newWorldCenter = ( newWorldPos0 + newWorldPos1 ) * 0.5f;
+            // TRANSLATION
+            if ( modeMask & ModeBit::Translate )
+            {
+                aggregateXf = AffineXf3f::translation( newWorldCenter - oldWorldCenter );
+            }
+
+            // ROTATION
+            if ( modeMask & ModeBit::Rotate )
+            {
+                auto a = ( oldWorldPos1 - oldWorldPos0 ).normalized();
+                auto b = ( newWorldPos1 - newWorldPos0 ).normalized();
+                // apply rotation first
+                aggregateXf = aggregateXf * AffineXf3f::xfAround( Matrix3f::rotation( a, b ), oldWorldCenter  );
+            }
+
+            // ZOOM
+            if ( modeMask & ModeBit::Zoom )
+            {
+                auto cameraPoint = vp.getCameraPoint();
+                auto vpCenter = vp.unprojectFromClipSpace( Vector3f( 0.0f, 0.0f, sceneCenterVpZ * 2.0f - 1.0f ) );
+                auto mult = angle( oldWorldPos0 - cameraPoint, oldWorldPos1 - cameraPoint ) /
+                            angle( newWorldPos0 - cameraPoint, newWorldPos1 - cameraPoint );
+                constexpr float minAngle = 0.001f;
+                constexpr float maxAngle = 179.99f;
+                vp.setCameraViewAngle( std::clamp( vp.getParameters().cameraViewAngle * mult, minAngle, maxAngle ) );
+                aggregateXf = AffineXf3f::translation( ( newWorldCenter - vpCenter ) * ( mult - 1.0f ) ) * aggregateXf;
+            }
+
+            vp.transformView( aggregateXf );
+            prevInfoRef = info;
+        };
     }
     else
-    {
-        // if last event in this frame was move - replace it with newer one
-        getViewerInstance().mouseEventQueue.back().callEvent = std::move( eventCall );
-    }
+        return true;
+    viewer->eventQueue.emplace( eventCall, true );
     return true;
 }
 
 bool TouchesController::onTouchEnd_( int id, int x, int y )
 {
-    mode_ = MouseButton::Count;
-    auto fing = multiInfo_.getFingerById( id );
-    if ( !fing )
+    if ( !multiInfo_.update( { id, Vector2f( float(x), float(y) ) }, true ) )
         return true;
-    multiInfo_.update( { id, Vector2f( float(x), float(y) ) }, true );
-    getViewerInstance().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, 
-        [mb = int( *fing )] ()
+    auto* viewer = &getViewerInstance();
+    if ( mouseMode_ )
     {
-        getViewerInstance().mouseUp( MouseButton( mb ), 0 );
-    } );
+        mouseMode_= false;
+        viewer->eventQueue.emplace( [viewer] ()
+        {
+            viewer->mouseUp( MouseButton::Left, 0 );
+        } );
+    }
+    else
+    {
+        viewer->eventQueue.emplace( [info = multiInfo_, prevInfoPtr = &multiPrevInfo_] ()
+        {
+            *prevInfoPtr = info;
+        } );
+    }
     return true;
 }
 

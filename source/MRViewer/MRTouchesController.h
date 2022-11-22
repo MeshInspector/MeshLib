@@ -14,6 +14,19 @@ class MRVIEWER_CLASS TouchesController : public MultiListener<TouchStartListener
 {
 public:
     MR_ADD_CTOR_DELETE_MOVE( TouchesController );
+
+    // bit meaning for mode mask
+    enum ModeBit
+    {
+        Translate = 0b001,
+        Rotate = 0b010,
+        Zoom = 0b100,
+        All = Translate | Rotate | Zoom,
+        Any = All
+    };
+    // mode mask can block some modes when two finger controll camera
+    unsigned char getModeMask() const { return touchModeMask_; }
+    void setModeMask( unsigned char mask ){ touchModeMask_ = mask; }
 private:
     virtual bool onTouchStart_( int id, int x, int y ) override;
     virtual bool onTouchMove_( int id, int x, int y ) override;
@@ -44,11 +57,9 @@ private:
     };
 
     MultiInfo multiInfo_;
-
-    MouseButton mode_{MouseButton::Count}; // invalid value
-    size_t secondTouchStartTime_{ 0 };
-    float startDist_{0.0f};
-    bool blockZoom_{false};
+    MultiInfo multiPrevInfo_;
+    bool mouseMode_{ false };
+    unsigned char touchModeMask_{ ModeBit::All };
 };
 
 }

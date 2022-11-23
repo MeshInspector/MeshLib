@@ -243,13 +243,13 @@ bool OpenDirectoryMenuItem::action()
                     auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
                     ProgressBar::nextTask( "Create ISO surface" );
-                    voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                    if ( ProgressBar::isCanceled() )
-                        return [viewer]
+                    auto isoRes = voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( !isoRes.has_value() )
+                        return[viewer, error = isoRes.error()]
                     {
                         auto menu = viewer->getMenuPlugin();
                         if ( menu )
-                            menu->showErrorModal( "Loading canceled." );
+                            menu->showErrorModal( error );
                     };
 
                     voxelsObject->select( true );
@@ -300,23 +300,21 @@ bool OpenDICOMsMenuItem::action()
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
                     obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
                     if ( ProgressBar::isCanceled() )
-                        return [viewer]
                     {
-                        auto menu = viewer->getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( "Loading canceled." );
-                    };
+                        errors += ( !errors.empty() ? "\n" : "" ) + std::string( "Loading canceled." );
+                        break;
+                    }
+
                     auto bins = obj->histogram().getBins();
                     auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
                     ProgressBar::nextTask( "Create ISO surface" );
-                    obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                    if ( ProgressBar::isCanceled() )
-                        return [viewer]
+                    auto isoRes = obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( isoRes.has_value() )
                     {
-                        auto menu = viewer->getMenuPlugin();
-                        if ( menu )
-                            menu->showErrorModal( "Loading canceled." );
-                    };
+                        errors += ( !errors.empty() ? "\n" : "" ) + res.error();
+                        break;
+                    }
+                    
                     obj->select( true );
                     voxelObjects.push_back( obj );
                 }

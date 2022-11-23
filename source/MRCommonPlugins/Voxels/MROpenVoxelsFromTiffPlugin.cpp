@@ -17,7 +17,6 @@ class OpenVoxelsFromTiffPlugin : public StatePlugin
 {
     Vector3f voxelSize_;
     VoxelsLoad::GridType gridType_ = VoxelsLoad::GridType::DenseGrid;
-
 public:
     OpenVoxelsFromTiffPlugin()
         : StatePlugin( "Open Voxels From TIFF" )
@@ -51,7 +50,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::SameLine();
     RibbonButtonDrawer::GradientRadioButton( "Level Set", ( int* )( &gridType_ ), 1 );
 
-    if ( RibbonButtonDrawer::GradientButton( "Open Directory" ) )
+    if ( RibbonButtonDrawer::GradientButton( "Open Directory", { -1, 0 } ) )
     {
         auto directory = openFolderDialog();
         if ( directory.empty() )
@@ -64,7 +63,15 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
-            auto loadRes = VoxelsLoad::loadTiffDir( directory, gridType_, voxelSize_, ProgressBar::callBackSetProgress );
+            
+            auto loadRes = VoxelsLoad::loadTiffDir
+            ( {
+                directory,
+                voxelSize_,
+                gridType_,
+                ProgressBar::callBackSetProgress
+            } );
+
             if ( loadRes.has_value() && !ProgressBar::isCanceled() )
             {
                 std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();

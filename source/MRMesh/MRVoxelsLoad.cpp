@@ -684,7 +684,6 @@ template<typename SampleType>
 bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
 {
     assert( sizeof( SampleType ) == tp.bitsPerSample >> 3 );
-    constexpr float maxSample = float( std::numeric_limits<SampleType>::max() );
 
     std::vector<SampleType> scanline ( tp.width * tp.samplesPerPixel );
     float* pData = &outVolume.data[layerIndex * tp.width * tp.height];
@@ -699,11 +698,11 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
             switch ( tp.samplesPerPixel )
             {
             case 1:
-                voxel = maxSample - float( scanline[j] );
+                voxel = float( scanline[j] );
                 break;
             case 3:
             case 4:            
-                voxel = maxSample - 
+                voxel =  
                     ( 0.299f * scanline[tp.samplesPerPixel * j] +
                     0.587f * scanline[tp.samplesPerPixel * j + 1] +
                     0.114f * scanline[tp.samplesPerPixel * j + 2] );
@@ -728,12 +727,12 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& dir, GridType gridType, const Vector3f& voxelSize, const ProgressCallback& cb)
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
 {
     const auto dirEnd = std::filesystem::directory_iterator{};
-    const auto fileCount = std::distance( std::filesystem::directory_iterator( dir ), dirEnd );
+    const auto fileCount = std::distance( std::filesystem::directory_iterator( settings.dir ), dirEnd );
     
-    auto dirIt = std::filesystem::directory_iterator( dir );
+    auto dirIt = std::filesystem::directory_iterator( settings.dir );
     auto [tif, tp] = OpenTiff( dirIt->path() );
 
     SimpleVolume outVolume;
@@ -741,12 +740,12 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesyst
     outVolume.min = FLT_MAX;
     outVolume.max = FLT_MIN;
 
-    outVolume.voxelSize = voxelSize;
+    outVolume.voxelSize = settings.voxelSize;
     outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
     
     for (size_t layerIndex = 0; tif; ++layerIndex)
     {
-        if ( cb && !cb( float( layerIndex ) / fileCount ) )
+        if ( settings.cb && !settings.cb( float( layerIndex ) / fileCount ) )
             return tl::make_unexpected( "loading was cancelled" );
 
         switch ( tp.bitsPerSample )
@@ -776,18 +775,32 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesyst
         }
     }
     
-    if ( cb && !cb( 1.0f ) )
+    if ( settings.cb && !settings.cb( 1.0f ) )
         return tl::make_unexpected( "loading was cancelled" );
 
-    VdbVolume res;    
-    res.data = simpleVolumeToDenseGrid( outVolume );
-    if ( gridType == GridType::LevelSet )
-        res.data->setGridClass( openvdb::GridClass::GRID_LEVEL_SET );
+    if ( outVolume.data.empty() )
+        return tl::make_unexpected( "no voxel data" );
 
+    VdbVolume res;
+
+    res.data = simpleVolumeToDenseGrid( outVolume );
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;
-    res.max = outVolume.max;    
+    res.max = outVolume.max;
+
+    if ( settings.gridType == GridType::LevelSet )
+    {
+        res.data->setGridClass( openvdb::GridClass::GRID_LEVEL_SET );
+        res.data->denseFill( openvdb::CoordBBox( 0, 0, 0, res.dims.x, res.dims.y, 0 ), res.max, false );
+        res.data->denseFill( openvdb::CoordBBox( 0, 0, 0, res.dims.x, 0, res.dims.z ), res.max, false );
+        res.data->denseFill( openvdb::CoordBBox( 0, 0, 0, 0, res.dims.y, res.dims.z ), res.max, false );
+
+        res.data->denseFill( openvdb::CoordBBox( 0, 0, res.dims.z, res.dims.x, res.dims.y, res.dims.z ), res.max, false );
+        res.data->denseFill( openvdb::CoordBBox( 0, res.dims.y, 0, res.dims.x, res.dims.y, res.dims.z ), res.max, false );
+        res.data->denseFill( openvdb::CoordBBox( res.dims.x, 0, 0, res.dims.x, res.dims.y, res.dims.z ), res.max, false );
+    }
+    
     return res;
 }
 

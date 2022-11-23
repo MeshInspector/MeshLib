@@ -112,6 +112,7 @@ IF(NOT MR_EMSCRIPTEN)
 		ENDIF()
 	ENDIF()
 ELSE()
+	include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/lib)
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
 			MRMESH_NO_PDF

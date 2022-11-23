@@ -266,7 +266,7 @@ bool OpenDirectoryMenuItem::action()
                     if ( menu )
                         menu->showErrorModal( error );
                 };
-            }, 2 );
+            }, 3 );
         }
     }
     return false;
@@ -309,9 +309,9 @@ bool OpenDICOMsMenuItem::action()
                     auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
                     ProgressBar::nextTask( "Create ISO surface" );
                     auto isoRes = obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                    if ( isoRes.has_value() )
+                    if ( !isoRes.has_value() )
                     {
-                        errors += ( !errors.empty() ? "\n" : "" ) + res.error();
+                        errors += ( !errors.empty() ? "\n" : "" ) + std::string( isoRes.error() );
                         break;
                     }
                     

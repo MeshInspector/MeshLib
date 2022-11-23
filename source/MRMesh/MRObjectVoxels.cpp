@@ -124,7 +124,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
     auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-    if ( !meshRes.has_value() )
+    if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
         return tl::make_unexpected( meshRes.error() );
 
     FloatGrid downsampledGrid = vdbVolume_.data;
@@ -133,7 +133,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
         downsampledGrid = resampled( downsampledGrid, 2.0f );
         meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
         if ( !meshRes.has_value() )
-            return tl::make_unexpected( meshRes.error() ); // "Operation was canceled."
+            return tl::make_unexpected( meshRes.error() );
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }

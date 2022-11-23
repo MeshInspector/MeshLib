@@ -47,10 +47,6 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
     {
         AABBTree::NodeId a, b;
         float distSq = 0;
-        SubTask() = default;
-        SubTask( AABBTree::NodeId a, AABBTree::NodeId b, float dd ) : a( a ), b( b ), distSq( dd )
-        {
-        }
     };
 
     constexpr int MaxStackSize = 128; // to avoid allocations
@@ -66,13 +62,9 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId a, AABBTree::NodeId b )
-    {
-        float distSq = aTree.nodes()[a].box.getDistanceSq( transformed( bTree.nodes()[b].box, rigidB2A ) );
-        return SubTask( a, b, distSq );
-    };
+#define TREE_NODE_DIST_SQ( a, b ) ( aTree[a].box.getDistanceSq( transformed( bTree[b].box, rigidB2A ) ) )
 
-    addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
+    addSubTask( SubTask{ aTree.rootNodeId(), bTree.rootNodeId(), TREE_NODE_DIST_SQ( aTree.rootNodeId(), bTree.rootNodeId() ) } );
 
     while ( stackSize > 0 )
     {
@@ -119,15 +111,15 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
         if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
         {
             // split aNode
-            s1 = getSubTask( aNode.l, s.b );
-            s2 = getSubTask( aNode.r, s.b );
+            s1 = SubTask{ aNode.l, s.b, TREE_NODE_DIST_SQ( aNode.l, s.b ) };
+            s2 = SubTask{ aNode.r, s.b, TREE_NODE_DIST_SQ( aNode.r, s.b ) };
         }
         else
         {
             assert( !bNode.leaf() );
             // split bNode
-            s1 = getSubTask( s.a, bNode.l );
-            s2 = getSubTask( s.a, bNode.r );
+            s1 = SubTask{ s.a, bNode.l, TREE_NODE_DIST_SQ( s.a, bNode.l ) };
+            s2 = SubTask{ s.a, bNode.r, TREE_NODE_DIST_SQ( s.a, bNode.r ) };
         }
         if ( s1.distSq < s2.distSq )
             std::swap( s1, s2 );
@@ -135,6 +127,8 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+
+#undef TREE_NODE_DIST_SQ
 
     if ( rigidB2A && res.distSq < upDistLimitSq )
         res.b.point = rigidB2A->inverse()( res.b.point );

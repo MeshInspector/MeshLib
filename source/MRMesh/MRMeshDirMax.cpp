@@ -63,16 +63,10 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     {
         AABBTree::NodeId n;
         float furthestBoxProj = 0;
-        SubTask() = default;
-        SubTask( AABBTree::NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
     const Vector3f minFactor{ dir.x <= 0 ? dir.x : 0.0f, dir.y <= 0 ? dir.y : 0.0f, dir.z <= 0 ? dir.z : 0.0f };
     const Vector3f maxFactor{ dir.x >= 0 ? dir.x : 0.0f, dir.y >= 0 ? dir.y : 0.0f, dir.z >= 0 ? dir.z : 0.0f };
-    auto getFurthestBoxProj = [&]( const Box3f & box )
-    {
-        return dot( minFactor, box.min ) + dot( maxFactor, box.max );
-    };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
     SubTask subtasks[MaxStackSize];
@@ -88,12 +82,9 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId n )
-    {
-        return SubTask( n, getFurthestBoxProj( tree.nodes()[n].box ) );
-    };
+#define TREE_NODE_FURTHEST_BOX_PROJ( n ) ( dot( minFactor, tree[n].box.min ) + dot( maxFactor, tree[n].box.max ) )
 
-    addSubTask( getSubTask( tree.rootNodeId() ) );
+    addSubTask( SubTask{ tree.rootNodeId(), TREE_NODE_FURTHEST_BOX_PROJ( tree.rootNodeId() ) } );
 
     while( stackSize > 0 )
     {
@@ -121,14 +112,16 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
             continue;
         }
         
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
+        auto s1 = SubTask{ node.l, TREE_NODE_FURTHEST_BOX_PROJ( node.l ) };
+        auto s2 = SubTask{ node.r, TREE_NODE_FURTHEST_BOX_PROJ( node.r ) };
         if ( s1.furthestBoxProj > s2.furthestBoxProj )
             std::swap( s1, s2 );
         assert ( s1.furthestBoxProj <= s2.furthestBoxProj );
         addSubTask( s1 ); // smaller projection on line to look later
         addSubTask( s2 ); // larger projection on line to look first
     }
+
+#undef TREE_NODE_FURTHEST_BOX_PROJ
 
     return res;
 }

@@ -26,10 +26,6 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
     {
         typename AABBTreePolyline<V>::NodeId n;
         float distSq = 0;
-        SubTask() = default;
-        SubTask( typename AABBTreePolyline<V>::NodeId n, float dd ) : n( n ), distSq( dd )
-        {
-        }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -45,13 +41,9 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
         }
     };
 
-    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
-    {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
-        return SubTask( n, distSq );
-    };
+#define TREE_NODE_DIST_SQ( n, pt ) ( transformed( tree[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq()
 
-    addSubTask( getSubTask( tree.rootNodeId() ) );
+    addSubTask( SubTask{tree.rootNodeId(), TREE_NODE_DIST_SQ( tree.rootNodeId(), pt ) } );
 
     while ( stackSize > 0 )
     {
@@ -82,14 +74,16 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
             continue;
         }
 
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
+        auto s1 = SubTask{node.l, TREE_NODE_DIST_SQ( node.l, pt ) };
+        auto s2 = SubTask{node.r, TREE_NODE_DIST_SQ( node.r, pt ) };
         if ( s1.distSq < s2.distSq )
             std::swap( s1, s2 );
         assert( s1.distSq >= s2.distSq );
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+
+#undef TREE_NODE_DIST_SQ
 
     return res;
 }
@@ -155,9 +149,6 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
     {
         typename AABBTreePolyline<V>::NodeId n;
         float dist = 0;
-        SubTask() = default;
-        SubTask( typename AABBTreePolyline<V>::NodeId n, float d ) : n( n ), dist( d )
-        {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -173,13 +164,9 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
         }
     };
 
-    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
-    {
-        float dist = ( ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).length() - maxOffset );
-        return SubTask( n, dist );
-    };
+#define TREE_NODE_DIST( n, pt ) ( transformed( tree[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).length()
 
-    addSubTask( getSubTask( tree.rootNodeId() ) );
+    addSubTask( SubTask{ tree.rootNodeId(), TREE_NODE_DIST( tree.rootNodeId(), pt ) - maxOffset } );
 
     while ( stackSize > 0 )
     {
@@ -211,14 +198,16 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
             continue;
         }
 
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
+        auto s1 = SubTask{ node.l, TREE_NODE_DIST( node.l, pt ) - maxOffset };
+        auto s2 = SubTask{ node.r, TREE_NODE_DIST( node.r, pt ) - maxOffset };
         if ( s1.dist < s2.dist )
             std::swap( s1, s2 );
         assert( s1.dist >= s2.dist );
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+
+#undef TREE_NODE_DIST
 
     return res;
 }

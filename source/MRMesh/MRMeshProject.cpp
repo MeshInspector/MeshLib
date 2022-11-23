@@ -22,8 +22,6 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     {
         AABBTree::NodeId n;
         float distSq = 0;
-        SubTask() = default;
-        SubTask( AABBTree::NodeId n, float dd ) : n( n ), distSq( dd ) { }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -39,13 +37,9 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId n )
-    {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
-        return SubTask( n, distSq );
-    };
+#define TREE_NODE_DIST_SQ( n, pt ) ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq()
 
-    addSubTask( getSubTask( tree.rootNodeId() ) );
+    addSubTask( SubTask{ tree.rootNodeId(), TREE_NODE_DIST_SQ( tree.rootNodeId(), pt ) } );
 
     while( stackSize > 0 )
     {
@@ -86,14 +80,16 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
             continue;
         }
         
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
+        auto s1 = SubTask{ node.l, TREE_NODE_DIST_SQ( node.l, pt ) };
+        auto s2 = SubTask{ node.r, TREE_NODE_DIST_SQ( node.r, pt ) };
         if ( s1.distSq < s2.distSq )
             std::swap( s1, s2 );
         assert ( s1.distSq >= s2.distSq );
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+
+#undef TREE_NODE_DIST_SQ
 
     return res;
 }

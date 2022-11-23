@@ -195,6 +195,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
         std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
+    getViewerInstance().setMouseScroll( joystickIndex_ == -1 );
 }
 
 }

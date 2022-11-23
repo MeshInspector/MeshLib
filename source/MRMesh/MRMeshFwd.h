@@ -153,7 +153,12 @@ template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
 using AffineXf3f = AffineXf3<float>;
 using AffineXf3d = AffineXf3<double>;
 
-template <typename T> struct Line3;
+template <typename V> struct Line;
+template <typename T> using Line2 = Line<Vector2<T>>;
+using Line2f = Line2<float>;
+using Line2d = Line2<double>;
+
+template <typename T> using Line3 = Line<Vector3<T>>;
 using Line3f = Line3<float>;
 using Line3d = Line3<double>;
 
@@ -221,11 +226,14 @@ using Quaterniond = Quaternion<double>;
 
 class PointAccumulator;
 
+struct EdgePoint;
+using MeshEdgePoint = EdgePoint;
+struct EdgePointPair;
+
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 struct PointOnFace;
-struct MeshEdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 struct MeshTriPoint;
 struct MeshProjectionResult;
@@ -285,6 +293,17 @@ template<typename V>
 class MRMESH_CLASS AABBTreePolyline;
 using AABBTreePolyline2 = AABBTreePolyline<Vector2f>;
 using AABBTreePolyline3 = AABBTreePolyline<Vector3f>;
+
+template<typename T> struct IntersectionPrecomputes;
+template<typename T> struct IntersectionPrecomputes2;
+
+template<typename V> struct [[nodiscard]] PolylineProjectionResult;
+using PolylineProjectionResult2 = PolylineProjectionResult<Vector2f>;
+using PolylineProjectionResult3 = PolylineProjectionResult<Vector3f>;
+
+template<typename V> struct [[nodiscard]] PolylineProjectionWithOffsetResult;
+using Polyline2ProjectionWithOffsetResult = PolylineProjectionWithOffsetResult<Vector2f>;
+using PolylineProjectionWithOffsetResult3 = PolylineProjectionWithOffsetResult<Vector3f>;
 
 class DistanceMap;
 

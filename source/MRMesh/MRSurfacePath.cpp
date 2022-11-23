@@ -55,6 +55,7 @@ static std::optional<float> computeExitPos( const Vector3f & b, const Vector3f &
     if ( gob <= 0 || gob >= god )
         return {};
     const auto a = gob / god;
+    assert( a < FLT_MAX );
     const auto ip = a * c + ( 1 - a ) * b;
     if ( dot( grad, ip ) >= 0 )
         return {}; // (b,c) is intersected in the direction +grad
@@ -115,15 +116,18 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
             const auto eBd = mesh_.topology.prev( e.sym() );
             const auto x = mesh_.topology.dest( eBd );
             const auto px = mesh_.points[x] - pv;
-            const auto vx = field_[x] - vv;
-            const auto triGrad = computeGradient( pd, px, vd, vx );
-            const auto triGradSq = triGrad.lengthSq();
-            if ( triGradSq > maxGradSq )
+            if ( auto fx = field_[x]; fx < FLT_MAX )
             {
-                if ( auto a = computeExitPos( pd, px, triGrad ) )
+                const auto vx = fx - vv;
+                const auto triGrad = computeGradient( pd, px, vd, vx );
+                const auto triGradSq = triGrad.lengthSq();
+                if ( triGradSq > maxGradSq )
                 {
-                    maxGradSq = triGradSq;
-                    res = MeshEdgePoint{ eBd, *a };
+                    if ( auto a = computeExitPos( pd, px, triGrad ) )
+                    {
+                        maxGradSq = triGradSq;
+                        res = MeshEdgePoint{ eBd, *a };
+                    }
                 }
             }
         }
@@ -138,7 +142,6 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
 
     // point is not in vertex
     std::optional<MeshEdgePoint> result;
-    float resValue = 0;
     float maxGradSq = 0;
     const auto p = mesh_.edgePoint( ep );
 
@@ -152,15 +155,12 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
     const auto po = mesh_.points[o] - p;
     const auto pd = mesh_.points[d] - p;
 
-    auto updateRes = [&result, &resValue]( const MeshEdgePoint & candidateEdgePoint, float edgeOrgValue, float edgeDestValue )
+    // stores candidate in the result if it has smaller value than initial point
+    auto updateRes = [&result, v]( const MeshEdgePoint & candidateEdgePoint, float edgeOrgValue, float edgeDestValue )
     {
         const float candidateValue = edgeOrgValue * ( 1 - candidateEdgePoint.a ) + edgeDestValue * candidateEdgePoint.a;
-        if ( result ) //otherwise resValue is not defined
-        {
-            if ( resValue <= candidateValue )
-                return false;
-        }
-        resValue = candidateValue;
+        if ( v <= candidateValue )
+            return false;
         result = candidateEdgePoint;
         return true;
     };
@@ -168,14 +168,20 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
     if ( fo < fd )
     {
         const auto poSq = po.lengthSq();
-        if ( updateRes( MeshEdgePoint{ ep.e, 0 }, fo, fd ) && poSq > 0 )
+        if ( poSq > 0 )
+        {
+            result = MeshEdgePoint{ ep.e, 0 };
             maxGradSq = sqr( vo ) / poSq;
+        }
     }
     else if ( fd < fo )
     {
         const auto pdSq = pd.lengthSq();
-        if ( updateRes( MeshEdgePoint{ ep.e.sym(), 0 }, fd, fo ) && pdSq > 0 )
+        if ( pdSq > 0 )
+        {
+            result = MeshEdgePoint{ ep.e.sym(), 0 };
             maxGradSq = sqr( vd ) / pdSq;
+        }
     }
 
     if ( mesh_.topology.left( ep.e ) )
@@ -183,29 +189,35 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
         const auto el = mesh_.topology.next( ep.e );
         const auto l = mesh_.topology.dest( el );
         const auto fl = field_[l];
-        const auto vl = fl - v;
-        const auto pl = mesh_.points[l] - p;
-        const auto plSq = pl.lengthSq();
-        if ( vl < 0 && plSq > 0 )
+        if ( fl < FLT_MAX )
         {
-            auto edgeGradSq = sqr( vl ) / plSq;
-            if ( edgeGradSq > maxGradSq && updateRes( MeshEdgePoint{ el.sym(), 0 }, fl, fo ) )
-                maxGradSq = edgeGradSq;
-        }
-
-        const auto triGrad = computeGradient( pd - po, pl - po, vd - vo, vl - vo );
-        const auto triGradSq = triGrad.lengthSq();
-        if ( triGradSq > maxGradSq )
-        {
-            if ( auto a0 = computeExitPos( pd, pl, triGrad ) )
+            const auto vl = fl - v;
+            const auto pl = mesh_.points[l] - p;
+            const auto plSq = pl.lengthSq();
+            if ( vl < 0 && plSq > 0 )
             {
-                if ( updateRes( MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), *a0 }, fd, fl ) )
-                    maxGradSq = triGradSq;
+                auto edgeGradSq = sqr( vl ) / plSq;
+                if ( edgeGradSq > maxGradSq )
+                {
+                    result = MeshEdgePoint{ el.sym(), 0 };
+                    maxGradSq = edgeGradSq;
+                }
             }
-            else if ( auto a1 = computeExitPos( pl, po, triGrad ) )
+
+            const auto triGrad = computeGradient( pd - po, pl - po, vd - vo, vl - vo );
+            const auto triGradSq = triGrad.lengthSq();
+            if ( triGradSq > maxGradSq )
             {
-                if ( updateRes( MeshEdgePoint{ el.sym(), *a1 }, fl, fo ) )
-                    maxGradSq = triGradSq;
+                if ( auto a0 = computeExitPos( pd, pl, triGrad ) )
+                {
+                    if ( updateRes( MeshEdgePoint{ mesh_.topology.prev( ep.e.sym() ), *a0 }, fd, fl ) )
+                        maxGradSq = triGradSq;
+                }
+                else if ( auto a1 = computeExitPos( pl, po, triGrad ) )
+                {
+                    if ( updateRes( MeshEdgePoint{ el.sym(), *a1 }, fl, fo ) )
+                        maxGradSq = triGradSq;
+                }
             }
         }
     }
@@ -215,29 +227,35 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
         const auto er = mesh_.topology.prev( ep.e );
         const auto r = mesh_.topology.dest( er );
         const auto fr = field_[r];
-        const auto vr = fr - v;
-        const auto pr = mesh_.points[r] - p;
-        const auto prSq = pr.lengthSq();
-        if ( vr < 0 && prSq > 0 )
+        if ( fr < FLT_MAX )
         {
-            auto edgeGradSq = sqr( vr ) / prSq;
-            if ( edgeGradSq > maxGradSq && updateRes( MeshEdgePoint{ er.sym(), 0 }, fr, fo ) )
-                maxGradSq = edgeGradSq;
-        }
-
-        const auto triGrad = computeGradient( pr - po, pd - po, vr - vo, vd - vo );
-        const auto triGradSq = triGrad.lengthSq();
-        if ( triGradSq > maxGradSq )
-        {
-            if ( auto a0 = computeExitPos( pr, pd, triGrad ) )
+            const auto vr = fr - v;
+            const auto pr = mesh_.points[r] - p;
+            const auto prSq = pr.lengthSq();
+            if ( vr < 0 && prSq > 0 )
             {
-                if ( updateRes( MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), *a0 }, fr, fd ) )
-                    maxGradSq = triGradSq;
+                auto edgeGradSq = sqr( vr ) / prSq;
+                if ( edgeGradSq > maxGradSq )
+                {
+                    result = MeshEdgePoint{ er.sym(), 0 };
+                    maxGradSq = edgeGradSq;
+                }
             }
-            else if ( auto a1 = computeExitPos( po, pr, triGrad ) )
+
+            const auto triGrad = computeGradient( pr - po, pd - po, vr - vo, vd - vo );
+            const auto triGradSq = triGrad.lengthSq();
+            if ( triGradSq > maxGradSq )
             {
-                if ( updateRes( MeshEdgePoint{ er, *a1 }, fo, fr ) )
-                    maxGradSq = triGradSq;
+                if ( auto a0 = computeExitPos( pr, pd, triGrad ) )
+                {
+                    if ( updateRes( MeshEdgePoint{ mesh_.topology.next( ep.e.sym() ).sym(), *a0 }, fr, fd ) )
+                        maxGradSq = triGradSq;
+                }
+                else if ( auto a1 = computeExitPos( po, pr, triGrad ) )
+                {
+                    if ( updateRes( MeshEdgePoint{ er, *a1 }, fo, fr ) )
+                        maxGradSq = triGradSq;
+                }
             }
         }
     }
@@ -314,11 +332,12 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
     SurfacePath res;
     if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
     {
-        VertId v1 = mesh.getClosestVertex( start );
-        VertId v2 = mesh.getClosestVertex( end );
-        auto edgePath = atype == GeodesicPathApprox::DijkstraBiDir
-            ? buildShortestPathBiDir( mesh, v1, v2 ) :
-              buildShortestPathAStar( mesh, v1, v2 );
+        VertId v1, v2;
+        EdgePath edgePath = ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
+            buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
+            buildShortestPathAStar( mesh, start, end, &v1, &v2 );
+        if ( !v1 || !v2 )
+            return tl::make_unexpected( PathError::StartEndNotConnected );
 
         // remove last segment from the path if end-point and the origin of last segment belong to one triangle
         while( !edgePath.empty()
@@ -338,8 +357,7 @@ tl::expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mes
 
         if ( edgePath.empty() )
         {
-            if ( v1 != v2 )
-                return tl::make_unexpected( PathError::StartEndNotConnected );
+            assert ( v1 == v2 );
             res = { MeshEdgePoint( mesh.topology.edgeWithOrg( v1 ), 0.0f ) };
         }
         else

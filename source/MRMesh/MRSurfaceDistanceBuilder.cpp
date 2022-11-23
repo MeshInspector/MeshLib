@@ -4,12 +4,10 @@
 #include "MRTimer.h"
 #include "MRphmap.h"
 #include "MRGTest.h"
+#include <algorithm>
 
 namespace MR
 {
-
-// the maximum amount of times vertex distance can be updated
-static constexpr int cMaxVertUpdates = 3;
 
 // consider triangle 0bc, where a linear scalar field is defined in two points: v(0) = 0, v(b) = b;
 // computes the field in c-point;
@@ -17,22 +15,34 @@ static constexpr int cMaxVertUpdates = 3;
 static bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
 {
     assert( vb >= 0 );
-    const float lb = b.length();
-    if ( lb <= vb ) // equality is reached only if path gradient is along the edge, which is considered separately
-        return false; // length of e-edge is less than distance of vertex values in the field (computation error?)
-    const float cos_n = vb / lb;
-    // n is the unit vector of field gradient in the triangle
-
-    const auto blen = b.normalized();
-    const float cos_b0c = std::min( dot( blen, c.normalized() ), 1.0f );
-    if ( cos_b0c <= cos_n )
+    const float dot_bc = dot( b, c );
+    if ( dot_bc <= 0 )
         return false; // the direction n is passing vertex c not from inside of triangle 0bc, but from 0c side
 
-    const float cos_0bc = std::min( dot( blen, ( c - b ).normalized() ), 1.0f );
-    if ( cos_0bc >= cos_n )
-        return false; // the direction n is passing vertex c not from inside of triangle 0bc, but from bc side
+    const float blenSq = b.lengthSq();
+    const float vbSq = sqr( vb );
+    if ( blenSq <= vbSq ) // equality is reached only if path gradient is along the edge, which is considered separately
+        return false; // length of e-edge is less than distance of vertex values in the field (computation error?)
+    const float sqr_cos_n = vbSq / blenSq;
+    // n is the unit vector of field gradient in the triangle
 
-    vc = c.length() * ( cos_b0c * cos_n + std::sqrt( 1 - sqr( cos_b0c ) ) * std::sqrt( 1 - sqr( cos_n ) ) );
+    const float clenSq = c.lengthSq();
+    float sqr_cos_b0c = sqr( dot_bc ) / ( blenSq * clenSq );
+    if ( sqr_cos_b0c <= sqr_cos_n )
+        return false; // the direction n is passing vertex c not from inside of triangle 0bc, but from 0c side
+
+    const auto a = c - b;
+    const auto dot_ba = dot( b, a );
+    if ( dot_ba >= 0 )
+    {
+        const float alenSq = a.lengthSq();
+        //const float sqr_cos_0bc = sqr( dot_ba ) / ( blenSq * alenSq );
+        if ( sqr( dot_ba ) >= sqr_cos_n * blenSq * alenSq )
+            return false; // the direction n is passing vertex c not from inside of triangle 0bc, but from bc side
+    }
+
+    sqr_cos_b0c = std::min( sqr_cos_b0c, 1.0f );
+    vc = std::sqrt( clenSq ) * ( std::sqrt( sqr_cos_b0c * sqr_cos_n ) + std::sqrt( ( 1 - sqr_cos_b0c ) * ( 1 - sqr_cos_n ) ) );
     assert( vc < FLT_MAX );
     return true;
 }
@@ -81,7 +91,13 @@ void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
     } );
 }
 
-bool SurfaceDistanceBuilder::suggestVertDistance_( const VertDistance & c )
+void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
+{
+    assert( v >= 1 && v <= 255 );
+    maxVertUpdates_ = std::clamp( v, 1, 255 );
+}
+
+bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c )
 {
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
@@ -89,6 +105,7 @@ bool SurfaceDistanceBuilder::suggestVertDistance_( const VertDistance & c )
         vi = c.distance;
         if ( region_ && !region_->test( c.vert ) )
             return false;
+        c.distance = metricToPenalty_( c.distance, c.vert );
         nextVerts_.push( c );
         return true;
     }
@@ -152,14 +169,15 @@ VertId SurfaceDistanceBuilder::growOne()
         const auto c = nextVerts_.top();
         nextVerts_.pop();
         auto & vi = vertDistanceMap_[c.vert];
-        if ( vi < c.distance )
+        const auto expectedPenalty = metricToPenalty_( vi, c.vert );
+        if ( expectedPenalty < c.distance )
         {
             // shorter path to the vertex was found
             continue;
         }
-        assert( vi == c.distance );
+        assert( expectedPenalty == c.distance );
         auto & numUpdated = vertUpdatedTimes_[c.vert];
-        if ( numUpdated >= cMaxVertUpdates )
+        if ( numUpdated >= maxVertUpdates_ )
         {
             // stop updating to avoid infinite loops
             continue;
@@ -169,6 +187,13 @@ VertId SurfaceDistanceBuilder::growOne()
         return c.vert;
     }
     return VertId();
+}
+
+float SurfaceDistanceBuilder::metricToPenalty_( float metric, VertId v ) const
+{
+    if ( !target_ )
+        return metric;
+    return metric + ( mesh_.points[v] - *target_ ).length();
 }
 
 TEST(MRMesh, SurfaceDistance) 

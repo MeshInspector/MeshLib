@@ -9,7 +9,7 @@
 #include "MR2DContoursTriangulation.h"
 #include "MRGTest.h"
 #include "MRMeshSave.h"
-#include "MRPolyline2.h"
+#include "MRPolyline.h"
 #include "MRDistanceMap.h"
 #include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"

@@ -62,6 +62,9 @@
     <Filter Include="IO">
       <UniqueIdentifier>{d5a52afb-6078-4698-ac58-593be7f5ec9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SpaceMouse">
+      <UniqueIdentifier>{3637b9ba-3c3d-4da1-8ab3-268e00a54ffa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -145,6 +148,12 @@
     <ClCompile Include="MRRibbonFontManager.cpp">
       <Filter>RibbonMenu</Filter>
     </ClCompile>
+    <ClCompile Include="MRTouchesHandler.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTouchesController.cpp">
+      <Filter>ShortcutManager</Filter>
+    </ClCompile>
     <ClCompile Include="MRMouseController.cpp">
       <Filter>ShortcutManager</Filter>
     </ClCompile>
@@ -222,6 +231,12 @@
     </ClCompile>
     <ClCompile Include="MRShadowsGL.cpp">
       <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpaceMouseController.cpp">
+      <Filter>ShortcutManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -356,6 +371,9 @@
     <ClInclude Include="MRMouseController.h">
       <Filter>ShortcutManager</Filter>
     </ClInclude>
+    <ClInclude Include="MRTouchesController.h">
+      <Filter>ShortcutManager</Filter>
+    </ClInclude>
     <ClInclude Include="MRRibbonButtonDrawer.h">
       <Filter>RibbonMenu</Filter>
     </ClInclude>
@@ -421,6 +439,15 @@
     </ClInclude>
     <ClInclude Include="MRShadowsGL.h">
       <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandler.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandlerWindows.h">
+      <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseController.h">
+      <Filter>ShortcutManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

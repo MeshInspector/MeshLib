@@ -1,28 +1,13 @@
 #include "MRPolyline2Collide.h"
 #include "MRAABBTreePolyline.h"
-#include "MRPolyline2.h"
-#include "MRPolyline2Project.h"
+#include "MRPolyline.h"
+#include "MRPolylineProject.h"
 #include "MRTimer.h"
 #include "MRMatrix2.h"
+#include "MREdgePoint.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <atomic>
-
-namespace
-{
-using namespace MR;
-bool doSegmentsIntersect( const Vector2d& a0, const Vector2d& a1, const Vector2d& b0, const Vector2d& b1 )
-{
-    // mb use intersection (LineSegm2f)
-    auto avec = a1 - a0;
-    if ( cross( avec, b0 - a0 ) * cross( avec, b1 - a0 ) > 0 )
-        return false;
-    auto bvec = b1 - b0;
-    if ( cross( bvec, a0 - b0 ) * cross( bvec, a1 - b0 ) > 0 )
-        return false;
-    return true;
-}
-
-}
 
 namespace MR
 {
@@ -35,11 +20,11 @@ struct NodeNodePoly
     {}
 };
 
-std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2A, bool firstIntersectionOnly )
+std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2A, bool firstIntersectionOnly )
 {
     MR_TIMER;
 
-    std::vector<UndirectedEdgeUndirectedEdge> res;
+    std::vector<EdgePointPair> res;
     const AABBTreePolyline2& aTree = a.getAABBTree();
     const AABBTreePolyline2& bTree = b.getAABBTree();
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
@@ -63,7 +48,7 @@ std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a
         {
             const auto aUndirEdge = aNode.leafId();
             const auto bUndirEdge = bNode.leafId();
-            res.emplace_back( aUndirEdge, bUndirEdge );
+            res.emplace_back( EdgePoint{ aUndirEdge, 0.5f }, EdgePoint{ bUndirEdge, 0.5f } );
             continue;
         }
 
@@ -91,16 +76,20 @@ std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a
             int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
             if ( firstIntersectionOnly && knownIntersection < i )
                 break;
-            Vector2f av[2], bv[2];
-            av[0] = a.orgPnt( res[i].aUndirEdge ); av[1] = a.destPnt( res[i].aUndirEdge );
-            bv[0] = b.orgPnt( res[i].bUndirEdge ); bv[1] = b.destPnt( res[i].bUndirEdge );
+
+            auto as = a.edgeSegment( res[i].a.e );
+            auto bs = b.edgeSegment( res[i].b.e );
             if ( rigidB2A )
             {
-                bv[0] = ( *rigidB2A )( bv[0] );
-                bv[1] = ( *rigidB2A )( bv[1] );
+                bs.a = ( *rigidB2A )( bs.a );
+                bs.b = ( *rigidB2A )( bs.b );
             }
-            if ( doSegmentsIntersect( Vector2d{ av[0] }, Vector2d{ av[1] }, Vector2d{ bv[0] }, Vector2d{ bv[1] } ) )
+
+            double aPos = 0, bPos = 0;
+            if ( doSegmentsIntersect( LineSegm2d{ as }, LineSegm2d{ bs }, &aPos, &bPos ) )
             {
+                res[i].a.a = float( aPos );
+                res[i].b.a = float( bPos );
                 if ( firstIntersectionOnly )
                 {
                     while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, i ) )
@@ -111,7 +100,7 @@ std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a
             }
             else
             {
-                res[i].aUndirEdge = UndirectedEdgeId{}; //invalidate
+                res[i].a.e = {}; //invalidate
             }
         }
     } );
@@ -129,12 +118,23 @@ std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a
     }
     else
     {
-        res.erase( std::remove_if( res.begin(), res.end(), [] ( const UndirectedEdgeUndirectedEdge& uu )
+        res.erase( std::remove_if( res.begin(), res.end(), [] ( const EdgePointPair& ep )
         {
-            return !uu.aUndirEdge.valid();
+            return !ep.a.e.valid();
         } ), res.end() );
     }
 
+    return res;
+}
+
+std::vector<UndirectedEdgeUndirectedEdge> findCollidingEdges( const Polyline2& a, const Polyline2& b,
+    const AffineXf2f* rigidB2A, bool firstIntersectionOnly )
+{
+    auto tmp = findCollidingEdgePairs( a, b, rigidB2A, firstIntersectionOnly );
+    std::vector<UndirectedEdgeUndirectedEdge> res;
+    res.reserve( tmp.size() );
+    for ( const auto & ep : tmp )
+        res.emplace_back( ep.a.e.undirected(), ep.b.e.undirected() );
     return res;
 }
 
@@ -173,11 +173,11 @@ inline bool doShareVertex( const VertId av[2], const VertId bv[2] )
     return false;
 }
 
-std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline2& polyline )
+std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline )
 {
     MR_TIMER;
 
-    std::vector<UndirectedEdgeUndirectedEdge> res;
+    std::vector<EdgePointPair> res;
     const AABBTreePolyline2& tree = polyline.getAABBTree();
     if ( tree.nodes().empty() )
         return res;
@@ -214,7 +214,7 @@ std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline
             av[0] = polyline.topology.org( aUndirEdge ); av[1] = polyline.topology.dest( aUndirEdge );
             bv[0] = polyline.topology.org( bUndirEdge ); bv[1] = polyline.topology.dest( bUndirEdge );
             if ( !doShareVertex( av, bv ) )
-                res.emplace_back( aUndirEdge, bUndirEdge );
+                res.emplace_back( EdgePoint{ aUndirEdge, 0.5f }, EdgePoint{ bUndirEdge, 0.5f } );
             continue;
         }
 
@@ -238,19 +238,37 @@ std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
-            Vector2f av[2], bv[2];
-            av[0] = polyline.orgPnt( res[i].aUndirEdge ); av[1] = polyline.destPnt( res[i].aUndirEdge );
-            bv[0] = polyline.orgPnt( res[i].bUndirEdge ); bv[1] = polyline.destPnt( res[i].bUndirEdge );
-            if ( !doSegmentsIntersect( Vector2d{ av[0] }, Vector2d{ av[1] }, Vector2d{ bv[0] }, Vector2d{ bv[1] } ) )
-                res[i].aUndirEdge = UndirectedEdgeId{}; //invalidate
+            double aPos = 0, bPos = 0;
+            if ( doSegmentsIntersect(
+                LineSegm2d{ polyline.edgeSegment( res[i].a.e ) },
+                LineSegm2d{ polyline.edgeSegment( res[i].b.e ) },
+                &aPos, &bPos ) )
+            {
+                res[i].a.a = float( aPos );
+                res[i].b.a = float( bPos );
+            }
+            else
+            {
+                res[i].a.e = {}; //invalidate
+            }
         }
     } );
 
-    res.erase( std::remove_if( res.begin(), res.end(), [] ( const UndirectedEdgeUndirectedEdge& uu )
+    res.erase( std::remove_if( res.begin(), res.end(), [] ( const EdgePointPair& ep )
     {
-        return !uu.aUndirEdge.valid();
+        return !ep.a.e;
     } ), res.end() );
 
+    return res;
+}
+
+std::vector<UndirectedEdgeUndirectedEdge> findSelfCollidingEdges( const Polyline2& polyline )
+{
+    auto tmp = findSelfCollidingEdgePairs( polyline );
+    std::vector<UndirectedEdgeUndirectedEdge> res;
+    res.reserve( tmp.size() );
+    for ( const auto & ep : tmp )
+        res.emplace_back( ep.a.e.undirected(), ep.b.e.undirected() );
     return res;
 }
 
@@ -282,6 +300,9 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
 
+    // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
+    static PolylineProjectionResult2 unused;
+
     auto projRes = findProjectionOnPolyline2( aPoint, b );
 
     // TODO: this should be separate function (e.g. findSignedProjectionOnPolyline2)
@@ -293,6 +314,41 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
     auto ray = projRes.point - aPoint;
 
     return cross( vecA, ray ) > 0.0f;
+}
+
+TEST( MRMesh, Polyline2Collide )
+{
+    Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
+    Polyline2 a;
+    a.addFromPoints( as, 2, false );
+
+    Vector2f bs[2] = { { 0, 2 }, { 2, 0 } };
+    Polyline2 b;
+    b.addFromPoints( bs, 2, false );
+
+    auto res = findCollidingEdgePairs( a, b );
+    ASSERT_EQ( res.size(), 1 );
+    ASSERT_EQ( res[0].a.e, 0_e );
+    ASSERT_EQ( res[0].a.a, 1.0f / 8 );
+    ASSERT_EQ( res[0].b.e, 0_e );
+    ASSERT_EQ( res[0].b.a, 1.0f / 4 );
+}
+
+TEST( MRMesh, Polyline2SelfCollide )
+{
+    Vector2f as[2] = { { 0, 1 }, { 4, 5 } };
+    Polyline2 polyline;
+    polyline.addFromPoints( as, 2, false );
+
+    Vector2f bs[2] = { { 0, 2 }, { 2, 0 } };
+    polyline.addFromPoints( bs, 2, false );
+
+    auto res = findSelfCollidingEdgePairs( polyline );
+    ASSERT_EQ( res.size(), 1 );
+    ASSERT_EQ( res[0].a.e, 2_e );
+    ASSERT_EQ( res[0].a.a, 1.0f / 4 );
+    ASSERT_EQ( res[0].b.e, 0_e );
+    ASSERT_EQ( res[0].b.a, 1.0f / 8 );
 }
 
 } //namespace MR

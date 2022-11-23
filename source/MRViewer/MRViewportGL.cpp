@@ -124,7 +124,7 @@ void ViewportGL::drawLines( const RenderParams& params ) const
 
     GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
                          (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( add_line_vao ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
@@ -156,7 +156,6 @@ void ViewportGL::drawLines( const RenderParams& params ) const
     GL_EXEC( glEnableVertexAttribArray( positionId ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineArraySize, previewLines_.lines.size() );
-
     GL_EXEC( glBindVertexArray( add_line_vao ) );
     GL_EXEC( glLineWidth( static_cast <GLfloat> ( params.width ) ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, static_cast <GLsizei> ( previewLines_.lines.size() * 2 ) ) );
@@ -202,7 +201,6 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     }
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
-
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, add_point_colors_vbo ) );
     if ( points_dirty )
     {
@@ -265,7 +263,6 @@ void ViewportGL::drawBorder( const BaseRenderParams& params, const Color& color 
                           borderColor[1],
                           borderColor[2],
                           borderColor[3] ) );
-
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, border_line_vbo ) );
     GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( GLfloat ) * 24, border, GL_STATIC_DRAW ) );
 
@@ -321,6 +318,11 @@ void ViewportGL::fillViewport( const Vector4i& viewport, const Color& color ) co
     GL_EXEC( glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
     GL_EXEC( glDisable( GL_SCISSOR_TEST ) );
 
+}
+
+bool ViewportGL::checkInit() const 
+{
+    return inited_;
 }
 
 ViewportGL::PickResults ViewportGL::pickObjects( const PickParameters& params, const std::vector<Vector2i>& picks ) const

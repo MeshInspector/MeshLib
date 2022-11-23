@@ -32,6 +32,7 @@
     <ClCompile Include="ViewerButtons\MRSceneControlMenuItems.cpp" />
     <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp" />
+    <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />

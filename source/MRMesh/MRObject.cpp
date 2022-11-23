@@ -17,13 +17,12 @@ ObjectChildrenHolder::ObjectChildrenHolder( ObjectChildrenHolder && b ) noexcept
     : children_( std::move( b.children_ ) )
     , bastards_( std::move( b.bastards_ ) )
 {
-    auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
         if ( child )
-            child->parent_ = thisObject;
+            child->parent_ = this;
     for ( const auto & wchild : bastards_ )
         if ( auto child = wchild.lock() )
-            child->parent_ = thisObject;
+            child->parent_ = this;
 }
 
 ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder && b ) noexcept
@@ -37,13 +36,12 @@ ObjectChildrenHolder & ObjectChildrenHolder::operator = ( ObjectChildrenHolder &
 
     children_ = std::move( b.children_ );
     bastards_ = std::move( b.bastards_ );
-    auto * thisObject = static_cast<Object*>( this );
     for ( const auto & child : children_ )
         if ( child )
-            child->parent_ = thisObject;
+            child->parent_ = this;
     for ( const auto & wchild : bastards_ )
         if ( auto child = wchild.lock() )
-            child->parent_ = thisObject;
+            child->parent_ = this;
     return * this;
 }
 
@@ -99,7 +97,7 @@ void Object::resetXf( ViewportId id )
 AffineXf3f Object::worldXf( ViewportId id, bool * isDef ) const
 {
     auto xf = xf_.get( id, isDef );
-    auto parent = parent_;
+    auto parent = this->parent();
     while ( parent )
     {
         bool parentDef = true;
@@ -123,7 +121,7 @@ void Object::applyScale( float )
 ViewportMask Object::globalVisibilityMask() const
 {
     auto res = visibilityMask_;
-    auto parent = parent_;
+    auto parent = this->parent();
     while ( !res.empty() && parent )
     {
         res &= parent->visibilityMask_;
@@ -138,7 +136,7 @@ void Object::setGlobalVisibilty( bool on, ViewportMask viewportMask /*= Viewport
     if ( !on )
         return;
 
-    auto parent = parent_;
+    auto parent = this->parent();
     while ( parent )
     {
         parent->setVisible( true, viewportMask );
@@ -150,7 +148,7 @@ bool Object::isAncestor( const Object* ancestor ) const
 {
     if ( !ancestor )
         return false;
-    auto preParent = parent_;
+    auto preParent = this->parent();
     while ( preParent )
     {
         if ( preParent == ancestor )
@@ -164,7 +162,7 @@ bool Object::detachFromParent()
 {
     if ( !parent_ )
         return false;
-    return parent_->removeChild( this );
+    return parent()->removeChild( this );
 }
 
 bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )

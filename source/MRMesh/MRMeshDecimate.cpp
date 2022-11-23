@@ -181,15 +181,8 @@ public:
 
 MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
 {
-    QuadraticForm3f qf;
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
     qf.addDistToOrigin( stabilizer );
-    for ( EdgeId e : orgRing( mp.mesh.topology, v ) )
-    {
-        if ( mp.mesh.topology.isBdEdge( e, mp.region ) )
-            qf.addDistToLine( mp.mesh.edgeVector( e ).normalized() );
-        if ( mp.mesh.topology.isLeftInRegion( e, mp.region ) )
-            qf.addDistToPlane( mp.mesh.leftNormal( e ) );
-    }
     return qf;
 }
 
@@ -283,8 +276,6 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     const auto pd = mesh_.points[d];
     const auto vo = vertForms_[o];
     const auto vd = vertForms_[d];
-    if ( ( po - pd ).lengthSq() > sqr( settings_.maxEdgeLen ) )
-        return {};
 
     QueueElement res;
     res.uedgeId = ue;
@@ -359,64 +350,68 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
     auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
-    auto dirDblArea = [&]( VertId nei1, VertId nei2 )
-    {
-        const auto pos1 = mesh_.points[nei1];
-        const auto pos2 = mesh_.points[nei2];
-        return cross( pos1 - collapsePos, pos2 - collapsePos );
-    };
-    auto triangleAspectRatio = [&]( const Vector3f & v0, VertId nei1, VertId nei2 )
-    {
-        return MR::triangleAspectRatio( v0, mesh_.points[nei1], mesh_.points[nei2] );
-    };
-
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
+    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), ( po - pd ).lengthSq() );
+    float maxNewEdgeLenSq = 0;
 
     originNeis_.clear();
     triDblAreas_.clear();
     Vector3d sumDblArea_;
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
-        auto eDest = topology.dest( e );
-        auto eDest2 = topology.dest( topology.next( e ) );
+        const auto eDest = topology.dest( e );
         if ( eDest == vd )
             return {}; // multiple edge found
         if ( eDest != vl && eDest != vr )
             originNeis_.push_back( eDest );
+
+        const auto pDest = mesh_.points[eDest];
+        maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( po - pDest ).lengthSq() );
+        maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
+
+        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr && topology.left( e ) )
         {
-            auto da = dirDblArea( eDest, eDest2 );
+            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, eDest, eDest2 ) );
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, pDest, pDest2 ) );
         }
-        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, eDest, eDest2 ) );
+        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
     std::sort( originNeis_.begin(), originNeis_.end() );
 
     for ( EdgeId e : orgRing0( topology, edgeToCollapse.sym() ) )
     {
-        auto eDest = topology.dest( e );
-        auto eDest2 = topology.dest( topology.next( e ) );
+        const auto eDest = topology.dest( e );
         assert ( eDest != vo );
         if ( std::binary_search( originNeis_.begin(), originNeis_.end(), eDest ) )
             return {}; // to prevent appearance of multiple edges
+
+        const auto pDest = mesh_.points[eDest];
+        maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
+        maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
+
+        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl && topology.left( e ) )
         {
-            auto da = dirDblArea( eDest, eDest2 );
+            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, eDest, eDest2 );
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
             if ( triAspect >= settings_.criticalTriAspectRatio )
                 triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
-        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, eDest, eDest2 ) );
+        maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
     if ( maxNewAspectRatio > maxOldAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
+
+    if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
+        return {}; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
     if ( ( po != pd ) || ( po != collapsePos ) )

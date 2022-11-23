@@ -7,11 +7,12 @@ namespace MR
 {
 
 Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, float maxDist, 
-                                              const VertBitSet* region )
+                                              const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
     b.addStartRegion( startVertices, 0 );
     while ( b.doneDistance() < maxDist )
     {
@@ -21,11 +22,12 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSe
 }
 
 Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSet & startVertices, const VertBitSet& targetVertices,
-    float maxDist, const VertBitSet* region )
+    float maxDist, const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
     b.addStartRegion( startVertices, 0 );
 
     auto toReachVerts = targetVertices - startVertices;
@@ -41,11 +43,12 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const VertBitSe
 }
 
 Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist,
-                                               const VertBitSet* region )
+                                               const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
     b.addStartVertices( startVertices );
     while ( b.doneDistance() < maxDist )
     {
@@ -55,11 +58,12 @@ Vector<float, VertId> computeSurfaceDistances( const Mesh& mesh, const HashMap<V
 }
 
 Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
-                                              const VertBitSet* region, bool * endReached )
+                                              const VertBitSet* region, bool * endReached, int maxVertUpdates )
 {
     MR_TIMER;
 
-    SurfaceDistanceBuilder b( mesh, region );
+    SurfaceDistanceBuilder b( mesh, mesh.triPoint( end ), region );
+    b.setMaxVertUpdates( maxVertUpdates );
     b.addStart( start );
 
     VertId stopVerts[3];
@@ -93,11 +97,12 @@ Vector<float,VertId> computeSurfaceDistances( const Mesh & mesh, const MeshTriPo
 }
 
 Vector<float,VertId> computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, float maxDist,
-                                              const VertBitSet* region )
+                                              const VertBitSet* region, int maxVertUpdates )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
     b.addStart( start );
     while ( b.doneDistance() < maxDist )
     {

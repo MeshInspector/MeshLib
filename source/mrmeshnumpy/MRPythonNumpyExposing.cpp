@@ -7,7 +7,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRVertexAttributeGradient.h"
-#include "MRMesh/MRPolyline2.h"
+#include "MRMesh/MRPolyline.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {

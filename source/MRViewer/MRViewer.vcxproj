@@ -21,6 +21,8 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
+    <ClCompile Include="MRTouchesHandler.cpp" />
+    <ClCompile Include="MRTouchesController.cpp" />
     <ClCompile Include="MRObjectMeshHistory.cpp" />
     <ClCompile Include="MRObjectTransformWidget.cpp" />
     <ClCompile Include="MRPickHoleBorderElement.cpp" />
@@ -38,6 +40,8 @@
     <ClCompile Include="MRSelectScreenLasso.cpp" />
     <ClCompile Include="MRShadowsGL.cpp" />
     <ClCompile Include="MRShortcutManager.cpp" />
+    <ClCompile Include="MRSpaceMouseController.cpp" />
+    <ClCompile Include="MRSpaceMouseHandlerWindows.cpp" />
     <ClCompile Include="MRSplashWindow.cpp" />
     <ClCompile Include="MRStatePlugin.cpp" />
     <ClCompile Include="MRDemoPlugin.cpp" />
@@ -81,6 +85,7 @@
     <ClInclude Include="MRGladGlfw.h" />
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
+    <ClInclude Include="MRTouchesController.h" />
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />
     <ClInclude Include="MRPickHoleBorderElement.h" />
@@ -99,6 +104,9 @@
     <ClInclude Include="MRSelectScreenLasso.h" />
     <ClInclude Include="MRShadowsGL.h" />
     <ClInclude Include="MRShortcutManager.h" />
+    <ClInclude Include="MRSpaceMouseController.h" />
+    <ClInclude Include="MRSpaceMouseHandler.h" />
+    <ClInclude Include="MRSpaceMouseHandlerWindows.h" />
     <ClInclude Include="MRSplashWindow.h" />
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />

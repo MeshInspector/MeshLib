@@ -56,4 +56,6 @@
 //clean up after windows.h
 #undef small
 #undef APIENTRY
+#undef M_PI
+#undef M_PI_2
 #endif

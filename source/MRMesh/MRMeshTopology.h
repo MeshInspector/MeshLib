@@ -102,7 +102,7 @@ public:
     /// for all valid vertices this vector contains an edge with the origin there
     [[nodiscard]] const Vector<EdgeId, VertId> & edgePerVertex() const { return edgePerVertex_; }
     /// returns valid edge if given vertex is present in the mesh
-    [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) && edgePerVertex_[a].valid() ? edgePerVertex_[a] : EdgeId(); }
+    [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) ? edgePerVertex_[a] : EdgeId(); }
     /// returns true if given vertex is present in the mesh
     [[nodiscard]] bool hasVert( VertId a ) const { return validVerts_.test( a ); }
     /// returns the number of valid vertices
@@ -127,7 +127,7 @@ public:
     /// for all valid faces this vector contains an edge with that face at left
     [[nodiscard]] const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
     /// returns valid edge if given vertex is present in the mesh
-    [[nodiscard]] EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) && edgePerFace_[a].valid() ? edgePerFace_[a] : EdgeId(); }
+    [[nodiscard]] EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) ? edgePerFace_[a] : EdgeId(); }
     /// returns true if given face is present in the mesh
     [[nodiscard]] bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
     /// if two valid faces share the same edge then it is found and returned

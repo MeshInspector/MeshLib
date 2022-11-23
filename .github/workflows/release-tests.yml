@@ -99,7 +99,7 @@ jobs:
         run: py -${{matrix.py-version}} -m pytest -s -v
 
   install-test:
-    timeout-minutes: 10
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
       image: ${{matrix.container}}

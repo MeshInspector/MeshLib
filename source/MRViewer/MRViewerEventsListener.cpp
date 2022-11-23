@@ -109,4 +109,46 @@ void PostRescaleListener::connect( Viewer* viewer, int group, boost::signals2::c
     connection_ = viewer->postRescaleSignal.connect( group, MAKE_SLOT( &PostRescaleListener::postRescale_ ), pos );
 }
 
+void TouchStartListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->touchStartSignal.connect( group, MAKE_SLOT( &TouchStartListener::onTouchStart_ ), pos );
+}
+
+void TouchMoveListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->touchMoveSignal.connect( group, MAKE_SLOT( &TouchMoveListener::onTouchMove_ ), pos );
+}
+
+void TouchEndListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->touchEndSignal.connect( group, MAKE_SLOT( &TouchEndListener::onTouchEnd_ ), pos );
+}
+
+void SpaceMouseMoveListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->spaceMouseMoveSignal.connect( group, MAKE_SLOT( &SpaceMouseMoveListener::spaceMouseMove_ ), pos );
+}
+
+void SpaceMouseDownListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->spaceMouseDownSignal.connect( group, MAKE_SLOT( &SpaceMouseDownListener::spaceMouseDown_ ), pos );
+}
+
+void SpaceMouseUpListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->spaceMouseUpSignal.connect( group, MAKE_SLOT( &SpaceMouseUpListener::spaceMouseUp_ ), pos );
+}
+
 }

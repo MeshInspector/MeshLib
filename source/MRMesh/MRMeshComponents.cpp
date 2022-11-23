@@ -307,6 +307,17 @@ std::vector<EdgeBitSet> getAllComponentsEdges( const Mesh& mesh, const EdgeBitSe
     return res;
 }
 
+bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
+{
+    MR_TIMER;
+    for ( const auto & component : getAllComponentsVerts( mesh ) )
+    {
+        if ( ( component - selection ).none() )
+            return true;
+    }
+    return false;
+}
+
 UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence/* = FaceIncidence::PerEdge*/ )
 {
     MR_TIMER;
@@ -360,7 +371,8 @@ UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet
             return region->test( v );
     };
 
-    UnionFind<VertId> unionFindStructure( mesh.topology.lastValidVert() + 1 );
+    static_assert( VertBitSet::npos + 1 == 0 );
+    UnionFind<VertId> unionFindStructure( vertsRegion.find_last() + 1 );
 
     VertId v1;
     for ( auto v0 : vertsRegion )

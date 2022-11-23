@@ -13,6 +13,7 @@ option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
 option(MRMESH_NO_LABEL "Disable support of label objects" OFF)
 option(MRMESH_NO_JPEG "Disable JPEG support" OFF)
 option(MRMESH_NO_PNG "Disable PNG support" OFF)
+option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
 option(MRMESH_NO_VOXEL "Disable voxel support" OFF)
 
 file(GLOB SOURCES "*.cpp")
@@ -91,6 +92,13 @@ IF(NOT MR_EMSCRIPTEN)
 	ELSE()
 		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES png)
 	ENDIF()
+
+	IF(MRMESH_NO_TIFF)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_TIFF)
+	ELSE()
+		list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tiff)
+	ENDIF()
+
 
 	IF(MRMESH_NO_VOXEL)
 		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_VOXEL)

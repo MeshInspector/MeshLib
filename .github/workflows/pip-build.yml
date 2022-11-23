@@ -8,7 +8,7 @@ on:
 jobs:
   setup:
     timeout-minutes: 5
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:
@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -39,6 +39,9 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -109,21 +112,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
             py-short-version: "38"
             py-dir: "Python38"
             py-file: "python38"
+            embed-version: "3.8.9"
           - py-version: "3.9"
             py-tag: "cp39"
             py-short-version: "39"
             py-dir: "Python39"
             py-file: "python39"
+            embed-version: "3.9.9"
           - py-version: "3.10"
             py-tag: "cp310"
             py-short-version: "310"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-short-version: "311"
+            py-dir: "Python311"
+            py-file: "python311"
+            embed-version: "3.11.0"
     steps:
       - name: Clear workspace
         run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
@@ -151,17 +162,26 @@ jobs:
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
+          docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
+          docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
       - name: Build
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
 
+      # cant fix embedded python 3.9 for windows yet, but this embedded python is not used in wheel, so we can just disable it this way
+      - name: Embedded Python3.9 fix
+        if: ${{ matrix.py-version == '3.9' }}
+        working-directory: source\x64\Release
+        run: del python39.zip
+        shell: cmd
+
       - name: Run Test
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
-      - name: Unit Tests
+      - name: Unit Tests Default
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
 
       - name: Python Tests
@@ -202,8 +222,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10" ]
+        platform: ["x86", "arm64"]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -220,6 +240,9 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-tag: "cp311"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -227,9 +250,19 @@ jobs:
           submodules: recursive
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Fix links
+        if: ${{ matrix.py-version == '3.11' && matrix.platform == 'x86' }}
+        run: |
+          find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+          sudo rm -rf /Library/Frameworks/Python.framework/
+          brew install --force python@3.11 && brew unlink python@3.11 && brew unlink python@3.11 && brew link --overwrite python@3.11
+
+      - name: Install Python
+        if: ${{ !(matrix.py-version == '3.11' && matrix.platform == 'x86') }}
+        run: brew install python@${{matrix.py-version}}
+
       - name: Python setup
         run: |
-          brew install python@${{matrix.py-version}}
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 
@@ -288,36 +321,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"
-          - os: "ubuntu:22.04"
-            py-version: "3.10"
-            py-cmd: "python3.10"
           - os: "fedora:35"
             py-version: "3.9"
             py-cmd: "python3.9"
-          - config: Release
-            pip-options: ""
-          - config: Test
-            pip-options: "-i https://test.pypi.org/simple/ --no-deps"
+          - os: "ubuntu:22.04"
+            py-version: "3.10"
+            py-cmd: "python3.10"
+          - os: "fedora:37"
+            py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Python setup
+      - name: Ubuntu system setup
+        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04'}}
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+      - name: Fedora 35 system setup
         if: ${{ matrix.os == 'fedora:35'}}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.py-version }}
 
-      - name: System setup
-        if: ${{ matrix.os != 'fedora:35'}}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+      - name: Fedora 37 system setup
+        if: ${{matrix.os == 'fedora:37'}}
+        run: dnf -y install python3 pip
 
       - name: Pip setup
         run: |
@@ -344,7 +380,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -383,7 +419,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["arm64", "x86"]
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
@@ -397,6 +433,8 @@ jobs:
             py-cmd: "python3.9"
           - py-version: "3.10"
             py-cmd: "python3.10"
+          - py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -404,6 +442,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
+        if: ${{ !(matrix.platform == 'x86' && matrix.py-version == '3.11') }}
         run: brew install python@${{matrix.py-version}}
 
       - name: Pip setup
@@ -456,56 +495,20 @@ jobs:
           name: Wheelhouse
           failOnError: false
 
-      - name: Delete ManyLinux Python3.8
+      - name: Delete all ManyLinux
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: ManyLinux-python3.8
+          name: ManyLinux-*
           failOnError: false
 
-      - name: Delete ManyLinux Python3.9
+      - name: Delete all Windows
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: ManyLinux-python3.9
+          name: Windows-*
           failOnError: false
 
-      - name: Delete ManyLinux Python3.10
+      - name: Delete all Macos
         uses: geekyeggo/delete-artifact@v2
         with:
-          name: ManyLinux-python3.10
-          failOnError: false
-
-      - name: Delete Windows Python3.8
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Windows-python3.8
-          failOnError: false
-
-      - name: Delete Windows Python3.9
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Windows-python3.9
-          failOnError: false
-
-      - name: Delete Windows Python3.10
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Windows-python3.10
-          failOnError: false
-
-      - name: Delete Macos Python3.8
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Macos-python3.8
-          failOnError: false
-
-      - name: Delete Macos Python3.9
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Macos-python3.9
-          failOnError: false
-
-      - name: Delete Windows Python3.10
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Macos-python3.10
+          name: Macos-*
           failOnError: false

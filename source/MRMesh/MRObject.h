@@ -45,10 +45,13 @@ private:
 };
 
 
+/// the main purpose of this class is to avoid move-constructor and move-assignment
+/// implementation in Object class, which has too many fields for that;
 /// since every object stores a pointer on its parent,
 /// copying of this object is prohibited and moving is taken with care
-struct ObjectChildrenHolder
+class ObjectChildrenHolder
 {
+public:
     ObjectChildrenHolder() = default;
     ObjectChildrenHolder( const ObjectChildrenHolder & ) = delete;
     ObjectChildrenHolder & operator = ( const ObjectChildrenHolder & ) = delete;
@@ -61,7 +64,7 @@ struct ObjectChildrenHolder
     [[nodiscard]] size_t heapBytes() const;
 
 protected:
-    Object * parent_ = nullptr;
+    ObjectChildrenHolder * parent_ = nullptr;
     std::vector< std::shared_ptr< Object > > children_; /// recognized ones
     std::vector< std::weak_ptr< Object > > bastards_; /// unrecognized children to hide from the pubic
 };
@@ -129,8 +132,8 @@ public:
     virtual void setLocked( bool on ) { locked_ = on; }
 
     /// returns parent object in the tree
-    const Object * parent() const { return parent_; }
-    Object * parent() { return parent_; }
+    const Object * parent() const { return static_cast<const Object *>( parent_ ); }
+    Object * parent() { return static_cast<Object *>( parent_ ); }
 
     /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;

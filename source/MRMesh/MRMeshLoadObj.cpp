@@ -70,7 +70,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         in >> ch;
         if ( in.eof() )
             break;
-        if ( ch == 'v' && in.peek() != 'n' )
+        if ( ch == 'v' && in.peek() != 'n' /*normals*/ && in.peek() != 't' /*texture coordinates*/ )
         {
             float x, y, z;
             in >> x >> y >> z;
@@ -78,22 +78,26 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         }
         else if ( ch == 'f' )
         {
+            auto skipSlashNum = [&]()
+            {
+                auto s = (char)in.peek();
+                if ( s != '/' )
+                    return false;
+                (void)in.get();
+                auto s1 = (char)in.peek();
+                if ( s1 >= '0' && s1 <= '9' )
+                {
+                    int x; //just skip for now
+                    in >> x;
+                }
+                return true;
+            };
             auto readVert = [&]()
             {
                 int v;
                 in >> v;
-                auto s = (char)in.peek();
-                if ( s == '/' )
-                {
-                    (void)in.get();
-                    auto s1 = (char)in.peek();
-                    if ( s1 == '/' )
-                    {
-                        (void)in.get();
-                        int x; //just skip for now
-                        in >> x;
-                    }
-                }
+                if ( skipSlashNum() )
+                    skipSlashNum();
                 return v;
             };
 

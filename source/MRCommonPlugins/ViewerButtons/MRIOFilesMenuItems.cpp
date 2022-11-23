@@ -224,13 +224,18 @@ bool OpenDirectoryMenuItem::action()
             ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
             {
                 ProgressBar::nextTask( "Load DICOM Folder" );
-                auto voxelsObject = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
-                if ( voxelsObject && !ProgressBar::isCanceled() )
+                auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
+                if ( loadRes.has_value() && !ProgressBar::isCanceled() )
                 {
+                    std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
+                    voxelsObject->setName( loadRes->name );
+                    ProgressBar::setTaskCount( 2 );
+                    ProgressBar::nextTask( "Construct ObjectVoxels" );
+                    voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
                     auto bins = voxelsObject->histogram().getBins();
                     auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
-                        ProgressBar::nextTask( "Create ISO surface" );
+                    ProgressBar::nextTask( "Create ISO surface" );
                     voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
                     voxelsObject->select( true );
                     return [viewer, voxelsObject] ()
@@ -240,11 +245,11 @@ bool OpenDirectoryMenuItem::action()
                         viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     };
                 }
-                return [viewer]()
+                return [viewer, error = loadRes.error()]()
                 {
                     auto menu = viewer->getMenuPlugin();
                     if ( menu )
-                        menu->showErrorModal( "Cannot open given folder, find more in log." );
+                        menu->showErrorModal( error );
                 };
             }, 2 );
         }
@@ -265,27 +270,46 @@ bool OpenDICOMsMenuItem::action()
     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
     {
         ProgressBar::nextTask( "Load DICOM Folder" );
-        auto voxelObjects = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
-        if ( !ProgressBar::isCanceled() && !voxelObjects.empty() )
+        auto loadRes = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
+        if ( !ProgressBar::isCanceled() && !loadRes.empty() )
         {
-            ProgressBar::setTaskCount( (int)voxelObjects.size() + 1 );
-            for ( auto & obj : voxelObjects )
+            std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
+            ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
+            std::string errors;
+            for ( auto & res : loadRes )
             {
-                auto bins = obj->histogram().getBins();
-                auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
-
-                ProgressBar::nextTask( "Create ISO surface" );
-                obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                obj->select( true );
+                if ( res.has_value() )
+                {
+                    std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+                    obj->setName( res->name );
+                    ProgressBar::nextTask( "Construct ObjectVoxels" );
+                    obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
+                    auto bins = obj->histogram().getBins();
+                    auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
+                    ProgressBar::nextTask( "Create ISO surface" );
+                    obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    obj->select( true );
+                    voxelObjects.push_back( obj );
+                }
+                else
+                    errors += ( !errors.empty() ? "\n" : "" ) + res.error();
             }
-            return [viewer, voxelObjects] ()
+            return [viewer, voxelObjects, errors] ()
             {
+                SCOPED_HISTORY( "Open Voxels" );
                 for ( auto & obj : voxelObjects )
                 {
                     AppendHistory<ChangeSceneAction>( "Open Voxels", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f }  );
+
+                if ( !errors.empty() )
+                {
+                    auto menu = viewer->getMenuPlugin();
+                    if ( menu )
+                        menu->showErrorModal( errors );
+                }
             };
         }
         return [viewer]()

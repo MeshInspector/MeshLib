@@ -70,8 +70,10 @@
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />
+    <ClInclude Include="MRIntersectionPrecomputes2.h" />
     <ClInclude Include="MRIOFormatsRegistry.h" />
     <ClInclude Include="MRIRenderObject.h" />
+    <ClInclude Include="MRLine.h" />
     <ClInclude Include="MRLine3.h" />
     <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />
@@ -87,6 +89,7 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
+    <ClInclude Include="MRMeshEdgePoint.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
     <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
@@ -103,7 +106,6 @@
     <ClInclude Include="MRPointCloudTriangulationHelpers.h" />
     <ClInclude Include="MRPointObject.h" />
     <ClInclude Include="MRPolyline.h" />
-    <ClInclude Include="MRPolyline2.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Intersect.h" />
     <ClInclude Include="MRPolyline2Project.h" />
@@ -118,6 +120,7 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
+    <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -165,7 +168,7 @@
     <ClInclude Include="MRMeshComponents.h" />
     <ClInclude Include="MRMeshDiff.h" />
     <ClInclude Include="MRMeshDistance.h" />
-    <ClInclude Include="MRMeshEdgePoint.h" />
+    <ClInclude Include="MREdgePoint.h" />
     <ClInclude Include="MRMeshFixer.h" />
     <ClInclude Include="MRPositionedText.h" />
     <ClInclude Include="MRMeshMetrics.h" />
@@ -369,7 +372,6 @@
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Intersect.cpp" />
-    <ClCompile Include="MRPolyline2Project.cpp" />
     <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineComponents.cpp" />
     <ClCompile Include="MRPolylineDecimate.cpp" />
@@ -391,7 +393,7 @@
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />
     <ClCompile Include="MRMeshDistance.cpp" />
-    <ClCompile Include="MRMeshEdgePoint.cpp" />
+    <ClCompile Include="MREdgePoint.cpp" />
     <ClCompile Include="MRMeshMetrics.cpp" />
     <ClCompile Include="MRMeshProject.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
@@ -579,7 +581,7 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
+      <Command>copy $(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip $(TargetDir)python$(PythonVersion).zip</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

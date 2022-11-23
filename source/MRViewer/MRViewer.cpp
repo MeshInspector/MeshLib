@@ -39,6 +39,8 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRPch/MRWasm.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRSpaceMouseHandler.h"
+#include "MRSpaceMouseHandlerWindows.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -89,15 +91,16 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
     else //if (button == GLFW_MOUSE_BUTTON_3)
         mb = MR::Viewer::MouseButton::Middle;
 
+    auto* viewer = &MR::getViewerInstance();
     if ( action == GLFW_PRESS )
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Down, [mb, modifier] ()
+        viewer->eventQueue.emplace( [mb, modifier, viewer] ()
     {
-        MR::Viewer::instanceRef().mouseDown( mb, modifier );
+        viewer->mouseDown( mb, modifier );
     } );
     else
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Up, [mb, modifier] ()
+        viewer->eventQueue.emplace( [mb, modifier, viewer] ()
     {
-        MR::Viewer::instanceRef().mouseUp( mb, modifier );
+        viewer->mouseUp( mb, modifier );
     } );
 }
 
@@ -164,26 +167,18 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 {
-    auto eventCall = [x, y] ()
+    auto* viewer = &MR::getViewerInstance();
+    auto eventCall = [x, y,viewer] ()
     {
-        MR::Viewer::instanceRef().mouseMove( int( x ), int( y ) );
-        MR::Viewer::instanceRef().draw();
+        viewer->mouseMove( int( x ), int( y ) );
+        viewer->draw();
     };
-    if ( MR::Viewer::instanceRef().mouseEventQueue.empty() ||
-         MR::Viewer::instanceRef().mouseEventQueue.back().type != MR::Viewer::MouseQueueEvent::Type::Move )
-    {
-        MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Move, std::move( eventCall ) );
-    }
-    else
-    {
-        // if last event in this frame was move - replace it with newer one
-        MR::Viewer::instanceRef().mouseEventQueue.back().callEvent = std::move( eventCall );
-    }
+    viewer->eventQueue.emplace( eventCall, true );
 }
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
-    MR::Viewer::instanceRef().mouseScroll( float( y ) );
+    MR::getViewerInstance().mouseScroll( float( y ) );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -196,10 +191,15 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
-    MR::Viewer::instanceRef().mouseEventQueue.emplace( MR::Viewer::MouseQueueEvent::Type::Drop, [paths] ()
+    MR::getViewerInstance().eventQueue.emplace( [paths] ()
     {
-        MR::Viewer::instanceRef().dragDrop( paths );
+        MR::getViewerInstance().dragDrop( paths );
     } );
+}
+
+static void glfw_joystick_callback( int jid, int event )
+{
+    MR::getViewerInstance().joystickUpdateConnected( jid, event );
 }
 
 namespace MR
@@ -316,8 +316,9 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 #ifdef __EMSCRIPTEN__
 void Viewer::mainLoopFunc_()
 {
-    instanceRef().draw(true);
-    instanceRef().processMouseEventsQueue_();
+    auto& viewer = getViewerInstance();
+    viewer.draw( true );
+    viewer.eventQueue.execute();
     CommandLoop::processCommands();
 }
 #endif
@@ -479,6 +480,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetMouseButtonCallback( window, glfw_mouse_press );
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
+        glfwSetJoystickCallback( glfw_joystick_callback );
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );
@@ -502,6 +504,9 @@ int Viewer::launchInit_( const LaunchParams& params )
         }
 
         mouseController.connect();
+        touchesController.connect( this );
+        spaceMouseController.connect();
+        initSpaceMouseHandler_();
     }
 
     std::future<void> splashMinTimer;
@@ -561,7 +566,8 @@ void Viewer::launchEventLoop()
         {
             draw( true );
             glfwPollEvents();
-            processMouseEventsQueue_();
+            eventQueue.execute();
+            spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
@@ -569,13 +575,15 @@ void Viewer::launchEventLoop()
         {
             const double minDuration = 1.0 / double( animationMaxFps );
             glfwWaitEventsTimeout( minDuration );
-            processMouseEventsQueue_();
+            eventQueue.execute();
         }
         else
         {
             glfwWaitEvents();
-            processMouseEventsQueue_();
+            eventQueue.execute();
         }
+        spaceMouseHandler_->handle();
+
     }
 }
 
@@ -686,12 +694,21 @@ void Viewer::parseCommandLine_( int argc, char** argv )
 #endif
 }
 
-void Viewer::processMouseEventsQueue_()
+void Viewer::EventQueue::emplace( EventCallback callEvent, bool skipable )
 {
-    while ( !mouseEventQueue.empty() )
+    if ( queue_.empty() || !skipable || !lastSkipable_ )
+        queue_.emplace( callEvent );
+    else
+        queue_.back() = callEvent;
+    lastSkipable_ = skipable;
+}
+
+void Viewer::EventQueue::execute()
+{
+    while ( !queue_.empty() )
     {
-        mouseEventQueue.front().callEvent();
-        mouseEventQueue.pop();
+        queue_.front()();
+        queue_.pop();
     }
 }
 
@@ -937,14 +954,52 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
     return false;
 }
 
+bool Viewer::touchStart( int id, int x, int y )
+{
+    return touchStartSignal( id, x, y );
+}
+
+bool Viewer::touchMove( int id, int x, int y )
+{
+    return touchMoveSignal( id, x, y );
+}
+
+bool Viewer::touchEnd( int id, int x, int y )
+{
+    return touchEndSignal( id, x, y );
+}
+
 bool Viewer::mouseScroll( float delta_y )
 {
+    // do extra frames to prevent imgui calculations ping
+    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
     if ( mouseScrollSignal( scrollForce * delta_y ) )
         return true;
 
     return true;
+}
+
+bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
+{
+    return spaceMouseMoveSignal( translate, rotate );
+}
+
+bool Viewer::spaceMouseDown( int key )
+{
+    return spaceMouseDownSignal( key );
+}
+
+bool Viewer::spaceMouseUp( int key )
+{
+    return spaceMouseUpSignal( key );
+}
+
+bool Viewer::spaceMouseRepeat( int key )
+{
+    return spaceMouseRepeatSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
@@ -961,6 +1016,11 @@ bool Viewer::interruptWindowClose()
         return true;
 
     return false;
+}
+
+void Viewer::joystickUpdateConnected( int jid, int event )
+{
+    spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
@@ -1333,6 +1393,17 @@ void Viewer::initRotationCenterObject_()
     rotationSphere->setFrontColor( color, false );
     rotationSphere->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     rotationSphere->setAncillary( true );
+}
+
+void Viewer::initSpaceMouseHandler_()
+{
+#ifdef _WIN32
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+#else
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+#endif
+
+    spaceMouseHandler_->initialize();
 }
 
 bool Viewer::windowShouldClose()

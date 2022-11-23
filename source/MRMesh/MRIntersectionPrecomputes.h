@@ -1,7 +1,10 @@
 #pragma once
-#include <boost/multiprecision/cpp_int.hpp>
 
 #include "MRVector3.h"
+
+#if defined(__x86_64__) || defined(_M_X64)
+#include <xmmintrin.h> //SSE instructions
+#endif
 
 namespace MR
 {
@@ -111,7 +114,7 @@ void findMaxVectorDim( int& dimX, int& dimY, int& dimZ, const Vector3<T>& dir )
 template<typename T>
 struct IntersectionPrecomputes
 {
-    // {1.f / dir}
+    // {1 / dir}
     Vector3<T> invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}

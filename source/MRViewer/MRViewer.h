@@ -16,6 +16,8 @@
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRImage.h"
 #include "MRMouseController.h"
+#include "MRTouchesController.h"
+#include "MRSpaceMouseController.h"
 #include <boost/signals2/signal.hpp>
 #include <cstdint>
 #include <queue>
@@ -38,6 +40,8 @@ auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
 
 namespace MR
 {
+
+class SpaceMouseHandler;
 
 // GLFW-based mesh viewer
 class Viewer
@@ -128,9 +132,19 @@ public:
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
+    MRVIEWER_API bool spaceMouseMove( const Vector3f& translate, const Vector3f& rotate );
+    MRVIEWER_API bool spaceMouseDown( int key );
+    MRVIEWER_API bool spaceMouseUp( int key );
+    MRVIEWER_API bool spaceMouseRepeat( int key );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
+    // Touch callbacks (now used in EMSCRIPTEN build only)
+    MRVIEWER_API bool touchStart( int id, int x, int y );
+    MRVIEWER_API bool touchMove( int id, int x, int y );
+    MRVIEWER_API bool touchEnd( int id, int x, int y );
     // This function is called when window should close, if return value is true, window will stay open
     MRVIEWER_API bool interruptWindowClose();
+    // callback to update connected / disconnected joystick
+    MRVIEWER_API void joystickUpdateConnected( int jid, int event );
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
@@ -419,6 +433,8 @@ public:
     RecentFilesStore recentFilesStore;
 
     MouseController mouseController;
+    TouchesController touchesController;
+    SpaceMouseController spaceMouseController;
 
     int window_width; // current width
     int window_height; // current height
@@ -484,6 +500,13 @@ public:
     KeySignal keyUpSignal; // signal is called on key up
     KeySignal keyDownSignal; // signal is called on key down
     KeySignal keyRepeatSignal; // signal is called when key is pressed for some time
+    // SpaceMouseEvents
+    using SpaceMouseMoveSignal = boost::signals2::signal<bool( const Vector3f& translate, const Vector3f& rotate ), SignalStopHandler>;
+    using SpaceMouseKeySignal = boost::signals2::signal<bool( int ), SignalStopHandler>;
+    SpaceMouseMoveSignal spaceMouseMoveSignal; // signal is called on spacemouse 3d controller (joystick) move
+    SpaceMouseKeySignal spaceMouseDownSignal; // signal is called on spacemouse key down
+    SpaceMouseKeySignal spaceMouseUpSignal; // signal is called on spacemouse key up
+    SpaceMouseKeySignal spaceMouseRepeatSignal; // signal is called when spacemouse key is pressed for some time
     // Render events
     using RenderSignal = boost::signals2::signal<void()>;
     RenderSignal preDrawSignal; // signal is called before scene draw (but after scene setup)
@@ -500,26 +523,26 @@ public:
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale
     InterruptCloseSignal interruptCloseSignal; // signal is called before close window (return true will prevent closing)
+    // Touch signals
+    using TouchSignal = boost::signals2::signal<bool(int,int,int), SignalStopHandler>;
+    TouchSignal touchStartSignal; // signal is called when any touch starts
+    TouchSignal touchMoveSignal; // signal is called when touch moves
+    TouchSignal touchEndSignal; // signal is called when touch stops
 
     // queue to ignore multiple mouse moves in one frame
-    struct MouseQueueEvent
+    class EventQueue
     {
-        enum Type
-        {
-            Down,
-            Up,
-            Move,
-            Drop // drop is here to know exact drop position 
-            // Scroll is doubtable
-        } type;
-        std::function<void()> callEvent;
-        // Constructor for emplace (for clang support)
-        MouseQueueEvent( Type typeP, std::function<void()> callEventP ) :
-            type{ typeP },
-            callEvent{ callEventP }
-        {}
-    };
-    std::queue<MouseQueueEvent> mouseEventQueue;
+    public:
+        using EventCallback = std::function<void()>;
+        // emplace event at the end of the queue
+        // replace last skipabl with new skipable
+        void emplace( EventCallback callEvent, bool skipable = false );
+        // execute all events in queue
+        void execute();
+    private:
+        std::queue<EventCallback> queue_;
+        bool lastSkipable_{false};
+    } eventQueue;
 private:
     Viewer();
     ~Viewer();
@@ -536,10 +559,6 @@ private:
     void shutdownPlugins_();
     // Search for python script to run or file to open on init
     void parseCommandLine_( int argc, char** argv );
-
-    // process all events stored in mouseEventsQueue
-    void processMouseEventsQueue_();
-
 #ifdef __EMSCRIPTEN__
     static void mainLoopFunc_();
 #endif
@@ -606,6 +625,7 @@ private:
     void initBasisAxesObject_();
     void initClippingPlaneObject_();
     void initRotationCenterObject_();
+    void initSpaceMouseHandler_();
 
     bool stopEventLoop_{ false };
 
@@ -627,6 +647,8 @@ private:
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
+
+    std::unique_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

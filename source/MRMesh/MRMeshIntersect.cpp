@@ -29,7 +29,7 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( tree[tree.rootNodeId()].box, rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
     {
         return std::nullopt;
     }
@@ -78,9 +78,9 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
             {
                 T lStart = rayStart, lEnd = rayEnd;
                 T rStart = rayStart, rEnd = rayEnd;
-                if( rayBoxIntersect( tree[node.l].box, rayOrigin, lStart, lEnd, prec ) )
+                if( rayBoxIntersect( Box3<T>{ tree[node.l].box }, rayOrigin, lStart, lEnd, prec ) )
                 {
-                    if( rayBoxIntersect( tree[node.r].box, rayOrigin, rStart, rEnd, prec ) )
+                    if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, rStart, rEnd, prec ) )
                     {
                         if( lStart > rStart )
                         {
@@ -100,7 +100,7 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
                 }
                 else
                 {
-                    if( rayBoxIntersect( tree[node.r].box, rayOrigin, rStart, rEnd, prec ) )
+                    if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, rStart, rEnd, prec ) )
                     {
                         nodesStack[++currentNode] = { node.r,rStart };
                     }
@@ -204,7 +204,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( tree[tree.rootNodeId()].box, rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
     {
         return;
     }
@@ -221,8 +221,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
     {
         convToInt = getToIntConverter( Box3d( tree[tree.rootNodeId()].box ) );
         convToFloat = getToFloatConverter( Box3d( tree[tree.rootNodeId()].box ) );
-        dP = Vector3f( line.p + s * line.d );
-        eP = Vector3f( line.p + e * line.d );
+        dP = Vector3f( line( s ) );
+        eP = Vector3f( line( e ) );
         pvc[3].pt = convToInt( dP );
         pvc[3].id = VertId( m.topology.vertSize() );
         pvc[4].pt = convToInt( eP );
@@ -275,7 +275,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
-                        found.proj.point = Vector3f( line.p + T( triIsect->t ) * line.d );
+                        found.proj.point = Vector3f( line( triIsect->t ) );
                         found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
                         if ( !callback( found ) )
@@ -287,12 +287,12 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         else
         {
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( tree[node.l].box, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( Box3<T>{ tree[node.l].box }, rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.l;
             }
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( tree[node.r].box, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.r;
             }

@@ -76,7 +76,6 @@ var updateEvents = function () {
             }
             bubbleUp = false;
         }
-        preventFunc(event);
         return bubbleUp;
     };
 

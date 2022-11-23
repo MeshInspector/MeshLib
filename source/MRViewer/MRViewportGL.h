@@ -6,6 +6,7 @@
 #include "MRMesh/MRLineSegm3.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRViewportId.h"
+#include "MRCommandLoop.h"
 
 namespace MR
 {
@@ -139,16 +140,16 @@ private:
 
     bool inited_ = false;
 
-    GLuint add_line_colors_vbo = 0;
-    GLuint add_line_vbo = 0;
-    GLuint add_line_vao = 0;
+    mutable GLuint add_line_colors_vbo = 0;
+    mutable GLuint add_line_vbo = 0;
+    mutable GLuint add_line_vao = 0;
 
-    GLuint add_point_colors_vbo = 0;
-    GLuint add_point_vbo = 0;
-    GLuint add_point_vao = 0;
+    mutable GLuint add_point_colors_vbo = 0;
+    mutable GLuint add_point_vbo = 0;
+    mutable GLuint add_point_vao = 0;
 
-    GLuint border_line_vbo = 0;
-    GLuint border_line_vao = 0;
+    mutable GLuint border_line_vbo = 0;
+    mutable GLuint border_line_vao = 0;
 
     // Additional lines and points list
     ViewportLinesWithColors previewLines_;

@@ -29,6 +29,9 @@ public:
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
 
+    // Returns the id of the main thread 
+    MRVIEWER_API static std::thread::id getMainThreadId();
+
 private:
     CommandLoop() = default;
     ~CommandLoop() = default;

@@ -65,4 +65,9 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread )
         cmd->callerThreadCV.wait( lock );
 }
 
+std::thread::id CommandLoop::getMainThreadId() 
+{
+    return instance_().mainThreadId_;
+}
+
 }

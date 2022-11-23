@@ -61,6 +61,9 @@ void ViewportGL::init()
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
 
+    if ( std::this_thread::get_id() != CommandLoop::getMainThreadId() )
+        return;
+
     // lines 
     GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
     GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
@@ -185,6 +188,7 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
 
     GL_EXEC( glViewport( (GLsizei) params.viewport.x, (GLsizei) params.viewport.y,
                          (GLsizei) params.viewport.z, (GLsizei) params.viewport.w ) );
+                         
     // Send points data to GL, install points properties 
     GL_EXEC( glBindVertexArray( add_point_vao ) );
 

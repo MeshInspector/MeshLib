@@ -1,4 +1,5 @@
 #include "MRMeshDelone.h"
+#include "MRBitSetParallelFor.h"
 #include "MRMesh.h"
 #include "MREdgeIterator.h"
 #include "MRRingIterator.h"
@@ -168,14 +169,21 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     MR_TIMER;
     MR_WRITER( mesh );
 
+    UndirectedEdgeBitSet flipCandidates;
+    flipCandidates.resize( mesh.topology.undirectedEdgeSize() );
+
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )
     {
         if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
             return flipsDone;
 
+        BitSetParallelForAll( flipCandidates, [&] ( UndirectedEdgeId e )
+        {
+            flipCandidates.set( e, !checkDeloneQuadrangleInMesh( mesh, e, settings ) );
+        } );
         int flipsDoneBeforeThisIter = flipsDone;
-        for ( UndirectedEdgeId e : undirectedEdges( mesh.topology ) )
+        for ( UndirectedEdgeId e : flipCandidates )
         {
             if ( checkDeloneQuadrangleInMesh( mesh, e, settings ) )
                 continue;

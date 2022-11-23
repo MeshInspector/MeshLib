@@ -11,7 +11,7 @@ def test_numpy_meshbuild():
     # however, you could also use float64
     verts = np.ndarray(shape=(4,3), dtype=np.float32, buffer=np.array([[0.0,0.0,0.0],[1.0,0.0,0.0],[1.0,1.0,0.0],[0.0,1.0,0.0]], dtype=np.float32))
 
-    mesh = mrmeshnumpy.topologyFromFacesVerts(faces, verts)
+    mesh = mrmeshnumpy.meshFromFacesVerts(faces, verts)
 
     assert (mesh.topology.getValidFaces().count() == 2)
     a = mrmesh.VertId(0)

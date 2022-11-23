@@ -158,6 +158,16 @@ public:
     float getShininess() const { return shininess_; }
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
+    /// returns intensity of reflections
+    float getSpecularStrength() const { return specularStrength_; }
+    /// sets intensity of reflections
+    virtual void setSpecularStrength( float specularStrength ) { specularStrength_ = specularStrength; needRedraw_ = true; }
+
+    /// returns intensity of non-directional light
+    float getAmbientStrength() const { return ambientStrength_; }
+    /// sets intensity of non-directional light
+    virtual void setAmbientStrength( float ambientStrength ) { specularStrength_ = ambientStrength; needRedraw_ = true; }
+
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     const std::vector<PositionedText>& getLabels() const { return labels_; }
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
@@ -213,6 +223,8 @@ protected:
     Color labelsColor_ = Color::black();
 
     float shininess_{35.0f}; ///< specular exponent
+    float specularStrength_{ 0.5f }; // reflection intensity
+    float ambientStrength_{ 0.1f }; //non - directional light intensity
 
     /// Main coloring options
     ColoringType coloringType_{ColoringType::SolidColor};

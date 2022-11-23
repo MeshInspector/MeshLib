@@ -163,8 +163,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useTexture;           // (in from base) enable texture
   uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
                                      
-  float ambientStrength = 0.1;
-  float specularStrength = 0.5;
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -295,8 +295,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useTexture;           // (in from base) enable texture
   uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
                                      
-  float ambientStrength = 0.1;
-  float specularStrength = 0.5;
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -448,8 +448,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useTexture;           // (in from base) enable texture
   uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
                                      
-  float ambientStrength = 0.1;
-  float specularStrength = 0.5;
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -670,8 +670,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform float specular_exponent;   // (in from base) lighting parameter
   uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
                                      
-  float ambientStrength = 0.1;
-  float specularStrength = 0.5;
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -776,8 +776,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
   flat in highp uint primitiveId;
                                      
-  float ambientStrength = 0.1;
-  float specularStrength = 0.5;
+  uniform float ambientStrength;    // (in from base) non-directional lighting
+  uniform float specularStrength;   // (in from base) reflection intensity
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)

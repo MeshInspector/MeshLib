@@ -62,6 +62,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     in.seekg( posStart );
     const float streamSize = float( posEnd - posStart );
 
+    std::vector<int> vs;
     for ( int i = 0;; ++i )
     {
         if ( !in )
@@ -101,18 +102,17 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 return v;
             };
 
-            int a = readVert();
-            int b = readVert();
-            int c = readVert();
-            if ( !in )
+            vs.clear();
+            for ( int v = readVert(); in; v = readVert() )
+                vs.push_back( v );
+            if ( vs.size() < 3 )
                 return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
-            t.push_back( { VertId( a-1 ), VertId( b-1 ), VertId( c-1 ) } );
-
-            readVert();
-            if ( !in.fail() )
-                return tl::make_unexpected( std::string( "Face with more than 3 vertices in OBJ-file" ) );
             if ( !in.bad() && !in.eof() )
                 in.clear();
+            
+            // TODO: make smarter triangulation based on point coordinates
+            for ( int j = 1; j + 1 < vs.size(); ++j )
+                t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
         }
         else if ( ch == 'o' )
         {

@@ -293,6 +293,9 @@ public:
     // Restes frames counter and events counter
     MRVIEWER_API void resetAllCounters();
 
+    // Activate / diactivate mouse scroll
+    MRVIEWER_API void setMouseScroll( bool active );
+
     /**
      * Captures part of window (redraw 3d scene over UI (without redrawing UI))
      * @param pos left-bottom corner of capturing area relative of left-down corner of window. default = size(0, 0)
@@ -640,6 +643,8 @@ private:
     bool glInitialized_{ false };
 
     bool isInDraw_{ false };
+
+    bool mouseScroll_{ true };
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

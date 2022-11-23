@@ -746,20 +746,20 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSe
     for (size_t layerIndex = 0; tif; ++layerIndex)
     {
         if ( settings.cb && !settings.cb( float( layerIndex ) / fileCount ) )
-            return tl::make_unexpected( "loading was cancelled" );
+            return tl::make_unexpected( "Loading was cancelled" );
 
         switch ( tp.bitsPerSample )
         {
         case 8:
             if ( !ReadVoxels<uint8_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
-                return tl::make_unexpected( "unsupported pixel format " );
+                return tl::make_unexpected( "Unsupported pixel format " );
             break;
         case 16:
             if ( !ReadVoxels<uint16_t>( outVolume, layerIndex, tif, tp, outVolume.min, outVolume.max ) )
-                return tl::make_unexpected( "unsupported pixel format " );
+                return tl::make_unexpected( "Unsupported pixel format " );
             break;
         default:
-            return tl::make_unexpected( "unsupported pixel format " );
+            return tl::make_unexpected( "Unsupported pixel format " );
         }
         
         TIFFClose( tif );
@@ -771,15 +771,15 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSe
             TiffParams currentTiffParams;
             std::tie(tif, currentTiffParams) = OpenTiff( dirIt->path() );
             if ( currentTiffParams != tp )
-                return tl::make_unexpected( "unable to process images with different params" );
+                return tl::make_unexpected( "Unable to process images with different params" );
         }
     }
     
     if ( settings.cb && !settings.cb( 1.0f ) )
-        return tl::make_unexpected( "loading was cancelled" );
+        return tl::make_unexpected( "Loading was cancelled" );
 
     if ( outVolume.data.empty() )
-        return tl::make_unexpected( "no voxel data" );
+        return tl::make_unexpected( "No voxel data" );
 
     VdbVolume res;
 

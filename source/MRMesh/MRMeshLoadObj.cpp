@@ -86,7 +86,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     return false;
                 (void)in.get();
                 auto s1 = (char)in.peek();
-                if ( s1 >= '0' && s1 <= '9' )
+                if ( ( s1 >= '0' && s1 <= '9' ) || s1 == '-' )
                 {
                     int x; //just skip for now
                     in >> x;
@@ -104,7 +104,15 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
             vs.clear();
             for ( int v = readVert(); in; v = readVert() )
+            {
+                if ( v < 0 )
+                {
+                    v += (int)points.size() + 1;
+                    if ( v <= 0 )
+                        return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
+                }
                 vs.push_back( v );
+            }
             if ( vs.size() < 3 )
                 return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
             if ( !in.bad() && !in.eof() )

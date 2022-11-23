@@ -87,6 +87,4 @@ if [[ "${NAME}" == "Ubuntu" ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
 fi
 cp -r ./lib/glad/include/* ./include/
 
- echo '/usr/local/lib' | tee -a  /etc/ld.so.conf
-
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

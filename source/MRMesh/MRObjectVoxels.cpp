@@ -54,7 +54,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
 {
-    construct( volume.data, volume.voxelSize );
+    construct( volume.data, volume.voxelSize, cb );
 }
 
 void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
@@ -74,7 +74,7 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     }
 }
 
-bool ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
+tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
 {
     if ( !vdbVolume_.data )
         return false; // no volume presented in this
@@ -83,7 +83,12 @@ bool ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurfa
 
     isoValue_ = iso;
     if ( updateSurface )
-        updateIsoSurface( recalculateIsoSurface( isoValue_, cb ) );
+    {
+        auto recRes = recalculateIsoSurface( isoValue_, cb );
+        if ( !recRes.has_value() )
+            return tl::make_unexpected( recRes.error() );
+        updateIsoSurface( *recRes );
+    }
     return updateSurface;
 }
 
@@ -114,17 +119,21 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
-std::shared_ptr<Mesh> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
+tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
 {
     if ( !vdbVolume_.data )
-        return {};
+        return tl::make_unexpected("No VdbVolume available");
     auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+    if ( !meshRes.has_value() )
+        return tl::make_unexpected( meshRes.error() );
 
     FloatGrid downsampledGrid = vdbVolume_.data;
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
         meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        if ( !meshRes.has_value() )
+            return tl::make_unexpected( meshRes.error() ); // "Operation was canceled."
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
 }
@@ -166,8 +175,11 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         {
             return cb( cbModifier + ( 1.0f - cbModifier ) * p );
         };
-
-        updateIsoSurface( recalculateIsoSurface( isoValue_, isoProgressCallback ) );
+        auto recRes = recalculateIsoSurface( isoValue_, isoProgressCallback );
+        std::shared_ptr<Mesh> recMesh;
+        if ( recRes.has_value() )
+            recMesh = *recRes;
+        updateIsoSurface( recMesh );
     }
 }
 

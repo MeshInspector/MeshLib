@@ -37,6 +37,8 @@ public:
 
     /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     [[nodiscard]] MRMESH_API IndexType find_last() const;
+    /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
+    [[nodiscard]] size_t nthSetBit( size_t n ) const;
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
@@ -100,6 +102,8 @@ public:
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
     [[nodiscard]] IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }
     [[nodiscard]] IndexType find_last() const { return IndexType( base::find_last() ); }
+    /// returns the location of nth set bit (where the first bit corresponds to n=0) or IndexType(npos) if there are less bit set
+    [[nodiscard]] IndexType nthSetBit( size_t n ) const { return IndexType( base::nthSetBit( n ) ); }
 
     TaggedBitSet & operator &= ( const TaggedBitSet & b ) { base::operator &= ( b ); return * this; }
     TaggedBitSet & operator |= ( const TaggedBitSet & b ) { base::operator |= ( b ); return * this; }

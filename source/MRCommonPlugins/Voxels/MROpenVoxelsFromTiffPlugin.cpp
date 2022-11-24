@@ -16,7 +16,7 @@ namespace MR
 class OpenVoxelsFromTiffPlugin : public StatePlugin
 {
     Vector3f voxelSize_;
-    VoxelsLoad::GridType gridType_ = VoxelsLoad::GridType::DenseGrid;
+    bool invertSurfaceOrientation_ = false;
 public:
     OpenVoxelsFromTiffPlugin()
         : StatePlugin( "Open Voxels From TIFF" )
@@ -30,7 +30,7 @@ public:
 bool OpenVoxelsFromTiffPlugin::onEnable_()
 {
     voxelSize_ = Vector3f::diagonal( 1.0f );
-    gridType_ = VoxelsLoad::GridType::DenseGrid;
+    invertSurfaceOrientation_ = false;
     return true;
 }
 
@@ -44,12 +44,11 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
-    ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 0.0f );
+    ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 1e-3f, 1000 );
 
-    RibbonButtonDrawer::GradientRadioButton( "Dense Grid", ( int* )( &gridType_ ), 0 );
-    ImGui::SameLine();
-    RibbonButtonDrawer::GradientRadioButton( "Level Set", ( int* )( &gridType_ ), 1 );
-
+    RibbonButtonDrawer::GradientCheckbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
+    ImGui::SetTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
+                                "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
     if ( RibbonButtonDrawer::GradientButton( "Open Directory", { -1, 0 } ) )
     {
         auto directory = openFolderDialog();
@@ -68,35 +67,49 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ( {
                 directory,
                 voxelSize_,
-                gridType_,
+                invertSurfaceOrientation_ ? VoxelsLoad::GridType::LevelSet : VoxelsLoad::GridType::DenseGrid,
                 ProgressBar::callBackSetProgress
             } );
 
-            if ( loadRes.has_value() && !ProgressBar::isCanceled() )
-            {
-                std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
-                voxelsObject->setName( "Loaded Voxels" );
-                ProgressBar::setTaskCount( 2 );
-                ProgressBar::nextTask( "Construct ObjectVoxels" );
-                voxelsObject->construct( *loadRes, ProgressBar::callBackSetProgress );
-                auto bins = voxelsObject->histogram().getBins();
-                auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
-
-                ProgressBar::nextTask( "Create ISO surface" );
-                voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                voxelsObject->select( true );
-                return [viewer, voxelsObject] ()
-                {
-                    AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( voxelsObject );
-                    viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                };
-            }
-            return[viewer, error = loadRes.error()]()
+            const auto returnError = [viewer, loadRes ]() -> void
             {
                 auto menu = viewer->getMenuPlugin();
-                if ( menu )
-                    menu->showErrorModal( error );
+                if ( !menu )
+                    return;
+
+                if ( ProgressBar::isCanceled() )
+                {
+                    menu->showErrorModal( "Operation was cancelled" );
+                    return;
+                }
+
+                menu->showErrorModal( loadRes.error() );
+            };            
+
+            if ( ProgressBar::isCanceled() || !loadRes.has_value() )
+                return returnError;
+
+            std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
+            voxelsObject->setName( "Loaded Voxels" );
+            ProgressBar::setTaskCount( 2 );
+            ProgressBar::nextTask( "Construct ObjectVoxels" );
+            voxelsObject->construct( *loadRes, ProgressBar::callBackSetProgress );
+            if ( ProgressBar::isCanceled() || !loadRes.has_value() )
+                return returnError;
+
+            auto bins = voxelsObject->histogram().getBins();
+            auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
+
+            ProgressBar::nextTask( "Create ISO surface" );
+            if ( ProgressBar::isCanceled() || !voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress ).has_value() )
+                return returnError;
+                
+            voxelsObject->select( true );
+            return [viewer, voxelsObject] ()
+            {
+                AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
+                SceneRoot::get().addChild( voxelsObject );
+                viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
             };
         }, 2 );
     }

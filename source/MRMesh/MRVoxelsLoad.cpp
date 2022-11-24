@@ -731,6 +731,9 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSe
 {
     const auto dirEnd = std::filesystem::directory_iterator{};
     const auto fileCount = std::distance( std::filesystem::directory_iterator( settings.dir ), dirEnd );
+
+    if ( fileCount < 2 )
+        return tl::make_unexpected( "Too few files in the directory" );
     
     auto dirIt = std::filesystem::directory_iterator( settings.dir );
     auto [tif, tp] = OpenTiff( dirIt->path() );

@@ -322,13 +322,13 @@ void ProgressBar::postEvent_()
     if ( lastPostEvent_ + minInterval > now )
         return;
     lastPostEvent_ = now;
-    glfwPostEmptyEvent();
+    getViewerInstance().postEmptyEvent();
 }
 
 void ProgressBar::finish_()
 {
     finished_ = true;
-    glfwPostEmptyEvent();
+    getViewerInstance().postEmptyEvent();
 }
 
 }

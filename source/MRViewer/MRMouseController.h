@@ -43,6 +43,10 @@ public:
 
     bool isCursorInside() const { return isCursorInside_; }    
 
+    // dropOldEventsOnNew flag - drop active mouse down state (calling mouseUp) if new mouse event happens
+    bool isDropOldEventOnNewActive() const { return dropOldEventsOnNew_; }
+    void dropOldEventsOnNew( bool on ) { dropOldEventsOnNew_ = on; };
+
     // returns nullopt if no control is present for given mode, otherwise returns associated control
     MRVIEWER_API std::optional<MouseControlKey> findControlByMode( MouseMode mode ) const;
     // make string from mouse button and modifier
@@ -61,6 +65,9 @@ private:
 
     bool isCursorInside_{ false };
     void cursorEntrance_( bool entered );
+
+    bool dropOldEventsOnNew_{ false };
+    void resetAllIfNeeded_();
 
     Vector3f downTranslation_;
     // screen space

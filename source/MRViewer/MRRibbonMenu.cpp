@@ -11,6 +11,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWasm.h"
 #include "MRRibbonIcons.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
@@ -460,6 +461,12 @@ void RibbonMenu::drawCollapseButton_()
         else
         {
             openedTimer_ -= ImGui::GetIO().DeltaTime;
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+            EM_ASM( postEmptyEvent( $0 ), int( openedTimer_ * 1000 ) );
+#pragma clang diagnostic pop
+#endif
             asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ) );
             if ( openedTimer_ <= 0.0f )
                 collapseState_ = CollapseState::Closed;

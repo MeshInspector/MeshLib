@@ -1,4 +1,5 @@
 #include "MRCommandLoop.h"
+#include "MRViewer.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
 
@@ -60,7 +61,7 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread )
     std::unique_lock<std::mutex> lock( inst.mutex_ );
     inst.commands_.push( cmd );
 
-    glfwPostEmptyEvent();
+    getViewerInstance().postEmptyEvent();
     if ( blockThread )
         cmd->callerThreadCV.wait( lock );
 }

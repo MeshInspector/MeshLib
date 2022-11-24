@@ -97,7 +97,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( ProgressBar::isCanceled() || !loadRes.has_value() )
                 return returnError;
 
-            auto bins = voxelsObject->histogram().getBins();
+            const auto& bins = voxelsObject->histogram().getBins();
             auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
             ProgressBar::nextTask( "Create ISO surface" );

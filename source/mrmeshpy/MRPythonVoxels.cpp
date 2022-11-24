@@ -2,6 +2,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
+#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRFloatGrid.h"
 #include "MRMesh/MRVDBConversions.h"
 #include "MRMesh/MRMesh.h"
@@ -94,6 +95,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
     m.def( "saveAllSlicesToImage", ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const std::string& extension, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage,
        pybind11::arg( "path" ), pybind11::arg( "extension"), pybind11::arg("vdbVolume"), pybind11::arg("slicePlain"), pybind11::arg("cb") = MR::ProgressCallback{},
        "Save the slice by the active plane through the sliceNumber to an image file.\n" );
+
+    pybind11::enum_<MR::VoxelsLoad::GridType>( m, "GridType" ).
+        value( "DenseGrid", MR::VoxelsLoad::GridType::DenseGrid, "Represents dense volume" ).
+        value( "LevelSet", MR::VoxelsLoad::GridType::LevelSet, "Represents distances volume" );
+
+    pybind11::class_<MR::VoxelsLoad::LoadingTiffSettings>( m, "LoadingTiffSettings", "Settings structure for loadTiffDir function" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "dir", &MR::VoxelsLoad::LoadingTiffSettings::dir, "Path to directory" ).
+        def_readwrite( "voxelSize", &MR::VoxelsLoad::LoadingTiffSettings::voxelSize, "Size of voxel" ).
+        def_readwrite( "gridType", &MR::VoxelsLoad::LoadingTiffSettings::gridType, "Type of the grid: DenseGrid or LevelSet" ).
+        def_readwrite( "progressCallback", &MR::VoxelsLoad::LoadingTiffSettings::cb, "Callback to report progress" );
+
+    m.def( "loadTiffDir", ( tl::expected<MR::VdbVolume, std::string>( * ) ( const MR::VoxelsLoad::LoadingTiffSettings& ) )& MR::VoxelsLoad::loadTiffDir,
+        pybind11::arg( "settings" ),
+        "Load voxels from a directory with TIFF images.\n",
+        "settings - Settings structure for loadTiffDir function\n" );
 
     m.def( "floatGridToVdbVolume", &MR::floatGridToVdbVolume, pybind11::arg( "grid" ),
         "fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)" );

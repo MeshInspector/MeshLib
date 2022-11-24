@@ -4,6 +4,10 @@ var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
 }
 
+var postEmptyEvent = function (timer) {
+    setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', [], []); }, timer);
+}
+
 var getPos = function (event, rect) {
     var cw = Module["canvas"].width;
     var ch = Module["canvas"].height;
@@ -60,17 +64,14 @@ var updateEvents = function () {
         if (event.pointerType == "mouse")
             oldCalcMovementFunction(event);
         else if (event.pointerType == "touch") {
-            if (event.type == "pointerdown")
-            {
+            if (event.type == "pointerdown") {
                 pointerCounter++;
                 touchEventProcess(event, 'emsTouchStart');
             }
-            else if (event.type == "pointermove")
-            {
+            else if (event.type == "pointermove") {
                 touchEventProcess(event, 'emsTouchMove');
             }
-            else if (event.type == "pointerup" || event.type == "pointercancel")
-            {
+            else if (event.type == "pointerup" || event.type == "pointercancel") {
                 touchEventProcess(event, 'emsTouchEnd');
                 pointerCounter--;
             }
@@ -91,7 +92,9 @@ var updateEvents = function () {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
         if (!GLFW.active.mouseButtonFunc) return;
-        getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+        (function (a1, a2, a3, a4) {
+            dynCall_viiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
+        })(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
     }
 
     GLFW.onMousemove = function (event) {
@@ -100,7 +103,9 @@ var updateEvents = function () {
         if (!Browser.calculateMouseEvent(event)) return;
         if (event.target != Module["canvas"] || !GLFW.active.cursorPosFunc)
             return;
-        getWasmTableEntry(GLFW.active.cursorPosFunc)(GLFW.active.id, Browser.mouseX, Browser.mouseY)
+        (function (a1, a2, a3) {
+            dynCall_vidd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);
+        })(GLFW.active.id, Browser.mouseX, Browser.mouseY);
     }
 
     // add new events

@@ -53,6 +53,7 @@
 #include "MRSwapRootAction.h"
 
 #ifdef __EMSCRIPTEN__
+#include <emscripten/html5.h>
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -76,6 +77,11 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     return 1;
 }
 
+EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent()
+{
+    MR::getViewerInstance().postEmptyEvent();
+}
+
 }
 #endif
 #include "MRMesh/MRSerializer.h"
@@ -92,15 +98,12 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
         mb = MR::Viewer::MouseButton::Middle;
 
     auto* viewer = &MR::getViewerInstance();
-    if ( action == GLFW_PRESS )
-        viewer->eventQueue.emplace( [mb, modifier, viewer] ()
+    viewer->eventQueue.emplace( [mb, action, modifier, viewer] ()
     {
-        viewer->mouseDown( mb, modifier );
-    } );
-    else
-        viewer->eventQueue.emplace( [mb, modifier, viewer] ()
-    {
-        viewer->mouseUp( mb, modifier );
+        if ( action == GLFW_PRESS )
+            viewer->mouseDown( mb, modifier );
+        else
+            viewer->mouseUp( mb, modifier );
     } );
 }
 
@@ -111,58 +114,91 @@ static void glfw_error_callback( int /*error*/, const char* description )
 
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
 {
-    MR::Viewer::instanceRef().keyPressed( codepoint, 0 );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [codepoint, viewer] ()
+    {
+        viewer->keyPressed( codepoint, 0 );
+    } );
 }
 
 static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int modifier )
 {
-    if ( action == GLFW_PRESS )
-        MR::Viewer::instanceRef().keyDown( key, modifier );
-    else if ( action == GLFW_RELEASE )
-        MR::Viewer::instanceRef().keyUp( key, modifier );
-    else if ( action == GLFW_REPEAT )
-        MR::Viewer::instanceRef().keyRepeat( key, modifier );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [action, key, modifier, viewer] ()
+    {
+        if ( action == GLFW_PRESS )
+            viewer->keyDown( key, modifier );
+        else if ( action == GLFW_RELEASE )
+            viewer->keyUp( key, modifier );
+        else if ( action == GLFW_REPEAT )
+            viewer->keyRepeat( key, modifier );
+    } );
 }
 
 static void glfw_window_size( GLFWwindow* /*window*/, int width, int height )
 {
-    MR::Viewer::instanceRef().postResize( width, height );
+    auto viewer = &MR::getViewerInstance();
+    viewer->postResize( width, height );
+    viewer->postEmptyEvent();
 }
 
 static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
 {
     // need for remember window pos and size before maximize
     // located here because glfw_window_pos calls before glfw_window_maximize and glfw_window_iconify (experience)
-    auto& viewer = MR::Viewer::instanceRef();
-    viewer.windowOldPos = viewer.windowSavePos;
-    viewer.postSetPosition( xPos, yPos );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [xPos, yPos, viewer] ()
+    {
+        viewer->windowOldPos = viewer->windowSavePos;
+        viewer->postSetPosition( xPos, yPos );
+    } );
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 {
-    MR::getViewerInstance().cursorEntranceSignal( bool( entered ) );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [entered, viewer] ()
+    {
+        viewer->cursorEntranceSignal( bool( entered ) );
+    } );
 }
 
 #ifndef __EMSCRIPTEN__
 static void glfw_window_maximize( GLFWwindow* /*window*/, int maximized )
 {
-    MR::Viewer::instanceRef().postSetMaximized( bool( maximized ) );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [maximized, viewer] ()
+    {
+        viewer->postSetMaximized( bool( maximized ) );
+    } );
 }
 
 static void glfw_window_iconify( GLFWwindow* /*window*/, int iconified )
 {
-    MR::Viewer::instanceRef().postSetIconified( bool( iconified ) );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [iconified, viewer] ()
+    {
+        viewer->postSetIconified( bool( iconified ) );
+    } );
 }
 
 static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
-    MR::Viewer::instanceRef().postFocus( bool( focused ) );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [focused, viewer] ()
+    {
+        viewer->postFocus( bool( focused ) );
+    } );
 }
 #endif
 
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
 {
-    MR::Viewer::instanceRef().postRescale( xscale, yscale );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [xscale, yscale, viewer] ()
+    {
+        viewer->postRescale( xscale, yscale );
+    } );
 }
 
 static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
@@ -178,7 +214,11 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
 
 static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
-    MR::getViewerInstance().mouseScroll( float( y ) );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [y, viewer] ()
+    {
+        viewer->mouseScroll( float( y ) );
+    } );
 }
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
@@ -191,15 +231,20 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         paths[i] = MR::pathFromUtf8( filenames[i] );
     }
-    MR::getViewerInstance().eventQueue.emplace( [paths] ()
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [paths, viewer] ()
     {
-        MR::getViewerInstance().dragDrop( paths );
+        viewer->dragDrop( paths );
     } );
 }
 
 static void glfw_joystick_callback( int jid, int event )
 {
-    MR::getViewerInstance().joystickUpdateConnected( jid, event );
+    auto viewer = &MR::getViewerInstance();
+    viewer->eventQueue.emplace( [jid, event, viewer] ()
+    {
+        viewer->joystickUpdateConnected( jid, event );
+    } );
 }
 
 namespace MR
@@ -314,12 +359,42 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 }
 
 #ifdef __EMSCRIPTEN__
-void Viewer::mainLoopFunc_()
+EM_BOOL emsMainLoopFunc( double, void* )
 {
     auto& viewer = getViewerInstance();
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
+    return EM_TRUE;
+}
+
+void Viewer::mainLoopFunc_()
+{
+    constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+    for (;;)
+    {
+        if ( isAnimating )
+        {
+            const double minDuration = 1e3 / double( animationMaxFps );
+            emscripten_sleep( std::max( int( minDuration ), minEmsSleep ) );
+        }
+        else if ( !isAnimating && eventQueue.empty() )
+        {
+            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            continue;
+        }
+
+        do
+        {
+            if ( forceRedrawFramesWithoutSwap_ == 0 )
+            {
+                emscripten_request_animation_frame( emsMainLoopFunc, nullptr ); // call with swap
+                emscripten_sleep( minEmsSleep );
+            }
+            else
+                emsMainLoopFunc( 0.0, nullptr ); // call without swap
+        } while ( forceRedrawFrames_ > 0 || needRedraw_() );
+    }
 }
 #endif
 
@@ -345,14 +420,16 @@ int Viewer::launch( const LaunchParams& params )
 
     parseCommandLine_( params.argc, params.argv );
 
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(mainLoopFunc_, 0, true);
-#else
     if ( params.startEventLoop )
+    {
+#ifdef __EMSCRIPTEN__
+        mainLoopFunc_();
+#else
         launchEventLoop();
+#endif
+    }
     if ( params.close )
         launchShut();
-#endif
     return EXIT_SUCCESS;
 }
 
@@ -583,7 +660,6 @@ void Viewer::launchEventLoop()
             eventQueue.execute();
         }
         spaceMouseHandler_->handle();
-
     }
 }
 
@@ -710,6 +786,17 @@ void Viewer::EventQueue::execute()
         queue_.front()();
         queue_.pop();
     }
+}
+
+bool Viewer::EventQueue::empty() const
+{
+    return queue_.empty();
+}
+
+void Viewer::postEmptyEvent()
+{
+    eventQueue.emplace( [] () {} );
+    glfwPostEmptyEvent();
 }
 
 Viewer::Viewer() :

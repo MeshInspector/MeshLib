@@ -31,23 +31,28 @@ nanoseconds TimeRecord::childTime() const
     return res;
 }
 
-void printTimeRecord( const TimeRecord& timeRecord, const std::string& name, int indent, const std::shared_ptr<spdlog::logger>& loggerHandle )
+void printTimeRecord( const TimeRecord& timeRecord, const std::string& name, int indent, const std::shared_ptr<spdlog::logger>& loggerHandle, double minTimeSec )
 {
+    auto sec = timeRecord.seconds();
+    if ( sec < minTimeSec )
+        return;
+
     std::stringstream ss;
     ss << std::setw( 9 )  << std::right << timeRecord.count;
-    ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << timeRecord.seconds();
+    ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << sec;
     ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << timeRecord.mySeconds();
     ss << std::string( indent, ' ' ) << name;
     loggerHandle->info( ss.str() );
 
     for ( const auto& child : timeRecord.children )
-        printTimeRecord( child.second, child.first, indent + 4, loggerHandle );
+        printTimeRecord( child.second, child.first, indent + 4, loggerHandle, minTimeSec );
 }
 
 struct RootTimeRecord : TimeRecord
 {
     time_point<high_resolution_clock> started = high_resolution_clock::now();
     bool printTreeInDtor = true;
+    double minTimeSec = 0.1;
     // prolong logger life
     std::shared_ptr<spdlog::logger> loggerHandle = Logger::instance().getSpdLogger();
     RootTimeRecord()
@@ -56,7 +61,7 @@ struct RootTimeRecord : TimeRecord
     }
     void printTree()
     {
-        loggerHandle->info( "Time Tree:" );
+        loggerHandle->info( "Time Tree (min printed time {} sec):", minTimeSec );
         std::stringstream ss;
         ss << std::setw( 9 ) << std::right << "Count";
         ss << std::setw( 12 ) << std::right << "Time";
@@ -64,7 +69,7 @@ struct RootTimeRecord : TimeRecord
         ss << "    Name";
         loggerHandle->info( ss.str() );
         time = high_resolution_clock::now() - started;
-        printTimeRecord( *this, "(total)", 4, loggerHandle );
+        printTimeRecord( *this, "(total)", 4, loggerHandle, minTimeSec );
     }
     ~RootTimeRecord()
     {
@@ -78,9 +83,10 @@ static RootTimeRecord rootTimeRecord;
 static TimeRecord* currentRecord = &rootTimeRecord;
 static auto mainThreadId = std::this_thread::get_id();
 
-void printTimingTreeAtEnd( bool on )
+void printTimingTreeAtEnd( bool on, double minTimeSec )
 {
     rootTimeRecord.printTreeInDtor = on;
+    rootTimeRecord.minTimeSec = minTimeSec;
 }
 
 void printCurrentTimerBranch()
@@ -108,10 +114,11 @@ void printCurrentTimerBranch()
     }
 }
 
-void printTimingTreeAndStop()
+void printTimingTreeAndStop( double minTimeSec )
 {
+    rootTimeRecord.printTreeInDtor = false;
+    rootTimeRecord.minTimeSec = minTimeSec;
     rootTimeRecord.printTree();
-    printTimingTreeAtEnd( false );
 }
 
 void Timer::restart( std::string name )

@@ -35,13 +35,15 @@ private:
 };
 
 /// enables or disables printing of timing tree when application terminates
-MRMESH_API void printTimingTreeAtEnd( bool on );
+/// \param minTimeSec omit printing records with time spent less than given value in seconds
+MRMESH_API void printTimingTreeAtEnd( bool on, double minTimeSec = 0.1 );
 
 /// prints current timer branch
 MRMESH_API void printCurrentTimerBranch();
 
 /// prints the current timing tree, then calls printTimingTreeAtEnd( false );
-MRMESH_API void printTimingTreeAndStop();
+/// \param minTimeSec omit printing records with time spent less than given value in seconds
+MRMESH_API void printTimingTreeAndStop( double minTimeSec = 0.1 );
 
 /// \}
 

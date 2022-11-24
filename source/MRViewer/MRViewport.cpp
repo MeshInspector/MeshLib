@@ -45,8 +45,7 @@ Viewport::~Viewport()
 
 void Viewport::init()
 {
-    viewportGL_ = ViewportGL();
-    viewportGL_.init();
+    viewportGL_ = ViewportGL();  
     init_axes();
     updateSceneBox_();
     setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );

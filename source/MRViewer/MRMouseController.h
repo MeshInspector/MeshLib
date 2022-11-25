@@ -58,7 +58,7 @@ public:
     MRVIEWER_API static MouseControlKey keyToMouseAndMod( int key );
 
     // Activate / diactivate mouse scroll in scene
-    MRVIEWER_API bool setMouseScroll( bool active );
+    MRVIEWER_API void setMouseScroll( bool active );
 private:
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );

@@ -199,8 +199,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
         std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
 
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->setMouseScroll( joystickIndex_ == -1 );
+    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 );
 }
 
 }

@@ -233,6 +233,10 @@ public:
                    std::function<void( ObjectLinesHolder*, const float& )> setter,
                    bool lineWidth = false );
 
+  void make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<float( const VisualObject* )> getter,
+    std::function<void( VisualObject*, const float& )> setter);
+
   MRVIEWER_API void draw_custom_plugins();
 
   void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };

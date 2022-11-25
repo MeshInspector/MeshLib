@@ -1249,6 +1249,22 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
 
+    make_light_strength( selectedVisualObjs, "Ambient Strength", [&] ( const VisualObject* obj )
+    {
+        return obj->getAmbientStrength();
+    }, [&] ( VisualObject* obj, float value )
+    {
+        obj->setAmbientStrength( value );
+    } );
+
+    make_light_strength( selectedVisualObjs, "Specular Strength", [&] ( const VisualObject* obj )
+    {
+        return obj->getSpecularStrength();
+    }, [&] ( VisualObject* obj, float value )
+    {
+        obj->setSpecularStrength( value );
+    } );
+
     return someChanges;
 }
 
@@ -1726,6 +1742,39 @@ void ImGuiMenu::make_color_selector( std::vector<std::shared_ptr<ObjectT>> selec
     if ( color != colorConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data.get(), color );
+}
+
+void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<float( const VisualObject* )> getter,
+    std::function<void( VisualObject*, const float& )> setter
+)
+{
+    auto obj = selectedVisualObjs[0];
+    auto value = getter( obj.get() );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i].get() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 0.f;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 40 * menu_scaling() );
+    ImGui::DragFloatValid( label, &value, 0.01f, 0.0f, 1.0f, "%.3f" );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data.get(), value );
 }
 
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 

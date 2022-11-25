@@ -166,7 +166,7 @@ public:
     /// returns intensity of non-directional light
     float getAmbientStrength() const { return ambientStrength_; }
     /// sets intensity of non-directional light
-    virtual void setAmbientStrength( float ambientStrength ) { specularStrength_ = ambientStrength; needRedraw_ = true; }
+    virtual void setAmbientStrength( float ambientStrength ) { ambientStrength_ = ambientStrength; needRedraw_ = true; }
 
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     const std::vector<PositionedText>& getLabels() const { return labels_; }

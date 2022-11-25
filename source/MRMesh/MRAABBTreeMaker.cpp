@@ -98,6 +98,7 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
 
     if ( numThreads >= 2 && s.numLeaves >= 32 )
     {
+        // split subtree between two threads
         const auto& lr = makeNode_( s );
         const int rThreads = numThreads / 2;
         const int lThreads = numThreads - rThreads;
@@ -108,6 +109,8 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
         return;
     }
 
+    // process subtree in this thread only
+    Timer t( "finishing" );
     std::stack<Subtree> stack;
     stack.push( s );
 
@@ -139,7 +142,19 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
 
     const auto numLeaves = (int)boxedLeaves_.size();
     nodes_.resize( getNumNodes( numLeaves ) );
-    makeSubtree_( Subtree( NodeId{ 0 }, 0, numLeaves ), std::thread::hardware_concurrency() );
+
+    // to equally balance the load on threads, subdivide the task on
+    // a power of two subtasks, which is at least twice the hardware concurrency
+    int numThreads = 1;
+    int target = std::thread::hardware_concurrency();
+    if ( target > 1 )
+        numThreads *= 2;
+    while ( target > 1 )
+    {
+        numThreads *= 2;
+        target = ( target + 1 ) / 2;
+    }
+    makeSubtree_( Subtree( NodeId{ 0 }, 0, numLeaves ), numThreads );
 
     return std::move( nodes_ );
 }

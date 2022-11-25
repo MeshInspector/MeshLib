@@ -594,7 +594,7 @@ void ImGuiMenu::draw_helpers()
                                         style.FramePadding.y * 4 );
         const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
         const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
-        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
+        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
         ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
         ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
                       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );

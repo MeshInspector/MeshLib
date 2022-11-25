@@ -515,7 +515,10 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
     {
         SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
-        SetNextWindowSizeConstraints( ImVec2( params.width, -1.0f ), ImVec2( params.width, -1.0f ) );
+        auto pHeight = params.height;
+        if ( pHeight <= 0.0f )
+            pHeight = -1.0f;
+        SetNextWindowSizeConstraints( ImVec2( params.width, pHeight ), ImVec2( params.width, pHeight ) );
     }
 
     auto context = ImGui::GetCurrentContext();

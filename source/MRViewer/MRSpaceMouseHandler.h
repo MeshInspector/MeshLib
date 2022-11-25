@@ -63,6 +63,9 @@ public:
 
     /// update after connect / disconnect devices
     virtual void updateConnected( int /*jid*/, int /*event*/ ) {};
+
+    /// reset input data
+    virtual void resetInput() {};
 };
 
 }

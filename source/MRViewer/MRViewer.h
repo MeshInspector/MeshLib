@@ -647,6 +647,7 @@ private:
     bool isInDraw_{ false };
 
     bool mouseScroll_{ true };
+    bool needResetSpaceMouse_{ false };
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

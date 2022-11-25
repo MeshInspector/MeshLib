@@ -644,6 +644,11 @@ void Viewer::launchEventLoop()
             draw( true );
             glfwPollEvents();
             eventQueue.execute();
+            if ( needResetSpaceMouse_ )
+            {
+                needResetSpaceMouse_ = false;
+                spaceMouseHandler_->resetInput();
+            }
             spaceMouseHandler_->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
@@ -658,6 +663,11 @@ void Viewer::launchEventLoop()
         {
             glfwWaitEvents();
             eventQueue.execute();
+        }
+        if ( needResetSpaceMouse_ )
+        {
+            needResetSpaceMouse_ = false;
+            spaceMouseHandler_->resetInput();
         }
         spaceMouseHandler_->handle();
     }
@@ -1380,6 +1390,8 @@ void Viewer::postFocus( bool focused )
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )
         MR::Viewer::instanceRef().draw( true );
+    if ( focused )
+        needResetSpaceMouse_ = true;
 }
 
 void Viewer::postRescale( float x, float y )

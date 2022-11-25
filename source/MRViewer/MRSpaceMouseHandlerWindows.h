@@ -11,6 +11,7 @@ public:
     virtual void initialize() override;
     virtual void handle() override;
     virtual void updateConnected( int jid, int event );
+    virtual void resetInput() override;
 private:
     bool initialized_{ false };
     std::array<float, 6> axes_;

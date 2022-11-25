@@ -117,7 +117,6 @@ void SpaceMouseHandlerWindows::handle()
     if ( !initialized_ || joystickIndex_ == -1 )
         return;
 
-
     int count;
     const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
     if ( count != 6 )
@@ -171,6 +170,16 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
     updateConnected_();
 }
 
+void SpaceMouseHandlerWindows::resetInput()
+{
+    if ( joystickIndex_ != -1 )
+    {
+        int count;
+        const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
+        std::copy( axesNew, axesNew + 6, axes_.begin() );
+    }
+}
+
 void SpaceMouseHandlerWindows::updateConnected_()
 {
     joystickIndex_ = -1;
@@ -189,12 +198,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
         }
     }
 
-    if ( joystickIndex_ != -1 )
-    {
-        int count;
-        const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-        std::copy( axesNew, axesNew + 6, axes_.begin() );
-    }
+    resetInput();
     getViewerInstance().setMouseScroll( joystickIndex_ == -1 );
 }
 

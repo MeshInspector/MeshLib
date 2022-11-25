@@ -78,6 +78,11 @@ MouseController::MouseControlKey MouseController::keyToMouseAndMod( int key )
     return { MouseButton( key >> 6 ),key % ( 1 << 6 ) };
 }
 
+void MouseController::setMouseScroll( bool active )
+{
+    scrollActive_ = active;
+}
+
 void MouseController::connect()
 {
     downState_.resize( 3 );
@@ -197,6 +202,9 @@ bool MouseController::preMouseMove_( int x, int y)
 bool MouseController::mouseScroll_( float delta )
 {
     resetAllIfNeeded_();
+
+    if ( !scrollActive_ )
+        return false;
 
     if ( currentMode_ != MouseMode::None )
         return false;

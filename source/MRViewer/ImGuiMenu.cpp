@@ -362,7 +362,7 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
     ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    return ImGui::GetIO().WantCaptureMouse && mouseScrollActive_;
+    return ImGui::GetIO().WantCaptureMouse;
 }
 
 // Keyboard IO
@@ -2559,11 +2559,6 @@ void ImGuiMenu::setShowShortcuts( bool val )
 bool ImGuiMenu::getShowShortcuts() const
 {
     return showShortcuts_;
-}
-
-bool ImGuiMenu::setMouseScroll( bool active )
-{
-    return mouseScrollActive_ = active;
 }
 
 void ImGuiMenu::PluginsCache::validate( const std::vector<ViewerPlugin*>& viewerPlugins )

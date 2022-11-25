@@ -56,6 +56,9 @@ public:
     MRVIEWER_API static int mouseAndModToKey( const MouseControlKey& key );
     // cast simple int key to mouse button and modifier
     MRVIEWER_API static MouseControlKey keyToMouseAndMod( int key );
+
+    // Activate / diactivate mouse scroll in scene
+    MRVIEWER_API bool setMouseScroll( bool active );
 private:
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
@@ -83,6 +86,8 @@ private:
 
     MouseModeMap map_;
     MouseModeBackMap backMap_;
+
+    bool scrollActive_{ true };
 };
 
 }

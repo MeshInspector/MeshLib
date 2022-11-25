@@ -14,12 +14,17 @@ ENDIF() # MR_EMSCRIPTEN
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(NOT MR_EMSCRIPTEN)
+pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+
 if(GTKMM_FOUND)
-  target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
+	message("------------------------------${GTKMM_INCLUDE_DIRS}")
+	include_directories(${GTKMM_INCLUDE_DIRS})
+  target_include_directories( ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${GTKMM_INCLUDE_DIRS}>
+		  											$<INSTALL_INTERFACE:${GTKMM_INCLUDE_DIRS}>)
 endif()
 
 set(GLAD_INCLUDES ${MESHLIB_THIRDPARTY_LIB_DIR}/glad/include/)
-target_include_directories( ${PROJECT_NAME} PUBLIC ${GLAD_INCLUDES})
+target_include_directories( ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${GLAD_INCLUDES}> $<INSTALL_INTERFACE:include>)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 file(GLOB JSONS "*.json")
@@ -81,3 +86,7 @@ ELSE() # MR_EMSCRIPTEN
 	file(COPY ${IMGUI_FONTS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	file(COPY "resource" DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 ENDIF() # MR_EMSCRIPTEN
+
+install(TARGETS ${PROJECT_NAME} DESTINATION "${main_lib_dest}")
+install(FILES ${HEADERS} DESTINATION "${include_dest}/${PROJECT_NAME}")
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} DESTINATION "${main_lib_dest}")

@@ -146,7 +146,6 @@ enable_testing()
 IF(NOT MR_EMSCRIPTEN)
 
 find_package(glfw3 CONFIG REQUIRED)
-pkg_check_modules(GTKMM gtkmm-3.0)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
@@ -157,6 +156,12 @@ IF(NOT APPLE)
 ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
+
+set(bin_dest "bin")
+set(include_dest "include/MeshLib")
+set(main_lib_dest "lib/MeshLib")
+set(py_lib_dest "${main_lib_dest}/meshlib")
+
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
@@ -169,3 +174,12 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+
+
+
+install(FILES meshlib-config.cmake DESTINATION ${main_lib_dest})
+
+install(EXPORT MRMesh DESTINATION "${main_lib_dest}")
+install(EXPORT MRViewer DESTINATION "${main_lib_dest}")
+install(EXPORT MRCommonPlugins DESTINATION "${main_lib_dest}")
+install(EXPORT MRViewerApp DESTINATION "${main_lib_dest}")

@@ -28,3 +28,6 @@ ELSE()
         fmt
     )
 ENDIF()
+
+install(TARGETS ${PROJECT_NAME} DESTINATION "${py_lib_dest}")
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} DESTINATION "${py_lib_dest}")

@@ -39,3 +39,8 @@ ELSE()
 		imgui
 		)
 ENDIF()
+
+install(TARGETS ${PROJECT_NAME} DESTINATION "${main_lib_dest}")
+install(FILES ${HEADERS} DESTINATION "${include_dest}/${PROJECT_NAME}")
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} DESTINATION "${main_lib_dest}")
+

@@ -17,3 +17,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         spdlog
         Boost::boost
 )
+
+install(TARGETS ${PROJECT_NAME} DESTINATION "${bin_dest}")
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} DESTINATION "${lib_dest}")

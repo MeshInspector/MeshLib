@@ -109,11 +109,13 @@ cp build/Release/bin/mr.version "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
 #copy headers
-cp -r include "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
+cp -r ./include/* "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
+printf "Thirdparty headers copy done\n"
+
 cd source
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
+find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
 cd -
-printf "Headers copy done\n"
+printf "Source headers copy done\n"
 
 #call dpkg
 cd distr

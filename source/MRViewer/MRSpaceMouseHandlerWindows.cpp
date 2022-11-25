@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include <windows.h>
 #include <GLFW/glfw3.h>
 #include <functional>
@@ -173,6 +174,8 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
 
 void SpaceMouseHandlerWindows::updateConnected_()
 {
+    if ( !initialized_ )
+        initialize();
     joystickIndex_ = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {
@@ -195,7 +198,8 @@ void SpaceMouseHandlerWindows::updateConnected_()
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
         std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
-    getViewerInstance().setMouseScroll( joystickIndex_ == -1 );
+
+    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 );
 }
 
 }

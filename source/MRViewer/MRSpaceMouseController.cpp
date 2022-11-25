@@ -23,21 +23,24 @@ bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vec
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
+    const Vector3f translateScaled = mult( translate, translateScale ) * 0.5f;
+    const Vector3f rotateScaled = mult( rotate, rotateScale ) * 0.01f;
+
     const auto& viewportParams = viewport.getParameters();
 
     //translation
     Vector3f axisN;
     Vector3f axisX = Vector3f::plusX();
-    Vector3f axisY = Vector3f::plusY();
-    axisN = viewport.unprojectFromViewportSpace( axisN );
-    axisX = ( viewport.unprojectFromViewportSpace( axisX ) - axisN ).normalized();
-    axisY = ( viewport.unprojectFromViewportSpace( axisY ) - axisN ).normalized();
-    Vector3f diff( translate.x * axisX + translate.z * axisY );
+    Vector3f axisY = Vector3f::minusY();
+    axisN = viewport.unprojectFromClipSpace( axisN );
+    axisX = ( viewport.unprojectFromClipSpace( axisX ) - axisN );
+    axisY = ( viewport.unprojectFromClipSpace( axisY ) - axisN );
+    Vector3f diff( translateScaled.x * axisX + translateScaled.z * axisY );
 
-    viewport.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.1f );
+    viewport.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.04f );
 
     //zoom
-    float  mult = pow( 0.95f, fabs( translate.y ) * translate.y );
+    float  mult = pow( 0.95f, fabs( translateScaled.y ) * translateScaled.y );
     constexpr float min_angle = 0.001f;
     constexpr float max_angle = 179.99f;
     constexpr float d2r = PI_F / 180.0f;
@@ -49,7 +52,6 @@ bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vec
     //rotation
     if ( !lockRotate_ )
     {
-        Vector3f rotateScaled = rotate * 0.05f;
         Quaternionf quat = (
             Quaternionf( Vector3f{ 1,0,0 }, rotateScaled.x ) *
             Quaternionf( Vector3f{ 0,0,1 }, rotateScaled.y ) *

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewerFwd.h"
+#include "MRMesh/MRVector3.h"
 
 namespace MR
 {
@@ -18,6 +19,9 @@ private:
 
 	bool lockRotate_{ false };
 	bool showKeyDebug_{ false };
+
+	Vector3f translateScale{ 1.f, 1.f, 1.f };
+	Vector3f rotateScale{ 1.f, 1.f, 1.f };
 };
 
 }

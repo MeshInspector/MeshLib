@@ -1,5 +1,6 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
@@ -38,10 +39,10 @@ public:
     using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;
 
-    NodeVec construct( std::vector<BoxedLeaf<T>> boxedLeaves );
+    NodeVec construct( Buffer<BoxedLeaf<T>> boxedLeaves );
 
 private:
-    std::vector<BoxedLeaf<T>> boxedLeaves_;
+    Buffer<BoxedLeaf<T>> boxedLeaves_;
     NodeVec nodes_;
 
 private:
@@ -130,7 +131,7 @@ void AABBTreeMaker<T>::makeSubtree( const Subtree & s, int numThreads )
 }
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( std::vector<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
+auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
 {
     MR_TIMER;
 
@@ -144,14 +145,14 @@ auto AABBTreeMaker<T>::construct( std::vector<BoxedLeaf<T>> boxedLeaves ) -> Nod
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> boxedLeaves )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves )
 {
     return AABBTreeMaker<T>().construct( std::move( boxedLeaves ) );
 }
 
-template AABBTreeNodeVec<FaceTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<FaceTreeTraits3>> boxedLeaves );
-template AABBTreeNodeVec<LineTreeTraits2> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits2>> boxedLeaves );
-template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( std::vector<BoxedLeaf<LineTreeTraits3>> boxedLeaves );
+template AABBTreeNodeVec<FaceTreeTraits3> makeAABBTreeNodeVec( Buffer<BoxedLeaf<FaceTreeTraits3>> boxedLeaves );
+template AABBTreeNodeVec<LineTreeTraits2> makeAABBTreeNodeVec( Buffer<BoxedLeaf<LineTreeTraits2>> boxedLeaves );
+template AABBTreeNodeVec<LineTreeTraits3> makeAABBTreeNodeVec( Buffer<BoxedLeaf<LineTreeTraits3>> boxedLeaves );
 
 TEST(MRMesh, TBBTask)
 {

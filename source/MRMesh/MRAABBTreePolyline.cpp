@@ -2,6 +2,7 @@
 #include "MRAABBTreeMaker.h"
 #include "MRPolyline.h"
 #include "MRMesh.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRGTest.h"
@@ -16,7 +17,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    std::vector<BoxedLine> boxedLines;
+    Buffer<BoxedLine> boxedLines;
     boxedLines.resize( polyline.topology.undirectedEdgeSize() );
 
     int numLines = 0;
@@ -50,14 +51,14 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    std::vector<BoxedLine> boxedLines;
-    boxedLines.reserve( edgeSet.count() );
-
-    for ( auto ue : edgeSet )
-        boxedLines.push_back( { ue } );
-    int numLines = (int)boxedLines.size();
-    if ( numLines <= 0 )
+    Buffer<BoxedLine> boxedLines;
+    boxedLines.resize( edgeSet.count() );
+    if ( boxedLines.size() <= 0 )
         return;
+
+    int numLines = 0; 
+    for ( auto ue : edgeSet )
+        boxedLines[numLines++].leafId = ue;
 
     // compute aabb's of each line
     tbb::parallel_for( tbb::blocked_range<int>( 0, numLines ),

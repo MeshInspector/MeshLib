@@ -1202,10 +1202,11 @@ float ImGuiMenu::drawSelectionInformation_()
             drawVec3( "Box min", selectionBbox_.min, fieldWidth );
             drawVec3( "Box max", selectionBbox_.max, fieldWidth );
             drawVec3( "Box size", bsize, fieldWidth );
-            ImGui::PopStyleVar();
 
             if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
                 drawVec3( "World box size", wbsize, fieldWidth );
+
+            ImGui::PopStyleVar();
         }
 
         ImGui::PopStyleVar();
@@ -2515,8 +2516,8 @@ float ImGuiMenu::getSceneInfoItemWidth_(size_t itemCount)
 {
     if ( itemCount == 0 )
         return 0;
-    /// 85 is the widest label's size
-    return ( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
+    /// 100 is the widest label's size
+    return ( ImGui::GetContentRegionAvail().x - 100.0f * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

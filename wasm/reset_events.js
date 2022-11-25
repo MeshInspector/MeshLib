@@ -1,4 +1,6 @@
 var pointerCounter = 0;
+var mouseState = [0,0,0];
+var reinterpretEvent = false;
 
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
@@ -62,7 +64,27 @@ var updateEvents = function () {
     Browser.calculateMouseEvent = function (event) {
         var bubbleUp = true;
         if (event.pointerType == "mouse")
+        {
+            var eventButton = GLFW.DOMToGLFWMouseButton(event);
+            if (event.type == "pointermove" && !reinterpretEvent)
+            {
+                if (eventButton >= 0){
+                    reinterpretEvent = true;
+                    if (mouseState[eventButton] == 0)
+                        mouseState[eventButton] = 1;
+                    else
+                        mouseState[eventButton] = 0;
+                    GLFW.onMouseButtonChanged(event,mouseState[eventButton]);
+                    return false;
+                }
+            }
+            if (event.type == "pointerdown")
+                mouseState[eventButton] = 1;
+            else if (event.type == "pointerup" || event.type == "pointercancel")
+                mouseState[eventButton] = 0;
+            reinterpretEvent = false;
             oldCalcMovementFunction(event);
+        }
         else if (event.pointerType == "touch") {
             if (event.type == "pointerdown") {
                 pointerCounter++;

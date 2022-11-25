@@ -173,6 +173,8 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
 
 void SpaceMouseHandlerWindows::updateConnected_()
 {
+    if ( !initialized_ )
+        initialize();
     joystickIndex_ = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {

@@ -1058,8 +1058,6 @@ bool Viewer::touchEnd( int id, int x, int y )
 
 bool Viewer::mouseScroll( float delta_y )
 {
-    if ( !mouseScroll_ )
-        return true;
     // do extra frames to prevent imgui calculations ping
     incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
 
@@ -1730,11 +1728,6 @@ void Viewer::resetAllCounters()
 {
     eventsCounter_.reset();
     frameCounter_.reset();
-}
-
-void Viewer::setMouseScroll( bool active )
-{
-    mouseScroll_ = active;
 }
 
 Image Viewer::captureScreenShot( const Vector2i& pos /*= Vector2i()*/, const Vector2i& sizeP /*= Vector2i()*/ )

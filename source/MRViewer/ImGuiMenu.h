@@ -259,8 +259,12 @@ public:
   //return show shortcuts state (enable / disable)
   MRVIEWER_API bool getShowShortcuts() const;
 
+  // Activate / diactivate mouse scroll in scene
+  MRVIEWER_API bool setMouseScroll(bool active);
+
 protected:
     bool capturedMouse_{ false };
+    bool mouseScrollActive_{ true };
     // Mouse IO
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;

@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include <windows.h>
 #include <GLFW/glfw3.h>
 #include <functional>
@@ -197,7 +198,9 @@ void SpaceMouseHandlerWindows::updateConnected_()
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
         std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
-    getViewerInstance().setMouseScroll( joystickIndex_ == -1 );
+
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        menu->setMouseScroll( joystickIndex_ == -1 );
 }
 
 }

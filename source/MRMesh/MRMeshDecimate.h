@@ -56,6 +56,8 @@ struct DecimateSettings
     FaceBitSet * region = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
+    /// Whether to allow edge flipping (in addition to collapsing) to improve Delone quality of the mesh
+    bool allowEdgeFlip = false;
     /**
      * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
      * \details It receives the edge being collapsed: its destination vertex will disappear,

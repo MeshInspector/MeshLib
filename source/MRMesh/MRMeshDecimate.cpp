@@ -519,18 +519,34 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
-        presentInQueue_.reset( topQE.uedgeId() );
-        VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
-        if ( !collapseVert )
-            continue;
-
-        vertForms_[collapseVert] = collapseForm;
-
-        for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
+        if ( qe->x.flip )
         {
+            EdgeId e = topQE.uedgeId();
+            mesh_.topology.flipEdge( e );
+            assert( mesh_.topology.left( e ) );
+            assert( mesh_.topology.right( e ) );
             addInQueueIfMissing_( e.undirected() );
-            if ( mesh_.topology.left( e ) )
-                addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+        }
+        else
+        {
+            // edge collapse
+            presentInQueue_.reset( topQE.uedgeId() );
+            VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
+            if ( !collapseVert )
+                continue;
+
+            vertForms_[collapseVert] = collapseForm;
+
+            for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
+            {
+                addInQueueIfMissing_( e.undirected() );
+                if ( mesh_.topology.left( e ) )
+                    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
 

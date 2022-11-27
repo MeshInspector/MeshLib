@@ -36,6 +36,8 @@ struct DecimateParallelSettings
     FaceBitSet * region = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
+    /// Whether to allow edge flipping (in addition to collapsing) to improve Delone quality of the mesh
+    bool allowEdgeFlip = false;
     /// Subdivides mesh on given number of parts to process them in parallel
     int subdivideParts = 32;
     /**

@@ -372,4 +372,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "use Shell type for non closed meshes\n"
         "so result mesh is always closed" );
 
-} )
+})
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
+{
+    pybind11::enum_<MR::GeodesicPathApprox>( m, "GeodesicPathApprox", "Method of approximation" ).
+        value( "DijkstraBiDir", MR::GeodesicPathApprox::DijkstraBiDir, "Bidirectional Dijkstra algorithm" ).
+        value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraAStar, "Dijkstra algorithm with A* modification" ).
+        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );  
+
+    m.def( "computeGeodesicPath", &MR::computeGeodesicPath,
+        pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters") = 100,
+            "Returns intermediate points of the geodesic path from start to end, where it crosses mesh edges"
+    );
+
+})

@@ -106,6 +106,7 @@ public:
 private: 
     Mesh & mesh_;
     const DecimateSettings & settings_;
+    const DeloneSettings deloneSettings_;
     const float maxErrorSq_;
     Vector<QuadraticForm3f, VertId> vertForms_;
     struct QueueElement
@@ -136,6 +137,10 @@ private:
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
     : mesh_( mesh )
     , settings_( settings )
+    , deloneSettings_{
+        .maxAngleChange = settings.maxAngleChange,
+        .criticalTriAspectRatio = settings.criticalTriAspectRatio,
+        .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
 {
 }
@@ -194,37 +199,21 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
 bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
-    bool meshChanged = false;
-    for( int i = 0; i < settings.maxIters; ++i )
-    {
-        DeloneSettings delone
-        {
-            .maxDeviationAfterFlip = settings.maxDeviation,
-            .maxAngleChange = settings.maxAngleChange,
-            .criticalTriAspectRatio = settings.criticalAspectRatio,
-            .region = settings.region
-        };
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
-        DecimateSettings decimate
-        {
-            .maxError = settings.maxDeviation,
-            .criticalTriAspectRatio = settings.criticalAspectRatio,
-            .region = settings.region
-        };
-        changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
-        meshChanged = meshChanged || changedThisIter;
-        if ( !changedThisIter )
-            break;
-    }
-    return meshChanged;
+    DecimateSettings dsettings
+    {
+        .maxError = settings.maxDeviation,
+        .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .region = settings.region,
+        .maxAngleChange = settings.maxAngleChange
+    };
+    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
 {
     ResolveMeshDegenSettings settings
     {
-        .maxIters = maxIters,
         .maxDeviation = maxDeviation,
         .maxAngleChange = maxAngleChange,
         .criticalAspectRatio = criticalAspectRatio
@@ -290,10 +279,10 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
             return true;
         res.emplace();
         res->x.uedgeId = (int)ue;
-        if ( settings_.allowEdgeFlip )
+        if ( settings_.maxAngleChange >= 0 )
         {
             float deviationSqAfterFlip = FLT_MAX;
-            if ( !checkDeloneQuadrangleInMesh( mesh_, ue, { .region = settings_.region }, &deviationSqAfterFlip )
+            if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
                 && deviationSqAfterFlip < errSq )
             {
                 res->x.flip = true;

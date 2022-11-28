@@ -24,7 +24,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     seqSettings.optimizeVertexPos = settings.optimizeVertexPos;
     seqSettings.region = settings.region;
     seqSettings.touchBdVertices = settings.touchBdVertices;
-    seqSettings.allowEdgeFlip = settings.allowEdgeFlip;
+    seqSettings.maxAngleChange = settings.maxAngleChange;
     if ( settings.preCollapse )
     {
         seqSettings.preCollapse = [&mesh, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool

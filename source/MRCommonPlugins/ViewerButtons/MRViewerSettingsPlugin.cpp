@@ -36,7 +36,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         ribbonMenu_->setShowShortcuts( true );
     }
-    if ( ribbonMenu_ && RibbonButtonDrawer::GradientButton( "Spacemouse settings", ImVec2( -1, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Spacemouse settings", ImVec2( -1, 0 ) ) )
     {
         spaceMouseParams = getViewerInstance().spaceMouseController.getParams();
         ImGui::OpenPopup( "Spacemouse settings" );

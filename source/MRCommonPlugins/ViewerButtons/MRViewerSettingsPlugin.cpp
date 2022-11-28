@@ -30,12 +30,18 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( RibbonButtonDrawer::GradientButton( "Scene mouse controls", ImVec2( -1, 0 ) ) )
         ImGui::OpenPopup( "Scene mouse controls" );
+    drawMouseSceneControlsSettings_( menuScaling );
 
     if ( RibbonButtonDrawer::GradientButton( "Show hotkeys", ImVec2( -1, 0 ) ) && ribbonMenu_ )
     {
         ribbonMenu_->setShowShortcuts( true );
     }
-    drawMouseSceneControlsSettings_( menuScaling );
+    if ( ribbonMenu_ && RibbonButtonDrawer::GradientButton( "Spacemouse settings", ImVec2( -1, 0 ) ) )
+    {
+        spaceMouseParams = getViewerInstance().spaceMouseController.getParams();
+        ImGui::OpenPopup( "Spacemouse settings" );
+    }
+    drawSpaceMouseSettings_( menuScaling );
 
     const auto& viewportParameters = viewer->viewport().getParameters();
     // Viewing options
@@ -435,6 +441,55 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
         }
         ImGui::TreePop();
     }
+}
+
+void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
+{
+    auto& viewerRef = Viewer::instanceRef();
+    ImVec2 windowSize( 400 * scaling, 300 * scaling );
+    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+
+    if ( !ImGui::BeginModalNoAnimation( "Spacemouse settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        return;
+
+    ImGui::Text( "%s", "Spacemouse settings" );
+
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 20.f );
+
+    drawModalExitButton_( scaling );
+
+    ImGui::Text( "%s", "Translation scales" );
+
+    bool anyChanged = false;
+    auto drawSlider = [&anyChanged, &windowSize] ( const char* label, float& value )
+    {
+        int valueAbs = int( std::fabs( value ) );
+        bool inverse = value < 0.f;
+        bool changed = ImGui::SliderInt( label, &valueAbs, 1, 100 );
+        ImGui::SameLine( windowSize.x * 0.8f);
+        const float cursorPosY = ImGui::GetCursorPosY();
+        ImGui::SetCursorPosY( cursorPosY + 3 );
+        changed = RibbonButtonDrawer::GradientCheckbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
+        if ( changed )
+            value = valueAbs * ( inverse ? -1.f : 1.f );
+        anyChanged = anyChanged || changed;
+    };
+
+    drawSlider( "X##translate", spaceMouseParams.translateScale[0] );
+    drawSlider( "Y##translate", spaceMouseParams.translateScale[2] );
+    drawSlider( "Zoom##translate", spaceMouseParams.translateScale[1] );
+
+    ImGui::NewLine();
+    ImGui::Text( "%s", "Rotation scales" );
+    drawSlider( "Ox##rotate", spaceMouseParams.rotateScale[0] );
+    drawSlider( "Oy##rotate", spaceMouseParams.rotateScale[1] );
+    drawSlider( "Oz##rotate", spaceMouseParams.rotateScale[2] );
+
+    if ( anyChanged )
+        getViewerInstance().spaceMouseController.setParams( spaceMouseParams );
+
+    ImGui::EndPopup();
 }
 
 void ViewerSettingsPlugin::drawModalExitButton_( float scaling )

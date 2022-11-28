@@ -139,6 +139,9 @@ struct ResolveMeshDegenSettings
     /// if this value is less than FLT_MAX then the algorithm will try to minimize maximal triangle aspect ratio,
     /// and ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value
     float criticalAspectRatio = 1e7f;
+    /// Small stabilizer is important to achieve good results on completely planar mesh parts,
+    /// if your mesh is not-planer everywhere, then you can set it to zero
+    float stabilizer = 1e-6f;
     /// degenerations will be fixed only in given region, which is updated during the processing
     FaceBitSet * region = nullptr;
 };

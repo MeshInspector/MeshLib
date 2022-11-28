@@ -204,7 +204,7 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
     {
         .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
-        .stabilizer = 1e-6f,
+        .stabilizer = settings.stabilizer,
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
     };

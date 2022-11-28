@@ -33,11 +33,17 @@ using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;
 using MenuItemsList = std::vector<std::string>;
+struct TabNamePriority
+{
+    std::string name;
+    int priority{ 0 };
+};
 
 // This structure describes UI schema of ribbon menu
 struct RibbonSchema
 {
-    std::vector<std::string> tabsOrder;
+
+    std::vector<TabNamePriority> tabsOrder;
     TabsGroupsMap tabsMap;
     GroupsItemsMap groupsMap;
     ItemMap items;

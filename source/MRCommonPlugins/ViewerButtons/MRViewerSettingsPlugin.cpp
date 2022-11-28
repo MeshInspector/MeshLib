@@ -379,7 +379,7 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
     bool canAdd = int( quickAccessList.size() ) < maxQuickAccessSize_;
 
     int quickAccessListIndex = 0;
-    for ( auto& tabName : tabsOrder )
+    for ( const auto& [tabName, tabPriority]  : tabsOrder )
     {
         if ( !ImGui::TreeNodeEx( tabName.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen ) )
             continue;

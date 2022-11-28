@@ -22,15 +22,6 @@
 							"Name": "Open directory"
 						},
 						{
-							"Name": "Open DICOMs"
-						},
-						{
-							"Name": "Open RAW Voxels"
-						},
-						{
-							"Name": "Open Voxels From TIFF"
-						},
-						{
 							"Name": "Save Scene"
 						},
 						{
@@ -119,6 +110,26 @@
 					]
 				}
 
+			]
+		},
+		{
+			"Name": "Voxel",
+			"Priority": 1,
+			"Groups": [
+				{
+					"Name": "Open",
+					"List": [
+						{
+							"Name": "Open DICOMs"
+						},
+						{
+							"Name": "Open RAW Voxels"
+						},
+						{
+							"Name": "Open Voxels From TIFF"
+						}
+					]
+				}
 			]
 		}
 	],

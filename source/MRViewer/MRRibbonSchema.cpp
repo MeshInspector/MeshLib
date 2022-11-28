@@ -40,6 +40,13 @@ void RibbonSchemaLoader::loadSchema() const
     sortFilesByOrder_( files );
     for ( const auto& file : files )
         readUIJson_( file );
+
+
+    auto& tabsOrder = RibbonSchemaHolder::schema().tabsOrder;
+    std::stable_sort( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& a, const auto& b )
+    {
+        return a.priority < b.priority;
+    } );
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )
@@ -301,6 +308,10 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
     {
         auto tab = tabs[i];
         auto tabName = tab["Name"];
+        auto tabPriorityJSON = tab["Priority"];
+        int tabPriority{ 0 };
+        if ( tabPriorityJSON.isInt() )
+            tabPriority = tabPriorityJSON.asInt();
         if ( !tabName.isString() )
         {
             spdlog::warn( "\"Name\" field is not valid or not present in \"Tabs\" {}", i );
@@ -372,7 +383,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         auto& tabRef = RibbonSchemaHolder::schema().tabsMap[tabName.asString()];
         if ( tabRef.empty() )
         {
-            RibbonSchemaHolder::schema().tabsOrder.push_back( tabName.asString() );
+            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority } );
             tabRef = std::move( newGroupsVec );
         }
         else

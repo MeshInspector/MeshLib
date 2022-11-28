@@ -62,4 +62,53 @@ std::string bytesString( size_t size )
     return fmt::format( "{:.2f} Gb", size / float(1024*1024*1024) );
 }
 
+char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision )
+{
+    assert( precision > 0 );
+    assert( digitsAfterPoint >= 0 && digitsAfterPoint <= 9 );
+    double cmp = 1;
+    int digitsBeforePoint = 0;
+    while ( digitsBeforePoint < precision && v >= cmp )
+    {
+        cmp *= 10;
+        ++digitsBeforePoint;
+    }
+    digitsAfterPoint = std::min( digitsAfterPoint, precision - digitsBeforePoint );
+
+    strcpy( fmt, "%.9f" );
+    fmt[2] = char( '0' + digitsAfterPoint );
+    if ( digitsAfterPoint <= 0 )
+        return fmt;
+
+    char buf[32];
+#pragma warning(push)
+#pragma warning(disable: 4774) // format string expected in argument 3 is not a string literal
+    int n = snprintf( buf, 32, fmt, v );
+#pragma warning(pop)
+
+    if ( n >= 0 && std::find( buf, buf + n, '.' ) != buf + n )
+    {
+        while ( buf[--n] == '0' )
+            --digitsAfterPoint;
+        assert( digitsAfterPoint >= 0 && digitsAfterPoint <= 9 );
+        fmt[2] = char( '0' + digitsAfterPoint );
+    }
+    return fmt;
+}
+
+double roundToPrecision( double v, int precision )
+{
+    assert( precision >= 1 && precision <= 9 );
+    char fmt[] = "%.9g";
+    fmt[2] = char( '0' + precision );
+
+    char buf[32];
+#pragma warning(push)
+#pragma warning(disable: 4774) // format string expected in argument 3 is not a string literal
+    int n = snprintf( buf, 32, fmt, v );
+#pragma warning(pop)
+
+    return n >= 0 ? std::atof( buf ) : v;
+}
+
 }

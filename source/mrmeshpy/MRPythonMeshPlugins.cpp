@@ -378,16 +378,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::GeodesicPathApprox>( m, "GeodesicPathApprox", "Method of approximation" ).
         value( "DijkstraBiDir", MR::GeodesicPathApprox::DijkstraBiDir, "Bidirectional Dijkstra algorithm" ).
-        value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraBiDir, "Dijkstra algorithm with A* modification" ).
-        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );
-
-    pybind11::class_<MR::MeshTriPoint>( m, "MeshTriPoint", "Encodes a point inside a triangular mesh face using barycentric coordinates" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "e", &MR::MeshTriPoint::e, "Left face of this edge is considered" ).
-        def_readwrite( "bary", &MR::MeshTriPoint::bary, "barycentryc coordinates" );
+        value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraAStar, "Dijkstra algorithm with A* modification" ).
+        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );  
 
     m.def( "computeGeodesicPath", &MR::computeGeodesicPath,
-        pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters"),
+        pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters") = 100,
             "Returns intermediate points of the geodesic path from start to end, where it crosses mesh edges"
     );
 

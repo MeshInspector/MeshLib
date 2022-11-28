@@ -96,7 +96,7 @@ bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const 
     return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
 }
 
-bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings )
+bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
 {
     if ( settings.notFlippable && settings.notFlippable->test( edge.undirected() ) )
         return true; // consider condition satisfied for not-flippable edges
@@ -142,13 +142,15 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     auto cp = mesh.points[c];
     auto dp = mesh.points[d];
 
-    if ( settings.maxDeviationAfterFlip < FLT_MAX )
+    if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
         Vector3f vec, closestOnAC, closestOnBD;
         SegPoints( vec, closestOnAC, closestOnBD,
             ap, cp - ap,   // first diagonal segment
             bp, dp - bp ); // second diagonal segment
-        double distSq = ( closestOnAC - closestOnBD ).lengthSq();
+        float distSq = ( closestOnAC - closestOnBD ).lengthSq();
+        if ( deviationSqAfterFlip )
+            *deviationSqAfterFlip = distSq;
         if ( distSq > sqr( settings.maxDeviationAfterFlip ) )
             return true; // flipping of given edge will change the surface shape too much
     }

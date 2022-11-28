@@ -27,7 +27,7 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b,
         return tl::make_unexpected( res.errorString );
 
     if ( fixDegenerations )
-        resolveMeshDegenerations( res.mesh, { .maxIters = INT_MAX, .maxDeviation = maxError } ); // INT_MAX cause it will stop itself if no changes done
+        resolveMeshDegenerations( res.mesh, { .maxDeviation = maxError } );
 
     return res.mesh;
 }

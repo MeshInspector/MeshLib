@@ -56,6 +56,9 @@ struct DecimateSettings
     FaceBitSet * region = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
+    /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
+    /// if it does change dihedral angle more than on this value (negative value prohibits any edge flips)
+    float maxAngleChange = -1;
     /**
      * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
      * \details It receives the edge being collapsed: its destination vertex will disappear,
@@ -127,7 +130,7 @@ MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, f
 
 struct ResolveMeshDegenSettings
 {
-    /// the number of times the whole algorithm is repeated
+    [[deprecated]]
     int maxIters = 1;
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
@@ -136,6 +139,9 @@ struct ResolveMeshDegenSettings
     /// if this value is less than FLT_MAX then the algorithm will try to minimize maximal triangle aspect ratio,
     /// and ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value
     float criticalAspectRatio = 1e7f;
+    /// Small stabilizer is important to achieve good results on completely planar mesh parts,
+    /// if your mesh is not-planer everywhere, then you can set it to zero
+    float stabilizer = 1e-6f;
     /// degenerations will be fixed only in given region, which is updated during the processing
     FaceBitSet * region = nullptr;
 };

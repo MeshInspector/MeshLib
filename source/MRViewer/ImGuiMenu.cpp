@@ -1768,7 +1768,7 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::DragFloatValid( label, &value, 0.01f, 0.0f, 1.0f, "%.3f" );
+    ImGui::DragFloatValid( label, &value, 0.01f, -FLT_MAX, FLT_MAX, "%.3f" );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();

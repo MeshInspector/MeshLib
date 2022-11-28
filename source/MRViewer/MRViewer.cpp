@@ -535,11 +535,10 @@ int Viewer::launchInit_( const LaunchParams& params )
             spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
             spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
         }
+        defaultWindowTitle = params.name;
         if ( params.showMRVersionInTitle )
-        {
-            defaultWindowTitle = params.name + " (" + GetMRVersionString() + ")";
-            glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
-        }
+            defaultWindowTitle += " (" + GetMRVersionString() + ")";
+        glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
 
         glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
         // Register callbacks

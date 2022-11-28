@@ -275,24 +275,24 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
     auto earlyReturn = [&]( float errSq )
     {
-        if ( !settings_.adjustCollapse && errSq > maxErrorSq_ )
-            return true;
-        res.emplace();
-        res->x.uedgeId = (int)ue;
+        bool flip = false;
         if ( settings_.maxAngleChange >= 0 )
         {
             float deviationSqAfterFlip = FLT_MAX;
             if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
                 && deviationSqAfterFlip < errSq )
             {
-                res->x.flip = true;
-                res->c = deviationSqAfterFlip;
-                return true;
+                flip = true;
+                errSq = deviationSqAfterFlip;
             }
         }
-
+        if ( ( flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
+            return true;
+        res.emplace();
+        res->x.uedgeId = (int)ue;
+        res->x.flip = flip;
         res->c = errSq;
-        return false;
+        return flip;
     };
 
     if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )

@@ -130,6 +130,8 @@ MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, f
 
 struct ResolveMeshDegenSettings
 {
+    [[deprecated]]
+    int maxIters = 1;
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
     /// Permit edge flips if it does change dihedral angle more than on this value

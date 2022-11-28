@@ -3,6 +3,7 @@
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRShadowsGL.h"
+#include "MRViewer/MRSpaceMouseController.h"
 
 namespace MR
 {
@@ -26,6 +27,8 @@ private:
 
     void drawQuickAccessList_();
 
+    void drawSpaceMouseSettings_( float menuScaling );
+
     void drawModalExitButton_( float menuScaling );
 
     Vector4f backgroundColor_;
@@ -40,6 +43,8 @@ private:
 
     Vector4f shadowColor4f_;
     std::unique_ptr<ShadowsGL> shadowGl_;
+
+    SpaceMouseController::Params spaceMouseParams;
 };
 
 }

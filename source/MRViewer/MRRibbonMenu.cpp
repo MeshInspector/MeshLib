@@ -360,7 +360,7 @@ void RibbonMenu::drawSearchButton_()
             auto pos = ImGui::GetCursorPos();
             if ( foundItem.tabIndex != -1 )
             {
-                const auto& tabName = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex];
+                const auto& tabName = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name;
                 auto label = "##SearchTabBtn" + tabName + std::to_string( ++uniqueBtnCounter );
                 auto labelSize = ImGui::CalcTextSize( tabName.c_str() );
                 if ( ImGui::Button( label.c_str(), ImVec2( labelSize.x + 2 * cRibbonButtonWindowPaddingX * scaling, ySize ) ) )
@@ -556,7 +556,7 @@ void RibbonMenu::drawHeaderPannel_()
     auto summaryTabPannelSize = 2 * 12.0f * menuScaling - cTabsInterval * menuScaling; // init shift (by eye, not defined in current design maket)
     for ( int i = 0; i < tabSizes.size(); ++i )
     {
-        const auto& tabStr = RibbonSchemaHolder::schema().tabsOrder[i];
+        const auto& tabStr = RibbonSchemaHolder::schema().tabsOrder[i].name;
         textSizes[i] = ImGui::CalcTextSize( tabStr.c_str() ).x;
         tabSizes[i] = std::max( textSizes[i] + cTabLabelMinPadding * 2 * menuScaling, cTabMinimumWidth * menuScaling );
         summaryTabPannelSize += ( tabSizes[i] + cTabsInterval * menuScaling );
@@ -624,7 +624,7 @@ void RibbonMenu::drawHeaderPannel_()
     basePos.y = cTabYOffset * menuScaling - 1;// -1 due to ImGui::TabItemBackground internal offset
     for ( int i = 0; i < RibbonSchemaHolder::schema().tabsOrder.size(); ++i )
     {
-        const auto& tabStr = RibbonSchemaHolder::schema().tabsOrder[i];
+        const auto& tabStr = RibbonSchemaHolder::schema().tabsOrder[i].name;
         const auto& tabWidth = tabSizes[i];
         ImVec2 tabBbMaxPoint( basePos.x + tabWidth, basePos.y + cTabHeight * menuScaling + 2 ); // +2 due to TabItemBackground internal offset
         ImRect tabRect( basePos, tabBbMaxPoint );
@@ -1222,12 +1222,12 @@ std::vector<RibbonMenu::SearchResult> RibbonMenu::search_()
     };
     for ( int t = 0; t < schema.tabsOrder.size(); ++t )
     {
-        auto tabItem = schema.tabsMap.find( schema.tabsOrder[t] );
+        auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
         if ( tabItem == schema.tabsMap.end() )
             continue;
         for ( int g = 0; g < tabItem->second.size(); ++g )
         {
-            auto groupItem = schema.groupsMap.find( schema.tabsOrder[t] + tabItem->second[g] );
+            auto groupItem = schema.groupsMap.find( schema.tabsOrder[t].name + tabItem->second[g] );
             if ( groupItem == schema.groupsMap.end() )
                 continue;
             lookUpMenuItemList( groupItem->second, t );
@@ -2075,7 +2075,7 @@ void RibbonMenu::drawTopPanelOpened_()
     ImGuiTableFlags tableFlags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
 
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-    const auto& tab = RibbonSchemaHolder::schema().tabsOrder[activeTabIndex_];
+    const auto& tab = RibbonSchemaHolder::schema().tabsOrder[activeTabIndex_].name;
     if ( collapseState_ != CollapseState::Closed )
     {
         auto tabIt = RibbonSchemaHolder::schema().tabsMap.find( tab );

@@ -18,13 +18,38 @@ void SpaceMouseController::connect()
     viewer.spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ), boost::signals2::at_front );
 }
 
+void SpaceMouseController::setParams( const Params& newParams )
+{
+    params = newParams;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( params.translateScale[i] < 50 )
+            params.translateScale[i] = 25.f + params.translateScale[i] / 2.f;
+        if ( params.rotateScale[i] < 50 )
+            params.rotateScale[i] = 25.f + params.rotateScale[i] / 2.f;
+    }
+}
+
+SpaceMouseController::Params SpaceMouseController::getParams() const
+{
+    Params out = params;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( out.translateScale[i] < 50 )
+            out.translateScale[i] = ( out.translateScale[i] - 25.f ) * 2.f;
+        if ( out.rotateScale[i] < 50 )
+            out.rotateScale[i] = ( out.rotateScale[i] - 25.f ) * 2.f;
+    }
+    return out;
+}
+
 bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate )
 {
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
-    const Vector3f translateScaled = mult( translate, translateScale ) * 0.5f;
-    const Vector3f rotateScaled = mult( rotate, rotateScale ) * 0.01f;
+    const Vector3f translateScaled = mult( translate, params.translateScale ) * 0.02f;
+    const Vector3f rotateScaled = mult( rotate, params.rotateScale ) * 0.001f;
 
     const auto& viewportParams = viewport.getParameters();
 
@@ -37,7 +62,7 @@ bool SpaceMouseController::spaceMouseMove_( const Vector3f& translate, const Vec
     axisY = ( viewport.unprojectFromClipSpace( axisY ) - axisN );
     Vector3f diff( translateScaled.x * axisX + translateScaled.z * axisY );
 
-    viewport.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.04f );
+    viewport.setCameraTranslation( viewportParams.cameraTranslation + diff * 0.1f );
 
     //zoom
     float  mult = pow( 0.95f, fabs( translateScaled.y ) * translateScaled.y );

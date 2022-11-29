@@ -10,6 +10,7 @@
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {

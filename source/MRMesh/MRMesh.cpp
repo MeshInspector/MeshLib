@@ -572,14 +572,14 @@ void Mesh::zeroUnusedPoints()
 {
     MR_TIMER
 
-    BitSetParallelForReset( topology.getValidVerts(), [&]( VertId v )
+    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ points.size() } ), [&] ( const tbb::blocked_range<VertId>& range )
     {
-        if ( v < points.size() )
-            points[v] = {};
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+        {
+            if ( !topology.hasVert( v ) )
+                points[v] = {};
+        }
     } );
-
-    for ( VertId v{ topology.getValidVerts().size() }; v < points.size(); ++v )
-        points[v] = {};
 }
 
 void Mesh::transform( const AffineXf3f & xf )

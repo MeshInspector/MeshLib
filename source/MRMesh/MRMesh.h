@@ -176,6 +176,9 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API Vector3f findCenterFromFaces() const;
     [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
+    // for all points not in topology.getValidVerts() sets coordinates to (0,0,0)
+    MRMESH_API void zeroUnusedPoints();
+
     // applies given transformation to all valid mesh vertices
     MRMESH_API void transform( const AffineXf3f & xf );
 

@@ -74,34 +74,32 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
 
 /// executes given function f for every set bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
-template <typename BS, typename F>
-void BitSetParallelFor( const BS& bs, F f )
+template <typename BS, typename F, typename ...Cb>
+auto BitSetParallelFor( const BS& bs, F f, Cb&&... cb )
 {
     using IndexType = typename BS::IndexType;
-    BitSetParallelForAll( bs, [&]( IndexType id )
+    return BitSetParallelForAll( bs, [&]( IndexType id )
     {
         if ( bs.test( id ) )
         {
             f( id );
         }
-    } );
+    }, std::forward<Cb>( cb )... );
 }
 
-/// executes given function f for every set bit in bs in parallel threads;
+/// executes given function f for every reset bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
-/// uses tbb::static_partitioner for uniform distribution of ids
-/// \return false if the processing was canceled by progressCb
-template <typename BS, typename F>
-bool BitSetParallelFor( const BS& bs, F f, ProgressCallback progressCb )
+template <typename BS, typename F, typename ...Cb>
+auto BitSetParallelForReset( const BS& bs, F f, Cb&&... cb )
 {
     using IndexType = typename BS::IndexType;
-    return BitSetParallelForAll( bs, [&] ( IndexType id )
+    return BitSetParallelForAll( bs, [&]( IndexType id )
     {
-        if ( bs.test( id ) )
+        if ( !bs.test( id ) )
         {
             f( id );
         }
-    }, progressCb );
+    }, std::forward<Cb>( cb )... );
 }
 
 /// \}

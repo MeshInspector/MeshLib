@@ -568,6 +568,20 @@ float Mesh::averageEdgeLength() const
     return n > 0 ? float( sum / n ) : 0.0f;
 }
 
+void Mesh::zeroUnusedPoints()
+{
+    MR_TIMER
+
+    BitSetParallelForReset( topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( v < points.size() )
+            points[v] = {};
+    } );
+
+    for ( VertId v{ topology.getValidVerts().size() }; v < points.size(); ++v )
+        points[v] = {};
+}
+
 void Mesh::transform( const AffineXf3f & xf )
 {
     MR_TIMER

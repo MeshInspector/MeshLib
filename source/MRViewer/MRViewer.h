@@ -534,14 +534,21 @@ public:
     {
     public:
         using EventCallback = std::function<void()>;
+        struct NamedEvent
+        {
+            std::string name;
+            EventCallback cb;
+        };
         // emplace event at the end of the queue
         // replace last skipabl with new skipable
-        MRVIEWER_API void emplace( EventCallback callEvent, bool skipable = false );
+        MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
         // execute all events in queue
         MRVIEWER_API void execute();
+        // pop all events while they have this name
+        MRVIEWER_API void popByName( const std::string& name );
         MRVIEWER_API bool empty() const;
     private:
-        std::queue<EventCallback> queue_;
+        std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;
     MRVIEWER_API void postEmptyEvent();

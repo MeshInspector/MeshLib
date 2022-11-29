@@ -17,7 +17,7 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     if ( finger == MultiInfo::Finger::First && numPressed == 1 )
     {
         mouseMode_ = true;
-        viewer->eventQueue.emplace( { "First touch imitate left mouse down", [x,y,viewer] ()
+        viewer->eventQueue.emplace( { "First touch imitates left mouse down", [x,y,viewer] ()
         {
             viewer->mouseMove( x, y ); // to setup position in MouseController
             viewer->draw();
@@ -28,7 +28,7 @@ bool TouchesController::onTouchStart_( int id, int x, int y )
     if ( mouseMode_ )
     {
         mouseMode_ = false;
-        viewer->eventQueue.emplace( { "First touch imitate left mouse up", [viewer] ()
+        viewer->eventQueue.emplace( { "First touch imitates left mouse up", [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
         } } );
@@ -129,7 +129,7 @@ bool TouchesController::onTouchEnd_( int id, int x, int y )
     if ( mouseMode_ )
     {
         mouseMode_= false;
-        viewer->eventQueue.emplace( { "First touch imitate left mouse up", [viewer] ()
+        viewer->eventQueue.emplace( { "First touch imitates left mouse up", [viewer] ()
         {
             viewer->mouseUp( MouseButton::Left, 0 );
         } } );

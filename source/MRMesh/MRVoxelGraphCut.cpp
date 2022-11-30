@@ -154,7 +154,7 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
 
     for ( int i = 0; ; ++i )
     {
-        if ( cb )
+        if ( (i % 100 == 0) && cb )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )
@@ -220,7 +220,7 @@ VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBit
     
     for ( int i = 0; !active_.empty(); ++i )
     {
-        if ( cb )
+        if ( ( i % 100 == 0 ) && cb )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )

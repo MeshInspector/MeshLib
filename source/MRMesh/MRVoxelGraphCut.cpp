@@ -50,7 +50,7 @@ class VoxelGraphCut : public VolumeIndexer
 {
 public:
     VoxelGraphCut( const SimpleVolume & densityVolume, float k );
-    VoxelBitSet fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb );
+    tl::expected<VoxelBitSet, std::string> fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb );
 
 private:
     Vector<VoxelOutEdgeCapacity, VoxelId> capacity_;
@@ -154,7 +154,7 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
 
     for ( int i = 0; ; ++i )
     {
-        if ( (i % 100 == 0) && cb )
+        if ( cb && (i % 128 == 0) )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )
@@ -207,7 +207,7 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
     return true;
 }
 
-VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
+tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER;
     
@@ -220,11 +220,11 @@ VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBit
     
     for ( int i = 0; !active_.empty(); ++i )
     {
-        if ( ( i % 100 == 0 ) && cb )
+        if ( cb && ( i % 128 == 0 ) )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )
-                return VoxelBitSet{};
+                return tl::make_unexpected( "Operation was cancelled" );
         }
 
         auto f = active_.front();
@@ -233,7 +233,7 @@ VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBit
     }
 
     if ( cb && !cb( targetProgress ) )
-        return VoxelBitSet{};
+        return tl::make_unexpected( "Operation was cancelled" );
 
     VoxelBitSet res( size_ );
     for ( VoxelId v{ 0 }; v < voxelData_.size(); ++v )
@@ -494,7 +494,7 @@ bool VoxelGraphCut::checkNotSaturatedPath_( VoxelId v, Side side ) const
     }
 }
 
-VoxelBitSet segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
+tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER
 

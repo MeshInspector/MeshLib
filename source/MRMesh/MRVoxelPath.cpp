@@ -306,7 +306,7 @@ std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const Vox
     const float targetProgress = 1.0f;
     for (int i = 0; ; ++i)
     {
-        if ( ( i % 100 == 0 ) && cb )
+        if ( cb && ( i % 128 == 0 ) )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )

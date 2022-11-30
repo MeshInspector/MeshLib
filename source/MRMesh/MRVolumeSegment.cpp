@@ -211,11 +211,7 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
     }
 
     // Segment volume
-    auto res = segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside], cb );
-    if ( res.empty() )
-        return tl::make_unexpected( "Operation was cancelled" );
-
-    return res;
+    return segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside], cb );
 }
 
 tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const

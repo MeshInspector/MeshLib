@@ -74,10 +74,10 @@ void RenderPointsObject::render( const RenderParams& renderParams )
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), int( hasNormalsBackup_ ) ) );
 
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objPoints_->getShininess() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objPoints_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objPoints_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objPoints_->getAmbientStrength() ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
     const auto& backColor = Vector4f( objPoints_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
@@ -85,11 +85,11 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     const auto& mainColor = Vector4f( objPoints_->getFrontColor( objPoints_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelectedVertices" ), objPoints_->getVisualizeProperty( PointsVisualizePropertyType::SelectedVertices, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelVerts" ), objPoints_->getVisualizeProperty( PointsVisualizePropertyType::SelectedVertices, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objPoints_->getSelectedVerticesColor() );
-    const auto selectionBackColor = Vector4f( backColor.x * selectionColor.x, backColor.y * selectionColor.y, backColor.z * selectionColor.z, backColor.w * selectionColor.w );
+    const auto selBackColor = Vector4f( backColor.x * selectionColor.x, backColor.y * selectionColor.y, backColor.z * selectionColor.z, backColor.w * selectionColor.w );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionColor" ), selectionColor[0], selectionColor[1], selectionColor[2], selectionColor[3] ) );
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionBackColor" ), selectionBackColor[0], selectionBackColor[1], selectionBackColor[2], selectionBackColor[3] ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selBackColor" ), selBackColor[0], selBackColor[1], selBackColor[2], selBackColor[3] ) );
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
 

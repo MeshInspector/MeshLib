@@ -149,19 +149,19 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool perVertColoring;      // (in from base) linear interpolate colors if true
   uniform bool flatShading;          // (in from base) linear interpolate normals if false
   uniform bool onlyOddFragments;     // (in from base) discard every second fragment
-  uniform bool showSelectedFaces;    // (in from base) use selection or not
+  uniform bool showSelFaces;    // (in from base) use selection or not
  
   uniform vec4 mainColor;            // (in from base) main color
   uniform vec4 selectionColor;       // (in from base) selection color
   uniform vec4 backColor;            // (in from base) back face color
-  uniform vec4 selectionBackColor;   // (in from base) selection back face color
+  uniform vec4 selBackColor;   // (in from base) selection back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
   uniform sampler2D tex;             // (in from base) texture
-  uniform float specular_exponent;   // (in from base) lighting parameter 
+  uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
@@ -191,13 +191,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       normEyeCpy = normalize(vec3 (normal_matrix * vec4 (norm, 0.0)));
     }
     
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
 
     vec4 colorCpy;
     bool selected = false;
-    if ( showSelectedFaces )
+    if ( showSelFaces )
     {
       ivec2 texSize = textureSize( selection, 0 );
       uint index = primitiveId / 32u;
@@ -209,7 +209,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         if ( !selected )
             colorCpy = backColor;
         else
-            colorCpy = selectionBackColor;
+            colorCpy = selBackColor;
     else
         if ( selected )
             colorCpy = selectionColor;
@@ -248,7 +248,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (dot_prod_specular < 0.0)
       dot_prod_specular = 0.0;
 
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(colorCpy);
@@ -281,19 +281,19 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool perVertColoring;      // (in from base) linear interpolate colors if true
   uniform bool flatShading;          // (in from base) linear interpolate normals if false
   uniform bool onlyOddFragments;     // (in from base) discard every second fragment
-  uniform bool showSelectedFaces;    // (in from base) use selection or not
+  uniform bool showSelFaces;    // (in from base) use selection or not
 
   uniform vec4 mainColor;            // (in from base) main color
   uniform vec4 selectionColor;       // (in from base) selection color
   uniform vec4 backColor;            // (in from base) back face color
-  uniform vec4 selectionBackColor;   // (in from base) selection back face color
+  uniform vec4 selBackColor;   // (in from base) selection back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
   uniform sampler2D tex;             // (in from base) texture
-  uniform float specular_exponent;   // (in from base) lighting parameter 
+  uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
@@ -329,13 +329,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       normEyeCpy = normalize(vec3 (normal_matrix * vec4 (norm, 0.0)));
     }
     
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
       
     vec4 colorCpy;
     bool selected = false;
-    if ( showSelectedFaces )
+    if ( showSelFaces )
     {
       ivec2 texSize = textureSize( selection, 0 );
       uint index = primitiveId / 32u;
@@ -346,7 +346,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         if ( !selected )
             colorCpy = backColor;
         else
-            colorCpy = selectionBackColor;
+            colorCpy = selBackColor;
     else
         if ( selected )
             colorCpy = selectionColor;
@@ -382,7 +382,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 surface_to_viewer_eye = normalize (-position_eye);
     float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
     dot_prod_specular = max(dot_prod_specular,0);
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(colorCpy);
@@ -434,19 +434,19 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool perVertColoring;      // (in from base) linear interpolate colors if true
   uniform bool flatShading;          // (in from base) linear interpolate normals if false
   uniform bool onlyOddFragments;     // (in from base) discard every second fragment
-  uniform bool showSelectedFaces;    // (in from base) use selection or not
+  uniform bool showSelFaces;    // (in from base) use selection or not
 
   uniform vec4 mainColor;            // (in from base) main color
   uniform vec4 selectionColor;       // (in from base) selection color
   uniform vec4 backColor;            // (in from base) back face color
-  uniform vec4 selectionBackColor;   // (in from base) selection back face color
+  uniform vec4 selBackColor;   // (in from base) selection back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
   uniform sampler2D tex;             // (in from base) texture
-  uniform float specular_exponent;   // (in from base) lighting parameter 
+  uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
@@ -476,13 +476,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       normEyeCpy = normalize(vec3 (normal_matrix * vec4 (norm, 0.0)));
     }
     
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
       
     vec4 colorCpy;
     bool selected = false;
-    if ( showSelectedFaces )
+    if ( showSelFaces )
     {
       ivec2 texSize = textureSize( selection, 0 );
       uint index = primitiveId / 32u;
@@ -493,7 +493,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         if ( !selected )
             colorCpy = backColor;
         else
-            colorCpy = selectionBackColor;
+            colorCpy = selBackColor;
     else
         if ( selected )
             colorCpy = selectionColor;
@@ -529,7 +529,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 surface_to_viewer_eye = normalize (-position_eye);
     float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
     dot_prod_specular = max(dot_prod_specular,0);
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(colorCpy);
@@ -654,9 +654,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform mat4 normal_matrix;
 
   uniform highp usampler2D selection;      // (in from base) selection BitSet
-  uniform bool showSelectedVertices;    // (in from base) use selection or not
+  uniform bool showSelVerts;    // (in from base) use selection or not
   uniform vec4 selectionColor;       // (in from base) selection color
-  uniform vec4 selectionBackColor;   // (in from base) selection back face color
+  uniform vec4 selBackColor;   // (in from base) selection back face color
 
   uniform bool perVertColoring;      // (in from base) linear interpolate colors if true
   uniform bool hasNormals;           // (in from base) dont use normals if they are not
@@ -667,8 +667,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
 
-  uniform float specular_exponent;   // (in from base) lighting parameter
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform float specExp;   // (in from base) lighting parameter
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
@@ -691,7 +691,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     vec3 normEyeCpy = normal_eye;
     
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     if (!hasNormals)
       normEyeCpy = direction_to_light_eye;
@@ -700,7 +700,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     
     vec4 colorCpy;
     bool selected = false;
-    if ( showSelectedVertices )
+    if ( showSelVerts )
     {
       ivec2 texSize = textureSize( selection, 0 );
       uint index = primitiveId / 32u;
@@ -714,7 +714,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         if ( !selected )
             colorCpy = backColor;
         else
-            colorCpy = selectionBackColor;
+            colorCpy = selBackColor;
     }
     else
         if ( selected )
@@ -735,7 +735,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
     if ( dot_prod_specular < 0.0 )
       dot_prod_specular = 0.0;
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(colorCpy);
@@ -772,8 +772,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
 
-  uniform float specular_exponent;   // (in from base) lighting parameter 
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform float specExp;   // (in from base) lighting parameter 
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
   flat in highp uint primitiveId;
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
@@ -793,7 +793,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     vec3 normEyeCpy = normal_eye;
     
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     if (!hasNormals)
       normEyeCpy = direction_to_light_eye;
@@ -826,7 +826,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
     if (dot_prod_specular < 0.0)
       dot_prod_specular = 0.0;
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(colorCpy);
@@ -1097,9 +1097,9 @@ void GLStaticHolder::createShader_( ShaderType type )
                 precision highp float;
   uniform mat4 view;
   uniform mat4 proj;
-  uniform vec3 light_position_eye;   // (in from base) light position transformed by view only (not proj)
+  uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
                                      
-  float specular_exponent = 35.0f;
+  float specExp = 35.0f;
   float ambientStrength = 0.1;
   float specularStrength = 0.5;
                                      
@@ -1111,7 +1111,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
   void main()
   {    
-    vec3 vector_to_light_eye = light_position_eye - position_eye;
+    vec3 vector_to_light_eye = ligthPosEye - position_eye;
     vec3 direction_to_light_eye = normalize (vector_to_light_eye);
     float dot_prod = abs(dot (direction_to_light_eye, normalize(normal_eye)));
 
@@ -1120,7 +1120,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     float dot_prod_specular = dot (reflection_eye, surface_to_viewer_eye);
     if ( dot_prod_specular < 0.0 )
       dot_prod_specular = 0.0;
-    float specular_factor = pow (dot_prod_specular, specular_exponent);
+    float specular_factor = pow (dot_prod_specular, specExp);
 
     vec3 ligthColor = vec3(1.0,1.0,1.0);
     vec3 color = vec3(color_frag);

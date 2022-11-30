@@ -31,4 +31,4 @@ def test_distance_map():
     assert (map.isValid(10,10) == False)
     assert (map.isValid(13,13) == True)
     assert (map.isValid(19,19) == False)
-    assert (tomesh.topology.numValidFaces() > 0)
+    assert (tomesh.topology.numValidFaces()>0)

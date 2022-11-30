@@ -14,7 +14,7 @@ namespace MR
 {
 
 tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b, 
-    bool fixDegenerations, float maxError, const Vector3f* shift = nullptr )
+    bool fixDegenerations, float maxError, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
         return b;
@@ -22,12 +22,28 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b,
         return a;
 
     AffineXf3f xf = AffineXf3f::translation( shift ? *shift : Vector3f() );
-    auto res = MR::boolean( a, b, BooleanOperation::Union, shift ? &xf : nullptr );
+    BooleanResultMapper mapper_;
+    auto res = MR::boolean(
+        a,
+        b,
+        BooleanOperation::Union,
+        shift ? &xf : nullptr,
+        fixDegenerations || mapper ? &mapper_ : nullptr
+    );
     if ( !res.valid() )
         return tl::make_unexpected( res.errorString );
 
     if ( fixDegenerations )
-        resolveMeshDegenerations( res.mesh, { .maxDeviation = maxError } );
+    {
+        auto newFaces = mapper_.newFaces();
+        resolveMeshDegenerations( res.mesh, {
+            .maxDeviation = maxError,
+            .region = &newFaces,
+        } );
+    }
+
+    if ( mapper != nullptr )
+        *mapper = std::move( mapper_ );
 
     return res.mesh;
 }
@@ -35,11 +51,12 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b,
 class BooleanReduce
 {
 public:
-    BooleanReduce( std::vector<Mesh>& mehses, const std::vector<Vector3f>& shifts, float maxError, bool fixDegenerations ) :
+    BooleanReduce( std::vector<Mesh>& mehses, const std::vector<Vector3f>& shifts, float maxError, bool fixDegenerations, bool collectNewFaces ) :
         maxError_{ maxError },
         fixDegenerations_{ fixDegenerations },
         mergedMeshes_{ mehses },
-        shifts_{ shifts }
+        shifts_{ shifts },
+        collectNewFaces_{ collectNewFaces }
     {}
 
     BooleanReduce( BooleanReduce& x, tbb::split ) :
@@ -47,7 +64,8 @@ public:
         maxError_{ x.maxError_ },
         fixDegenerations_{ x.fixDegenerations_ },
         mergedMeshes_{ x.mergedMeshes_ },
-        shifts_{ x.shifts_ }
+        shifts_{ x.shifts_ },
+        collectNewFaces_{ x.collectNewFaces_ }
     {
     }
 
@@ -61,11 +79,20 @@ public:
             return;
         }
         Vector3f shift = y.resShift - resShift;
-        auto res = unitePairOfMeshes( resultMesh, y.resultMesh, fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift );
-        if ( res.has_value() )
-            resultMesh = std::move( res.value() );
-        else
+        BooleanResultMapper mapper;
+        auto res = unitePairOfMeshes( resultMesh, y.resultMesh, fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
+        if ( !res.has_value() )
+        {
             error = std::move( res.error() );
+            return;
+        }
+        resultMesh = std::move( res.value() );
+        if ( collectNewFaces_ )
+        {
+            newFaces = mapper.newFaces()
+                    | mapper.map( newFaces, BooleanResultMapper::MapObject::A )
+                    | mapper.map( y.newFaces, BooleanResultMapper::MapObject::B );
+        }
     }
 
     void operator()( const tbb::blocked_range<int>& r )
@@ -75,16 +102,19 @@ public:
         if ( !shifts_.empty() )
             resShift = shifts_[r.begin()];
         resultMesh = std::move( mergedMeshes_[r.begin()] );
+        newFaces.resize( resultMesh.topology.faceSize() );
     }
 
     Mesh resultMesh;
     std::string error;
     Vector3f resShift;
+    FaceBitSet newFaces;
 private:
     float maxError_{ 0.0f };
     bool fixDegenerations_{ false };
     std::vector<Mesh>& mergedMeshes_;
     const std::vector<Vector3f>& shifts_;
+    bool collectNewFaces_{ false };
 };
 
 tl::expected<Mesh, std::string> uniteManyMeshes( 
@@ -196,11 +226,13 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
     }
 
     // parallel reduce unite merged meshes
-    BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations );
+    BooleanReduce reducer( mergedMeshes, randomShifts, params.maxAllowedError, params.fixDegenerations, params.newFaces != nullptr );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
         return tl::make_unexpected( "Error while uniting meshes: " + reducer.error );
 
+    if ( params.newFaces != nullptr )
+        *params.newFaces = std::move( reducer.newFaces );
     return reducer.resultMesh;
 }
 

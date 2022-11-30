@@ -16,7 +16,6 @@ jsoncpp-devel
 libtiff-devel
 libzip-devel
 libzstd-devel
-openvdb-devel
 pkg-config
 podofo-devel
 python3.9

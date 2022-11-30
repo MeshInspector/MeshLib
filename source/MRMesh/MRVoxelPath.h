@@ -50,7 +50,7 @@ struct VoxelMetricParameters
 
 /// builds shortest path in given metric from start to finish voxels; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API std::vector<size_t> buildSmallestMetricPath( const VdbVolume & voxels,  const VoxelsMetric & metric,
-                                                                     size_t start, size_t finish, ProgressCallback cb = nullptr );
+                                                                     size_t start, size_t finish, ProgressCallback cb = {} );
 
 /// \}
 

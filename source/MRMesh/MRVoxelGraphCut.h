@@ -16,6 +16,6 @@ namespace MR
  * 
  * \sa \ref VolumeSegmenter
  */
-MRMESH_API VoxelBitSet segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb );
+MRMESH_API VoxelBitSet segmentVolumeByGraphCut( const SimpleVolume& densityVolume, float k, const VoxelBitSet& sourceSeeds, const VoxelBitSet& sinkSeeds, ProgressCallback cb = {} );
 
 } // namespace MR

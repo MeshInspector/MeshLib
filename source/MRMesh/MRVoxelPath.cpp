@@ -302,10 +302,16 @@ std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const Vox
     MR_TIMER;
     VoxelsPathsBuilder b( voxels, metric );
     b.addPathStart( finish, 0 );
+    float progress = 0.0f;
+    const float targetProgress = 1.0f;
     for (;;)
     {
-        if ( cb && !cb( 0.0f ) )
-            return {};
+        if ( cb )
+        {
+            progress += ( targetProgress - progress ) * 0.5f;
+            if ( !cb( progress ) )
+                return {};
+        }
 
         auto back = b.growOneVoxel();
         if ( back == InvalidVoxel )

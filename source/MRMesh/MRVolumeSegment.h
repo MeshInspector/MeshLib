@@ -87,7 +87,7 @@ public:
     MRMESH_API const std::vector<Vector3i>& getSeeds( SeedType seedType ) const;
 
     /// Segments volume, return inside part segmentation (VoxelBitSet in space of VolumePart)
-    MRMESH_API tl::expected<VoxelBitSet, std::string> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = nullptr );
+    MRMESH_API tl::expected<VoxelBitSet, std::string> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = {} );
     
     /// Returns mesh of given segment
     MRMESH_API tl::expected<MR::Mesh, std::string> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;

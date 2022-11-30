@@ -149,10 +149,17 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
         minPathCapacity.setLargerValue( v, FLT_MAX );
     }
 
+    float progress = 0.0f;
+    const float targetProgress = 0.5f;
+
     for ( int i = 0; ; ++i )
     {
-        if ( ( i % 100 == 0 ) && cb && !cb( 0.0f ) )
-            return false;
+        if ( cb )
+        {
+            progress += ( targetProgress - progress ) * 0.5f;
+            if ( !cb( progress ) )
+                return false;
+        }
         
         auto top = minPathCapacity.setTopValue( -1.0f );
         const VoxelId v{ top.id };
@@ -194,6 +201,9 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
             active_.push_back( v );
     }
 
+    if ( cb && !cb( targetProgress ) )
+        return false;
+
     return true;
 }
 
@@ -203,20 +213,26 @@ VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBit
     
     buildInitialForest_( sourceSeeds, sinkSeeds, cb );
     
-    if ( cb && !cb( 0.25f ) )
+    float progress = 0.5f;
+    const float targetProgress = 1.0f;
+    if ( cb && !cb( 0.5f ) )
         return VoxelBitSet{};
     
     for ( int i = 0; !active_.empty(); ++i )
     {
-        if ( ( i % 100 == 0 ) && cb && !cb( 0.5f ) )
-            return VoxelBitSet{};
+        if ( cb )
+        {
+            progress += ( targetProgress - progress ) * 0.5f;
+            if ( !cb( progress ) )
+                return VoxelBitSet{};
+        }
 
         auto f = active_.front();
         active_.pop_front();
         processActive_( f );
     }
 
-    if ( cb && !cb( 1.0f ) )
+    if ( cb && !cb( targetProgress ) )
         return VoxelBitSet{};
 
     VoxelBitSet res( size_ );

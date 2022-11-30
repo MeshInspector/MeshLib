@@ -55,7 +55,7 @@ RUN ./scripts/build_thirdparty.sh
 #FROM ubuntu:20.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-COPY lib /usr/local/lib/meshlib-thirdparty-lib/lib
+RUN cp lib /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh

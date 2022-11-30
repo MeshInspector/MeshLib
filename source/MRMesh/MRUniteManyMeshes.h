@@ -21,6 +21,8 @@ struct UniteManyMeshesParams
     float maxAllowedError{ 1e-5f };
     // Seed that is used for random shifts
     unsigned int randomShiftsSeed{ 0 };
+    // If set, the bitset will store new faces created by boolean operations
+    FaceBitSet* newFaces{ nullptr };
 };
 
 // Computes the surface of objects' union each of which is defined by its own surface mesh

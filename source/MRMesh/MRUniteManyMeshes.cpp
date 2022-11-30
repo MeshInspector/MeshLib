@@ -89,6 +89,7 @@ public:
         resultMesh = std::move( res.value() );
         if ( collectNewFaces_ )
         {
+            // store faces created by the latest union operation and map faces created by previous ones
             newFaces = mapper.newFaces()
                     | mapper.map( newFaces, BooleanResultMapper::MapObject::A )
                     | mapper.map( y.newFaces, BooleanResultMapper::MapObject::B );

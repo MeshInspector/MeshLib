@@ -1,6 +1,7 @@
 #pragma once
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRMeshFwd.h"
+#include "MRProgressCallback.h"
 #include <functional>
 
 namespace MR
@@ -49,7 +50,7 @@ struct VoxelMetricParameters
 
 /// builds shortest path in given metric from start to finish voxels; if no path can be found then empty path is returned
 [[nodiscard]] MRMESH_API std::vector<size_t> buildSmallestMetricPath( const VdbVolume & voxels,  const VoxelsMetric & metric,
-                                                                     size_t start, size_t finish );
+                                                                     size_t start, size_t finish, ProgressCallback cb = {} );
 
 /// \}
 

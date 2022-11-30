@@ -55,6 +55,7 @@ RUN ./scripts/build_thirdparty.sh
 #FROM ubuntu:20.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
+COPY lib /usr/local/lib/meshlib-thirdparty-lib/lib
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
@@ -62,7 +63,6 @@ COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 
 #COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
-COPY /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
 
 ENV MR_STATE=DOCKER_BUILD
 

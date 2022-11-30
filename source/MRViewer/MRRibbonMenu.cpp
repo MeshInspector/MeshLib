@@ -464,7 +464,7 @@ void RibbonMenu::drawCollapseButton_()
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-            EM_ASM( postEmptyEvent( $0 ), int( openedTimer_ * 1000 ) );
+            EM_ASM( postEmptyEvent( $0, 2 ), int( openedTimer_ * 1000 ) );
 #pragma clang diagnostic pop
 #endif
             asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ) );

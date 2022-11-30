@@ -19,8 +19,8 @@ RUN cd /home && wget http://downloads.sourceforge.net/project/boost/boost/1.80.0
 
 RUN apt-get install clang -y
 RUN cd /home/boost_1_80_0 \
-  && sudo ./bootstrap.sh --prefix=/usr/local --with-libraries=iostream \
-  && sudo ./b2 install \
+  && sudo ./bootstrap.sh --prefix=/usr/local \
+  && sudo ./b2 install
 
 # install cmake from kitware apt repo
 RUN apt-get update -y \

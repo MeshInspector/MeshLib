@@ -224,7 +224,7 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const VoxelBitSet & 
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )
-                return tl::make_unexpected( "Operation was cancelled" );
+                return tl::make_unexpected( "Operation was canceled" );
         }
 
         auto f = active_.front();
@@ -233,7 +233,7 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const VoxelBitSet & 
     }
 
     if ( cb && !cb( targetProgress ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     VoxelBitSet res( size_ );
     for ( VoxelId v{ 0 }; v < voxelData_.size(); ++v )

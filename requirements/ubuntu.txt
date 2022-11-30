@@ -1,5 +1,6 @@
 build-essential
 clang-11
+cmake
 g++-10
 gcc-10
 libblosc-dev

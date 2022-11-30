@@ -5,6 +5,7 @@
 #include <tl/expected.hpp>
 #include "MRSimpleVolume.h"
 #include "MRBitSet.h"
+#include "MRProgressCallback.h"
 #include <string>
 
 namespace MR
@@ -86,7 +87,7 @@ public:
     MRMESH_API const std::vector<Vector3i>& getSeeds( SeedType seedType ) const;
 
     /// Segments volume, return inside part segmentation (VoxelBitSet in space of VolumePart)
-    MRMESH_API tl::expected<VoxelBitSet, std::string> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25 );
+    MRMESH_API tl::expected<VoxelBitSet, std::string> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = nullptr );
     
     /// Returns mesh of given segment
     MRMESH_API tl::expected<MR::Mesh, std::string> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;

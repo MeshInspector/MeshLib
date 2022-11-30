@@ -297,13 +297,16 @@ VoxelsMetric voxelsSumDiffsMetric( const VdbVolume& voxels, const VoxelMetricPar
     };
 }
 
-std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const VoxelsMetric& metric, size_t start, size_t finish )
+std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const VoxelsMetric& metric, size_t start, size_t finish, ProgressCallback cb )
 {
     MR_TIMER;
     VoxelsPathsBuilder b( voxels, metric );
     b.addPathStart( finish, 0 );
-    for ( ;;)
+    for (;;)
     {
+        if ( cb && !cb( 0.0f ) )
+            return {};
+
         auto back = b.growOneVoxel();
         if ( back == InvalidVoxel )
         {

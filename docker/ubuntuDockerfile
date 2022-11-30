@@ -7,9 +7,13 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip\
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+        tzdata git sudo time python3-pip wget software-properties-common
+
+RUN apt-get update -y \
+ && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+ && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
+ && apt update -y \
+ && apt install -y cmake
 
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
@@ -46,7 +50,14 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl \
+        tzdata git sudo time python3-pip xvfb curl wget software-properties-common \
+ && apt-get update -qqy \
+# update cmake
+ && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+ && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
+ && apt update -y \
+ && apt install -y cmake \
+# install requirements
  && ./scripts/install_apt_requirements.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \

@@ -130,7 +130,7 @@ jobs:
 
       - name: Build Linux image
         if: ${{ matrix.distribution != 'windows' }}
-        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}} -m 4GB . --progress=plain
 
       - name: Build Windows image
         if: ${{ matrix.distribution == 'windows' }}

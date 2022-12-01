@@ -134,7 +134,9 @@ jobs:
 
       - name: Build Windows image
         if: ${{ matrix.distribution == 'windows' }}
-        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} -m 32GB .
+        run: |
+          scripts/runner_instal_vcpkg.bat
+          docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} -m 16GB .
 
       - name: Push Linux image
         if: ${{ matrix.distribution != 'windows' }}

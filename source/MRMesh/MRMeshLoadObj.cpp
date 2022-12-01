@@ -143,26 +143,26 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     in.seekg( posStart );
     const auto streamSize = posEnd - posStart;
 
-    Buffer<char> data;
-    {
-        MR_NAMED_TIMER( "resize buffer" )
-        data.resize( streamSize + 1 );
-    }
+    Buffer<char> data( streamSize + 1 );
     {
         MR_NAMED_TIMER( "read data" )
         in.read( data.data(), streamSize );
     }
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
+    // finish with a newline
     if ( data[streamSize - 1] != '\n' )
         data[streamSize] = '\n';
     else
         data.resize( streamSize );
 
     std::vector<size_t> newlines{ 0 };
-    for ( size_t i = 0; i < data.size(); i++ )
-        if ( data[i] == '\n' )
-            newlines.emplace_back( i + 1 );
+    {
+        MR_NAMED_TIMER( "split by lines" )
+        for ( size_t i = 0; i < data.size(); i++ )
+            if ( data[i] == '\n' )
+                newlines.emplace_back( i + 1 );
+    }
 
     std::vector<int> vs;
     for ( int i = 0; i + 1 < newlines.size(); ++i )

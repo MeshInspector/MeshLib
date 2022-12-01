@@ -5,17 +5,7 @@
 #include "MRBuffer.h"
 #include "MRPch/MRTBB.h"
 
-// TODO: specify MSVC version
-#ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable:4459 )
-#endif
-#include <boost/spirit/include/phoenix_core.hpp>
-#include <boost/spirit/include/phoenix_operator.hpp>
-#include <boost/spirit/include/qi.hpp>
-#ifdef _MSC_VER
-#pragma warning( pop )
-#endif
+#include <boost/spirit/home/x3.hpp>
 
 namespace
 {
@@ -23,34 +13,23 @@ namespace
 
     tl::expected<Vector3f, std::string> parseObjVertex( const std::string_view& str )
     {
-        namespace qi = boost::spirit::qi;
-        namespace ascii = boost::spirit::ascii;
-
-        using boost::phoenix::ref;
+        using namespace boost::spirit::x3;
 
         Vector3f v;
-        bool r = qi::phrase_parse(
+        int i = 0;
+        auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
+
+        bool r = phrase_parse(
             str.begin(),
             str.end(),
-            ( 'v' >> qi::float_[ref( v.x ) = qi::_1] >> qi::float_[ref( v.y ) = qi::_1] >> qi::float_[ref( v.z ) = qi::_1] ),
+            ( 'v' >> float_[coord] >> float_[coord] >> float_[coord] ),
             ascii::space
         );
         if ( !r )
             return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
+
         return v;
     }
-
-    template <typename T>
-    struct VectorAdaptor
-    {
-        std::vector<T>& vec;
-
-        VectorAdaptor<T>& operator +=( T v )
-        {
-            vec.emplace_back( v );
-            return *this;
-        }
-    };
 
     struct ObjFace
     {
@@ -61,35 +40,24 @@ namespace
 
     tl::expected<ObjFace, std::string> parseObjFace( const std::string_view& str )
     {
-        namespace qi = boost::spirit::qi;
-        namespace ascii = boost::spirit::ascii;
-
-        using boost::phoenix::ref;
+        using namespace boost::spirit::x3;
 
         ObjFace f;
         for ( auto ia : { &f.vertices, &f.textures, &f.normals } )
             ia->reserve( 4 );
-        VectorAdaptor<int> vs{ f.vertices }, ts{ f.textures }, ns{ f.normals };
+        auto v = [&] ( auto& ctx ) { f.vertices.emplace_back( _attr( ctx ) ); };
+        auto vt = [&] ( auto& ctx ) { f.textures.emplace_back( _attr( ctx ) ); };
+        auto vn = [&] ( auto& ctx ) { f.normals.emplace_back( _attr( ctx ) ); };
 
-        bool r = qi::phrase_parse(
+        bool r = phrase_parse(
             str.begin(),
             str.end(),
-            (
-                'f' >>
-                *( qi::int_[ref( vs ) += qi::_1]
-                    >> -(
-                        ( '/' >> qi::int_[ref( ts ) += qi::_1] )
-                        |
-                        ( '/' >> qi::int_[ref( ts ) += qi::_1] >> '/' >> qi::int_[ref( ns ) += qi::_1] )
-                        |
-                        ( "//" >> qi::int_[ref( ns ) += qi::_1] )
-                    )
-                )
-            ),
+            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] ) | ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( "//" >> int_[vn] ) ) ) ),
             ascii::space
         );
         if ( !r )
             return tl::make_unexpected( "Failed to parse face in OBJ-file" );
+
         if ( f.vertices.empty() )
             return tl::make_unexpected( "Invalid face vertex count in OBJ-file" );
         if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )

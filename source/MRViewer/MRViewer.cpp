@@ -1414,6 +1414,7 @@ void Viewer::postFocus( bool focused )
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )
         MR::Viewer::instanceRef().draw( true );
+    postFocusSignal( bool( focused ) );
 }
 
 void Viewer::postRescale( float x, float y )

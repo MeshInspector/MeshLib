@@ -29,14 +29,16 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     public MultiListener<
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener,
     CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
+    SpaceMouseMoveListener, SpaceMouseDownListener,
     PreDrawListener, PostDrawListener,
     PostResizeListener, PostRescaleListener>
 {
     using ImGuiMenuMultiListener = MultiListener<
         MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener,
         CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
+        SpaceMouseMoveListener, SpaceMouseDownListener,
         PreDrawListener, PostDrawListener,
-        PostResizeListener>;
+        PostResizeListener, PostRescaleListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
   float hidpi_scaling_;
@@ -281,6 +283,9 @@ protected:
     // Scene events
     MRVIEWER_API virtual void postResize_( int width, int height ) override;
     MRVIEWER_API virtual void postRescale_( float x, float y) override;
+    // Spacemouse events
+    MRVIEWER_API virtual bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate ) override;
+    MRVIEWER_API virtual bool spaceMouseDown_( int key ) override;
 
     // This function reset ImGui style to current theme and scale it by menu_scaling
     // called in ImGuiMenu::postRescale_()

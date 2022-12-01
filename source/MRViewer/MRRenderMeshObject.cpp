@@ -88,20 +88,20 @@ void RenderMeshObject::render( const RenderParams& renderParams )
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
     GL_EXEC( auto fixed_colori = glGetUniformLocation( shader, "fixed_color" ) );
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objMesh_->getShininess() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objMesh_->getAmbientStrength() ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
     const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelectedFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objMesh_->getSelectedFacesColor() );
     const auto backColor = Vector4f( objMesh_->getBackColor() );
     const auto selectionBackfacesColor = Vector4f( backColor.x * selectionColor.x, backColor.y * selectionColor.y, backColor.z * selectionColor.z, backColor.w * selectionColor.w );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionColor" ), selectionColor[0], selectionColor[1], selectionColor[2], selectionColor[3] ) );
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionBackColor" ), selectionBackfacesColor[0], selectionBackfacesColor[1], selectionBackfacesColor[2], selectionBackfacesColor[3] ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selBackColor" ), selectionBackfacesColor[0], selectionBackfacesColor[1], selectionBackfacesColor[2], selectionBackfacesColor[3] ) );
 
     // Render fill
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Faces, renderParams.viewportId ) )

@@ -18,7 +18,8 @@ var open_files_dialog_popup = function (extensions, multi) {
   if (multi)
     file_selector.setAttribute('multiple', null);
   file_selector.setAttribute('onchange', 'open_files(event)');
-  file_selector.setAttribute('accept', extensions);
+  if (!is_ios())
+    file_selector.setAttribute('accept', extensions);
   file_selector.setAttribute('style', 'display: none;');
   file_selector.setAttribute('align', 'center');
 

@@ -6,6 +6,7 @@
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -205,37 +206,26 @@ tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshT
     if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
         return tl::make_unexpected( "Only closed mesh can be converted to signed volume" );
 
+    auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
     FloatGrid grid;
     if ( params.type == MeshToVolumeParams::Type::Signed )
-        grid = meshToLevelSet( mesh, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToLevelSet( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
     else
-        grid = meshToDistanceField( mesh, params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+        grid = meshToDistanceField( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
 
     if ( !grid )
         return tl::make_unexpected( "Operation canceled" );
 
-    auto gridBB = grid->evalActiveVoxelBoundingBox();
-    auto minCorner = gridBB.min();
-
-    Vector3f shift( float( -minCorner.x() + 1 ), float( -minCorner.y() + 1 ), float( -minCorner.z() + 1 ) );
-
-    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    xform->preTranslate( { shift.x,shift.y,shift.z } );
-    openvdb::tools::GridTransformer transformer( xform->baseMap()->getAffineMap()->getMat4() );
-
-    FloatGrid targetGrid = std::make_shared<OpenVdbFloatGrid>();
     // to get proper normal orientation both for signed and unsigned cases
-    targetGrid->setGridClass( openvdb::GRID_LEVEL_SET );
+    grid->setGridClass( openvdb::GRID_LEVEL_SET );
 
-    // transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>( *grid, *targetGrid );
-    targetGrid->tree().prune();
     if ( params.outXf )
-        *params.outXf = AffineXf3f::translation( -mult( shift, params.voxelSize ) );
+        *params.outXf = shift;
 
     VdbVolume res;
-    res.data = targetGrid;
-    evalGridMinMax( targetGrid, res.min, res.max );
-    auto dim = gridBB.extents();
+    res.data = grid;
+    evalGridMinMax( grid, res.min, res.max );
+    auto dim = grid->evalActiveVoxelBoundingBox().extents();
     res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
     res.voxelSize = params.voxelSize;
 

@@ -102,7 +102,12 @@ void PlaneWidget::updateWidget_( bool updateCameraRotation )
     Vector3f cameraUp3 = cameraUp3Old_;
     auto from = transform.A * Vector3f::plusY();
     auto to = plane_.project( transform.b + cameraUp3 ) - transform.b;
-    auto rot2 = Matrix3f::rotation( plane_.n, angle( from, to ) );
+    auto axis = cross( from, to );
+    if ( dot( axis, plane_.n ) < 0.0f )
+        axis = -plane_.n;
+    else
+        axis = plane_.n;
+    auto rot2 = Matrix3f::rotation( axis, angle( from, to ) );
 
     auto lastPlaneTransform = trans1 * AffineXf3f::linear( rot2 ) * rot1;
     transform = lastPlaneTransform * scale1;

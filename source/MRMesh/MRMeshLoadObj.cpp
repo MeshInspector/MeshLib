@@ -13,7 +13,7 @@ namespace
 {
     using namespace MR;
 
-    tl::expected<Vector3f, std::string> parse_obj_vertex( const std::string_view& str )
+    tl::expected<Vector3f, std::string> parseObjVertex( const std::string_view& str )
     {
         namespace qi = boost::spirit::qi;
         namespace ascii = boost::spirit::ascii;
@@ -32,46 +32,49 @@ namespace
         return v;
     }
 
-    struct index_accumulator
+    template <typename T>
+    struct VectorAdaptor
     {
-        std::vector<int> indices;
+        std::vector<T>& vec;
 
-        index_accumulator& operator +=( int v )
+        VectorAdaptor<T>& operator +=( T v )
         {
-            indices.emplace_back( v );
+            vec.emplace_back( v );
             return *this;
         }
     };
 
-    struct obj_face_indices
+    struct ObjFace
     {
-        index_accumulator vertices;
-        index_accumulator textures;
-        index_accumulator normals;
+        std::vector<int> vertices;
+        std::vector<int> textures;
+        std::vector<int> normals;
     };
 
-    tl::expected<obj_face_indices, std::string> parse_obj_face( const std::string_view& str )
+    tl::expected<ObjFace, std::string> parseObjFace( const std::string_view& str )
     {
         namespace qi = boost::spirit::qi;
         namespace ascii = boost::spirit::ascii;
 
         using boost::phoenix::ref;
 
-        obj_face_indices vs;
-        for ( auto ia : { &vs.vertices, &vs.textures, &vs.normals } )
-            ia->indices.reserve( 4 );
+        ObjFace f;
+        for ( auto ia : { &f.vertices, &f.textures, &f.normals } )
+            ia->reserve( 4 );
+        VectorAdaptor<int> vs{ f.vertices }, ts{ f.textures }, ns{ f.normals };
+
         bool r = qi::phrase_parse(
             str.begin(),
             str.end(),
             (
                 'f' >>
-                *( qi::int_[ref( vs.vertices ) += qi::_1]
+                *( qi::int_[ref( vs ) += qi::_1]
                     >> -(
-                        ( '/' >> qi::int_[ref( vs.textures ) += qi::_1] )
+                        ( '/' >> qi::int_[ref( ts ) += qi::_1] )
                         |
-                        ( '/' >> qi::int_[ref( vs.textures ) += qi::_1] >> '/' >> qi::int_[ref( vs.normals ) += qi::_1] )
+                        ( '/' >> qi::int_[ref( ts ) += qi::_1] >> '/' >> qi::int_[ref( ns ) += qi::_1] )
                         |
-                        ( "//" >> qi::int_[ref( vs.normals ) += qi::_1] )
+                        ( "//" >> qi::int_[ref( ns ) += qi::_1] )
                     )
                 )
             ),
@@ -79,8 +82,13 @@ namespace
         );
         if ( !r )
             return tl::make_unexpected( "Failed to parse face in OBJ-file" );
-        // TODO: checks
-        return vs;
+        if ( f.vertices.empty() )
+            return tl::make_unexpected( "Invalid face vertex count in OBJ-file" );
+        if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
+            return tl::make_unexpected( "Invalid face texture count in OBJ-file" );
+        if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
+            return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
+        return f;
     }
 }
 
@@ -205,7 +213,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         {
             const auto li = vertexLines[vi];
             std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
-            auto v = parse_obj_vertex( line );
+            auto v = parseObjVertex( line );
             if ( !v.has_value() )
             {
                 if ( tbb::task::self().cancel_group_execution() )
@@ -237,7 +245,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             {
                 const auto li = object.faceLines[fi];
                 std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
-                auto f = parse_obj_face( line );
+                auto f = parseObjFace( line );
                 if ( !f.has_value() )
                 {
                     if ( tbb::task::self().cancel_group_execution() )
@@ -245,7 +253,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     return;
                 }
 
-                auto& vs = f->vertices.indices;
+                auto& vs = f->vertices;
                 for ( auto& v : vs )
                 {
                     if ( v < 0 )

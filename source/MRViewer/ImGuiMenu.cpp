@@ -1749,6 +1749,9 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     std::function<void( VisualObject*, const float& )> setter
 )
 {
+    if ( selectedVisualObjs.empty() )
+        return;
+
     auto obj = selectedVisualObjs[0];
     auto value = getter( obj.get() );
     bool isAllTheSame = true;

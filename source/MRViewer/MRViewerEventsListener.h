@@ -236,4 +236,14 @@ protected:
     virtual bool spaceMouseUp_( int key ) = 0;
 };
 
+/// class to subscribe on PostWindowFocusSingal
+struct MRVIEWER_CLASS PostWindowFocusListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( PostWindowFocusListener );
+    virtual ~PostWindowFocusListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual void postWindowFocusSignal_( bool focused ) = 0;
+};
+
 }

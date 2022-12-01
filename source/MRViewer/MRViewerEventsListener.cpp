@@ -151,4 +151,11 @@ void SpaceMouseUpListener::connect( Viewer* viewer, int group, boost::signals2::
     connection_ = viewer->spaceMouseUpSignal.connect( group, MAKE_SLOT( &SpaceMouseUpListener::spaceMouseUp_ ), pos );
 }
 
+void PostWindowFocusListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->postWindowFocusSignal.connect( group, MAKE_SLOT( &PostWindowFocusListener::postWindowFocusSignal_ ), pos );
+}
+
 }

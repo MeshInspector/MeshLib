@@ -189,6 +189,7 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
     {
         viewer->postFocus( bool( focused ) );
     } } );
+    viewer->postWindowFocusSignal( bool( focused ) );
 }
 #endif
 

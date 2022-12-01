@@ -281,6 +281,8 @@ protected:
     // Scene events
     MRVIEWER_API virtual void postResize_( int width, int height ) override;
     MRVIEWER_API virtual void postRescale_( float x, float y) override;
+    // Spacemouse events
+    MRVIEWER_API bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate );
 
     // This function reset ImGui style to current theme and scale it by menu_scaling
     // called in ImGuiMenu::postRescale_()

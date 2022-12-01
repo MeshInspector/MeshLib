@@ -528,6 +528,9 @@ public:
     TouchSignal touchStartSignal; // signal is called when any touch starts
     TouchSignal touchMoveSignal; // signal is called when touch moves
     TouchSignal touchEndSignal; // signal is called when touch stops
+    // Window focus signal
+    using PostWindowFocusSignal = boost::signals2::signal<void( bool )>;
+    PostWindowFocusSignal postWindowFocusSignal;
 
     // queue to ignore multiple mouse moves in one frame
     class MRVIEWER_CLASS EventQueue

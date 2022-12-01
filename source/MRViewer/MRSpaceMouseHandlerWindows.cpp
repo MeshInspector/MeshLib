@@ -96,6 +96,11 @@ bool InitializeRawInput()
     return ( RegisterRawInputDevices( inputDevices, inputDevicesCount, cbSize ) != FALSE );
 }
 
+SpaceMouseHandlerWindows::SpaceMouseHandlerWindows()
+{
+    connect( &getViewerInstance() );
+}
+
 void SpaceMouseHandlerWindows::initialize()
 {
     bool spaceMouseAttached = isSpaceMouseAttached();
@@ -118,65 +123,70 @@ void SpaceMouseHandlerWindows::handle()
     if ( !initialized_ || joystickIndex_ == -1 )
         return;
 
-
+    auto& viewer = getViewerInstance();
     int count;
     const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-    if ( count != 6 )
+    if ( count == 6 )
     {
-        spdlog::error( "Error SpaceMouseHandlerWindows : Wrong axes count" );
-        // TODO disconect device
-        assert( false );
-        return;
+        if ( active_ )
+        {
+            Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
+            Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
+            translate *= axesScale;
+            rotate *= axesScale;
+
+            if ( translate.lengthSq() > 1.e-3f || rotate.lengthSq() > 1.e-3f )
+                viewer.spaceMouseMove( translate, rotate );
+        }
+        std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
-    Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
-    Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
-    std::copy( axesNew, axesNew + 6, axes_.begin() );
-    translate *= axesScale;
-    rotate *= axesScale;
-
-    auto& viewer = getViewerInstance();
-    if ( translate.lengthSq() > 1.e-3f || rotate.lengthSq() > 1.e-3f )
-        viewer.spaceMouseMove( translate, rotate );
-
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
-    if ( count != 2 && count != 15 && count != 31 )
+    
+    if ( count == 2 || count == 15 || count == 31 )
     {
-        spdlog::error( "Error SpaceMouseHandlerWindows : Wrong buttons count" );
-        // TODO disconect device
-        assert( false );
-        return;
+        buttonsCount_ = count;
+        if ( active_ )
+        {
+            mapButtons_ = mapButtonsPro;
+            if ( count == 2 )
+                mapButtons_ = mapButtonsCompact;
+            else if ( count == 15 )
+                mapButtons_ = mapButtonsPro;
+            else
+                mapButtons_ = mapButtonsEnterprise;
+            for ( int i = 0; i < count; ++i )
+            {
+                int button = mapButtons_[i];
+                if ( !buttons_[i] && buttons[i] ) // button down
+                    viewer.spaceMouseDown( button );
+                else if ( buttons_[i] && !buttons[i] ) // button up
+                    viewer.spaceMouseUp( button );
+//                 else if ( buttons_[i] && buttons[i] &&  ) // button repeat
+//                     viewer.spaceMouseRepeat( button );
+            }
+        }
+        std::copy( buttons, buttons + count, buttons_.begin() );
     }
-    const int* mapButtons = mapButtonsPro;
-    if ( count == 2 )
-        mapButtons = mapButtonsCompact;
-    else if ( count == 15 )
-        mapButtons = mapButtonsPro;
-    else
-        mapButtons = mapButtonsEnterprise;
-    for ( int i = 0; i < count; ++i )
-    {
-        int button = mapButtons[i];
-        if ( !buttons_[i] && buttons[i] ) // button down
-            viewer.spaceMouseDown( button );
-        else if ( buttons_[i] && !buttons[i] ) // button up
-            viewer.spaceMouseUp( button );
-//         else if ( buttons_[i] && buttons[i] &&  ) // button repeat
-//             viewer.spaceMouseRepeat( button );
-    }
-    std::copy( buttons, buttons + count, buttons_.begin() );
 }
 
 void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
 {
-    updateConnected_();
+    if ( initialized_ )
+        updateConnected_();
+    else
+        initialize();
+}
+
+void SpaceMouseHandlerWindows::postWindowFocusSignal_( bool focused )
+{
+    active_ = focused;
 }
 
 void SpaceMouseHandlerWindows::updateConnected_()
 {
-    if ( !initialized_ )
-        initialize();
-    joystickIndex_ = -1;
+
+    int newJoystickIndex_ = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {
         int present = glfwJoystickPresent( i );
@@ -187,10 +197,15 @@ void SpaceMouseHandlerWindows::updateConnected_()
         auto findRes = str.find( "SpaceMouse" );
         if ( findRes != std::string_view::npos )
         {
-            joystickIndex_ = i;
+            newJoystickIndex_ = i;
             break;
         }
     }
+
+    if ( newJoystickIndex_ == joystickIndex_ )
+        return;
+
+    joystickIndex_ = newJoystickIndex_;
 
     if ( joystickIndex_ != -1 )
     {

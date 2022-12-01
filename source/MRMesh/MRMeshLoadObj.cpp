@@ -5,9 +5,15 @@
 #include "MRBuffer.h"
 #include "MRPch/MRTBB.h"
 
+// TODO: specify MSVC version
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable:4459 )
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/qi.hpp>
+#pragma warning( pop )
+#endif
 
 namespace
 {

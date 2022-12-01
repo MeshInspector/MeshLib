@@ -189,7 +189,6 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
     {
         viewer->postFocus( bool( focused ) );
     } } );
-    viewer->postFocusSignal( bool( focused ) );
 }
 #endif
 
@@ -1400,6 +1399,7 @@ void Viewer::postFocus( bool focused )
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )
         MR::Viewer::instanceRef().draw( true );
+    postFocusSignal( bool( focused ) );
 }
 
 void Viewer::postRescale( float x, float y )

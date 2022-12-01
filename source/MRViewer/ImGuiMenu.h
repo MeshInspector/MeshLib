@@ -36,8 +36,9 @@ class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     using ImGuiMenuMultiListener = MultiListener<
         MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener,
         CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
+        SpaceMouseMoveListener, SpaceMouseDownListener,
         PreDrawListener, PostDrawListener,
-        PostResizeListener>;
+        PostResizeListener, PostRescaleListener>;
 protected:
   // Hidpi scaling to be used for text rendering.
   float hidpi_scaling_;

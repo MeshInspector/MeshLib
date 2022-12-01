@@ -251,15 +251,20 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             size_t size = 0;
             for ( auto& tris : trisPerThread )
                 size += tris.size();
-            t.reserve( size );
+            t.reserve( t.size() + size );
             for ( auto& tris : trisPerThread )
                 t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
 
-            currentObjName = object.name;
-            finishObject();
+            if ( !combineAllObjects )
+            {
+                currentObjName = object.name;
+                finishObject();
+            }
         }
     }
 
+    if ( combineAllObjects )
+        finishObject();
     return res;
 }
 

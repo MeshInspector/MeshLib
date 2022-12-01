@@ -3,6 +3,84 @@
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
 
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/qi.hpp>
+
+namespace
+{
+    using namespace MR;
+
+    tl::expected<Vector3f, std::string> parse_obj_vertex( const std::string& str )
+    {
+        namespace qi = boost::spirit::qi;
+        namespace ascii = boost::spirit::ascii;
+
+        using boost::phoenix::ref;
+
+        Vector3f v;
+        bool r = qi::phrase_parse(
+            str.begin(),
+            str.end(),
+            ( qi::float_[ref( v.x ) = qi::_1] >> qi::float_[ref( v.y ) = qi::_1] >> qi::float_[ref( v.z ) = qi::_1] ),
+            ascii::space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse vertex" );
+        return v;
+    }
+
+    struct index_accumulator
+    {
+        std::vector<int> indices;
+
+        index_accumulator& operator +=( int v )
+        {
+            indices.emplace_back( v );
+            return *this;
+        }
+    };
+
+    struct obj_face_indices
+    {
+        index_accumulator vertices;
+        index_accumulator textures;
+        index_accumulator normals;
+    };
+
+    tl::expected<obj_face_indices, std::string> parse_obj_face( const std::string& str )
+    {
+        namespace qi = boost::spirit::qi;
+        namespace ascii = boost::spirit::ascii;
+
+        using boost::phoenix::ref;
+
+        obj_face_indices vs;
+        for ( auto ia : { &vs.vertices, &vs.textures, &vs.normals } )
+            ia->indices.reserve( 4 );
+        bool r = qi::phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                *( qi::int_[ref( vs.vertices ) += qi::_1]
+                    >> -(
+                        ( '/' >> qi::int_[ref( vs.textures ) += qi::_1] )
+                        |
+                        ( '/' >> qi::int_[ref( vs.textures ) += qi::_1] >> '/' >> qi::int_[ref( vs.normals ) += qi::_1] )
+                        |
+                        ( "//" >> qi::int_[ref( vs.normals ) += qi::_1] )
+                    )
+                )
+            ),
+            ascii::space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse face" );
+        // TODO: checks
+        return vs;
+    }
+}
+
 namespace MR
 {
 
@@ -73,37 +151,23 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             break;
         if ( ch == 'v' && in.peek() != 'n' /*normals*/ && in.peek() != 't' /*texture coordinates*/ )
         {
-            float x, y, z;
-            in >> x >> y >> z;
-            points.emplace_back( x, y, z );
+            std::string line;
+            std::getline( in, line );
+            auto v = parse_obj_vertex( line );
+            if ( !v.has_value() )
+                return tl::make_unexpected( v.error() );
+            points.emplace_back( *v );
         }
         else if ( ch == 'f' )
         {
-            auto skipSlashNum = [&]()
-            {
-                auto s = (char)in.peek();
-                if ( s != '/' )
-                    return false;
-                (void)in.get();
-                auto s1 = (char)in.peek();
-                if ( ( s1 >= '0' && s1 <= '9' ) || s1 == '-' )
-                {
-                    int x; //just skip for now
-                    in >> x;
-                }
-                return true;
-            };
-            auto readVert = [&]()
-            {
-                int v;
-                in >> v;
-                if ( skipSlashNum() )
-                    skipSlashNum();
-                return v;
-            };
+            std::string line;
+            std::getline( in, line );
+            auto is = parse_obj_face( line );
+            if ( !is.has_value() )
+                return tl::make_unexpected( is.error() );
 
-            vs.clear();
-            for ( int v = readVert(); in; v = readVert() )
+            auto vs = std::move( is->vertices.indices );
+            for ( auto& v : vs )
             {
                 if ( v < 0 )
                 {
@@ -111,13 +175,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     if ( v <= 0 )
                         return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
                 }
-                vs.push_back( v );
             }
             if ( vs.size() < 3 )
                 return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
-            if ( !in.bad() && !in.eof() )
-                in.clear();
-            
+
             // TODO: make smarter triangulation based on point coordinates
             for ( int j = 1; j + 1 < vs.size(); ++j )
                 t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );

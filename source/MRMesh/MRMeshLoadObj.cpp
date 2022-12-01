@@ -3,6 +3,7 @@
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
+#include "MRPch/MRTBB.h"
 
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
@@ -164,65 +165,97 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 newlines.emplace_back( i + 1 );
     }
 
-    std::vector<int> vs;
-    for ( int i = 0; i + 1 < newlines.size(); ++i )
+    std::vector<size_t> vLines;
+    struct ObjectLines
     {
-        std::string_view line( data.data() + newlines[i], newlines[i + 1] - newlines[i + 0] );
-        if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
+        std::string name;
+        std::vector<size_t> fLines;
+    };
+    std::vector<ObjectLines> oLines( 1 );
+    {
+        MR_NAMED_TIMER( "find vertex lines" )
+        for ( int i = 0; i + 1 < newlines.size(); ++i )
         {
-            auto v = parse_obj_vertex( line );
-            if ( !v.has_value() )
-                return tl::make_unexpected( v.error() );
-            points.emplace_back( *v );
-        }
-        else if ( line[0] == 'f' )
-        {
-            auto is = parse_obj_face( line );
-            if ( !is.has_value() )
-                return tl::make_unexpected( is.error() );
-
-            auto vs = std::move( is->vertices.indices );
-            for ( auto& v : vs )
+            auto* line = data.data() + newlines[i];
+            if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
             {
-                if ( v < 0 )
-                {
-                    v += (int)points.size() + 1;
-                    if ( v <= 0 )
-                        return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
-                }
+                vLines.emplace_back( i );
             }
-            if ( vs.size() < 3 )
-                return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
-
-            // TODO: make smarter triangulation based on point coordinates
-            for ( int j = 1; j + 1 < vs.size(); ++j )
-                t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
-        }
-        else if ( line[0] == 'o' )
-        {
-            if ( !combineAllObjects )
-                finishObject();
-            // next object
-            currentObjName = line.substr( 1, std::string::npos );
-            while ( !currentObjName.empty() && currentObjName[0] == ' ' )
-                currentObjName.erase( currentObjName.begin() );
+            else if ( line[0] == 'f' )
             {
-
+                oLines.back().fLines.emplace_back( i );
             }
-        }
-        else
-        {
-            // skip unknown line
-        }
-        if ( callback && !(i & 0x3FF) )
-        {
-            const float progress = float( i + 1 ) / float( newlines.size() );
-            if ( !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ));
+            else if ( line[0] == 'o' )
+            {
+                auto o = oLines.emplace_back();
+                size_t i = 1;
+                while ( line[i] == ' ' )
+                    i++;
+                o.name = std::string_view( line + i, newlines[i + 1] - 1 - newlines[i + 0] - i );
+            }
         }
     }
 
-    finishObject();
+    points.resize( vLines.size() );
+    {
+        MR_NAMED_TIMER( "parse vertex lines" )
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, vLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            for ( auto vi = range.begin(); vi < range.end(); vi++ )
+            {
+                auto i = vLines[vi];
+                std::string_view line( data.data() + newlines[i], newlines[i + 1] - 1 - newlines[i + 0] );
+                auto v = parse_obj_vertex( line );
+                //if ( !v.has_value() )
+                //    return tl::make_unexpected( v.error() );
+                points[vi] = *v;
+            }
+        } );
+    }
+
+    {
+        MR_NAMED_TIMER( "parse faces and objects" )
+        for ( auto& oObj : oLines )
+        {
+            std::vector<obj_face_indices> indices( oObj.fLines.size() );
+            tbb::parallel_for( tbb::blocked_range<size_t>( 0, oObj.fLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+            {
+                for ( auto fi = range.begin(); fi < range.end(); fi++ )
+                {
+                    auto i = oObj.fLines[fi];
+                    std::string_view line( data.data() + newlines[i], newlines[i + 1] - 1 - newlines[i + 0] );
+                    auto is = parse_obj_face( line );
+                    //if ( !is.has_value() )
+                    //    return tl::make_unexpected( is.error() );
+
+                    for ( auto& v : is->vertices.indices )
+                    {
+                        if ( v < 0 )
+                        {
+                            v += (int)points.size() + 1;
+                            //if ( v <= 0 )
+                            //    return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
+                        }
+                    }
+                    //if ( vs.size() < 3 )
+                    //    return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
+
+                    indices[fi] = std::move( *is );
+                }
+            } );
+
+            for ( auto& is : indices )
+            {
+                auto& vs = is.vertices.indices;
+                // TODO: make smarter triangulation based on point coordinates
+                for ( int j = 1; j + 1 < vs.size(); ++j )
+                    t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+            }
+            currentObjName = oObj.name;
+            finishObject();
+        }
+    }
+
     return res;
 }
 

@@ -207,6 +207,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     timer.restart( "parse vertex lines" );
     points.resize( vertexLines.size() );
     std::string parseError;
+    tbb::task_group_context ctx;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( auto vi = range.begin(); vi < range.end(); vi++ )
@@ -216,13 +217,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             auto v = parseObjVertex( line );
             if ( !v.has_value() )
             {
-                if ( tbb::task::self().cancel_group_execution() )
+                if ( ctx.cancel_group_execution() )
                     parseError = v.error();
                 return;
             }
             points[vi] = *v;
         }
-    } );
+    }, ctx );
     if ( !parseError.empty() )
         return tl::make_unexpected( parseError );
 
@@ -248,7 +249,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 auto f = parseObjFace( line );
                 if ( !f.has_value() )
                 {
-                    if ( tbb::task::self().cancel_group_execution() )
+                    if ( ctx.cancel_group_execution() )
                         parseError = f.error();
                     return;
                 }
@@ -261,7 +262,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                         v += (int)points.size() + 1;
                         if ( v <= 0 )
                         {
-                            if ( tbb::task::self().cancel_group_execution() )
+                            if ( ctx.cancel_group_execution() )
                                 parseError = "Too negative vertex ID in OBJ-file";
                             return;
                         }
@@ -269,7 +270,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 }
                 if ( vs.size() < 3 )
                 {
-                    if ( tbb::task::self().cancel_group_execution() )
+                    if ( ctx.cancel_group_execution() )
                         parseError = "Face with less than 3 vertices in OBJ-file";
                     return;
                 }
@@ -278,7 +279,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 for ( int j = 1; j + 1 < vs.size(); ++j )
                     tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
             }
-        } );
+        }, ctx );
         if ( !parseError.empty() )
             return tl::make_unexpected( parseError );
 

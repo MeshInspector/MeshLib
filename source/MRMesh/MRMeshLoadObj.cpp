@@ -217,9 +217,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         MR_NAMED_TIMER( "parse faces and objects" )
         for ( auto& oObj : oLines )
         {
-            std::vector<obj_face_indices> indices( oObj.fLines.size() );
+            tbb::enumerable_thread_specific<Triangulation> tPerThread;
             tbb::parallel_for( tbb::blocked_range<size_t>( 0, oObj.fLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
             {
+                auto& t = tPerThread.local();
                 for ( auto fi = range.begin(); fi < range.end(); fi++ )
                 {
                     auto i = oObj.fLines[fi];
@@ -228,7 +229,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     //if ( !is.has_value() )
                     //    return tl::make_unexpected( is.error() );
 
-                    for ( auto& v : is->vertices.indices )
+                    auto& vs = is->vertices.indices;
+                    for ( auto& v : vs )
                     {
                         if ( v < 0 )
                         {
@@ -240,17 +242,19 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     //if ( vs.size() < 3 )
                     //    return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
 
-                    indices[fi] = std::move( *is );
+                    // TODO: make smarter triangulation based on point coordinates
+                    for ( int j = 1; j + 1 < vs.size(); ++j )
+                        t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
                 }
             } );
 
-            for ( auto& is : indices )
-            {
-                auto& vs = is.vertices.indices;
-                // TODO: make smarter triangulation based on point coordinates
-                for ( int j = 1; j + 1 < vs.size(); ++j )
-                    t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
-            }
+            auto size = 0;
+            for ( auto& tpt : tPerThread )
+                size += tpt.size();
+            t.reserve( size );
+            for ( auto& tpt : tPerThread )
+                t.vec_.insert( t.vec_.end(), tpt.vec_.begin(), tpt.vec_.end() );
+
             currentObjName = oObj.name;
             finishObject();
         }

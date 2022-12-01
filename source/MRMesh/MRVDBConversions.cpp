@@ -227,7 +227,7 @@ tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshT
     // to get proper normal orientation both for signed and unsigned cases
     targetGrid->setGridClass( openvdb::GRID_LEVEL_SET );
 
-    transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>( *grid, *targetGrid );
+    // transformer.transformGrid<openvdb::tools::BoxSampler, openvdb::FloatGrid>( *grid, *targetGrid );
     targetGrid->tree().prune();
     if ( params.outXf )
         *params.outXf = AffineXf3f::translation( -mult( shift, params.voxelSize ) );

@@ -9,9 +9,11 @@
 #ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable:4459 )
+#endif
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/qi.hpp>
+#ifdef _MSC_VER
 #pragma warning( pop )
 #endif
 

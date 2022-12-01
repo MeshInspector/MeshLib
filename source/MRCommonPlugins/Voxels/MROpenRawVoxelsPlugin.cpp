@@ -69,10 +69,31 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             {
                 ProgressBar::nextTask( "Load file" );
                 tl::expected<VdbVolume, std::string> res;
+
+                const auto returnError = [res, path] () -> void
+                {
+                    auto menu = getViewerInstance().getMenuPlugin();
+                    if ( !menu )
+                        return;
+
+                    if ( ProgressBar::isCanceled() )
+                    {
+                        menu->showErrorModal( "Loading canceled: " + path.string() );
+                        return;
+                    }
+
+                    menu->showErrorModal( res.error() );
+                };
+
+                
                 if ( autoMode )
                     res = VoxelsLoad::loadRaw( path, ProgressBar::callBackSetProgress );
                 else
                     res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
+
+                if ( ProgressBar::isCanceled() )
+                    return returnError;
+
                 if ( res.has_value() )
                 {
                     ProgressBar::nextTask( "Create object" );
@@ -82,9 +103,16 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     auto bins = object->histogram().getBins();
                     auto minMax = object->histogram().getBinMinMax( bins.size() / 3 );
 
+                    if ( ProgressBar::isCanceled() )
+                        return returnError;
+
                     ProgressBar::nextTask( "Create ISO surface" );
                     object->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
                     object->select( true );
+
+                    if ( ProgressBar::isCanceled() )
+                        return returnError;
+
                     return [object] ()
                     {
                         AppendHistory<ChangeSceneAction>( "Open Voxels", object, ChangeSceneAction::Type::AddObject );
@@ -93,12 +121,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     };
                 }
                 else
-                    return [error = res.error()] ()
-                {
-                    auto menu = getViewerInstance().getMenuPlugin();
-                    if ( menu )
-                        menu->showErrorModal( error );
-                };
+                    return returnError;
             }, 3 );
             dialogIsOpen_ = false;
         }

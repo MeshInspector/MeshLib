@@ -69,20 +69,15 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             {
                 ProgressBar::nextTask( "Load file" );
                 tl::expected<VdbVolume, std::string> res;
+                std::string error;
 
-                const auto returnError = [res, path] () -> void
+                const auto showError = [error] () -> void
                 {
                     auto menu = getViewerInstance().getMenuPlugin();
                     if ( !menu )
-                        return;
+                        return;                   
 
-                    if ( ProgressBar::isCanceled() )
-                    {
-                        menu->showErrorModal( "Loading canceled: " + path.string() );
-                        return;
-                    }
-
-                    menu->showErrorModal( res.error() );
+                    menu->showErrorModal( error );
                 };
 
                 
@@ -92,7 +87,10 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
 
                 if ( ProgressBar::isCanceled() )
-                    return returnError;
+                {
+                    error = getCancelMessage( path );
+                    return showError;
+                }
 
                 if ( res.has_value() )
                 {
@@ -104,14 +102,20 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     auto minMax = object->histogram().getBinMinMax( bins.size() / 3 );
 
                     if ( ProgressBar::isCanceled() )
-                        return returnError;
+                    {
+                        error = getCancelMessage( path );
+                        return showError;
+                    }
 
                     ProgressBar::nextTask( "Create ISO surface" );
                     object->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
                     object->select( true );
 
                     if ( ProgressBar::isCanceled() )
-                        return returnError;
+                    {
+                        error = getCancelMessage( path );
+                        return showError;
+                    }
 
                     return [object] ()
                     {
@@ -121,7 +125,10 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     };
                 }
                 else
-                    return returnError;
+                {
+                    error = res.error();
+                    return showError;
+                }
             }, 3 );
             dialogIsOpen_ = false;
         }

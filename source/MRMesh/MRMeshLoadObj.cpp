@@ -147,7 +147,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     Buffer<char> data( streamSize );
     {
         MR_NAMED_TIMER( "read data" )
-        in.read( data.data(), data.size() );
+        in.read( data.data(), (ptrdiff_t)data.size() );
     }
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
@@ -155,54 +155,56 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     std::vector<size_t> newlines{ 0 };
     {
         MR_NAMED_TIMER( "split by lines" )
-        for ( size_t i = 0; i < data.size(); i++ )
-            if ( data[i] == '\n' )
-                newlines.emplace_back( i + 1 );
+        for ( size_t ci = 0; ci < data.size(); ci++ )
+            if ( data[ci] == '\n' )
+                newlines.emplace_back( ci + 1 );
     }
     // add finish line
     if ( newlines.back() != data.size() )
         newlines.emplace_back( data.size() );
 
-    std::vector<size_t> vLines;
-    struct ObjectLines
+    struct Object
     {
         std::string name;
-        std::vector<size_t> fLines;
+        std::vector<size_t> faceLines;
     };
-    std::vector<ObjectLines> oLines( 1 );
+    std::vector<size_t> vertexLines;
+    std::vector<Object> objects( 1 ); // emplace default object
     {
-        MR_NAMED_TIMER( "find vertex lines" )
-        for ( int i = 0; i + 1 < newlines.size(); ++i )
+        MR_NAMED_TIMER( "find element lines" )
+        for ( size_t li = 0; li + 1 < newlines.size(); ++li )
         {
-            auto* line = data.data() + newlines[i];
+            auto* line = data.data() + newlines[li];
             if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
             {
-                vLines.emplace_back( i );
+                vertexLines.emplace_back( li );
             }
             else if ( line[0] == 'f' )
             {
-                oLines.back().fLines.emplace_back( i );
+                objects.back().faceLines.emplace_back( li );
             }
             else if ( line[0] == 'o' )
             {
-                auto o = oLines.emplace_back();
-                size_t i = 1;
-                while ( line[i] == ' ' )
-                    i++;
-                o.name = std::string_view( line + i, newlines[i + 1] - 1 - newlines[i + 0] - i );
+                auto object = objects.emplace_back();
+
+                const auto lineWidth = newlines[li + 1] - 1 - newlines[li + 0];
+                size_t trimShift = 1;
+                while ( line[trimShift] == ' ' )
+                    trimShift++;
+                object.name = std::string_view( line + trimShift, lineWidth - trimShift );
             }
         }
     }
 
-    points.resize( vLines.size() );
+    points.resize( vertexLines.size() );
     {
         MR_NAMED_TIMER( "parse vertex lines" )
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, vLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             for ( auto vi = range.begin(); vi < range.end(); vi++ )
             {
-                auto i = vLines[vi];
-                std::string_view line( data.data() + newlines[i], newlines[i + 1] - 1 - newlines[i + 0] );
+                const auto li = vertexLines[vi];
+                std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
                 auto v = parse_obj_vertex( line );
                 //if ( !v.has_value() )
                 //    return tl::make_unexpected( v.error() );
@@ -212,22 +214,22 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     }
 
     {
-        MR_NAMED_TIMER( "parse faces and objects" )
-        for ( auto& oObj : oLines )
+        MR_NAMED_TIMER( "parse face lines" )
+        for ( auto& object : objects )
         {
-            tbb::enumerable_thread_specific<Triangulation> tPerThread;
-            tbb::parallel_for( tbb::blocked_range<size_t>( 0, oObj.fLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+            tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+            tbb::parallel_for( tbb::blocked_range<size_t>( 0, object.faceLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
             {
-                auto& t = tPerThread.local();
+                auto& tris = trisPerThread.local();
                 for ( auto fi = range.begin(); fi < range.end(); fi++ )
                 {
-                    auto i = oObj.fLines[fi];
-                    std::string_view line( data.data() + newlines[i], newlines[i + 1] - 1 - newlines[i + 0] );
-                    auto is = parse_obj_face( line );
-                    //if ( !is.has_value() )
-                    //    return tl::make_unexpected( is.error() );
+                    const auto li = object.faceLines[fi];
+                    std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
+                    auto f = parse_obj_face( line );
+                    //if ( !f.has_value() )
+                    //    return tl::make_unexpected( f.error() );
 
-                    auto& vs = is->vertices.indices;
+                    auto& vs = f->vertices.indices;
                     for ( auto& v : vs )
                     {
                         if ( v < 0 )
@@ -242,18 +244,18 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
                     // TODO: make smarter triangulation based on point coordinates
                     for ( int j = 1; j + 1 < vs.size(); ++j )
-                        t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+                        tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
                 }
             } );
 
-            auto size = 0;
-            for ( auto& tpt : tPerThread )
-                size += tpt.size();
+            size_t size = 0;
+            for ( auto& tris : trisPerThread )
+                size += tris.size();
             t.reserve( size );
-            for ( auto& tpt : tPerThread )
-                t.vec_.insert( t.vec_.end(), tpt.vec_.begin(), tpt.vec_.end() );
+            for ( auto& tris : trisPerThread )
+                t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
 
-            currentObjName = oObj.name;
+            currentObjName = object.name;
             finishObject();
         }
     }

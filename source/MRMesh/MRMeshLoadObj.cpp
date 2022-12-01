@@ -150,6 +150,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
 
+    if ( !callback( 0.25f ) )
+        return tl::make_unexpected( "Loading cancelled" );
+
     timer.restart( "split by lines" );
     std::vector<size_t> newlines{ 0 };
     for ( size_t ci = 0; ci < data.size(); ci++ )
@@ -158,6 +161,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     // add finish line
     if ( newlines.back() != data.size() )
         newlines.emplace_back( data.size() );
+
+    if ( !callback( 0.40f ) )
+        return tl::make_unexpected( "Loading cancelled" );
 
     timer.restart( "find element lines" );
     struct Object
@@ -212,7 +218,14 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     if ( !parseError.empty() )
         return tl::make_unexpected( parseError );
 
+    if ( !callback( 0.50f ) )
+        return tl::make_unexpected( "Loading cancelled" );
+
     timer.restart( "parse face lines" );
+    size_t faceTotal = 0;
+    for ( auto& object : objects )
+        faceTotal += object.faceLines.size();
+    size_t faceProcessed = 0;
     for ( auto& object : objects )
     {
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
@@ -273,6 +286,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             currentObjName = object.name;
             finishObject();
         }
+
+        faceProcessed += object.faceLines.size();
+        if ( !callback( 0.50f + 0.50f * ( (float)faceProcessed / (float)faceTotal ) ) )
+            return tl::make_unexpected( "Loading cancelled" );
     }
 
     if ( combineAllObjects )

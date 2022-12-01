@@ -10,7 +10,12 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
+
+#define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+#pragma warning(push)
+#pragma warning(disable: 4464) //relative include path contains '..'
 #include <tbb/parallel_reduce.h>
+#pragma warning(pop)
 
 namespace MR
 {

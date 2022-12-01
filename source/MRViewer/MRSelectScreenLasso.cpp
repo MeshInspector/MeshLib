@@ -14,7 +14,11 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
 
+#define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+#pragma warning(push)
+#pragma warning(disable: 4464) //relative include path contains '..'
 #include <tbb/enumerable_thread_specific.h>
+#pragma warning(pop)
 
 namespace MR
 {

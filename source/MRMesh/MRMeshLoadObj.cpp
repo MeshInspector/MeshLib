@@ -144,18 +144,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     in.seekg( posStart );
     const auto streamSize = posEnd - posStart;
 
-    Buffer<char> data( streamSize + 1 );
+    Buffer<char> data( streamSize );
     {
         MR_NAMED_TIMER( "read data" )
-        in.read( data.data(), streamSize );
+        in.read( data.data(), data.size() );
     }
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
-    // finish with a newline
-    if ( data[streamSize - 1] != '\n' )
-        data[streamSize] = '\n';
-    else
-        data.resize( streamSize );
 
     std::vector<size_t> newlines{ 0 };
     {
@@ -164,6 +159,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             if ( data[i] == '\n' )
                 newlines.emplace_back( i + 1 );
     }
+    // add finish line
+    if ( newlines.back() != data.size() )
+        newlines.emplace_back( data.size() );
 
     std::vector<size_t> vLines;
     struct ObjectLines

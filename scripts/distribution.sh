@@ -24,29 +24,23 @@ if [ -d "./distr/" ]; then
  rm -rf distr
 fi
 
-MR_LIB_DIR="lib/"
-MR_BIN_DIR="build/Release/bin/"
-MR_INSTALL_BIN_DIR="/usr/local/bin/"
+cd ./build/Release
+cmake --install . --prefix "../../distr/meshlib-dev/usr/local"
+cd -
+
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib/"
-MR_INSTALL_PYLIB_DIR="/usr/local/lib/MeshLib/meshlib/"
-MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib/"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib/"
-PYTHON_DIR="/usr/lib/python3"
+MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib/"
 
-mkdir -p distr/meshlib-dev/DEBIAN
-mkdir -p "distr/meshlib-dev${MR_INSTALL_BIN_DIR}"
-mkdir -p "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
-mkdir -p "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
-mkdir -p "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
-mkdir -p "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
-
-if [ ${1} ]; then
-  echo ${1:1} > build/Release/bin/mr.version
-else
-  echo 0.0.0.0 > build/Release/bin/mr.version
+mkdir -p distr/meshlib-dev/${MR_INSTALL_RES_DIR}
+MR_VERSION="0.0.0.0"
+if [ "${1}" ]; then
+  ${MR_VERSION}="${1:1}"
 fi
+echo ${MR_VERSION} > ${MR_INSTALL_RES_DIR}/mr.version
 
 #create control file
+mkdir -p distr/meshlib-dev/DEBIAN
 CONTROL_FILE="./distr/meshlib-dev/DEBIAN/control"
 echo "Package: meshlib-dev" > "$CONTROL_FILE"
 echo "Essential: no" >> "$CONTROL_FILE"
@@ -55,7 +49,7 @@ echo "Section: model" >> "$CONTROL_FILE"
 echo "Maintainer: Adalisk team" >> "$CONTROL_FILE"
 echo "Architecture: all" >> "$CONTROL_FILE"
 echo "Description: Advanced mesh modeling library" >> "$CONTROL_FILE"
-printf "Version: %s\n" `cat build/Release/bin/mr.version` >> "$CONTROL_FILE"
+printf "Version: %s\n" "$(cat ${MR_INSTALL_RES_DIR}/mr.version)" >> "$CONTROL_FILE"
 DEPENDS_LINE="Depends:"
 req_counter=0
 BASEDIR=$(dirname "$0")
@@ -86,36 +80,12 @@ cp "./scripts/postinstall.sh" ./distr/meshlib-dev/DEBIAN/postinst
 chmod +x ./distr/meshlib-dev/DEBIAN/postinst
 
 #copy lib dir
-CURRENT_DIR="`pwd`"
-cd "${MR_LIB_DIR}"
-find . -name '*.so*' -type f,l -exec cp -fP \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}" \;
-cd -
+cp ./lib/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}";
 printf "Thirdparty libs copy done\n"
-
-#copy application
-cp -r build/Release/bin/meshconv "distr/meshlib-dev${MR_INSTALL_BIN_DIR}"
-printf "app copy done\n"
-
-#copy libs
-cp -r build/Release/bin/*.so "distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
-printf "MR libs copy done\n"
-
-#copy python libs
-cp -r build/Release/bin/meshlib/*.so "distr/meshlib-dev${MR_INSTALL_PYLIB_DIR}"
-printf "python MR libs copy done\n"
-
-#copy verison file
-cp build/Release/bin/mr.version "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
-printf "MR version copy done\n"
 
 #copy headers
 cp -r ./include/* "distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
 printf "Thirdparty headers copy done\n"
-
-cd source
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
-cd -
-printf "Source headers copy done\n"
 
 #call dpkg
 cd distr

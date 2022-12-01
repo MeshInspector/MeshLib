@@ -82,6 +82,11 @@ else
 fi
 
 if [[ "${NAME}" == "Ubuntu" ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
+  CURRENT_DIR="`pwd`"
+  mkdir -p include/openvdb
+  cd ./thirdparty/openvdb/openvdb/openvdb/
+  find . -name '*.h*' -type f,l -exec cp -fP --parents \{\} "${CURRENT_DIR}/include/openvdb" \;
+  cd -
   cp -r ./lib/openvdb/openvdb/openvdb/* ./include/
   cp -r ./lib/cpr/cpr_generated_includes/* ./include/
 fi

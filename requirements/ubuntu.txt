@@ -17,7 +17,6 @@ libjsoncpp-dev
 libpodofo-dev
 libpython3.8-dev
 libspdlog-dev
-libtbb-dev
 libtiff-dev
 libturbojpeg0-dev
 libzip-dev

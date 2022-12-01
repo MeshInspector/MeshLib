@@ -163,10 +163,9 @@ pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
 IF(NOT APPLE)
- IF(NOT ${MR_FEDORA})
-  set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
-  include_directories(${OPENVDB_DIR})
- ENDIF()
+ set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
+ include_directories(${OPENVDB_DIR})
+
  IF(${MR_FEDORA} OR ${MR_UBUNTU22})
   add_compile_definitions(SPDLOG_FMT_EXTERNAL)
  ENDIF()

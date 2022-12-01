@@ -37,7 +37,7 @@ RUN py -3.10 -m ensurepip --upgrade && \
 	py -3.10 -m pip install -r MeshLib\requirements\python.txt
 
 # Copy vcpkg
-COPY C:\\vcpkg C:\\vcpkg
+COPY vcpkg C:\\vcpkg
 
 # There is powershell on the server side.
 ENTRYPOINT ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]

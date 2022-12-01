@@ -1,6 +1,5 @@
-@echo off
 
-choco install git.install sudo --confirm
+REM choco install git.install sudo --confirm
 
 set WORKDIR=%cd%
 echo %cd%
@@ -18,4 +17,6 @@ sudo vcpkg integrate install
 echo %WORKDIR%
 cd %WORKDIR%
 
-thirdparty\install.bat
+call thirdparty\install.bat
+rmdir /S /Q %WORKDIR%\\vcpkg\\
+robocopy C:\\vcpkg\\ %WORKDIR%\\vcpkg\\ *.* /XD "buildtrees" "downloads" "ports" "packages" /S

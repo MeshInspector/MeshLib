@@ -28,7 +28,7 @@ namespace
             ascii::space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse vertex" );
+            return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
         return v;
     }
 
@@ -78,7 +78,7 @@ namespace
             ascii::space
         );
         if ( !r )
-            return tl::make_unexpected( "Failed to parse face" );
+            return tl::make_unexpected( "Failed to parse face in OBJ-file" );
         // TODO: checks
         return vs;
     }
@@ -192,6 +192,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
     timer.restart( "parse vertex lines" );
     points.resize( vertexLines.size() );
+    std::string parseError;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( auto vi = range.begin(); vi < range.end(); vi++ )
@@ -199,16 +200,23 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             const auto li = vertexLines[vi];
             std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
             auto v = parse_obj_vertex( line );
-            //if ( !v.has_value() )
-            //    return tl::make_unexpected( v.error() );
+            if ( !v.has_value() )
+            {
+                if ( tbb::task::self().cancel_group_execution() )
+                    parseError = v.error();
+                return;
+            }
             points[vi] = *v;
         }
     } );
+    if ( !parseError.empty() )
+        return tl::make_unexpected( parseError );
 
     timer.restart( "parse face lines" );
     for ( auto& object : objects )
     {
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+        parseError.clear();
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, object.faceLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
@@ -217,8 +225,12 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                 const auto li = object.faceLines[fi];
                 std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
                 auto f = parse_obj_face( line );
-                //if ( !f.has_value() )
-                //    return tl::make_unexpected( f.error() );
+                if ( !f.has_value() )
+                {
+                    if ( tbb::task::self().cancel_group_execution() )
+                        parseError = f.error();
+                    return;
+                }
 
                 auto& vs = f->vertices.indices;
                 for ( auto& v : vs )
@@ -226,18 +238,28 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
                     if ( v < 0 )
                     {
                         v += (int)points.size() + 1;
-                        //if ( v <= 0 )
-                        //    return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
+                        if ( v <= 0 )
+                        {
+                            if ( tbb::task::self().cancel_group_execution() )
+                                parseError = "Too negative vertex ID in OBJ-file";
+                            return;
+                        }
                     }
                 }
-                //if ( vs.size() < 3 )
-                //    return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
+                if ( vs.size() < 3 )
+                {
+                    if ( tbb::task::self().cancel_group_execution() )
+                        parseError = "Face with less than 3 vertices in OBJ-file";
+                    return;
+                }
 
                 // TODO: make smarter triangulation based on point coordinates
                 for ( int j = 1; j + 1 < vs.size(); ++j )
                     tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
             }
         } );
+        if ( !parseError.empty() )
+            return tl::make_unexpected( parseError );
 
         size_t size = 0;
         for ( auto& tris : trisPerThread )

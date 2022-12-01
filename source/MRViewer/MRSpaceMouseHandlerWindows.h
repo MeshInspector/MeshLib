@@ -21,6 +21,7 @@ private:
     std::array<unsigned char, SMB_BUTTON_COUNT> buttons_;
     int joystickIndex_{ -1 };
     const int* mapButtons_{ nullptr };
+    int buttonsCount_{ 0 };
 
     virtual void postWindowFocusSignal_( bool focused ) override;
 

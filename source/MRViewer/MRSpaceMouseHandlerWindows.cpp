@@ -205,6 +205,17 @@ void SpaceMouseHandlerWindows::updateConnected_()
     if ( newJoystickIndex_ == joystickIndex_ )
         return;
 
+    auto& viewer = getViewerInstance();
+    if ( joystickIndex_ != -1 )
+    {
+        for ( int i = 0; i < buttonsCount_; ++i )
+        {
+            if ( buttons_[i] ) // button up
+                viewer.spaceMouseUp( mapButtons_[i] );
+        }
+        buttons_ = {};
+    }
+
     joystickIndex_ = newJoystickIndex_;
 
     if ( joystickIndex_ != -1 )

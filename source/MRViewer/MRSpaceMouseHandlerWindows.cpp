@@ -143,6 +143,7 @@ void SpaceMouseHandlerWindows::handle()
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
     
+    // SpaceMouse Compact have 2 btns, Pro - 15, Enterprise - 31
     if ( count == 2 || count == 15 || count == 31 )
     {
         buttonsCount_ = count;
@@ -178,7 +179,7 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
         initialize();
 }
 
-void SpaceMouseHandlerWindows::postWindowFocusSignal_( bool focused )
+void SpaceMouseHandlerWindows::postFocusSignal_( bool focused )
 {
     active_ = focused;
 }

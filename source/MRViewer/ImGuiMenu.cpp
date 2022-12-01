@@ -156,8 +156,6 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
         connect( _viewer, 0, boost::signals2::connect_position::at_front );
     }
 
-    _viewer->spaceMouseMoveSignal.connect( MAKE_SLOT( &ImGuiMenu::spaceMouseMove_), boost::signals2::connect_position::at_front );
-
     setupShortcuts_();
 }
 
@@ -334,6 +332,11 @@ void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 }
 
 bool ImGuiMenu::spaceMouseMove_( const Vector3f& /*translate*/, const Vector3f& /*rotate*/ )
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
+bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
 {
     return ImGui::GetIO().WantCaptureMouse;
 }

@@ -6,7 +6,7 @@
 namespace MR
 {
 
-class SpaceMouseHandlerWindows : public SpaceMouseHandler, public MultiListener<PostWindowFocusListener>
+class SpaceMouseHandlerWindows : public SpaceMouseHandler, public MultiListener<PostFocusListener>
 {
 public:
     SpaceMouseHandlerWindows();
@@ -23,7 +23,7 @@ private:
     const int* mapButtons_{ nullptr };
     int buttonsCount_{ 0 };
 
-    virtual void postWindowFocusSignal_( bool focused ) override;
+    virtual void postFocusSignal_( bool focused ) override;
 
     void updateConnected_();
 };

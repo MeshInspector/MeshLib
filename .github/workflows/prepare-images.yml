@@ -100,7 +100,7 @@ jobs:
           elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
             echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019-office\"}]}"      
+            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"      
           fi
 
   image-build-upload:

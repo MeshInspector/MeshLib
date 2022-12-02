@@ -61,6 +61,7 @@
 #endif
 
 #pragma warning(push)
+#pragma warning(disable:4244) //'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:4265) //class has virtual functions, but its non-trivial destructor is not virtual; instances of this class may not be destructed correctly
 #pragma warning(disable:4458) //'this': declaration of 'size' hides class member

@@ -14,8 +14,6 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPolyline2Intersect.h"
 
-#include <tbb/enumerable_thread_specific.h>
-
 namespace MR
 {
 

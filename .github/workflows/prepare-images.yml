@@ -106,7 +106,7 @@ jobs:
   image-build-upload:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 180
+    timeout-minutes: 220
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

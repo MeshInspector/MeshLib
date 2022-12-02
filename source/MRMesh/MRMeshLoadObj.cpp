@@ -85,6 +85,29 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 {
     MR_TIMER
 
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const auto streamSize = posEnd - posStart;
+
+    Buffer<char> data( streamSize );
+    in.read( data.data(), (ptrdiff_t)data.size() );
+    if ( !in )
+        return tl::make_unexpected( std::string( "OBJ-format read error" ) );
+
+    if ( !callback( 0.25f ) )
+        return tl::make_unexpected( "Loading canceled" );
+    // TODO: redefine callback
+
+    return fromSceneObjFile( data.data(), data.size(), combineAllObjects, callback );
+}
+
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
+                                                                    ProgressCallback callback )
+{
+    MR_TIMER
+
     std::vector<NamedMesh> res;
     std::string currentObjName;
     std::vector<Vector3f> points;
@@ -118,25 +141,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         currentObjName.clear();
     };
 
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const auto streamSize = posEnd - posStart;
-
-    Timer timer( "read data" );
-    Buffer<char> data( streamSize );
-    in.read( data.data(), (ptrdiff_t)data.size() );
-    if ( !in )
-        return tl::make_unexpected( std::string( "OBJ-format read error" ) );
-
-    if ( !callback( 0.25f ) )
-        return tl::make_unexpected( "Loading canceled" );
-
-    timer.restart( "split by lines" );
+    Timer timer( "split by lines" );
     std::vector<size_t> newlines{ 0 };
     tbb::enumerable_thread_specific<std::vector<size_t>> newlinesPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, data.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         bool exists = false;
         auto& newlines = newlinesPerThread.local( exists );
@@ -164,8 +172,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     for ( auto&& newlinesBlock : newlinesBlocks )
         newlines.insert( newlines.end(), newlinesBlock.begin(), newlinesBlock.end() );
     // add finish line
-    if ( newlines.back() != data.size() )
-        newlines.emplace_back( data.size() );
+    if ( newlines.back() != size )
+        newlines.emplace_back( size );
 
     if ( !callback( 0.40f ) )
         return tl::make_unexpected( "Loading canceled" );
@@ -180,7 +188,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     std::vector<Object> objects( 1 ); // emplace default object
     for ( size_t li = 0; li + 1 < newlines.size(); ++li )
     {
-        auto* line = data.data() + newlines[li];
+        auto* line = data + newlines[li];
         if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
         {
             vertexLines.emplace_back( li );
@@ -211,7 +219,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         for ( auto vi = range.begin(); vi < range.end(); vi++ )
         {
             const auto li = vertexLines[vi];
-            std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
+            std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
             auto res = parseObjVertex( line, v );
             if ( !res.has_value() )
             {
@@ -247,7 +255,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
             for ( auto fi = range.begin(); fi < range.end(); fi++ )
             {
                 const auto li = object.faceLines[fi];
-                std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
+                std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
                 for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
                     elements->clear();
                 auto res = parseObjFace( line, f );
@@ -287,10 +295,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         if ( !parseError.empty() )
             return tl::make_unexpected( parseError );
 
-        size_t size = 0;
+        size_t trisSize = 0;
         for ( auto& tris : trisPerThread )
-            size += tris.size();
-        t.reserve( t.size() + size );
+            trisSize += tris.size();
+        t.reserve( t.size() + trisSize );
         for ( auto& tris : trisPerThread )
             t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
 

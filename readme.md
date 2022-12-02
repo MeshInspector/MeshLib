@@ -148,7 +148,7 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 5c54cc06554e450829d72013c4b9e4baae41529a
+    git checkout 2022.11.14
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     cd ..

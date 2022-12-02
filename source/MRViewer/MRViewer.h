@@ -573,6 +573,9 @@ private:
     void parseCommandLine_( int argc, char** argv );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
+#ifndef MR_EMSCRIPTEN_ASYNCIFY
+    static void emsMainInfiniteLoop();
+#endif
 #endif
 
     // minimum auto increment force redraw frames after events

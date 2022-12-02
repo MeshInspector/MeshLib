@@ -384,12 +384,14 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 
 #ifdef __EMSCRIPTEN__
 #ifndef MR_EMSCRIPTEN_ASYNCIFY
-void emsMainInfiniteLoop()
+void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
+    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
+        viewer.draw( true );
 }
 #endif
 

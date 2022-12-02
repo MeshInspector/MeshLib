@@ -131,7 +131,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
 
     if ( !callback( 0.25f ) )
-        return tl::make_unexpected( "Loading cancelled" );
+        return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "split by lines" );
     std::vector<size_t> newlines{ 0 };
@@ -168,7 +168,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         newlines.emplace_back( data.size() );
 
     if ( !callback( 0.40f ) )
-        return tl::make_unexpected( "Loading cancelled" );
+        return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "find element lines" );
     struct Object
@@ -226,7 +226,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         return tl::make_unexpected( parseError );
 
     if ( !callback( 0.50f ) )
-        return tl::make_unexpected( "Loading cancelled" );
+        return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "parse face lines" );
     size_t faceTotal = 0;
@@ -302,7 +302,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
         faceProcessed += object.faceLines.size();
         if ( !callback( 0.50f + 0.50f * ( (float)faceProcessed / (float)faceTotal ) ) )
-            return tl::make_unexpected( "Loading cancelled" );
+            return tl::make_unexpected( "Loading canceled" );
     }
 
     if ( combineAllObjects )

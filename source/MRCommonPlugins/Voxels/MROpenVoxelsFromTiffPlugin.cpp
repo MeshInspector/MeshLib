@@ -71,15 +71,15 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 ProgressBar::callBackSetProgress
             } );
 
-            const auto returnError = [viewer, loadRes ]() -> void
+            const auto returnError = [directory, loadRes]() -> void
             {
-                auto menu = viewer->getMenuPlugin();
+                auto menu = getViewerInstance().getMenuPlugin();
                 if ( !menu )
                     return;
 
                 if ( ProgressBar::isCanceled() )
                 {
-                    menu->showErrorModal( "Operation was cancelled" );
+                    menu->showErrorModal( getCancelMessage( directory ) );
                     return;
                 }
 

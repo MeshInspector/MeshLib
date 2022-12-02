@@ -69,15 +69,15 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             {
                 ProgressBar::nextTask( "Load file" );
                 tl::expected<VdbVolume, std::string> res;
-                std::string error;
+                auto error = std::make_shared<std::string>();
 
                 const auto showError = [error] () -> void
                 {
                     auto menu = getViewerInstance().getMenuPlugin();
-                    if ( !menu )
-                        return;                   
+                    if ( !menu || !error)
+                        return;
 
-                    menu->showErrorModal( error );
+                    menu->showErrorModal( *error );
                 };
 
                 
@@ -88,7 +88,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                 if ( ProgressBar::isCanceled() )
                 {
-                    error = getCancelMessage( path );
+                    *error = getCancelMessage( path );
                     return showError;
                 }
 
@@ -103,7 +103,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                     if ( ProgressBar::isCanceled() )
                     {
-                        error = getCancelMessage( path );
+                        *error = getCancelMessage( path );
                         return showError;
                     }
 
@@ -113,7 +113,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                     if ( ProgressBar::isCanceled() )
                     {
-                        error = getCancelMessage( path );
+                        *error = getCancelMessage( path );
                         return showError;
                     }
 
@@ -126,7 +126,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 }
                 else
                 {
-                    error = res.error();
+                    *error = res.error();
                     return showError;
                 }
             }, 3 );

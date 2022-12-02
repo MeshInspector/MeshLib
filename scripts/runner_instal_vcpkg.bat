@@ -1,5 +1,5 @@
-
-REM choco install git.install sudo --confirm
+@echo off
+choco install git.install sudo --confirm
 
 set WORKDIR=%cd%
 echo %cd%

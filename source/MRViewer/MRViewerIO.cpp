@@ -190,6 +190,8 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
                         result = { obj };
                     }
+                    else
+                        result = tl::make_unexpected( objectDistanceMap.error() );
                 }
             }
         }

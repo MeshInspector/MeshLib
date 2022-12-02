@@ -473,12 +473,11 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
         {
+            if ( !mesh->topology.hasFace( f ) )
+                continue;
             auto ind = 3 * f;
             Vector3f v[3];
-            if ( mesh->topology.hasFace( f ) )
-                mesh->getTriPoints( f, v[0], v[1], v[2] );
-            else
-                v[0] = v[1] = v[2] = {};
+            mesh->getTriPoints( f, v[0], v[1], v[2] );
             for ( int i = 0; i < 3; ++i )
                 buffer[ind + i] = v[i];
         }
@@ -508,19 +507,16 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         {
             for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
                 auto ind = 3 * f;
-                if ( topology.hasFace( f ) )
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
                 {
-                    VertId v[3];
-                    topology.getTriVerts( f, v );
-                    for ( int i = 0; i < 3; ++i )
-                    {
-                        const auto &norm = vertNormals[v[i]];
-                        buffer[ind + i] = norm;
-                    }
+                    const auto &norm = vertNormals[v[i]];
+                    buffer[ind + i] = norm;
                 }
-                else for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = {};
             }
         } );
 
@@ -538,15 +534,12 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         {
             for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
                 auto ind = 3 * f;
-                if ( topology.hasFace( f ) )
-                {
-                    const auto& cornerN = cornerNormals[f];
-                    for ( int i = 0; i < 3; ++i )
-                        buffer[ind + i] = cornerN[i];
-                }
-                else for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = {};
+                const auto& cornerN = cornerNormals[f];
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
             }
         } );
 
@@ -576,16 +569,13 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
         {
+            if ( !mesh->topology.hasFace( f ) )
+                continue;
             auto ind = 3 * f;
-            if ( topology.hasFace( f ) )
-            {
-                VertId v[3];
-                topology.getTriVerts( f, v );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = vertsColorMap[v[i]];
-            }
-            else for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = {};
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = vertsColorMap[v[i]];
         }
     } );
 
@@ -616,16 +606,13 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
         {
             for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
                 auto ind = 3 * f;
-                if ( topology.hasFace( f ) )
-                {
-                    VertId v[3];
-                    topology.getTriVerts( f, v );
-                    for ( int i = 0; i < 3; ++i )
-                        buffer[ind + i] = uvCoords[v[i]];
-                }
-                else for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = {};
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = uvCoords[v[i]];
             }
         } );
 

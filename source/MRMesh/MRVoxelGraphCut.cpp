@@ -50,7 +50,7 @@ class VoxelGraphCut : public VolumeIndexer
 {
 public:
     VoxelGraphCut( const SimpleVolume & densityVolume, float k );
-    VoxelBitSet fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds );
+    tl::expected<VoxelBitSet, std::string> fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb );
 
 private:
     Vector<VoxelOutEdgeCapacity, VoxelId> capacity_;
@@ -69,7 +69,7 @@ private:
     //   from vnei to v for Sink side
     float edgeCapacity_( Side side, VoxelId v, OutEdge vOutEdge, VoxelId neiv );
     // constructs initial forest of paths processing vertices in min-edge-capacity-in-path-till-vertex order
-    void buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds );
+    bool buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb );
     // process neighborhood of given active voxel
     void processActive_( VoxelId v );
     // augment the path joined at neighbor voxels vSource and vSink
@@ -126,7 +126,7 @@ VoxelGraphCut::VoxelGraphCut( const SimpleVolume & densityVolume, float k )
     } );
 }
 
-void VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
+bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER;
 
@@ -149,8 +149,18 @@ void VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
         minPathCapacity.setLargerValue( v, FLT_MAX );
     }
 
-    for (;;)
+    float progress = 0.0f;
+    const float targetProgress = 0.5f;
+
+    for ( int i = 0; ; ++i )
     {
+        if ( cb && (i % 128 == 0) )
+        {
+            progress += ( targetProgress - progress ) * 0.5f;
+            if ( !cb( progress ) )
+                return false;
+        }
+        
         auto top = minPathCapacity.setTopValue( -1.0f );
         const VoxelId v{ top.id };
         const auto c{ top.val };
@@ -190,20 +200,40 @@ void VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
         if ( neiboursOtherSide )
             active_.push_back( v );
     }
+
+    if ( cb && !cb( targetProgress ) )
+        return false;
+
+    return true;
 }
 
-VoxelBitSet VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
+tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER;
-
-    buildInitialForest_( sourceSeeds, sinkSeeds );
-
-    while ( !active_.empty() )
+    
+    buildInitialForest_( sourceSeeds, sinkSeeds, cb );
+    
+    float progress = 0.5f;
+    const float targetProgress = 1.0f;
+    if ( cb && !cb( 0.5f ) )
+        return VoxelBitSet{};
+    
+    for ( int i = 0; !active_.empty(); ++i )
     {
+        if ( cb && ( i % 128 == 0 ) )
+        {
+            progress += ( targetProgress - progress ) * 0.5f;
+            if ( !cb( progress ) )
+                return tl::make_unexpected( "Operation was canceled" );
+        }
+
         auto f = active_.front();
         active_.pop_front();
         processActive_( f );
     }
+
+    if ( cb && !cb( targetProgress ) )
+        return tl::make_unexpected( "Operation was canceled" );
 
     VoxelBitSet res( size_ );
     for ( VoxelId v{ 0 }; v < voxelData_.size(); ++v )
@@ -464,12 +494,12 @@ bool VoxelGraphCut::checkNotSaturatedPath_( VoxelId v, Side side ) const
     }
 }
 
-VoxelBitSet segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
+tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER
 
     VoxelGraphCut vgc( densityVolume, k );
-    return vgc.fill( sourceSeeds, sinkSeeds );
+    return vgc.fill( sourceSeeds, sinkSeeds, cb );
 }
 
 } // namespace MR

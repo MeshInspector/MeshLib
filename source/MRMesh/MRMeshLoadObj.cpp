@@ -2,6 +2,67 @@
 #include "MRStringConvert.h"
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
+#include "MRBuffer.h"
+#include "MRPch/MRTBB.h"
+
+#include <boost/spirit/home/x3.hpp>
+
+namespace
+{
+    using namespace MR;
+
+    tl::expected<void, std::string> parseObjVertex( const std::string_view& str, Vector3f& v )
+    {
+        using namespace boost::spirit::x3;
+
+        int i = 0;
+        auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
+
+        bool r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( 'v' >> float_[coord] >> float_[coord] >> float_[coord] ),
+            ascii::space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
+
+        return {};
+    }
+
+    struct ObjFace
+    {
+        std::vector<int> vertices;
+        std::vector<int> textures;
+        std::vector<int> normals;
+    };
+
+    tl::expected<void, std::string> parseObjFace( const std::string_view& str, ObjFace& f )
+    {
+        using namespace boost::spirit::x3;
+
+        auto v = [&] ( auto& ctx ) { f.vertices.emplace_back( _attr( ctx ) ); };
+        auto vt = [&] ( auto& ctx ) { f.textures.emplace_back( _attr( ctx ) ); };
+        auto vn = [&] ( auto& ctx ) { f.normals.emplace_back( _attr( ctx ) ); };
+
+        bool r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] ) | ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( "//" >> int_[vn] ) ) ) ),
+            ascii::space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse face in OBJ-file" );
+
+        if ( f.vertices.empty() )
+            return tl::make_unexpected( "Invalid face vertex count in OBJ-file" );
+        if ( !f.textures.empty() && f.textures.size() != f.vertices.size() )
+            return tl::make_unexpected( "Invalid face texture count in OBJ-file" );
+        if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
+            return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
+        return {};
+    }
+}
 
 namespace MR
 {
@@ -24,6 +85,29 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 {
     MR_TIMER
 
+    const auto posStart = in.tellg();
+    in.seekg( 0, std::ios_base::end );
+    const auto posEnd = in.tellg();
+    in.seekg( posStart );
+    const auto streamSize = posEnd - posStart;
+
+    Buffer<char> data( streamSize );
+    in.read( data.data(), (ptrdiff_t)data.size() );
+    if ( !in )
+        return tl::make_unexpected( std::string( "OBJ-format read error" ) );
+
+    if ( !callback( 0.25f ) )
+        return tl::make_unexpected( "Loading canceled" );
+    // TODO: redefine callback
+
+    return fromSceneObjFile( data.data(), data.size(), combineAllObjects, callback );
+}
+
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
+                                                                    ProgressCallback callback )
+{
+    MR_TIMER
+
     std::vector<NamedMesh> res;
     std::string currentObjName;
     std::vector<Vector3f> points;
@@ -31,6 +115,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
     auto finishObject = [&]() 
     {
+        MR_NAMED_TIMER( "finish object" )
         if ( !t.empty() )
         {
             res.emplace_back();
@@ -56,101 +141,180 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         currentObjName.clear();
     };
 
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
-
-    std::vector<int> vs;
-    for ( int i = 0;; ++i )
+    Timer timer( "split by lines" );
+    std::vector<size_t> newlines{ 0 };
+    tbb::enumerable_thread_specific<std::vector<size_t>> newlinesPerThread;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        if ( !in )
-            return tl::make_unexpected( std::string( "OBJ-format read error" ) );
-        char ch = 0;
-        in >> ch;
-        if ( in.eof() )
-            break;
-        if ( ch == 'v' && in.peek() != 'n' /*normals*/ && in.peek() != 't' /*texture coordinates*/ )
+        bool exists = false;
+        auto& newlines = newlinesPerThread.local( exists );
+        // blocks shall not intersect each other
+        assert( !exists );
+        for ( auto ci = range.begin(); ci < range.end(); ci++ )
         {
-            float x, y, z;
-            in >> x >> y >> z;
-            points.emplace_back( x, y, z );
+            if ( data[ci] == '\n' )
+                newlines.emplace_back( ci + 1 );
         }
-        else if ( ch == 'f' )
-        {
-            auto skipSlashNum = [&]()
-            {
-                auto s = (char)in.peek();
-                if ( s != '/' )
-                    return false;
-                (void)in.get();
-                auto s1 = (char)in.peek();
-                if ( ( s1 >= '0' && s1 <= '9' ) || s1 == '-' )
-                {
-                    int x; //just skip for now
-                    in >> x;
-                }
-                return true;
-            };
-            auto readVert = [&]()
-            {
-                int v;
-                in >> v;
-                if ( skipSlashNum() )
-                    skipSlashNum();
-                return v;
-            };
+    }, tbb::static_partitioner() );
+    std::vector<std::vector<size_t>> newlinesBlocks;
+    size_t newlinesSize = 1;
+    for ( auto&& newlinesBlock : newlinesPerThread )
+    {
+        assert( !newlinesBlock.empty() );
+        newlinesSize += newlinesBlock.size();
+        newlinesBlocks.emplace_back( std::move( newlinesBlock ) );
+    }
+    std::sort( newlinesBlocks.begin(), newlinesBlocks.end(), [] ( const auto& lhs, const auto& rhs )
+    {
+        return lhs.front() < rhs.front();
+    } );
+    newlines.reserve( newlinesSize );
+    for ( auto&& newlinesBlock : newlinesBlocks )
+        newlines.insert( newlines.end(), newlinesBlock.begin(), newlinesBlock.end() );
+    // add finish line
+    if ( newlines.back() != size )
+        newlines.emplace_back( size );
 
-            vs.clear();
-            for ( int v = readVert(); in; v = readVert() )
-            {
-                if ( v < 0 )
-                {
-                    v += (int)points.size() + 1;
-                    if ( v <= 0 )
-                        return tl::make_unexpected( std::string( "Too negative vertex ID in OBJ-file" ) );
-                }
-                vs.push_back( v );
-            }
-            if ( vs.size() < 3 )
-                return tl::make_unexpected( std::string( "Face with less than 3 vertices in OBJ-file" ) );
-            if ( !in.bad() && !in.eof() )
-                in.clear();
-            
-            // TODO: make smarter triangulation based on point coordinates
-            for ( int j = 1; j + 1 < vs.size(); ++j )
-                t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
-        }
-        else if ( ch == 'o' )
-        {
-            if ( !combineAllObjects )
-                finishObject();
-            // next object
-            getline( in, currentObjName );
-            while ( !currentObjName.empty() && currentObjName[0] == ' ' )
-                currentObjName.erase( currentObjName.begin() );
-            {
+    if ( !callback( 0.40f ) )
+        return tl::make_unexpected( "Loading canceled" );
 
-            }
-        }
-        else
+    timer.restart( "find element lines" );
+    struct Object
+    {
+        std::string name;
+        std::vector<size_t> faceLines;
+    };
+    std::vector<size_t> vertexLines;
+    std::vector<Object> objects( 1 ); // emplace default object
+    for ( size_t li = 0; li + 1 < newlines.size(); ++li )
+    {
+        auto* line = data + newlines[li];
+        if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
         {
-            // skip unknown line
-            std::string str;
-            std::getline( in, str );
+            vertexLines.emplace_back( li );
         }
-        if ( callback && !(i & 0x3FF) )
+        else if ( line[0] == 'f' )
         {
-            const float progress = int( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
-                return tl::make_unexpected( std::string( "Loading canceled" ));
+            objects.back().faceLines.emplace_back( li );
         }
-        if ( in.eof() )
-            break;
+        else if ( line[0] == 'o' )
+        {
+            auto object = objects.emplace_back();
+
+            const auto lineWidth = newlines[li + 1] - 1 - newlines[li + 0];
+            size_t trimShift = 1;
+            while ( line[trimShift] == ' ' )
+                trimShift++;
+            object.name = std::string_view( line + trimShift, lineWidth - trimShift );
+        }
     }
 
-    finishObject();
+    timer.restart( "parse vertex lines" );
+    points.resize( vertexLines.size() );
+    std::string parseError;
+    tbb::task_group_context ctx;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        Vector3f v;
+        for ( auto vi = range.begin(); vi < range.end(); vi++ )
+        {
+            const auto li = vertexLines[vi];
+            std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
+            auto res = parseObjVertex( line, v );
+            if ( !res.has_value() )
+            {
+                if ( ctx.cancel_group_execution() )
+                    parseError = res.error();
+                return;
+            }
+            points[vi] = v;
+        }
+    }, ctx );
+    if ( !parseError.empty() )
+        return tl::make_unexpected( parseError );
+
+    if ( !callback( 0.50f ) )
+        return tl::make_unexpected( "Loading canceled" );
+
+    timer.restart( "parse face lines" );
+    size_t faceTotal = 0;
+    for ( auto& object : objects )
+        faceTotal += object.faceLines.size();
+    size_t faceProcessed = 0;
+    for ( auto& object : objects )
+    {
+        tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+        parseError.clear();
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, object.faceLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            auto& tris = trisPerThread.local();
+            ObjFace f;
+            // usually a face has 3 or 4 vertices
+            for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
+                elements->reserve( 4 );
+            for ( auto fi = range.begin(); fi < range.end(); fi++ )
+            {
+                const auto li = object.faceLines[fi];
+                std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
+                for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
+                    elements->clear();
+                auto res = parseObjFace( line, f );
+                if ( !res.has_value() )
+                {
+                    if ( ctx.cancel_group_execution() )
+                        parseError = res.error();
+                    return;
+                }
+
+                auto& vs = f.vertices;
+                for ( auto& v : vs )
+                {
+                    if ( v < 0 )
+                    {
+                        v += (int)points.size() + 1;
+                        if ( v <= 0 )
+                        {
+                            if ( ctx.cancel_group_execution() )
+                                parseError = "Too negative vertex ID in OBJ-file";
+                            return;
+                        }
+                    }
+                }
+                if ( vs.size() < 3 )
+                {
+                    if ( ctx.cancel_group_execution() )
+                        parseError = "Face with less than 3 vertices in OBJ-file";
+                    return;
+                }
+
+                // TODO: make smarter triangulation based on point coordinates
+                for ( int j = 1; j + 1 < vs.size(); ++j )
+                    tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+            }
+        }, ctx );
+        if ( !parseError.empty() )
+            return tl::make_unexpected( parseError );
+
+        size_t trisSize = 0;
+        for ( auto& tris : trisPerThread )
+            trisSize += tris.size();
+        t.reserve( t.size() + trisSize );
+        for ( auto& tris : trisPerThread )
+            t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
+
+        if ( !combineAllObjects )
+        {
+            currentObjName = object.name;
+            finishObject();
+        }
+
+        faceProcessed += object.faceLines.size();
+        if ( !callback( 0.50f + 0.50f * ( (float)faceProcessed / (float)faceTotal ) ) )
+            return tl::make_unexpected( "Loading canceled" );
+    }
+
+    if ( combineAllObjects )
+        finishObject();
     return res;
 }
 

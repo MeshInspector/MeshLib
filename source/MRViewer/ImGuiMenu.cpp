@@ -331,6 +331,16 @@ void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
 
+bool ImGuiMenu::spaceMouseMove_( const Vector3f& /*translate*/, const Vector3f& /*rotate*/ )
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
+bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
 void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
@@ -1749,6 +1759,9 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     std::function<void( VisualObject*, const float& )> setter
 )
 {
+    if ( selectedVisualObjs.empty() )
+        return;
+
     auto obj = selectedVisualObjs[0];
     auto value = getter( obj.get() );
     bool isAllTheSame = true;

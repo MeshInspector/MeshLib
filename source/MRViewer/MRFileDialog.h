@@ -47,4 +47,8 @@ MRVIEWER_API std::filesystem::path saveFileDialog( const FileParameters& params 
 // Unified function to save file in desktop code and in emscripten
 // callback is called inside this function in desktop build and deferred in emscripten build
 MRVIEWER_API void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> callback, const FileParameters& params = {} );
+
+// Returns message showed when loading is canceled
+MRVIEWER_API std::string getCancelMessage( const std::filesystem::path& path );
+
 }

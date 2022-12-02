@@ -148,7 +148,7 @@ void drawTris( const std::vector<Tri>& tris, const std::vector<TriCornerColors>&
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &params.lightPos.x ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &params.lightPos.x ) );
 
     GL_EXEC( GLint colorsId = glGetAttribLocation( shader, "color" ) );
     quadColorBuffer.loadData( GL_ARRAY_BUFFER, colors );

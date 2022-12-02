@@ -105,10 +105,11 @@ jobs:
 
   image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_rebuild == 'true' }}
+    if: ${{ needs.image-select.outputs.need_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 180
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
     env:
       DOCKERHUB_BASE_PATH: ${{ needs.image-select.outputs.image_path }}

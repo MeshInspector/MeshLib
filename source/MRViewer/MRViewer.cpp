@@ -77,9 +77,11 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     return 1;
 }
 
-EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent()
+EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent( int forceFrames )
 {
-    MR::getViewerInstance().postEmptyEvent();
+    auto& viewer = MR::getViewerInstance();
+    viewer.incrementForceRedrawFrames( forceFrames, true );
+    viewer.postEmptyEvent();
 }
 
 }
@@ -201,7 +203,7 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
     } } );
 }
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
 static EM_BOOL emsDraw( double, void* ptr )
 {
     MR::getViewerInstance().draw( bool( ptr ) );
@@ -215,7 +217,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
     auto eventCall = [x, y,viewer] ()
     {
         viewer->mouseMove( int( x ), int( y ) );
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
         emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
         emscripten_sleep( 1 );
 #else
@@ -235,7 +237,7 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
     {
         *prevPtr = y;
         viewer->mouseScroll( float( y ) );
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
         emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
         emscripten_sleep( 1 );
 #endif
@@ -381,9 +383,19 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 }
 
 #ifdef __EMSCRIPTEN__
+#ifndef MR_EMSCRIPTEN_ASYNCIFY
+void emsMainInfiniteLoop()
+{
+    auto& viewer = getViewerInstance();
+    viewer.draw( true );
+    viewer.eventQueue.execute();
+    CommandLoop::processCommands();
+}
+#endif
 
 void Viewer::mainLoopFunc_()
 {
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
     constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
     for (;;)
     {
@@ -411,6 +423,9 @@ void Viewer::mainLoopFunc_()
             CommandLoop::processCommands();
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
     }
+#else
+    emscripten_set_main_loop( emsMainInfiniteLoop, 0, true );
+#endif
 }
 #endif
 
@@ -1399,6 +1414,7 @@ void Viewer::postFocus( bool focused )
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )
         MR::Viewer::instanceRef().draw( true );
+    postFocusSignal( bool( focused ) );
 }
 
 void Viewer::postRescale( float x, float y )

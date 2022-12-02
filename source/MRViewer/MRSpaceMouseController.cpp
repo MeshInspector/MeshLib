@@ -14,8 +14,8 @@ namespace MR
 void SpaceMouseController::connect()
 {
     auto& viewer = getViewerInstance();
-    viewer.spaceMouseMoveSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseMove_ ), boost::signals2::at_front );
-    viewer.spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ), boost::signals2::at_front );
+    viewer.spaceMouseMoveSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseMove_ ) );
+    viewer.spaceMouseDownSignal.connect( MAKE_SLOT( &SpaceMouseController::spaceMouseDown_ ) );
 }
 
 void SpaceMouseController::setParams( const Params& newParams )

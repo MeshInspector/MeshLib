@@ -48,7 +48,7 @@ namespace
         bool r = phrase_parse(
             str.begin(),
             str.end(),
-            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] ) | ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( "//" >> int_[vn] ) ) ) ),
+            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( '/' >> int_[vt] ) | ( "//" >> int_[vn] ) ) ) ),
             ascii::space
         );
         if ( !r )
@@ -73,7 +73,7 @@ namespace MeshLoad
 tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                     ProgressCallback callback )
 {
-    std::ifstream in( file );
+    std::ifstream in( file, std::ios::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 

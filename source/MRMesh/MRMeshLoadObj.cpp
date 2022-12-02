@@ -11,11 +11,10 @@ namespace
 {
     using namespace MR;
 
-    tl::expected<Vector3f, std::string> parseObjVertex( const std::string_view& str )
+    tl::expected<void, std::string> parseObjVertex( const std::string_view& str, Vector3f& v )
     {
         using namespace boost::spirit::x3;
 
-        Vector3f v;
         int i = 0;
         auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
 
@@ -28,7 +27,7 @@ namespace
         if ( !r )
             return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
 
-        return v;
+        return {};
     }
 
     struct ObjFace
@@ -38,13 +37,10 @@ namespace
         std::vector<int> normals;
     };
 
-    tl::expected<ObjFace, std::string> parseObjFace( const std::string_view& str )
+    tl::expected<void, std::string> parseObjFace( const std::string_view& str, ObjFace& f )
     {
         using namespace boost::spirit::x3;
 
-        ObjFace f;
-        for ( auto ia : { &f.vertices, &f.textures, &f.normals } )
-            ia->reserve( 4 );
         auto v = [&] ( auto& ctx ) { f.vertices.emplace_back( _attr( ctx ) ); };
         auto vt = [&] ( auto& ctx ) { f.textures.emplace_back( _attr( ctx ) ); };
         auto vn = [&] ( auto& ctx ) { f.normals.emplace_back( _attr( ctx ) ); };
@@ -64,7 +60,7 @@ namespace
             return tl::make_unexpected( "Invalid face texture count in OBJ-file" );
         if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
             return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
-        return f;
+        return {};
     }
 }
 
@@ -211,18 +207,19 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     tbb::task_group_context ctx;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
+        Vector3f v;
         for ( auto vi = range.begin(); vi < range.end(); vi++ )
         {
             const auto li = vertexLines[vi];
             std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
-            auto v = parseObjVertex( line );
-            if ( !v.has_value() )
+            auto res = parseObjVertex( line, v );
+            if ( !res.has_value() )
             {
                 if ( ctx.cancel_group_execution() )
-                    parseError = v.error();
+                    parseError = res.error();
                 return;
             }
-            points[vi] = *v;
+            points[vi] = v;
         }
     }, ctx );
     if ( !parseError.empty() )
@@ -243,19 +240,25 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, object.faceLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
+            ObjFace f;
+            // usually a face has 3 or 4 vertices
+            for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
+                elements->reserve( 4 );
             for ( auto fi = range.begin(); fi < range.end(); fi++ )
             {
                 const auto li = object.faceLines[fi];
                 std::string_view line( data.data() + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
-                auto f = parseObjFace( line );
-                if ( !f.has_value() )
+                for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
+                    elements->clear();
+                auto res = parseObjFace( line, f );
+                if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
-                        parseError = f.error();
+                        parseError = res.error();
                     return;
                 }
 
-                auto& vs = f->vertices;
+                auto& vs = f.vertices;
                 for ( auto& v : vs )
                 {
                     if ( v < 0 )

@@ -1,5 +1,6 @@
 var pointerCounter = 0;
 var mouseState = [0, 0, 0];
+var touchId = [-1, -1];
 var reinterpretEvent = false;
 
 var hasMouse = function () {
@@ -61,6 +62,20 @@ var updateEvents = function () {
     // main event func determine what to call
     var oldCalcMovementFunction = Browser.calculateMouseEvent;
 
+    var touchDownFunc = function (event) {
+        var proceed = true;
+        if (touchId[0] == -1)
+            touchId[0] = event.pointerId;
+        else if (touchId[1] == -1)
+            touchId[1] = event.pointerId;
+        else
+            proceed = false;
+        if (proceed) {
+            pointerCounter++;
+            touchEventProcess(event, 'emsTouchStart');
+        }
+    }
+
     Browser.calculateMouseEvent = function (event) {
         var bubbleUp = true;
         if (event.pointerType == "mouse") {
@@ -85,15 +100,26 @@ var updateEvents = function () {
         }
         else if (event.pointerType == "touch") {
             if (event.type == "pointerdown") {
-                pointerCounter++;
-                touchEventProcess(event, 'emsTouchStart');
+                touchDownFunc(event);
             }
             else if (event.type == "pointermove") {
-                touchEventProcess(event, 'emsTouchMove');
+                if (touchId[0] == event.pointerId || touchId[1] == event.pointerId)
+                    touchEventProcess(event, 'emsTouchMove');
+                else
+                    touchDownFunc(event);
             }
             else if (event.type == "pointerup" || event.type == "pointercancel") {
-                touchEventProcess(event, 'emsTouchEnd');
-                pointerCounter--;
+                var proceed = true;
+                if (touchId[0] == event.pointerId)
+                    touchId[0] = -1;
+                else if (touchId[1] == event.pointerId)
+                    touchId[1] = -1;
+                else
+                    proceed = false;
+                if (proceed) {
+                    touchEventProcess(event, 'emsTouchEnd');
+                    pointerCounter--;
+                }
             }
             bubbleUp = false;
         }

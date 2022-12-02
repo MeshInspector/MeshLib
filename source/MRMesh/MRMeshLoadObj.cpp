@@ -73,7 +73,7 @@ namespace MeshLoad
 tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                     ProgressCallback callback )
 {
-    std::ifstream in( file );
+    std::ifstream in( file, std::ios::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 

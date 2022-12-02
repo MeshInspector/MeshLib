@@ -139,9 +139,34 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
 
     timer.restart( "split by lines" );
     std::vector<size_t> newlines{ 0 };
-    for ( size_t ci = 0; ci < data.size(); ci++ )
-        if ( data[ci] == '\n' )
-            newlines.emplace_back( ci + 1 );
+    tbb::enumerable_thread_specific<std::vector<size_t>> newlinesPerThread;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, data.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        bool exists = false;
+        auto& newlines = newlinesPerThread.local( exists );
+        // blocks shall not intersect each other
+        assert( !exists );
+        for ( auto ci = range.begin(); ci < range.end(); ci++ )
+        {
+            if ( data[ci] == '\n' )
+                newlines.emplace_back( ci + 1 );
+        }
+    }, tbb::static_partitioner() );
+    std::vector<std::vector<size_t>> newlinesBlocks;
+    size_t newlinesSize = 1;
+    for ( auto&& newlinesBlock : newlinesPerThread )
+    {
+        assert( !newlinesBlock.empty() );
+        newlinesSize += newlinesBlock.size();
+        newlinesBlocks.emplace_back( std::move( newlinesBlock ) );
+    }
+    std::sort( newlinesBlocks.begin(), newlinesBlocks.end(), [] ( const auto& lhs, const auto& rhs )
+    {
+        return lhs.front() < rhs.front();
+    } );
+    newlines.reserve( newlinesSize );
+    for ( auto&& newlinesBlock : newlinesBlocks )
+        newlines.insert( newlines.end(), newlinesBlock.begin(), newlinesBlock.end() );
     // add finish line
     if ( newlines.back() != data.size() )
         newlines.emplace_back( data.size() );

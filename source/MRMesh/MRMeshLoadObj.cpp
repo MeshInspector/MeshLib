@@ -48,7 +48,7 @@ namespace
         bool r = phrase_parse(
             str.begin(),
             str.end(),
-            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] ) | ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( "//" >> int_[vn] ) ) ) ),
+            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( '/' >> int_[vt] ) | ( "//" >> int_[vn] ) ) ) ),
             ascii::space
         );
         if ( !r )

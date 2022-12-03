@@ -1129,6 +1129,33 @@ void MeshTopology::stopUpdatingValids()
 #endif
 }
 
+void MeshTopology::preferEdges( const UndirectedEdgeBitSet & stableEdges )
+{
+    MR_TIMER
+
+    tbb::parallel_for( tbb::blocked_range( 0_f, edgePerFace_.endId() ), [&]( const tbb::blocked_range<FaceId> & range )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            for ( EdgeId e : leftRing( *this, f ) )
+                if ( stableEdges.test( e.undirected() ) )
+                {
+                    edgePerFace_[f] = e;
+                    break;
+                }
+    } );
+
+    tbb::parallel_for( tbb::blocked_range( 0_v, edgePerVertex_.endId() ), [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            for ( EdgeId e : orgRing( *this, v ) )
+                if ( stableEdges.test( e.undirected() ) )
+                {
+                    edgePerVertex_[v] = e;
+                    break;
+                }
+    } );
+}
+
 void MeshTopology::computeValidsFromEdges()
 {
     MR_TIMER

@@ -287,6 +287,9 @@ public:
     MRMESH_API void stopUpdatingValids();
     /// returns whether the methods validVerts(), validFaces(), numValidVerts(), numValidFaces() can be called
     [[nodiscard]] bool updatingValids() const { return updateValids_; }
+    /// for incident vertices and faces of given edges, remember one of them as edgeWithOrg and edgeWithLeft;
+    /// this is important in parallel algorithms where other edges may change but stable ones will survive
+    MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;

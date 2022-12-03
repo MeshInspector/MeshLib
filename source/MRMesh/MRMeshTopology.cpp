@@ -131,13 +131,15 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     if ( wasSameOriginId && bData.org.valid() )
     {
         setOrg_( b, VertId() );
-        edgePerVertex_[aData.org] = a;
+        if ( !fromSameOriginRing( edgePerVertex_[aData.org], a ) )
+            edgePerVertex_[aData.org] = a;
     }
 
     if ( wasSameLeftId && bData.left.valid() )
     {
         setLeft_( b, FaceId() );
-        edgePerFace_[aData.left] = a;
+        if ( !fromSameLeftRing( edgePerFace_[aData.left], a ) )
+            edgePerFace_[aData.left] = a;
     }
 }
 

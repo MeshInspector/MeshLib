@@ -165,14 +165,14 @@ tl::expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
         return tl::make_unexpected( "Cannot initialize JPEG decompressor" );
 
     int width, height, jpegSubsamp, jpegColorspace;
-    auto res = tjDecompressHeader3( reader.tjInstance, (const unsigned char*)buffer.data(), buffer.size(), &width, &height, &jpegSubsamp, &jpegColorspace );
+    auto res = tjDecompressHeader3( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), &width, &height, &jpegSubsamp, &jpegColorspace );
     if ( res != 0 )
         return tl::make_unexpected( "Failed to decompress JPEG header" );
 
     Image image;
     image.pixels.resize( width * height );
     image.resolution = { width, height };
-    res = tjDecompress2( reader.tjInstance, (const unsigned char*)buffer.data(), buffer.size(), reinterpret_cast<unsigned char*>( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
+    res = tjDecompress2( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), reinterpret_cast<unsigned char*>( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
     if ( res != 0 )
         return tl::make_unexpected( "Failed to decompress JPEG file" );
 

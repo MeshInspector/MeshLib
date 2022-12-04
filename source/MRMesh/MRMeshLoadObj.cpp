@@ -5,6 +5,7 @@
 #include "MRBuffer.h"
 #include "MRPch/MRTBB.h"
 
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
 
 namespace
@@ -154,95 +155,104 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     // add finish line
     if ( newlines.back() != size )
         newlines.emplace_back( size );
+    const auto lineCount = newlines.size() - 1;
 
     if ( !callback( 0.40f ) )
         return tl::make_unexpected( "Loading canceled" );
 
-    timer.restart( "find element lines" );
-    struct Object
+    timer.restart( "group element lines" );
+    enum Element
     {
-        std::string name;
-        std::vector<size_t> faceLines;
+        Unknown,
+        Vertex,
+        Face,
+        Object,
     };
-    std::vector<size_t> vertexLines;
-    std::vector<Object> objects( 1 ); // emplace default object
-    for ( size_t li = 0; li + 1 < newlines.size(); ++li )
+    struct ElementGroup
+    {
+        Element element;
+        size_t begin;
+        size_t end;
+    };
+    std::vector<ElementGroup> groups{ { Unknown, 0, 0 } }; // emplace stub initial group
+    for ( size_t li = 0; li < lineCount; ++li )
     {
         auto* line = data + newlines[li];
+
+        Element element = Unknown;
         if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
         {
-            vertexLines.emplace_back( li );
+            element = Vertex;
         }
         else if ( line[0] == 'f' )
         {
-            objects.back().faceLines.emplace_back( li );
+            element = Face;
         }
         else if ( line[0] == 'o' )
         {
-            auto object = objects.emplace_back();
+            element = Object;
+        }
+        // TODO: multi-line elements
 
-            const auto lineWidth = newlines[li + 1] - 1 - newlines[li + 0];
-            size_t trimShift = 1;
-            while ( line[trimShift] == ' ' )
-                trimShift++;
-            object.name = std::string_view( line + trimShift, lineWidth - trimShift );
+        if ( element != groups.back().element )
+        {
+            groups.back().end = li;
+            groups.push_back( { element, li, 0 } );
         }
     }
-
-    timer.restart( "parse vertex lines" );
-    points.resize( vertexLines.size() );
-    std::string parseError;
-    tbb::task_group_context ctx;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, vertexLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        Vector3f v;
-        for ( auto vi = range.begin(); vi < range.end(); vi++ )
-        {
-            const auto li = vertexLines[vi];
-            std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
-            auto res = parseObjVertex( line, v );
-            if ( !res.has_value() )
-            {
-                if ( ctx.cancel_group_execution() )
-                    parseError = res.error();
-                return;
-            }
-            points[vi] = v;
-        }
-    }, ctx );
-    if ( !parseError.empty() )
-        return tl::make_unexpected( parseError );
+    groups.back().end = lineCount;
 
     if ( !callback( 0.50f ) )
         return tl::make_unexpected( "Loading canceled" );
 
-    timer.restart( "parse face lines" );
-    size_t faceTotal = 0;
-    for ( auto& object : objects )
-        faceTotal += object.faceLines.size();
-    size_t faceProcessed = 0;
-    for ( auto& object : objects )
+    auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
+        const auto offset = points.size();
+        points.resize( points.size() + ( end - begin ) );
+
+        tbb::task_group_context ctx;
+        tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            Vector3f v;
+            for ( auto li = range.begin(); li < range.end(); li++ )
+            {
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+                auto res = parseObjVertex( line, v );
+                if ( !res.has_value() )
+                {
+                    if ( ctx.cancel_group_execution() )
+                        parseError = std::move( res.error() );
+                    return;
+                }
+                points[offset + ( li - begin )] = v;
+            }
+        }, ctx );
+    };
+
+    auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
+    {
+        tbb::task_group_context ctx;
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
-        parseError.clear();
-        tbb::parallel_for( tbb::blocked_range<size_t>( 0, object.faceLines.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+        tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
+
             ObjFace f;
             // usually a face has 3 or 4 vertices
             for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
                 elements->reserve( 4 );
-            for ( auto fi = range.begin(); fi < range.end(); fi++ )
+
+            for ( auto li = range.begin(); li < range.end(); li++ )
             {
-                const auto li = object.faceLines[fi];
-                std::string_view line( data + newlines[li], newlines[li + 1] - 1 - newlines[li + 0] );
                 for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
                     elements->clear();
+
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
                 auto res = parseObjFace( line, f );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
-                        parseError = res.error();
+                        parseError = std::move( res.error() );
                     return;
                 }
 
@@ -250,14 +260,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 for ( auto& v : vs )
                 {
                     if ( v < 0 )
-                    {
                         v += (int)points.size() + 1;
-                        if ( v <= 0 )
-                        {
-                            if ( ctx.cancel_group_execution() )
-                                parseError = "Too negative vertex ID in OBJ-file";
-                            return;
-                        }
+
+                    if ( v <= 0 )
+                    {
+                        if ( ctx.cancel_group_execution() )
+                            parseError = "Too negative vertex ID in OBJ-file";
+                        return;
                     }
                 }
                 if ( vs.size() < 3 )
@@ -272,8 +281,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
             }
         }, ctx );
+
         if ( !parseError.empty() )
-            return tl::make_unexpected( parseError );
+            return;
 
         size_t trisSize = 0;
         for ( auto& tris : trisPerThread )
@@ -281,20 +291,48 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         t.reserve( t.size() + trisSize );
         for ( auto& tris : trisPerThread )
             t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
+    };
 
-        if ( !combineAllObjects )
+    auto parseObject = [&] ( size_t begin, size_t end, std::string& parseError )
+    {
+        if ( combineAllObjects )
+            return;
+
+        // finish previous object
+        finishObject();
+
+        const auto li = end - 1;
+        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+        currentObjName = line.substr( 1, std::string_view::npos );
+        boost::trim( currentObjName );
+    };
+
+    timer.restart( "parse groups" );
+    for ( const auto& group : groups )
+    {
+        std::string parseError;
+        switch ( group.element )
         {
-            currentObjName = object.name;
-            finishObject();
+        case Unknown:
+            break;
+        case Vertex:
+            parseVertices( group.begin, group.end, parseError );
+            break;
+        case Face:
+            parseFaces( group.begin, group.end, parseError );
+            break;
+        case Object:
+            parseObject( group.begin, group.end, parseError );
+            break;
         }
+        if ( !parseError.empty() )
+            return tl::make_unexpected( parseError );
 
-        faceProcessed += object.faceLines.size();
-        if ( !callback( 0.50f + 0.50f * ( (float)faceProcessed / (float)faceTotal ) ) )
+        if ( !callback( 0.50f + 0.50f * ( (float)group.end / (float)lineCount ) ) )
             return tl::make_unexpected( "Loading canceled" );
     }
 
-    if ( combineAllObjects )
-        finishObject();
+    finishObject();
     return res;
 }
 

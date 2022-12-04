@@ -189,11 +189,27 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
 {
     QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
     qf.addDistToOrigin( stabilizer );
     return qf;
+}
+
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer )
+{
+    MR_TIMER;
+
+    VertBitSet store;
+    const VertBitSet & regionVertices = getIncidentVerts( mp.mesh.topology, mp.region, store );
+
+    Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
+    BitSetParallelFor( regionVertices, [&]( VertId v )
+    {
+        res[v] = computeFormAtVertex( mp, v, stabilizer );
+    } );
+
+    return res;
 }
 
 bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
@@ -226,9 +242,6 @@ bool MeshDecimator::initializeQueue_()
 {
     MR_TIMER;
 
-    VertBitSet store;
-    const VertBitSet & regionVertices = getIncidentVerts( mesh_.topology, settings_.region, store );
-
     if ( settings_.vertForms && !settings_.vertForms->empty() )
     {
         assert( settings_.vertForms->size() > mesh_.topology.lastValidVert() );
@@ -236,11 +249,7 @@ bool MeshDecimator::initializeQueue_()
     }
     else
     {
-        vertForms_.resize( mesh_.topology.lastValidVert() + 1 );
-        BitSetParallelFor( regionVertices, [&]( VertId v )
-        {
-            vertForms_[v] = computeFormAtVertex( MR::MeshPart{ mesh_, settings_.region }, v, settings_.stabilizer );
-        } );
+        vertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer );
     }
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )

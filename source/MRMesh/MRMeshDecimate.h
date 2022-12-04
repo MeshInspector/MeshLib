@@ -76,8 +76,8 @@ struct DecimateSettings
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
     /**
-     * \brief  If not null, then
-     * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
+     * \brief  If not null, then vertex quadratic forms are stored there;
+     * if on input the vector is not empty then initialization is skipped in favor of values from there;
      * on output: quadratic form for each remaining vertex is returned there
      */
     Vector<QuadraticForm3f, VertId> * vertForms = nullptr;

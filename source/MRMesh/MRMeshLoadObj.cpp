@@ -48,7 +48,9 @@ namespace
         bool r = phrase_parse(
             str.begin(),
             str.end(),
-            ( 'f' >> *( int_[v] >> -( ( '/' >> int_[vt] >> '/' >> int_[vn] ) | ( '/' >> int_[vt] ) | ( "//" >> int_[vn] ) ) ) ),
+            // NOTE: actions are not being reverted after backtracking
+            // https://github.com/boostorg/spirit/issues/378
+            ( 'f' >> *( int_[v] >> -( '/' >> ( ( int_[vt] >> -( '/' >> int_[vn] ) ) | ( '/' >> int_[vn] ) ) ) ) ),
             ascii::space
         );
         if ( !r )

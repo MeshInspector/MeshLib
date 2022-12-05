@@ -149,7 +149,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     {
         constexpr size_t blockSize = 4096;
         const auto blockCount = (size_t)std::ceil( (float)size / blockSize );
-        constexpr size_t maxGroupCount = 48;
+        constexpr size_t maxGroupCount = 256;
         const auto blocksPerGroup = (size_t)std::ceil( (float)blockCount / maxGroupCount );
         const auto groupSize = blockSize * blocksPerGroup;
         const auto groupCount = (size_t)std::ceil( (float)size / groupSize );
@@ -174,14 +174,25 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         taskGroup.wait();
 
         size_t sum = 1;
-        for ( const auto& group : groups )
-            sum += group.size();
-        newlines.reserve( sum );
+        std::vector<size_t> groupOffsets;
         for ( const auto& group : groups )
         {
-            assert( newlines.back() < group.front() );
-            newlines.insert( newlines.end(), group.begin(), group.end() );
+            groupOffsets.emplace_back( sum );
+            sum += group.size();
         }
+        newlines.resize( sum );
+
+        for ( size_t gi = 0; gi < groupCount; gi++ )
+        {
+            taskGroup.run( [&, i = gi]
+            {
+                const auto& group = groups[i];
+                const auto offset = groupOffsets[i];
+                for ( auto li = 0; li < group.size(); li++ )
+                    newlines[offset + li] = group[li];
+            } );
+        }
+        taskGroup.wait();
     }
     // add finish line
     if ( newlines.back() != size )

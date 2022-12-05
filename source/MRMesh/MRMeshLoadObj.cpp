@@ -163,12 +163,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         {
             taskGroup.run( [&, i = gi]
             {
-                auto& group = groups[i];
+                std::vector<size_t> group;
                 const auto begin = i * groupSize;
                 const auto end = std::min( ( i + 1 ) * groupSize, size );
                 for ( auto ci = begin; ci < end; ci++ )
                     if ( data[ci] == '\n' )
                         group.emplace_back( ci + 1 );
+                groups[i] = std::move( group );
             } );
         }
         taskGroup.wait();

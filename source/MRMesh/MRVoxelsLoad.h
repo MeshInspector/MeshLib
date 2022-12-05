@@ -82,8 +82,16 @@ enum class GridType
     // consider values less than iso as inner area
     LevelSet = 1
 };
+
+struct LoadingTiffSettings
+{
+    std::filesystem::path dir;
+    Vector3f voxelSize = { 1.0f, 1.0f, 1.0f };
+    GridType gridType = GridType::DenseGrid;
+    ProgressCallback cb = {};
+};
 /// Load voxels from a set of TIFF files
-MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const std::filesystem::path& path, GridType gridType = GridType::DenseGrid, const Vector3f& voxelSize = { 1.0f, 1.0f, 1.0f }, const ProgressCallback& cb = {} );
+MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
 
 }
 

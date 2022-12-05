@@ -515,7 +515,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
     {
         SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
-        SetNextWindowSizeConstraints( ImVec2( params.width, -1.0f ), ImVec2( params.width, -1.0f ) );
+        auto pHeight = params.height;
+        if ( pHeight <= 0.0f )
+            pHeight = -1.0f;
+        pHeight = std::min( pHeight, GetMainViewport()->Size.y - style.DisplaySafeAreaPadding.y * 2.0f );
+        SetNextWindowSizeConstraints( ImVec2( params.width, pHeight ), ImVec2( params.width, pHeight ) );
     }
 
     auto context = ImGui::GetCurrentContext();
@@ -556,7 +560,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         auto backUpContSizeY = window->ContentSize.y;
         if ( hasPrevData )
         {
-            window->ContentSize.y = ( ( -window->ContentSizeIdeal.y + window->ContentSize.y ) +
+            window->ContentSize.y = ( ( window->ContentSize.y - window->ContentSizeIdeal.y ) +
                 prevCursorMaxPos - window->DC.CursorStartPos.y ) - ( titleBarHeight );
         }
         // Determine scrollbar position
@@ -640,11 +644,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     {
         ImGui::PushFont( titleFont );
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + params.menuScaling } );
-        //ImGui::SetCursorPosY( scaling ); // this is due to title font internal shift 
     }
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
-        //ImGui::SetCursorPosY( 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) );
 
     ImGui::RenderText( ImGui::GetCursorScreenPos(), label );
 
@@ -694,7 +696,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::PopStyleColor( 2 );
     window->DrawList->PopClipRect();
     
-    const ImGuiTableFlags tableFlags = ((height == 0.0f) ? ImGuiTableFlags_SizingStretchProp : ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY );
+    const ImGuiTableFlags tableFlags = ImGuiTableFlags_SizingStretchProp;
 
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0,0 } );
     ImGui::SetCursorPosY( titleBarHeight + style.WindowPadding.y - borderSize );

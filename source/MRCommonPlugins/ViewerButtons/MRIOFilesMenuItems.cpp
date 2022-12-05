@@ -223,23 +223,38 @@ bool OpenDirectoryMenuItem::action()
         {
             ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
             {
+                ProgressBar::setTaskCount( 3 );
                 ProgressBar::nextTask( "Load DICOM Folder" );
                 auto loadRes = VoxelsLoad::loadDCMFolder( directory, 4, ProgressBar::callBackSetProgress );
                 if ( loadRes.has_value() && !ProgressBar::isCanceled() )
                 {
                     std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
                     voxelsObject->setName( loadRes->name );
-                    ProgressBar::setTaskCount( 2 );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
                     voxelsObject->construct( loadRes->vdbVolume, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                        return [directory]
+                    {
+                        auto menu = getViewerInstance().getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( getCancelMessage( directory ) );
+                    };
                     auto bins = voxelsObject->histogram().getBins();
                     auto minMax = voxelsObject->histogram().getBinMinMax( bins.size() / 3 );
 
                     ProgressBar::nextTask( "Create ISO surface" );
-                    voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    auto isoRes = voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( !isoRes.has_value() )
+                        return[viewer, error = isoRes.error()]
+                    {
+                        auto menu = viewer->getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( error );
+                    };
+
                     voxelsObject->select( true );
                     return [viewer, voxelsObject] ()
-                        {
+                    {
                         AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( voxelsObject );
                         viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
@@ -251,7 +266,7 @@ bool OpenDirectoryMenuItem::action()
                     if ( menu )
                         menu->showErrorModal( error );
                 };
-            }, 2 );
+            }, 3 );
         }
     }
     return false;
@@ -271,7 +286,7 @@ bool OpenDICOMsMenuItem::action()
     {
         ProgressBar::nextTask( "Load DICOM Folder" );
         auto loadRes = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
-        if ( !ProgressBar::isCanceled() && !loadRes.empty() )
+        if ( !loadRes.empty() )
         {
             std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
             ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
@@ -284,15 +299,39 @@ bool OpenDICOMsMenuItem::action()
                     obj->setName( res->name );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
                     obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                    {
+                        errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                        break;
+                    }
+
                     auto bins = obj->histogram().getBins();
                     auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
                     ProgressBar::nextTask( "Create ISO surface" );
-                    obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    auto isoRes = obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
+                    if ( ProgressBar::isCanceled() )
+                    {
+                        errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                        break;
+                    }
+                    else if ( !isoRes.has_value() )
+                    {
+                        errors += ( !errors.empty() ? "\n" : "" ) + std::string( isoRes.error() );
+                        break;
+                    }
+                    
                     obj->select( true );
                     voxelObjects.push_back( obj );
                 }
+                else if ( ProgressBar::isCanceled() )
+                {
+                    errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
+                    break;
+                }
                 else
-                    errors += ( !errors.empty() ? "\n" : "" ) + res.error();
+                {
+                    errors += res.error();
+                }
             }
             return [viewer, voxelObjects, errors] ()
             {

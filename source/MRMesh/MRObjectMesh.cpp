@@ -62,16 +62,22 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
         res.push_back( "components: " + std::to_string( meshStat_->numComponents ) );
         res.push_back( "vertices: " + std::to_string( mesh_->topology.numValidVerts() ) );
+        if( mesh_->topology.numValidVerts() < mesh_->topology.vertSize() )
+            res.back() += " / " + std::to_string( mesh_->topology.vertSize() ) + " size";
 
         res.push_back( "faces: " + std::to_string( mesh_->topology.numValidFaces() ) );
         if( auto nFacesSelected = numSelectedFaces() )
             res.back() += " / " + std::to_string( nFacesSelected ) + " selected";
+        if( mesh_->topology.numValidFaces() < mesh_->topology.faceSize() )
+            res.back() += " / " + std::to_string( mesh_->topology.faceSize() ) + " size";
 
         res.push_back( "edges: " + std::to_string( meshStat_->numUndirectedEdges ) );
         if( auto nEdgesSelected = numSelectedEdges() )
             res.back() += " / " + std::to_string( nEdgesSelected ) + " selected";
         if( auto nCreaseEdges = numCreaseEdges() )
             res.back() += " / " + std::to_string( nCreaseEdges ) + " creases";
+        if( meshStat_->numUndirectedEdges < mesh_->topology.undirectedEdgeSize() )
+            res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeSize() ) + " size";
 
         res.push_back( "holes: " + std::to_string( meshStat_->numHoles ) );
 

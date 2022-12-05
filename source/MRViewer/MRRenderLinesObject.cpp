@@ -83,8 +83,10 @@ void RenderLinesObject::render( const RenderParams& renderParams )
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 0 ) ); // what is a normal of 3d line?
 
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objLines_->getShininess() ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objLines_->getShininess() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objLines_->getSpecularStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objLines_->getAmbientStrength() ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
     const auto& backColor = Vector4f( objLines_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
@@ -263,8 +265,10 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 0 ) );
 
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objLines_->getShininess() ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objLines_->getShininess() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objLines_->getSpecularStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objLines_->getAmbientStrength() ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
     const auto& backColor = Vector4f( objLines_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );

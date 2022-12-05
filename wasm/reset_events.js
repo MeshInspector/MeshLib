@@ -1,7 +1,14 @@
 var pointerCounter = 0;
+var mouseState = [0, 0, 0];
+var touchId = [-1, -1];
+var reinterpretEvent = false;
 
 var hasMouse = function () {
     return !(('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
+}
+
+var postEmptyEvent = function (timer, forceFramesNum) {
+    setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [forceFramesNum]); }, timer);
 }
 
 var getPos = function (event, rect) {
@@ -55,28 +62,67 @@ var updateEvents = function () {
     // main event func determine what to call
     var oldCalcMovementFunction = Browser.calculateMouseEvent;
 
+    var touchDownFunc = function (event) {
+        var proceed = true;
+        if (touchId[0] == -1)
+            touchId[0] = event.pointerId;
+        else if (touchId[1] == -1)
+            touchId[1] = event.pointerId;
+        else
+            proceed = false;
+        if (proceed) {
+            pointerCounter++;
+            touchEventProcess(event, 'emsTouchStart');
+        }
+    }
+
     Browser.calculateMouseEvent = function (event) {
         var bubbleUp = true;
-        if (event.pointerType == "mouse")
-            oldCalcMovementFunction(event);
-        else if (event.pointerType == "touch") {
+        if (event.pointerType == "mouse") {
+            var eventButton = GLFW.DOMToGLFWMouseButton(event);
+            if (event.type == "pointermove" && !reinterpretEvent) {
+                if (eventButton >= 0) {
+                    reinterpretEvent = true;
+                    if (mouseState[eventButton] == 0)
+                        mouseState[eventButton] = 1;
+                    else
+                        mouseState[eventButton] = 0;
+                    GLFW.onMouseButtonChanged(event, mouseState[eventButton]);
+                    return false;
+                }
+            }
             if (event.type == "pointerdown")
-            {
-                pointerCounter++;
-                touchEventProcess(event, 'emsTouchStart');
-            }
-            else if (event.type == "pointermove")
-            {
-                touchEventProcess(event, 'emsTouchMove');
-            }
+                mouseState[eventButton] = 1;
             else if (event.type == "pointerup" || event.type == "pointercancel")
-            {
-                touchEventProcess(event, 'emsTouchEnd');
-                pointerCounter--;
+                mouseState[eventButton] = 0;
+            reinterpretEvent = false;
+            oldCalcMovementFunction(event);
+        }
+        else if (event.pointerType == "touch") {
+            if (event.type == "pointerdown") {
+                touchDownFunc(event);
+            }
+            else if (event.type == "pointermove") {
+                if (touchId[0] == event.pointerId || touchId[1] == event.pointerId)
+                    touchEventProcess(event, 'emsTouchMove');
+                else
+                    touchDownFunc(event);
+            }
+            else if (event.type == "pointerup" || event.type == "pointercancel") {
+                var proceed = true;
+                if (touchId[0] == event.pointerId)
+                    touchId[0] = -1;
+                else if (touchId[1] == event.pointerId)
+                    touchId[1] = -1;
+                else
+                    proceed = false;
+                if (proceed) {
+                    touchEventProcess(event, 'emsTouchEnd');
+                    pointerCounter--;
+                }
             }
             bubbleUp = false;
         }
-        preventFunc(event);
         return bubbleUp;
     };
 
@@ -92,7 +138,12 @@ var updateEvents = function () {
             GLFW.active.buttons &= ~(1 << eventButton);
         }
         if (!GLFW.active.mouseButtonFunc) return;
-        getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+        if (typeof (dynCall_vidd) == 'undefined')
+            getWasmTableEntry(GLFW.active.mouseButtonFunc)(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
+        else
+            (function (a1, a2, a3, a4) {
+                dynCall_viiii.apply(null, [GLFW.active.mouseButtonFunc, a1, a2, a3, a4]);
+            })(GLFW.active.id, eventButton, status, GLFW.getModBits(GLFW.active));
     }
 
     GLFW.onMousemove = function (event) {
@@ -101,7 +152,12 @@ var updateEvents = function () {
         if (!Browser.calculateMouseEvent(event)) return;
         if (event.target != Module["canvas"] || !GLFW.active.cursorPosFunc)
             return;
-        getWasmTableEntry(GLFW.active.cursorPosFunc)(GLFW.active.id, Browser.mouseX, Browser.mouseY)
+        if (typeof (dynCall_vidd) == 'undefined')
+            getWasmTableEntry(GLFW.active.cursorPosFunc)(GLFW.active.id, Browser.mouseX, Browser.mouseY);
+        else
+            (function (a1, a2, a3) {
+                dynCall_vidd.apply(null, [GLFW.active.cursorPosFunc, a1, a2, a3]);
+            })(GLFW.active.id, Browser.mouseX, Browser.mouseY);
     }
 
     // add new events

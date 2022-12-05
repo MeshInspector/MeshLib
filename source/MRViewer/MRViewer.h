@@ -44,7 +44,7 @@ namespace MR
 class SpaceMouseHandler;
 
 // GLFW-based mesh viewer
-class Viewer
+class MRVIEWER_CLASS Viewer
 {
 public:
     using MouseButton = MR::MouseButton;
@@ -528,21 +528,33 @@ public:
     TouchSignal touchStartSignal; // signal is called when any touch starts
     TouchSignal touchMoveSignal; // signal is called when touch moves
     TouchSignal touchEndSignal; // signal is called when touch stops
+    // Window focus signal
+    using PostFocusSignal = boost::signals2::signal<void( bool )>;
+    PostFocusSignal postFocusSignal;
 
     // queue to ignore multiple mouse moves in one frame
-    class EventQueue
+    class MRVIEWER_CLASS EventQueue
     {
     public:
         using EventCallback = std::function<void()>;
+        struct NamedEvent
+        {
+            std::string name;
+            EventCallback cb;
+        };
         // emplace event at the end of the queue
         // replace last skipabl with new skipable
-        void emplace( EventCallback callEvent, bool skipable = false );
+        MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
         // execute all events in queue
-        void execute();
+        MRVIEWER_API void execute();
+        // pop all events while they have this name
+        MRVIEWER_API void popByName( const std::string& name );
+        MRVIEWER_API bool empty() const;
     private:
-        std::queue<EventCallback> queue_;
+        std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;
+    MRVIEWER_API void postEmptyEvent();
 private:
     Viewer();
     ~Viewer();
@@ -560,7 +572,10 @@ private:
     // Search for python script to run or file to open on init
     void parseCommandLine_( int argc, char** argv );
 #ifdef __EMSCRIPTEN__
-    static void mainLoopFunc_();
+    void mainLoopFunc_();
+#ifndef MR_EMSCRIPTEN_ASYNCIFY
+    static void emsMainInfiniteLoop();
+#endif
 #endif
 
     // minimum auto increment force redraw frames after events

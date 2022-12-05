@@ -85,7 +85,7 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts )
     return res;
 }
 
-MR_ADD_PYTHON_FUNCTION( mrmeshnumpy, topologyFromFacesVerts, &fromFV, "constructs topology from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" )
+MR_ADD_PYTHON_FUNCTION( mrmeshnumpy, meshFromFacesVerts, &fromFV, "constructs mesh from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" )
 
 
 MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11::buffer& normals )

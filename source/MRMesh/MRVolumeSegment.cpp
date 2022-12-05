@@ -196,7 +196,7 @@ const std::vector<MR::Vector3i>& VolumeSegmenter::getSeeds( SeedType seedType ) 
     return seeds_[seedType];
 }
 
-tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */ )
+tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */, ProgressCallback cb /* =nullptr */)
 {
     if ( seeds_[Inside].empty() )
         return tl::make_unexpected( "No seeds presented" );
@@ -211,7 +211,7 @@ tl::expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float seg
     }
 
     // Segment volume
-    return segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside] );
+    return segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside], cb );
 }
 
 tl::expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const

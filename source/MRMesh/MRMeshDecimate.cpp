@@ -106,15 +106,21 @@ public:
 private: 
     Mesh & mesh_;
     const DecimateSettings & settings_;
+    const DeloneSettings deloneSettings_;
     const float maxErrorSq_;
     Vector<QuadraticForm3f, VertId> vertForms_;
     struct QueueElement
     {
         float c = 0;
-        UndirectedEdgeId uedgeId;
-        std::pair<float, UndirectedEdgeId> asPair() const { return { -c, uedgeId }; }
+        struct X {
+            unsigned int flip : 1 = 0;
+            unsigned int uedgeId : 31 = 0;
+        } x;
+        UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
+        std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
         bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
     };
+    static_assert( sizeof( QueueElement ) == 8 );
     std::priority_queue<QueueElement> queue_;
     UndirectedEdgeBitSet presentInQueue_;
     DecimateResult res_;
@@ -131,6 +137,10 @@ private:
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
     : mesh_( mesh )
     , settings_( settings )
+    , deloneSettings_{
+        .maxAngleChange = settings.maxAngleChange,
+        .criticalTriAspectRatio = settings.criticalTriAspectRatio,
+        .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
 {
 }
@@ -189,37 +199,22 @@ MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, 
 bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
 {
     MR_TIMER;
-    bool meshChanged = false;
-    for( int i = 0; i < settings.maxIters; ++i )
-    {
-        DeloneSettings delone
-        {
-            .maxDeviationAfterFlip = settings.maxDeviation,
-            .maxAngleChange = settings.maxAngleChange,
-            .criticalTriAspectRatio = settings.criticalAspectRatio,
-            .region = settings.region
-        };
-        bool changedThisIter = makeDeloneEdgeFlips( mesh, delone, 5 ) > 0;
 
-        DecimateSettings decimate
-        {
-            .maxError = settings.maxDeviation,
-            .criticalTriAspectRatio = settings.criticalAspectRatio,
-            .region = settings.region
-        };
-        changedThisIter = decimateMesh( mesh, decimate ).vertsDeleted > 0 || changedThisIter;
-        meshChanged = meshChanged || changedThisIter;
-        if ( !changedThisIter )
-            break;
-    }
-    return meshChanged;
+    DecimateSettings dsettings
+    {
+        .maxError = settings.maxDeviation,
+        .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .stabilizer = settings.stabilizer,
+        .region = settings.region,
+        .maxAngleChange = settings.maxAngleChange
+    };
+    return decimateMesh( mesh, dsettings ).vertsDeleted > 0;
 }
 
-bool resolveMeshDegenerations( MR::Mesh& mesh, int maxIters, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
+bool resolveMeshDegenerations( MR::Mesh& mesh, int, float maxDeviation, float maxAngleChange, float criticalAspectRatio )
 {
     ResolveMeshDegenSettings settings
     {
-        .maxIters = maxIters,
         .maxDeviation = maxDeviation,
         .maxAngleChange = maxAngleChange,
         .criticalAspectRatio = criticalAspectRatio
@@ -259,7 +254,7 @@ bool MeshDecimator::initializeQueue_()
 
     presentInQueue_.resize( mesh_.topology.undirectedEdgeSize() );
     for ( const auto & qe : calc.elements() )
-        presentInQueue_.set( qe.uedgeId );
+        presentInQueue_.set( qe.uedgeId() );
     queue_ = std::priority_queue<QueueElement>{ std::less<QueueElement>(), calc.takeElements() };
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.25f ) )
@@ -277,14 +272,34 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     const auto vo = vertForms_[o];
     const auto vd = vertForms_[d];
 
-    QueueElement res;
-    res.uedgeId = ue;
+    std::optional<QueueElement> res;
+    // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
+    auto earlyReturn = [&]( float errSq )
+    {
+        bool flip = false;
+        if ( settings_.maxAngleChange >= 0 )
+        {
+            float deviationSqAfterFlip = FLT_MAX;
+            if ( !checkDeloneQuadrangleInMesh( mesh_, ue, deloneSettings_, &deviationSqAfterFlip )
+                && deviationSqAfterFlip < errSq )
+            {
+                flip = true;
+                errSq = deviationSqAfterFlip;
+            }
+        }
+        if ( ( flip || !settings_.adjustCollapse ) && errSq > maxErrorSq_ )
+            return true;
+        res.emplace();
+        res->x.uedgeId = (int)ue;
+        res->x.flip = flip;
+        res->c = errSq;
+        return flip;
+    };
 
     if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )
     {
-        res.c = mesh_.edgeLengthSq( e );
-        if ( !settings_.adjustCollapse && res.c > maxErrorSq_ )
-            return {};
+        if ( earlyReturn( mesh_.edgeLengthSq( e ) ) )
+            return res;
     }
 
     QuadraticForm3f qf;
@@ -293,16 +308,16 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
 
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {
-        if ( !settings_.adjustCollapse && qf.c > maxErrorSq_ )
-            return {};
-        res.c = qf.c;
+        if ( earlyReturn( qf.c ) )
+            return res;
     }
 
+    assert( res && !res->x.flip );
     if ( settings_.adjustCollapse )
     {
         const auto pos0 = pos;
-        settings_.adjustCollapse( ue, res.c, pos );
-        if ( res.c > maxErrorSq_ )
+        settings_.adjustCollapse( ue, res->c, pos );
+        if ( res->c > maxErrorSq_ )
             return {};
         if ( outCollapseForm && pos != pos0 )
             qf.c = vo.eval( po - pos ) + vd.eval( pd - pos );
@@ -457,7 +472,7 @@ DecimateResult MeshDecimator::run()
     while ( !queue_.empty() )
     {
         auto topQE = queue_.top();
-        assert( presentInQueue_.test( topQE.uedgeId ) );
+        assert( presentInQueue_.test( topQE.uedgeId() ) );
         queue_.pop();
         if ( res_.facesDeleted >= settings_.maxDeletedFaces || res_.vertsDeleted >= settings_.maxDeletedVertices )
         {
@@ -472,19 +487,19 @@ DecimateResult MeshDecimator::run()
             lastProgressFacesDeleted = res_.facesDeleted;
         }
 
-        if ( mesh_.topology.isLoneEdge( topQE.uedgeId ) )
+        if ( mesh_.topology.isLoneEdge( topQE.uedgeId() ) )
         {
             // edge has been deleted by this moment
-            presentInQueue_.reset( topQE.uedgeId );
+            presentInQueue_.reset( topQE.uedgeId() );
             continue;
         }
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
-        auto qe = computeQueueElement_( topQE.uedgeId, &collapseForm, &collapsePos );
+        auto qe = computeQueueElement_( topQE.uedgeId(), &collapseForm, &collapsePos );
         if ( !qe )
         {
-            presentInQueue_.reset( topQE.uedgeId );
+            presentInQueue_.reset( topQE.uedgeId() );
             continue;
         }
 
@@ -494,18 +509,34 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
-        presentInQueue_.reset( topQE.uedgeId );
-        VertId collapseVert = collapse_( topQE.uedgeId, collapsePos );
-        if ( !collapseVert )
-            continue;
-
-        vertForms_[collapseVert] = collapseForm;
-
-        for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
+        if ( qe->x.flip )
         {
+            EdgeId e = topQE.uedgeId();
+            mesh_.topology.flipEdge( e );
+            assert( mesh_.topology.left( e ) );
+            assert( mesh_.topology.right( e ) );
             addInQueueIfMissing_( e.undirected() );
-            if ( mesh_.topology.left( e ) )
-                addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+        }
+        else
+        {
+            // edge collapse
+            presentInQueue_.reset( topQE.uedgeId() );
+            VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
+            if ( !collapseVert )
+                continue;
+
+            vertForms_[collapseVert] = collapseForm;
+
+            for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
+            {
+                addInQueueIfMissing_( e.undirected() );
+                if ( mesh_.topology.left( e ) )
+                    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+            }
         }
     }
 

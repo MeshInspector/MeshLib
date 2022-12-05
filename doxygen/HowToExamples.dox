@@ -140,6 +140,25 @@ if expectedMesh.has_value():
     mrmeshpy.saveMesh(expectedMesh.value(),mrmeshpy.Path("mesh.ply"))
 \endcode
 
+Using numpy to create mesh and get back its primitives
+\code
+import meshlib.mrmeshpy as mrmeshpy
+import meshlib.mrmeshnumpy as mrmeshnumpy
+
+faces = np.ndarray(shape=(2,3), dtype=np.int32, buffer=np.array([[0,1,2],[2,3,0]], dtype=np.int32))
+
+# mrmesh uses float32 for vertex coordinates
+# however, you could also use float64
+verts = np.ndarray(shape=(4,3), dtype=np.float32, buffer=np.array([[0.0,0.0,0.0],[1.0,0.0,0.0],[1.0,1.0,0.0],[0.0,1.0,0.0]], dtype=np.float32))
+
+mesh = mrmeshnumpy.meshFromFacesVerts(faces, verts)
+
+# some mesh manipulations
+
+outVerts = mrmeshnumpy.getNumpyVerts(mesh)
+outFaces = mrmeshnumpy.getNumpyFaces(mesh.topology)
+\endcode
+
 Mesh modification examples
 \code
 import meshlib.mrmeshpy as mrmeshpy

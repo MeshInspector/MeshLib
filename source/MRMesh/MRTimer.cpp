@@ -9,18 +9,23 @@ using namespace std::chrono;
 namespace MR
 {
 
-struct TimeRecord
+struct SimpleTimeRecord
 {
-    TimeRecord* parent = nullptr;
     int count = 0;
     nanoseconds time = {};
+    double seconds() const { return time.count() * 1e-9; }
+};
+
+struct TimeRecord : SimpleTimeRecord
+{
+    TimeRecord* parent = nullptr;
     std::map<std::string, TimeRecord> children;
 
     // returns summed time of immediate children
     nanoseconds childTime() const;
+    nanoseconds myTime() const { return time - childTime(); }
 
-    double seconds() const { return time.count() * 1e-9; }
-    double mySeconds() const { return ( time - childTime() ).count() * 1e-9; }
+    double mySeconds() const { return myTime().count() * 1e-9; }
 };
 
 nanoseconds TimeRecord::childTime() const
@@ -31,23 +36,75 @@ nanoseconds TimeRecord::childTime() const
     return res;
 }
 
-void printTimeRecord( const TimeRecord& timeRecord, const std::string& name, int indent, const std::shared_ptr<spdlog::logger>& loggerHandle )
+void printTimeRecord( const TimeRecord& timeRecord, const std::string& name, int indent, const std::shared_ptr<spdlog::logger>& loggerHandle, double minTimeSec )
 {
+    auto sec = timeRecord.seconds();
+    if ( sec < minTimeSec )
+        return;
+
     std::stringstream ss;
     ss << std::setw( 9 )  << std::right << timeRecord.count;
-    ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << timeRecord.seconds();
+    ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << sec;
     ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << timeRecord.mySeconds();
     ss << std::string( indent, ' ' ) << name;
     loggerHandle->info( ss.str() );
 
     for ( const auto& child : timeRecord.children )
-        printTimeRecord( child.second, child.first, indent + 4, loggerHandle );
+        printTimeRecord( child.second, child.first, indent + 4, loggerHandle, minTimeSec );
+}
+
+void summarizeRecords( const TimeRecord& root, const std::string& name, std::map<std::string, SimpleTimeRecord> & res )
+{
+    auto & x = res[name];
+    x.count += root.count;
+    x.time += root.myTime();
+
+    for ( const auto& child : root.children )
+        summarizeRecords( child.second, child.first, res );
+}
+
+void printSummarizedRecords( const TimeRecord& root, const std::string& name, const std::shared_ptr<spdlog::logger>& loggerHandle, double minTimeSec )
+{
+    std::map<std::string, SimpleTimeRecord> sum;
+    summarizeRecords( root, name, sum );
+
+    std::vector<std::pair<std::string, SimpleTimeRecord>> sumPairs;
+    sumPairs.reserve( sum.size() );
+    for ( const auto & p : sum )
+        sumPairs.push_back( p );
+    // sort in time-descending order
+    std::sort( sumPairs.begin(), sumPairs.end(), []( const auto & a, const auto & b )
+        { return a.second.time > b.second.time; } );
+
+    loggerHandle->info( "" );
+    loggerHandle->info( "Slowest places:" );
+    std::stringstream ss;
+    ss << std::setw( 9 ) << std::right << "Count";
+    ss << std::setw( 12 ) << std::right << "Self time";
+    ss << "    Name";
+    loggerHandle->info( ss.str() );
+
+    for ( const auto & p : sumPairs )
+    {
+        auto sec = p.second.seconds();
+        if ( sec < minTimeSec )
+        {
+            loggerHandle->info( "Skip places faster than {} sec", minTimeSec );
+            break;
+        }
+        ss = std::stringstream{};
+        ss << std::setw( 9 )  << std::right << p.second.count;
+        ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << sec;
+        ss << "    " << p.first;
+        loggerHandle->info( ss.str() );
+    }
 }
 
 struct RootTimeRecord : TimeRecord
 {
     time_point<high_resolution_clock> started = high_resolution_clock::now();
     bool printTreeInDtor = true;
+    double minTimeSec = 0.1;
     // prolong logger life
     std::shared_ptr<spdlog::logger> loggerHandle = Logger::instance().getSpdLogger();
     RootTimeRecord()
@@ -56,7 +113,7 @@ struct RootTimeRecord : TimeRecord
     }
     void printTree()
     {
-        loggerHandle->info( "Time Tree:" );
+        loggerHandle->info( "Time Tree (min printed time {} sec):", minTimeSec );
         std::stringstream ss;
         ss << std::setw( 9 ) << std::right << "Count";
         ss << std::setw( 12 ) << std::right << "Time";
@@ -64,7 +121,8 @@ struct RootTimeRecord : TimeRecord
         ss << "    Name";
         loggerHandle->info( ss.str() );
         time = high_resolution_clock::now() - started;
-        printTimeRecord( *this, "(total)", 4, loggerHandle );
+        printTimeRecord( *this, "(total)", 4, loggerHandle, minTimeSec );
+        printSummarizedRecords( *this, "(other)", loggerHandle, minTimeSec );
     }
     ~RootTimeRecord()
     {
@@ -78,9 +136,10 @@ static RootTimeRecord rootTimeRecord;
 static TimeRecord* currentRecord = &rootTimeRecord;
 static auto mainThreadId = std::this_thread::get_id();
 
-void printTimingTreeAtEnd( bool on )
+void printTimingTreeAtEnd( bool on, double minTimeSec )
 {
     rootTimeRecord.printTreeInDtor = on;
+    rootTimeRecord.minTimeSec = minTimeSec;
 }
 
 void printCurrentTimerBranch()
@@ -108,10 +167,11 @@ void printCurrentTimerBranch()
     }
 }
 
-void printTimingTreeAndStop()
+void printTimingTreeAndStop( double minTimeSec )
 {
+    rootTimeRecord.printTreeInDtor = false;
+    rootTimeRecord.minTimeSec = minTimeSec;
     rootTimeRecord.printTree();
-    printTimingTreeAtEnd( false );
 }
 
 void Timer::restart( std::string name )

@@ -4,13 +4,13 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRMeshNormals.h"
-#include "MRMesh/MRBitSetParallelFor.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -88,18 +88,20 @@ void RenderMeshObject::render( const RenderParams& renderParams )
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
     GL_EXEC( auto fixed_colori = glGetUniformLocation( shader, "fixed_color" ) );
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specular_exponent" ), objMesh_->getShininess() ) );
-    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objMesh_->getAmbientStrength() ) );
+    GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
     const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelectedFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objMesh_->getSelectedFacesColor() );
     const auto backColor = Vector4f( objMesh_->getBackColor() );
     const auto selectionBackfacesColor = Vector4f( backColor.x * selectionColor.x, backColor.y * selectionColor.y, backColor.z * selectionColor.z, backColor.w * selectionColor.w );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionColor" ), selectionColor[0], selectionColor[1], selectionColor[2], selectionColor[3] ) );
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionBackColor" ), selectionBackfacesColor[0], selectionBackfacesColor[1], selectionBackfacesColor[2], selectionBackfacesColor[3] ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selBackColor" ), selectionBackfacesColor[0], selectionBackfacesColor[1], selectionBackfacesColor[2], selectionBackfacesColor[3] ) );
 
     // Render fill
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Faces, renderParams.viewportId ) )
@@ -467,13 +469,18 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertPosBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = 3 * numF );
 
-    BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
     {
-        auto ind = 3 * f;
-        Vector3f v[3];
-        mesh->getTriPoints( f, v[0], v[1], v[2] );
-        for ( int i = 0; i < 3; ++i )
-            buffer[ind + i] = v[i];
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            if ( !mesh->topology.hasFace( f ) )
+                continue;
+            auto ind = 3 * f;
+            Vector3f v[3];
+            mesh->getTriPoints( f, v[0], v[1], v[2] );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = v[i];
+        }
     } );
 
     return buffer;
@@ -496,15 +503,20 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
         auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
 
         const auto vertNormals = computePerVertNormals( *mesh );
-        BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
             {
-                const auto &norm = vertNormals[v[i]];
-                buffer[ind + i] = norm;
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                {
+                    const auto &norm = vertNormals[v[i]];
+                    buffer[ind + i] = norm;
+                }
             }
         } );
 
@@ -518,12 +530,17 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
 
         const auto& creases = objMesh_->creases();
         const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
         {
-            auto ind = 3 * f;
-            const auto& cornerN = cornerNormals[f];
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = cornerN[i];
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                const auto& cornerN = cornerNormals[f];
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
+            }
         } );
 
         return buffer;
@@ -548,13 +565,18 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
     auto buffer = glBuffer.prepareBuffer<Color>( vertColorsSize_ = 3 * numF );
 
     const auto& vertsColorMap = objMesh_->getVertsColorMap();
-    BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
     {
-        auto ind = 3 * f;
-        VertId v[3];
-        topology.getTriVerts( f, v );
-        for ( int i = 0; i < 3; ++i )
-            buffer[ind + i] = vertsColorMap[v[i]];
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            if ( !mesh->topology.hasFace( f ) )
+                continue;
+            auto ind = 3 * f;
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int i = 0; i < 3; ++i )
+                buffer[ind + i] = vertsColorMap[v[i]];
+        }
     } );
 
     return buffer;
@@ -580,13 +602,18 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     {
         auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 3 * numF );
 
-        BitSetParallelFor( topology.getValidFaces(), [&] ( FaceId f )
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
         {
-            auto ind = 3 * f;
-            VertId v[3];
-            topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = uvCoords[v[i]];
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = uvCoords[v[i]];
+            }
         } );
 
         return buffer;
@@ -608,16 +635,16 @@ RenderBufferRef<Vector3i> RenderMeshObject::loadFaceIndicesBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto buffer = glBuffer.prepareBuffer<Vector3i>( faceIndicesSize_ = numF );
 
-    const auto& edgePerFace = topology.edgePerFace();
-    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
     {
-        auto ind = 3 * f;
-        if ( f >= numF )
-            return;
-        if ( !edgePerFace[f].valid() )
-            buffer[f] = Vector3i();
-        else
-            buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            auto ind = 3 * f;
+            if ( topology.hasFace( f ) )
+                buffer[f] = Vector3i{ ind, ind + 1, ind + 2 };
+            else
+                buffer[f] = Vector3i();
+        }
     } );
 
     return buffer;
@@ -634,21 +661,21 @@ RenderBufferRef<Vector2i> RenderMeshObject::loadEdgeIndicesBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto buffer = glBuffer.prepareBuffer<Vector2i>( edgeIndicesSize_ = 3 * numF );
 
-    const auto& edgePerFace = topology.edgePerFace();
-    BitSetParallelForAll( topology.getValidFaces(), [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
     {
-        auto ind = 3 * f;
-        if ( f >= numF )
-            return;
-        if ( !edgePerFace[f].valid() )
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
         {
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = Vector2i();
-        }
-        else
-        {
-            for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+            auto ind = 3 * f;
+            if ( !topology.hasFace( f ) )
+            {
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = Vector2i();
+            }
+            else
+            {
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = Vector2i{ ind + i, ind + ( ( i + 1 ) % 3 ) };
+            }
         }
     } );
 

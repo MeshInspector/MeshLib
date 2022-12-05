@@ -112,7 +112,10 @@ bool RibbonSceneSelectAll::action()
 {
     const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     for ( auto obj : selectable )
+    {
         obj->select( true );
+        obj->setVisible( true );
+    }
     return false;
 }
 

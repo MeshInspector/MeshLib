@@ -27,6 +27,8 @@ MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( c
                                                                                ProgressCallback callback = {} );
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
+MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
+                                                                               ProgressCallback callback = {} );
 
 /// \}
 

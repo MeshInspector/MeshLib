@@ -77,4 +77,18 @@ inline tl::expected<T, std::string> addFileNameInError( tl::expected<T, std::str
     return v;
 }
 
+/// returns printf-format for floating-point value in decimal notation with given precision in digits
+/// and without trailing zeros after the decimal point
+/// \param fmt       preallocated buffer of 5 bytes
+/// \param v         value to print
+/// \param digitsAfterPoint  maximal number of digits after decimal point
+/// \param precision         maximal number of not-zero decimal digits
+MRMESH_API char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision = 6 );
+
+/// returns given value rounded to given number of decimal digits
+MRMESH_API double roundToPrecision( double v, int precision );
+
+/// returns given value rounded to given number of decimal digits
+inline float roundToPrecision( float v, int precision ) { return (float)roundToPrecision( double(v), precision ); }
+
 }

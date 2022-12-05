@@ -1,16 +1,26 @@
 #include "MRImageLoad.h"
-#include "MRImage.h"
+#include "MRBuffer.h"
 #include "MRFile.h"
+#include "MRImage.h"
 #include "MRStringConvert.h"
-#include <fstream>
-#include <filesystem>
+
 #include <tl/expected.hpp>
+
+#include <filesystem>
+#include <fstream>
 #include <string>
+
 #ifndef MRMESH_NO_PNG
 #ifdef __EMSCRIPTEN__
 #include <png.h>
 #else
 #include <libpng16/png.h>
+#endif
+#endif
+
+#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_JPEG
+#include <turbojpeg.h>
 #endif
 #endif
 
@@ -23,6 +33,12 @@ const IOFilters Filters =
 {
 #ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
+#endif
+#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_JPEG
+    {"JPEG (.jpg)",  "*.jpg"},
+    {"JPEG (.jpeg)", "*.jpeg"},
+#endif
 #endif
 };
 
@@ -115,6 +131,57 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
 }
 #endif
 
+#ifndef __EMSCRIPTEN__
+
+#ifndef MRMESH_NO_JPEG
+struct JpegReader
+{
+    JpegReader()
+    {
+        tjInstance = tjInitDecompress();
+    }
+    ~JpegReader()
+    {
+        if ( tjInstance )
+            tjDestroy( tjInstance );
+    }
+    tjhandle tjInstance{ nullptr };
+};
+
+tl::expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
+{
+    std::ifstream in( path, std::ios::binary );
+    if ( !in )
+        return tl::make_unexpected( "Cannot open file " + utf8string( path ) );
+
+    const auto fileSize = std::filesystem::file_size( path );
+    Buffer<char> buffer( fileSize );
+    in.read( buffer.data(), (ptrdiff_t)buffer.size() );
+    if ( !in )
+        return tl::make_unexpected( "Cannot read file " + utf8string( path ) );
+
+    JpegReader reader;
+    if ( !reader.tjInstance )
+        return tl::make_unexpected( "Cannot initialize JPEG decompressor" );
+
+    int width, height, jpegSubsamp, jpegColorspace;
+    auto res = tjDecompressHeader3( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), &width, &height, &jpegSubsamp, &jpegColorspace );
+    if ( res != 0 )
+        return tl::make_unexpected( "Failed to decompress JPEG header" );
+
+    Image image;
+    image.pixels.resize( width * height );
+    image.resolution = { width, height };
+    res = tjDecompress2( reader.tjInstance, (const unsigned char*)buffer.data(), (unsigned long)buffer.size(), reinterpret_cast<unsigned char*>( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
+    if ( res != 0 )
+        return tl::make_unexpected( "Failed to decompress JPEG file" );
+
+    return image;
+}
+#endif
+
+#endif
+
 tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
@@ -125,6 +192,12 @@ tl::expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::
 #ifndef MRMESH_NO_PNG
     if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );
+#endif
+#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_JPEG
+    if ( ext == ".jpg" || ext == ".jpeg" )
+        return MR::ImageLoad::fromJpeg( file );
+#endif
 #endif
     return res;
 }

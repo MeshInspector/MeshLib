@@ -331,6 +331,16 @@ void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
 
+bool ImGuiMenu::spaceMouseMove_( const Vector3f& /*translate*/, const Vector3f& /*rotate*/ )
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
+bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
 void ImGuiMenu::rescaleStyle_()
 {
     CommandLoop::appendCommand( [&] ()
@@ -594,7 +604,7 @@ void ImGuiMenu::draw_helpers()
                                         style.FramePadding.y * 4 );
         const float posX = Viewer::instanceRef().window_width - fpsWindowWidth;
         const float posY = Viewer::instanceRef().window_height - fpsWindowHeight;
-        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_FirstUseEver );
+        ImGui::SetNextWindowPos( ImVec2( posX, posY ), ImGuiCond_Appearing );
         ImGui::SetNextWindowSize( ImVec2( fpsWindowWidth, fpsWindowHeight ) );
         ImGui::Begin( "##FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | //ImGuiWindowFlags_NoInputs | 
                       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
@@ -1202,10 +1212,11 @@ float ImGuiMenu::drawSelectionInformation_()
             drawVec3( "Box min", selectionBbox_.min, fieldWidth );
             drawVec3( "Box max", selectionBbox_.max, fieldWidth );
             drawVec3( "Box size", bsize, fieldWidth );
-            ImGui::PopStyleVar();
 
             if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
                 drawVec3( "World box size", wbsize, fieldWidth );
+
+            ImGui::PopStyleVar();
         }
 
         ImGui::PopStyleVar();
@@ -1247,6 +1258,22 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     if ( checked != hasLocked )
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
+
+    make_light_strength( selectedVisualObjs, "Ambient Strength", [&] ( const VisualObject* obj )
+    {
+        return obj->getAmbientStrength();
+    }, [&] ( VisualObject* obj, float value )
+    {
+        obj->setAmbientStrength( value );
+    } );
+
+    make_light_strength( selectedVisualObjs, "Specular Strength", [&] ( const VisualObject* obj )
+    {
+        return obj->getSpecularStrength();
+    }, [&] ( VisualObject* obj, float value )
+    {
+        obj->setSpecularStrength( value );
+    } );
 
     return someChanges;
 }
@@ -1725,6 +1752,42 @@ void ImGuiMenu::make_color_selector( std::vector<std::shared_ptr<ObjectT>> selec
     if ( color != colorConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data.get(), color );
+}
+
+void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<float( const VisualObject* )> getter,
+    std::function<void( VisualObject*, const float& )> setter
+)
+{
+    if ( selectedVisualObjs.empty() )
+        return;
+
+    auto obj = selectedVisualObjs[0];
+    auto value = getter( obj.get() );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i].get() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 0.f;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 50 * menu_scaling() );
+    ImGui::DragFloatValid( label, &value, 0.01f, -99.0f, 99.0f, "%.3f" );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data.get(), value );
 }
 
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
@@ -2515,8 +2578,8 @@ float ImGuiMenu::getSceneInfoItemWidth_(size_t itemCount)
 {
     if ( itemCount == 0 )
         return 0;
-    /// 85 is the widest label's size
-    return ( ImGui::GetContentRegionAvail().x - 85 * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
+    /// 100 is the widest label's size
+    return ( ImGui::GetContentRegionAvail().x - 100.0f * menu_scaling() - ImGui::GetStyle().ItemInnerSpacing.x * ( itemCount - 1 ) ) / float ( itemCount );
 }
 
 void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )

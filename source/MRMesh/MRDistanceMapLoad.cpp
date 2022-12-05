@@ -47,9 +47,13 @@ tl::expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& pat
     uint64_t resolution[2] = {};
     if ( !inFile.read( ( char* )resolution, sizeof( resolution ) ) )
         return tl::make_unexpected( readError );
-
-    DistanceMap dmap( resolution[0], resolution[1] );
     const size_t size = size_t( resolution[0] ) * size_t( resolution[1] );
+    const size_t fileSize = std::filesystem::file_size( path );
+
+    if ( size != ( fileSize - 2 * sizeof( uint64_t ) ) / sizeof( float ) )
+        return tl::make_unexpected( "File does not hold a distance map" );
+
+    DistanceMap dmap( resolution[0], resolution[1] );    
     std::vector<float> buffer( size );
 
     if ( !readByBlocks( inFile, ( char* )buffer.data(), buffer.size() * sizeof( float ), progressCb ) )

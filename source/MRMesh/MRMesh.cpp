@@ -568,6 +568,20 @@ float Mesh::averageEdgeLength() const
     return n > 0 ? float( sum / n ) : 0.0f;
 }
 
+void Mesh::zeroUnusedPoints()
+{
+    MR_TIMER
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ points.size() } ), [&] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+        {
+            if ( !topology.hasVert( v ) )
+                points[v] = {};
+        }
+    } );
+}
+
 void Mesh::transform( const AffineXf3f & xf )
 {
     MR_TIMER

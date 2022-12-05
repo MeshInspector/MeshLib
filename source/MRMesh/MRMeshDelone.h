@@ -47,7 +47,8 @@ MRMESH_API bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f
 /// consider quadrangle formed by left and right triangles of given edge, and
 /// checks whether this edge satisfies Delone's condition in the quadrangle;
 /// \return false otherwise if flipping the edge does not introduce too large surface deviation (can be returned only for inner edge of the region)
-MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {} );
+MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {},
+    float * deviationSqAfterFlip = nullptr ); ///< squared surface deviation after flip is written here (at least when the function returns false)
 
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,

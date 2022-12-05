@@ -21,7 +21,8 @@
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:4464) //relative include path contains '..'
 #pragma warning(disable:4701) //potentially uninitialized local variable 'inv' used
-
+#pragma warning(disable:4702) //unreachable code
+#pragma warning(disable:4800) // Implicit conversion from '_Ty' to bool.
 #pragma warning(disable:4868) //compiler may not enforce left-to-right evaluation order in braced initializer list
 
 #pragma warning(disable:6297)  //Arithmetic overflow:  32-bit value is shifted, then cast to 64-bit value.  Results might not be an expected value.
@@ -40,6 +41,7 @@
 #endif
 #endif
 
+#define IMATH_HALF_NO_LOOKUP_TABLE // fix for unresolved external symbol "imath_half_to_float_table"
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/Composite.h>
 #include <openvdb/tools/GridTransformer.h>

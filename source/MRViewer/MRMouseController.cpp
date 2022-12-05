@@ -78,6 +78,11 @@ MouseController::MouseControlKey MouseController::keyToMouseAndMod( int key )
     return { MouseButton( key >> 6 ),key % ( 1 << 6 ) };
 }
 
+void MouseController::setMouseScroll( bool active )
+{
+    scrollActive_ = active;
+}
+
 void MouseController::connect()
 {
     downState_.resize( 3 );
@@ -97,6 +102,7 @@ void MouseController::cursorEntrance_( bool entered )
 
 bool MouseController::preMouseDown_( MouseButton btn, int )
 {
+    resetAllIfNeeded_();
     if ( !downState_.any() )
         downMousePos_ = currentMousePos_;
 
@@ -195,6 +201,11 @@ bool MouseController::preMouseMove_( int x, int y)
 
 bool MouseController::mouseScroll_( float delta )
 {
+    resetAllIfNeeded_();
+
+    if ( !scrollActive_ )
+        return false;
+
     if ( currentMode_ != MouseMode::None )
         return false;
 
@@ -233,6 +244,14 @@ bool MouseController::mouseScroll_( float delta )
     Vector3f diff = ( ps - pc ) * ( mult - 1.0f );
     viewport.setCameraTranslation( viewport.getParameters().cameraTranslation + diff );
     return true;
+}
+
+void MouseController::resetAllIfNeeded_()
+{
+    if ( !dropOldEventsOnNew_ )
+        return;
+    for ( auto btn : downState_ )
+        getViewerInstance().mouseUp( MouseButton( btn ), 0 );
 }
 
 }

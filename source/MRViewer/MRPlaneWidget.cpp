@@ -100,8 +100,14 @@ void PlaneWidget::updateWidget_( bool updateCameraRotation )
     if ( updateCameraRotation )
         cameraUp3Old_ = viewer->viewport().getUpDirection();
     Vector3f cameraUp3 = cameraUp3Old_;
-    auto rot2 = Matrix3f::rotation( transform.A * Vector3f::plusY(),
-                                    plane_.project( transform( Vector3f() ) + cameraUp3 ) - transform( Vector3f() ) );
+    auto from = transform.A * Vector3f::plusY();
+    auto to = plane_.project( transform.b + cameraUp3 ) - transform.b;
+    auto axis = cross( from, to );
+    if ( dot( axis, plane_.n ) < 0.0f )
+        axis = -plane_.n;
+    else
+        axis = plane_.n;
+    auto rot2 = Matrix3f::rotation( axis, angle( from, to ) );
 
     auto lastPlaneTransform = trans1 * AffineXf3f::linear( rot2 ) * rot1;
     transform = lastPlaneTransform * scale1;
@@ -178,10 +184,10 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
 
     auto viewer = Viewer::instance();
     auto& viewport = viewer->viewport();
-    auto viewportStart = viewer->screenToViewport( to3dim( startMousePos_ ), viewer->viewport().id );
+    auto viewportStart = viewer->screenToViewport( to3dim( startMousePos_ ), viewport.id );
     auto start = viewport.unprojectFromViewportSpace( viewportStart );
 
-    auto viewportStop = viewer->screenToViewport( to3dim( endMousePos_ ), viewer->viewport().id );
+    auto viewportStop = viewer->screenToViewport( to3dim( endMousePos_ ), viewport.id );
     auto stop = viewport.unprojectFromViewportSpace( viewportStop );
     auto stopFar = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
 

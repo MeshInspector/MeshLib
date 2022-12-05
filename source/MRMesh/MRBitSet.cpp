@@ -63,11 +63,23 @@ BitSet::IndexType BitSet::find_last() const
     return base::npos;
 }
 
+size_t BitSet::nthSetBit( size_t n ) const
+{
+    for ( auto b : *this )
+        if ( n-- == 0 )
+            return b;
+    return npos;
+}
+
 TEST(MRMesh, BitSet) 
 {
     BitSet bs0(4);
     bs0.set(0);
     bs0.set(2);
+
+    EXPECT_EQ( bs0.nthSetBit( 0 ), 0 );
+    EXPECT_EQ( bs0.nthSetBit( 1 ), 2 );
+    EXPECT_EQ( bs0.nthSetBit( 2 ), BitSet::npos );
 
     BitSet bs1(3);
     bs1.set(1);
@@ -102,6 +114,10 @@ TEST(MRMesh, TaggedBitSet)
     VertBitSet bs1( 4 );
     bs1.set( VertId( 1 ) );
     bs1.set( VertId( 2 ) );
+
+    EXPECT_EQ( bs1.nthSetBit( 0 ), 1_v );
+    EXPECT_EQ( bs1.nthSetBit( 1 ), 2_v );
+    EXPECT_EQ( bs1.nthSetBit( 2 ), VertId{} );
 
     EXPECT_EQ( VertBitSet( bs0 & bs1 ).count(), 1 );
     EXPECT_EQ( VertBitSet( bs0 | bs1 ).count(), 3 );

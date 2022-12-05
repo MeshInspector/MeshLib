@@ -4,6 +4,7 @@
 #include "MRTimer.h"
 #include "MRUVSphere.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
@@ -27,10 +28,14 @@ AABBTree::AABBTree( const Mesh & mesh )
     if ( numFaces <= 0 )
         return;
 
-    std::vector<BoxedFace> boxedFaces( numFaces );
-    int n = 0;
-    for ( auto f : mesh.topology.getValidFaces() )
-        boxedFaces[n++].leafId = f;
+    Buffer<BoxedFace> boxedFaces( numFaces );
+    const bool packed = numFaces == mesh.topology.faceSize();
+    if ( !packed )
+    {
+        int n = 0;
+        for ( auto f : mesh.topology.getValidFaces() )
+            boxedFaces[n++].leafId = f;
+    }
 
     // compute aabb's of each face
     tbb::parallel_for( tbb::blocked_range<int>( 0, (int)numFaces ),
@@ -38,14 +43,21 @@ AABBTree::AABBTree( const Mesh & mesh )
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
+            FaceId f;
+            if ( packed )
+                boxedFaces[i].leafId = f = FaceId( i );
+            else
+                f = boxedFaces[i].leafId;
+            Box3f box;
             Vector3f a, b, c;
-            mesh.getTriPoints( boxedFaces[i].leafId, a, b, c );
-            boxedFaces[i].box.include( a );
-            boxedFaces[i].box.include( b );
-            boxedFaces[i].box.include( c );
+            mesh.getTriPoints( f, a, b, c );
+            box.include( a );
+            box.include( b );
+            box.include( c );
 
             // micro expand boxes to have better precision in AABB algorithms
-            boxedFaces[i].box = boxedFaces[i].box.insignificantlyExpanded();
+            box = box.insignificantlyExpanded();
+            boxedFaces[i].box = box;
         }
     } );
 

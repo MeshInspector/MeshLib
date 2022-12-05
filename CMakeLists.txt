@@ -135,10 +135,15 @@ IF(MR_EMSCRIPTEN)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
   include_directories(${THIRDPARTY_LIB_DIR}/libzip)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
   ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_RUNTIME_METHODS=[ccall] -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1 -s USE_WEBGL2=1 -s USE_GLFW=3 -s USE_ZLIB=1 -s FULL_ES3=1 -s USE_LIBPNG=1")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_RUNTIME_METHODS=[ccall] -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1 -s USE_WEBGL2=1 -s USE_GLFW=3 -s USE_ZLIB=1 -s FULL_ES3=1 -s USE_LIBPNG=1")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --preload-file ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets@/")
+  IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -sASYNCIFY -Wno-limited-postlink-optimizations")
+    add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
+  ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
 ENDIF() # MR_EMSCRIPTEN
 
 enable_testing()
@@ -146,10 +151,14 @@ enable_testing()
 IF(NOT MR_EMSCRIPTEN)
 
 find_package(glfw3 CONFIG REQUIRED)
+pkg_check_modules(GTKMM gtkmm-3.0)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
 IF(NOT APPLE)
+ set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
+ include_directories(${OPENVDB_DIR})
+
  IF(${MR_FEDORA} OR ${MR_UBUNTU22})
   add_compile_definitions(SPDLOG_FMT_EXTERNAL)
  ENDIF()

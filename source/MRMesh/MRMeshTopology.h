@@ -253,6 +253,16 @@ public:
     MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
         const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
         const PartMapping & map = {} );
+    /// fromFaces contains mapping from this-topology (considering it is empty) to from-topology
+    MRMESH_API void addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
+        const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
+        const PartMapping & map = {} );
+    /// both addPartByMask and addPartByFaceMap call this general implementation
+    template<typename I>
+    MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation,
+        const std::vector<std::vector<EdgeId>> & thisContours,
+        const std::vector<std::vector<EdgeId>> & fromContours,
+        const PartMapping & map );
 
     /// tightly packs all arrays eliminating lone edges and invalid face and verts
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;

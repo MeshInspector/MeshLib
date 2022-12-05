@@ -686,6 +686,25 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const
 void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
+
+void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
+
+template<typename I>
+void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map )
 {
     MR_TIMER
@@ -693,7 +712,7 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     VertHashMap localVmap;
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.topology, fromFaces, flipOrientation, thisContours, fromContours, map );
+    topology.addPartBy( from.topology, fbegin, fend, flipOrientation, thisContours, fromContours, map );
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );

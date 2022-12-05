@@ -1182,7 +1182,24 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     const PartMapping & map )
 {
     MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
 
+void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
+
+template<typename I>
+void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
     
@@ -1248,8 +1265,9 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
 
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
-    for ( auto f : fromFaces )
+    for ( ; fbegin != fend; ++fbegin )
     {
+        auto f = *fbegin;
         auto efrom = from.edgePerFace_[f];
         for ( auto e : leftRing( from, efrom ) )
         {

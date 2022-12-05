@@ -221,7 +221,19 @@ struct [[nodiscard]] Mesh
         const std::vector<std::vector<EdgeId>> & thisContours, // contours on this mesh that have to be stitched with
         const std::vector<std::vector<EdgeId>> & fromContours, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
-        PartMapping map = {} );
+        const PartMapping & map = {} );
+    /// fromFaces contains mapping from this-mesh (considering it is empty) to from-mesh
+    MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
+        const std::vector<std::vector<EdgeId>> & thisContours, // contours on this mesh that have to be stitched with
+        const std::vector<std::vector<EdgeId>> & fromContours, // contours on from mesh during addition
+        // optionally returns mappings: from.id -> this.id
+        const PartMapping & map = {} );
+    /// both addPartByMask and addPartByFaceMap call this general implementation
+    template<typename I>
+    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
+        const std::vector<std::vector<EdgeId>> & thisContours,
+        const std::vector<std::vector<EdgeId>> & fromContours,
+        PartMapping map );
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id

@@ -1161,7 +1161,8 @@ void MeshTopology::computeValidsFromEdges()
     MR_TIMER
     assert( !updateValids_ );
 
-    assert( validVerts_.size() == edgePerVertex_.size() );
+    validVerts_.clear();
+    validVerts_.resize( edgePerVertex_.size() );
     BitSetParallelForAll( validVerts_, [&]( VertId v )
     {
         if ( edgePerVertex_[v].valid() )
@@ -1178,7 +1179,8 @@ void MeshTopology::computeValidsFromEdges()
     },
     [] ( auto a, auto b ) { return a + b; } );
 
-    assert( validFaces_.size() == edgePerFace_.size() );
+    validFaces_.clear();
+    validFaces_.resize( edgePerFace_.size() );
     BitSetParallelForAll( validFaces_, [&]( FaceId f )
     {
         if ( edgePerFace_[f].valid() )
@@ -1560,7 +1562,6 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
     if ( !s )
         return tl::make_unexpected( std::string( "Stream reading error" ) );
     edgePerVertex_.resize( numVerts );
-    validVerts_.resize( numVerts );
     if ( !readByBlocks( s, (char*)edgePerVertex_.data(), edgePerVertex_.size() * sizeof( EdgeId ),
         callback ? [callback] ( float v )
     {
@@ -1574,7 +1575,6 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
     if ( !s )
         return tl::make_unexpected( std::string( "Stream reading error" ) );
     edgePerFace_.resize( numFaces );
-    validFaces_.resize( numFaces );
     if ( !readByBlocks( s, (char*)edgePerFace_.data(), edgePerFace_.size() * sizeof( EdgeId ),
         callback ? [callback] ( float v )
     {

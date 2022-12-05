@@ -462,8 +462,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
     }
-    collapseEdge( topology, edgeToCollapse );
-    return topology.hasVert( vo ) ? vo : VertId{};
+    auto eo = collapseEdge( topology, edgeToCollapse );
+    return eo ? vo : VertId{};
 }
 
 DecimateResult MeshDecimator::run()

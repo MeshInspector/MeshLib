@@ -5,6 +5,7 @@
 
 // unknown pragmas
 #pragma warning(disable:4068)
+#pragma warning(disable:4127)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
 #include <Eigen/Dense>

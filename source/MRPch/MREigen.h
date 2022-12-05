@@ -3,6 +3,8 @@
 // this is to include all important for us Eigen parts in a precompiled header and suppress warnings there
 
 #pragma warning(push)
+#pragma warning(disable:4127)  //
+#pragma warning(disable:4459)  //declaration of 'last' hides global declaration (compiling source file MRLaplacian.cpp)
 #pragma warning(disable:4464)  //relative include path contains '..'
 #pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
 #pragma warning(disable:6011)  //Dereferencing NULL pointer 'newOuterIndex'. 

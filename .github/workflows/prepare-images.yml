@@ -106,7 +106,7 @@ jobs:
   image-build-upload:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 180
+    timeout-minutes: 220
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -135,7 +135,9 @@ jobs:
 
       - name: Build Windows image
         if: ${{ matrix.distribution == 'windows' }}
-        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} .
+        run: |
+          scripts/runner_instal_vcpkg.bat
+          docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} -m 16GB .
 
       - name: Push Linux image
         if: ${{ matrix.distribution != 'windows' }}

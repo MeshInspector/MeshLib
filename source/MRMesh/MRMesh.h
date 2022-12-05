@@ -230,7 +230,7 @@ struct [[nodiscard]] Mesh
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
-    void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
+    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
         const std::vector<std::vector<EdgeId>> & thisContours,
         const std::vector<std::vector<EdgeId>> & fromContours,
         PartMapping map );

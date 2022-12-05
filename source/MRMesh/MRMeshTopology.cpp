@@ -1413,6 +1413,17 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
         *map.src2tgtEdges = std::move( emap );
 }
 
+template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map );
+template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map );
+
 void MeshTopology::rotateTriangles()
 {
     MR_TIMER

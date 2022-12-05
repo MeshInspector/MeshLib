@@ -723,6 +723,17 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
     invalidateCaches();
 }
 
+template MRMESH_API void Mesh::addPartBy( const Mesh & from,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    PartMapping map );
+template MRMESH_API void Mesh::addPartBy( const Mesh & from,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    PartMapping map );
+
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER

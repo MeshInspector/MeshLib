@@ -174,7 +174,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         }
         taskGroup.wait();
 
-        size_t sum = 1;
+        size_t sum = newlines.size();
         std::vector<size_t> groupOffsets;
         for ( const auto& group : groups )
         {

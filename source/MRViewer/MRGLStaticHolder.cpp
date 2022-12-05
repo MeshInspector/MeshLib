@@ -125,8 +125,8 @@ void GLStaticHolder::createShader_( ShaderType type )
     Ki = K;
     texcoordi = texcoord;
     uint primId = uint(gl_VertexID) / 3u;
-    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
-    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
+    primitiveIdf1 = float( uint( primId >> 20u ) ) + 0.5;
+    primitiveIdf0 = float( primId % uint( 1u << 20u ) ) + 0.5;
   }
 )";
         if ( type == DrawMesh )
@@ -190,7 +190,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && ((int(gl_FragCoord.x) + int(gl_FragCoord.y)) % 2) == 1)
       discard;
 
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -330,7 +330,7 @@ void GLStaticHolder::createShader_( ShaderType type )
       else
         gl_SampleMask[0] = gl_SampleMaskIn[0] & 0x55555555;
     }
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -480,7 +480,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && mod(gl_FragCoord.x + gl_FragCoord.y, 2) < 1)
       discard;
     
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -595,8 +595,8 @@ void GLStaticHolder::createShader_( ShaderType type )
     world_pos = vec3(model*vec4 (position, 1.0));
     gl_Position = proj * view * vec4 (world_pos, 1.0); //proj * view * vec4(position, 1.0);"
     uint primId = uint(gl_VertexID) / primBucketSize;
-    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
-    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
+    primitiveIdf1 = float( uint( primId >> 20u ) ) + 0.5;
+    primitiveIdf0 = float( primId % uint( 1u << 20u ) ) + 0.5;
     gl_PointSize = pointSize;
   }
 )";
@@ -621,7 +621,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
       discard;
 
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     color.r = primitiveId;
 
     color.g = uniGeomId;
@@ -665,8 +665,8 @@ void GLStaticHolder::createShader_( ShaderType type )
     Ki = K;
     gl_PointSize = pointSize;
     uint primId = uint(gl_VertexID) / primBucketSize;
-    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
-    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
+    primitiveIdf1 = float( uint( primId >> 20u ) ) + 0.5;
+    primitiveIdf0 = float( primId % uint( 1u << 20u ) ) + 0.5;
   }
 )";
         if ( type == DrawPoints )
@@ -726,7 +726,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
     
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec4 colorCpy;
     bool selected = false;
     if ( showSelVerts )
@@ -832,7 +832,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
       
-    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
+    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec4 colorCpy = mainColor;
     if ( perVertColoring )
     {

@@ -204,7 +204,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "group element lines" );
-    enum Element
+    enum class Element
     {
         Unknown,
         Vertex,
@@ -217,23 +217,23 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         size_t begin;
         size_t end;
     };
-    std::vector<ElementGroup> groups{ { Unknown, 0, 0 } }; // emplace stub initial group
+    std::vector<ElementGroup> groups{ { Element::Unknown, 0, 0 } }; // emplace stub initial group
     for ( size_t li = 0; li < lineCount; ++li )
     {
         auto* line = data + newlines[li];
 
-        Element element = Unknown;
+        Element element = Element::Unknown;
         if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
         {
-            element = Vertex;
+            element = Element::Vertex;
         }
         else if ( line[0] == 'f' )
         {
-            element = Face;
+            element = Element::Face;
         }
         else if ( line[0] == 'o' )
         {
-            element = Object;
+            element = Element::Object;
         }
         // TODO: multi-line elements
 
@@ -356,15 +356,15 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         std::string parseError;
         switch ( group.element )
         {
-        case Unknown:
+        case Element::Unknown:
             break;
-        case Vertex:
+        case Element::Vertex:
             parseVertices( group.begin, group.end, parseError );
             break;
-        case Face:
+        case Element::Face:
             parseFaces( group.begin, group.end, parseError );
             break;
-        case Object:
+        case Element::Object:
             parseObject( group.begin, group.end, parseError );
             break;
         }

@@ -217,7 +217,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         size_t begin{ 0 };
         size_t end{ 0 };
     };
-    std::vector<ElementGroup> groups( 1 ); // emplace stub initial group
+    std::vector<ElementGroup> groups{ { Element::Unknown, 0, 0 } }; // emplace stub initial group
     for ( size_t li = 0; li < lineCount; ++li )
     {
         auto* line = data + newlines[li];

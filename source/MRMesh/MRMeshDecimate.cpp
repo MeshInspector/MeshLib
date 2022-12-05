@@ -108,7 +108,8 @@ private:
     const DecimateSettings & settings_;
     const DeloneSettings deloneSettings_;
     const float maxErrorSq_;
-    Vector<QuadraticForm3f, VertId> vertForms_;
+    Vector<QuadraticForm3f, VertId> myVertForms_;
+    Vector<QuadraticForm3f, VertId> * pVertForms_ = nullptr;
     struct QueueElement
     {
         float c = 0;
@@ -189,11 +190,27 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-MR::QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
 {
     QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
     qf.addDistToOrigin( stabilizer );
     return qf;
+}
+
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer )
+{
+    MR_TIMER;
+
+    VertBitSet store;
+    const VertBitSet & regionVertices = getIncidentVerts( mp.mesh.topology, mp.region, store );
+
+    Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
+    BitSetParallelFor( regionVertices, [&]( VertId v )
+    {
+        res[v] = computeFormAtVertex( mp, v, stabilizer );
+    } );
+
+    return res;
 }
 
 bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings )
@@ -226,22 +243,13 @@ bool MeshDecimator::initializeQueue_()
 {
     MR_TIMER;
 
-    VertBitSet store;
-    const VertBitSet & regionVertices = getIncidentVerts( mesh_.topology, settings_.region, store );
-
-    if ( settings_.vertForms && !settings_.vertForms->empty() )
-    {
-        assert( settings_.vertForms->size() > mesh_.topology.lastValidVert() );
-        vertForms_ = std::move( *settings_.vertForms );
-    }
+    if ( settings_.vertForms )
+        pVertForms_ = settings_.vertForms;
     else
-    {
-        vertForms_.resize( mesh_.topology.lastValidVert() + 1 );
-        BitSetParallelFor( regionVertices, [&]( VertId v )
-        {
-            vertForms_[v] = computeFormAtVertex( MR::MeshPart{ mesh_, settings_.region }, v, settings_.stabilizer );
-        } );
-    }
+        pVertForms_ = &myVertForms_;
+
+    if ( pVertForms_->empty() )
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -269,8 +277,8 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
     const auto d = mesh_.topology.org( e.sym() );
     const auto po = mesh_.points[o];
     const auto pd = mesh_.points[d];
-    const auto vo = vertForms_[o];
-    const auto vd = vertForms_[d];
+    const auto vo = (*pVertForms_)[o];
+    const auto vd = (*pVertForms_)[d];
 
     std::optional<QueueElement> res;
     // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
@@ -454,8 +462,8 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( auto r = topology.left( edgeToCollapse.sym() ) )
             settings_.region->reset( r );
     }
-    collapseEdge( topology, edgeToCollapse );
-    return topology.hasVert( vo ) ? vo : VertId{};
+    auto eo = collapseEdge( topology, edgeToCollapse );
+    return eo ? vo : VertId{};
 }
 
 DecimateResult MeshDecimator::run()
@@ -529,7 +537,7 @@ DecimateResult MeshDecimator::run()
             if ( !collapseVert )
                 continue;
 
-            vertForms_[collapseVert] = collapseForm;
+            (*pVertForms_)[collapseVert] = collapseForm;
 
             for ( EdgeId e : orgRing( mesh_.topology, collapseVert ) )
             {
@@ -556,13 +564,11 @@ DecimateResult MeshDecimator::run()
             for ( VertId oldV{ 0 }; oldV < vmap.size(); ++oldV )
                 if ( auto newV = vmap[oldV] )
                     if ( newV < oldV )
-                        vertForms_[newV] = vertForms_[oldV];
-            vertForms_.resize( mesh_.topology.vertSize() );
+                        (*pVertForms_)[newV] = (*pVertForms_)[oldV];
+            pVertForms_->resize( mesh_.topology.vertSize() );
         }
     }
 
-    if ( settings_.vertForms )
-        *settings_.vertForms = std::move( vertForms_ );
     res_.cancelled = false;
     return res_;
 }

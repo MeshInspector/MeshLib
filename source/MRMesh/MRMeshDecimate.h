@@ -76,8 +76,8 @@ struct DecimateSettings
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
     /**
-     * \brief  If not null, then
-     * on input: if the vector is not empty then it is takes for initialization instead of form computation for all vertices;
+     * \brief  If not null, then vertex quadratic forms are stored there;
+     * if on input the vector is not empty then initialization is skipped in favor of values from there;
      * on output: quadratic form for each remaining vertex is returned there
      */
     Vector<QuadraticForm3f, VertId> * vertForms = nullptr;
@@ -126,7 +126,13 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup
  */
-MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
+[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
+
+/**
+ * \brief Computes quadratic forms at every vertex of mesh part before decimation
+ * \ingroup DecimateGroup
+ */
+[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer );
 
 struct ResolveMeshDegenSettings
 {

@@ -120,6 +120,11 @@ public:
     /// this is a faster version if the result size is known beforehand
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const;
+
+    /// returns the identifier of the back() element
+    [[nodiscard]] IndexType backId() const { assert( !empty() ); return IndexType{ size() - 1 }; }
+    /// returns backId() + 1
+    [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 };
 
 /// compare that two bit sets have the same set bits (they can be equal even if sizes are distinct but last bits are off)

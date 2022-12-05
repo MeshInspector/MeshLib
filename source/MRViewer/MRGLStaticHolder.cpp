@@ -96,6 +96,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -111,7 +112,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   out vec4 Ki;           // (out to fragment shader) vert color 
   out vec3 position_eye; // (out to fragment shader) vert position transformed by model and view (not proj)
   out vec3 normal_eye;   // (out to fragment shader) vert normal transformed by model and view (not proj)
-  out float primitiveIdf;
+  out float primitiveIdf0;
+  out float primitiveIdf1;
 
   void main()
   {
@@ -122,7 +124,9 @@ void GLStaticHolder::createShader_( ShaderType type )
     gl_Position = proj * vec4 (position_eye, 1.0); //proj * view * vec4(position, 1.0);"
     Ki = K;
     texcoordi = texcoord;
-    primitiveIdf = float(gl_VertexID) / 3.0;
+    uint primId = uint(gl_VertexID) / 3u;
+    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
+    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
   }
 )";
         if ( type == DrawMesh )
@@ -137,6 +141,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                 fragmentShader =
                     MR_GLSL_VERSION_LINE R"(
                     precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -171,7 +176,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   in vec4 Ki;                        // (in from vertex shader) vert color
   in vec2 texcoordi;                 // (in from vertex shader) vert uv coordinate
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-  in float primitiveIdf;
+  
+  in float primitiveIdf0;
+  in float primitiveIdf1;
                                      
   out vec4 outColor;                 // (out to render) fragment color
 
@@ -183,7 +190,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && ((int(gl_FragCoord.x) + int(gl_FragCoord.y)) % 2) == 1)
       discard;
 
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -304,7 +311,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   in vec4 Ki;                        // (in from vertex shader) vert color
   in vec2 texcoordi;                 // (in from vertex shader) vert uv coordinate
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-  in float primitiveIdf;
+  
+  in float primitiveIdf0;
+  in float primitiveIdf1;
                                      
   out vec4 outColor;                 // (out to render) fragment color
 
@@ -321,7 +330,7 @@ void GLStaticHolder::createShader_( ShaderType type )
       else
         gl_SampleMask[0] = gl_SampleMaskIn[0] & 0x55555555;
     }
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -457,7 +466,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   in vec4 Ki;                        // (in from vertex shader) vert color
   in vec2 texcoordi;                 // (in from vertex shader) vert uv coordinate
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
-  in float primitiveIdf;
+  
+  in float primitiveIdf0;
+  in float primitiveIdf1;
                                      
   out vec4 outColor;                 // (out to render) fragment color
 
@@ -469,7 +480,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && mod(gl_FragCoord.x + gl_FragCoord.y, 2) < 1)
       discard;
     
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -566,6 +577,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -575,13 +587,16 @@ void GLStaticHolder::createShader_( ShaderType type )
   in vec3 position;
   
   out vec3 world_pos;
-  out float primitiveIdf;
+  out float primitiveIdf0;
+  out float primitiveIdf1;
 
   void main()
   {
     world_pos = vec3(model*vec4 (position, 1.0));
     gl_Position = proj * view * vec4 (world_pos, 1.0); //proj * view * vec4(position, 1.0);"
-    primitiveIdf = float(gl_VertexID) / float(primBucketSize);
+    uint primId = uint(gl_VertexID) / primBucketSize;
+    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
+    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
     gl_PointSize = pointSize;
   }
 )";
@@ -589,12 +604,15 @@ void GLStaticHolder::createShader_( ShaderType type )
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform bool useClippingPlane;
   uniform vec4 clippingPlane;
   uniform uint uniGeomId;
 
   in vec3 world_pos;
-  in float primitiveIdf;
+  
+  in float primitiveIdf0;
+  in float primitiveIdf1;
 
   out highp uvec4 color;
 
@@ -603,7 +621,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
       discard;
 
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     color.r = primitiveId;
 
     color.g = uniGeomId;
@@ -617,6 +635,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -632,7 +651,9 @@ void GLStaticHolder::createShader_( ShaderType type )
   out vec4 Ki;           // (out to fragment shader) vert color 
   out vec3 position_eye; // (out to fragment shader) vert position transformed by model and view (not proj)
   out vec3 normal_eye;   // (out to fragment shader) vert normal transformed by model and view (not proj)
-  out float primitiveIdf;
+  
+  out float primitiveIdf0;
+  out float primitiveIdf1;
 
   void main()
   {
@@ -643,7 +664,9 @@ void GLStaticHolder::createShader_( ShaderType type )
     gl_Position = proj * vec4 (position_eye, 1.0); //proj * view * vec4(position, 1.0);"
     Ki = K;
     gl_PointSize = pointSize;
-    primitiveIdf = float(gl_VertexID) / float(primBucketSize);
+    uint primId = uint(gl_VertexID) / primBucketSize;
+    primitiveIdf1 = float( primId / 1000000u ) + 0.5;
+    primitiveIdf0 = float( primId % 1000000u ) + 0.5;
   }
 )";
         if ( type == DrawPoints )
@@ -651,6 +674,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -681,7 +705,8 @@ void GLStaticHolder::createShader_( ShaderType type )
   in vec4 Ki;                        // (in from vertex shader) vert color
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
 
-  in float primitiveIdf;
+  in float primitiveIdf0;
+  in float primitiveIdf1;
                                      
   out vec4 outColor;                 // (out to render) fragment color
 
@@ -701,7 +726,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
     
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     vec4 colorCpy;
     bool selected = false;
     if ( showSelVerts )
@@ -760,6 +785,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -778,7 +804,9 @@ void GLStaticHolder::createShader_( ShaderType type )
 
   uniform float specExp;   // (in from base) lighting parameter 
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
-  in float primitiveIdf;
+  
+  in float primitiveIdf0;
+  in float primitiveIdf1;
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
@@ -804,7 +832,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
       
-    uint primitiveId = uint(primitiveIdf);
+    uint primitiveId = uint(primitiveIdf1) * 1000000u + uint(primitiveIdf0);
     vec4 colorCpy = mainColor;
     if ( perVertColoring )
     {
@@ -853,6 +881,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform mat4 view;
   uniform mat4 proj;
   uniform mat4 model;
@@ -874,6 +903,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
 
@@ -943,6 +973,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         vertexShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
@@ -962,6 +993,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
             precision highp float;
+            precision highp int;
 
   uniform vec4 mainColor;            // (in from base) main color
                                      
@@ -983,6 +1015,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             vertexShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform mat4 view;
   uniform mat4 proj;
   uniform float pointSize;
@@ -1004,6 +1037,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             vertexShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform mat4 view;
   uniform mat4 proj;
 
@@ -1029,6 +1063,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             vertexShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform vec4 user_color;
   in vec3 position;
   out vec4 color_frag;
@@ -1046,6 +1081,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform float offset;
   in vec4 color_frag;
   out vec4 outColor;
@@ -1063,6 +1099,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform float offset;
 
   in vec4 color_frag;
@@ -1083,6 +1120,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   in vec4 color_frag;
   out vec4 outColor;
   void main()
@@ -1100,6 +1138,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             fragmentShader =
                 MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform mat4 view;
   uniform mat4 proj;
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
@@ -1244,6 +1283,7 @@ void main(void)
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform sampler2D pixels;
   uniform vec4 color;
   uniform vec2 shift;
@@ -1293,6 +1333,7 @@ void main(void)
         fragmentShader =
             MR_GLSL_VERSION_LINE R"(
                 precision highp float;
+            precision highp int;
   uniform sampler2D pixels;
   uniform vec2 viewportSize;
   uniform float depth;

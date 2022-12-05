@@ -146,11 +146,42 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     Timer timer( "split by lines" );
     std::vector<size_t> newlines{ 0 };
-    // TODO: parallelize
-    for ( auto ci = 0; ci < size; ci++ )
     {
-        if ( data[ci] == '\n' )
-            newlines.emplace_back( ci + 1 );
+        constexpr size_t blockSize = 4096;
+        const auto blockCount = (size_t)std::ceil( (float)size / blockSize );
+        constexpr size_t maxGroupCount = 48;
+        const auto blocksPerGroup = (size_t)std::ceil( (float)blockCount / maxGroupCount );
+        const auto groupSize = blockSize * blocksPerGroup;
+        const auto groupCount = (size_t)std::ceil( (float)size / groupSize );
+        assert( groupCount <= maxGroupCount );
+        assert( groupSize * groupCount >= size );
+        assert( groupSize * ( groupCount - 1 ) < size );
+
+        std::vector<std::vector<size_t>> groups( groupCount );
+        tbb::task_group taskGroup;
+        for ( size_t gi = 0; gi < groupCount; gi++ )
+        {
+            taskGroup.run( [&, i = gi]
+            {
+                auto& group = groups[i];
+                const auto begin = i * groupSize;
+                const auto end = std::min( ( i + 1 ) * groupSize, size );
+                for ( auto ci = begin; ci < end; ci++ )
+                    if ( data[ci] == '\n' )
+                        group.emplace_back( ci + 1 );
+            } );
+        }
+        taskGroup.wait();
+
+        size_t sum = 1;
+        for ( const auto& group : groups )
+            sum += group.size();
+        newlines.reserve( sum );
+        for ( const auto& group : groups )
+        {
+            assert( newlines.back() < group.front() );
+            newlines.insert( newlines.end(), group.begin(), group.end() );
+        }
     }
     // add finish line
     if ( newlines.back() != size )

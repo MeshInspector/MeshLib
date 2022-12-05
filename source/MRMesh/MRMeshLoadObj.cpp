@@ -324,7 +324,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
     };
 
-    auto parseObject = [&] ( size_t begin, size_t end, std::string& parseError )
+    auto parseObject = [&] ( size_t, size_t end, std::string& )
     {
         if ( combineAllObjects )
             return;

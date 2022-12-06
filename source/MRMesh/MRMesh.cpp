@@ -745,6 +745,19 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
+void Mesh::packOptimally( const PartMapping & map )
+{
+    MR_TIMER
+
+    getAABBTree(); // ensure that tree is constructed
+    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
+    Mesh packed;
+    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
+    // preserve AABB tree in this
+    topology = std::move( packed.topology );
+    points = std::move( packed.points );
+}
+
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
 {
     auto proj = findProjection( point, { *this, region }, maxDistSq, xf );

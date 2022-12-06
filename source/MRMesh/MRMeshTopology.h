@@ -245,24 +245,24 @@ public:
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// the same but copies only portion of (from) specified by fromFaces,
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, const PartMapping & map );
     /// this version has more parameters
     /// \param flipOrientation if true then every from triangle is inverted before adding
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
+    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {}, const std::vector<std::vector<EdgeId>> & fromContours = {},
         const PartMapping & map = {} );
     /// fromFaces contains mapping from this-topology (considering it is empty) to from-topology
-    MRMESH_API void addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours, const std::vector<std::vector<EdgeId>> & fromContours,
+    MRMESH_API void addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {}, const std::vector<std::vector<EdgeId>> & fromContours = {},
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
-    MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours,
-        const std::vector<std::vector<EdgeId>> & fromContours,
-        const PartMapping & map );
+    MRMESH_API void addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {},
+        const std::vector<std::vector<EdgeId>> & fromContours = {},
+        const PartMapping & map = {} );
 
     /// tightly packs all arrays eliminating lone edges and invalid face and verts
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;

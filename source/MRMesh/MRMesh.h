@@ -214,30 +214,32 @@ struct [[nodiscard]] Mesh
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     // the same but copies only portion of (from) specified by fromFaces
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map = {} );
+    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const PartMapping & map );
     // this version has more parameters:
     //   if flipOrientation then every from triangle is inverted before adding
-    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours, // contours on this mesh that have to be stitched with
-        const std::vector<std::vector<EdgeId>> & fromContours, // contours on from mesh during addition
+    MRMESH_API void addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {}, // contours on this mesh that have to be stitched with
+        const std::vector<std::vector<EdgeId>> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
     /// fromFaces contains mapping from this-mesh (considering it is empty) to from-mesh
-    MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours, // contours on this mesh that have to be stitched with
-        const std::vector<std::vector<EdgeId>> & fromContours, // contours on from mesh during addition
+    MRMESH_API void addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {}, // contours on this mesh that have to be stitched with
+        const std::vector<std::vector<EdgeId>> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
-    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
-        const std::vector<std::vector<EdgeId>> & thisContours,
-        const std::vector<std::vector<EdgeId>> & fromContours,
-        PartMapping map );
+    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation = false,
+        const std::vector<std::vector<EdgeId>> & thisContours = {},
+        const std::vector<std::vector<EdgeId>> & fromContours = {},
+        PartMapping map = {} );
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    // packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
+    MRMESH_API void packOptimally( const PartMapping & map = {} );
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed

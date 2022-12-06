@@ -191,6 +191,7 @@ void Timer::finish()
 {
     if ( !started_ )
         return;
+    started_ = false;
     auto currentParent = currentRecord->parent;
     if ( !currentParent )
         return;

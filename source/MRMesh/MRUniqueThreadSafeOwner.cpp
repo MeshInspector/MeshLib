@@ -66,7 +66,7 @@ void UniqueThreadSafeOwner<T>::reset()
 }
 
 template<typename T>
-const T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
+T & UniqueThreadSafeOwner<T>::getOrCreate( const std::function<T()> & creator )
 {
     if ( obj_ ) // fast path to avoid locking when everything is ready
         return *obj_;

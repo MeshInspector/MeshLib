@@ -815,7 +815,8 @@ void Viewer::EventQueue::execute()
 {
     while ( !queue_.empty() )
     {
-        queue_.front().cb();
+        if ( queue_.front().cb )
+            queue_.front().cb();
         queue_.pop();
     }
 }

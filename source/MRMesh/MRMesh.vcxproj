@@ -130,6 +130,7 @@
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
+    <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
     <ClInclude Include="MRMeshIntersect.h" />

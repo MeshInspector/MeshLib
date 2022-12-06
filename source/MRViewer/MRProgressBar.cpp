@@ -1,8 +1,9 @@
 #include "MRProgressBar.h"
 #include "MRViewer.h"
-#include "MRMesh/MRSystem.h"
 #include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
@@ -147,8 +148,11 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance] ()
         {
+            static ThreadRootTimeRecord rootRecord( "Progress" );
+            registerThreadRootTimeRecord( rootRecord );
             SetCurrentThreadName( "ProgressBar" );
             instance.tryRunTaskWithSehHandler_();
+            unregisterThreadRootTimeRecord( rootRecord );
         } );
 #else
         staticTaskForLaterCall = [&instance] () 

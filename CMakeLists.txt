@@ -44,7 +44,8 @@ IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
-set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
 
@@ -88,8 +89,6 @@ ELSE()
  IF( ${distro} STREQUAL "Fedora Linux")
   SET(MR_FEDORA TRUE)
  ENDIF() # Fedora
-
- include_directories(/usr/include)
 ENDIF() # APPLE
 
 IF(${MR_UBUNTU22} OR APPLE)
@@ -105,6 +104,8 @@ ENDIF()
 
 IF(APPLE)
  LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${PYTHON_VERSION}/Frameworks/Python.framework/Versions/${PYTHON_VERSION}/lib/)
+ include_directories(${HOMEBREW_PREFIX}/include)
+ find_package(pybind11 REQUIRED)
 ENDIF()
 
 set(PYTHON_VAR "python")
@@ -117,25 +118,13 @@ include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
 
-IF(APPLE)
- include_directories(${HOMEBREW_PREFIX}/include)
- find_package(pybind11 REQUIRED)
-ELSE()
- set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
- include_directories(${PYBIND11_DIR})
-ENDIF()
-
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
   link_directories(${THIRDPARTY_LIB_DIR}/lib)
-  link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
+  link_directories(${MESHLIB_THIRDPARTY_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
   include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
   include_directories(${THIRDPARTY_LIB_DIR}/libzip)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)

@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project (MeshRUs_thirdparty CXX)
+project (MeshLib_thirdparty CXX)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
        -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
@@ -41,6 +43,7 @@ ELSE()
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
+    add_subdirectory(./expected ./expected)
 ELSE()
  set(OPENVDB_ENABLE_UNINSTALL OFF)
  set(OPENVDB_ENABLE_INSTALL OFF)
@@ -57,21 +60,39 @@ ELSE()
 ENDIF()
 
 add_subdirectory(./OpenCTM ./OpenCTM)
+set(PHMAP_INSTALL ON)
 add_subdirectory(./parallel-hashmap ./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
+  set(INSTALL_GTEST ON)
   add_subdirectory(./googletest ./googletest)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
+  set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip ./libzip)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   add_subdirectory(./jsoncpp ./jsoncpp)
+  set(SPDLOG_INSTALL ON)
+  add_subdirectory(./spdlog ./spdlog)
+  install(DIRECTORY wasmtbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 ELSE()
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)
   set(CLIP_X11_WITH_PNG OFF)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip ./clip)
+  file(GLOB CLIP_HEADERS "clip/*.h")
+  install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
 ENDIF()
 
+set(GLAD_INSTALL ON)
 add_subdirectory(./glad ./glad)
+set(PYBIND11_INSTALL ON)
+add_subdirectory(./pybind11 ./pybind11)
+
+file(GLOB IMGUI_HEADERS "imgui/*.h")
+install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
+install(DIRECTORY imgui/backends DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
+install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
+install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+

@@ -17,9 +17,6 @@ IF(NOT MR_EMSCRIPTEN)
 if(GTKMM_FOUND)
   target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
 endif()
-
-set(GLAD_INCLUDES ${MESHLIB_THIRDPARTY_LIB_DIR}/glad/include/)
-target_include_directories( ${PROJECT_NAME} PUBLIC ${GLAD_INCLUDES})
 ENDIF() # NOT MR_EMSCRIPTEN
 
 file(GLOB JSONS "*.json")

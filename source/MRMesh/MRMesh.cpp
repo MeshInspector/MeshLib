@@ -686,6 +686,25 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, const
 void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
+
+void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    const PartMapping & map )
+{
+    MR_TIMER
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+}
+
+template<typename I>
+void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map )
 {
     MR_TIMER
@@ -693,7 +712,7 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     VertHashMap localVmap;
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.topology, fromFaces, flipOrientation, thisContours, fromContours, map );
+    topology.addPartBy( from.topology, fbegin, fend, flipOrientation, thisContours, fromContours, map );
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
@@ -704,6 +723,17 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     invalidateCaches();
 }
 
+template MRMESH_API void Mesh::addPartBy( const Mesh & from,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    PartMapping map );
+template MRMESH_API void Mesh::addPartBy( const Mesh & from,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    const std::vector<std::vector<EdgeId>> & thisContours,
+    const std::vector<std::vector<EdgeId>> & fromContours,
+    PartMapping map );
+
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
@@ -713,6 +743,19 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     Mesh packed;
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
+}
+
+void Mesh::packOptimally( const PartMapping & map )
+{
+    MR_TIMER
+
+    getAABBTree(); // ensure that tree is constructed
+    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
+    Mesh packed;
+    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
+    // preserve AABB tree in this
+    topology = std::move( packed.topology );
+    points = std::move( packed.points );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

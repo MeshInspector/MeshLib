@@ -47,9 +47,9 @@ class MRMESH_CLASS VertTag;
 class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 
-template <typename T> class Id;
-template <typename T, typename I> class Vector;
-template <typename T> class Buffer;
+template <typename T> class MRMESH_CLASS Id;
+template <typename T, typename I> class MRMESH_CLASS Vector;
+template <typename T> class MRMESH_CLASS Buffer;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
@@ -68,8 +68,9 @@ using Triangulation = Vector<ThreeVertIds, FaceId>;
 using EdgePath = std::vector<EdgeId>;
 using EdgeLoop = std::vector<EdgeId>;
 
-class BitSet;
-template <typename T> class TaggedBitSet;
+class MRMESH_CLASS BitSet;
+template <typename T> class MRMESH_CLASS TaggedBitSet;
+template <typename T> class MRMESH_CLASS SetBitIteratorT;
 
 struct Color;
 
@@ -276,12 +277,13 @@ using WholeEdgeHashMap = HashMap<UndirectedEdgeId, EdgeId>;
 template <typename I> class UnionFind;
 template <typename T, typename I, typename P> class Heap;
 
-class MeshTopology;
-struct Mesh;
-struct MeshPart;
-struct PointCloud;
+class MRMESH_CLASS MeshTopology;
+struct MRMESH_CLASS Mesh;
+struct MRMESH_CLASS MeshPart;
+struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+struct MRMESH_CLASS PartMapping;
 template<typename T> class UniqueThreadSafeOwner;
 
 class PolylineTopology;

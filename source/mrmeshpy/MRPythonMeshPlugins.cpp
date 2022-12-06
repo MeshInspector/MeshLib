@@ -393,4 +393,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
         "considered paths can go either along edges or straightly within triangles" 
     );
 
+    m.def( "computeSurfaceDistances", 
+        ( MR::Vector<float, MR::VertId>( * )( const MR::Mesh&, const VertBitSet&, const VertBitSet&, float maxDist, const VertBitSet*, int ) )& MR::computeSurfaceDistances,
+        pybind11::arg( "mesh" ), pybind11::arg( "startVertices" ), pybind11::arg( "targetVertices" ), pybind11::arg( "maxDist" ) = FLT_MAX, pybind11::arg( "region" ) = nullptr, pybind11::arg( "maxVertUpdates" ) = 3,
+        "Computes path distances in mesh vertices from given start vertices, stopping when all targetVertices or maxDist is reached;\n"
+        "considered paths can go either along edges or straightly within triangles"
+    );
 })

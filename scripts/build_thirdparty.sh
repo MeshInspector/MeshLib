@@ -16,7 +16,8 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   FILE_NAME="install_brew_requirements.sh"
 else
   source /etc/os-release
-  echo $NAME
+  . /etc/lsb-release
+  echo "${NAME}" "${DISTRIB_RELEASE}"
   FILE_NAME="install_apt_requirements.sh"
 
   if [ "${NAME}" == "Fedora Linux" ]; then
@@ -47,7 +48,6 @@ else
 fi
 printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
 
-MR_THIRDPARTY_DIR="thirdparty/"
 if [ $MR_EMSCRIPTEN == "ON" ]; then
  if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
   MR_EMSCRIPTEN_SINGLETHREAD=1
@@ -57,39 +57,43 @@ else
  ./scripts/$FILE_NAME
 fi
 
-#build Third party
-if ! [ -d "./lib/" ]; then
- mkdir -p lib
-fi
-if ! [ -d "./include/" ]; then
- mkdir -p include
-fi
 
+MR_THIRDPARTY_DIR="thirdparty/"
+MR_THIRDPARTY_BUILD_DIR="thirdparty_build/"
+MR_THIRDPARTY_LIB_DIR="lib/"
+MR_THIRDPARTY_INCLUDE_DIR="include/"
+
+#build Third party
+rm -rf "${MR_THIRDPARTY_BUILD_DIR}"
+rm -rf "${MR_THIRDPARTY_LIB_DIR}"
+rm -rf "${MR_THIRDPARTY_INCLUDE_DIR}"
+
+mkdir -p "${MR_THIRDPARTY_BUILD_DIR}"
+mkdir -p "${MR_THIRDPARTY_LIB_DIR}"
+mkdir -p "${MR_THIRDPARTY_INCLUDE_DIR}"
+
+# build
+echo "Starting build..."
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
-  cd lib
-  emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR}
+  cd "${MR_THIRDPARTY_BUILD_DIR}"
+  emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   emmake make -j `nproc` #VERBOSE=1
+  make install
   cd ..
 
   cd thirdparty/wasmtbb
   EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
   cd ../..
 else
-  cd lib
-  cmake ../${MR_THIRDPARTY_DIR}
-  make -j `nproc` #VERBOSE=1
+  cd "${MR_THIRDPARTY_BUILD_DIR}"
+  cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
+  cmake --build . -j `nproc`  #VERBOSE=1
+  cmake --install .
   cd ..
 fi
 
-if [[ "${NAME}" == "Ubuntu" ]] && [[ "${MR_EMSCRIPTEN}" == "OFF" ]]; then
-  CURRENT_DIR="`pwd`"
-  mkdir -p include/openvdb
-  cd ./thirdparty/openvdb/openvdb/openvdb/
-  find . -name '*.h*' -type f,l -exec cp -fP --parents \{\} "${CURRENT_DIR}/include/openvdb" \;
-  cd -
-  cp -r ./lib/openvdb/openvdb/openvdb/* ./include/
-  cp -r ./lib/cpr/cpr_generated_includes/* ./include/
-fi
-cp -r ./lib/glad/include/* ./include/
+# copy .so libs (some of them are handled by their cmake --install, but some are not)
+echo "Copying shared libs.."
+cp "${MR_THIRDPARTY_BUILD_DIR}"/*.so "${MR_THIRDPARTY_LIB_DIR}"/
 
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

@@ -19,8 +19,8 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 if(GTKMM_FOUND)
 	message("------------------------------${GTKMM_INCLUDE_DIRS}")
 	include_directories(${GTKMM_INCLUDE_DIRS})
-  target_include_directories( ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${GTKMM_INCLUDE_DIRS}>
-		  											$<INSTALL_INTERFACE:${GTKMM_INCLUDE_DIRS}>)
+  #target_include_directories( ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${GTKMM_INCLUDE_DIRS}>
+		  										#	$<INSTALL_INTERFACE:${GTKMM_INCLUDE_DIRS}>)
 endif()
 
 set(GLAD_INCLUDES ${MESHLIB_THIRDPARTY_LIB_DIR}/glad/include/)

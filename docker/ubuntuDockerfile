@@ -31,7 +31,7 @@ RUN apt-get update -y \
 
 RUN apt-get install git -y
 RUN cd home && git clone https://github.com/oneapi-src/oneTBB.git && cd oneTBB \
-     && git checkout v2021.3.0 && ls -al \
+     && git checkout v2021.4.0 && ls -al \
      && rm -rf build && mkdir build && cd build \
      && cmake -S .. -DCMAKE_INSTALL_PREFIX=/usr/local -DTBB_TEST=OFF  \
      && cmake --build . \

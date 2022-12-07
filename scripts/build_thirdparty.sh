@@ -16,13 +16,14 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   FILE_NAME="install_brew_requirements.sh"
 else
   source /etc/os-release
-  . /etc/lsb-release
-  echo "${NAME}" "${DISTRIB_RELEASE}"
   FILE_NAME="install_apt_requirements.sh"
 
   if [ "${NAME}" == "Fedora Linux" ]; then
    FILE_NAME="install_dnf_requirements.sh"
+  else
+    . /etc/lsb-release
   fi
+  echo "${NAME}" "${DISTRIB_RELEASE}"
 fi
 
 MR_EMSCRIPTEN_SINGLETHREAD=0
@@ -59,7 +60,7 @@ fi
 
 
 MR_THIRDPARTY_DIR="thirdparty/"
-MR_THIRDPARTY_BUILD_DIR="thirdparty_build/"
+MR_THIRDPARTY_BUILD_DIR="thirdparty_build"
 MR_THIRDPARTY_LIB_DIR="lib/"
 MR_THIRDPARTY_INCLUDE_DIR="include/"
 

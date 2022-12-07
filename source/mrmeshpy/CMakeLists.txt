@@ -25,6 +25,6 @@ ELSE()
         MRMesh
         spdlog
         fmt
-        ${PYTHON_LIB}
+        ${MR_PYTHON_LIB}
     )
 ENDIF()

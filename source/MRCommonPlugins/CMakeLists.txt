@@ -26,6 +26,7 @@ IF(APPLE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		MRMesh
 		MRViewer
+		clip
 		imgui
 		fmt
 		spdlog

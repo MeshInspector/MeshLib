@@ -95,6 +95,10 @@ fi
 
 # copy .so libs (some of them are handled by their cmake --install, but some are not)
 echo "Copying shared libs.."
-cp "${MR_THIRDPARTY_BUILD_DIR}"/*.so "${MR_THIRDPARTY_LIB_DIR}"/
+if [[ $OSTYPE == 'darwin'* ]]; then
+  cp "${MR_THIRDPARTY_BUILD_DIR}"/*.dylib "${MR_THIRDPARTY_LIB_DIR}"/
+else
+  cp "${MR_THIRDPARTY_BUILD_DIR}"/*.so "${MR_THIRDPARTY_LIB_DIR}"/
+fi
 
 printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"

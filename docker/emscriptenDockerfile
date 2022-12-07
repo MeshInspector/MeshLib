@@ -37,7 +37,7 @@ RUN ./scripts/build_thirdparty.sh
 
 RUN mkdir /usr/local/lib/emscripten-single/ && \
     cp -r lib /usr/local/lib/emscripten-single/ && \
-    cp -r include /usr/local/lib/emscripten/
+    cp -r include /usr/local/lib/emscripten-single/
 
 RUN mkdir -p /usr/local/lib/emscripten-single/wasmtbb/build && \
     cp -r ./thirdparty/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release /usr/local/lib/emscripten-single/wasmtbb/build/

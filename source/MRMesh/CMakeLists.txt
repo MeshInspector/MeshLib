@@ -125,10 +125,6 @@ ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
 
-set(EIGEN_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/eigen3)
-target_include_directories(
-	${PROJECT_NAME} PUBLIC ${EIGEN_DIR})
-
 IF(APPLE OR MR_EMSCRIPTEN)
 	#jpeg-turbo is keg-only, which means it was not symlinked into /opt/homebrew,
 	#because libjpeg-turbo is not linked to prevent conflicts with the standard libjpeg.

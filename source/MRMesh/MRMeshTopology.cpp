@@ -1182,7 +1182,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
 void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
@@ -1190,11 +1190,11 @@ void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
 template<typename I>
-void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation,
+void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map )
@@ -1211,9 +1211,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
     };
 
     // in all maps: from index -> to index
-    WholeEdgeHashMap emap;
-    VertHashMap vmap;
     FaceHashMap fmap;
+    fmap.reserve( fcount );
+    WholeEdgeHashMap emap;
+    emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
+    VertHashMap vmap;
+    vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
     if ( map.tgt2srcEdges )
         map.tgt2srcEdges->resize( undirectedEdgeSize() );
     if ( map.tgt2srcVerts )
@@ -1386,12 +1389,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
 }
 
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
-    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map );
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
-    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map );

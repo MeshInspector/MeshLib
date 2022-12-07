@@ -1272,15 +1272,15 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
         for ( auto e : leftRing( from, efrom ) )
         {
             const UndirectedEdgeId ue = e.undirected();
-            if ( emap.find( ue ) == emap.end() )
+            if ( auto [it, inserted] = emap.insert( { ue, {} } ); inserted )
             {
                 if ( auto e1 = findExistingEdge( e ) )
                 {
-                    emap[ue] = e.even() ? e1 : e1.sym();
+                    it->second = e.even() ? e1 : e1.sym();
                 }
                 else
                 {
-                    emap[ue] = edges_.endId();
+                    it->second = edges_.endId();
                     edges_.push_back( from.edges_[EdgeId{ue}] );
                     edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
                     if ( map.tgt2srcEdges )
@@ -1289,22 +1289,24 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
                     }
                 }
             }
-            auto v = from.org( e );
-            if ( v.valid() && vmap.find( v ) == vmap.end() )
+            if ( auto v = from.org( e ); v.valid() )
             {
-                if ( auto v1 = findExistingVert( v ) )
+                if ( auto [it, inserted] = vmap.insert( { v, {} } ); inserted )
                 {
-                    vmap[v] = v1;
-                }
-                else
-                {
-                    auto nv = addVertId();
-                    if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts ->push_back( v );
-                    vmap[v] = nv;
-                    edgePerVertex_[nv] = mapEdge( emap, e );
-                    validVerts_.set( nv );
-                    ++numValidVerts_;
+                    if ( auto v1 = findExistingVert( v ) )
+                    {
+                        it->second = v1;
+                    }
+                    else
+                    {
+                        auto nv = addVertId();
+                        if ( map.tgt2srcVerts )
+                            map.tgt2srcVerts ->push_back( v );
+                        it->second = nv;
+                        edgePerVertex_[nv] = mapEdge( emap, e );
+                        validVerts_.set( nv );
+                        ++numValidVerts_;
+                    }
                 }
             }
         }

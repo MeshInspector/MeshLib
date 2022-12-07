@@ -39,6 +39,7 @@ else # darwin
   fi
   PYTHON_PREFIX=$(python"${PYTHON_VERSION}"-config --prefix)
   echo "PYTHON_PREFIX=${PYTHON_PREFIX}"
+  PYTHON_EXECUTABLE=$(which python"${PYTHON_VERSION}")
   PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
 fi
@@ -111,7 +112,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
  fi
  cd Release
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" | tee ${logfile}
+    cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON_EXECUTABLE}" | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}
@@ -134,7 +135,7 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  fi
  cd Debug
  if [[ $OSTYPE == 'darwin'* ]]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" | tee ${logfile}
+    cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON_EXECUTABLE}" | tee ${logfile}
  else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} | tee ${logfile}

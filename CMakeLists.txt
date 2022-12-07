@@ -111,9 +111,9 @@ ENDIF()
 set(PYTHON_VAR "python")
 string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
 
-find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
+find_package(Python ${MR_PYTHON_VERSION} REQUIRED)
+find_package(PythonInterp ${MR_PYTHON_VERSION} REQUIRED)
+find_package(PythonLibs ${MR_PYTHON_VERSION} REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN

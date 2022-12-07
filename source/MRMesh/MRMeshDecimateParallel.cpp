@@ -155,7 +155,8 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
                 {
                     submesh.subVertToOriginal[packedId] = vertSubToFull[beforePackId];
                     assert( packedId <= beforePackId );
-                    submesh.mVertForms[packedId] = submesh.mVertForms[beforePackId];
+                    if ( beforePackId < submesh.mVertForms.size() )
+                        submesh.mVertForms[packedId] = submesh.mVertForms[beforePackId];
                 }
             }
             submesh.mBdVerts = submesh.m.topology.findBoundaryVerts();

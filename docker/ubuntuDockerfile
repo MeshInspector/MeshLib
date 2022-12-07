@@ -56,6 +56,7 @@ RUN ./scripts/build_thirdparty.sh
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 RUN cp -r lib /usr/local/lib/meshlib-thirdparty-lib/
+RUN cp -r include /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
@@ -63,6 +64,7 @@ COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 
 #COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+#COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
 
 ENV MR_STATE=DOCKER_BUILD
 

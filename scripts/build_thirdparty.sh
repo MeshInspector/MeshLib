@@ -97,7 +97,7 @@ fi
 echo "Copying shared libs.."
 if [[ $OSTYPE == 'darwin'* ]]; then
   cp "${MR_THIRDPARTY_BUILD_DIR}"/*.dylib "${MR_THIRDPARTY_LIB_DIR}"/
-else
+elif [ "${MR_EMSCRIPTEN}" != "ON" ]; then
   cp "${MR_THIRDPARTY_BUILD_DIR}"/*.so "${MR_THIRDPARTY_LIB_DIR}"/
 fi
 

@@ -111,9 +111,9 @@ ENDIF()
 set(PYTHON_VAR "python")
 string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
 
-find_package(Python ${MR_PYTHON_VERSION} REQUIRED)
-find_package(PythonInterp ${MR_PYTHON_VERSION} REQUIRED)
-find_package(PythonLibs ${MR_PYTHON_VERSION} REQUIRED)
+find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
@@ -123,10 +123,7 @@ include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
-  link_directories(${THIRDPARTY_LIB_DIR}/lib)
   link_directories(${MESHLIB_THIRDPARTY_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
-  include_directories(${THIRDPARTY_LIB_DIR}/libzip)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287

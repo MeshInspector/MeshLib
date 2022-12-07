@@ -75,23 +75,21 @@ mkdir -p "${MR_THIRDPARTY_INCLUDE_DIR}"
 
 # build
 echo "Starting build..."
+cd "${MR_THIRDPARTY_BUILD_DIR}"
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
-  cd "${MR_THIRDPARTY_BUILD_DIR}"
   emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   emmake make -j `nproc` #VERBOSE=1
   make install
   cd ..
-
   cd thirdparty/wasmtbb
   EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
-  cd ../..
+  cd ..
 else
-  cd "${MR_THIRDPARTY_BUILD_DIR}"
   cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
   cmake --build . -j `nproc`  #VERBOSE=1
   cmake --install .
-  cd ..
 fi
+cd ..
 
 # copy libs (some of them are handled by their `cmake --install`, but some are not)
 echo "Copying thirdparty libs.."

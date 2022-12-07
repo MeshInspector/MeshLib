@@ -196,7 +196,13 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             else
             {
                 mesh.points[fv] = submesh.m.points[v];
-                unitedVertForms[fv] = submesh.mVertForms[v];
+                if ( v < submesh.mVertForms.size() )
+                    unitedVertForms[fv] = submesh.mVertForms[v];
+                else
+                {
+                    assert( settings.region );
+                    // and this vertex is not in the region
+                }
             }
         }
     }

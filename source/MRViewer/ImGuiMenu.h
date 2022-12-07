@@ -305,6 +305,7 @@ protected:
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
     MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );

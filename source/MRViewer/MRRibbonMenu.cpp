@@ -1415,6 +1415,7 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( ImGui::BeginPopupContextItem() )
     {
+        ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         bool wasChanged = false;
         if ( selectedVisualObjs.empty() )
         {
@@ -1427,12 +1428,14 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
             ImGui::TableNextColumn();
             wasChanged |= drawGeneralOptions_( selected );
             wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs );
+            wasChanged |= drawAdvancedOptions_( selectedVisualObjs );
             ImGui::TableNextColumn();
             wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
             wasChanged |= drawRemoveButton_( selected );
             wasChanged |= drawGroupUngroupButton_( selected );
             ImGui::EndTable();
         }
+        ImGui::PopStyleVar();
         if ( wasChanged )
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();

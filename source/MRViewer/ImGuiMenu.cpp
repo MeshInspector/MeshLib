@@ -801,6 +801,7 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
     {
         drawDrawOptionsCheckboxes_( selectedVisualObjs );
         drawDrawOptionsColors_( selectedVisualObjs );
+        drawAdvancedOptions_( selectedVisualObjs );
     }
 
     draw_custom_selection_properties( selectedObjs );
@@ -1259,7 +1260,34 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
 
-    make_light_strength( selectedVisualObjs, "Ambient Strength", [&] ( const VisualObject* obj )
+    return someChanges;
+}
+
+bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs )
+{
+    if ( selectedObjs.empty() )
+        return false;
+    auto currWindow = ImGui::GetCurrentContext()->CurrentWindow;
+    if ( currWindow )
+        currWindow->DrawList->PushClipRect( currWindow->OuterRectClipped.Min, currWindow->OuterRectClipped.Max );
+    if ( !RibbonButtonDrawer::CustomCollapsingHeader( "Advanced" ) )
+    {
+        if ( currWindow )
+            currWindow->DrawList->PopClipRect();
+        return false;
+    }
+    if ( currWindow )
+        currWindow->DrawList->PopClipRect();
+
+    make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
+    {
+        return obj->getShininess();
+    }, [&] ( VisualObject* obj, float value )
+    {
+        obj->setShininess( value );
+    } );
+
+    make_light_strength( selectedObjs, "Ambient Strength", [&] ( const VisualObject* obj )
     {
         return obj->getAmbientStrength();
     }, [&] ( VisualObject* obj, float value )
@@ -1267,7 +1295,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
         obj->setAmbientStrength( value );
     } );
 
-    make_light_strength( selectedVisualObjs, "Specular Strength", [&] ( const VisualObject* obj )
+    make_light_strength( selectedObjs, "Specular Strength", [&] ( const VisualObject* obj )
     {
         return obj->getSpecularStrength();
     }, [&] ( VisualObject* obj, float value )
@@ -1275,7 +1303,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
         obj->setSpecularStrength( value );
     } );
 
-    return someChanges;
+    return false;
 }
 
 bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs )

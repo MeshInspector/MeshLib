@@ -41,9 +41,8 @@ mkdir -p "${MR_INSTALL_INCLUDE_DIR}"
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-cd "${MR_LIB_DIR}"
-find . -name '*.so*' -type f,l -exec cp -fP \{\} "${MR_INSTALL_LIB_DIR}" \;
-cd -
+cp -r ./lib "${MR_INSTALL_LIB_DIR}"
+cp -r ./include "${MR_INSTALL_INCLUDE_DIR}"
 printf "lib copy done\n"
 
 #copy application
@@ -63,12 +62,6 @@ cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
 #copy headers
-cd "${MR_LIB_DIR}"
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
-cd thirdparty/eigen
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
 cd source
 find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${MR_INSTALL_INCLUDE_DIR}" \;
 cd -

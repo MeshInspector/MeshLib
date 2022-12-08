@@ -43,26 +43,26 @@ ELSE()
   ENDIF()
 ENDIF()
 
-# get os name and version
-file(STRINGS /etc/os-release distro REGEX "^NAME=")
-string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
-
-# check version (major)
-file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
-string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
-string(FIND ${version_id} "." dot-pos)
-string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
-message("using ${distro} ${version_id}")
-
-IF( ${distro} STREQUAL "Ubuntu")
-    IF( ${version_id} STREQUAL "20")
-        SET(MR_OPENVDB_OLD TRUE)
-    ENDIF() # Ubuntu 22
-ENDIF() # Ubuntu
-
 IF(APPLE OR MR_EMSCRIPTEN)
     add_subdirectory(./expected ./expected)
 ELSE()
+ # get os name and version
+ file(STRINGS /etc/os-release distro REGEX "^NAME=")
+ string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
+
+ # check version (major)
+ file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
+ string(REGEX REPLACE "VERSION_ID=\"(.*)\"" "\\1" version_id "${version_id}")
+ string(FIND ${version_id} "." dot-pos)
+ string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
+ message("using ${distro} ${version_id}")
+
+ IF( ${distro} STREQUAL "Ubuntu")
+  IF( ${version_id} STREQUAL "20")
+   SET(MR_OPENVDB_OLD TRUE)
+  ENDIF() # Ubuntu 20
+ ENDIF() # Ubuntu
+
  set(OPENVDB_ENABLE_UNINSTALL OFF)
  set(OPENVDB_ENABLE_INSTALL OFF)
  set(OPENVDB_CORE_SHARED "ON")

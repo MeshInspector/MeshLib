@@ -755,6 +755,7 @@ void Mesh::packOptimally( const PartMapping & )
     Buffer<FaceId> invFaceMap( topology.faceSize() );
     AABBTreeOwner_.get()->getInvLeafOrderAndReset( invFaceMap );
     auto vOrder = getVertexOrdering( invFaceMap, topology );
+    auto eOrder = getEdgeOrdering( invFaceMap, topology );
 
 /*    Mesh packed;
     packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );

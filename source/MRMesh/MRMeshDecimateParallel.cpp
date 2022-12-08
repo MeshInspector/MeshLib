@@ -155,7 +155,8 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
                 {
                     submesh.subVertToOriginal[packedId] = vertSubToFull[beforePackId];
                     assert( packedId <= beforePackId );
-                    submesh.mVertForms[packedId] = submesh.mVertForms[beforePackId];
+                    if ( beforePackId < submesh.mVertForms.size() )
+                        submesh.mVertForms[packedId] = submesh.mVertForms[beforePackId];
                 }
             }
             submesh.mBdVerts = submesh.m.topology.findBoundaryVerts();
@@ -195,7 +196,13 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             else
             {
                 mesh.points[fv] = submesh.m.points[v];
-                unitedVertForms[fv] = submesh.mVertForms[v];
+                if ( v < submesh.mVertForms.size() )
+                    unitedVertForms[fv] = submesh.mVertForms[v];
+                else
+                {
+                    assert( settings.region );
+                    // and this vertex is not in the region
+                }
             }
         }
     }

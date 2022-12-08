@@ -1182,7 +1182,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet & 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
 void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & fromFaces, bool flipOrientation,
@@ -1190,11 +1190,11 @@ void MeshTopology::addPartByFaceMap( const MeshTopology & from, const FaceMap & 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
 template<typename I>
-void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool flipOrientation,
+void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map )
@@ -1210,8 +1210,21 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
             assert( it->second == val );
     };
 
-    VertHashMap existingVerts;
-    WholeEdgeHashMap existingEdges;
+    // in all maps: from index -> to index
+    FaceHashMap fmap;
+    fmap.reserve( fcount );
+    WholeEdgeHashMap emap;
+    emap.reserve( std::min( 2 * fcount, from.undirectedEdgeSize() ) ); // if whole connected component is copied then ecount=3/2*fcount; if unconnected triangles are copied then ecount=3*fcount
+    VertHashMap vmap;
+    vmap.reserve( std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
+    if ( map.tgt2srcEdges )
+        map.tgt2srcEdges->resize( undirectedEdgeSize() );
+    if ( map.tgt2srcVerts )
+        map.tgt2srcVerts->resize( vertSize() );
+    if ( map.tgt2srcFaces )
+        map.tgt2srcFaces->resize( faceSize() );
+
+    UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
     for ( int i = 0; i < szContours; ++i )
     {
         const auto & thisContour = thisContours[i];
@@ -1230,38 +1243,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
             auto e1 = thisContour[j];
             assert( !left( e1 ) );
             assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
-            set( existingVerts, from.org( e ), org( e1 ) );
-            set( existingVerts, from.dest( e ), dest( e1 ) );
-            set( existingEdges, e.undirected(), e.even() ? e1 : e1.sym() );
+            set( vmap, from.org( e ), org( e1 ) );
+            set( vmap, from.dest( e ), dest( e1 ) );
+            set( emap, e.undirected(), e.even() ? e1 : e1.sym() );
+            existingEdges.autoResizeSet( e.undirected() );
         }
     }
-    const bool existingVertsEmpty = existingVerts.empty();
-    auto findExistingVert = [&]( VertId v )
-    {
-        if ( existingVertsEmpty )
-            return VertId{};
-        auto it = existingVerts.find( v );
-        return it == existingVerts.end() ? VertId() : it->second;
-    };
-
-    const bool existingEdgesEmpty = existingEdges.empty();
-    auto findExistingEdge = [&]( EdgeId e )
-    {
-        if ( existingEdgesEmpty )
-            return EdgeId{};
-        return mapEdge( existingEdges, e );
-    };
-
-    // in all maps: from index -> to index
-    WholeEdgeHashMap emap;
-    VertHashMap vmap;
-    FaceHashMap fmap;
-    if ( map.tgt2srcEdges )
-        map.tgt2srcEdges->resize( undirectedEdgeSize() );
-    if ( map.tgt2srcVerts )
-        map.tgt2srcVerts->resize( vertSize() );
-    if ( map.tgt2srcFaces )
-        map.tgt2srcFaces->resize( faceSize() );
 
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
@@ -1272,36 +1259,24 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
         for ( auto e : leftRing( from, efrom ) )
         {
             const UndirectedEdgeId ue = e.undirected();
-            if ( emap.find( ue ) == emap.end() )
+            if ( auto [it, inserted] = emap.insert( { ue, {} } ); inserted )
             {
-                if ( auto e1 = findExistingEdge( e ) )
+                it->second = edges_.endId();
+                edges_.push_back( from.edges_[EdgeId{ue}] );
+                edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
+                if ( map.tgt2srcEdges )
                 {
-                    emap[ue] = e.even() ? e1 : e1.sym();
-                }
-                else
-                {
-                    emap[ue] = edges_.endId();
-                    edges_.push_back( from.edges_[EdgeId{ue}] );
-                    edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
-                    if ( map.tgt2srcEdges )
-                    {
-                        map.tgt2srcEdges ->push_back( EdgeId{ue} );
-                    }
+                    map.tgt2srcEdges ->push_back( EdgeId{ue} );
                 }
             }
-            auto v = from.org( e );
-            if ( v.valid() && vmap.find( v ) == vmap.end() )
+            if ( auto v = from.org( e ); v.valid() )
             {
-                if ( auto v1 = findExistingVert( v ) )
-                {
-                    vmap[v] = v1;
-                }
-                else
+                if ( auto [it, inserted] = vmap.insert( { v, {} } ); inserted )
                 {
                     auto nv = addVertId();
                     if ( map.tgt2srcVerts )
                         map.tgt2srcVerts ->push_back( v );
-                    vmap[v] = nv;
+                    it->second = nv;
                     edgePerVertex_[nv] = mapEdge( emap, e );
                     validVerts_.set( nv );
                     ++numValidVerts_;
@@ -1330,14 +1305,14 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
             auto e1 = thisContour[j];
 
             auto eNx = flipOrientation ? from.prev( e.sym() ) : from.next( e.sym() );
-            if ( !findExistingEdge( eNx.undirected() ) )
+            if ( !existingEdges.test( eNx.undirected() ) )
             {
                 auto e1Nx = prev( e1.sym() );
                 prevNextEdges.emplace_back( e1Nx, mapEdge( emap, eNx ) );
             }
 
             auto ePr = flipOrientation ? from.next( e ) : from.prev( e );
-            if ( !findExistingEdge( ePr.undirected() ) )
+            if ( !existingEdges.test( ePr.undirected() ) )
             {
                 auto e1Pr = next( e1 );
                 prevNextEdges.emplace_back( mapEdge( emap, ePr ), e1Pr );
@@ -1358,7 +1333,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
             auto e1 = thisContour[j];
 
             {
-                assert ( findExistingEdge( e.undirected() ) );
+                assert ( existingEdges.test( e.undirected() ) );
                 assert( !left( e1 ) );
                 HalfEdgeRecord & toHe = edges_[e1];
                 const HalfEdgeRecord & fromHe = from.edges_[e];
@@ -1414,12 +1389,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, bool 
 }
 
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
-    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map );
 template MRMESH_API void MeshTopology::addPartBy( const MeshTopology & from,
-    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     const PartMapping & map );

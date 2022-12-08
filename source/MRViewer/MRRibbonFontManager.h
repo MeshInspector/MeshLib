@@ -46,6 +46,11 @@ public:
 private:
     std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
 
+    /// get ribbon latin menu font path
+    std::filesystem::path getMenuLatinFontPath_() const;
+    /// get ribbon latin menu font path
+    std::filesystem::path getMenuLatinSemiBoldFontPath_() const;
+
     /// get pointer to instance of this class (if it exists)
     static RibbonFontManager*& getFontManagerInstance_();
 

@@ -163,7 +163,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def( pybind11::init<>() ).
         def_readwrite( "startPoint", &TextMeshAlignParams::startPoint, "Start coordinate on mesh, represent lowest left corner of text" ).
         def_readwrite( "direction", &TextMeshAlignParams::direction, "Direction of text" ).
-        def_readwrite( "fontHeight ", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
+        def_readwrite( "fontHeight", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
@@ -230,8 +230,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "maxEdgeSplits", &SubdivideSettings::maxEdgeSplits, "Maximum number of edge splits allowed" ).
         def_readwrite( "maxDeviationAfterFlip", &SubdivideSettings::maxDeviationAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation" ).
         def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value" ).
-        def_readwrite( "region ", &SubdivideSettings::region, "Region on mesh to be subdivided, it is updated during the operation" ).
-        def_readwrite( "newVerts ", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" ).
+        def_readwrite( "region", &SubdivideSettings::region, "Region on mesh to be subdivided, it is updated during the operation" ).
+        def_readwrite( "newVerts", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" ).
         def_readwrite( "subdivideBorder", &SubdivideSettings::subdivideBorder,
             "If false do not touch border edges (cannot subdivide lone faces)\n"
             "use findRegionOuterFaces to find boundary faces" ).
@@ -240,8 +240,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
             "this parameter prevents subdivision of such triangles" ).
         def_readwrite( "useCurvature", &SubdivideSettings::useCurvature,
             "This option works best for natural surfaces, where all triangles are close to equilateral and have similar area,\n"
-            "and no sharp edges in between" ).
-        def_readwrite( "newVerts ", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" );
+            "and no sharp edges in between" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg( "settings" ) = MR::SubdivideSettings{},

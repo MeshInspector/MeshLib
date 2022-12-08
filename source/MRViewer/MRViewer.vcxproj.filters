@@ -483,6 +483,9 @@
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-SemiBold.ttf">
       <Filter>Fonts</Filter>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
+      <Filter>Fonts</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\object_icons\X1\Object.png">

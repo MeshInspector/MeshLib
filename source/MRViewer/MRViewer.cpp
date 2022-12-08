@@ -240,6 +240,8 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
         emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
         emscripten_sleep( 1 );
+#else
+        viewer->draw();
 #endif
     };
     viewer->eventQueue.emplace( { "Mouse scroll", eventCall } );
@@ -524,6 +526,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE );
 #endif
     glfwWindowHint( GLFW_SAMPLES, 8 );
+    glfwWindowHint( GLFW_FOCUS_ON_SHOW, GLFW_TRUE );
 #ifndef __EMSCRIPTEN__
     glfwWindowHint( GLFW_TRANSPARENT_FRAMEBUFFER, params.enableTransparentBackground );
 #endif

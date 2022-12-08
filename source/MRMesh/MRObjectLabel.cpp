@@ -49,7 +49,7 @@ ObjectLabel::ObjectLabel()
     setDefaultColors_();
 
     // set default path to font if available
-    pathToFont_ = GetFontsDirectory() / "DroidSans.ttf";
+    pathToFont_ = GetFontsDirectory() / "NotoSansSC-Regular.otf";
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( pathToFont_, ec ) )
         pathToFont_.clear();

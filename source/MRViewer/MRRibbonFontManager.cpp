@@ -73,11 +73,6 @@ void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontMa
     getFontManagerInstance_() = ribbonFontManager;
 }
 
-std::filesystem::path RibbonFontManager::getMenuLatinFontPath_() const
-{
-    return getMenuFontPath().parent_path() / "NotoSans-Regular.ttf";
-}
-
 std::filesystem::path RibbonFontManager::getMenuLatinSemiBoldFontPath_() const
 {
     return getMenuFontPath().parent_path() / "NotoSans-SemiBold.ttf";
@@ -135,7 +130,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Big )
     {
-        auto fontPath = getMenuLatinFontPath_();
+        auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );

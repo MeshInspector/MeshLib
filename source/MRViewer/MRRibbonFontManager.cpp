@@ -57,7 +57,11 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
+#ifndef __EMSCRIPTEN__
     return  GetFontsDirectory() / "NotoSansSC-Regular.otf";
+#else
+    return  GetFontsDirectory() / "NotoSans-Regular.ttf";
+#endif
 }
 
 ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
@@ -91,7 +95,11 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+#ifndef __EMSCRIPTEN__
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
+#else
+        config.GlyphOffset = ImVec2( 0, -3 * scaling );
+#endif
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
@@ -111,7 +119,11 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+#ifndef __EMSCRIPTEN__
         config.GlyphOffset = ImVec2( 0, -3 * scaling );
+#else
+        config.GlyphOffset = ImVec2( 0, -2 * scaling );
+#endif
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cSmallFontSize * scaling,
             &config, ranges );

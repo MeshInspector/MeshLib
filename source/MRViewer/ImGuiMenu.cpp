@@ -215,7 +215,9 @@ std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::Visual
 void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
+#ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
+#endif
 }
 
 void ImGuiMenu::load_font(int font_size)

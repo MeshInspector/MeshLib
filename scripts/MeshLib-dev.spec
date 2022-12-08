@@ -41,8 +41,8 @@ mkdir -p "${MR_INSTALL_INCLUDE_DIR}"
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-cp -r ./lib "${MR_INSTALL_LIB_DIR}"
-cp -r ./include "${MR_INSTALL_INCLUDE_DIR}"
+cp -rL ./lib "${MR_INSTALL_LIB_DIR}"
+cp -rL ./include "${MR_INSTALL_INCLUDE_DIR}"
 printf "lib copy done\n"
 
 #copy application

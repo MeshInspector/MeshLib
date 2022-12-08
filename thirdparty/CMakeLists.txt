@@ -54,6 +54,12 @@ string(FIND ${version_id} "." dot-pos)
 string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
 message("using ${distro} ${version_id}")
 
+IF( ${distro} STREQUAL "Ubuntu")
+    IF( ${version_id} STREQUAL "20")
+        SET(MR_OPENVDB_OLD TRUE)
+    ENDIF() # Ubuntu 22
+ENDIF() # Ubuntu
+
 IF(APPLE OR MR_EMSCRIPTEN)
     add_subdirectory(./expected ./expected)
 ELSE()
@@ -62,7 +68,7 @@ ELSE()
  set(OPENVDB_CORE_SHARED "ON")
  set(OPENVDB_CORE_STATIC "OFF")
 
- IF(${distro} STREQUAL "Ubuntu" AND ${version_id} STREQUAL "20")
+ IF(MR_OPENVDB_OLD)
   add_subdirectory(./openvdb/v9/openvdb)
  ELSE()
   add_subdirectory(./openvdb/v10/openvdb)

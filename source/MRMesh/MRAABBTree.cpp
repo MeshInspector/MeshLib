@@ -142,6 +142,19 @@ FaceMap AABBTree::getLeafOrderAndReset()
     return res;
 }
 
+void AABBTree::getInvLeafOrderAndReset( Buffer<FaceId> & invFaceMap )
+{
+    MR_TIMER;
+    FaceId f = 0_f;
+    for ( auto & n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        invFaceMap[n.leafId()] = f;
+        n.setLeafId( f++ );
+    }
+}
+
 auto AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const -> NodeBitSet
 {
     MR_TIMER;

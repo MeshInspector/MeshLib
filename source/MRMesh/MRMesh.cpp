@@ -20,6 +20,7 @@
 #include "MRTriMath.h"
 #include "MRQuadraticForm.h"
 #include "MRPch/MRTBB.h"
+#include "MROrder.h"
 
 namespace MR
 {
@@ -745,17 +746,21 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-void Mesh::packOptimally( const PartMapping & map )
+void Mesh::packOptimally( const PartMapping & )
 {
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
-    Mesh packed;
+    //auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
+    Buffer<FaceId> invFaceMap( topology.faceSize() );
+    AABBTreeOwner_.get()->getInvLeafOrderAndReset( invFaceMap );
+    auto vOrder = getVertexOrdering( invFaceMap, topology );
+
+/*    Mesh packed;
     packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
     // preserve AABB tree in this
     topology = std::move( packed.topology );
-    points = std::move( packed.points );
+    points = std::move( packed.points );*/
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

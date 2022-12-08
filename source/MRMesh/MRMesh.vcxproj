@@ -96,6 +96,7 @@
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
+    <ClInclude Include="MROrder.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
@@ -356,6 +357,7 @@
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRObjectPointsHolder.cpp" />
+    <ClCompile Include="MROrder.cpp" />
     <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />

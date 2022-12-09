@@ -204,9 +204,10 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-static EM_BOOL emsDraw( double, void* ptr )
+static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static EM_BOOL emsStaticDraw( double, void* ptr )
 {
-    MR::getViewerInstance().draw( bool( ptr ) );
+    MR::getViewerInstance().emsDraw( bool( ptr ) );
     return EM_TRUE;
 }
 #endif
@@ -217,12 +218,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
     auto eventCall = [x, y,viewer] ()
     {
         viewer->mouseMove( int( x ), int( y ) );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-        emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
-        emscripten_sleep( 1 );
-#else
         viewer->draw();
-#endif
     };
     viewer->eventQueue.emplace( { "Mouse move", eventCall }, true );
 }
@@ -237,12 +233,7 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
     {
         *prevPtr = y;
         viewer->mouseScroll( float( y ) );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-        emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
-        emscripten_sleep( 1 );
-#else
         viewer->draw();
-#endif
     };
     viewer->eventQueue.emplace( { "Mouse scroll", eventCall } );
 }
@@ -389,18 +380,17 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
+    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
+        viewer.draw( true );
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
-    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
-        viewer.draw( true );
 }
 #endif
 
 void Viewer::mainLoopFunc_()
 {
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
-    constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
     for (;;)
     {
         if ( isAnimating )
@@ -416,13 +406,7 @@ void Viewer::mainLoopFunc_()
 
         do
         {
-            if ( forceRedrawFramesWithoutSwap_ == 0 )
-            {
-                emscripten_request_animation_frame( emsDraw, ( void* ) 1 ); // call with swap
-                emscripten_sleep( minEmsSleep );
-            }
-            else
-                emsDraw( 0.0, ( void* ) 1 ); // call without swap
+            draw( true );
             eventQueue.execute();
             CommandLoop::processCommands();
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
@@ -1248,7 +1232,29 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
 }
 
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+void Viewer::emsDraw( bool force )
+{
+    draw_( force );
+}
+#endif
+
 void Viewer::draw( bool force )
+{
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+    if ( forceRedrawFramesWithoutSwap_ == 0 )
+    {
+        emscripten_request_animation_frame( emsStaticDraw, force ? ( void* ) 1 : nullptr ); // call with swap
+        emscripten_sleep( minEmsSleep );
+    }
+    else
+        draw_( true );
+#else
+    draw_( force );
+#endif
+}
+
+void Viewer::draw_( bool force )
 {
     if ( !force && !needRedraw_() )
         return;
@@ -1380,9 +1386,10 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
-
+#ifndef __EMSCRIPTEN__
     if ( isLaunched_ )
         draw();
+#endif
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

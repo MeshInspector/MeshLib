@@ -19,6 +19,7 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -110,7 +111,7 @@ jobs:
   windows-pip-build:
     needs: setup
     timeout-minutes: 60
-    runs-on: windows-2019
+    runs-on: windows-2019-test
     strategy:
       fail-fast: false
       matrix:
@@ -211,6 +212,7 @@ jobs:
         run: docker rm -f meshlib-win
 
   macos-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 40
     runs-on: ${{ matrix.instance }}

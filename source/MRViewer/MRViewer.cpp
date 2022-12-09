@@ -922,10 +922,12 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
             if ( filename.empty() )
                 continue;
 
+            spdlog::info( "Loading file {}", utf8string( filename ) );
             auto res = loadObjectFromFile( filename, [callback = ProgressBar::callBackSetProgress, i, number = filesList.size()]( float v )
             {
                 return callback( ( i + v ) / number );
             } );
+            spdlog::info( "Load file {} - {}", utf8string( filename ), res.has_value() ? "success" : res.error().c_str() );
             if ( !res.has_value() )
             {
                 errorList.push_back( std::move( res.error() ) );

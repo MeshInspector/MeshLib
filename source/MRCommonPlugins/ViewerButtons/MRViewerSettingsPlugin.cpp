@@ -198,7 +198,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     }
                     else
                     {
-                        std::string label = "x" + std::to_string( i );
+                        std::string label = 'x' + std::to_string( i );
                         RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
                     }
                     if ( i << 1 <= maxSamples_ && ( ++couter ) % 3 != 0 )

@@ -14,6 +14,9 @@ class IViewerSettingsManager
 public:
     virtual ~IViewerSettingsManager() = default;
 
+    virtual int loadInt( const std::string& name, int def = 0 ) = 0;
+    virtual void saveInt( const std::string& name, int value ) = 0;
+
     virtual void loadSettings( Viewer& ) = 0;
     virtual void saveSettings( const Viewer& ) = 0;
 };
@@ -22,6 +25,9 @@ class MRVIEWER_CLASS ViewerSettingsManager : public IViewerSettingsManager
 {
 public:
     MRVIEWER_API ViewerSettingsManager();
+
+    MRVIEWER_API virtual int loadInt( const std::string& name, int def ) override;
+    MRVIEWER_API virtual void saveInt( const std::string& name, int value ) override;
 
     MRVIEWER_API virtual void loadSettings( Viewer& viewer ) override;
     MRVIEWER_API virtual void saveSettings( const Viewer& viewer ) override;

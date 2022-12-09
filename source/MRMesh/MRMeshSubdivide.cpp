@@ -20,13 +20,11 @@ struct EdgeLength
 
     EdgeLength() = default;
     EdgeLength( UndirectedEdgeId edge, float lenSq ) : edge( edge ), lenSq( lenSq ) {}
-
-    auto asPair() const { return std::make_pair( lenSq, edge ); }
 };
 
 inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 {
-    return a.asPair() < b.asPair();
+    return std::tie( a.lenSq, a.edge ) < std::tie( b.lenSq, b.edge );
 }
 
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )

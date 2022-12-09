@@ -204,9 +204,10 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-static EM_BOOL emsDraw( double, void* ptr )
+static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static EM_BOOL emsStaticDraw( double, void* ptr )
 {
-    MR::getViewerInstance().draw( bool( ptr ) );
+    MR::getViewerInstance().emsDraw( bool( ptr ) );
     return EM_TRUE;
 }
 #endif
@@ -217,12 +218,7 @@ static void glfw_mouse_move( GLFWwindow* /*window*/, double x, double y )
     auto eventCall = [x, y,viewer] ()
     {
         viewer->mouseMove( int( x ), int( y ) );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-        emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
-        emscripten_sleep( 1 );
-#else
         viewer->draw();
-#endif
     };
     viewer->eventQueue.emplace( { "Mouse move", eventCall }, true );
 }
@@ -237,12 +233,7 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
     {
         *prevPtr = y;
         viewer->mouseScroll( float( y ) );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-        emscripten_request_animation_frame( emsDraw, nullptr ); // call with swap
-        emscripten_sleep( 1 );
-#else
         viewer->draw();
-#endif
     };
     viewer->eventQueue.emplace( { "Mouse scroll", eventCall } );
 }
@@ -389,18 +380,17 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
+    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
+        viewer.draw( true );
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
-    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
-        viewer.draw( true );
 }
 #endif
 
 void Viewer::mainLoopFunc_()
 {
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
-    constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
     for (;;)
     {
         if ( isAnimating )
@@ -416,13 +406,7 @@ void Viewer::mainLoopFunc_()
 
         do
         {
-            if ( forceRedrawFramesWithoutSwap_ == 0 )
-            {
-                emscripten_request_animation_frame( emsDraw, ( void* ) 1 ); // call with swap
-                emscripten_sleep( minEmsSleep );
-            }
-            else
-                emsDraw( 0.0, ( void* ) 1 ); // call without swap
+            draw( true );
             eventQueue.execute();
             CommandLoop::processCommands();
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
@@ -1001,7 +985,7 @@ bool Viewer::saveToFile( const std::filesystem::path & path )
 bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, false );
 
     eventsCounter_.counter[size_t( EventType::CharPressed )]++;
 
@@ -1010,7 +994,7 @@ bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 
 bool Viewer::keyDown( int key, int modifiers )
 {
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::KeyDown )]++;
 
@@ -1022,7 +1006,7 @@ bool Viewer::keyDown( int key, int modifiers )
 
 bool Viewer::keyUp( int key, int modifiers )
 {
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::KeyUp )]++;
 
@@ -1035,7 +1019,7 @@ bool Viewer::keyUp( int key, int modifiers )
 bool Viewer::keyRepeat( int key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, false );
 
     eventsCounter_.counter[size_t( EventType::KeyRepeat )]++;
 
@@ -1050,7 +1034,7 @@ bool Viewer::mouseDown( MouseButton button, int modifier )
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
     // g_MouseJustPressed in ImGui_ImplGlfw_UpdateMousePosAndButtons
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::MouseDown )]++;
 
@@ -1065,7 +1049,7 @@ bool Viewer::mouseUp( MouseButton button, int modifier )
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
     // g_MouseJustPressed in ImGui_ImplGlfw_UpdateMousePosAndButtons
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::MouseUp )]++;
 
@@ -1102,9 +1086,6 @@ bool Viewer::touchEnd( int id, int x, int y )
 
 bool Viewer::mouseScroll( float delta_y )
 {
-    // do extra frames to prevent imgui calculations ping
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
-
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
     if ( mouseScrollSignal( scrollForce * delta_y ) )
@@ -1253,7 +1234,29 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
 }
 
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+void Viewer::emsDraw( bool force )
+{
+    draw_( force );
+}
+#endif
+
 void Viewer::draw( bool force )
+{
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+    if ( forceRedrawFramesWithoutSwap_ == 0 )
+    {
+        emscripten_request_animation_frame( emsStaticDraw, force ? ( void* ) 1 : nullptr ); // call with swap
+        emscripten_sleep( minEmsSleep );
+    }
+    else
+        draw_( true );
+#else
+    draw_( force );
+#endif
+}
+
+void Viewer::draw_( bool force )
 {
     if ( !force && !needRedraw_() )
         return;
@@ -1274,7 +1277,13 @@ void Viewer::draw( bool force )
 
     setupScene();
     preDrawSignal();
-    drawScene();
+
+    if ( forceRedrawFramesWithoutSwap_ > 0 )
+        forceRedrawFramesWithoutSwap_--;
+    bool swapped = forceRedrawFramesWithoutSwap_ == 0;
+    if ( swapped )
+        drawScene();
+
     postDrawSignal();
 
     if ( forceRedrawFrames_ > 0 )
@@ -1282,15 +1291,8 @@ void Viewer::draw( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
-    if ( forceRedrawFramesWithoutSwap_ > 0 )
-        forceRedrawFramesWithoutSwap_--;
-    bool swapped = false;
-    if ( window )
-    {
-        swapped = forceRedrawFramesWithoutSwap_ == 0;
-        if ( swapped )
-            glfwSwapBuffers( window );
-    }
+    if ( window && swapped )
+        glfwSwapBuffers( window );
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
 }
@@ -1386,9 +1388,10 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
-
+#ifndef __EMSCRIPTEN__
     if ( isLaunched_ )
         draw();
+#endif
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
@@ -1733,11 +1736,6 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const Viewport::Fi
             viewport.preciseFitDataToScreenBorder( params );
         }
     }
-}
-
-void Viewer::setMinimumForceRedrawFramesAfterEvents( int minimumIncrement )
-{
-    forceRedrawMinimumIncrement_ = std::max( 2, minimumIncrement );
 }
 
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)

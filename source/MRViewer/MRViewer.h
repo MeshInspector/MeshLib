@@ -148,6 +148,9 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+    MRVIEWER_API void emsDraw( bool force = false );
+#endif
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene() const;
     // Setup viewports views
@@ -241,10 +244,10 @@ public:
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
 
-    // Sets minimum auto increment for force redraw frames after basic events (the smallest value is 2)
-    MRVIEWER_API void setMinimumForceRedrawFramesAfterEvents( int minimumIncrement );
     // if true only last frame of force redraw after events will be swapped, otherwise each will be swapped
     bool swapOnLastPostEventsRedraw{ true };
+    // minimum auto increment force redraw frames after events
+    int forceRedrawMinimumIncrementAfterEvents{ 4 };
 
     // Increment number of forced frames to redraw in event loop
     // if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not
@@ -577,9 +580,8 @@ private:
     static void emsMainInfiniteLoop();
 #endif
 #endif
+    void draw_( bool force );
 
-    // minimum auto increment force redraw frames after events
-    int forceRedrawMinimumIncrement_{ 4 };
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.

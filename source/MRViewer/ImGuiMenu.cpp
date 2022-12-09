@@ -375,7 +375,13 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
     ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    return ImGui::GetIO().WantCaptureMouse;
+    // do extra frames to prevent imgui calculations ping
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
+        return true;
+    }
+    return false;
 }
 
 // Keyboard IO

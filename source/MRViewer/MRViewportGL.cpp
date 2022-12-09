@@ -99,6 +99,7 @@ void ViewportGL::free()
     GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
     GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
 
+    pickFBO_.del();
     inited_ = false;
 }
 
@@ -442,30 +443,18 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
     int width = params.baseRenderParams.viewport.z;
     int height = params.baseRenderParams.viewport.w;
 
-    // https://learnopengl.com/Advanced-OpenGL/Anti-Aliasing
-    unsigned int framebuffer;
-    GL_EXEC( glGenFramebuffers( 1, &framebuffer ) );
-    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, framebuffer ) );
-    // create a multisampled color attachment texture
-    unsigned int textureColorBufferMultiSampled;
-    GL_EXEC( glGenTextures( 1, &textureColorBufferMultiSampled ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, textureColorBufferMultiSampled ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32UI, width, height, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, 0 ) );
-    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBufferMultiSampled, 0 ) );
-    // create a (also multisampled) renderbuffer object for depth and stencil attachments
-    unsigned int rbo;
-    GL_EXEC( glGenRenderbuffers( 1, &rbo ) );
-    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, rbo ) );
-    GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT32F, width, height ) ); // GL_DEPTH_COMPONENT32 is not supported by OpenGL ES 3.0
-    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
-    GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo ) );
-    assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
-    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+    pickFBO_.resize( { width,height } );
 
-    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, framebuffer ) );
+    pickFBO_.bind( false );
 
     // Clear the buffer
+
+    if ( rect.valid() )
+    {
+        GL_EXEC( glScissor( rect.min.x, height - rect.max.y - 1, size.x, size.y ) );
+        GL_EXEC( glEnable( GL_SCISSOR_TEST ) );
+    }
+
     unsigned int cClearValue[4] = { 0xffffffff,0xffffffff,0xffffffff,0xffffffff };
     GL_EXEC( glClearBufferuiv( GL_COLOR, 0, cClearValue ) );
     GL_EXEC( glClear( GL_DEPTH_BUFFER_BIT ) );
@@ -485,7 +474,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
         obj.renderForPicker( { params.baseRenderParams.viewMatrixPtr, modelTemp.data(), params.baseRenderParams.projMatrixPtr ,nullptr,
                              params.viewportId, params.clippingPlane,params.baseRenderParams.viewport }, i );
     }
-    GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, framebuffer ) );
+    pickFBO_.bind( true );
 
     if ( rect.valid() )
     {
@@ -496,13 +485,61 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
     GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 ) );
     GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 ) );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
-    GL_EXEC( glDeleteTextures( 1, &textureColorBufferMultiSampled ) );
-    GL_EXEC( glDeleteFramebuffers( 1, &framebuffer ) );
-    GL_EXEC( glDeleteRenderbuffers( 1, &rbo ) );
 
     // Clean up
     GL_EXEC( glEnable( GL_BLEND ) );
+    if ( rect.valid() )
+    {
+        GL_EXEC( glDisable( GL_SCISSOR_TEST ) );
+    }
     return resColors;
+}
+
+void ViewportGL::PickTextureFrameBuffer::resize( const Vector2i& size )
+{
+    if ( size == Vector2i() || size == size_ )
+        return;
+    del();
+    size_ = size;
+    GL_EXEC( glGenFramebuffers( 1, &framebuffer_ ) );
+    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, framebuffer_ ) );
+    // create a color attachment texture
+    GL_EXEC( glGenTextures( 1, &colorTexture_ ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, colorTexture_ ) );
+    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32UI, size_.x, size_.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL ) );
+    GL_EXEC( glBindTexture( GL_TEXTURE_2D, 0 ) );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture_, 0 ) );
+    // create a renderbuffer object for depth
+    GL_EXEC( glGenRenderbuffers( 1, &renderbuffer_ ) );
+    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, renderbuffer_ ) );
+    GL_EXEC( glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT32F, size_.x, size_.y ) ); // GL_DEPTH_COMPONENT32 is not supported by OpenGL ES 3.0
+    GL_EXEC( glBindRenderbuffer( GL_RENDERBUFFER, 0 ) );
+    GL_EXEC( glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderbuffer_ ) );
+    assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
+    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
+}
+
+void ViewportGL::PickTextureFrameBuffer::del()
+{
+    if ( framebuffer_ == 0 )
+        return;
+    GL_EXEC( glDeleteTextures( 1, &colorTexture_ ) );
+    GL_EXEC( glDeleteFramebuffers( 1, &framebuffer_ ) );
+    GL_EXEC( glDeleteRenderbuffers( 1, &renderbuffer_ ) );
+}
+
+void ViewportGL::PickTextureFrameBuffer::bind( bool read )
+{
+    if ( framebuffer_ == 0 )
+        return;
+    if ( !read )
+    {
+        GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, framebuffer_ ) );
+    }
+    else
+    {
+        GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, framebuffer_ ) );
+    }
 }
 
 }

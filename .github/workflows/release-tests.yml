@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu:20.04", "ubuntu:22.04"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -35,23 +35,13 @@ jobs:
           - os: "ubuntu:22.04"
             py-version: "3.10"
             py-cmd: "python3.10"
-          - os: "fedora:35"
-            py-version: "3.9"
-            py-cmd: "python3.9"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Python setup
-        if: ${{ matrix.os == 'fedora:35'}}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.py-version }}
-
       - name: System setup
-        if: ${{ matrix.os != 'fedora:35'}}
         run: |
           apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 

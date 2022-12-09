@@ -133,14 +133,14 @@ void SpaceMouseHandlerWindows::handle()
 
     auto& viewer = getViewerInstance();
     int count;
-	std::array<float, 6> axesDiff = axesDiff_;
+    std::array<float, 6> axesDiff = axesDiff_;
     if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > 1.e-2 / axesScale; } ) )
     {
-		axesDiff_ = { 0, 0, 0, 0, 0, 0 };
+        axesDiff_ = { 0, 0, 0, 0, 0, 0 };
         Vector3f translate( axesDiff[0], axesDiff[1], axesDiff[2] );
         Vector3f rotate( axesDiff[3], axesDiff[4], axesDiff[5] );
-        
-        float newHandleTime = float (glfwGetTime() );
+
+        float newHandleTime = float( glfwGetTime() );
         if ( handleTime_ == 0.f )
             handleTime_ = newHandleTime;
         float timeScale = std::clamp( ( newHandleTime - handleTime_ ), 0.f, 0.5f ) * 60.f;
@@ -150,7 +150,7 @@ void SpaceMouseHandlerWindows::handle()
         rotate *= axesScale * timeScale;
 
         if ( active_ )
-		    viewer.spaceMouseMove( translate, rotate );
+            viewer.spaceMouseMove( translate, rotate );
     }
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
@@ -232,7 +232,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
             updateThread_.join();
     }
 
-	joystickIndex_ = newJoystickIndex;
+    joystickIndex_ = newJoystickIndex;
 
     if ( joystickIndex_ != -1 )
     {

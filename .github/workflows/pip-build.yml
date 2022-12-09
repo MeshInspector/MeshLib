@@ -324,7 +324,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"

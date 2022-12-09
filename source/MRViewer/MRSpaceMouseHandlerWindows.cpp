@@ -11,7 +11,8 @@
 namespace MR
 {
 
-constexpr float axesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
+constexpr float cAxesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
+constexpr float cAxesThreshold = 1.e-2f / cAxesScale; // axis threshold to send signals spacemouse move
 
 constexpr int mapButtonsCompact[2] = {
     SMB_CUSTOM_1, SMB_CUSTOM_2
@@ -134,7 +135,7 @@ void SpaceMouseHandlerWindows::handle()
     auto& viewer = getViewerInstance();
     int count;
     std::array<float, 6> axesDiff = axesDiff_;
-    if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > 1.e-2 / axesScale; } ) )
+    if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > cAxesThreshold; } ) )
     {
         axesDiff_ = { 0, 0, 0, 0, 0, 0 };
         Vector3f translate( axesDiff[0], axesDiff[1], axesDiff[2] );
@@ -143,14 +144,17 @@ void SpaceMouseHandlerWindows::handle()
         float newHandleTime = float( glfwGetTime() );
         if ( handleTime_ == 0.f )
             handleTime_ = newHandleTime;
-        float timeScale = std::clamp( ( newHandleTime - handleTime_ ), 0.f, 0.5f ) * 60.f;
-        handleTime_ = newHandleTime;
+        else
+        {
+            float timeScale = std::clamp( ( newHandleTime - handleTime_ ), 0.f, 0.5f ) * 60.f;
+            handleTime_ = newHandleTime;
 
-        translate *= axesScale * timeScale;
-        rotate *= axesScale * timeScale;
+            translate *= cAxesScale * timeScale;
+            rotate *= cAxesScale * timeScale;
 
-        if ( active_ )
-            viewer.spaceMouseMove( translate, rotate );
+            if ( active_ )
+                viewer.spaceMouseMove( translate, rotate );
+        }
     }
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
@@ -248,6 +252,9 @@ void SpaceMouseHandlerWindows::updateConnected_()
 
 void SpaceMouseHandlerWindows::startUpdateThread_()
 {
+    if ( joystickIndex_ == -1 )
+        return;
+
     updateThreadActive_ = true;
     axesDiff_ = { 0, 0, 0, 0, 0, 0 };
     // additional thread needed to avoid double changing spacemouse axes values
@@ -261,23 +268,23 @@ void SpaceMouseHandlerWindows::startUpdateThread_()
         int count = 0;
         do
         {
-            if ( joystickIndex != -1 )
+            const float* axesNew = glfwGetJoystickAxes( joystickIndex, &count );
+            if ( count == 6 )
             {
-                const float* axesNew = glfwGetJoystickAxes( joystickIndex, &count );
-                if ( count == 6 )
+                axesDiff = axesDiff_;
+                for ( int i = 0; i < 6; ++i )
                 {
-                    axesDiff = axesDiff_;
-                    for ( int i = 0; i < 6; ++i )
-                    {
-                        float newDiff = axesNew[i] - axesOld_[i];
-                        if ( newDiff * axesDiff[i] < 0 )
-                            axesDiff[i] = newDiff;
-                        else if ( std::fabs( axesDiff[i] ) < std::fabs( newDiff ) )
-                            axesDiff[i] = newDiff;
-                    }
-                    axesDiff_ = axesDiff;
-                    std::copy( axesNew, axesNew + 6, axesOld_.begin() );
+                    float newDiff = axesNew[i] - axesOld_[i];
+                    // updating axis differences
+                    // if in the last cycle we got a non-zero diff and in this cycle we got a non-zero diff but of a different sign, we remember the last diff
+                    // if in the past and this cycle we got a non-zero diff of one sign, we remember a larger diff
+                    if ( newDiff * axesDiff[i] < 0 )
+                        axesDiff[i] = newDiff;
+                    else if ( std::fabs( axesDiff[i] ) < std::fabs( newDiff ) )
+                        axesDiff[i] = newDiff;
                 }
+                axesDiff_ = axesDiff;
+                std::copy( axesNew, axesNew + 6, axesOld_.begin() );
             }
             std::this_thread::sleep_for( std::chrono::microseconds( 1000 ) );
         } while ( updateThreadActive_ );

@@ -135,6 +135,19 @@ private:
         unsigned color[4];
     };
 
+    struct PickTextureFrameBuffer
+    {
+        void resize( const Vector2i& size );
+        void del();
+        void bind( bool read );
+    private:
+        unsigned int framebuffer_{ 0 };
+        unsigned int colorTexture_{ 0 };
+        unsigned int renderbuffer_{ 0 };
+        Vector2i size_;
+    };
+    mutable PickTextureFrameBuffer pickFBO_;
+
     std::vector<PickColor> pickObjectsInRect_( const PickParameters& params, const Box2i& rect ) const;
 
     bool inited_ = false;

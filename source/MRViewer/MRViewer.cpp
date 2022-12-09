@@ -999,7 +999,7 @@ bool Viewer::saveToFile( const std::filesystem::path & path )
 bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, false );
 
     eventsCounter_.counter[size_t( EventType::CharPressed )]++;
 
@@ -1008,7 +1008,7 @@ bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 
 bool Viewer::keyDown( int key, int modifiers )
 {
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::KeyDown )]++;
 
@@ -1020,7 +1020,7 @@ bool Viewer::keyDown( int key, int modifiers )
 
 bool Viewer::keyUp( int key, int modifiers )
 {
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::KeyUp )]++;
 
@@ -1033,7 +1033,7 @@ bool Viewer::keyUp( int key, int modifiers )
 bool Viewer::keyRepeat( int key, int modifiers )
 {
     // repeated signals swap each frame to prevent freezes
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, false );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, false );
 
     eventsCounter_.counter[size_t( EventType::KeyRepeat )]++;
 
@@ -1048,7 +1048,7 @@ bool Viewer::mouseDown( MouseButton button, int modifier )
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
     // g_MouseJustPressed in ImGui_ImplGlfw_UpdateMousePosAndButtons
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::MouseDown )]++;
 
@@ -1063,7 +1063,7 @@ bool Viewer::mouseUp( MouseButton button, int modifier )
     // if the mouse was released in this frame, then we need to render at least one more frame to get button reaction;
     // if the mouse was pressed and released in this frame, then at least two more frames are necessary because of
     // g_MouseJustPressed in ImGui_ImplGlfw_UpdateMousePosAndButtons
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
     eventsCounter_.counter[size_t( EventType::MouseUp )]++;
 
@@ -1100,9 +1100,6 @@ bool Viewer::touchEnd( int id, int x, int y )
 
 bool Viewer::mouseScroll( float delta_y )
 {
-    // do extra frames to prevent imgui calculations ping
-    incrementForceRedrawFrames( forceRedrawMinimumIncrement_, swapOnLastPostEventsRedraw );
-
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
     if ( mouseScrollSignal( scrollForce * delta_y ) )
@@ -1272,7 +1269,13 @@ void Viewer::draw( bool force )
 
     setupScene();
     preDrawSignal();
-    drawScene();
+
+    if ( forceRedrawFramesWithoutSwap_ > 0 )
+        forceRedrawFramesWithoutSwap_--;
+    bool swapped = forceRedrawFramesWithoutSwap_ == 0;
+    if ( swapped )
+        drawScene();
+
     postDrawSignal();
 
     if ( forceRedrawFrames_ > 0 )
@@ -1280,15 +1283,8 @@ void Viewer::draw( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
-    if ( forceRedrawFramesWithoutSwap_ > 0 )
-        forceRedrawFramesWithoutSwap_--;
-    bool swapped = false;
-    if ( window )
-    {
-        swapped = forceRedrawFramesWithoutSwap_ == 0;
-        if ( swapped )
-            glfwSwapBuffers( window );
-    }
+    if ( window && swapped )
+        glfwSwapBuffers( window );
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
 }
@@ -1731,11 +1727,6 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList, const Viewport::Fi
             viewport.preciseFitDataToScreenBorder( params );
         }
     }
-}
-
-void Viewer::setMinimumForceRedrawFramesAfterEvents( int minimumIncrement )
-{
-    forceRedrawMinimumIncrement_ = std::max( 2, minimumIncrement );
 }
 
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)

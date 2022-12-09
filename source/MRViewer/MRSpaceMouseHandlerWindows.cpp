@@ -98,51 +98,55 @@ bool InitializeRawInput()
 
 SpaceMouseHandlerWindows::SpaceMouseHandlerWindows()
 {
+    std::for_each( buttons_.begin(), buttons_.end(), [](auto& v) { v = 0; } );
+    std::for_each( axesOld_.begin(), axesOld_.end(), [](auto& v) { v = 0; } );
+    axesDiff_ = { 0, 0, 0, 0, 0, 0 };
     connect( &getViewerInstance() );
+}
+
+SpaceMouseHandlerWindows::~SpaceMouseHandlerWindows()
+{
+    if ( updateThread_.joinable() )
+        updateThread_.join();
 }
 
 void SpaceMouseHandlerWindows::initialize()
 {
     bool spaceMouseAttached = isSpaceMouseAttached();
     if ( spaceMouseAttached )
-        spdlog::info( "Found attached spacemouse" );
+        spdlog::info( "Found attached SpaceMouse" );
     else
     {
-        spdlog::info( "Not found any attached spacemouse" );
+        spdlog::info( "Not found any attached SpaceMouse" );
         return;
     }
 
     initialized_ = InitializeRawInput();
-    spdlog::info( "InitializeRawInput = {}", initialized_ );
+    spdlog::info( "Initialize SpaceMouse {}", initialized_ ? "success" : "failed" );
 
     updateConnected_();
 }
 
 void SpaceMouseHandlerWindows::handle()
 {
-    if ( !initialized_ || joystickIndex_ == -1 )
+    if ( !initialized_ || joystickIndex_ == -1 || !active_ )
         return;
 
     auto& viewer = getViewerInstance();
     int count;
-    const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-    if ( count == 6 )
+	std::array<float, 6> axesDiff = axesDiff_;
+    if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > 1.e-2 / axesScale; } ) )
     {
-        if ( active_ )
-        {
-            Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
-            Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
-            translate *= axesScale;
-            rotate *= axesScale;
-
-            if ( translate.lengthSq() > 1.e-3f || rotate.lengthSq() > 1.e-3f )
-                viewer.spaceMouseMove( translate, rotate );
-        }
-        std::copy( axesNew, axesNew + 6, axes_.begin() );
+        Vector3f translate( axesDiff[0], axesDiff[1], axesDiff[2] );
+        Vector3f rotate( axesDiff[3], axesDiff[4], axesDiff[5] );
+        translate *= axesScale;
+        rotate *= axesScale;
+        
+		viewer.spaceMouseMove( translate, rotate );
+		axesDiff_ = { 0, 0, 0, 0, 0, 0 };
     }
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
-    
     // SpaceMouse Compact have 2 btns, Pro - 15, Enterprise - 31
     if ( count == 2 || count == 15 || count == 31 )
     {
@@ -187,7 +191,7 @@ void SpaceMouseHandlerWindows::postFocusSignal_( bool focused )
 void SpaceMouseHandlerWindows::updateConnected_()
 {
 
-    int newJoystickIndex_ = -1;
+    int newJoystickIndex = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {
         int present = glfwJoystickPresent( i );
@@ -198,12 +202,12 @@ void SpaceMouseHandlerWindows::updateConnected_()
         auto findRes = str.find( "SpaceMouse" );
         if ( findRes != std::string_view::npos )
         {
-            newJoystickIndex_ = i;
+            newJoystickIndex = i;
             break;
         }
     }
 
-    if ( newJoystickIndex_ == joystickIndex_ )
+    if ( newJoystickIndex == joystickIndex_ )
         return;
 
     auto& viewer = getViewerInstance();
@@ -213,20 +217,59 @@ void SpaceMouseHandlerWindows::updateConnected_()
         {
             if ( buttons_[i] ) // button up
                 viewer.spaceMouseUp( mapButtons_[i] );
-        }
-        buttons_ = {};
+		}
+        std::for_each( buttons_.begin(), buttons_.end(), [](auto& v) { v = 0; } );
+
+        if ( newJoystickIndex == -1 && updateThread_.joinable() )
+            updateThread_.join();
     }
 
-    joystickIndex_ = newJoystickIndex_;
-
-    if ( joystickIndex_ != -1 )
+    if ( newJoystickIndex != -1 )
     {
         int count;
-        const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-        std::copy( axesNew, axesNew + 6, axes_.begin() );
+        const float* axesNew = glfwGetJoystickAxes( newJoystickIndex, &count );
+        std::copy( axesNew, axesNew + 6, axesOld_.begin() );
+
+        if ( joystickIndex_ == -1 )
+            startUpdateThread_();
     }
 
+	joystickIndex_ = newJoystickIndex;
     getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 );
+}
+
+void SpaceMouseHandlerWindows::startUpdateThread_()
+{
+    updateThreadActive_ = true;
+    axesDiff_ = { 0, 0, 0, 0, 0, 0 };
+	updateThread_ = std::thread( [&]
+    {
+        std::array<float, 6> axesDiff;
+        std::for_each( axesDiff.begin(), axesDiff.end(), [](float& v) { v = 0.f; } );
+       int count = 0;
+       do
+       {
+           if ( active_ && joystickIndex_ != -1 )
+		   {
+               const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
+               if ( count == 6 )
+			   {
+				   axesDiff = axesDiff_;
+                   for ( int i = 0; i < 6; ++i )
+                   {
+                       float newDiff = axesNew[i] - axesOld_[i];
+                       if ( newDiff * axesDiff[i] < 0 )
+                           axesDiff[i] = newDiff;
+                       else if ( std::fabs( axesDiff[i] ) < std::fabs( newDiff ) )
+                           axesDiff[i] = newDiff;
+                   }
+                   axesDiff_ = axesDiff;
+                   std::copy( axesNew, axesNew + 6, axesOld_.begin() );
+               }
+           }
+           std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
+       } while ( updateThreadActive_ );
+    } );
 }
 
 }

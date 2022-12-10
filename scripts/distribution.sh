@@ -89,8 +89,8 @@ chmod +x ./distr/meshlib-dev/DEBIAN/postinst
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-cp -r ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
-cp -r ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
+cp -rL ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
+cp -rL ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
 printf "Thirdparty libs copy done\n"
 
 #copy application

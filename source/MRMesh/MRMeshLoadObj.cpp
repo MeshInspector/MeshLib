@@ -99,7 +99,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );
 
-    if ( !callback( 0.25f ) )
+    if ( callback && !callback( 0.25f ) )
         return tl::make_unexpected( "Loading canceled" );
     // TODO: redefine callback
 
@@ -200,7 +200,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         newlines.emplace_back( size );
     const auto lineCount = newlines.size() - 1;
 
-    if ( !callback( 0.40f ) )
+    if ( callback && !callback( 0.40f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "group element lines" );
@@ -245,7 +245,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     }
     groups.back().end = lineCount;
 
-    if ( !callback( 0.50f ) )
+    if ( callback && !callback( 0.50f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
@@ -371,7 +371,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         if ( !parseError.empty() )
             return tl::make_unexpected( parseError );
 
-        if ( !callback( 0.50f + 0.50f * ( (float)group.end / (float)lineCount ) ) )
+        if ( callback && !callback( 0.50f + 0.50f * ( (float)group.end / (float)lineCount ) ) )
             return tl::make_unexpected( "Loading canceled" );
     }
 

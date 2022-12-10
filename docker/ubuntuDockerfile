@@ -7,35 +7,9 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip wget software-properties-common
-
-RUN apt-get install gcc -y
-# Download boost, untar, setup install with bootstrap and only do the Program Options library,
-# and then install
-RUN cd /home && wget http://downloads.sourceforge.net/project/boost/boost/1.80.0/boost_1_80_0.tar.gz \
-  && tar xfz boost_1_80_0.tar.gz \
-  && rm boost_1_80_0.tar.gz \
-  && cd boost_1_80_0
-
-RUN apt-get install clang -y
-RUN cd /home/boost_1_80_0 \
-  && sudo ./bootstrap.sh --prefix=/usr/local \
-  && sudo ./b2 install
-
-# install cmake from kitware apt repo
-RUN apt-get update -y \
- && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
- && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
- && apt update -y \
- && apt install -y cmake
-
-RUN apt-get install git -y
-RUN cd home && git clone https://github.com/oneapi-src/oneTBB.git && cd oneTBB \
-     && git checkout v2021.3.0 && ls -al \
-     && rm -rf build && mkdir build && cd build \
-     && cmake -S .. -DCMAKE_INSTALL_PREFIX=/usr/local -DTBB_TEST=OFF  \
-     && cmake --build . \
-     && cmake --install .
+        tzdata git sudo time python3-pip\
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
@@ -51,21 +25,18 @@ COPY requirements requirements
 ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
-# temporary using one stage build
-#FROM ubuntu:20.04 AS production
+
+FROM ubuntu:20.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-RUN cp -r lib /usr/local/lib/meshlib-thirdparty-lib/
-RUN cp -r include /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 
-# temporary using one stage build
-#COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
-#COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -76,9 +47,8 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl\
- && apt-get update -qqy \
-# && ./scripts/install_apt_requirements.sh \
+        tzdata git sudo time python3-pip xvfb curl \
+ && ./scripts/install_apt_requirements.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
  && apt-get update -y \

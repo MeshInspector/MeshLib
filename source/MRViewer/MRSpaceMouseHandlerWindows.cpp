@@ -11,7 +11,8 @@
 namespace MR
 {
 
-constexpr float axesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
+constexpr float cAxesScale = 93.62f; // experemental coefficient to scale raw axes data to range [-1 ; 1]
+constexpr float cAxesThreshold = 1.e-2f / cAxesScale; // axis threshold to send signals spacemouse move
 
 constexpr int mapButtonsCompact[2] = {
     SMB_CUSTOM_1, SMB_CUSTOM_2
@@ -98,51 +99,65 @@ bool InitializeRawInput()
 
 SpaceMouseHandlerWindows::SpaceMouseHandlerWindows()
 {
+    axesDiff_ = { 0, 0, 0, 0, 0, 0 };
     connect( &getViewerInstance() );
+}
+
+SpaceMouseHandlerWindows::~SpaceMouseHandlerWindows()
+{
+    updateThreadActive_ = false;
+    if ( updateThread_.joinable() )
+        updateThread_.join();
 }
 
 void SpaceMouseHandlerWindows::initialize()
 {
     bool spaceMouseAttached = isSpaceMouseAttached();
     if ( spaceMouseAttached )
-        spdlog::info( "Found attached spacemouse" );
+        spdlog::info( "Found attached SpaceMouse" );
     else
     {
-        spdlog::info( "Not found any attached spacemouse" );
+        spdlog::info( "Not found any attached SpaceMouse" );
         return;
     }
 
     initialized_ = InitializeRawInput();
-    spdlog::info( "InitializeRawInput = {}", initialized_ );
+    spdlog::info( "Initialize SpaceMouse {}", initialized_ ? "success" : "failed" );
 
     updateConnected_();
 }
 
 void SpaceMouseHandlerWindows::handle()
 {
-    if ( !initialized_ || joystickIndex_ == -1 )
+    if ( !initialized_ || joystickIndex_ == -1 || !active_ )
         return;
 
     auto& viewer = getViewerInstance();
     int count;
-    const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-    if ( count == 6 )
+    std::array<float, 6> axesDiff = axesDiff_;
+    if ( std::any_of( axesDiff.begin(), axesDiff.end(), [] ( const float& v ) { return std::fabs( v ) > cAxesThreshold; } ) )
     {
-        if ( active_ )
-        {
-            Vector3f translate( axesNew[0] - axes_[0], axesNew[1] - axes_[1], axesNew[2] - axes_[2] );
-            Vector3f rotate( axesNew[3] - axes_[3], axesNew[4] - axes_[4], axesNew[5] - axes_[5] );
-            translate *= axesScale;
-            rotate *= axesScale;
+        axesDiff_ = { 0, 0, 0, 0, 0, 0 };
+        Vector3f translate( axesDiff[0], axesDiff[1], axesDiff[2] );
+        Vector3f rotate( axesDiff[3], axesDiff[4], axesDiff[5] );
 
-            if ( translate.lengthSq() > 1.e-3f || rotate.lengthSq() > 1.e-3f )
+        float newHandleTime = float( glfwGetTime() );
+        if ( handleTime_ == 0.f )
+            handleTime_ = newHandleTime;
+        else
+        {
+            float timeScale = std::clamp( ( newHandleTime - handleTime_ ), 0.f, 0.5f ) * 60.f;
+            handleTime_ = newHandleTime;
+
+            translate *= cAxesScale * timeScale;
+            rotate *= cAxesScale * timeScale;
+
+            if ( active_ )
                 viewer.spaceMouseMove( translate, rotate );
         }
-        std::copy( axesNew, axesNew + 6, axes_.begin() );
     }
 
     const unsigned char* buttons = glfwGetJoystickButtons( joystickIndex_, &count );
-    
     // SpaceMouse Compact have 2 btns, Pro - 15, Enterprise - 31
     if ( count == 2 || count == 15 || count == 31 )
     {
@@ -187,7 +202,7 @@ void SpaceMouseHandlerWindows::postFocusSignal_( bool focused )
 void SpaceMouseHandlerWindows::updateConnected_()
 {
 
-    int newJoystickIndex_ = -1;
+    int newJoystickIndex = -1;
     for ( int i = GLFW_JOYSTICK_1; i <= GLFW_JOYSTICK_LAST; ++i )
     {
         int present = glfwJoystickPresent( i );
@@ -198,12 +213,12 @@ void SpaceMouseHandlerWindows::updateConnected_()
         auto findRes = str.find( "SpaceMouse" );
         if ( findRes != std::string_view::npos )
         {
-            newJoystickIndex_ = i;
+            newJoystickIndex = i;
             break;
         }
     }
 
-    if ( newJoystickIndex_ == joystickIndex_ )
+    if ( newJoystickIndex == joystickIndex_ )
         return;
 
     auto& viewer = getViewerInstance();
@@ -215,18 +230,65 @@ void SpaceMouseHandlerWindows::updateConnected_()
                 viewer.spaceMouseUp( mapButtons_[i] );
         }
         buttons_ = {};
+
+        updateThreadActive_ = false;
+        if ( updateThread_.joinable() )
+            updateThread_.join();
     }
 
-    joystickIndex_ = newJoystickIndex_;
+    joystickIndex_ = newJoystickIndex;
 
     if ( joystickIndex_ != -1 )
     {
         int count;
         const float* axesNew = glfwGetJoystickAxes( joystickIndex_, &count );
-        std::copy( axesNew, axesNew + 6, axes_.begin() );
+        std::copy( axesNew, axesNew + 6, axesOld_.begin() );
+
+        startUpdateThread_();
     }
 
     getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 );
+}
+
+void SpaceMouseHandlerWindows::startUpdateThread_()
+{
+    if ( joystickIndex_ == -1 )
+        return;
+
+    updateThreadActive_ = true;
+    axesDiff_ = { 0, 0, 0, 0, 0, 0 };
+    // additional thread needed to avoid double changing spacemouse axes values
+    // we assume that the mouse has its own refresh rate
+    // if we receive data less frequently, we can accept several changes as one
+    // to avoid this, we poll the mouse more often, but we can't reduce frequency main thread
+    // so we create another thread
+    updateThread_ = std::thread( [&, joystickIndex = joystickIndex_]
+    {
+        std::array<float, 6> axesDiff{};
+        int count = 0;
+        do
+        {
+            const float* axesNew = glfwGetJoystickAxes( joystickIndex, &count );
+            if ( count == 6 )
+            {
+                axesDiff = axesDiff_;
+                for ( int i = 0; i < 6; ++i )
+                {
+                    float newDiff = axesNew[i] - axesOld_[i];
+                    // updating axis differences
+                    // if in the last cycle we got a non-zero diff and in this cycle we got a non-zero diff but of a different sign, we remember the last diff
+                    // if in the past and this cycle we got a non-zero diff of one sign, we remember a larger diff
+                    if ( newDiff * axesDiff[i] < 0 )
+                        axesDiff[i] = newDiff;
+                    else if ( std::fabs( axesDiff[i] ) < std::fabs( newDiff ) )
+                        axesDiff[i] = newDiff;
+                }
+                axesDiff_ = axesDiff;
+                std::copy( axesNew, axesNew + 6, axesOld_.begin() );
+            }
+            std::this_thread::sleep_for( std::chrono::microseconds( 1000 ) );
+        } while ( updateThreadActive_ );
+    } );
 }
 
 }

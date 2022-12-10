@@ -10,6 +10,10 @@ build/*
 install.log
 installError.log
 lib/*
+include/*
+share/*
+bin/*
+thirdparty_build/*
 .vscode/*
 distr/*
 *.log

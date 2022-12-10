@@ -23,9 +23,10 @@ struct ZeroOnMove
  *  1) resized without initialization of its elements,
  *  2) much simplified: no push_back and many other methods
  * \tparam T type of stored elements
+ * \tparam I type of index (shall be convertible to size_t)
  * \ingroup BasicGroup
  */
-template <typename T>
+template <typename T, typename I>
 class Buffer
 {
 public:
@@ -39,6 +40,7 @@ public:
 
     [[nodiscard]] auto capacity() const { return capacity_.val; }
     [[nodiscard]] auto size() const { return size_.val; }
+    [[nodiscard]] bool empty() const { return size_.val == 0; }
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
@@ -57,12 +59,12 @@ public:
         size_.val = newSize;
     }
 
-    [[nodiscard]] const_reference operator[]( size_t i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const
     {
         assert( i < size_.val );
         return data_[i];
     }
-    [[nodiscard]] reference operator[]( size_t i )
+    [[nodiscard]] reference operator[]( I i )
     {
         assert( i < size_.val );
         return data_[i];
@@ -70,6 +72,10 @@ public:
 
     [[nodiscard]] auto data() { return data_.get(); }
     [[nodiscard]] auto data() const { return data_.get(); }
+    /// returns the identifier of the back() element
+    [[nodiscard]] I backId() const { assert( !empty() ); return I{ size() - 1 }; }
+    /// returns backId() + 1
+    [[nodiscard]] I endId() const { return I{ size() }; }
 
     void swap( Buffer & b ) { data_.swap( b.data_ ); std::swap( capacity_, b.capacity_ ); std::swap( size_, b.size_ ); }
 

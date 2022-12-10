@@ -49,7 +49,7 @@ class MRMESH_CLASS VoxelTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
-template <typename T> class MRMESH_CLASS Buffer;
+template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
@@ -285,6 +285,14 @@ class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
 template<typename T> class UniqueThreadSafeOwner;
+
+struct OrderedVertex;
+/// mapping: new vertex id -> old vertex id in v-field
+using VertexOrdering = Buffer<OrderedVertex, VertId>;
+struct OrderedEdge;
+/// mapping: new edge id -> old edge id in ue-field
+using EdgeOrdering = Buffer<OrderedEdge, UndirectedEdgeId>;
+
 
 class PolylineTopology;
 template<typename V>

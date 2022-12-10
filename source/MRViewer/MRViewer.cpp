@@ -187,10 +187,7 @@ static void glfw_window_iconify( GLFWwindow* /*window*/, int iconified )
 static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window focus", [focused, viewer] ()
-    {
-        viewer->postFocus( bool( focused ) );
-    } } );
+    viewer->postFocus( bool( focused ) );
 }
 #endif
 
@@ -1425,9 +1422,14 @@ void Viewer::postSetIconified( bool iconified )
 
 void Viewer::postFocus( bool focused )
 {
+#ifndef __EMSCRIPTEN__
     // it is needed ImGui to correctly capture events after refocusing
     if ( focused && focusRedrawReady_ && !isInDraw_ )
-        MR::Viewer::instanceRef().draw( true );
+    {
+        forceRedrawFramesWithoutSwap_ = 0;
+        draw( true );
+    }
+#endif
     postFocusSignal( bool( focused ) );
 }
 

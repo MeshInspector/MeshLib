@@ -21,6 +21,7 @@
 #include <boost/dynamic_bitset.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
+#include <boost/stacktrace.hpp>
 #pragma warning(pop)
 
 #ifndef __EMSCRIPTEN__

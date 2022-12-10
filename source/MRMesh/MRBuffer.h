@@ -77,8 +77,6 @@ public:
     /// returns backId() + 1
     [[nodiscard]] I endId() const { return I{ size() }; }
 
-    void swap( Buffer & b ) { data_.swap( b.data_ ); std::swap( capacity_, b.capacity_ ); std::swap( size_, b.size_ ); }
-
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 

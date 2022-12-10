@@ -1281,7 +1281,7 @@ void Viewer::draw_( bool force )
     if ( forceRedrawFramesWithoutSwap_ > 0 )
         forceRedrawFramesWithoutSwap_--;
     bool swapped = forceRedrawFramesWithoutSwap_ == 0;
-    //if ( swapped )
+    if ( swapped )
         drawScene();
 
     postDrawSignal();
@@ -1291,7 +1291,7 @@ void Viewer::draw_( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
-    //if ( window && swapped )
+    if ( window && swapped )
         glfwSwapBuffers( window );
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;

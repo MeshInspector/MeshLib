@@ -674,6 +674,7 @@ void RibbonMenu::drawHeaderPannel_()
         drawActiveListButton_( basePos, activeBtnSize, activeTextSize );
         basePos.x += ( activeBtnSize + cTabsInterval * menuScaling );
     }
+    ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::EndChild();
     if ( needFwdBtn )
     {

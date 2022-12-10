@@ -552,7 +552,8 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     ImGui::BeginGroup();
 
     int colorChanged = pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.rootType );
-    bool pressed = ImGui::Button( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize );
+    bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowItemOverlap );
+    ImGui::SetItemAllowOverlap();
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
@@ -689,6 +690,16 @@ bool RibbonButtonDrawer::drawCustomStyledButton( const char* icon, const ImVec2&
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params )
 {
     float iconSize = params.iconSize * 0.5f;
+    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( font )
+    {
+        const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
+        if ( params.sizeType == DrawButtonParams::SizeType::Big )
+            font->Scale = iconSize / fontSize;
+        else
+            font->Scale = iconSize * 1.5f / fontSize;
+        ImGui::PushFont( font );
+    }
     ImVec2 itemSize = ImVec2( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
     ImVec2 dropBtnPos;
     if ( params.sizeType == DrawButtonParams::SizeType::Small )
@@ -717,7 +728,6 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     auto name = "##DropDown" + item.item->name();
     auto nameWindow = name + "Popup";
     bool menuOpened = ImGui::IsPopupOpen( nameWindow.c_str() );
-    ImGui::SetItemAllowOverlap();
 
     bool dropBtnEnabled = !item.item->dropItems().empty();
 
@@ -725,16 +735,6 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
     bool comboPressed = ImGui::Button( name.c_str(), itemSize ) && dropBtnEnabled;
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        const float fontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( params.sizeType == DrawButtonParams::SizeType::Big )
-            font->Scale = iconSize / fontSize;
-        else
-            font->Scale = iconSize * 1.5f / fontSize;
-        ImGui::PushFont( font );
-    }
     auto iconRealSize = ImGui::CalcTextSize( "\xef\x81\xb8" ); //down icon
     ImGui::SetCursorPosX( dropBtnPos.x + ( itemSize.x - iconRealSize.x + 1 ) * 0.5f );
     ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );

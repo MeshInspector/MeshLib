@@ -1754,7 +1754,7 @@ void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*=
 
 bool Viewer::isCurrentFrameSwapping() const
 {
-    return forceRedrawFramesWithoutSwap_ <= 1;
+    return forceRedrawFramesWithoutSwap_ == 0;
 }
 
 size_t Viewer::getEventsCount( EventType type ) const
@@ -2002,22 +2002,25 @@ size_t Viewer::getStaticGLBufferSize() const
 
 void Viewer::FrameCounter::startDraw()
 {
-    startDrawTime_ = std::chrono::time_point_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() ).time_since_epoch().count();
+    startDrawTime_ = std::chrono::high_resolution_clock::now();
 }
 
 void Viewer::FrameCounter::endDraw( bool swapped )
 {
-    if ( swapped )
-        ++swappedFrameCounter;
     ++totalFrameCounter;
-    auto nowTP = std::chrono::system_clock::now();
-    auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
-    drawTimeMilliSec = std::chrono::time_point_cast< std::chrono::milliseconds >( nowTP ).time_since_epoch().count() - startDrawTime_;
-    if ( nowSec > startFPSTime_ )
+    if ( swapped )
     {
-        startFPSTime_ = nowSec;
-        fps = swappedFrameCounter - startFrameNum;
-        startFrameNum = swappedFrameCounter;
+        ++swappedFrameCounter;
+        const auto startSec = std::chrono::time_point_cast< std::chrono::seconds >( startDrawTime_ ).time_since_epoch().count();
+        const auto nowTP = std::chrono::high_resolution_clock::now();
+        const auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
+        drawTimeMilliSec =  ( nowTP - startDrawTime_ ) * 1000;
+        if ( nowSec > startFPSTime_ )
+        {
+            startFPSTime_ = nowSec;
+            fps = swappedFrameCounter - startFrameNum;
+            startFrameNum = swappedFrameCounter;
+        }
     }
 }
 

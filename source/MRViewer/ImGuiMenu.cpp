@@ -627,9 +627,9 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "GL memory buffer: %s", glBufferSizeStr.c_str() );
         auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
         if ( prevFrameTime > frameTimeMillisecThreshold_ )
-            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
+            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %.1f ms", prevFrameTime );
         else
-            ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
+            ImGui::Text( "Previous frame time: %.1f ms", prevFrameTime );
         ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
         ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
         ImGui::Text( "FPS: %zu", viewer->getFPS() );

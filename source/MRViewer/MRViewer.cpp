@@ -2011,7 +2011,6 @@ void Viewer::FrameCounter::endDraw( bool swapped )
     if ( swapped )
     {
         ++swappedFrameCounter;
-        const auto startSec = std::chrono::time_point_cast< std::chrono::seconds >( startDrawTime_ ).time_since_epoch().count();
         const auto nowTP = std::chrono::high_resolution_clock::now();
         const auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
         drawTimeMilliSec =  ( nowTP - startDrawTime_ ) * 1000;

@@ -36,7 +36,10 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>MR_PROJECT_NAME="$(MeshLibProjectName)";NOMINMAX;_CRT_SECURE_NO_DEPRECATE;ImDrawIdx=unsigned;SPDLOG_COMPILED_LIB;SPDLOG_SHARED_LIB;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;IMGUI_ENABLE_FREETYPE;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\parallel-hashmap\;$(MeshLibDir)thirdparty\pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <Link>
+	    <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
+      </Link>
+	  <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <!-- 
@@ -74,10 +77,5 @@
       -->
       <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4710;4711;4820;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Link>
-      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
 </Project>

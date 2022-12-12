@@ -187,7 +187,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( maxSamples_ > 1 )
             {
                 auto backUpSamples = storedSamples_;
-                ImGui::Text( "MSAA" );
+                ImGui::Text( "Multisample anti-aliasing (MSAA):" );
+                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
                 int couter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
@@ -212,7 +213,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     needReset_ = storedSamples_ != curSamples_;
                 }
                 if ( needReset_ )
-                    ImGui::TransparentTextWrapped( "Application requires reset to apply this change" );
+                    ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
             }
         }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )

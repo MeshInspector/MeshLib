@@ -1278,15 +1278,14 @@ void Viewer::draw_( bool force )
     setupScene();
     preDrawSignal();
 
-    bool swapped = forceRedrawFramesWithoutSwap_ <= 1;
-    if ( swapped )
+    if ( forceRedrawFramesWithoutSwap_ <= 1 ) // if swapped
         drawScene();
 
     postDrawSignal();
 
     if ( forceRedrawFramesWithoutSwap_ > 0 )
         forceRedrawFramesWithoutSwap_--;
-    swapped = forceRedrawFramesWithoutSwap_ == 0;
+    auto swapped = forceRedrawFramesWithoutSwap_ == 0;
 
     if ( forceRedrawFrames_ > 0 )
     {

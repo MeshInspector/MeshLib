@@ -187,8 +187,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( maxSamples_ > 1 )
             {
                 auto backUpSamples = storedSamples_;
-                ImGui::Text( "Multisample anti-aliasing" );
-                ImGui::SetTooltipIfHovered( "Number of samples to render more smoothly. More samples - better quality but worse performance.", menuScaling );
+                ImGui::Text( "Multisample anti-aliasing (MSAA):" );
+                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
                 int couter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {

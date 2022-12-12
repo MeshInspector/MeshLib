@@ -179,8 +179,8 @@ jobs:
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
-      #- name: Unit Tests
-       # run: .\source\x64\\Release\MRTest.exe
+      - name: Unit Tests
+        run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
 
       - name: Python Tests
         run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\Release meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"

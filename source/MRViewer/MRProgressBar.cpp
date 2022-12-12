@@ -75,6 +75,8 @@ void ProgressBar::setup( float scaling )
         }
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
+        if ( progress >= 1.0f )
+            getViewerInstance().incrementForceRedrawFrames();
 #endif
         if ( instance.finished_ )
         {

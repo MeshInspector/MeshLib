@@ -11,7 +11,7 @@
 namespace MR
 {
 
-VertexOrdering getVertexOrdering( const Buffer<FaceId> & invFaceMap, const MeshTopology & topology )
+VertexOrdering getVertexOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const MeshTopology & topology )
 {
     MR_TIMER
     assert( topology.lastValidFace() < invFaceMap.size() );
@@ -48,7 +48,7 @@ VertexOrdering getVertexOrdering( const Buffer<FaceId> & invFaceMap, const MeshT
     return res;
 }
 
-EdgeOrdering getEdgeOrdering( const Buffer<FaceId> & invFaceMap, const MeshTopology & topology )
+EdgeOrdering getEdgeOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const MeshTopology & topology )
 {
     MR_TIMER
     assert( topology.lastValidFace() < invFaceMap.size() );

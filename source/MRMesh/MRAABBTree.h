@@ -41,7 +41,7 @@ public:
     [[nodiscard]] MRMESH_API FaceMap getLeafOrderAndReset();
     /// returns FaceId -> leaf#, then resets leaf order to 0,1,2,...;
     /// \param invFaceMap must be resized before the call
-    MRMESH_API void getInvLeafOrderAndReset( Buffer<FaceId> & invFaceMap );
+    MRMESH_API void getInvLeafOrderAndReset( Buffer<FaceId, FaceId> & invFaceMap );
 
     /// returns set of nodes containing among direct or indirect children given faces
     [[nodiscard]] MRMESH_API NodeBitSet getNodesFromFaces( const FaceBitSet & faces ) const;

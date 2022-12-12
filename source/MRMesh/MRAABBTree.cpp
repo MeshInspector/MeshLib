@@ -142,7 +142,7 @@ FaceMap AABBTree::getLeafOrderAndReset()
     return res;
 }
 
-void AABBTree::getInvLeafOrderAndReset( Buffer<FaceId> & invFaceMap )
+void AABBTree::getInvLeafOrderAndReset( Buffer<FaceId, FaceId> & invFaceMap )
 {
     MR_TIMER;
     FaceId f = 0_f;

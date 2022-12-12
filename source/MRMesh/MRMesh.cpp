@@ -752,7 +752,7 @@ void Mesh::packOptimally( const PartMapping & )
 
     getAABBTree(); // ensure that tree is constructed
     //auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
-    Buffer<FaceId> invFaceMap( topology.faceSize() );
+    Buffer<FaceId, FaceId> invFaceMap( topology.faceSize() );
     AABBTreeOwner_.get()->getInvLeafOrderAndReset( invFaceMap );
     auto vOrder = getVertexOrdering( invFaceMap, topology );
     auto eOrder = getEdgeOrdering( invFaceMap, topology );

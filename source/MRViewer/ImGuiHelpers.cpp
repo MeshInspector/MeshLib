@@ -726,7 +726,9 @@ void EndCustomStatePlugin()
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
 {
+	ImGui::PushStyleColor( ImGuiCol_TitleBgActive, 0xFF000000 );
     bool started = BeginPopupModal( label, open, flags );
+    ImGui::PopStyleColor();
     if ( started )
         GetCurrentContext()->DimBgRatio = 1.0f;
     return started;

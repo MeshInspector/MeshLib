@@ -10,6 +10,7 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRRibbonConstants.h"
 
 namespace MR
 {
@@ -309,7 +310,7 @@ bool ViewerSettingsPlugin::onDisable_()
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 500 * scaling, 160 * scaling );
+    ImVec2 windowSize( 500 * scaling, 165 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -335,6 +336,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );
 
+        const float posY = ImGui::GetCursorPosY();
+        ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
@@ -342,7 +345,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x - 150.0f );
 
-        ImGui::Button( "Set other", ImVec2( -1, 0 ) );
+		ImGui::SetCursorPosY( posY );
+        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, 0 ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -400,8 +404,8 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( quickAccessList_->size() ), maxQuickAccessSize_ );
-
-    const float buttonHeight = 20 * scaling;
+    
+    const float buttonHeight = cGradientButtonFramePadding * 2 * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
     const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
 
     ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
@@ -410,7 +414,7 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
 
     ImGui::EndChild();
 
-    if ( ImGui::Button( "Reset to default", ImVec2( 0, buttonHeight ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
     {
         auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
         if ( ribbonMenu )

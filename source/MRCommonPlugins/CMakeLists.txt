@@ -32,6 +32,7 @@ IF(APPLE)
 		spdlog
 		glfw
 		jsoncpp
+		glad
 		)
 ELSE()
 	target_link_libraries(${PROJECT_NAME} PRIVATE

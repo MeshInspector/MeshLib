@@ -34,12 +34,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>MR_PROJECT_NAME="$(MeshLibProjectName)";NOMINMAX;_CRT_SECURE_NO_DEPRECATE;ImDrawIdx=unsigned;SPDLOG_COMPILED_LIB;SPDLOG_SHARED_LIB;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;IMGUI_ENABLE_FREETYPE;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MR_PROJECT_NAME="$(MeshLibProjectName)";NOMINMAX;_CRT_SECURE_NO_DEPRECATE;ImDrawIdx=unsigned;SPDLOG_COMPILED_LIB;SPDLOG_SHARED_LIB;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING;IMGUI_ENABLE_FREETYPE;IMGUI_DISABLE_OBSOLETE_FUNCTIONS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\parallel-hashmap\;$(MeshLibDir)thirdparty\pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <Link>
-	    <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
-      </Link>
-	  <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <!-- 
@@ -73,9 +70,14 @@
            warning C5219: implicit conversion from 'int' to 'float', possible loss of data
            warning C5243: using incomplete class can cause potential one definition rule violation due to ABI limitation
            warning C5246: the initialization of a subobject should be wrapped in braces
+           warning C5262: implicit fall-through occurs here; are you missing a break statement? Use [[fallthrough]] when a break statement is intentionally omitted between cases
+           warning C5264: 'const' variable is not used
            warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
       -->
-      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4710;4711;4820;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4668;4710;4711;4820;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
 </Project>

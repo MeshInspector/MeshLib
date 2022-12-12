@@ -375,7 +375,13 @@ bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
 bool ImGuiMenu::onMouseScroll_(float delta_y)
 {
     ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
-    return ImGui::GetIO().WantCaptureMouse;
+    // do extra frames to prevent imgui calculations ping
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
+        return true;
+    }
+    return false;
 }
 
 // Keyboard IO
@@ -621,9 +627,9 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "GL memory buffer: %s", glBufferSizeStr.c_str() );
         auto prevFrameTime = viewer->getPrevFrameDrawTimeMillisec();
         if ( prevFrameTime > frameTimeMillisecThreshold_ )
-            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %lld ms", prevFrameTime );
+            ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "Previous frame time: %.1f ms", prevFrameTime );
         else
-            ImGui::Text( "Previous frame time: %lld ms", prevFrameTime );
+            ImGui::Text( "Previous frame time: %.1f ms", prevFrameTime );
         ImGui::Text( "Total frames: %zu", viewer->getTotalFrames() );
         ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
         ImGui::Text( "FPS: %zu", viewer->getFPS() );
@@ -660,14 +666,14 @@ void ImGuiMenu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) )
+        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ESCAPE ) )
+        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -694,7 +700,7 @@ void ImGuiMenu::draw_helpers()
 
         ImGui::Spacing();
         ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( GLFW_KEY_ENTER ) ||
+        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            
@@ -1224,6 +1230,7 @@ float ImGuiMenu::drawSelectionInformation_()
         }
 
         ImGui::PopStyleVar();
+        ImGui::Dummy( ImVec2( 0, 0 ) );
         ImGui::EndChild();
         ImGui::PopStyleVar();
     }

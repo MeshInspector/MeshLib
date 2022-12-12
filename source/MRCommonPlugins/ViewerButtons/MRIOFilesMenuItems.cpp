@@ -260,11 +260,11 @@ bool OpenDirectoryMenuItem::action()
                         viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     };
                 }
-                return [viewer, error = loadRes.error()]()
+                return [viewer, directory]()
                 {
                     auto menu = viewer->getMenuPlugin();
                     if ( menu )
-                        menu->showErrorModal( error );
+                        menu->showErrorModal( ( "No supported files can be open from the directory:\n" + utf8string( directory ) ).c_str() );
                 };
             }, 3 );
         }

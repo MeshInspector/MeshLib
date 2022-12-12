@@ -7,7 +7,9 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
-#include <GLFW/glfw3.h>
+#include "MRViewer/MRViewerSettingsManager.h"
+#include "MRViewer/MRGLMacro.h"
+#include "MRViewer/MRGladGlfw.h"
 
 namespace MR
 {
@@ -16,6 +18,16 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     StatePlugin( "Viewer settings" )
 {
     shadowGl_ = std::make_unique<ShadowsGL>();
+    CommandLoop::appendCommand( [maxSamples = &maxSamples_, curSamples = &curSamples_, storedSamples = &storedSamples_] ()
+    {
+        if ( getViewerInstance().isGLInitialized() && loadGL() )
+        {
+            GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, maxSamples ) );
+            GL_EXEC( glGetIntegerv( GL_SAMPLES, curSamples ) );
+            *maxSamples = std::max( std::min( *maxSamples, 16 ), *curSamples ); // there are some known issues with 32 MSAA
+            *storedSamples = *curSamples;
+        }
+    } );
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -169,6 +181,39 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             RibbonButtonDrawer::GradientCheckbox( "Alpha Sort", &alphaBoxVal );
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
+        }
+        if ( viewer->isGLInitialized() )
+        {
+            if ( maxSamples_ > 1 )
+            {
+                auto backUpSamples = storedSamples_;
+                ImGui::Text( "MSAA" );
+                int couter = 0;
+                for ( int i = 0; i <= maxSamples_; i <<= 1 )
+                {
+                    if ( i == 0 )
+                    {
+                        RibbonButtonDrawer::GradientRadioButton( "Off", &storedSamples_, i );
+                        ++i;
+                    }
+                    else
+                    {
+                        std::string label = 'x' + std::to_string( i );
+                        RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
+                    }
+                    if ( i << 1 <= maxSamples_ && ( ++couter ) % 3 != 0 )
+                        ImGui::SameLine( ( couter % 3 ) * menuScaling * 80.0f );
+                }
+                if ( backUpSamples != storedSamples_ )
+                {
+                    if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+                        settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
+                    
+                    needReset_ = storedSamples_ != curSamples_;
+                }
+                if ( needReset_ )
+                    ImGui::TransparentTextWrapped( "Application requires reset to apply this change" );
+            }
         }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
         {

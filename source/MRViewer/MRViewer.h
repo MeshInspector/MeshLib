@@ -19,6 +19,7 @@
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
 #include <boost/signals2/signal.hpp>
+#include <chrono>
 #include <cstdint>
 #include <queue>
 
@@ -239,7 +240,7 @@ public:
     size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
     size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }
     size_t getFPS() const { return frameCounter_.fps; }
-    long long getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec; }
+    double getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec.count(); }
 
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
@@ -253,7 +254,7 @@ public:
     // if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not
     MRVIEWER_API void incrementForceRedrawFrames( int i = 1, bool swapOnLastOnly = false );
 
-    // Returns true if current frame will be swapped on display
+    // Returns true if current frame will be shown on display
     MRVIEWER_API bool isCurrentFrameSwapping() const;
 
     // types of counted events
@@ -599,13 +600,13 @@ private:
         size_t swappedFrameCounter{ 0 };
         size_t startFrameNum{ 0 };
         size_t fps{ 0 };
-        long long drawTimeMilliSec{ 0 };
+        std::chrono::duration<double> drawTimeMilliSec{ 0 };
         void startDraw();
         void endDraw( bool swapped );
         void reset();
     private:
         long long startFPSTime_{ 0 };
-        long long startDrawTime_{ 0 };
+        std::chrono::time_point<std::chrono::high_resolution_clock> startDrawTime_;
     } frameCounter_;
 
     mutable struct EventsCounter

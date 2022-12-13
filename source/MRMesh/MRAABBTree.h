@@ -37,11 +37,9 @@ public:
     [[nodiscard]] MRMESH_API FaceBitSet getSubtreeFaces( NodeId subtreeRoot ) const;
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
-    /// returns leaf# -> FaceId, then resets leaf order to 0,1,2,...
-    [[nodiscard]] MRMESH_API FaceMap getLeafOrderAndReset();
     /// returns FaceId -> leaf#, then resets leaf order to 0,1,2,...;
-    /// \param invFaceMap must be resized before the call
-    MRMESH_API void getInvLeafOrderAndReset( Buffer<FaceId, FaceId> & invFaceMap );
+    /// \param buffer in faceMap must be resized before the call
+    MRMESH_API void getLeafOrderAndReset( FaceBMap & faceMap );
 
     /// returns set of nodes containing among direct or indirect children given faces
     [[nodiscard]] MRMESH_API NodeBitSet getNodesFromFaces( const FaceBitSet & faces ) const;

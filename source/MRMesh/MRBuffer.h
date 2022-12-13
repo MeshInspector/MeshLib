@@ -101,4 +101,12 @@ template <typename T, typename I>
 [[nodiscard]] inline auto end( Buffer<T> & a )
     { return a.data() + a.size(); }
 
+/// flat map: I -> T
+template <typename T, typename I>
+struct BMap
+{
+    Buffer<T, I> b;
+    size_t tsize; ///< target size, all values inside b must be less than this value
+};
+
 } // namespace MR

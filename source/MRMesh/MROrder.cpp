@@ -11,18 +11,30 @@
 namespace MR
 {
 
-VertexOrdering getVertexOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const MeshTopology & topology )
+VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {
     MR_TIMER
-    assert( topology.lastValidFace() < invFaceMap.size() );
-    VertexOrdering res( topology.vertSize() );
+
+    struct OrderedVertex
+    {
+        VertId v;
+        std::uint32_t f; // the smallest nearby face
+        bool operator <( const OrderedVertex & b ) const
+            { return std::tie( f, v ) < std::tie( b.f, b.v ); } // order vertices by f
+    };
+    static_assert( sizeof( OrderedVertex ) == 8 );
+    /// mapping: new vertex id -> old vertex id in v-field
+    using VertexOrdering = Buffer<OrderedVertex, VertId>;
+
+    assert( topology.lastValidFace() < faceMap.b.size() );
+    VertexOrdering ord( topology.vertSize() );
 
     Timer t( "fill" );
     const auto getNewFace = [&]( FaceId f )
     {
         if ( !f )
             return f;
-        return invFaceMap[ f ];
+        return faceMap.b[ f ];
     };
 
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
@@ -33,33 +45,56 @@ VertexOrdering getVertexOrdering( const Buffer<FaceId, FaceId> & invFaceMap, con
             auto f = ~std::uint32_t(0);
             for ( EdgeId e : orgRing( topology, v ) )
                 f = std::min( f, std::uint32_t( getNewFace( topology.left( e ) ) ) );
-            res[v] = OrderedVertex{ v, f };
+            ord[v] = OrderedVertex{ v, f };
         }
     } );
 
     t.restart( "sort" );
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-    std::sort( std::execution::par, res.data(), res.data() + res.size() );
+    std::sort( std::execution::par, ord.data(), ord.data() + ord.size() );
 #else
-    std::sort( res.data(), res.data() + res.size() );
+    std::sort( ord.data(), ord.data() + ord.size() );
 #endif
-    res.resize( topology.numValidVerts() );
 
+    VertBMap res;
+    res.b.resize( topology.vertSize() );
+    res.tsize = topology.numValidVerts();
+    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
+    [&]( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+        {
+            res.b[ord[v].v] = v;
+        }
+    } );
+    
     return res;
 }
 
-EdgeOrdering getEdgeOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const MeshTopology & topology )
+UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {
     MR_TIMER
-    assert( topology.lastValidFace() < invFaceMap.size() );
-    EdgeOrdering res( topology.undirectedEdgeSize() );
+
+    struct OrderedEdge
+    {
+        UndirectedEdgeId ue;
+        std::uint32_t f; // the smallest nearby face
+        bool operator <( const OrderedEdge & b ) const
+            { return std::tie( f, ue ) < std::tie( b.f, b.ue ); } // order vertices by f
+    };
+    static_assert( sizeof( OrderedEdge ) == 8 );
+    /// mapping: new vertex id -> old vertex id in v-field
+    using EdgeOrdering = Buffer<OrderedEdge, UndirectedEdgeId>;
+
+    assert( topology.lastValidFace() < faceMap.b.size() );
+    EdgeOrdering ord( topology.undirectedEdgeSize() );
 
     Timer t( "fill" );
     const auto getNewFace = [&]( FaceId f )
     {
         if ( !f )
             return f;
-        return invFaceMap[ f ];
+        return faceMap.b[ f ];
     };
 
     std::atomic<int> notLoneEdges{0};
@@ -72,7 +107,7 @@ EdgeOrdering getEdgeOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const M
             auto f = std::min(
                 std::uint32_t( getNewFace( topology.left( ue ) ) ),
                 std::uint32_t( getNewFace( topology.right( ue ) ) ) );
-            res[ue] = OrderedEdge{ ue, f };
+            ord[ue] = OrderedEdge{ ue, f };
             if ( int(f) >= 0 )
                 ++myNotLoneEdges;
         }
@@ -81,11 +116,22 @@ EdgeOrdering getEdgeOrdering( const Buffer<FaceId, FaceId> & invFaceMap, const M
 
     t.restart( "sort" );
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-    std::sort( std::execution::par, res.data(), res.data() + res.size() );
+    std::sort( std::execution::par, ord.data(), ord.data() + ord.size() );
 #else
-    std::sort( res.data(), res.data() + res.size() );
+    std::sort( ord.data(), ord.data() + ord.size() );
 #endif
-    res.resize( notLoneEdges );
+
+    UndirectedEdgeBMap res;
+    res.b.resize( topology.undirectedEdgeSize() );
+    res.tsize = notLoneEdges;
+    tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ),
+    [&]( const tbb::blocked_range<UndirectedEdgeId>& range )
+    {
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+        {
+            res.b[ord[ue].ue] = ue;
+        }
+    } );
 
     return res;
 }

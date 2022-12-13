@@ -253,6 +253,13 @@ using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
+template <typename T, typename I> struct MRMESH_CLASS BMap;
+using FaceBMap = BMap<FaceId, FaceId>;
+using VertBMap = BMap<VertId, VertId>;
+using EdgeBMap = BMap<EdgeId, EdgeId>;
+using UndirectedEdgeBMap = BMap<UndirectedEdgeId, UndirectedEdgeId>;
+using WholeEdgeBMap = BMap<EdgeId, UndirectedEdgeId>;
+
 template <typename K>
 using HashSet = phmap::flat_hash_set<K>;
 template <typename K>
@@ -285,14 +292,6 @@ class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
 template<typename T> class UniqueThreadSafeOwner;
-
-struct OrderedVertex;
-/// mapping: new vertex id -> old vertex id in v-field
-using VertexOrdering = Buffer<OrderedVertex, VertId>;
-struct OrderedEdge;
-/// mapping: new edge id -> old edge id in ue-field
-using EdgeOrdering = Buffer<OrderedEdge, UndirectedEdgeId>;
-
 
 class PolylineTopology;
 template<typename V>

@@ -751,18 +751,26 @@ void Mesh::packOptimally( const PartMapping & )
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    //auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
     FaceBMap faceMap;
     faceMap.b.resize( topology.faceSize() );
     AABBTreeOwner_.get()->getLeafOrderAndReset( faceMap );
     auto vertMap = getVertexOrdering( faceMap, topology );
     auto edgeMap = getEdgeOrdering( faceMap, topology );
+    topology.packReorder( edgeMap, faceMap, vertMap );
 
-/*    Mesh packed;
-    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
-    // preserve AABB tree in this
-    topology = std::move( packed.topology );
-    points = std::move( packed.points );*/
+    VertCoords newPoints( vertMap.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( points.size() ) ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        {
+            auto newv = vertMap.b[oldv];
+            if ( !newv )
+                continue;
+            newPoints[newv] = points[oldv];
+        }
+    } );
+    points = std::move( newPoints );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

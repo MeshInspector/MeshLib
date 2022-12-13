@@ -1449,11 +1449,12 @@ inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, Ed
     return res;
 }
 
-void MeshTopology::reorder( const UndirectedEdgeBMap & emap, const FaceBMap & fmap, const VertBMap & vmap )
+void MeshTopology::packReorder( const UndirectedEdgeBMap & emap, const FaceBMap & fmap, const VertBMap & vmap )
 {
     MR_TIMER
 
-    Vector<HalfEdgeRecord, EdgeId> newEdges( 2 * emap.tsize );
+    Vector<HalfEdgeRecord, EdgeId> newEdges;
+    resizeNoInit( newEdges, 2 * emap.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
@@ -1477,7 +1478,8 @@ void MeshTopology::reorder( const UndirectedEdgeBMap & emap, const FaceBMap & fm
     } );
     edges_ = std::move( newEdges );
 
-    Vector<EdgeId, FaceId> newEdgePerFace( fmap.tsize );
+    Vector<EdgeId, FaceId> newEdgePerFace;
+    resizeNoInit( newEdgePerFace, fmap.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
         [&]( const tbb::blocked_range<FaceId> & range )
     {
@@ -1490,16 +1492,12 @@ void MeshTopology::reorder( const UndirectedEdgeBMap & emap, const FaceBMap & fm
         }
     } );
     edgePerFace_ = std::move( newEdgePerFace );
-
-    validFaces_.clear();
+    assert( edgePerFace_.size() == numValidFaces_ );
     validFaces_.resize( edgePerFace_.size() );
-    BitSetParallelForAll( validFaces_, [&]( FaceId f )
-    {
-        if ( edgePerFace_[f] )
-            validFaces_.set( f );
-    } );
+    validFaces_.set( 0_f, edgePerFace_.size(), true );
 
-    Vector<EdgeId, VertId> newEdgePerVertex( vmap.tsize );
+    Vector<EdgeId, VertId> newEdgePerVertex;
+    resizeNoInit( newEdgePerVertex, vmap.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
         [&]( const tbb::blocked_range<VertId> & range )
     {
@@ -1512,14 +1510,9 @@ void MeshTopology::reorder( const UndirectedEdgeBMap & emap, const FaceBMap & fm
         }
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );
-
-    validVerts_.clear();
+    assert( edgePerVertex_.size() == numValidVerts_ );
     validVerts_.resize( edgePerVertex_.size() );
-    BitSetParallelForAll( validVerts_, [&]( VertId v )
-    {
-        if ( edgePerVertex_[v] )
-            validVerts_.set( v );
-    } );
+    validVerts_.set( 0_v, edgePerVertex_.size(), true );
 }
 
 void MeshTopology::write( std::ostream & s ) const

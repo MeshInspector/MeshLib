@@ -121,6 +121,8 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
                                        ProgressCallback callback )
 {
     MR_TIMER
+    out << "# MeshInspector.com\n";
+
     VertId lastValidPoint = mesh.topology.lastValidVert();
 
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )

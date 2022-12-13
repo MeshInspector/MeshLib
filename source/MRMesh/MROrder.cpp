@@ -30,13 +30,6 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     VertexOrdering ord( topology.vertSize() );
 
     Timer t( "fill" );
-    const auto getNewFace = [&]( FaceId f )
-    {
-        if ( !f )
-            return f;
-        return faceMap.b[ f ];
-    };
-
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
     [&]( const tbb::blocked_range<VertId>& range )
     {
@@ -44,7 +37,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
         {
             auto f = ~std::uint32_t(0);
             for ( EdgeId e : orgRing( topology, v ) )
-                f = std::min( f, std::uint32_t( getNewFace( topology.left( e ) ) ) );
+                f = std::min( f, std::uint32_t( getAt( faceMap.b, topology.left( e ) ) ) );
             ord[v] = OrderedVertex{ v, f };
         }
     } );
@@ -90,13 +83,6 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     EdgeOrdering ord( topology.undirectedEdgeSize() );
 
     Timer t( "fill" );
-    const auto getNewFace = [&]( FaceId f )
-    {
-        if ( !f )
-            return f;
-        return faceMap.b[ f ];
-    };
-
     std::atomic<int> notLoneEdges{0};
     tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ),
     [&]( const tbb::blocked_range<UndirectedEdgeId>& range )
@@ -105,8 +91,8 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
             auto f = std::min(
-                std::uint32_t( getNewFace( topology.left( ue ) ) ),
-                std::uint32_t( getNewFace( topology.right( ue ) ) ) );
+                std::uint32_t( getAt( faceMap.b, topology.left( ue ) ) ),
+                std::uint32_t( getAt( faceMap.b, topology.right( ue ) ) ) );
             ord[ue] = OrderedEdge{ ue, f };
             if ( int(f) >= 0 )
                 ++myNotLoneEdges;

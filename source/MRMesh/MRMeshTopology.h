@@ -269,6 +269,8 @@ public:
     /// \param rearrangeTriangles if true then calls rotateTriangles() 
     /// and selects the order of triangles according to the order of their vertices
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
+    MRMESH_API void reorder( const UndirectedEdgeBMap & emap, const FaceBMap & fmap, const VertBMap & vmap );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;

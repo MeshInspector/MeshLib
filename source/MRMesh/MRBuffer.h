@@ -85,6 +85,13 @@ private:
     ZeroOnMove<size_t> capacity_, size_;
 };
 
+/// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
+template <typename T, typename I>
+inline T getAt( const Buffer<T, I> & bmap, I key )
+{
+    return key ? bmap[key] : T{};
+}
+
 template <typename T, typename I>
 [[nodiscard]] inline auto begin( const Buffer<T> & a )
     { return a.data(); }

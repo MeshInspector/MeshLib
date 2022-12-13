@@ -689,6 +689,7 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
+    glfwHideWindow( window );
 
     if ( settingsMng_ )
     {
@@ -1391,7 +1392,10 @@ void Viewer::postResize( int w, int h )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
 #ifndef __EMSCRIPTEN__
     if ( isLaunched_ )
-        draw();
+    {
+        incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
+        do draw(); while ( !isCurrentFrameSwapping() );
+    }
 #endif
 }
 

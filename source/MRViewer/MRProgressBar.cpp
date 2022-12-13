@@ -2,6 +2,7 @@
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRRibbonButtonDrawer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
@@ -64,7 +65,7 @@ void ProgressBar::setup( float scaling )
             if ( !instance.canceled_ )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
-                if ( ImGui::Button( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
+                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
                     instance.canceled_ = true;
             }
             else

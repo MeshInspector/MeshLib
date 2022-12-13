@@ -19,6 +19,7 @@ tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & obj
 
 tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out )
 {
+    out << "# MeshInspector.com\n";
     int firstVertId = 1;
     for ( auto & o : objects )
     {

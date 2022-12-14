@@ -9,7 +9,8 @@
 #include "MRViewer/MRCommandLoop.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
-#include "GLFW/glfw3.h"
+#include "MRViewer/MRGLMacro.h"
+#include "MRViewer/MRGladGlfw.h"
 
 namespace
 {
@@ -26,6 +27,7 @@ const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
 const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string lastExtextentionsParamKey = "lastExtextentions";
 const std::string cSpaceMouseSettings = "spaceMouseSettings";
+const std::string cMSAA = "multisampleAntiAliasing";
 }
 
 namespace MR
@@ -34,6 +36,23 @@ namespace MR
 ViewerSettingsManager::ViewerSettingsManager()
 {
     lastExtentionNums_.resize( int( ObjType::Count ), 0 );
+}
+
+int ViewerSettingsManager::loadInt( const std::string& name, int def )
+{
+    auto& cfg = Config::instance();
+    if ( !cfg.hasJsonValue( name ) )
+        return def;
+    const auto& value = cfg.getJsonValue( name );
+    if ( !value.isInt() )
+        return def;
+    return value.asInt();
+}
+
+void ViewerSettingsManager::saveInt( const std::string& name, int value )
+{
+    Json::Value val = value;
+    Config::instance().setJsonValue( name, val );
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )

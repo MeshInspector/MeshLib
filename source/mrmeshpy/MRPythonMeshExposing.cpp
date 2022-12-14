@@ -57,6 +57,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "getValidVerts", &MR::MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
         def( "flip", (void (MR::MeshTopology::*)(FaceBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
         def( "flip", (void (MR::MeshTopology::*)(VertBitSet&)const)&MR::MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
+        def( "flipOrientation", &MR::MeshTopology::flipOrientation, "flip orientation (normals) of all faces" ).
         def( "org", &MR::MeshTopology::org, pybind11::arg( "he" ), "returns origin vertex of half-edge" ).
         def( "dest", &MR::MeshTopology::dest, pybind11::arg( "he" ), "returns destination vertex of half-edge" ).
         def( "findBoundaryFaces", &MR::MeshTopology::findBoundaryFaces, "returns all boundary faces, having at least one boundary edge" ).

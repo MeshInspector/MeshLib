@@ -89,9 +89,8 @@ chmod +x ./distr/meshlib-dev/DEBIAN/postinst
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-cd "${MR_LIB_DIR}"
-find . -name '*.so*' -type f,l -exec cp -fP \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}" \;
-cd -
+cp -rL ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}"
+cp -rL ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}"
 printf "Thirdparty libs copy done\n"
 
 #copy application
@@ -111,12 +110,6 @@ cp build/Release/bin/mr.version "distr/meshlib-dev${MR_INSTALL_RES_DIR}"
 printf "MR version copy done\n"
 
 #copy headers
-cd "${MR_LIB_DIR}"
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
-cd thirdparty/eigen
-find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_THIRDPARTY_INCLUDE_DIR}" \;
-cd -
 cd source
 find . -name '*.h' -type f -exec cp -f --recursive --parents \{\} "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}" \;
 cd -

@@ -30,6 +30,7 @@ COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY requirements requirements
 
 COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
+COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
 
 ENV MR_STATE=DOCKER_BUILD
 

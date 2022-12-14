@@ -1,8 +1,10 @@
 #include "MRProgressBar.h"
 #include "MRViewer.h"
-#include "MRMesh/MRSystem.h"
 #include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRRibbonButtonDrawer.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
@@ -63,7 +65,7 @@ void ProgressBar::setup( float scaling )
             if ( !instance.canceled_ )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
-                if ( ImGui::Button( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
+                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
                     instance.canceled_ = true;
             }
             else
@@ -74,6 +76,8 @@ void ProgressBar::setup( float scaling )
         }
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
+        if ( instance.progress_ >= 1.0f )
+            getViewerInstance().incrementForceRedrawFrames();
 #endif
         if ( instance.finished_ )
         {
@@ -147,8 +151,11 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance] ()
         {
+            static ThreadRootTimeRecord rootRecord( "Progress" );
+            registerThreadRootTimeRecord( rootRecord );
             SetCurrentThreadName( "ProgressBar" );
             instance.tryRunTaskWithSehHandler_();
+            unregisterThreadRootTimeRecord( rootRecord );
         } );
 #else
         staticTaskForLaterCall = [&instance] () 

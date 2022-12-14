@@ -39,7 +39,9 @@ jobs:
           submodules: recursive
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Build
         run: ./scripts/build_source.sh

@@ -19,6 +19,7 @@
 #include "MRTouchesController.h"
 #include "MRSpaceMouseController.h"
 #include <boost/signals2/signal.hpp>
+#include <chrono>
 #include <cstdint>
 #include <queue>
 
@@ -148,6 +149,9 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
+#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+    MRVIEWER_API void emsDraw( bool force = false );
+#endif
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene() const;
     // Setup viewports views
@@ -236,21 +240,21 @@ public:
     size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
     size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }
     size_t getFPS() const { return frameCounter_.fps; }
-    long long getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec; }
+    double getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec.count(); }
 
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
 
-    // Sets minimum auto increment for force redraw frames after basic events (the smallest value is 2)
-    MRVIEWER_API void setMinimumForceRedrawFramesAfterEvents( int minimumIncrement );
     // if true only last frame of force redraw after events will be swapped, otherwise each will be swapped
     bool swapOnLastPostEventsRedraw{ true };
+    // minimum auto increment force redraw frames after events
+    int forceRedrawMinimumIncrementAfterEvents{ 4 };
 
     // Increment number of forced frames to redraw in event loop
     // if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not
     MRVIEWER_API void incrementForceRedrawFrames( int i = 1, bool swapOnLastOnly = false );
 
-    // Returns true if current frame will be swapped on display
+    // Returns true if current frame will be shown on display
     MRVIEWER_API bool isCurrentFrameSwapping() const;
 
     // types of counted events
@@ -577,9 +581,8 @@ private:
     static void emsMainInfiniteLoop();
 #endif
 #endif
+    void draw_( bool force );
 
-    // minimum auto increment force redraw frames after events
-    int forceRedrawMinimumIncrement_{ 4 };
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
@@ -597,13 +600,13 @@ private:
         size_t swappedFrameCounter{ 0 };
         size_t startFrameNum{ 0 };
         size_t fps{ 0 };
-        long long drawTimeMilliSec{ 0 };
+        std::chrono::duration<double> drawTimeMilliSec{ 0 };
         void startDraw();
         void endDraw( bool swapped );
         void reset();
     private:
         long long startFPSTime_{ 0 };
-        long long startDrawTime_{ 0 };
+        std::chrono::time_point<std::chrono::high_resolution_clock> startDrawTime_;
     } frameCounter_;
 
     mutable struct EventsCounter

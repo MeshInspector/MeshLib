@@ -20,6 +20,7 @@
 #include "MRTriMath.h"
 #include "MRQuadraticForm.h"
 #include "MRPch/MRTBB.h"
+#include "MROrder.h"
 
 namespace MR
 {
@@ -689,7 +690,7 @@ void Mesh::addPartByMask( const Mesh & from, const FaceBitSet & fromFaces, bool 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.count(), flipOrientation, thisContours, fromContours, map );
 }
 
 void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool flipOrientation,
@@ -698,11 +699,11 @@ void Mesh::addPartByFaceMap( const Mesh & from, const FaceMap & fromFaces, bool 
     const PartMapping & map )
 {
     MR_TIMER
-    addPartBy( from, begin( fromFaces ), end( fromFaces ), flipOrientation, thisContours, fromContours, map );
+    addPartBy( from, begin( fromFaces ), end( fromFaces ), fromFaces.size(), flipOrientation, thisContours, fromContours, map );
 }
 
 template<typename I>
-void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
+void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map )
@@ -712,7 +713,7 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
     VertHashMap localVmap;
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartBy( from.topology, fbegin, fend, flipOrientation, thisContours, fromContours, map );
+    topology.addPartBy( from.topology, fbegin, fend, fcount, flipOrientation, thisContours, fromContours, map );
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
@@ -724,12 +725,12 @@ void Mesh::addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation,
 }
 
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,
-    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, bool flipOrientation,
+    SetBitIteratorT<FaceBitSet> fbegin, SetBitIteratorT<FaceBitSet> fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map );
 template MRMESH_API void Mesh::addPartBy( const Mesh & from,
-    FaceMap::iterator fbegin, FaceMap::iterator fend, bool flipOrientation,
+    FaceMap::iterator fbegin, FaceMap::iterator fend, size_t fcount, bool flipOrientation,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map );
@@ -745,17 +746,33 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-void Mesh::packOptimally( const PartMapping & map )
+PackMapping Mesh::packOptimally()
 {
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
-    Mesh packed;
-    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
-    // preserve AABB tree in this
-    topology = std::move( packed.topology );
-    points = std::move( packed.points );
+
+    PackMapping map;
+    map.f.b.resize( topology.faceSize() );
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    map.v = getVertexOrdering( map.f, topology );
+    map.e = getEdgeOrdering( map.f, topology );
+    topology.pack( map );
+
+    VertCoords newPoints( map.v.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( points.size() ) ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        {
+            auto newv = map.v.b[oldv];
+            if ( !newv )
+                continue;
+            newPoints[newv] = points[oldv];
+        }
+    } );
+    points = std::move( newPoints );
+    return map;
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

@@ -1,32 +1,11 @@
 #include "MRTimer.h"
-#include "MRLog.h"
-#include <map>
-#include <thread>
+#include "MRTimeRecord.h"
 #include <sstream>
 
 using namespace std::chrono;
 
 namespace MR
 {
-
-struct SimpleTimeRecord
-{
-    int count = 0;
-    nanoseconds time = {};
-    double seconds() const { return time.count() * 1e-9; }
-};
-
-struct TimeRecord : SimpleTimeRecord
-{
-    TimeRecord* parent = nullptr;
-    std::map<std::string, TimeRecord> children;
-
-    // returns summed time of immediate children
-    nanoseconds childTime() const;
-    nanoseconds myTime() const { return time - childTime(); }
-
-    double mySeconds() const { return myTime().count() * 1e-9; }
-};
 
 nanoseconds TimeRecord::childTime() const
 {
@@ -100,41 +79,58 @@ void printSummarizedRecords( const TimeRecord& root, const std::string& name, co
     }
 }
 
-struct RootTimeRecord : TimeRecord
-{
-    time_point<high_resolution_clock> started = high_resolution_clock::now();
-    bool printTreeInDtor = true;
-    double minTimeSec = 0.1;
-    // prolong logger life
-    std::shared_ptr<spdlog::logger> loggerHandle = Logger::instance().getSpdLogger();
-    RootTimeRecord()
-    {
-        count = 1;
-    }
-    void printTree()
-    {
-        loggerHandle->info( "Time Tree (min printed time {} sec):", minTimeSec );
-        std::stringstream ss;
-        ss << std::setw( 9 ) << std::right << "Count";
-        ss << std::setw( 12 ) << std::right << "Time";
-        ss << std::setw( 12 ) << std::right << "Self time";
-        ss << "    Name";
-        loggerHandle->info( ss.str() );
-        time = high_resolution_clock::now() - started;
-        printTimeRecord( *this, "(total)", 4, loggerHandle, minTimeSec );
-        printSummarizedRecords( *this, "(other)", loggerHandle, minTimeSec );
-    }
-    ~RootTimeRecord()
-    {
-        if ( !printTreeInDtor )
-            return;
-        printTree();
-    }
-};
+static thread_local TimeRecord* currentRecord = nullptr;
 
-static RootTimeRecord rootTimeRecord;
-static TimeRecord* currentRecord = &rootTimeRecord;
-static auto mainThreadId = std::this_thread::get_id();
+ThreadRootTimeRecord::ThreadRootTimeRecord( const char * tdName ) : threadName( tdName )
+{
+    count = 1;
+}
+
+void ThreadRootTimeRecord::printTree()
+{
+    loggerHandle->info( "{} thread time tree (min printed time {} sec):", threadName, minTimeSec );
+    std::stringstream ss;
+    ss << std::setw( 9 ) << std::right << "Count";
+    ss << std::setw( 12 ) << std::right << "Time";
+    ss << std::setw( 12 ) << std::right << "Self time";
+    ss << "    Name";
+    loggerHandle->info( ss.str() );
+    time = high_resolution_clock::now() - started;
+    printTimeRecord( *this, "(total)", 4, loggerHandle, minTimeSec );
+    printSummarizedRecords( *this, "(other)", loggerHandle, minTimeSec );
+}
+
+ThreadRootTimeRecord::~ThreadRootTimeRecord()
+{
+    if ( !printTreeInDtor )
+        return;
+    printTree();
+}
+
+void registerThreadRootTimeRecord( ThreadRootTimeRecord & root )
+{
+    if( currentRecord == nullptr )
+        currentRecord = &root;
+    else
+        assert( false );
+}
+
+void unregisterThreadRootTimeRecord( ThreadRootTimeRecord & root )
+{
+    if( currentRecord == &root )
+        currentRecord = nullptr;
+    else
+        assert( false );
+}
+
+static struct MainThreadRootTimeRecord  : public ThreadRootTimeRecord
+{
+    MainThreadRootTimeRecord() : ThreadRootTimeRecord( "Main" )
+    {
+        assert( currentRecord == nullptr );
+        currentRecord = this;
+    }
+} rootTimeRecord;
 
 void printTimingTreeAtEnd( bool on, double minTimeSec )
 {
@@ -182,11 +178,11 @@ void Timer::restart( std::string name )
 
 void Timer::start( std::string name )
 {
-    if ( std::this_thread::get_id() != mainThreadId )
+    auto parent = currentRecord;
+    if ( !parent )
         return;
     started_ = true;
     start_ = high_resolution_clock::now();
-    auto parent = currentRecord;
     currentRecord = &parent->children[ std::move( name ) ];
     currentRecord->parent = parent;
 }
@@ -195,6 +191,7 @@ void Timer::finish()
 {
     if ( !started_ )
         return;
+    started_ = false;
     auto currentParent = currentRecord->parent;
     if ( !currentParent )
         return;

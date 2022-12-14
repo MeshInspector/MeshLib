@@ -11,6 +11,7 @@ def test_subdivider():
     settings.maxEdgeLen = 0.3
     settings.maxEdgeSplits = 5
     settings.maxDeviationAfterFlip = 0.2
+    settings.region = None
     mrmesh.subdivideMesh(torus, settings)
 
     assert (torus.topology.getValidFaces().count() > countInit)

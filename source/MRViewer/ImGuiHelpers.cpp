@@ -12,6 +12,8 @@
 #include "MRRenderLinesObject.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRPlaneWidget.h"
+#include "MRColorTheme.h"
+#include "MRMesh/MRColor.h"
 
 namespace ImGui
 {
@@ -726,7 +728,10 @@ void EndCustomStatePlugin()
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
 {
+    const auto color = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32();
+	ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
     bool started = BeginPopupModal( label, open, flags );
+    ImGui::PopStyleColor();
     if ( started )
         GetCurrentContext()->DimBgRatio = 1.0f;
     return started;

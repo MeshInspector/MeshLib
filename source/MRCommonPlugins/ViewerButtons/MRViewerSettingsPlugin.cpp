@@ -7,7 +7,10 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
-#include <GLFW/glfw3.h>
+#include "MRViewer/MRViewerSettingsManager.h"
+#include "MRViewer/MRGLMacro.h"
+#include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRRibbonConstants.h"
 
 namespace MR
 {
@@ -16,6 +19,16 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     StatePlugin( "Viewer settings" )
 {
     shadowGl_ = std::make_unique<ShadowsGL>();
+    CommandLoop::appendCommand( [maxSamples = &maxSamples_, curSamples = &curSamples_, storedSamples = &storedSamples_] ()
+    {
+        if ( getViewerInstance().isGLInitialized() && loadGL() )
+        {
+            GL_EXEC( glGetIntegerv( GL_MAX_SAMPLES, maxSamples ) );
+            GL_EXEC( glGetIntegerv( GL_SAMPLES, curSamples ) );
+            *maxSamples = std::max( std::min( *maxSamples, 16 ), *curSamples ); // there are some known issues with 32 MSAA
+            *storedSamples = *curSamples;
+        }
+    } );
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -170,6 +183,40 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
+        if ( viewer->isGLInitialized() )
+        {
+            if ( maxSamples_ > 1 )
+            {
+                auto backUpSamples = storedSamples_;
+                ImGui::Text( "Multisample anti-aliasing (MSAA):" );
+                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
+                int couter = 0;
+                for ( int i = 0; i <= maxSamples_; i <<= 1 )
+                {
+                    if ( i == 0 )
+                    {
+                        RibbonButtonDrawer::GradientRadioButton( "Off", &storedSamples_, i );
+                        ++i;
+                    }
+                    else
+                    {
+                        std::string label = 'x' + std::to_string( i );
+                        RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
+                    }
+                    if ( i << 1 <= maxSamples_ && ( ++couter ) % 3 != 0 )
+                        ImGui::SameLine( ( couter % 3 ) * menuScaling * 80.0f );
+                }
+                if ( backUpSamples != storedSamples_ )
+                {
+                    if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+                        settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
+                    
+                    needReset_ = storedSamples_ != curSamples_;
+                }
+                if ( needReset_ )
+                    ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
+            }
+        }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
         {
             bool isEnableShadows = shadowGl_->isEnabled();
@@ -264,7 +311,7 @@ bool ViewerSettingsPlugin::onDisable_()
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 500 * scaling, 160 * scaling );
+    ImVec2 windowSize( 500 * scaling, 165 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -290,6 +337,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );
 
+        const float posY = ImGui::GetCursorPosY();
+        ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
@@ -297,7 +346,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x - 150.0f );
 
-        ImGui::Button( "Set other", ImVec2( -1, 0 ) );
+		ImGui::SetCursorPosY( posY );
+        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, 0 ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -355,8 +405,8 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( quickAccessList_->size() ), maxQuickAccessSize_ );
-
-    const float buttonHeight = 20 * scaling;
+    
+    const float buttonHeight = cGradientButtonFramePadding * 2 * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
     const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
 
     ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
@@ -365,7 +415,7 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
 
     ImGui::EndChild();
 
-    if ( ImGui::Button( "Reset to default", ImVec2( 0, buttonHeight ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
     {
         auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
         if ( ribbonMenu )

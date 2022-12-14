@@ -36,6 +36,7 @@ cd ${MR_LIB_DIR}
 find . -name \*.so* -exec sudo cp -R --preserve=links -p {} ${MR_INSTALL_THIRDPARTY_DIR} \;
 #copy fonts
 find . -name \*.ttf -exec sudo cp -p {} ${MR_INSTALL_FONTS_DIR} \;
+find . -name \*.otf -exec sudo cp -p {} ${MR_INSTALL_FONTS_DIR} \;
 cd -
 
 # headers copy

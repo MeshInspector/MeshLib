@@ -64,7 +64,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
         return tl::make_unexpected( "Operation was canceled." );
 
     // Make offset mesh
-    auto newMesh = gridToMesh( grid, voxelSizeVector, offsetInVoxels, params.adaptivity, params.callBack ?
+    auto newMesh = gridToMesh( std::move( grid ), voxelSizeVector, offsetInVoxels, params.adaptivity, params.callBack ?
                              [params]( float p )
     {
         return params.callBack( 0.5f + p * 0.5f );

@@ -44,7 +44,8 @@ IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ENDIF() # NOT MR_EMSCRIPTEN_SINGLETHREAD
 
-set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
 set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
 
@@ -88,56 +89,41 @@ ELSE()
  IF( ${distro} STREQUAL "Fedora Linux")
   SET(MR_FEDORA TRUE)
  ENDIF() # Fedora
-
- include_directories(/usr/include)
 ENDIF() # APPLE
 
 IF(${MR_UBUNTU22} OR APPLE)
- SET(PYTHON_VERSION 3.10)
+ SET(MR_PYTHON_VERSION 3.10)
 ELSEIF(${MR_UBUNTU})
- SET(PYTHON_VERSION 3.8)
+ SET(MR_PYTHON_VERSION 3.8)
 ELSE()
- SET(PYTHON_VERSION 3.9)
+ SET(MR_PYTHON_VERSION 3.9)
 ENDIF()
 IF ($ENV{MESHLIB_PYTHON_VERSION})
- SET(PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
+ SET(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
 ENDIF()
 
 IF(APPLE)
- LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${PYTHON_VERSION}/Frameworks/Python.framework/Versions/${PYTHON_VERSION}/lib/)
+ LINK_DIRECTORIES(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
+ include_directories(${HOMEBREW_PREFIX}/include)
+ find_package(pybind11 REQUIRED)
 ENDIF()
 
 set(PYTHON_VAR "python")
-string(CONCAT PYTHON_LIB ${PYTHON_VAR}${PYTHON_VERSION})
+string(CONCAT MR_PYTHON_LIB ${PYTHON_VAR}${MR_PYTHON_VERSION})
 
-find_package(Python ${PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonInterp ${PYTHON_VERSION} EXACT REQUIRED)
-find_package(PythonLibs ${PYTHON_VERSION} EXACT REQUIRED)
+find_package(Python ${MR_PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonInterp ${MR_PYTHON_VERSION} EXACT REQUIRED)
+find_package(PythonLibs ${MR_PYTHON_VERSION} EXACT REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_PATH})
 ENDIF() # NOT MR_EMSCRIPTEN
-
-IF(APPLE)
- include_directories(${HOMEBREW_PREFIX}/include)
- find_package(pybind11 REQUIRED)
-ELSE()
- set(PYBIND11_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/pybind11/include)
- include_directories(${PYBIND11_DIR})
-ENDIF()
 
 set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(MR_EMSCRIPTEN)
   add_compile_definitions(__emscripten__)
-  link_directories(${THIRDPARTY_LIB_DIR}/lib)
-  link_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/wasmtbb/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/spdlog/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/jsoncpp/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/googletest/googletest/include)
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR}/libzip/lib)
-  include_directories(${THIRDPARTY_LIB_DIR}/libzip)
+  link_directories(${MESHLIB_THIRDPARTY_DIR}/wasmtbb/build/linux_wasm32_emscripten_emscripten_wasm32_release)
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -s PTHREAD_POOL_SIZE_STRICT=0 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pthreads-mem-growth") # look https://github.com/emscripten-core/emscripten/issues/8287
@@ -162,14 +148,10 @@ pkg_check_modules(GTKMM gtkmm-3.0)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories(${JSONCPP_INCLUDE_DIRS})
 
-IF(NOT APPLE)
- set(OPENVDB_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/openvdb/openvdb)
- include_directories(${OPENVDB_DIR})
-
- IF(${MR_FEDORA} OR ${MR_UBUNTU22})
-  add_compile_definitions(SPDLOG_FMT_EXTERNAL)
- ENDIF()
+IF(${MR_FEDORA} OR ${MR_UBUNTU22})
+ add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 ENDIF()
+
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 

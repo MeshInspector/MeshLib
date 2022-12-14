@@ -121,6 +121,8 @@ tl::expected<void, std::string> toObj( const Mesh & mesh, std::ostream & out, co
                                        ProgressCallback callback )
 {
     MR_TIMER
+    out << "# MeshInspector.com\n";
+
     VertId lastValidPoint = mesh.topology.lastValidVert();
 
     for ( VertId i{ 0 }; i <= lastValidPoint; ++i )
@@ -478,7 +480,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const Mesh& mesh, const st
         res = MR::MeshSave::toPly( mesh, file, colors, callback );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, file, {}, colors, callback );
+        res = MR::MeshSave::toCtm( mesh, file, { .rearrangeTriangles = true }, colors, callback );
 #endif
     else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, file, callback );

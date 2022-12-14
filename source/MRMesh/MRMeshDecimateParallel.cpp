@@ -136,7 +136,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             {
                 subSeqSettings.preCollapse = [&mesh, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool
                 {
-                    return cb(
+                    return cb( 
                         mesh.topology.org( edgeToCollapse ),
                         mesh.topology.dest( edgeToCollapse ),
                         newEdgeOrgPos );

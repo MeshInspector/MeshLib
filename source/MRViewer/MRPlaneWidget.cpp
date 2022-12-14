@@ -90,28 +90,25 @@ void PlaneWidget::updateWidget_( bool updateCameraRotation )
     if ( !planeObj_ )
         definePlane();
 
-    auto viewer = Viewer::instance();
     plane_ = plane_.normalized();
 
     auto trans1 = AffineXf3f::translation( plane_.project( box_.center() ) );
     auto rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), plane_.n ) );
     auto scale1 = AffineXf3f::linear( Matrix3f::scale( box_.diagonal() ) );
-    AffineXf3f transform = trans1 * rot1 * scale1;
+    
     if ( updateCameraRotation )
-        cameraUp3Old_ = viewer->viewport().getUpDirection();
-    Vector3f cameraUp3 = cameraUp3Old_;
-    auto from = transform.A * Vector3f::plusY();
-    auto to = plane_.project( transform.b + cameraUp3 ) - transform.b;
-    auto axis = cross( from, to );
+        cameraUp3Old_ = getViewerInstance().viewport().getUpDirection();
+    Vector3f cameraUp3 = scale1.A * cameraUp3Old_;
+    auto from = rot1.A * Vector3f::plusY();
+    auto to = plane_.project( trans1.b + cameraUp3 ) - trans1.b;
+    auto axis = cross( from, to ).normalized();
     if ( dot( axis, plane_.n ) < 0.0f )
         axis = -plane_.n;
     else
         axis = plane_.n;
-    auto rot2 = Matrix3f::rotation( axis, angle( from, to ) );
-
-    auto lastPlaneTransform = trans1 * AffineXf3f::linear( rot2 ) * rot1;
-    transform = lastPlaneTransform * scale1;
-    planeObj_->setXf( transform );
+    auto rot2 = AffineXf3f::linear( Matrix3f::rotation( axis, angle( from, to ) ) );
+    
+    planeObj_->setXf( trans1 * rot2 * rot1 * scale1 );
 }
 
 bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
@@ -192,7 +189,7 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     auto stopFar = viewport.unprojectFromViewportSpace( { viewportStop.x, viewportStop.y, 1.0f } );
 
     auto prevNorm = plane_.n;
-    plane_ = Plane3f::fromDirAndPt( cross( stopFar - stop, stop - start ).normalized(), start );
+    plane_ = Plane3f::fromDirAndPt( cross( ( stopFar - stop ).normalized(), ( stop - start ).normalized() ).normalized(), start );
     if ( angle( -plane_.n, prevNorm ) < angle( plane_.n, prevNorm ) )
         plane_ = -plane_;
     updatePlane( plane_ );

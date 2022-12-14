@@ -230,7 +230,7 @@ struct [[nodiscard]] Mesh
         const PartMapping & map = {} );
     /// both addPartByMask and addPartByFaceMap call this general implementation
     template<typename I>
-    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, bool flipOrientation = false,
+    MRMESH_API void addPartBy( const Mesh & from, I fbegin, I fend, size_t fcount, bool flipOrientation = false,
         const std::vector<std::vector<EdgeId>> & thisContours = {},
         const std::vector<std::vector<EdgeId>> & fromContours = {},
         PartMapping map = {} );
@@ -239,7 +239,7 @@ struct [[nodiscard]] Mesh
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     // packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
-    MRMESH_API void packOptimally( const PartMapping & map = {} );
+    MRMESH_API PackMapping packOptimally();
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed

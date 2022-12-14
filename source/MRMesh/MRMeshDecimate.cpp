@@ -110,6 +110,8 @@ private:
     const float maxErrorSq_;
     Vector<QuadraticForm3f, VertId> myVertForms_;
     Vector<QuadraticForm3f, VertId> * pVertForms_ = nullptr;
+    VertBitSet bdVerts_;
+
     struct QueueElement
     {
         float c = 0;
@@ -152,9 +154,8 @@ bool MeshDecimator::isInRegion( EdgeId e ) const
         return false;
     if ( !settings_.touchBdVertices )
     {
-        if ( mesh_.topology.isBdVertexInOrg( e, settings_.region ) )
-            return false;
-        if ( mesh_.topology.isBdVertexInOrg( e.sym(), settings_.region ) )
+        if ( bdVerts_.test( mesh_.topology.org( e ) ) ||
+             bdVerts_.test( mesh_.topology.dest( e ) ) )
             return false;
     }
     return true;
@@ -463,12 +464,27 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             settings_.region->reset( r );
     }
     auto eo = collapseEdge( topology, edgeToCollapse );
-    return eo ? vo : VertId{};
+    const auto remainingVertex = eo ? vo : VertId{};
+    if ( !settings_.touchBdVertices && remainingVertex )
+       bdVerts_.set( remainingVertex, mesh_.topology.isBdVertex( remainingVertex, settings_.region ) );
+
+    return remainingVertex;
 }
 
 DecimateResult MeshDecimator::run()
 {
     MR_TIMER;
+
+    if ( !settings_.touchBdVertices )
+    {
+        bdVerts_.clear();
+        bdVerts_.resize( mesh_.topology.vertSize() );
+        BitSetParallelForAll( bdVerts_, [&]( VertId v )
+        {
+            if ( mesh_.topology.isBdVertex( v, settings_.region ) )
+                bdVerts_.set( v );
+        } );
+    }
 
     if ( !initializeQueue_() )
         return res_;

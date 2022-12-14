@@ -168,26 +168,17 @@ static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 #ifndef __EMSCRIPTEN__
 static void glfw_window_maximize( GLFWwindow* /*window*/, int maximized )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window maximaze", [maximized, viewer] ()
-    {
-        viewer->postSetMaximized( bool( maximized ) );
-    } } );
+    MR::getViewerInstance().postSetMaximized( bool( maximized ) );
 }
 
 static void glfw_window_iconify( GLFWwindow* /*window*/, int iconified )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window iconify", [iconified, viewer] ()
-    {
-        viewer->postSetIconified( bool( iconified ) );
-    } } );
+    MR::getViewerInstance().postSetIconified( bool( iconified ) );
 }
 
 static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->postFocus( bool( focused ) );
+    MR::getViewerInstance().postFocus( bool( focused ) );
 }
 #endif
 

@@ -83,7 +83,7 @@ var updateEvents = function () {
             if (event.type == "pointermove" && !reinterpretEvent) {
                 if (eventButton >= 0) {
                     reinterpretEvent = true;
-                    if (mouseState[eventButton] == 0)
+                    if (mouseState[eventButton] == 0 && event.buttons != 0)
                         mouseState[eventButton] = 1;
                     else
                         mouseState[eventButton] = 0;

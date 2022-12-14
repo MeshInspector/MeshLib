@@ -1394,7 +1394,7 @@ void Viewer::postResize( int w, int h )
     if ( isLaunched_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
-        do draw(); while ( !isCurrentFrameSwapping() );
+        do draw( true ); while ( !isCurrentFrameSwapping() );
     }
 #endif
 }

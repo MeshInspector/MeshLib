@@ -282,7 +282,8 @@ static void _ctmReArrangeTriangles(_CTMcontext * self, CTMuint * aIndices)
   }
 
   // Step 2: Sort the triangles based on the first triangle index
-  qsort((void *) aIndices, self->mTriangleCount, sizeof(CTMuint) * 3, _compareTriangle);
+  if ( self->mRearrangeTriangles )
+    qsort((void *) aIndices, self->mTriangleCount, sizeof(CTMuint) * 3, _compareTriangle);
 }
 
 //-----------------------------------------------------------------------------
@@ -926,8 +927,7 @@ int _ctmCompressMesh_MG2(_CTMcontext * self)
     free((void *) sortVertices);
     return CTM_FALSE;
   }
-  if ( self->mRearrangeTriangles )
-    _ctmReArrangeTriangles(self, indices);
+  _ctmReArrangeTriangles(self, indices);
 
   // Calculate index deltas (entropy-reduction)
   deltaIndices = (CTMuint *) malloc(sizeof(CTMuint) * self->mTriangleCount * 3);

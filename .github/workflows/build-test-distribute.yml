@@ -31,6 +31,7 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
+    if: ${{false}}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
@@ -63,6 +64,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
+    if: ${{false}}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
@@ -70,6 +72,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
+    if: ${{false}}
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
@@ -77,7 +80,8 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   update-win-version:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{false}}
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [ windows-build-test ]
     timeout-minutes: 15
     runs-on: windows-2019

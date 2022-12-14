@@ -129,7 +129,8 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["BackgroundPadding"] = backgroundPadding_;
 
     serializeToJson( sourcePointColor_, root["Colors"]["SourcePoint"] );
-    serializeToJson( leaderLineColor_, root["Colors"]["LeaderLine"] );
+	serializeToJson( leaderLineColor_, root["Colors"]["LeaderLine"] );
+	serializeToJson( contourColor_, root["Colors"]["Contour"] );
 }
 
 void ObjectLabel::deserializeFields_( const Json::Value& root )
@@ -151,8 +152,9 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["BackgroundPadding"].isDouble() )
         backgroundPadding_ = root["BackgroundPadding"].asFloat();
 
-    deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_ );
-    deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_ );
+	deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_ );
+	deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_ );
+	deserializeFromJson( root["Colors"]["Contour"], contourColor_ );
 }
 
 void ObjectLabel::setupRenderObject_() const
@@ -266,7 +268,9 @@ const ViewportMask &ObjectLabel::getVisualizePropertyMask( unsigned int type ) c
     case LabelVisualizePropertyType::SourcePoint:
         return sourcePoint_;
     case LabelVisualizePropertyType::Background:
-        return background_;
+		return background_;
+	case LabelVisualizePropertyType::Contour:
+		return contour_;
     case LabelVisualizePropertyType::LeaderLine:
         return leaderLine_;
     default:
@@ -315,6 +319,14 @@ void ObjectLabel::setLeaderLineColor( const Color &color )
         return;
 
     leaderLineColor_ = color;
+}
+
+void ObjectLabel::setContourColor( const Color& color )
+{
+	if ( contourColor_ == color )
+		return;
+
+    contourColor_ = color;
 }
 
 }

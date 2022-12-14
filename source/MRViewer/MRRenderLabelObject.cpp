@@ -99,13 +99,45 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 
     GL_EXEC( glUniform2f( glGetUniformLocation( shader, "modifier" ), modifier.x, modifier.y ) );
 
-    Vector2f shift = objLabel_->getPivotShift();
-    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
-
     const auto& pos = objLabel_->getLabel().position;
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
 
-    const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
+	Vector2f shift = objLabel_->getPivotShift();
+	if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Contour, renderParams.viewportId ) )
+	{
+		const auto color = Vector4f( objLabel_->getContourColor() );
+		GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), color[0], color[1], color[2], color[3] ) );
+
+		auto contourFn = [&] ( Vector2f contourShift )
+		{
+			const Vector2f newShift = shift + contourShift;
+			GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), newShift.x, newShift.y ) );
+			getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
+			GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
+		};
+		contourFn( Vector2f( 1, 1 ) );
+		contourFn( Vector2f( 0.5, 1 ) );
+		contourFn( Vector2f( 0, 1 ) );
+		contourFn( Vector2f( -0.5, 1 ) );
+
+		contourFn( Vector2f( -1, 1 ) );
+		contourFn( Vector2f( -1, 0.5 ) );
+		contourFn( Vector2f( -1, 0 ) );
+		contourFn( Vector2f( -1, -0.5 ) );
+
+		contourFn( Vector2f( -1, -1 ) );
+		contourFn( Vector2f( -0.5, -1 ) );
+		contourFn( Vector2f( 0, -1 ) );
+		contourFn( Vector2f( 0.5, -1 ) );
+
+		contourFn( Vector2f( 1, -1 ) );
+		contourFn( Vector2f( 1, -0.5 ) );
+		contourFn( Vector2f( 1, 0 ) );
+		contourFn( Vector2f( 1, 0.5 ) );
+	}
+	GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
+
+	const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );

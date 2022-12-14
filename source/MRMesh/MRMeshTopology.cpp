@@ -1449,27 +1449,27 @@ inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, Ed
     return res;
 }
 
-void MeshTopology::packReorder( const UndirectedEdgeBMap & emap, const FaceBMap & fmap, const VertBMap & vmap )
+void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER
 
     Vector<HalfEdgeRecord, EdgeId> newEdges;
-    resizeNoInit( newEdges, 2 * emap.tsize );
+    resizeNoInit( newEdges, 2 * map.e.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
         for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
         {
-            auto newUe = emap.b[oldUe];
+            auto newUe = map.e.b[oldUe];
             if ( !newUe )
                 continue;
             auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
             {
                 HalfEdgeRecord res;
-                res.next = getAt( emap.b, he.next );
-                res.prev = getAt( emap.b, he.prev );
-                res.org = getAt( vmap.b, he.org );
-                res.left = getAt( fmap.b, he.left );
+                res.next = getAt( map.e.b, he.next );
+                res.prev = getAt( map.e.b, he.prev );
+                res.org = getAt( map.v.b, he.org );
+                res.left = getAt( map.f.b, he.left );
                 return res;
             };
             newEdges[ EdgeId{newUe} ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
@@ -1479,16 +1479,16 @@ void MeshTopology::packReorder( const UndirectedEdgeBMap & emap, const FaceBMap 
     edges_ = std::move( newEdges );
 
     Vector<EdgeId, FaceId> newEdgePerFace;
-    resizeNoInit( newEdgePerFace, fmap.tsize );
+    resizeNoInit( newEdgePerFace, map.f.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
         [&]( const tbb::blocked_range<FaceId> & range )
     {
         for ( auto oldf = range.begin(); oldf < range.end(); ++oldf )
         {
-            auto newf = fmap.b[oldf];
+            auto newf = map.f.b[oldf];
             if ( !newf )
                 continue;
-            newEdgePerFace[newf] = getAt( emap.b, edgePerFace_[oldf] );
+            newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
         }
     } );
     edgePerFace_ = std::move( newEdgePerFace );
@@ -1497,16 +1497,16 @@ void MeshTopology::packReorder( const UndirectedEdgeBMap & emap, const FaceBMap 
     validFaces_.set( 0_f, edgePerFace_.size(), true );
 
     Vector<EdgeId, VertId> newEdgePerVertex;
-    resizeNoInit( newEdgePerVertex, vmap.tsize );
+    resizeNoInit( newEdgePerVertex, map.v.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
         [&]( const tbb::blocked_range<VertId> & range )
     {
         for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
         {
-            auto newv = vmap.b[oldv];
+            auto newv = map.v.b[oldv];
             if ( !newv )
                 continue;
-            newEdgePerVertex[newv] = getAt( emap.b, edgePerVertex_[oldv] );
+            newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
         }
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );

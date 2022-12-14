@@ -50,6 +50,7 @@ class MRMESH_CLASS VoxelTag;
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
 template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
+struct PackMapping;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;

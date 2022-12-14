@@ -116,4 +116,13 @@ struct BMap
     size_t tsize; ///< target size, all values inside b must be less than this value
 };
 
+// mapping of mesh elements: old -> new,
+// the mapping is tight (or packing) in the sense that there are no unused new elements within [0, (e/f/v).tsize)
+struct PackMapping
+{
+    UndirectedEdgeBMap e;
+    FaceBMap f;
+    VertBMap v;
+};
+
 } // namespace MR

@@ -746,31 +746,33 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-void Mesh::packOptimally( const PartMapping & )
+PackMapping Mesh::packOptimally()
 {
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    FaceBMap faceMap;
-    faceMap.b.resize( topology.faceSize() );
-    AABBTreeOwner_.get()->getLeafOrderAndReset( faceMap );
-    auto vertMap = getVertexOrdering( faceMap, topology );
-    auto edgeMap = getEdgeOrdering( faceMap, topology );
-    topology.packReorder( edgeMap, faceMap, vertMap );
 
-    VertCoords newPoints( vertMap.tsize );
+    PackMapping map;
+    map.f.b.resize( topology.faceSize() );
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    map.v = getVertexOrdering( map.f, topology );
+    map.e = getEdgeOrdering( map.f, topology );
+    topology.pack( map );
+
+    VertCoords newPoints( map.v.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_v, VertId( points.size() ) ),
         [&]( const tbb::blocked_range<VertId> & range )
     {
         for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
         {
-            auto newv = vertMap.b[oldv];
+            auto newv = map.v.b[oldv];
             if ( !newv )
                 continue;
             newPoints[newv] = points[oldv];
         }
     } );
     points = std::move( newPoints );
+    return map;
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

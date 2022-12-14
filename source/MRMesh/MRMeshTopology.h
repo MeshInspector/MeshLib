@@ -271,7 +271,7 @@ public:
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
-    MRMESH_API void packReorder( const UndirectedEdgeBMap & emap, const FaceBMap & fmap, const VertBMap & vmap );
+    MRMESH_API void pack( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;

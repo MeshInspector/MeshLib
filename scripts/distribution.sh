@@ -35,7 +35,7 @@ MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib"
 mkdir -p distr/meshlib-dev${MR_INSTALL_RES_DIR}
 MR_VERSION="0.0.0.0"
 if [ "${1}" ]; then
-  ${MR_VERSION}="${1:1}"
+  MR_VERSION="${1:1}"
 fi
 echo ${MR_VERSION} > distr/meshlib-dev${MR_INSTALL_RES_DIR}/mr.version
 

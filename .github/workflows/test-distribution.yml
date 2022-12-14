@@ -36,5 +36,8 @@ jobs:
 
       - name: Install Release
         run: |
-          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo xvfb
           sudo apt-get -y install ./*${{matrix.name}}*.deb
+
+      - name: Run MeshViewer
+        run: xvfb-run -a /usr/local/bin/MeshViewer -hidden -noEventLoop

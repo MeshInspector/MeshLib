@@ -894,6 +894,9 @@
     <ClInclude Include="MRTimeRecord.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MROrder.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1486,6 +1489,9 @@
     </ClCompile>
     <ClCompile Include="MRUniteManyMeshes.cpp">
       <Filter>Source Files\Boolean</Filter>
+    </ClCompile>
+    <ClCompile Include="MROrder.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

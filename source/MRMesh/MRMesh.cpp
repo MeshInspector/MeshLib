@@ -20,6 +20,7 @@
 #include "MRTriMath.h"
 #include "MRQuadraticForm.h"
 #include "MRPch/MRTBB.h"
+#include "MROrder.h"
 
 namespace MR
 {
@@ -745,17 +746,33 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-void Mesh::packOptimally( const PartMapping & map )
+PackMapping Mesh::packOptimally()
 {
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
-    Mesh packed;
-    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
-    // preserve AABB tree in this
-    topology = std::move( packed.topology );
-    points = std::move( packed.points );
+
+    PackMapping map;
+    map.f.b.resize( topology.faceSize() );
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    map.v = getVertexOrdering( map.f, topology );
+    map.e = getEdgeOrdering( map.f, topology );
+    topology.pack( map );
+
+    VertCoords newPoints( map.v.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( points.size() ) ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        {
+            auto newv = map.v.b[oldv];
+            if ( !newv )
+                continue;
+            newPoints[newv] = points[oldv];
+        }
+    } );
+    points = std::move( newPoints );
+    return map;
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

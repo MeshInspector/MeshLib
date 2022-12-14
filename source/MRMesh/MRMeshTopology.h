@@ -264,11 +264,14 @@ public:
         const std::vector<std::vector<EdgeId>> & fromContours = {},
         const PartMapping & map = {} );
 
-    /// tightly packs all arrays eliminating lone edges and invalid face and verts
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
     /// \param rearrangeTriangles if true then calls rotateTriangles() 
     /// and selects the order of triangles according to the order of their vertices
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
+    MRMESH_API void pack( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;

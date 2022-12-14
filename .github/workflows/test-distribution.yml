@@ -1,0 +1,40 @@
+name: Test Distribution
+
+on:
+  workflow_call:
+
+jobs:
+  ubuntu-test:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu:20.04", "ubuntu:22.04"]
+        include:
+          - os: "ubuntu:20.04"
+            name: "ubuntu20"
+          - os: "ubuntu:22.04"
+            name: "ubuntu22"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Python setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Download Distributive
+        uses: actions/download-artifact@v3
+        with:
+          name: Distributives
+
+      - name: Install Release
+        run: |
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
+          sudo apt-get -y install ./*${{matrix.name}}*.deb

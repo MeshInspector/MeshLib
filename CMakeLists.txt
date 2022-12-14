@@ -30,7 +30,7 @@ ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
 project (MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshViewer\")
+add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -155,6 +155,13 @@ ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
+set(MR_BIN_DEST "bin")
+set(MR_INCLUDE_DEST "include/MeshLib")
+set(MR_MAIN_LIB_DEST "lib/MeshLib")
+set(MR_PY_LIB_DEST "${MR_MAIN_LIB_DEST}/meshlib")
+set(MR_RESOURCES_DEST "etc/MeshLib")
+set(MR_FONTS_DEST "share/fonts")
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
@@ -166,3 +173,10 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+
+install(FILES meshlib-config.cmake DESTINATION ${MR_MAIN_LIB_DEST})
+
+install(EXPORT MRMesh DESTINATION "${MR_MAIN_LIB_DEST}")
+install(EXPORT MRViewer DESTINATION "${MR_MAIN_LIB_DEST}")
+install(EXPORT MRCommonPlugins DESTINATION "${MR_MAIN_LIB_DEST}")
+#install(EXPORT MRViewerApp DESTINATION "${MR_MAIN_LIB_DEST}")

@@ -68,17 +68,14 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
 }
 
 tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
-    const std::vector<openvdb::Vec3s>& pointsArg, 
-    const std::vector<openvdb::Vec3I>& trisArg,
-    const std::vector<openvdb::Vec4I>& quadArg,
+    std::vector<openvdb::Vec3s>&& pointsArg, 
+    std::vector<openvdb::Vec3I>&& trisArg,
+    std::vector<openvdb::Vec4I>&& quadArg,
     ProgressCallback cb )
 {
     if ( cb && !cb( 0.0f ) )
             return tl::make_unexpected( "Operation was canceled." );
     std::vector<Vector3f> points( pointsArg.size() );
-    Triangulation t;
-    const size_t tNum = trisArg.size() + 2 * quadArg.size();
-    t.reserve( tNum );
     for ( int i = 0; i < points.size(); ++i )
     {
         points[i][0] = pointsArg[i][0] * voxelSize[0];
@@ -88,6 +85,11 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         if ( cb && !(i & 0x3FF) && !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
+    pointsArg = std::vector<openvdb::Vec3s>{};
+
+    Triangulation t;
+    const size_t tNum = trisArg.size() + 2 * quadArg.size();
+    t.reserve( tNum );
     size_t tCounter = 0;
     for ( const auto& tri : trisArg )
     {
@@ -104,6 +106,8 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         if ( cb && !(tCounter & 0x3FF) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
+    trisArg = std::vector<openvdb::Vec3I>{};
+
     for ( const auto& quad : quadArg )
     {
         ThreeVertIds newTri
@@ -126,6 +130,7 @@ tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
         if ( cb && !(tCounter & 0x3FE) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
                 return tl::make_unexpected( "Operation was canceled." );
     }
+    quadArg = std::vector<openvdb::Vec4I>{};
 
     Mesh res;
     res.topology = MeshBuilder::fromTriangles( t );
@@ -298,7 +303,7 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
             return cb( 0.2f + 0.8f * p );
         };
     }
-    return convertFromVDMMesh( voxelSize, pointsRes, trisRes, quadRes, passCallback );
+    return convertFromVDMMesh( voxelSize, std::move( pointsRes ), std::move( trisRes ), std::move( quadRes ), passCallback );
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
@@ -386,7 +391,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
         };
     }
 
-    return convertFromVDMMesh( Vector3f::diagonal( voxelSize ), points, tris, quads, passCb );
+    return convertFromVDMMesh( Vector3f::diagonal( voxelSize ), std::move( points ), std::move( tris ), std::move( quads ), passCb );
 }
 
 } //namespace MR

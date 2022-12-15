@@ -115,25 +115,15 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 			getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 			GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 		};
-		contourFn( Vector2f( 1, 1 ) );
-		contourFn( Vector2f( 0.5, 1 ) );
-		contourFn( Vector2f( 0, 1 ) );
-		contourFn( Vector2f( -0.5, 1 ) );
-
-		contourFn( Vector2f( -1, 1 ) );
-		contourFn( Vector2f( -1, 0.5 ) );
-		contourFn( Vector2f( -1, 0 ) );
-		contourFn( Vector2f( -1, -0.5 ) );
-
-		contourFn( Vector2f( -1, -1 ) );
-		contourFn( Vector2f( -0.5, -1 ) );
-		contourFn( Vector2f( 0, -1 ) );
-		contourFn( Vector2f( 0.5, -1 ) );
-
-		contourFn( Vector2f( 1, -1 ) );
-		contourFn( Vector2f( 1, -0.5 ) );
-		contourFn( Vector2f( 1, 0 ) );
-		contourFn( Vector2f( 1, 0.5 ) );
+        for ( int i = 0; i < 2; ++i );
+		contourFn( Vector2f( 1, 1 ) / 2.f );
+		contourFn( Vector2f( 0, 1 ) / 2.f );
+		contourFn( Vector2f( -1, 1 ) / 2.f );
+		contourFn( Vector2f( -1, 0 ) / 2.f );
+		contourFn( Vector2f( -1, -1 ) / 2.f );
+		contourFn( Vector2f( 0, -1 ) / 2.f );
+		contourFn( Vector2f( 1, -1 ) / 2.f );
+		contourFn( Vector2f( 1, 0 ) / 2.f );
 	}
 	GL_EXEC( glUniform2f( glGetUniformLocation( shader, "shift" ), shift.x, shift.y ) );
 

@@ -7,6 +7,7 @@
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+//#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <Eigen/Core>
 #pragma clang diagnostic pop
 #pragma warning(pop)

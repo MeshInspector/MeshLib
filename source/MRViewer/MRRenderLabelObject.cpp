@@ -115,7 +115,6 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 			getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 			GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
 		};
-        for ( int i = 0; i < 2; ++i );
 		contourFn( Vector2f( 1, 1 ) / 2.f );
 		contourFn( Vector2f( 0, 1 ) / 2.f );
 		contourFn( Vector2f( -1, 1 ) / 2.f );

@@ -14,6 +14,7 @@ struct LabelVisualizePropertyType : VisualizeMaskType
         SourcePoint = VisualizeMaskType::VisualizePropsCount,
         LeaderLine,
         Background,
+        Contour,
 
         LabelVisualizePropsCount
     };
@@ -100,6 +101,10 @@ public:
     MRMESH_API virtual void setLeaderLineColor( const Color& color );
     /// return color of leader line
     const Color& getLeaderLineColor() const { return leaderLineColor_; }
+    /// sets contour color
+    MRMESH_API void setContourColor( const Color& color );
+    /// return contour color
+    const Color& getContourColor() const { return leaderLineColor_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
@@ -137,10 +142,12 @@ protected:
 
     ViewportMask sourcePoint_;
     ViewportMask background_;
+    ViewportMask contour_;
     ViewportMask leaderLine_;
 
     Color sourcePointColor_;
     Color leaderLineColor_;
+    Color contourColor_{ Color( 0.5f, 0.5f, 0.5f, 1.f ) };
 
     ObjectLabel( const ObjectLabel& other ) = default;
 

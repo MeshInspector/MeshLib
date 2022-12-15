@@ -1425,6 +1425,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid, true );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Source point", LabelVisualizePropertyType::SourcePoint, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Background", LabelVisualizePropertyType::Background, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Contour", LabelVisualizePropertyType::Contour, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
     }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
@@ -1534,6 +1535,13 @@ MR_SUPPRESS_WARNING_POP
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
             data->setLeaderLineColor( Color( color ) );
+        } );
+        make_color_selector<ObjectLabel>( selectedLabelObjs, "Contour color", [&] ( const ObjectLabel* data )
+        {
+            return Vector4f( data->getContourColor() );
+        }, [&] ( ObjectLabel* data, const Vector4f& color )
+        {
+            data->setContourColor( Color( color ) );
         } );
     }
 

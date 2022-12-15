@@ -62,20 +62,22 @@ private:
     // merging same vertices can make multiple edges, so clear it and update winding modifiers for merged edges
     void removeMultipleAfterMerge_();
 
+    struct LoneRightmostLeft
+    {
+        EdgeId id;
+        EdgeId upper;
+        EdgeId lower;
+    };
     // active edges - edges that currently intersect sweep line
     struct ActiveEdgeInfo
     {
         ActiveEdgeInfo( EdgeId e, float y ) :id{ e }, yPos{ y }{}
         EdgeId id;
         float yPos{ FLT_MAX };
+        LoneRightmostLeft loneRightmostLeft;
     };
-    std::vector<ActiveEdgeInfo> activeSweepEdges_;
-    struct LoneRightmostLeft
-    {
-        EdgeId id;
-        EdgeId upper;
-        EdgeId lower;
-    } loneRightmostLeft_;
+    LoneRightmostLeft lastLoneRightmostLeft_;
+    std::vector<ActiveEdgeInfo> activeSweepEdges_;;
     bool processOneVert_( VertId v );
     bool resolveIntersectios_();
 };
@@ -114,7 +116,6 @@ std::optional<Mesh> PlanarTriangulator::run()
         if ( !processOneVert_( active.id ) )
             return {};
     }
-
     // triangulate
     for ( auto e : undirectedEdges( mesh_.topology ) )
     {
@@ -129,7 +130,7 @@ std::optional<Mesh> PlanarTriangulator::run()
         if ( !windingInfo_[e].inside() )
             continue;
         FillHoleParams params;
-        params.metric = getPlaneFillMetric( mesh_, dirE );
+        params.metric = getSimplePlanarMetric( mesh_, dirE );
         fillHole( mesh_, dirE, params );
     }
     makeDeloneEdgeFlips( mesh_, { .maxDeviationAfterFlip = std::numeric_limits<float>::epsilon() }, 100 );
@@ -353,8 +354,9 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
     assert( rightGoingEdges.empty() || lowestRight != INT_MAX );
 
+    bool hasOuter = activeVPosition != INT_MAX && activeVPosition != -1;
     // connect with outer contour if it has no left and inside (containing region should be internal)
-    if ( !hasLeft && activeVPosition != INT_MAX && activeVPosition != -1 && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
+    if ( !hasLeft && hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
         assert( lowestRight != INT_MAX );
         // find helper:
@@ -363,10 +365,9 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         EdgeId helperId;
         auto upper = activeSweepEdges_[activeVPosition + 1].id;
         auto lower = activeSweepEdges_[activeVPosition].id;
-        if ( loneRightmostLeft_.id && loneRightmostLeft_.upper == upper && loneRightmostLeft_.lower == lower )
+        if ( lastLoneRightmostLeft_.id && lastLoneRightmostLeft_.upper == upper && lastLoneRightmostLeft_.lower == lower )
         {
-            helperId = loneRightmostLeft_.id;
-            loneRightmostLeft_.id = EdgeId{};
+            helperId = lastLoneRightmostLeft_.id;
         }
         else
         {
@@ -378,6 +379,8 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 helperId = lower;
         }
         assert( helperId );
+        if ( helperId == lastLoneRightmostLeft_.id )
+            lastLoneRightmostLeft_.id = EdgeId{};
         auto newE = mesh_.topology.makeEdge();
         mesh_.topology.splice( helperId, newE );
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
@@ -386,24 +389,11 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
 
     // connect rightmost left with no right edges to this edge, if needed
-    if ( loneRightmostLeft_.id )
+    if ( hasOuter || lastLoneRightmostLeft_.id )
     {
-        bool canConnect =
-            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
-                v == mesh_.topology.dest( loneRightmostLeft_.upper ) ) ||
-            ( v == mesh_.topology.dest( loneRightmostLeft_.lower ) &&
-                activeVPosition != INT_MAX &&
-                activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper ) ||
-            ( v == mesh_.topology.dest( loneRightmostLeft_.upper ) &&
-                activeVPosition != -1 &&
-                activeSweepEdges_[activeVPosition != INT_MAX ? activeVPosition : int( activeSweepEdges_.size() )].id == loneRightmostLeft_.lower ) ||
-            ( activeVPosition != -1 && activeVPosition != INT_MAX &&
-                activeSweepEdges_[activeVPosition].id == loneRightmostLeft_.lower &&
-               activeSweepEdges_[activeVPosition + 1].id == loneRightmostLeft_.upper );
-
-        if ( canConnect )
+        auto connect = [&] ( const LoneRightmostLeft& loneInfo ) mutable
         {
-            const auto& orgPt = mesh_.orgPnt( loneRightmostLeft_.id );
+            const auto& orgPt = mesh_.orgPnt( loneInfo.id );
 
             Vector3f baseVec = ( orgPt - mesh_.points[v] ).normalized();
             float maxDiffAng = -FLT_MAX;
@@ -419,14 +409,27 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 }
             }
             auto newE = mesh_.topology.makeEdge();
-            mesh_.topology.splice( loneRightmostLeft_.id, newE );
+            mesh_.topology.splice( loneInfo.id, newE );
             mesh_.topology.splice( maxDiffE, newE.sym() );
 
             windingInfo_.resize( newE.undirected() + 1 );
             windingInfo_[newE.undirected()].winding = 1; // mark inside
             if ( maxDiffE == lowestLeftEdge && activePoint.y > orgPt.y )
                 lowestLeftEdge = newE.sym();
-            loneRightmostLeft_.id = EdgeId{};
+        };
+        if ( hasOuter )
+        {
+            const auto& lowerEdgeInfo = activeSweepEdges_[activeVPosition];
+            const auto& upperEdgeInfo = activeSweepEdges_[activeVPosition + 1];
+            if ( lowerEdgeInfo.loneRightmostLeft.id && lowerEdgeInfo.id == lowerEdgeInfo.loneRightmostLeft.lower )
+                connect( lowerEdgeInfo.loneRightmostLeft );
+            if ( upperEdgeInfo.loneRightmostLeft.id && upperEdgeInfo.id == upperEdgeInfo.loneRightmostLeft.upper )
+                connect( upperEdgeInfo.loneRightmostLeft );
+        }
+        else
+        {
+            connect( lastLoneRightmostLeft_ );
+            lastLoneRightmostLeft_.id = EdgeId{};
         }
     }
 
@@ -437,12 +440,17 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         auto pos = activeVPosition == INT_MAX ? int( activeSweepEdges_.size() ) : activeVPosition + 1;
         activeSweepEdges_.insert( activeSweepEdges_.begin() + pos, rightGoingEdges.begin(), rightGoingEdges.end() );
     }
-    else if ( activeVPosition != INT_MAX && activeVPosition != -1 && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
+    else if ( hasOuter && windingInfo_[activeSweepEdges_[activeVPosition].id.undirected()].inside() )
     {
         assert( hasLeft );
-        loneRightmostLeft_.id = lowestLeftEdge;
-        loneRightmostLeft_.lower = activeSweepEdges_[activeVPosition].id;
-        loneRightmostLeft_.upper = activeSweepEdges_[activeVPosition + 1].id;
+        LoneRightmostLeft loneRightmostLeft;
+        loneRightmostLeft.id = lowestLeftEdge;
+        loneRightmostLeft.lower = activeSweepEdges_[activeVPosition].id;
+        loneRightmostLeft.upper = activeSweepEdges_[activeVPosition + 1].id;
+
+        activeSweepEdges_[activeVPosition].loneRightmostLeft = loneRightmostLeft;
+        activeSweepEdges_[activeVPosition + 1].loneRightmostLeft = loneRightmostLeft;
+        lastLoneRightmostLeft_ = std::move( loneRightmostLeft );
     }
 
     int windingLast = 0;

@@ -147,6 +147,19 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & face
     return topology.getValidVerts() - getIncidentVerts_( topology, topology.getValidFaces() - faces );
 }
 
+VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region )
+{
+    MR_TIMER
+
+    VertBitSet bdVerts( topology.vertSize() );
+    BitSetParallelForAll( bdVerts, [&]( VertId v )
+    {
+        if ( topology.isBdVertex( v, region ) )
+            bdVerts.set( v );
+    } );
+    return bdVerts;
+}
+
 EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
     MR_TIMER

@@ -8,6 +8,8 @@
 #include <atomic>
 #include <stack>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #if __has_include(<fmt/std.h>)
 #include <fmt/std.h> // This formats `std::thread::id`.
@@ -176,19 +178,30 @@ TEST(MRMesh, TBBTask)
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
 
     const auto mainThreadId = std::this_thread::get_id();
+    decltype( std::this_thread::get_id() ) taskThreadId;
     tbb::task_group group;
-    std::atomic<bool> sameThread;
-    group.run( [mainThreadId, &sameThread]
+    std::atomic<bool> taskFinished{ false };
+    std::mutex mutex;
+    std::condition_variable cvar;
+    group.run( [&]
     {
-        const auto taskThreadId = std::this_thread::get_id();
-        spdlog::info( "Task in thread {}", taskThreadId );
-        sameThread = mainThreadId == taskThreadId;
+        std::unique_lock lock( mutex );
+        taskThreadId = std::this_thread::get_id();
+        taskFinished = true;
+        cvar.notify_one();
     } );
 
-    spdlog::info( "Main in thread {}", mainThreadId );
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
+    if ( numThreads > 1 )
+    {
+        std::unique_lock lock( mutex );
+        cvar.wait( lock, [&taskFinished]() { return taskFinished.load(); } );
+    }
+
     group.wait();
+    spdlog::info( "Main in thread {}", mainThreadId );
+    spdlog::info( "Task in thread {}", taskThreadId );
+    const bool sameThread = mainThreadId == taskThreadId;
+
     EXPECT_TRUE( ( numThreads == 1 && sameThread ) || ( numThreads > 1 && !sameThread ) );
 }
 

@@ -27,8 +27,12 @@ public:
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
+    /// returns the number of allocated edge records
+    [[nodiscard]] size_t edgeCapacity() const { return edges_.capacity(); }
     /// returns the number of undirected edges (pairs of half-edges) including lone ones
     [[nodiscard]] size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    /// returns the number of allocated undirected edges (pairs of half-edges)
+    [[nodiscard]] size_t undirectedEdgeCapacity() const { return edges_.capacity() >> 1; }
     /// computes the number of not-lone (valid) undirected edges
     [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
     /// sets the capacity of half-edges vector
@@ -117,6 +121,8 @@ public:
     void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
+    /// returns the number of allocated vert records
+    [[nodiscard]] size_t vertCapacity() const { return edgePerVertex_.capacity(); }
     /// returns cached set of all valid vertices
     [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
     /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
@@ -154,6 +160,8 @@ public:
     void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); validFaces_.reserve( newCapacity ); }
     /// returns the number of face records including invalid ones
     [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
+    /// returns the number of allocated face records
+    [[nodiscard]] size_t faceCapacity() const { return edgePerFace_.capacity(); }
     /// returns cached set of all valid faces
     [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
     /// sets in (fs) all valid faces that were not selected before the call, and resets other bits

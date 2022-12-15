@@ -16,8 +16,13 @@ jobs:
         include:
           - os: "ubuntu:20.04"
             name: "ubuntu20"
+            cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
+            cxx-compiler: /usr/bin/clang++-11
+          - os: "fedora:35"
+            name: "fedora35"
+            cxx-compiler: /usr/bin/clang++-13
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -58,7 +63,7 @@ jobs:
         run: |
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=clang++ && \
+          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
           cmake --build . && \
           ./cmake-example
           

@@ -76,6 +76,7 @@ fi
 
 printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"
 echo "/usr/local/lib/MeshLib" | sudo tee /etc/ld.so.conf.d/local_libs.conf
+echo "/usr/local/lib/MeshLib/lib" | sudo tee /etc/ld.so.conf.d/local_libs.conf
 sudo ldconfig
 
 %clean

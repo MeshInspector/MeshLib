@@ -119,6 +119,7 @@ jobs:
     needs:
       - ubuntu20-build-test
       - ubuntu22-build-test
+      - fedora35-build-test
     uses: ./.github/workflows/test-distribution.yml
 
   upload-distributions:

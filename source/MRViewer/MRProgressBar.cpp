@@ -12,6 +12,7 @@
 #ifdef _WIN32
 #include <excpt.h>
 #endif
+#include "MRRibbonConstants.h"
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace
@@ -65,7 +66,8 @@ void ProgressBar::setup( float scaling )
             if ( !instance.canceled_ )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
-                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
+				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
+                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, btnHeight ) ) )
                     instance.canceled_ = true;
             }
             else

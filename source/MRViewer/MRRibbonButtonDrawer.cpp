@@ -59,16 +59,25 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
     const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
 
     int pushedStyleNum = 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+	ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+
+	auto framePadding = style.FramePadding;
     if ( size.y == 0 )
     {
-        auto framePadding = style.FramePadding;
         framePadding.y = cGradientButtonFramePadding;
         if ( auto menu = getViewerInstance().getMenuPlugin() )
             framePadding.y *= menu->menu_scaling();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-        ++pushedStyleNum;
     }
+    else if ( size.y > 0 )
+	{
+        framePadding.y = ( size.y - ImGui::CalcTextSize( label ).y ) / 2.f;
+	}
+    if ( size.x > 0 )
+	{
+		framePadding.x = ( size.x - ImGui::CalcTextSize( label ).x ) / 2.f;
+    }
+	++pushedStyleNum;
+	ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
 
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );

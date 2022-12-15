@@ -140,13 +140,13 @@ protected:
     /// padding of background on screen in pixels
     float backgroundPadding_{ 8.f };
 
-	ViewportMask sourcePoint_;
-	ViewportMask background_;
-	ViewportMask contour_;
+    ViewportMask sourcePoint_;
+    ViewportMask background_;
+    ViewportMask contour_;
     ViewportMask leaderLine_;
 
     Color sourcePointColor_;
-	Color leaderLineColor_;
+    Color leaderLineColor_;
     Color contourColor_{ Color( 0.5f, 0.5f, 0.5f, 1.f ) };
 
     ObjectLabel( const ObjectLabel& other ) = default;

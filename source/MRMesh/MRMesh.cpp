@@ -760,7 +760,7 @@ PackMapping Mesh::packOptimally()
     topology.pack( map );
 
     VertCoords newPoints( map.v.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( points.size() ) ),
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId{ map.v.b.size() } ),
         [&]( const tbb::blocked_range<VertId> & range )
     {
         for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )

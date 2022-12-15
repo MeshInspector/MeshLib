@@ -1258,33 +1258,6 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
-// Very simple metric for cut mesh holes, only fines for normal flip and area
-FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
-{
-    auto norm = Vector3d();
-    for ( auto e : leftRing( mesh.topology, e0 ) )
-    {
-        norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-    }
-    norm = norm.normalized();
-
-    FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, norm] ( VertId a, VertId b, VertId c )
-    {
-        Vector3d aP = Vector3d( mesh.points[a] );
-        Vector3d bP = Vector3d( mesh.points[b] );
-        Vector3d cP = Vector3d( mesh.points[c] );
-
-        auto faceNorm = cross( bP - aP, cP - aP );
-        auto faceDblArea = faceNorm.length();
-        if ( dot( norm, faceNorm ) < 0.5f * faceDblArea )
-            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
-
-        return faceDblArea; // area
-    };
-    return metric;
-}
-
 FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 {
     bool stopOnBad{ false };
@@ -1294,7 +1267,7 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 
     auto res = getFillHolePlan( mesh, e, params );
     if ( stopOnBad )
-        res = getFillHolePlan( mesh, e, { getCutMeshMetric( mesh,e ) } );
+        res = getFillHolePlan( mesh, e, { getSimplePlanarMetric( mesh,e ) } );
     return res;
 }
 

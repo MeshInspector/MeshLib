@@ -7,6 +7,7 @@
 #include <MRMesh/MRSerializer.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRRibbonConstants.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -54,7 +55,8 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::Text( "Save your changes?" );
 
 		float p = ImGui::GetStyle().FramePadding.x;
-        const ImVec2 btnSize = ImVec2( ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0.f );
+        const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
+        const ImVec2 btnSize = ImVec2( ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, btnHeight );
         if ( RibbonButtonDrawer::GradientButton( "Save", btnSize ) )
         {
             auto savePath = SceneRoot::getScenePath();

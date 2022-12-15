@@ -7,9 +7,9 @@
 #include <MRMesh/MRSerializer.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRRibbonConstants.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
-#include "MRRibbonConstants.h"
 
 namespace MR
 {

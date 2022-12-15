@@ -7,12 +7,12 @@
 #include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "MRRibbonConstants.h"
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
 #include <excpt.h>
 #endif
-#include "MRRibbonConstants.h"
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace

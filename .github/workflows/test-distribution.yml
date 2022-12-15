@@ -31,14 +31,14 @@ jobs:
           name: Distributives
 
       - name: Install Ubuntu Release
-        if: ${{ matrix.os != 'fedora:35}}
+        if: ${{ matrix.os != 'fedora:35' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb && \
             apt-get -y install ./*${{matrix.name}}*.deb
 
       - name: Install Fedora Release
-        if: ${{ matrix.os == 'fedora:35}}
+        if: ${{ matrix.os == 'fedora:35' }}
         run: |
           dnf --refresh -y upgrade
           dnf -y install org-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel

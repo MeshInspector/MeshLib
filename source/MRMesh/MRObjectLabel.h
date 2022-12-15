@@ -104,7 +104,7 @@ public:
     /// sets contour color
     MRMESH_API void setContourColor( const Color& color );
     /// return contour color
-    const Color& getContourColor() const { return leaderLineColor_; }
+    const Color& getContourColor() const { return contourColor_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )

@@ -269,9 +269,10 @@ FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-// Very simple metric for cut mesh holes, only fines for normal flip and area
+// Very simple metric for cut mesh holes, only penalty for normal flip and area
 FillHoleMetric getSimplePlanarMetric( const Mesh& mesh, EdgeId e0 )
 {
+    assert( !mesh.topology.left( e0 ) );
     auto norm = Vector3d();
     for ( auto e : leftRing( mesh.topology, e0 ) )
     {

@@ -95,7 +95,7 @@ MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
 /// This metric maximizes the minimal angle among all faces in the triangulation
 MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );
 
-// Very simple planar metric for only fines for normal flip and area
+// Very simple planar metric for only penalty for normal flip and area
 MRMESH_API FillHoleMetric getSimplePlanarMetric( const Mesh& mesh, EdgeId e0 );
 
 /// \}

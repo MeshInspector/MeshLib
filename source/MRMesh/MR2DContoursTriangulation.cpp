@@ -77,7 +77,7 @@ private:
         LoneRightmostLeft loneRightmostLeft;
     };
     LoneRightmostLeft lastLoneRightmostLeft_;
-    std::vector<ActiveEdgeInfo> activeSweepEdges_;;
+    std::vector<ActiveEdgeInfo> activeSweepEdges_;
     bool processOneVert_( VertId v );
     bool resolveIntersectios_();
 };
@@ -363,24 +363,24 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         // id of rightmost left vertex (it's lower edge) closest to active vertex
         // close to `helper` described here : https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
         EdgeId helperId;
-        auto upper = activeSweepEdges_[activeVPosition + 1].id;
-        auto lower = activeSweepEdges_[activeVPosition].id;
-        if ( lastLoneRightmostLeft_.id && lastLoneRightmostLeft_.upper == upper && lastLoneRightmostLeft_.lower == lower )
+        auto& upper = activeSweepEdges_[activeVPosition + 1];
+        auto& lower = activeSweepEdges_[activeVPosition];
+        if ( lastLoneRightmostLeft_.id && lastLoneRightmostLeft_.upper == upper.id && lastLoneRightmostLeft_.lower == lower.id )
         {
             helperId = lastLoneRightmostLeft_.id;
         }
         else
         {
-            auto compUpper = ComaparableVertId( &mesh_, mesh_.topology.org( upper ) );
-            auto compLower = ComaparableVertId( &mesh_, mesh_.topology.org( lower ) );
+            auto compUpper = ComaparableVertId( &mesh_, mesh_.topology.org( upper.id ) );
+            auto compLower = ComaparableVertId( &mesh_, mesh_.topology.org( lower.id ) );
             if ( compUpper > compLower )
-                helperId = mesh_.topology.prev( upper );
+                helperId = mesh_.topology.prev( upper.id );
             else
-                helperId = lower;
+                helperId = lower.id;
         }
         assert( helperId );
         if ( helperId == lastLoneRightmostLeft_.id )
-            lastLoneRightmostLeft_.id = EdgeId{};
+            lastLoneRightmostLeft_.id = upper.loneRightmostLeft.id = lower.loneRightmostLeft.id = EdgeId{};
         auto newE = mesh_.topology.makeEdge();
         mesh_.topology.splice( helperId, newE );
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
@@ -389,7 +389,6 @@ bool PlanarTriangulator::processOneVert_( VertId v )
     }
 
     // connect rightmost left with no right edges to this edge, if needed
-    if ( hasOuter || lastLoneRightmostLeft_.id )
     {
         auto connect = [&] ( const LoneRightmostLeft& loneInfo ) mutable
         {
@@ -417,16 +416,27 @@ bool PlanarTriangulator::processOneVert_( VertId v )
             if ( maxDiffE == lowestLeftEdge && activePoint.y > orgPt.y )
                 lowestLeftEdge = newE.sym();
         };
-        if ( hasOuter )
+        if ( activeVPosition != -1 && !activeSweepEdges_.empty() )
         {
-            const auto& lowerEdgeInfo = activeSweepEdges_[activeVPosition];
-            const auto& upperEdgeInfo = activeSweepEdges_[activeVPosition + 1];
+            auto& lowerEdgeInfo = activeSweepEdges_[activeVPosition == INT_MAX ? int( activeSweepEdges_.size() - 1 ) : activeVPosition];
             if ( lowerEdgeInfo.loneRightmostLeft.id && lowerEdgeInfo.id == lowerEdgeInfo.loneRightmostLeft.lower )
+            {
                 connect( lowerEdgeInfo.loneRightmostLeft );
-            if ( upperEdgeInfo.loneRightmostLeft.id && upperEdgeInfo.id == upperEdgeInfo.loneRightmostLeft.upper )
-                connect( upperEdgeInfo.loneRightmostLeft );
+                lowerEdgeInfo.loneRightmostLeft.id = EdgeId{};
+            }
         }
-        else
+        if ( activeVPosition != INT_MAX && !activeSweepEdges_.empty() )
+        {
+            auto& upperEdgeInfo = activeSweepEdges_[activeVPosition + 1];
+            if ( upperEdgeInfo.loneRightmostLeft.id && upperEdgeInfo.id == upperEdgeInfo.loneRightmostLeft.upper )
+            {
+                connect( upperEdgeInfo.loneRightmostLeft );
+                upperEdgeInfo.loneRightmostLeft.id = EdgeId{};
+            }
+        }
+        if ( lastLoneRightmostLeft_.id && 
+            mesh_.topology.dest( lastLoneRightmostLeft_.upper ) == v &&
+            mesh_.topology.dest( lastLoneRightmostLeft_.lower ) == v )
         {
             connect( lastLoneRightmostLeft_ );
             lastLoneRightmostLeft_.id = EdgeId{};

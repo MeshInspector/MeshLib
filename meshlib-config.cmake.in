@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+set(MESHLIB_INCLUDE_DIR "${PACKAGE_PREFIX_DIR}/@PACKAGE_MR_INCLUDE_DIR@")
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PACKAGE_PREFIX_DIR}/@PACKAGE_MR_INCLUDE_DIR@/include")
+
+get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+include(${SELF_DIR}/cmake/MRMeshConfig.cmake)
+include(${SELF_DIR}/cmake/MRViewerConfig.cmake)
+include(${SELF_DIR}/cmake/MRCommonPluginsConfig.cmake)

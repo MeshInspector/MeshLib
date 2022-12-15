@@ -36,8 +36,24 @@ jobs:
 
       - name: Install Release
         run: |
-          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo xvfb
-          sudo apt-get -y install ./*${{matrix.name}}*.deb
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
+            apt-get -y install sudo xvfb && \
+            apt-get -y install ./*${{matrix.name}}*.deb
 
       - name: Run MeshViewer
+        if: always()
         run: xvfb-run -a /usr/local/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Show meshconv help
+        if: always()
+        run: /usr/local/bin/meshconv --help
+
+      - name: Build example
+        if: always()
+        working-directory: examples/cmake-use
+        run: |
+          mkdir build && \
+          cd build && \
+          cmake .. -DCMAKE_CXX_COMPILER=clang++ && \
+          cmake --build . && \
+          

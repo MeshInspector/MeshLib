@@ -1,5 +1,0 @@
-get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-include(${SELF_DIR}/MRMesh.cmake)
-include(${SELF_DIR}/MRViewer.cmake)
-include(${SELF_DIR}/MRCommonPlugins.cmake)
-#include(${SELF_DIR}/MRViewerApp.cmake)

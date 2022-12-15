@@ -155,12 +155,12 @@ ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
-set(MR_BIN_DEST "bin")
-set(MR_INCLUDE_DEST "include/MeshLib")
-set(MR_MAIN_LIB_DEST "lib/MeshLib")
-set(MR_PY_LIB_DEST "${MR_MAIN_LIB_DEST}/meshlib")
-set(MR_RESOURCES_DEST "etc/MeshLib")
-set(MR_FONTS_DEST "share/fonts")
+set(MR_BIN_DIR "bin")
+set(MR_INCLUDE_DIR "include/MeshLib")
+set(MR_MAIN_LIB_DIR "lib/MeshLib")
+set(MR_PY_LIB_DIR "${MR_MAIN_LIB_DIR}/meshlib")
+set(MR_RESOURCES_DIR "etc/MeshLib")
+set(MR_FONTS_DIR "share/fonts")
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
@@ -174,9 +174,20 @@ ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
 
-install(FILES meshlib-config.cmake DESTINATION ${MR_MAIN_LIB_DEST})
+IF(NOT MESHLIB_VERSION)
+    set(MESHLIB_VERSION 0.0.0)
+ENDIF()
 
-install(EXPORT MRMesh DESTINATION "${MR_MAIN_LIB_DEST}")
-install(EXPORT MRViewer DESTINATION "${MR_MAIN_LIB_DEST}")
-install(EXPORT MRCommonPlugins DESTINATION "${MR_MAIN_LIB_DEST}")
-#install(EXPORT MRViewerApp DESTINATION "${MR_MAIN_LIB_DEST}")
+include(CMakePackageConfigHelpers)
+configure_package_config_file(meshlib-config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
+        INSTALL_DESTINATION ${MR_MAIN_LIB_DIR}
+        PATH_VARS MR_INCLUDE_DIR)
+
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        VERSION ${MESHLIB_VERSION}
+        COMPATIBILITY ExactVersion)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        DESTINATION ${MR_MAIN_LIB_DIR})

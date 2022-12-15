@@ -74,6 +74,9 @@ if [ -d /usr/lib/python3.9 ]; then
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 fi
 
+printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"
+echo "/usr/local/lib/MeshLib" | sudo tee /etc/ld.so.conf.d/local_libs.conf
+sudo ldconfig
 
 %clean
 rm -rf $RPM_BUILD_ROOT

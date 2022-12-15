@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  ubuntu-test:
+  linux-test:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
@@ -41,7 +41,7 @@ jobs:
         if: ${{ matrix.os == 'fedora:35' }}
         run: |
           dnf --refresh -y upgrade
-          dnf -y install org-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel
+          dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel
           dnf -y install ./*.rpm
 
       - name: Run MeshViewer
@@ -60,4 +60,5 @@ jobs:
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=clang++ && \
           cmake --build . && \
+          ./cmake-example
           

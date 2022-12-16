@@ -17,7 +17,7 @@ public:
 private:
     const MeshTopology & topology_;
     FaceBitSet filledFaces_;
-    std::vector<EdgeId> currentFacesBd_;
+    std::vector<EdgeId> currentFacesBd_, nextFacesBd_;
 
     void firstStep_();
     void nextStep_();
@@ -71,9 +71,7 @@ void ContourLeftFiller::firstStep_()
 
 void ContourLeftFiller::nextStep_()
 {
-    MR_TIMER
-
-        std::vector<EdgeId> nextFacesBd;
+    nextFacesBd_.clear();
     for ( EdgeId e : currentFacesBd_ )
     {
         auto l = topology_.left( e );
@@ -81,12 +79,12 @@ void ContourLeftFiller::nextStep_()
             continue;
         if ( !filledFaces_.test_set( l ) )
         {
-            nextFacesBd.push_back( topology_.next( e ) );
-            nextFacesBd.push_back( topology_.prev( e.sym() ).sym() );
+            nextFacesBd_.push_back( topology_.next( e ) );
+            nextFacesBd_.push_back( topology_.prev( e.sym() ).sym() );
         }
     }
 
-    currentFacesBd_ = std::move( nextFacesBd );
+    currentFacesBd_.swap( nextFacesBd_ );
 }
 
 const FaceBitSet& ContourLeftFiller::fill()

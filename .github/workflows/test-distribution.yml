@@ -6,9 +6,9 @@ on:
 jobs:
   linux-test:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    #container:
+      #image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:

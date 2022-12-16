@@ -36,10 +36,10 @@ void ContourLeftFiller::addContour( const std::vector<EdgeId> & contour )
 
 void ContourLeftFiller::firstStep_()
 {
-    MR_TIMER
-        // first step is more complicated to ensure that we do not fill to the other side from the contour
+    nextFacesBd_.clear();
+    // first step is more complicated to ensure that we do not fill to the other side from the contour
 
-        phmap::parallel_flat_hash_set<EdgeId> initialEdges;
+    phmap::parallel_flat_hash_set<EdgeId> initialEdges;
     for ( EdgeId e : currentFacesBd_ )
         initialEdges.insert( e );
 
@@ -66,7 +66,7 @@ void ContourLeftFiller::firstStep_()
         }
     }
 
-    currentFacesBd_ = std::move( nextFacesBd );
+    currentFacesBd_.swap( nextFacesBd_ );
 }
 
 void ContourLeftFiller::nextStep_()

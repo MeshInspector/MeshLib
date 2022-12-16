@@ -12,17 +12,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu-20.04", "ubuntu-22.04"] #, "fedora:35"]
         include:
-          - os: "ubuntu:20.04"
+          - os: "ubuntu-20.04"
             name: "ubuntu20"
             cxx-compiler: /usr/bin/clang++-11
-          - os: "ubuntu:22.04"
+          - os: "ubuntu-22.04"
             name: "ubuntu22"
             cxx-compiler: /usr/bin/clang++-11
-          - os: "fedora:35"
-            name: "fedora35"
-            cxx-compiler: /usr/bin/clang++-13
+          #- os: "fedora:35"
+            #name: "fedora35"
+            #cxx-compiler: /usr/bin/clang++-13
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -38,9 +38,10 @@ jobs:
       - name: Install Ubuntu Release
         if: ${{ matrix.os != 'fedora:35' }}
         run: |
-          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
-            apt-get -y install sudo xvfb && \
-            apt-get -y install ./*${{matrix.name}}*.deb
+          sudo apt-get -y update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install xvfb
+          sudo apt-get -y install ./*${{matrix.name}}*.deb
 
       - name: Install Fedora Release
         if: ${{ matrix.os == 'fedora:35' }}

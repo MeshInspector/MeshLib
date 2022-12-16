@@ -182,7 +182,7 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(meshlib-config.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
         INSTALL_DESTINATION ${MR_MAIN_LIB_DIR}
-        PATH_VARS MR_INCLUDE_DIR)
+        PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR)
 
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake

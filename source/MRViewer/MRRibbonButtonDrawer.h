@@ -39,10 +39,10 @@ public:
     MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetGradientTexture();
 
     /// draw gradient button
-    /// returns true if button is pressed in this frame, or key is pressed (optional)
+    /// returns true if button is clicked in this frame, or key is pressed (optional)
     MRVIEWER_API static bool GradientButton( const char* label, const ImVec2& size = ImVec2( 0, 0 ), ImGuiKey key = ImGuiKey_None );
     /// draw gradient button with the ordinary button size
-    /// returns true if button is pressed in this frame, or key is pressed (optional)
+    /// returns true if button is clicked in this frame, or key is pressed (optional)
     MRVIEWER_API static bool GradientButtonCommonSize( const char* label, const ImVec2& size = ImVec2( 0, 0 ), ImGuiKey key = ImGuiKey_None );
     /// draw gradient button, which can be disabled (valid = false)
     MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );

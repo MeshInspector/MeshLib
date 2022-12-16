@@ -22,7 +22,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        config: [Release] #[Debug, Release]
+        config: [Debug, Release]
         compiler: [Clang 13, GCC 11]
         include:
           - compiler: Clang 13

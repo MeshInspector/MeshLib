@@ -36,19 +36,18 @@ void ContourLeftFiller::addContour( const std::vector<EdgeId> & contour )
 
 void ContourLeftFiller::firstStep_()
 {
-    nextFacesBd_.clear();
     // first step is more complicated to ensure that we do not fill to the other side from the contour
 
     phmap::parallel_flat_hash_set<EdgeId> initialEdges;
     for ( EdgeId e : currentFacesBd_ )
         initialEdges.insert( e );
 
-    std::vector<EdgeId> nextFacesBd;
+    nextFacesBd_.clear();
     auto addNextStepEdge = [&]( EdgeId e )
     {
         if ( initialEdges.find( e ) != initialEdges.end() )
             return;
-        nextFacesBd.push_back( e.sym() );
+        nextFacesBd_.push_back( e.sym() );
     };
 
     for ( EdgeId e : currentFacesBd_ )

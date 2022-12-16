@@ -7,7 +7,7 @@
 
 int main()
 {
-    MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "/home/user/CLionProjects/untitled/Torus0.stl" ).value();
+    MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "../Torus0.stl" ).value();
 
     // relax mesh (5 iterations)
     MR::relax( mesh, {{5}} );

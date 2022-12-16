@@ -45,11 +45,19 @@ std::unique_ptr<ImGuiImage>& RibbonButtonDrawer::GetGradientTexture()
     return texture;
 }
 
-bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */ )
+bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */, ImGuiKey key )
 {
     auto& texture = GetGradientTexture();
+    auto checkKey = [] ( ImGuiKey passedKey )
+    {
+        if ( passedKey == ImGuiKey_None )
+            return false;
+        if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
+            return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+        return ImGui::IsKeyPressed( passedKey );
+    };
     if ( !texture )
-        return ImGui::Button( label, size );
+        return ImGui::Button( label, size ) || checkKey( key );
 
     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
@@ -89,16 +97,16 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
         ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), style.FrameRounding );
 
-    auto res = ImGui::Button( label, size );
+    auto res = ImGui::Button( label, size ) || checkKey( key );
 
     ImGui::PopStyleVar( pushedStyleNum );
     ImGui::PopStyleColor( 2 );
     return res;
 }
 
-bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size )
+bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size, ImGuiKey key )
 {
-    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ) );
+    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ), key );
 }
 
 bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )

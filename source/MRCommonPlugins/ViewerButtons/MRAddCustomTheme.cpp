@@ -80,13 +80,13 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::Text( "Theme with name %s already exists, override it?", themeName_.c_str() );
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Save", ImVec2( ( w - p ) / 2.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
         {
             save_();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }

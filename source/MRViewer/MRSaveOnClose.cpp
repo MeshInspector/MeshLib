@@ -57,7 +57,7 @@ void SaveOnClosePlugin::preDraw_()
 		float p = ImGui::GetStyle().FramePadding.x;
         const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
         const ImVec2 btnSize = ImVec2( ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, btnHeight );
-        if ( RibbonButtonDrawer::GradientButton( "Save", btnSize ) )
+        if ( RibbonButtonDrawer::GradientButton( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -91,7 +91,7 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::SetTooltipIfHovered( "Close the application without saving", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButton( "Cancel", btnSize ) )
+        if ( RibbonButtonDrawer::GradientButton( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }

@@ -1125,7 +1125,7 @@ PaletteChanges Palette(
         ImGui::Text( "Palette preset with this name already exists, override?" );
         auto w = GetContentRegionAvail().x;
         auto p = GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
             PalettePresets::savePreset( currentPaletteName, palette );
             presetName = currentPaletteName;
@@ -1133,7 +1133,7 @@ PaletteChanges Palette(
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "No", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "No", ImVec2( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -1145,7 +1145,7 @@ PaletteChanges Palette(
     ImGui::SameLine();
     const auto& style = ImGui::GetStyle();
     ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-    if ( ImGui::Button( "Cancel", ImVec2( btnWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
         ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();

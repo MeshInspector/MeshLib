@@ -666,14 +666,14 @@ void ImGuiMenu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Ok", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }

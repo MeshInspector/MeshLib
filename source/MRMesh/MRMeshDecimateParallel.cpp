@@ -6,6 +6,7 @@
 #include "MRQuadraticForm.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPch/MRTBB.h"
+#include "MRRegionBoundary.h"
 
 namespace MR
 {
@@ -58,6 +59,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     struct alignas(64) Parts
     {
         FaceBitSet faces;
+        VertBitSet bdVerts;
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
@@ -68,6 +70,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             parts[i].faces = tree.getSubtreeFaces( subroots[i] );
+            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
         }
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.1f ) )
@@ -128,6 +131,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
 
             auto subSeqSettings = seqSettings;
             subSeqSettings.touchBdVertices = false;
+            subSeqSettings.bdVerts = &parts[i].bdVerts;
             FaceBitSet myRegion = parts[i].faces;
             if ( settings.region )
                 myRegion &= *settings.region;

@@ -57,7 +57,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     {
         for ( VertId v = range.begin(); v < range.end(); ++v )
         {
-            res.b[ord[v].v] = v;
+            res.b[ord[v].v] = v < res.tsize ? v : VertId{};
         }
     } );
     
@@ -115,7 +115,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     {
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
-            res.b[ord[ue].ue] = ue;
+            res.b[ord[ue].ue] = ue < res.tsize ? ue : UndirectedEdgeId{};
         }
     } );
 

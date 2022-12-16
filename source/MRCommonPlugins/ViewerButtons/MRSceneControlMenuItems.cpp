@@ -92,7 +92,7 @@ void ResetSceneMenuItem::preDraw_()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", ImVec2( ( w - p ) / 3.f, 0 ), ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -115,7 +115,7 @@ void ResetSceneMenuItem::preDraw_()
         ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Don't Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
@@ -123,7 +123,7 @@ void ResetSceneMenuItem::preDraw_()
         ImGui::SetTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 3.f, 0 ), ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
         ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
 

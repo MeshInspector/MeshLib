@@ -28,6 +28,8 @@ MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const Fac
 MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store );
 // composes the set of all vertices with all their faces in given set
 MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & faces );
+// composes the set of all boundary vertices for given region (or whole mesh if !region)
+MRMESH_API VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );
 
 // composes the set of all faces incident to given vertices
 MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & verts );

@@ -199,9 +199,9 @@ std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::share
 
 bool RibbonSceneRemoveSelected::action()
 {
-    auto allowRemoval = getViewerInstance().getMenuPluginAs<RibbonMenu>()->checkPossibilityObjectRemoval();
-    if ( !allowRemoval )
-        return false;
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+        if ( !menu->checkPossibilityObjectRemoval() )
+            return false;
 
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
     SCOPED_HISTORY( "Remove objects" );

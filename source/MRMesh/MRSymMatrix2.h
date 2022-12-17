@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRVector2.h"
+#include "MRMatrix2.h"
+#include <limits>
 
 namespace MR
 {
@@ -21,6 +23,10 @@ struct SymMatrix2
     static constexpr SymMatrix2 identity() noexcept { SymMatrix2 res; res.xx = res.yy = 1; return res; }
     static constexpr SymMatrix2 diagonal( T diagVal ) noexcept { SymMatrix2 res; res.xx = res.yy = diagVal; return res; }
 
+    /// computes trace of the matrix
+    constexpr T trace() const noexcept { return xx + yy; }
+    /// computes the squared norm of the matrix, which is equal to the sum of 4 squared elements
+    constexpr T normSq() const noexcept { return sqr( xx ) + 2 * sqr( xy ) + sqr( yy ); }
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
@@ -36,6 +42,17 @@ struct SymMatrix2
         else
             return *this *= ( 1 / b );
     }
+
+    /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
+    /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
+    /// M*V^T = V^T*L; M = V^T*L*V
+    Vector2<T> eigens( Matrix2<T> * eigenvectors = nullptr ) const;
+    /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
+    Vector2<T> eigenvector( T eigenvalue ) const;
+
+    /// solves the equation M*x = b and returns x;
+    /// if M is degenerate then returns the solution closest to origin point
+    Vector2<T> solve( const Vector2<T> & b ) const;
 };
 
 /// \related SymMatrix2
@@ -107,6 +124,59 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse() const noexcept
     res.xx =  yy / det;
     res.xy = -xy / det;
     res.yy =  xx / det;
+    return res;
+}
+
+template <typename T> 
+Vector2<T> SymMatrix2<T>::eigens( Matrix2<T> * eigenvectors ) const
+{
+    //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#2%C3%972_matrices
+    const auto tr = trace();
+    const auto q = tr / 2;
+    const auto p = std::sqrt( std::max( T(0), sqr( tr ) - 4 * det() ) ) / 2;
+    Vector2<T> eig;
+    if ( p <= std::abs( q ) * std::numeric_limits<T>::epsilon() )
+    {
+        // this is proportional to identity matrix
+        eig = { q, q };
+        if ( eigenvectors )
+            *eigenvectors = Matrix2<T>{};
+        return eig;
+    }
+    eig[0] = q - p;
+    eig[1] = q + p;
+    if ( eigenvectors )
+    {
+        const auto x = eigenvector( eig[0] ).normalized();
+        *eigenvectors = Matrix2<T>::fromRows( x, x.perpendicular() );
+    }
+    return eig;
+}
+
+template <typename T> 
+Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const
+{
+    const Vector2<T> row0( xx - eigenvalue, xy );
+    const Vector2<T> row1( xy, yy - eigenvalue );
+    // not-repeating eigenvalue means that one of two rows is not zero
+    const T lsq0 = row0.lengthSq();
+    const T lsq1 = row1.lengthSq();
+    return lsq0 >= lsq1 ? row0.perpendicular() : row1.perpendicular();
+}
+
+template <typename T> 
+Vector2<T> SymMatrix2<T>::solve( const Vector2<T> & b ) const
+{
+    Matrix2<T> eigenvectors;
+    const auto eigenvalues = eigens( &eigenvectors );
+    const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[1] ) ) * std::numeric_limits<T>::epsilon();
+    Vector2<T> res;
+    for ( int i = 0; i < 2; ++i )
+    {
+        if ( std::abs( eigenvalues[i] ) <= threshold )
+            continue;
+        res += dot( b, eigenvectors[i] ) / eigenvalues[i] * eigenvectors[i];
+    }
     return res;
 }
 

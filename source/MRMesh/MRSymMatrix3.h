@@ -1,6 +1,9 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRMatrix3.h"
+#include "MRConstants.h"
+#include <limits>
 
 namespace MR
 {
@@ -21,6 +24,10 @@ struct SymMatrix3
     static constexpr SymMatrix3 identity() noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = 1; return res; }
     static constexpr SymMatrix3 diagonal( T diagVal ) noexcept { SymMatrix3 res; res.xx = res.yy = res.zz = diagVal; return res; }
 
+    /// computes trace of the matrix
+    constexpr T trace() const noexcept { return xx + yy + zz; }
+    /// computes the squared norm of the matrix, which is equal to the sum of 9 squared elements
+    constexpr T normSq() const noexcept;
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
@@ -36,6 +43,17 @@ struct SymMatrix3
         else
             return *this *= ( 1 / b );
     }
+
+    /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
+    /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
+    /// M*V^T = V^T*L; M = V^T*L*V
+    Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const;
+    /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
+    Vector3<T> eigenvector( T eigenvalue ) const;
+
+    /// solves the equation M*x = b and returns x;
+    /// if M is degenerate then returns the solution closest to origin point
+    Vector3<T> solve( const Vector3<T> & b ) const;
 };
 
 /// \related SymMatrix3
@@ -105,6 +123,13 @@ constexpr T SymMatrix3<T>::det() const noexcept
 }
 
 template <typename T> 
+constexpr T SymMatrix3<T>::normSq() const noexcept
+{
+    return sqr( xx ) + sqr( yy ) + sqr( zz ) +
+        2 * ( sqr( xy ) + sqr( xz ) + sqr( yz ) );
+}
+
+template <typename T> 
 constexpr SymMatrix3<T> SymMatrix3<T>::inverse() const noexcept
 {
     auto det = this->det();
@@ -117,6 +142,106 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse() const noexcept
     res.yy = ( xx * zz - xz * xz ) / det;
     res.yz = ( xz * xy - xx * yz ) / det;
     res.zz = ( xx * yy - xy * xy ) / det;
+    return res;
+}
+
+template <typename T> 
+Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const
+{
+    //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
+    const auto q = trace() / 3;
+    const auto B = *this - diagonal( q );
+    const auto p2 = B.normSq();
+    const auto p = std::sqrt( p2 / 6 );
+    Vector3<T> eig;
+    if ( p <= std::abs( q ) * std::numeric_limits<T>::epsilon() )
+    {
+        // this is proportional to identity matrix
+        eig = { q, q, q };
+        if ( eigenvectors )
+            *eigenvectors = Matrix3<T>{};
+        return eig;
+    }
+    const auto r = B.det() / ( 2 * p * p * p );
+
+    // In exact arithmetic for a symmetric matrix - 1 <= r <= 1
+    // but computation error can leave it slightly outside this range.
+    if ( r <= -1 )
+    {
+        //phi = PI / 3;
+        eig[0] = q - 2 * p;
+        eig[1] = eig[2] = q + p;
+        if ( eigenvectors )
+        {
+            const auto x = eigenvector( eig[0] ).normalized();
+            const auto [ y, z ] = x.perpendicular();
+            *eigenvectors = Matrix3<T>::fromRows( x, y, z );
+        }
+        return eig;
+    }
+    if ( r >= 1 )
+    {
+        //phi = 0;
+        eig[0] = eig[1] = q - p;
+        eig[2] = q + 2 * p;
+        if ( eigenvectors )
+        {
+            const auto z = eigenvector( eig[2] ).normalized();
+            const auto [ x, y ] = z.perpendicular();
+            *eigenvectors = Matrix3<T>::fromRows( x, y, z );
+        }
+        return eig;
+    }
+    const auto phi = std::acos( r ) / 3;
+    eig[0] = q + 2 * p * cos( phi + T( 2 * PI / 3 ) );
+    eig[2] = q + 2 * p * cos( phi );
+    eig[1] = 3 * q - eig[0] - eig[2]; // 2 * q = trace() = eig[0] + eig[1] + eig[2]
+    if ( eigenvectors )
+    {
+        const auto x = eigenvector( eig[0] ).normalized();
+        const auto z = eigenvector( eig[2] ).normalized();
+        const auto y = cross( z, x );
+        *eigenvectors = Matrix3<T>::fromRows( x, y, z );
+    }
+    return eig;
+}
+
+template <typename T> 
+Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
+{
+    const Vector3<T> row0( xx - eigenvalue, xy, xz );
+    const Vector3<T> row1( xy, yy - eigenvalue, yz );
+    const Vector3<T> row2( xz, yz, zz - eigenvalue );
+    // not-repeating eigenvalue means that some two rows are linearly independent
+    const Vector3<T> crs01 = cross( row0, row1 );
+    const Vector3<T> crs12 = cross( row1, row2 );
+    const Vector3<T> crs20 = cross( row2, row0 );
+    const T lsq01 = crs01.lengthSq();
+    const T lsq12 = crs12.lengthSq();
+    const T lsq20 = crs20.lengthSq();
+    if ( lsq01 > lsq12 )
+    {
+        if ( lsq01 > lsq20 )
+            return crs01;
+    }
+    else if ( lsq12 > lsq20 )
+        return crs12;
+    return crs20;
+}
+
+template <typename T> 
+Vector3<T> SymMatrix3<T>::solve( const Vector3<T> & b ) const
+{
+    Matrix3<T> eigenvectors;
+    const auto eigenvalues = eigens( &eigenvectors );
+    const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[2] ) ) * std::numeric_limits<T>::epsilon();
+    Vector3<T> res;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( std::abs( eigenvalues[i] ) <= threshold )
+            continue;
+        res += dot( b, eigenvectors[i] ) / eigenvalues[i] * eigenvectors[i];
+    }
     return res;
 }
 

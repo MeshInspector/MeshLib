@@ -1,15 +1,4 @@
-#pragma warning(disable:4464)  //relative include path contains '..'
-#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
 #include "MRQuadraticForm.h"
-#include "MRToFromEigen.h"
-
-// unknown pragmas
-#pragma warning(disable:4068)
-#pragma warning(disable:4127)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#include <Eigen/Dense>
-#pragma clang diagnostic pop
 
 namespace MR
 {
@@ -44,9 +33,7 @@ std::pair< QuadraticForm<V>, V > sum(
     else
     {
         const auto center = T(0.5) * ( x0 + x1 );
-        Eigen::Map<Eigen::Matrix<T, V::elements, 1>>{ &x2.x } = 
-            toEigen( q2.A ).ldlt().solve( toEigen( q0.A * ( x0 - center ) + q1.A * ( x1 - center ) ) );
-        x2 += center;
+        x2 = q2.A.solve( q0.A * ( x0 - center ) + q1.A * ( x1 - center ) ) + center;
         q2.c = q0.eval( x0 - x2 ) + q1.eval( x1 - x2 );
     }
 

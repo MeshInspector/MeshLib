@@ -55,6 +55,9 @@ struct Vector2
     /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
     Vector2 furthestBasisVector() const;
 
+    /// returns same length vector orthogonal to this (rotated 90 degrees counter-clockwise)
+    Vector2 perpendicular() const { return Vector2{ -y, x }; }
+
     Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
     Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }
     Vector2 & operator *=( T b ) { x *= b; y *= b; return * this; }

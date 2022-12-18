@@ -36,8 +36,10 @@ MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const Ver
 // composes the set of all faces with all their vertices in given set
 MRMESH_API FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & verts );
 
-// composes the set of all edges, all vertices of which are incident to given set
+// composes the set of all edges, having a face from given set at the left
 MRMESH_API EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces );
+// composes the set of all undirected edges, having a face from given set from one of two sides
+MRMESH_API UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceBitSet& faces );
 // composes the set of all vertices incident to given edges
 MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
 // composes the set of all faces incident to given edges

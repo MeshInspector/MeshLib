@@ -97,7 +97,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             map.tgt2srcVerts = &vertSubToFull;
             if ( settings.region )
                 map.src2tgtFaces = &faceFullToSub;
-            submesh.m.addPartByMask( mesh, faces, map );
+            submesh.m = mesh.cloneRegion( faces, false, map );
 
             if ( !reportThreadProgress( 0.1f ) )
                 break;

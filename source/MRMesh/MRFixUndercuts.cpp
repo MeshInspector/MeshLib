@@ -146,9 +146,7 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
     copyFBS.resize( mesh.topology.faceSize(), true );
 
     // create mesh and unclosed grid 
-    Mesh selectedPartMesh;
-    selectedPartMesh.addPartByMask( mesh, copyFBS );
-    auto partGrid = meshToDistanceField( selectedPartMesh, rot, Vector3f::diagonal( voxelSize ) );
+    auto partGrid = meshToDistanceField( mesh.cloneRegion( copyFBS ), rot, Vector3f::diagonal( voxelSize ) );
 
     // fix undercuts if fullGrid by active voxels from partGrid
     fixFullByPart( fullGrid, partGrid, zOffset );

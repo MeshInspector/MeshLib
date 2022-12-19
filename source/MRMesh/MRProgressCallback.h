@@ -1,4 +1,5 @@
 #pragma once
+#include "MRStringConvert.h"
 #include <functional>
 #include <string>
 #include <filesystem>
@@ -14,7 +15,7 @@ typedef std::function<bool( float )> ProgressCallback;
 // Returns message showed when loading is canceled
 inline std::string getCancelMessage( const std::filesystem::path& path )
 {
-	return "Loading canceled: " + path.string();
+	return "Loading canceled: " + utf8string( path );
 }
 
 }

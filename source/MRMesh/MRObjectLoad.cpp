@@ -111,14 +111,15 @@ bool isAnySupportedFilesInSubfolders( const std::filesystem::path& folder )
         filesList.erase( filesList.begin() );
 
         std::error_code ec;
-        for ( auto& directoryEntry : std::filesystem::directory_iterator( path, ec ) )
+        const std::filesystem::directory_iterator dirEnd;
+        for ( auto it = std::filesystem::directory_iterator( path, ec ); !ec && it != dirEnd; it.increment( ec ) )
         {
-            auto subpath = directoryEntry.path();
-            if ( directoryEntry.is_directory( ec ) )
+            auto subpath = it->path();
+            if ( it->is_directory( ec ) )
             {
                 filesList.push_back( path = subpath );
             }
-            else if ( directoryEntry.is_regular_file( ec ) )
+            else if ( it->is_regular_file( ec ) )
             {
                 auto ext = utf8string( subpath.extension() );
                 for ( auto& c : ext )
@@ -141,7 +142,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     MR_TIMER;
 
     if ( callback && !callback( 0.f ) )
-        return getCancelMessage( folder );
+        return tl::make_unexpected( getCancelMessage( folder ) );
 
     struct FilePathNode
     {
@@ -156,31 +157,32 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree] ( FilePathNode& node )
-	{
-		std::error_code ec;
-        for ( auto& directoryEntry : std::filesystem::directory_iterator( node.path, ec ) )
-		{
-			auto path = directoryEntry.path();
-			if ( directoryEntry.is_directory( ec ) )
-			{
-				node.subfolders.push_back( { .path = path } );
+    {
+        std::error_code ec;
+        const std::filesystem::directory_iterator dirEnd;
+        for ( auto it = std::filesystem::directory_iterator( node.path, ec ); !ec && it != dirEnd; it.increment( ec ) )
+        {
+            auto path = it->path();
+            if ( it->is_directory( ec ) )
+            {
+                node.subfolders.push_back( { .path = path } );
                 fillFilesTree( node.subfolders[node.subfolders.size() - 1] );
-			}
-			else if ( directoryEntry.is_regular_file( ec ) )
-			{
-				auto ext = utf8string( path.extension() );
-				for ( auto& c : ext )
-					c = ( char )tolower( c );
+            }
+            else if ( it->is_regular_file( ec ) )
+            {
+                auto ext = utf8string( path.extension() );
+                for ( auto& c : ext )
+                    c = ( char )tolower( c );
 
-				if ( ext.empty() )
-					continue;
+                if ( ext.empty() )
+                    continue;
 
-				if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
-				{
-					return f.extension.substr( 1 ) == ext;
-				} ) != allFilters.end() )
-					node.files.push_back( { .path = path } );
-			}
+                if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
+                {
+                    return f.extension.substr( 1 ) == ext;
+                } ) != allFilters.end() )
+                    node.files.push_back( { .path = path } );
+            }
         }
     };
     fillFilesTree( filesTree );
@@ -219,9 +221,9 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     {
 
         for ( const FilePathNode& folder : node.subfolders )
-		{
-			auto pObj = std::make_shared<Object>();
-			pObj->setName( utf8string( folder.path.stem() ) );
+        {
+            auto pObj = std::make_shared<Object>();
+            pObj->setName( utf8string( folder.path.stem() ) );
             objPtr->addChild( pObj );
             createFolderObj( folder, pObj.get() );
         }
@@ -233,7 +235,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
             } ), objPtr );
         }
     };
-	Object result;
+    Object result;
     result.setName( utf8string( folder.stem() ) );
     createFolderObj( filesTree, &result );
 
@@ -268,7 +270,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         }
     }
     if ( loadingCanceled )
-        return getCancelMessage( folder );
+        return tl::make_unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
         return tl::make_unexpected( allErrors );
 

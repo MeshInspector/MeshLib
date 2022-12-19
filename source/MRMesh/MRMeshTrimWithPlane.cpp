@@ -3,6 +3,7 @@
 #include "MRPlane3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
+#include "MRRegionBoundary.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -27,14 +28,18 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane )
     BitSetParallelForAll( edgesToCut, [&]( UndirectedEdgeId ue )
     {
         const VertId o = mesh.topology.org( ue );
+        if ( !o )
+            return;
         const VertId d = mesh.topology.dest( ue );
+        if ( !d )
+            return;
         if ( ( positiveVerts.test( o ) && negativeVerts.test( d ) )
           || ( positiveVerts.test( d ) && negativeVerts.test( o ) ) )
             edgesToCut.set( ue );
     } );
 
     FaceBitSet positiveFaces( mesh.topology.lastValidFace() + 1 );
-    BitSetParallelForAll( positiveFaces, [&]( FaceId f )
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
         VertId vs[3];
         mesh.topology.getTriVerts( f, vs );
@@ -63,6 +68,7 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane )
         assert( o * d < 0 );
         const auto p = ( o * pd - d * po ) / ( o - d );
         mesh.splitEdge( e, p );
+        positiveVerts.autoResizeSet( mesh.topology.org( e ) ); // add new vertices on the plane in "positive" vertices
         for ( EdgeId ei : orgRing( mesh.topology, e ) )
         {
             const auto l = mesh.topology.left( ei );
@@ -75,10 +81,12 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane )
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours )
 {
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane );
+    if ( outCutContours )
+        *outCutContours = findRegionBoundary( mesh.topology, &posFaces );
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
 }
 

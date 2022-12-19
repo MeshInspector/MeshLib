@@ -100,7 +100,7 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     return objectDistanceMap;
 }
 
-bool isAnySupportedFilesInSubfolders( const std::filesystem::path& folder )
+bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
 {
     std::vector<std::filesystem::path> filesList;
     filesList.push_back( folder );

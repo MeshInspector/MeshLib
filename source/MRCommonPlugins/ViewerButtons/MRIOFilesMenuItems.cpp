@@ -209,7 +209,7 @@ bool OpenDirectoryMenuItem::action()
     auto directory = openFolderDialog();
     if ( !directory.empty() )
     {
-        bool isAnySupportedFiles = isAnySupportedFilesInSubfolders( directory );
+        bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
         if ( isAnySupportedFiles )
         {
             ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory] ()->std::function<void()>

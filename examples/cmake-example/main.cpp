@@ -1,13 +1,12 @@
-
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRMeshSubdivide.h"
-#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRTorus.h"
 
 int main()
 {
-    MR::Mesh mesh = MR::MeshLoad::fromAnySupportedFormat( "../Torus0.stl" ).value();
+    MR::Mesh mesh = MR::makeTorus();
 
     // relax mesh (5 iterations)
     MR::relax( mesh, {{5}} );

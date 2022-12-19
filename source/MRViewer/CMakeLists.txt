@@ -16,8 +16,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 IF(NOT MR_EMSCRIPTEN)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 if(GTKMM_FOUND)
-	include_directories(${GTKMM_INCLUDE_DIRS})
-  # target_include_directories( ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:/usr/include/gtkmm-3.0>) # @todo
+  target_include_directories( ${PROJECT_NAME} PUBLIC ${GTKMM_INCLUDE_DIRS})
 endif()
 ENDIF() # NOT MR_EMSCRIPTEN
 

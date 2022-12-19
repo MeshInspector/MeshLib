@@ -141,7 +141,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     MR_TIMER;
 
     if ( callback && !callback( 0.f ) )
-        return tl::make_unexpected( cLoadingCanceledStr );
+        return getCancelMessage( folder );
 
     struct FilePathNode
     {
@@ -268,7 +268,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         }
     }
     if ( loadingCanceled )
-        return tl::make_unexpected( cLoadingCanceledStr );
+        return getCancelMessage( folder );
     if ( !atLeastOneLoaded )
         return tl::make_unexpected( allErrors );
 

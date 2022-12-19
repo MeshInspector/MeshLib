@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
-#include <cstring>
+#include <string>
+#include <filesystem>
 
 namespace MR
 {
@@ -10,6 +11,10 @@ namespace MR
 /// \ingroup BasicStructuresGroup
 typedef std::function<bool( float )> ProgressCallback;
 
-const std::string cLoadingCanceledStr = std::string( "Loading canceled" );
+// Returns message showed when loading is canceled
+inline std::string getCancelMessage( const std::filesystem::path& path )
+{
+	return "Loading canceled: " + path.string();
+}
 
 }

@@ -1354,15 +1354,12 @@ void RibbonMenu::drawRibbonSceneList_()
 void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
     drawSceneListButtons_();
-    // mesh with index 0 is Ancillary, and cannot be removed
-    // it can be cleaned but it is inconsistent, so this mesh is untouchable
-    int uniqueCounter = 0;
     ImGui::BeginChild( "Meshes", ImVec2( -1, -( informationHeight_ + transformHeight_ ) ), false );
     updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all, uniqueCounter );
-    makeDragDropTarget_( SceneRoot::get(), false, true, uniqueCounter + 1 );
+        draw_object_recurse_( *child, selected, all );
+    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
 
     // any click on empty space below Scene Tree removes object selection
     ImGui::BeginChild( "EmptySpace" );

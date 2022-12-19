@@ -753,13 +753,12 @@ void ImGuiMenu::draw_scene_list_content( const std::vector<std::shared_ptr<Objec
 {
     // mesh with index 0 is Ancillary, and cannot be removed
     // it can be cleaned but it is inconsistent, so this mesh is untouchable
-    int uniqueCounter = 0;
     ImGui::BeginChild( "Meshes", ImVec2( -1, -1 ), true );
     updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all, uniqueCounter );
-    makeDragDropTarget_( SceneRoot::get(), false, true, uniqueCounter + 1 );
+        draw_object_recurse_( *child, selected, all );
+    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
     ImGui::EndChild();
     sceneOpenCommands_.clear();
 
@@ -844,7 +843,7 @@ void ImGuiMenu::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>&
 
 }
 
-void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLine, int counter )
+void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr )
 {
     if ( !allowSceneReorder_ )
         return;
@@ -856,7 +855,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
         lineDrawed = true;
         curPos = ImGui::GetCursorPos();
         auto width = ImGui::GetContentRegionAvail().x;
-        ImGui::ColorButton( ( "##InternalDragDropArea" + std::to_string( counter ) ).c_str(),
+        ImGui::ColorButton( ( "##InternalDragDropArea" + uniqueStr ).c_str(),
             ImVec4( 0, 0, 0, 0 ),
             0, ImVec2( width, 4 * menu_scaling() ) );
     }
@@ -866,7 +865,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
         {
             ImGui::SetCursorPos( curPos );
             auto width = ImGui::GetContentRegionAvail().x;
-            ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + std::to_string( counter ) ).c_str(),
+            ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
                 0, ImVec2( width, 4 * menu_scaling() ) );
         }
@@ -884,10 +883,9 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
     }
 }
 
-void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, int& counter )
+void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
-    ++counter;
-    std::string counterStr = std::to_string( counter );
+    std::string uniqueStr = std::to_string( intptr_t( &object ) );
     const bool isObjSelectable = !object.isAncillary();
 
     // has selectable children
@@ -895,7 +893,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
     bool isOpen{ false };
     if ( ( hasRealChildren || isObjSelectable ) )
     {
-        makeDragDropTarget_( object, true, true, counter );
+        makeDragDropTarget_( object, true, true, uniqueStr );
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
@@ -905,7 +903,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
+            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
@@ -935,7 +933,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str(),
+        isOpen = drawCollapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -946,7 +944,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         ImGui::PopStyleVar();
 
         makeDragDropSource_( selected );
-        makeDragDropTarget_( object, false, false, 0 );
+        makeDragDropTarget_( object, false, false, "0" );
 
         if ( isObjSelectable && ImGui::IsItemHovered() )
         {
@@ -1002,7 +1000,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         auto lines = object.getInfoLines();
         if ( hasRealChildren && !lines.empty() )
         {
-            auto infoId = std::string("Info: ##") + std::to_string(counter);
+            auto infoId = std::string( "Info: ##" ) + uniqueStr;
             infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
         }
 
@@ -1036,9 +1034,9 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::Indent();
             for ( const auto& child : children )
             {
-                draw_object_recurse_( *child, selected, all, counter );
+                draw_object_recurse_( *child, selected, all );
             }
-            makeDragDropTarget_( object, false, true, 0 );
+            makeDragDropTarget_( object, false, true, "0" );
             ImGui::Unindent();
         }
     }

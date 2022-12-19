@@ -110,6 +110,13 @@ jobs:
           path: MeshLibDist.zip
           retention-days: 1
 
+  test-distribution:
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    needs:
+      - ubuntu20-build-test
+      - ubuntu22-build-test
+      - fedora35-build-test
+    uses: ./.github/workflows/test-distribution.yml
 
   upload-distributions:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -123,6 +130,7 @@ jobs:
       - emscripten-build-test
       - macos-build-test
       - versioning-and-release-url
+      - test-distribution
     steps:
       - name: Checkout
         uses: actions/checkout@v3

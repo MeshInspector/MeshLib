@@ -1,0 +1,73 @@
+name: Test Distribution
+
+on:
+  workflow_call:
+
+jobs:
+  linux-test:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        include:
+          - os: "ubuntu:20.04"
+            name: "ubuntu20"
+            cxx-compiler: /usr/bin/clang++-11
+          - os: "ubuntu:22.04"
+            name: "ubuntu22"
+            cxx-compiler: /usr/bin/clang++-14
+          - os: "fedora:35"
+            name: "fedora35"
+            cxx-compiler: /usr/bin/clang++-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+
+      - name: Download Distributive
+        uses: actions/download-artifact@v3
+        with:
+          name: Distributives
+
+      - name: Install Ubuntu Release
+        if: ${{ matrix.os != 'fedora:35' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
+            apt-get -y install sudo xvfb && \
+            apt-get -y install ./*${{matrix.name}}*.deb
+
+      - name: Install Fedora Release
+        if: ${{ matrix.os == 'fedora:35' }}
+        run: |
+          dnf --refresh -y upgrade
+          dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel
+          dnf -y install ./*.rpm
+
+      - name: Debug output
+        if: always()
+        run: sudo cat /etc/ld.so.conf.d/meshlib_libs.conf
+
+      - name: Run MeshViewer
+        if: always()
+        run: xvfb-run -a MeshViewer -hidden -noEventLoop
+
+      - name: Show meshconv help
+        if: always()
+        run: meshconv --help
+
+      - name: Build example
+        if: always()
+        working-directory: examples/cmake-example
+        run: |
+          mkdir build && \
+          cd build && \
+          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
+          cmake --build . && \
+          ./cmake-example
+          

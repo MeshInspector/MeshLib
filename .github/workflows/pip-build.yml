@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          #ref: ${{needs.setup.outputs.version_tag}}
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}
@@ -148,7 +148,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          #ref: ${{needs.setup.outputs.version_tag}}
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Start container
         run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
@@ -167,13 +167,6 @@ jobs:
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
           docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -p:PythonIncludePath=C:\${{matrix.py-dir}}\include\
-
-      # cant fix embedded python 3.9 for windows yet, but this embedded python is not used in wheel, so we can just disable it this way
-      #- name: Embedded Python3.9 fix
-        #if: ${{ matrix.py-version == '3.9' }}
-        #working-directory: source\x64\Release
-        #run: del python39.zip
-        #shell: cmd
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -246,7 +239,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          #ref: ${{needs.setup.outputs.version_tag}}
+          ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Fix links
         if: ${{ matrix.py-version == '3.11' && matrix.platform == 'x86' }}

@@ -86,7 +86,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane );
     if ( outCutContours )
-        *outCutContours = findRegionBoundary( mesh.topology, &posFaces );
+        *outCutContours = findRegionBoundaryInsideMesh( mesh.topology, posFaces );
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
 }
 

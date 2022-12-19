@@ -17,7 +17,7 @@
 namespace MR
 {
 
-const IOFilters allFilters = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | VoxelsLoad::Filters;
+const IOFilters allFilters = MeshLoad::getFilters();
 
 tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
 {

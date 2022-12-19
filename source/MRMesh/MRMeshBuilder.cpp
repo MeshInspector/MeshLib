@@ -360,7 +360,7 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     int numEdgesInParts = firstPartEdge.back();
 
     MeshTopology res;
-    const auto borderTriCount = settings0.region ? settings0.region->count() : 0;
+    const auto borderTriCount = region.count();
     res.edgeReserve( numEdgesInParts + 6 * borderTriCount ); // should be enough even if all border triangles are disconnected
     res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, t.size() );
 

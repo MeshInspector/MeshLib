@@ -3,6 +3,7 @@
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
 #include "MREdgePaths.h"
+#include "MRBuffer.h"
 #include "MRphmap.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
@@ -1434,6 +1435,84 @@ void MeshTopology::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * ou
     MeshTopology packed;
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
+}
+
+inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, EdgeId key )
+{
+    EdgeId res;
+    if ( key )
+    {
+        res = bmap[ key.undirected() ];
+        if ( key.odd() )
+            res = res.sym();
+    }
+    return res;
+}
+
+void MeshTopology::pack( const PackMapping & map )
+{
+    MR_TIMER
+
+    Vector<HalfEdgeRecord, EdgeId> newEdges;
+    resizeNoInit( newEdges, 2 * map.e.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
+        {
+            auto newUe = map.e.b[oldUe];
+            if ( !newUe )
+                continue;
+            auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
+            {
+                HalfEdgeRecord res;
+                res.next = getAt( map.e.b, he.next );
+                res.prev = getAt( map.e.b, he.prev );
+                res.org = getAt( map.v.b, he.org );
+                res.left = getAt( map.f.b, he.left );
+                return res;
+            };
+            newEdges[ EdgeId{newUe} ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
+            newEdges[ EdgeId{newUe}.sym() ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
+        }
+    } );
+    edges_ = std::move( newEdges );
+
+    Vector<EdgeId, FaceId> newEdgePerFace;
+    resizeNoInit( newEdgePerFace, map.f.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
+        [&]( const tbb::blocked_range<FaceId> & range )
+    {
+        for ( auto oldf = range.begin(); oldf < range.end(); ++oldf )
+        {
+            auto newf = map.f.b[oldf];
+            if ( !newf )
+                continue;
+            newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
+        }
+    } );
+    edgePerFace_ = std::move( newEdgePerFace );
+    assert( edgePerFace_.size() == numValidFaces_ );
+    validFaces_.resize( edgePerFace_.size() );
+    validFaces_.set( 0_f, edgePerFace_.size(), true );
+
+    Vector<EdgeId, VertId> newEdgePerVertex;
+    resizeNoInit( newEdgePerVertex, map.v.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        {
+            auto newv = map.v.b[oldv];
+            if ( !newv )
+                continue;
+            newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
+        }
+    } );
+    edgePerVertex_ = std::move( newEdgePerVertex );
+    assert( edgePerVertex_.size() == numValidVerts_ );
+    validVerts_.resize( edgePerVertex_.size() );
+    validVerts_.set( 0_v, edgePerVertex_.size(), true );
 }
 
 void MeshTopology::write( std::ostream & s ) const

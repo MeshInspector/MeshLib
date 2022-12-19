@@ -10,6 +10,7 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRRibbonConstants.h"
 
 namespace MR
 {
@@ -187,7 +188,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             if ( maxSamples_ > 1 )
             {
                 auto backUpSamples = storedSamples_;
-                ImGui::Text( "MSAA" );
+                ImGui::Text( "Multisample anti-aliasing (MSAA):" );
+                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
                 int couter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
@@ -212,7 +214,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     needReset_ = storedSamples_ != curSamples_;
                 }
                 if ( needReset_ )
-                    ImGui::TransparentTextWrapped( "Application requires reset to apply this change" );
+                    ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
             }
         }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
@@ -309,7 +311,7 @@ bool ViewerSettingsPlugin::onDisable_()
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 500 * scaling, 160 * scaling );
+    ImVec2 windowSize( 500 * scaling, 150 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -324,6 +326,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 
     ImGui::BeginChild( "##MouseSceneControlsList", ImVec2( -1, -1 ), true );
 
+	const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Set other" ).y;
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
     {
         MouseMode mode = MouseMode( i );
@@ -335,6 +338,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         if ( ctrl )
             ctrlStr = MouseController::getControlString( *ctrl );
 
+        const float posY = ImGui::GetCursorPosY();
+        ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling / 2.f );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
@@ -342,7 +347,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x - 150.0f );
 
-        ImGui::Button( "Set other", ImVec2( -1, 0 ) );
+		ImGui::SetCursorPosY( posY );
+        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, buttonHeight ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -400,8 +406,8 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( quickAccessList_->size() ), maxQuickAccessSize_ );
-
-    const float buttonHeight = 20 * scaling;
+    
+    const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
     const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
 
     ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
@@ -410,7 +416,7 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
 
     ImGui::EndChild();
 
-    if ( ImGui::Button( "Reset to default", ImVec2( 0, buttonHeight ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
     {
         auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
         if ( ribbonMenu )
@@ -491,7 +497,7 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 400 * scaling, 300 * scaling );
+    ImVec2 windowSize( 400 * scaling, 285 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -548,7 +554,8 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
         return;
     font->Scale = 0.6f;
     ImGui::PushFont( font );
-    if ( ImGui::Button( "\xef\x80\x8d" ) )
+    const float btnSize = 20 * scaling;
+    if ( RibbonButtonDrawer::GradientButton( "\xef\x80\x8d", ImVec2( btnSize , btnSize ) ) )
         ImGui::CloseCurrentPopup();
     ImGui::PopFont();
     ImGui::SetCursorPos( oldCursorPos );

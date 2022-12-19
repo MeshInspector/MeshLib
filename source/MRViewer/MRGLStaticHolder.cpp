@@ -190,7 +190,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && ((int(gl_FragCoord.x) + int(gl_FragCoord.y)) % 2) == 1)
       discard;
 
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -330,7 +330,7 @@ void GLStaticHolder::createShader_( ShaderType type )
       else
         gl_SampleMask[0] = gl_SampleMaskIn[0] & 0x55555555;
     }
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -480,7 +480,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (onlyOddFragments && mod(gl_FragCoord.x + gl_FragCoord.y, 2) < 1)
       discard;
     
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec3 normEyeCpy = normal_eye;
     if ( flatShading )
     {
@@ -621,7 +621,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
       discard;
 
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     color.r = primitiveId;
 
     color.g = uniGeomId;
@@ -726,7 +726,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
     
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec4 colorCpy;
     bool selected = false;
     if ( showSelVerts )
@@ -832,7 +832,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
     float dot_prod = dot (direction_to_light_eye, normalize(normEyeCpy));
       
-    uint primitiveId = uint( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
+    uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
     vec4 colorCpy = mainColor;
     if ( perVertColoring )
     {

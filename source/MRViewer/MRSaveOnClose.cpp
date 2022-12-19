@@ -2,10 +2,12 @@
 #include "MRMenu.h"
 #include "MRFileDialog.h"
 #include "MRProgressBar.h"
+#include "MRRibbonButtonDrawer.h"
 #include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRSerializer.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRRibbonConstants.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -46,15 +48,16 @@ void SaveOnClosePlugin::preDraw_()
             showCloseModal_ = false;
         }
     }
-    ImGui::SetNextWindowSize( ImVec2( 300 * scaling, -1 ), ImGuiCond_Always );
+	ImGui::SetNextWindowSize( ImVec2( 300 * scaling, -1 ), ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( "Application close##modal", nullptr, ImGuiWindowFlags_NoResize ) )
     {
 
         ImGui::Text( "Save your changes?" );
 
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+		float p = ImGui::GetStyle().FramePadding.x;
+        const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
+        const ImVec2 btnSize = ImVec2( ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, btnHeight );
+        if ( RibbonButtonDrawer::GradientButton( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -79,7 +82,7 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Don't Save", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButton( "Don't Save", btnSize ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
@@ -88,7 +91,7 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::SetTooltipIfHovered( "Close the application without saving", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 3.f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButton( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -98,7 +101,7 @@ void SaveOnClosePlugin::preDraw_()
             ImGui::CloseCurrentPopup();
 
         ImGui::EndPopup();
-    }
+	}
 }
 
 void SaveOnClosePlugin::init( Viewer* _viewer )

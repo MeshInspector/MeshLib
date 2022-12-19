@@ -2,10 +2,12 @@
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "ImGuiHelpers.h"
+#include "MRRibbonButtonDrawer.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimeRecord.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
+#include "MRRibbonConstants.h"
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
@@ -64,7 +66,8 @@ void ProgressBar::setup( float scaling )
             if ( !instance.canceled_ )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
-                if ( ImGui::Button( "Cancel", ImVec2( 75.0f * scaling, 0.0f ) ) )
+				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
+                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
                     instance.canceled_ = true;
             }
             else
@@ -75,6 +78,8 @@ void ProgressBar::setup( float scaling )
         }
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
+        if ( instance.progress_ >= 1.0f )
+            getViewerInstance().incrementForceRedrawFrames();
 #endif
         if ( instance.finished_ )
         {

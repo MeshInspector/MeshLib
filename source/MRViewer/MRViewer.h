@@ -254,8 +254,7 @@ public:
     // if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not
     MRVIEWER_API void incrementForceRedrawFrames( int i = 1, bool swapOnLastOnly = false );
 
-    // Returns true if current frame will be shown on display,
-    // please call this method from postDrawEvent and not from preDrawEvent
+    // Returns true if current frame will be shown on display
     MRVIEWER_API bool isCurrentFrameSwapping() const;
 
     // types of counted events

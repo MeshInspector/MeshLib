@@ -18,7 +18,8 @@ inline int loadGL()
 #ifndef __EMSCRIPTEN__
 #pragma warning(push)
 #pragma warning(disable: 4191) //'type cast': unsafe conversion from 'GLFWglproc (__cdecl *)(const char *)' to 'GLADloadproc'
-    return gladLoadGLLoader( (GLADloadproc)glfwGetProcAddress );
+    static auto loadRes = gladLoadGLLoader( ( GLADloadproc )glfwGetProcAddress );
+    return loadRes;
 #pragma warning(pop)
 #else
 return 1;

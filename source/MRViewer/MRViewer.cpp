@@ -168,26 +168,17 @@ static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 #ifndef __EMSCRIPTEN__
 static void glfw_window_maximize( GLFWwindow* /*window*/, int maximized )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window maximaze", [maximized, viewer] ()
-    {
-        viewer->postSetMaximized( bool( maximized ) );
-    } } );
+    MR::getViewerInstance().postSetMaximized( bool( maximized ) );
 }
 
 static void glfw_window_iconify( GLFWwindow* /*window*/, int iconified )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window iconify", [iconified, viewer] ()
-    {
-        viewer->postSetIconified( bool( iconified ) );
-    } } );
+    MR::getViewerInstance().postSetIconified( bool( iconified ) );
 }
 
 static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->postFocus( bool( focused ) );
+    MR::getViewerInstance().postFocus( bool( focused ) );
 }
 #endif
 
@@ -689,6 +680,7 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
+    glfwHideWindow( window );
 
     if ( settingsMng_ )
     {
@@ -1278,13 +1270,14 @@ void Viewer::draw_( bool force )
     setupScene();
     preDrawSignal();
 
-    if ( forceRedrawFramesWithoutSwap_ > 0 )
-        forceRedrawFramesWithoutSwap_--;
-    bool swapped = forceRedrawFramesWithoutSwap_ == 0;
-    if ( swapped )
+    if ( forceRedrawFramesWithoutSwap_ <= 1 ) // if swapped
         drawScene();
 
     postDrawSignal();
+
+    if ( forceRedrawFramesWithoutSwap_ > 0 )
+        forceRedrawFramesWithoutSwap_--;
+    auto swapped = forceRedrawFramesWithoutSwap_ == 0;
 
     if ( forceRedrawFrames_ > 0 )
     {
@@ -1390,7 +1383,10 @@ void Viewer::postResize( int w, int h )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
 #ifndef __EMSCRIPTEN__
     if ( isLaunched_ )
-        draw();
+    {
+        incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
+        do draw( true ); while ( !isCurrentFrameSwapping() );
+    }
 #endif
 }
 

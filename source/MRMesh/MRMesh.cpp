@@ -1,24 +1,26 @@
 #include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRBox.h"
+#include "MRAABBTree.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
-#include "MRTimer.h"
-#include "MREdgeIterator.h"
-#include "MRRingIterator.h"
-#include "MRMeshTriPoint.h"
 #include "MRBitSetParallelFor.h"
-#include "MRAABBTree.h"
-#include "MRTriangleIntersection.h"
-#include "MRMeshIntersect.h"
+#include "MRBox.h"
+#include "MRComputeBoundingBox.h"
+#include "MRConstants.h"
+#include "MRCube.h"
+#include "MREdgeIterator.h"
+#include "MRGTest.h"
 #include "MRLine3.h"
 #include "MRLineSegm.h"
-#include "MRConstants.h"
-#include "MRComputeBoundingBox.h"
-#include "MRGTest.h"
-#include "MRCube.h"
-#include "MRTriMath.h"
+#include "MRMeshBuilder.h"
+#include "MRMeshIntersect.h"
+#include "MRMeshTriPoint.h"
+#include "MROrder.h"
 #include "MRQuadraticForm.h"
+#include "MRRegionBoundary.h"
+#include "MRRingIterator.h"
+#include "MRTimer.h"
+#include "MRTriangleIntersection.h"
+#include "MRTriMath.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -734,6 +736,29 @@ template MRMESH_API void Mesh::addPartBy( const Mesh & from,
     const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map );
 
+Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
+{
+    MR_TIMER
+
+    Mesh res;
+    const auto fcount = region.count();
+    res.topology.faceReserve( fcount );
+    const auto vcount = getIncidentVerts( topology, region ).count();
+    res.topology.vertReserve( vcount );
+    const auto ecount = 2 * getIncidentEdges( topology, region ).count();
+    res.topology.edgeReserve( ecount );
+
+    res.addPartByMask( *this, region, flipOrientation, {}, {}, map );
+
+    assert( res.topology.faceSize() == fcount );
+    assert( res.topology.faceCapacity() == fcount );
+    assert( res.topology.vertSize() == vcount );
+    assert( res.topology.vertCapacity() == vcount );
+    assert( res.topology.edgeSize() == ecount );
+    assert( res.topology.edgeCapacity() == ecount );
+    return res;
+}
+
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {
     MR_TIMER
@@ -745,17 +770,33 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-void Mesh::packOptimally( const PartMapping & map )
+PackMapping Mesh::packOptimally()
 {
     MR_TIMER
 
     getAABBTree(); // ensure that tree is constructed
-    auto faceMap = AABBTreeOwner_.get()->getLeafOrderAndReset();
-    Mesh packed;
-    packed.addPartByFaceMap( *this, faceMap, false, {}, {}, map );
-    // preserve AABB tree in this
-    topology = std::move( packed.topology );
-    points = std::move( packed.points );
+
+    PackMapping map;
+    map.f.b.resize( topology.faceSize() );
+    AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    map.v = getVertexOrdering( map.f, topology );
+    map.e = getEdgeOrdering( map.f, topology );
+    topology.pack( map );
+
+    VertCoords newPoints( map.v.tsize );
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId{ map.v.b.size() } ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        {
+            auto newv = map.v.b[oldv];
+            if ( !newv )
+                continue;
+            newPoints[newv] = points[oldv];
+        }
+    } );
+    points = std::move( newPoints );
+    return map;
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

@@ -12,6 +12,8 @@
 #include "MRRenderLinesObject.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRPlaneWidget.h"
+#include "MRColorTheme.h"
+#include "MRMesh/MRColor.h"
 
 namespace ImGui
 {
@@ -551,7 +553,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     window = context->CurrentWindow;
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
+    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y && !params.changedSize )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
@@ -726,7 +728,10 @@ void EndCustomStatePlugin()
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
 {
+    const auto color = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32();
+	ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
     bool started = BeginPopupModal( label, open, flags );
+    ImGui::PopStyleColor();
     if ( started )
         GetCurrentContext()->DimBgRatio = 1.0f;
     return started;
@@ -1120,7 +1125,7 @@ PaletteChanges Palette(
         ImGui::Text( "Palette preset with this name already exists, override?" );
         auto w = GetContentRegionAvail().x;
         auto p = GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
             PalettePresets::savePreset( currentPaletteName, palette );
             presetName = currentPaletteName;
@@ -1128,7 +1133,7 @@ PaletteChanges Palette(
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "No", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "No", ImVec2( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -1140,7 +1145,7 @@ PaletteChanges Palette(
     ImGui::SameLine();
     const auto& style = ImGui::GetStyle();
     ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-    if ( ImGui::Button( "Cancel", ImVec2( btnWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
         ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();

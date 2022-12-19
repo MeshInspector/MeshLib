@@ -234,12 +234,14 @@ struct [[nodiscard]] Mesh
         const std::vector<std::vector<EdgeId>> & thisContours = {},
         const std::vector<std::vector<EdgeId>> & fromContours = {},
         PartMapping map = {} );
+    /// creates new mesh from given triangles of this mesh
+    MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     // packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
-    MRMESH_API void packOptimally( const PartMapping & map = {} );
+    MRMESH_API PackMapping packOptimally();
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed

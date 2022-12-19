@@ -96,6 +96,7 @@
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
+    <ClInclude Include="MROrder.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
@@ -356,6 +357,7 @@
     <ClCompile Include="MRMeshToPointCloud.cpp" />
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRObjectPointsHolder.cpp" />
+    <ClCompile Include="MROrder.cpp" />
     <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
@@ -417,13 +419,7 @@
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
-    <ClCompile Include="MRQuadraticForm.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
-      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IntrinsicFunctions>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ForcedIncludeFiles>
-    </ClCompile>
+    <ClCompile Include="MRQuadraticForm.cpp" />
     <ClCompile Include="MRFreeFormDeformer.cpp" />
     <ClCompile Include="MRStreamOperators.cpp" />
     <ClCompile Include="MRSurfaceDistance.cpp" />

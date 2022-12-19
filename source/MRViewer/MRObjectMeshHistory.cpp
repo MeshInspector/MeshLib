@@ -3,6 +3,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRChangeSelectionAction.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRTimer.h>
 
 namespace MR
@@ -61,6 +62,15 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     return res;
 }
 
+[[nodiscard]] static UndirectedEdgeBitSet getMapping( const UndirectedEdgeBitSet & src, const UndirectedEdgeBMap & map )
+{
+    UndirectedEdgeBitSet res( map.tsize );
+    for ( auto b : src )
+        if ( auto mapped = getAt( map.b, b ) )
+            res.set( mapped );
+    return res;
+}
+
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )
 {
     MR_TIMER
@@ -79,6 +89,23 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
 }
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeHashMap & emap )
+{
+    MR_TIMER
+    if ( !objMesh )
+        return;
+
+    // update edges in the selection
+    auto selEdges = getMapping( objMesh->getSelectedEdges(), emap );
+    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
+    objMesh->selectEdges( std::move( selEdges ) );
+
+    // update edges in the creases
+    auto creases = getMapping( objMesh->creases(), emap );
+    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
+    objMesh->setCreases( std::move( creases ) );
+}
+
+void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const UndirectedEdgeBMap & emap )
 {
     MR_TIMER
     if ( !objMesh )

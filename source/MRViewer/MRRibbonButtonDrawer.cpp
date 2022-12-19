@@ -45,11 +45,19 @@ std::unique_ptr<ImGuiImage>& RibbonButtonDrawer::GetGradientTexture()
     return texture;
 }
 
-bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */ )
+bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */, ImGuiKey key )
 {
     auto& texture = GetGradientTexture();
+    auto checkKey = [] ( ImGuiKey passedKey )
+    {
+        if ( passedKey == ImGuiKey_None )
+            return false;
+        if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
+            return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+        return ImGui::IsKeyPressed( passedKey );
+    };
     if ( !texture )
-        return ImGui::Button( label, size );
+        return ImGui::Button( label, size ) || checkKey( key );
 
     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
@@ -59,16 +67,25 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
     const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
 
     int pushedStyleNum = 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+	ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+
+	auto framePadding = style.FramePadding;
     if ( size.y == 0 )
     {
-        auto framePadding = style.FramePadding;
         framePadding.y = cGradientButtonFramePadding;
         if ( auto menu = getViewerInstance().getMenuPlugin() )
             framePadding.y *= menu->menu_scaling();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-        ++pushedStyleNum;
     }
+    else if ( size.y > 0 )
+	{
+        framePadding.y = ( size.y - ImGui::CalcTextSize( label ).y ) / 2.f;
+	}
+    if ( size.x > 0 )
+	{
+		framePadding.x = ( size.x - ImGui::CalcTextSize( label ).x ) / 2.f;
+    }
+	++pushedStyleNum;
+	ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
 
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
@@ -80,16 +97,16 @@ bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /
         ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
         Color::white().getUInt32(), style.FrameRounding );
 
-    auto res = ImGui::Button( label, size );
+    auto res = ImGui::Button( label, size ) || checkKey( key );
 
     ImGui::PopStyleVar( pushedStyleNum );
     ImGui::PopStyleColor( 2 );
     return res;
 }
 
-bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size )
+bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size, ImGuiKey key )
 {
-    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ) );
+    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ), key );
 }
 
 bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )

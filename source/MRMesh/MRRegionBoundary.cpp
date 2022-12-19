@@ -147,6 +147,22 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & face
     return topology.getValidVerts() - getIncidentVerts_( topology, topology.getValidFaces() - faces );
 }
 
+VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region )
+{
+    MR_TIMER
+
+    VertBitSet store;
+    const VertBitSet & regionVertices = getIncidentVerts( topology, region, store );
+
+    VertBitSet bdVerts( regionVertices.size() );
+    BitSetParallelFor( regionVertices, [&]( VertId v )
+    {
+        if ( topology.isBdVertex( v, region ) )
+            bdVerts.set( v );
+    } );
+    return bdVerts;
+}
+
 EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
     MR_TIMER
@@ -157,6 +173,20 @@ EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces
         {
             assert( e.valid() );
             res.set( e );
+        }
+    }
+    return res;
+}
+
+UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceBitSet& faces )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    for ( auto f : faces )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            res.set( e.undirected() );
         }
     }
     return res;

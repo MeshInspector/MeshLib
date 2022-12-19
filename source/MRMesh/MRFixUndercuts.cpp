@@ -114,7 +114,7 @@ void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxel
     auto grid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
     fix( grid, zOffset );
     
-    mesh = gridToMesh( grid, Vector3f::diagonal( voxelSize ) ).value(); // no callback so cannot be stopped
+    mesh = gridToMesh( std::move( grid ), Vector3f::diagonal( voxelSize ) ).value(); // no callback so cannot be stopped
     auto rotInversed = rot.inverse();
     mesh.transform( rotInversed );
 }
@@ -146,15 +146,13 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
     copyFBS.resize( mesh.topology.faceSize(), true );
 
     // create mesh and unclosed grid 
-    Mesh selectedPartMesh;
-    selectedPartMesh.addPartByMask( mesh, copyFBS );
-    auto partGrid = meshToDistanceField( selectedPartMesh, rot, Vector3f::diagonal( voxelSize ) );
+    auto partGrid = meshToDistanceField( mesh.cloneRegion( copyFBS ), rot, Vector3f::diagonal( voxelSize ) );
 
     // fix undercuts if fullGrid by active voxels from partGrid
     fixFullByPart( fullGrid, partGrid, zOffset );
 
     // create mesh and restore transform
-    mesh = gridToMesh( fullGrid, Vector3f::diagonal( voxelSize ) ).value(); // no callback so cannot be stopped
+    mesh = gridToMesh( std::move( fullGrid ), Vector3f::diagonal( voxelSize ) ).value(); // no callback so cannot be stopped
     auto rotInversed = rot.inverse();
     mesh.transform( rotInversed );
 }

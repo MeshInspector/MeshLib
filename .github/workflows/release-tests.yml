@@ -112,12 +112,11 @@ jobs:
         run: brew install python@${{matrix.py-version}}
 
       - name: Pip setup
-        run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
+        run: python${{matrix.py-version}} -m pip install --upgrade pip
 
       - name: Meshlib wheel install
-        run:  ${{ matrix.py-cmd }} -m pip install meshlib
+        run:  python${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests
         working-directory: test_python
-        run: ${{ matrix.py-cmd }} -m pytest -s -v
+        run: python${{matrix.py-version}} -m pytest -s -v

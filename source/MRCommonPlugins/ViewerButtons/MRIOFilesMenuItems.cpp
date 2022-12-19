@@ -209,15 +209,31 @@ bool OpenDirectoryMenuItem::action()
     auto directory = openFolderDialog();
     if ( !directory.empty() )
     {
-        auto container = makeObjectTreeFromFolder( directory );
-        if ( container.has_value() && !container->children().empty() )
+        bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
+        if ( isAnySupportedFiles )
         {
-            auto obj = std::make_shared<Object>( std::move( container.value() ) );
-            obj->setName( utf8string( directory.stem() ) );
-            sSelectRecursive( *obj );
-            AppendHistory<ChangeSceneAction>( "Open directory", obj, ChangeSceneAction::Type::AddObject );
-            SceneRoot::get().addChild( obj );
-            Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory] ()->std::function<void()>
+            {
+                auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
+                if ( loadRes.has_value() )
+                {
+                    auto obj = std::make_shared<Object>( std::move( *loadRes ) );
+                    return[obj]
+                    {
+                        sSelectRecursive( *obj );
+                        AppendHistory<ChangeSceneAction>( "Open directory", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                    };
+                }
+                else
+                    return[error = loadRes.error()]
+                    {
+                        auto menu = getViewerInstance().getMenuPlugin();
+                        if ( menu )
+                            menu->showErrorModal( error );
+                    };
+            } );
         }
         else
         {

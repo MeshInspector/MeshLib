@@ -91,4 +91,10 @@ MRMESH_API double roundToPrecision( double v, int precision );
 /// returns given value rounded to given number of decimal digits
 inline float roundToPrecision( float v, int precision ) { return (float)roundToPrecision( double(v), precision ); }
 
+// Returns message showed when loading is canceled
+inline std::string getCancelMessage( const std::filesystem::path& path )
+{
+    return "Loading canceled: " + utf8string( path );
+}
+
 }

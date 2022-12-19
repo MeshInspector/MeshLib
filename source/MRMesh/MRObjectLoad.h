@@ -23,8 +23,11 @@ MRMESH_API tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( con
 /// loads distance map from given file in new object
 MRMESH_API tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
+// check if exist any supported files in folder and subfolders
+MRMESH_API bool isAnySupportedFilesInSubfolders( const std::filesystem::path& folder );
+
 /// loads meshes from given folder in new container object
-MRMESH_API tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder );
+MRMESH_API tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, ProgressCallback callback = {} );
 
 /// \}
 

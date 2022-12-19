@@ -87,6 +87,7 @@
     <ClInclude Include="MRMeshBooleanFacade.h" />
     <ClInclude Include="MRMeshBuilderTypes.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshTrimWithPlane.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
     <ClInclude Include="MRMeshEdgePoint.h" />
@@ -345,6 +346,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />

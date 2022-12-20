@@ -83,11 +83,13 @@ std::vector<EdgeLoop> findRegionBoundaryInsideMesh( const MeshTopology & topolog
             int holeEdgeIdx = -1;
             for ( int i = 0; i < loop.size(); ++i )
             {
-                if ( !topology.right( loop[i] ) )
+                if ( topology.right( loop[i] ) )
                 {
-                    holeEdgeIdx = i;
-                    break;
+                    [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
+                    assert( inserted );
                 }
+                else if ( holeEdgeIdx < 0 )
+                    holeEdgeIdx = i;
             }
             if ( holeEdgeIdx >= 0 )
             {
@@ -111,11 +113,6 @@ std::vector<EdgeLoop> findRegionBoundaryInsideMesh( const MeshTopology & topolog
             else
             {
                 // found loop is entirely inside the mesh, and have all valid right faces
-                for ( EdgeId ei : loop )
-                {
-                    [[maybe_unused]] bool inserted = reportedBdEdges.insert( ei ).second;
-                    assert( inserted );
-                }
                 res.push_back( std::move( loop ) );
             }
         }

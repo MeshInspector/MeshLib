@@ -104,7 +104,8 @@ std::vector<EdgeLoop> findRegionBoundaryInsideMesh( const MeshTopology & topolog
                     // skip not-hole edges
                     for ( ; i < loop.size() && topology.right( loop[i] ); ++i )
                         {}
-                    res.emplace_back( beg, loop.begin() + i );
+                    if ( beg < loop.begin() + i )
+                        res.emplace_back( beg, loop.begin() + i );
                 }
             }
             else

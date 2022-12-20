@@ -23,11 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -35,31 +34,29 @@ jobs:
           - os: "ubuntu:22.04"
             py-version: "3.10"
             py-cmd: "python3.10"
-          - os: "fedora:35"
+          - os: "debian:11-slim"
             py-version: "3.9"
             py-cmd: "python3.9"
+          - os: "fedora:37"
+            py-version: "3.11"
+            py-cmd: "python3.11"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Python setup
-        if: ${{ matrix.os == 'fedora:35'}}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.py-version }}
+      - name: Ubuntu system setup
+        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
+        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
-      - name: System setup
-        if: ${{ matrix.os != 'fedora:35'}}
-        run: |
-          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+      - name: Fedora 37 system setup
+        if: ${{matrix.os == 'fedora:37'}}
+        run: dnf -y install python3 pip
 
       - name: Pip setup
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Meshlib wheel install
         run:  ${{ matrix.py-cmd }} -m pip install meshlib
@@ -75,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10" ]
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -89,78 +86,37 @@ jobs:
 
       - name: Pip setup
         run: |
-          py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip uninstall -y meshlib
-          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt     
+          py -${{matrix.py-version}} -m pip install --upgrade pip 
           py -${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests
         working-directory: test_python
         run: py -${{matrix.py-version}} -m pytest -s -v
 
-  install-test:
+  pip-test-macos:
+    needs: setup
     timeout-minutes: 20
-    runs-on: ubuntu-latest
-    container:
-      image: ${{matrix.container}}
-      options: --user root
+    runs-on: macos-12
     strategy:
       fail-fast: false
       matrix:
-        os: [Ubuntu20, Ubuntu22, Fedroa35]
-        include:
-          - os: Ubuntu20
-            container: ubuntu:20.04
-            fileName: "*ubuntu20*"
-            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
-            installCmd: apt-get -y install ./*.deb
-          - os: Ubuntu22
-            container: ubuntu:22.04
-            fileName: "*ubuntu22*"
-            updateCmd: export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && apt-get -y install sudo
-            installCmd: apt-get -y install ./*.deb
-          - os: Fedroa35
-            container: fedora:35
-            fileName: "*-dev.rpm"
-            updateCmd: dnf --refresh -y upgrade
-            installCmd: dnf -y install ./*.rpm
+        py-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Python setup on Fedora
-        if: ${{ matrix.os == 'Fedroa35'}}
-        run: |
-          dnf -y install python3.9 curl
-          curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
-          python3.9 -m pip install --upgrade -r ./requirements/python.txt
-
-      - name: System setup
-        if: ${{ matrix.os != 'Fedroa35'}}
-        run: |
-          apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade -r ./requirements/python.txt
-
-      - name: Download Release
-        uses: robinraju/release-downloader@v1.6
         with:
-          repository: MeshInspector/MeshLib
-          latest: true
-          fileName: ${{matrix.fileName}}
-          out-file-path: ""
+          ref: ${{needs.setup.outputs.version_tag}}
 
-      - name: Install Release
-        run: |
-          ${{matrix.updateCmd}}
-          ${{matrix.installCmd}}
+      - name: Python setup
+        if: ${{ matrix.py-version != '3.11' }}
+        run: brew install python@${{matrix.py-version}}
+
+      - name: Pip setup
+        run: python${{matrix.py-version}} -m pip install --upgrade pip
+
+      - name: Meshlib wheel install
+        run:  python${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests
-        if: ${{ matrix.os != 'Fedroa35'}}
         working-directory: test_python
-        run: python3 -m pytest -s -v
-
-      - name: Run Python tests on Fedora
-        if: ${{ matrix.os == 'Fedroa35'}}
-        working-directory: test_python
-        run: python3.9 -m pytest -s -v
+        run: python${{matrix.py-version}} -m pytest -s -v

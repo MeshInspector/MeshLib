@@ -510,9 +510,4 @@ void saveFileDialogAsync( std::function<void( const std::filesystem::path& )> ca
 #endif
 }
 
-std::string getCancelMessage( const std::filesystem::path& path )
-{
-    return "Loading canceled: " + path.string();
-}
-
 }

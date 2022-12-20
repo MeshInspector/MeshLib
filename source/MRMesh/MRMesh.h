@@ -234,6 +234,8 @@ struct [[nodiscard]] Mesh
         const std::vector<std::vector<EdgeId>> & thisContours = {},
         const std::vector<std::vector<EdgeId>> & fromContours = {},
         PartMapping map = {} );
+    /// creates new mesh from given triangles of this mesh
+    MRMESH_API Mesh cloneRegion( const FaceBitSet & region, bool flipOrientation = false, const PartMapping & map = {} ) const;
 
     // tightly packs all arrays eliminating lone edges and invalid face, verts and points,
     // optionally returns mappings: old.id -> new.id

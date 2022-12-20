@@ -17,7 +17,7 @@ public:
 private:
     const MeshTopology & topology_;
     FaceBitSet filledFaces_;
-    std::vector<EdgeId> currentFacesBd_;
+    std::vector<EdgeId> currentFacesBd_, nextFacesBd_;
 
     void firstStep_();
     void nextStep_();
@@ -36,19 +36,18 @@ void ContourLeftFiller::addContour( const std::vector<EdgeId> & contour )
 
 void ContourLeftFiller::firstStep_()
 {
-    MR_TIMER
-        // first step is more complicated to ensure that we do not fill to the other side from the contour
+    // first step is more complicated to ensure that we do not fill to the other side from the contour
 
-        phmap::parallel_flat_hash_set<EdgeId> initialEdges;
+    phmap::parallel_flat_hash_set<EdgeId> initialEdges;
     for ( EdgeId e : currentFacesBd_ )
         initialEdges.insert( e );
 
-    std::vector<EdgeId> nextFacesBd;
+    nextFacesBd_.clear();
     auto addNextStepEdge = [&]( EdgeId e )
     {
         if ( initialEdges.find( e ) != initialEdges.end() )
             return;
-        nextFacesBd.push_back( e.sym() );
+        nextFacesBd_.push_back( e.sym() );
     };
 
     for ( EdgeId e : currentFacesBd_ )
@@ -66,14 +65,12 @@ void ContourLeftFiller::firstStep_()
         }
     }
 
-    currentFacesBd_ = std::move( nextFacesBd );
+    currentFacesBd_.swap( nextFacesBd_ );
 }
 
 void ContourLeftFiller::nextStep_()
 {
-    MR_TIMER
-
-        std::vector<EdgeId> nextFacesBd;
+    nextFacesBd_.clear();
     for ( EdgeId e : currentFacesBd_ )
     {
         auto l = topology_.left( e );
@@ -81,12 +78,12 @@ void ContourLeftFiller::nextStep_()
             continue;
         if ( !filledFaces_.test_set( l ) )
         {
-            nextFacesBd.push_back( topology_.next( e ) );
-            nextFacesBd.push_back( topology_.prev( e.sym() ).sym() );
+            nextFacesBd_.push_back( topology_.next( e ) );
+            nextFacesBd_.push_back( topology_.prev( e.sym() ).sym() );
         }
     }
 
-    currentFacesBd_ = std::move( nextFacesBd );
+    currentFacesBd_.swap( nextFacesBd_ );
 }
 
 const FaceBitSet& ContourLeftFiller::fill()

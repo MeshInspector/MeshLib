@@ -1,26 +1,27 @@
 #include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRBox.h"
+#include "MRAABBTree.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
-#include "MRTimer.h"
-#include "MREdgeIterator.h"
-#include "MRRingIterator.h"
-#include "MRMeshTriPoint.h"
 #include "MRBitSetParallelFor.h"
-#include "MRAABBTree.h"
-#include "MRTriangleIntersection.h"
-#include "MRMeshIntersect.h"
+#include "MRBox.h"
+#include "MRComputeBoundingBox.h"
+#include "MRConstants.h"
+#include "MRCube.h"
+#include "MREdgeIterator.h"
+#include "MRGTest.h"
 #include "MRLine3.h"
 #include "MRLineSegm.h"
-#include "MRConstants.h"
-#include "MRComputeBoundingBox.h"
-#include "MRGTest.h"
-#include "MRCube.h"
-#include "MRTriMath.h"
-#include "MRQuadraticForm.h"
-#include "MRPch/MRTBB.h"
+#include "MRMeshBuilder.h"
+#include "MRMeshIntersect.h"
+#include "MRMeshTriPoint.h"
 #include "MROrder.h"
+#include "MRQuadraticForm.h"
+#include "MRRegionBoundary.h"
+#include "MRRingIterator.h"
+#include "MRTimer.h"
+#include "MRTriangleIntersection.h"
+#include "MRTriMath.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -734,6 +735,29 @@ template MRMESH_API void Mesh::addPartBy( const Mesh & from,
     const std::vector<std::vector<EdgeId>> & thisContours,
     const std::vector<std::vector<EdgeId>> & fromContours,
     PartMapping map );
+
+Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
+{
+    MR_TIMER
+
+    Mesh res;
+    const auto fcount = region.count();
+    res.topology.faceReserve( fcount );
+    const auto vcount = getIncidentVerts( topology, region ).count();
+    res.topology.vertReserve( vcount );
+    const auto ecount = 2 * getIncidentEdges( topology, region ).count();
+    res.topology.edgeReserve( ecount );
+
+    res.addPartByMask( *this, region, flipOrientation, {}, {}, map );
+
+    assert( res.topology.faceSize() == fcount );
+    assert( res.topology.faceCapacity() == fcount );
+    assert( res.topology.vertSize() == vcount );
+    assert( res.topology.vertCapacity() == vcount );
+    assert( res.topology.edgeSize() == ecount );
+    assert( res.topology.edgeCapacity() == ecount );
+    return res;
+}
 
 void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, bool rearrangeTriangles )
 {

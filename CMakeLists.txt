@@ -30,7 +30,7 @@ ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
 project (MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshViewer\")
+add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -155,6 +155,13 @@ ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
+set(MR_BIN_DIR "bin")
+set(MR_INCLUDE_DIR "include/MeshLib")
+set(MR_MAIN_LIB_DIR "lib/MeshLib")
+set(MR_PY_LIB_DIR "${MR_MAIN_LIB_DIR}/meshlib")
+set(MR_RESOURCES_DIR "etc/MeshLib")
+set(MR_FONTS_DIR "share/fonts")
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
@@ -166,3 +173,21 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+
+IF(NOT MESHLIB_VERSION)
+    set(MESHLIB_VERSION 0.0.0)
+ENDIF()
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(meshlib-config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
+        INSTALL_DESTINATION ${MR_MAIN_LIB_DIR}
+        PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR)
+
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        VERSION ${MESHLIB_VERSION}
+        COMPATIBILITY ExactVersion)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        DESTINATION ${MR_MAIN_LIB_DIR})

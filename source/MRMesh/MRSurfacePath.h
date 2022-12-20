@@ -59,7 +59,7 @@ MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh 
     const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 
-/// returns length of surface path, accumulate each segment
+/// computes the length of surface path
 MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
 
 /// \}

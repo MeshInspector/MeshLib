@@ -87,6 +87,7 @@
     <ClInclude Include="MRMeshBooleanFacade.h" />
     <ClInclude Include="MRMeshBuilderTypes.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
+    <ClInclude Include="MRMeshTrimWithPlane.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
     <ClInclude Include="MRMeshEdgePoint.h" />
@@ -345,6 +346,8 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshDecimateParallelInplace.cpp" />
+    <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
@@ -419,13 +422,7 @@
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp" />
-    <ClCompile Include="MRQuadraticForm.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
-      <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IntrinsicFunctions>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ForcedIncludeFiles>
-    </ClCompile>
+    <ClCompile Include="MRQuadraticForm.cpp" />
     <ClCompile Include="MRFreeFormDeformer.cpp" />
     <ClCompile Include="MRStreamOperators.cpp" />
     <ClCompile Include="MRSurfaceDistance.cpp" />
@@ -543,7 +540,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
@@ -579,7 +576,7 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>

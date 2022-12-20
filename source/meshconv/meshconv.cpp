@@ -126,7 +126,7 @@ static int mainInternal( int argc, char **argv )
             "meshconv is mesh file conversion utility based on MeshInspector/MeshLib\n"
             "Usage: meshconv input-file output-file [options]\n"
             << allCommands << "\n";
-        return 1;
+        return 0;
     }
 
     if ( vm.count("timings") )

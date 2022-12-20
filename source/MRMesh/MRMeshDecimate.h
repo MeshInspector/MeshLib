@@ -126,6 +126,17 @@ struct DecimateResult
  */ 
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
+struct DecimateParallelInplaceSettings : DecimateSettings
+{
+    /// Subdivides mesh on given number of parts to process them in parallel
+    int subdivideParts = 32;
+};
+
+/// decimate given mesh in parallel (using many threads);
+/// unlike \ref decimateParallelMesh does not create copies of mesh regions, so may take less memory to operate;
+/// IMPORTANT: please call mesh.packOptimally() before calling this, otherwise performance will be bad
+MRMESH_API DecimateResult decimateParallelMeshInplace( MR::Mesh & mesh, const DecimateParallelInplaceSettings & settings );
+
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup

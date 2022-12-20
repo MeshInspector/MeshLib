@@ -11,6 +11,7 @@
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
+#include "MRMesh/MRSystem.h"
 
 namespace MR
 {
@@ -29,6 +30,25 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
             *storedSamples = *curSamples;
         }
     } );
+#ifndef __EMSCRIPTEN__
+    CommandLoop::appendCommandAfterWindowAppear( [] ()
+    {
+        auto& viewer = getViewerInstance();
+        int samples = 0;
+        if ( auto& settingsManager = viewer.getViewportSettingsManager() )
+            samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
+        if ( viewer.isGLInitialized() && loadGL() )
+        {
+            int realSamples;
+            GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
+            if ( realSamples != samples )
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( "GPU multisampling settings override application value." );
+            }
+        }
+    } );
+#endif
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )

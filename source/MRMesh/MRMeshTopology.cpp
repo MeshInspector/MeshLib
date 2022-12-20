@@ -1248,7 +1248,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
             set( vmap, from.org( e ), org( e1 ) );
             set( vmap, from.dest( e ), dest( e1 ) );
-            set( emap, e.undirected(), e.even() ? e1 : e1.sym() );
+            [[maybe_unused]] bool eInserted = emap.insert( { e.undirected(), e.even() ? e1 : e1.sym() } ).second;
+            assert( eInserted ); // all contour edges must be unique
             existingEdges.autoResizeSet( e.undirected() );
         }
     }

@@ -12,6 +12,7 @@ class ViewerSettingsPlugin : public StatePlugin
 {
 public:
     ViewerSettingsPlugin();
+    ~ViewerSettingsPlugin();
 
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
 
@@ -50,6 +51,11 @@ private:
     std::unique_ptr<ShadowsGL> shadowGl_;
 
     SpaceMouseController::Params spaceMouseParams;
+#ifndef __EMSCRIPTEN__
+    // timer for sampling check
+    AsyncTimer asyncTimer_;
+    std::thread timerThread_;
+#endif
 };
 
 }

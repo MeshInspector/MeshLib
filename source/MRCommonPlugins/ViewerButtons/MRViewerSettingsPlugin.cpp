@@ -31,40 +31,23 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         }
     } );
 #ifndef __EMSCRIPTEN__
-    // check after 2 sec delay, to make sure that window was started correctly
-    asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( 2 * 1000 ) ) );
-    timerThread_ = std::thread( [this] ()
+    CommandLoop::appendCommandAfterWindowAppear( [] ()
     {
-        MR::SetCurrentThreadName( "Sampling check timer thread" );
-        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
+        auto& viewer = getViewerInstance();
+        int samples = 0;
+        if ( auto& settingsManager = viewer.getViewportSettingsManager() )
+            samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
+        if ( viewer.isGLInitialized() && loadGL() )
         {
-            CommandLoop::appendCommand( [] ()
+            int realSamples;
+            GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
+            if ( realSamples != samples )
             {
-                auto& viewer = getViewerInstance();
-                int samples = 0;
-                if ( auto& settingsManager = viewer.getViewportSettingsManager() )
-                    samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
-                if ( viewer.isGLInitialized() && loadGL() )
-                {
-                    int realSamples;
-                    GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
-                    if ( realSamples != samples )
-                    {
-                        if ( auto menu = getViewerInstance().getMenuPlugin() )
-                            menu->showErrorModal( "GPU multisampling settings override application value." );
-                    }
-                }
-            } );
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( "GPU multisampling settings override application value." );
+            }
         }
     } );
-#endif
-}
-
-ViewerSettingsPlugin::~ViewerSettingsPlugin()
-{
-#ifndef __EMSCRIPTEN__
-    asyncTimer_.terminate();
-    timerThread_.join();
 #endif
 }
 

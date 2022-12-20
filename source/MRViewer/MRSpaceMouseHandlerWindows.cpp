@@ -194,6 +194,12 @@ void SpaceMouseHandlerWindows::updateConnected( int /*jid*/, int /*event*/ )
         initialize();
 }
 
+void SpaceMouseHandlerWindows::setDisableMouseScrollZoom( bool disableMouseSrollZoom )
+{
+    disableMouseScrollZoom_ = disableMouseSrollZoom;
+    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 || !disableMouseScrollZoom_ );
+}
+
 void SpaceMouseHandlerWindows::postFocusSignal_( bool focused )
 {
     active_ = focused;
@@ -247,7 +253,7 @@ void SpaceMouseHandlerWindows::updateConnected_()
         startUpdateThread_();
     }
 
-    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 );
+    getViewerInstance().mouseController.setMouseScroll( joystickIndex_ == -1 || !disableMouseScrollZoom_ );
 }
 
 void SpaceMouseHandlerWindows::startUpdateThread_()

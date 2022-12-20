@@ -11,6 +11,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
+#include "MRSpaceMouseHandlerWindows.h"
 
 namespace
 {
@@ -219,6 +220,21 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( paramsJson.isMember( "rotateScale" ) )
             deserializeFromJson( paramsJson["rotateScale"], spaceMouseParams.rotateScale );
         viewer.spaceMouseController.setParams( spaceMouseParams );
+
+#ifdef _WIN32
+        if ( paramsJson.isMember( "disableMouseScrollZoom" ) && paramsJson["disableMouseScrollZoom"].isBool() )
+        {
+            if ( viewer.spaceMouseHandler )
+            {
+                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( viewer.spaceMouseHandler );
+                if ( winHandler )
+                {
+                    const bool disableMouseScrollZoom = paramsJson["disableMouseScrollZoom"].asBool();
+                    winHandler->setDisableMouseScrollZoom( disableMouseScrollZoom );
+                }
+            }
+        }
+#endif
     }
 }
 
@@ -286,6 +302,16 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     SpaceMouseController::Params spaceMouseParams = viewer.spaceMouseController.getParams();
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
+#ifdef _WIN32
+    if ( viewer.spaceMouseHandler )
+    {
+        auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( viewer.spaceMouseHandler );
+        if ( winHandler )
+        {
+            spaceMouseParamsJson["disableMouseScrollZoom"] = winHandler->getDisableMouseScrollZoom();
+        }
+    }
+#endif
     cfg.setJsonValue( cSpaceMouseSettings, spaceMouseParamsJson );
 }
 

@@ -439,6 +439,7 @@ public:
     MouseController mouseController;
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
+    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler;
 
     int window_width; // current width
     int window_height; // current height
@@ -665,8 +666,6 @@ private:
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
-
-    std::unique_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

@@ -49,7 +49,8 @@ private:
     Vector4f shadowColor4f_;
     std::unique_ptr<ShadowsGL> shadowGl_;
 
-    SpaceMouseController::Params spaceMouseParams;
+    SpaceMouseController::Params spaceMouseParams_;
+    bool disableMouseScrollZoom_{ false };
 };
 
 }

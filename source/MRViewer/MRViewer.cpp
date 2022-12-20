@@ -653,7 +653,7 @@ void Viewer::launchEventLoop()
             draw( true );
             glfwPollEvents();
             eventQueue.execute();
-            spaceMouseHandler_->handle();
+            spaceMouseHandler->handle();
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
@@ -668,7 +668,7 @@ void Viewer::launchEventLoop()
             glfwWaitEvents();
             eventQueue.execute();
         }
-        spaceMouseHandler_->handle();
+        spaceMouseHandler->handle();
     }
 }
 
@@ -1123,7 +1123,7 @@ bool Viewer::interruptWindowClose()
 
 void Viewer::joystickUpdateConnected( int jid, int event )
 {
-    spaceMouseHandler_->updateConnected( jid, event );
+    spaceMouseHandler->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
@@ -1533,12 +1533,12 @@ void Viewer::initRotationCenterObject_()
 void Viewer::initSpaceMouseHandler_()
 {
 #ifdef _WIN32
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
+    spaceMouseHandler = std::make_unique<SpaceMouseHandlerWindows>();
 #else
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
+    spaceMouseHandler = std::make_unique<SpaceMouseHandler>();
 #endif
 
-    spaceMouseHandler_->initialize();
+    spaceMouseHandler->initialize();
 }
 
 bool Viewer::windowShouldClose()

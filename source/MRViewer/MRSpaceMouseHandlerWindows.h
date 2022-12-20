@@ -15,6 +15,9 @@ public:
     virtual void initialize() override;
     virtual void handle() override;
     virtual void updateConnected( int jid, int event );
+
+    MRVIEWER_API void setDisableMouseScrollZoom( bool disableMouseSrollZoom );
+    bool getDisableMouseScrollZoom() { return disableMouseScrollZoom_; }
 private:
     bool active_{ true };
     bool initialized_{ false };
@@ -28,6 +31,8 @@ private:
     std::atomic_bool updateThreadActive_{ true };
     std::atomic<std::array<float, 6>> axesDiff_;
     std::array<float, 6> axesOld_{};
+
+    bool disableMouseScrollZoom_{ true };
 
     virtual void postFocusSignal_( bool focused ) override;
 

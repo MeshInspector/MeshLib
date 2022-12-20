@@ -89,7 +89,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
     {
         *outCutContours = findRegionBoundaryInsideMesh( mesh.topology, posFaces );
         for ( const auto & c : *outCutContours )
-            for ( EdgeId e : c )
+            for ( [[maybe_unused]] EdgeId e : c )
             {
                 assert( contains( posFaces, mesh.topology.left( e ) ) );
                 assert( mesh.topology.right( e ) );
@@ -100,7 +100,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
     if ( outCutContours )
     {
         for ( const auto & c : *outCutContours )
-            for ( EdgeId e : c )
+            for ( [[maybe_unused]] EdgeId e : c )
             {
                 assert( mesh.topology.left( e ) );
                 assert( !mesh.topology.right( e ) );

@@ -381,6 +381,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
         value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraAStar, "Dijkstra algorithm with A* modification" ).
         value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );  
 
+    pybind11::enum_<MR::PathError>( m, "PathError" ).
+        value( "StartEndNotConnected", MR::PathError::StartEndNotConnected, "no path can be found from start to end, because they are not from the same connected component" ).
+        value( "InternalError", MR::PathError::InternalError, "report to developers for investigation" );
+
     m.def( "computeGeodesicPath", &MR::computeGeodesicPath,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters") = 100,
         "Returns intermediate points of the geodesic path from start to end, where it crosses mesh edges"
@@ -404,3 +408,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
         "considered paths can go either along edges or straightly within triangles"
     );
 })
+
+MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedGeodesicPath, MR::SurfacePath, MR::PathError )

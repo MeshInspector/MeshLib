@@ -13,16 +13,28 @@ void CommandLoop::setMainThreadId( const std::thread::id& id )
     inst.mainThreadId_ = id;
 }
 
+void CommandLoop::setWindowAppeared()
+{
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ );
+    inst.windowAppeared_ = true;
+}
+
 void CommandLoop::appendCommand( CommandFunc func )
 {
-    addCommand_( func, false );
+    addCommand_( func, false, false );
+}
+
+void CommandLoop::appendCommandAfterWindowAppear( CommandFunc func )
+{
+    addCommand_( func, false, true );
 }
 
 void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( blockThread )
-        return addCommand_( func, true );
+        return addCommand_( func, true, false );
     else
         return func();
 }
@@ -30,12 +42,23 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 void CommandLoop::processCommands()
 {
     auto& inst = instance_();
+    std::shared_ptr<Command> refCommand;
     for ( ; ;)
     {
         std::unique_lock<std::mutex> lock( inst.mutex_ );
         if ( inst.commands_.empty() )
             break;
-        auto cmd = std::move( inst.commands_.front() );
+        auto cmd = inst.commands_.front();
+        if ( !inst.windowAppeared_ && cmd->afterAppear )
+        {
+            if ( refCommand == cmd )
+                break;
+            if ( !refCommand )
+                refCommand = cmd;
+            inst.commands_.push( cmd );
+            inst.commands_.pop();
+            continue;
+        }
         inst.commands_.pop();
         lock.unlock();
 
@@ -52,10 +75,11 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-void CommandLoop::addCommand_( CommandFunc func, bool blockThread )
+void CommandLoop::addCommand_( CommandFunc func, bool blockThread, bool afterAppear )
 {
     auto& inst = instance_();
     std::shared_ptr<Command> cmd = std::make_shared<Command>();
+    cmd->afterAppear = afterAppear;
     cmd->func = func;
     cmd->threadId = std::this_thread::get_id();
     std::unique_lock<std::mutex> lock( inst.mutex_ );

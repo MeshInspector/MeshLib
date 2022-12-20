@@ -427,6 +427,8 @@ int Viewer::launch( const LaunchParams& params )
 
     parseCommandLine_( params.argc, params.argv );
 
+    CommandLoop::setWindowAppeared();
+
     if ( params.startEventLoop )
     {
 #ifdef __EMSCRIPTEN__

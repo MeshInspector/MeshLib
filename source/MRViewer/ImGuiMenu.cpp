@@ -336,12 +336,12 @@ void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 
 bool ImGuiMenu::spaceMouseMove_( const Vector3f& /*translate*/, const Vector3f& /*rotate*/ )
 {
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
 bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
 {
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
 void ImGuiMenu::rescaleStyle_()

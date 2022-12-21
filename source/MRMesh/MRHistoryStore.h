@@ -32,6 +32,7 @@ public:
     MRMESH_API bool isSceneModified() const;
     /// Consider the current scene state as saved
     void setSavedState() { savedSceneIndex_ = firstRedoIndex_; }
+    /// declare that next action is loading files
     MRMESH_API void nextIsLoadingFiles();
 
     /// Clears this HistoryStore

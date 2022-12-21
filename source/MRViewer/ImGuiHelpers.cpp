@@ -253,7 +253,7 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     return res;
 }
 
-void InputTextCenteredReadOnly( const char* label, const std::string& str, float width, std::optional<ImVec4> textColor )
+void InputTextCenteredReadOnly( const char* label, const std::string& str, float width, const std::optional<ImVec4>& textColor )
 {
     const auto& style = ImGui::GetStyle();
     const auto& viewer = MR::Viewer::instanceRef();

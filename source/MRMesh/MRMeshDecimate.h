@@ -89,6 +89,10 @@ struct DecimateSettings
     bool packMesh = false;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback = {};
+    /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
+    /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
+    /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
+    int subdivideParts = 1;
 };
 
 /**
@@ -125,18 +129,6 @@ struct DecimateResult
  * \sa \ref resolveMeshDegenerations
  */ 
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
-
-struct DecimateParallelInplaceSettings : DecimateSettings
-{
-    /// Subdivides mesh on given number of parts to process them in parallel
-    int subdivideParts = 32;
-};
-
-/// decimate given mesh in parallel (using many threads);
-/// unlike \ref decimateParallelMesh does not create copies of mesh regions, so may take less memory to operate;
-/// the other benefits is that FaceIds and EdgeIds are preserved unlike \ref decimateParallelMesh;
-/// IMPORTANT: please call mesh.packOptimally() before calling this, otherwise performance will be bad
-MRMESH_API DecimateResult decimateParallelMeshInplace( MR::Mesh & mesh, const DecimateParallelInplaceSettings & settings );
 
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation

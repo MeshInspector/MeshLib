@@ -1499,9 +1499,6 @@
     <ClCompile Include="MRMeshTrimWithPlane.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshDecimateParallelInplace.cpp">
-      <Filter>Source Files\Decimation</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

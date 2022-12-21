@@ -50,6 +50,8 @@ namespace MR
 [[nodiscard]] MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
 // composes the set of all edges with all their vertices in given set
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts );
+// composes the set of all edges having both left and right in given region
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBitSet& region );
 // if edges-parameter is null pointer then simply returns the reference on all valid vertices;
 // otherwise performs store = getIncidentVerts( topology, *edges ) and returns reference on store
 [[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store );

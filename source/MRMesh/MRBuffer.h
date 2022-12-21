@@ -113,7 +113,7 @@ template <typename T, typename I>
 struct BMap
 {
     Buffer<T, I> b;
-    size_t tsize; ///< target size, all values inside b must be less than this value
+    size_t tsize = 0; ///< target size, all values inside b must be less than this value
 };
 
 // mapping of mesh elements: old -> new,

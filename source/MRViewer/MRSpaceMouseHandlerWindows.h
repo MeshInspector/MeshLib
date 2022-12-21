@@ -15,6 +15,11 @@ public:
     virtual void initialize() override;
     virtual void handle() override;
     virtual void updateConnected( int jid, int event );
+
+    // set state of zoom by mouse scroll (to fix scroll signal from spacemouse driver)
+    MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );
+    // get state of zoom by mouse scroll
+    bool isMouseScrollZoomActive() { return activeMouseScrollZoom_; }
 private:
     bool active_{ true };
     bool initialized_{ false };
@@ -28,6 +33,8 @@ private:
     std::atomic_bool updateThreadActive_{ true };
     std::atomic<std::array<float, 6>> axesDiff_;
     std::array<float, 6> axesOld_{};
+
+    bool activeMouseScrollZoom_{ false };
 
     virtual void postFocusSignal_( bool focused ) override;
 

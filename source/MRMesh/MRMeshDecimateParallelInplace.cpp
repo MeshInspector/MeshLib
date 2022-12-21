@@ -22,8 +22,8 @@ DecimateResult decimateParallelMeshInplace( MR::Mesh & mesh, const DecimateParal
     }
 
     // not implemented in parallel version of decimate:
-    assert( settings.maxDeletedVertices == INT_MAX );
-    assert( settings.maxDeletedFaces == INT_MAX );
+    assert( settings.maxDeletedVertices >= mesh.topology.vertSize() );
+    assert( settings.maxDeletedFaces >= mesh.topology.faceSize() );
     assert( !settings.bdVerts );
     assert( !settings.vertForms );
 
@@ -107,6 +107,7 @@ DecimateResult decimateParallelMeshInplace( MR::Mesh & mesh, const DecimateParal
                 break;
 
             DecimateSettings subSeqSettings = settings;
+            subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
             subSeqSettings.touchBdVertices = false;
             subSeqSettings.bdVerts = &parts[i].bdVerts;

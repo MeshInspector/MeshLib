@@ -185,10 +185,7 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window scale", [xscale, yscale, viewer] ()
-    {
-        viewer->postRescale( xscale, yscale );
-    } } );
+    viewer->postRescale( xscale, yscale );
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)

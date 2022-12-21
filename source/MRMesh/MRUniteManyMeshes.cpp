@@ -17,9 +17,9 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b,
     bool fixDegenerations, float maxError, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
-        return b;
+        return std::move( b );
     else if ( b.points.empty() )
-        return a;
+        return std::move( a );
 
     AffineXf3f xf = AffineXf3f::translation( shift ? *shift : Vector3f() );
     BooleanResultMapper mapper_;

@@ -887,7 +887,7 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList] ()->std::function<void()>
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, this] ()->std::function<void()>
     {
         std::vector<std::filesystem::path> loadedFiles;
         std::vector<std::string> errorList;
@@ -925,7 +925,7 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
             else
                 errorList.push_back( "No objects found in the file \"" + utf8string( filename ) + "\"" );
         }
-        return [loadedObjects, loadedFiles, errorList]
+        return [loadedObjects, loadedFiles, errorList, this]
         {
             if ( !loadedObjects.empty() )
             {
@@ -939,6 +939,8 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                 else
                 {
                     std::string historyName = loadedObjects.size() == 1 ? "Open file" : "Open files";
+                    if ( globalHistoryStore_ )
+                        globalHistoryStore_->nextIsLoadingFiles();
                     SCOPED_HISTORY( historyName );
                     for ( auto& obj : loadedObjects )
                     {

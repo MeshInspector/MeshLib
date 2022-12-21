@@ -20,6 +20,9 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
         return;
     }
 
+    if ( firstRedoIndex_ < savedSceneIndex_ )
+        savedSceneIndex_ = size_t( -1 );
+
     stack_.resize( firstRedoIndex_ + 1 );
     stack_[firstRedoIndex_] = action;
     ++firstRedoIndex_;
@@ -37,6 +40,7 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
         stack_.erase( stack_.begin(), stack_.begin() + numActionsToDelete );
         firstRedoIndex_ -= numActionsToDelete;
         savedSceneIndex_ -= numActionsToDelete;
+        firstActionIsLoadingFile_ = false;
     }
 
     changedSignal( *this, ChangeType::AppendAction );
@@ -49,6 +53,18 @@ void HistoryStore::startScope( bool on )
     scoped_ = on;
     if ( !on )
         scopedBlock_.clear();
+}
+
+bool HistoryStore::isSceneModified() const
+{
+    return !( ( savedSceneIndex_ == 0 && firstRedoIndex_ == 1 && firstActionIsLoadingFile_ ) ||
+        ( savedSceneIndex_ == firstRedoIndex_ ) );
+}
+
+void HistoryStore::nextIsLoadingFiles()
+{
+    if ( firstRedoIndex_ == 0 && savedSceneIndex_ == 0 )
+        firstActionIsLoadingFile_ = true;
 }
 
 void HistoryStore::clear()

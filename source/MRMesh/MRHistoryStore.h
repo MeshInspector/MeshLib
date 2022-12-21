@@ -29,9 +29,10 @@ public:
     const std::vector<std::shared_ptr<HistoryAction>>& getScopeBlock() const { return scopedBlock_; }
 
     /// Returns true if the current scene state does not match the saved state
-    bool isSceneModified() const { return firstRedoIndex_ != savedSceneIndex_; }
+    MRMESH_API bool isSceneModified() const;
     /// Consider the current scene state as saved
     void setSavedState() { savedSceneIndex_ = firstRedoIndex_; }
+    MRMESH_API void nextIsLoadingFiles();
 
     /// Clears this HistoryStore
     MRMESH_API void clear();
@@ -75,6 +76,7 @@ private:
     /// this index points to the position in stack_ corresponding to saved scene state;
     /// if firstRedoIndex_ == savedSceneIndex_ then the scene is considered as not modified
     size_t savedSceneIndex_{ 0 };
+    bool firstActionIsLoadingFile_{ false };
     /// memory limit (bytes) to this HistoryStore if stack_ exceed it, old actions are removed
     size_t storageLimit_{ size_t( ~0 ) };
 };

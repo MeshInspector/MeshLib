@@ -13,11 +13,13 @@
 #include "MRObjectDistanceMap.h"
 #include "MRStringConvert.h"
 #include "MRIOFormatsRegistry.h"
+#include "MRMeshLoadObj.h"
+#include "MRSerializer.h"
 
 namespace MR
 {
 
-const IOFilters allFilters = MeshLoad::getFilters();
+const IOFilters allFilters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | VoxelsLoad::Filters;
 
 tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
 {
@@ -99,6 +101,114 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
 
     return objectDistanceMap;
 }
+
+
+tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
+                                                                                        ProgressCallback callback )
+{
+    if ( callback && !callback( 0.f ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
+
+    tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+
+    auto ext = filename.extension().u8string();
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+
+    if ( ext == u8".obj" )
+    {
+        auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
+        if ( res.has_value() )
+        {
+            std::vector<std::shared_ptr<Object>> objects( res.value().size() );
+            auto& resValue = *res;
+            for ( int i = 0; i < objects.size(); ++i )
+            {
+                std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
+                if ( resValue[i].name.empty() )
+                    objectMesh->setName( utf8string( filename.stem() ) );
+                else
+                    objectMesh->setName( std::move( resValue[i].name ) );
+                objectMesh->select( true );
+                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
+                objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+            }
+            result = objects;
+        }
+        else
+            result = tl::make_unexpected( res.error() );
+    }
+    else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
+    {
+        auto res = deserializeObjectTree( filename, {}, callback );
+        if ( res.has_value() )
+        {
+            result = std::vector( { *res } );
+            ( *result )[0]->setName( utf8string( filename.stem() ) );
+        }
+        else
+            result = tl::make_unexpected( res.error() );
+    }
+    else
+    {
+        auto objectMesh = makeObjectMeshFromFile( filename, callback );
+        if ( objectMesh.has_value() )
+        {
+            objectMesh->select( true );
+            auto obj = std::make_shared<ObjectMesh>( std::move( *objectMesh ) );
+            result = { obj };
+        }
+        else if ( objectMesh.error() == "Loading canceled" )
+        {
+            result = tl::make_unexpected( objectMesh.error() );
+        }
+        else
+        {
+            result = tl::make_unexpected( objectMesh.error() );
+
+            auto objectPoints = makeObjectPointsFromFile( filename, callback );
+            if ( objectPoints.has_value() )
+            {
+                objectPoints->select( true );
+                auto obj = std::make_shared<ObjectPoints>( std::move( objectPoints.value() ) );
+                result = { obj };
+            }
+            else if ( result.error() == "unsupported file extension" )
+            {
+                result = tl::make_unexpected( objectPoints.error() );
+
+                auto objectLines = makeObjectLinesFromFile( filename, callback );
+                if ( objectLines.has_value() )
+                {
+                    objectLines->select( true );
+                    auto obj = std::make_shared<ObjectLines>( std::move( objectLines.value() ) );
+                    result = { obj };
+                }
+                else if ( result.error() == "unsupported file extension" )
+                {
+                    result = tl::make_unexpected( objectLines.error() );
+
+                    auto objectDistanceMap = makeObjectDistanceMapFromFile( filename, callback );
+                    if ( objectDistanceMap.has_value() )
+                    {
+                        objectDistanceMap->select( true );
+                        auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
+                        result = { obj };
+                    }
+                    else
+                        result = tl::make_unexpected( objectDistanceMap.error() );
+                }
+            }
+        }
+    }
+
+    if ( !result.has_value() )
+        spdlog::error( result.error() );
+
+    return result;
+}
+
 
 bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
 {
@@ -205,12 +315,13 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         return tl::make_unexpected( std::string( "Error: folder is empty." ) );
 
 
+    using loadObjResultType = tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string>;
     // create folders objects
     struct LoadTask
     {
-        std::future< tl::expected<ObjectMesh, std::string> > future;
+        std::future<loadObjResultType> future;
         Object* parent = nullptr;
-        LoadTask( std::future< tl::expected<ObjectMesh, std::string> > future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
+        LoadTask( std::future<loadObjResultType> future, Object* parent ) : future( std::move( future ) ), parent( parent ) {}
         bool finished = false;
     };
     std::vector<LoadTask> loadTasks;
@@ -231,7 +342,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         {
             loadTasks.emplace_back( std::async( std::launch::async, [&] ()
             {
-                return makeObjectMeshFromFile( file.path, [&]( float ){ return !loadingCanceled; } );
+                return loadObjectFromFile( file.path, [&]( float ){ return !loadingCanceled; } );
             } ), objPtr );
         }
     };
@@ -250,13 +361,18 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         afterSecond += +std::chrono::seconds( 1 );
         for ( auto& t : loadTasks )
         {
+            if ( !t.future.valid() )
+                continue;
             std::future_status status = t.future.wait_until( afterSecond );
             if ( status != std::future_status::ready )
                 continue;
             auto res = t.future.get();
             if ( res.has_value() )
             {
-                t.parent->addChild( std::make_shared<ObjectMesh>( std::move( res.value() ) ) );
+                for ( const auto& objPtr : *res )
+                {
+                    t.parent->addChild( objPtr );
+                }
                 if ( !atLeastOneLoaded )
                     atLeastOneLoaded = true;
             }
@@ -269,6 +385,8 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
                 loadingCanceled = true;
         }
     }
+    if ( !allErrors.empty() )
+        spdlog::warn( "Load folder error:\n{}", allErrors );
     if ( loadingCanceled )
         return tl::make_unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )

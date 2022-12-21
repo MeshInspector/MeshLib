@@ -15,6 +15,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
 #include "MRSerializer.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

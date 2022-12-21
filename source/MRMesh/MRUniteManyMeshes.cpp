@@ -69,7 +69,7 @@ public:
     {
     }
 
-    void join( const BooleanReduce& y )
+    void join( BooleanReduce& y )
     {
         if ( !error.empty() )
             return;
@@ -80,8 +80,7 @@ public:
         }
         Vector3f shift = y.resShift - resShift;
         BooleanResultMapper mapper;
-        // sorry for const_cast
-        auto res = unitePairOfMeshes( std::move( resultMesh ), std::move( const_cast< BooleanReduce& > ( y ).resultMesh ), fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
+        auto res = unitePairOfMeshes( std::move( resultMesh ), std::move( y.resultMesh ), fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
         if ( !res.has_value() )
         {
             error = std::move( res.error() );

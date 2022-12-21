@@ -263,7 +263,8 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     SetNextItemWidth( actualWidth );
-    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+    if ( actualWidth > estimatedSize.x )
+        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
 
     if ( textColor )
     {
@@ -282,7 +283,8 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
         ImGui::Text( "%s", label );
 
-    PopStyleVar();
+    if ( actualWidth > estimatedSize.x )
+        PopStyleVar();
 }
 
 MRVIEWER_API void TransparentText( const char* fmt, ... )

@@ -88,7 +88,7 @@ struct BooleanResultMapper
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
-MRMESH_API tl::expected<Mesh, std::string> doBooleanOperation( const Mesh& meshACut, const Mesh& meshBCut,
+MRMESH_API tl::expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
                                                                const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
                                                                BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
                                                                BooleanResultMapper* mapper = nullptr );

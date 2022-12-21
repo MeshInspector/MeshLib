@@ -55,7 +55,7 @@ struct RemovedFaceInfo
 using FullRemovedFacesInfo = std::vector<std::vector<RemovedFaceInfo>>;
 struct PreCutResult
 {
-    Vector<EdgeData, UndirectedEdgeId> edgeData;
+    HashMap<UndirectedEdgeId, EdgeData> edgeData;
     std::vector<EdgePath> paths;
     FullRemovedFacesInfo removedFaces;
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
@@ -1229,7 +1229,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             if ( newVertId.valid() && inter.primitiveId.index() == OneMeshIntersection::Edge )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
-                auto& edgeData = res.edgeData.autoResizeAt( thisEdge.undirected() );
+                auto& edgeData = res.edgeData[thisEdge.undirected()];
                 edgeData.orgEdgeInLeftTri.push_back( newEdgeId );
                 edgeData.newVerts.push_back( newVertId );
                 edgeData.intersections.push_back( {ContourId( contourId ),IntersectionId( intersectionId )} );
@@ -1510,17 +1510,17 @@ void cutOneEdge( Mesh& mesh,
 // this function cut mesh edge and connects it with result path, 
 // after it each path edge left and right faces are invalid (they are removed)
 void cutEdgesIntoPieces( Mesh& mesh, 
-                         const Vector<EdgeData, UndirectedEdgeId>& edgeData, const OneMeshContours& contours, 
+                         HashMap<UndirectedEdgeId, EdgeData>&& edgeData, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap )
 {
     MR_TIMER;
     for ( const auto& edgeInfo : edgeData )
     {
-        if ( edgeInfo.intersections.empty() )
+        if ( edgeInfo.second.intersections.empty() )
             continue;
 
-        cutOneEdge( mesh, edgeInfo, contours, sortData, new2OldMap );
+        cutOneEdge( mesh, edgeInfo.second, contours, sortData, new2OldMap );
     }
 }
 
@@ -1575,7 +1575,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
     auto preRes = doPreCutMesh( mesh, contours );
-    cutEdgesIntoPieces( mesh, preRes.edgeData, contours, params.sortData, params.new2OldMap );
+    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap );
 
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );

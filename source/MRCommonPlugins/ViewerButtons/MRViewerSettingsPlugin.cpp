@@ -12,6 +12,7 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRMesh/MRSystem.h"
+#include "MRViewer/MRSpaceMouseHandlerWindows.h"
 
 namespace MR
 {
@@ -71,7 +72,16 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( RibbonButtonDrawer::GradientButton( "Spacemouse settings", ImVec2( -1, 0 ) ) )
     {
-        spaceMouseParams = getViewerInstance().spaceMouseController.getParams();
+        auto& viewerRef = getViewerInstance();
+        spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
+#ifdef _WIN32
+        if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
+        {
+            auto winHandler = std::dynamic_pointer_cast<SpaceMouseHandlerWindows>( spaceMouseHandler );
+            if ( winHandler )
+                activeMouseScrollZoom_ = winHandler->isMouseScrollZoomActive();
+        }
+#endif
         ImGui::OpenPopup( "Spacemouse settings" );
     }
     drawSpaceMouseSettings_( menuScaling );
@@ -517,7 +527,7 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 400 * scaling, 285 * scaling );
+    ImVec2 windowSize( 400 * scaling, 305 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -547,18 +557,32 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         anyChanged = anyChanged || changed;
     };
 
-    drawSlider( "X##translate", spaceMouseParams.translateScale[0] );
-    drawSlider( "Y##translate", spaceMouseParams.translateScale[2] );
-    drawSlider( "Zoom##translate", spaceMouseParams.translateScale[1] );
+    drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );
+    drawSlider( "Y##translate", spaceMouseParams_.translateScale[2] );
+    drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
 
     ImGui::NewLine();
     ImGui::Text( "%s", "Rotation scales" );
-    drawSlider( "Ox##rotate", spaceMouseParams.rotateScale[0] );
-    drawSlider( "Oy##rotate", spaceMouseParams.rotateScale[1] );
-    drawSlider( "Oz##rotate", spaceMouseParams.rotateScale[2] );
+    drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
+    drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
+    drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
+
+#ifdef _WIN32
+    if ( RibbonButtonDrawer::GradientCheckbox( "Activate mouse scroll zoom", &activeMouseScrollZoom_ ) )
+    {
+        if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
+        {
+            auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
+            if ( winHandler )
+            {
+                winHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
+            }
+        }
+    }
+#endif
 
     if ( anyChanged )
-        getViewerInstance().spaceMouseController.setParams( spaceMouseParams );
+        getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
 
     ImGui::EndPopup();
 }

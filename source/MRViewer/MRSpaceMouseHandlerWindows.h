@@ -16,7 +16,9 @@ public:
     virtual void handle() override;
     virtual void updateConnected( int jid, int event );
 
+    // set mode disabling zoom by mouse scroll (to fix scroll signal from spacemouse driver)
     MRVIEWER_API void setDisableMouseScrollZoom( bool disableMouseSrollZoom );
+    // get mode disabling zoom by mouse scroll
     bool getDisableMouseScrollZoom() { return disableMouseScrollZoom_; }
 private:
     bool active_{ true };

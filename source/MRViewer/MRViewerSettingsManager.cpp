@@ -224,9 +224,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 #ifdef _WIN32
         if ( paramsJson.isMember( "disableMouseScrollZoom" ) && paramsJson["disableMouseScrollZoom"].isBool() )
         {
-            if ( viewer.spaceMouseHandler )
+            if ( auto spaceMouseHandler =  viewer.getSpaceMouseHandler() )
             {
-                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( viewer.spaceMouseHandler );
+                auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
                 if ( winHandler )
                 {
                     const bool disableMouseScrollZoom = paramsJson["disableMouseScrollZoom"].asBool();
@@ -303,9 +303,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     serializeToJson( spaceMouseParams.translateScale, spaceMouseParamsJson["translateScale"] );
     serializeToJson( spaceMouseParams.rotateScale, spaceMouseParamsJson["rotateScale"] );
 #ifdef _WIN32
-    if ( viewer.spaceMouseHandler )
+    if ( auto spaceMouseHandler = viewer.getSpaceMouseHandler() )
     {
-        auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( viewer.spaceMouseHandler );
+        auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
         if ( winHandler )
         {
             spaceMouseParamsJson["disableMouseScrollZoom"] = winHandler->getDisableMouseScrollZoom();

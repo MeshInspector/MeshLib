@@ -388,6 +388,8 @@ public:
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
     const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
+    // Return spacemouse handler 
+    const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
     MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath );
@@ -439,7 +441,6 @@ public:
     MouseController mouseController;
     TouchesController touchesController;
     SpaceMouseController spaceMouseController;
-    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler;
 
     int window_width; // current width
     int window_height; // current height
@@ -666,6 +667,8 @@ private:
     std::unique_ptr<IViewerSettingsManager> settingsMng_;
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
+
+    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

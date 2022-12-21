@@ -69,30 +69,27 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
 namespace MR
 {
 
-BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation opearation,
+BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
 {
-    bool needCutMeshA = opearation != BooleanOperation::InsideB && opearation != BooleanOperation::OutsideB;
-    bool needCutMeshB = opearation != BooleanOperation::InsideA && opearation != BooleanOperation::OutsideA;
-    Mesh meshACut, meshBCut;
+    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
+    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
     if ( needCutMeshA )
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshA.getAABBTree();
     }
-    meshACut = meshA;
     if ( needCutMeshB )
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshB.getAABBTree();
     }
-    meshBCut = meshB;
-    return boolean( std::move( meshACut ), std::move( meshBCut ), opearation, rigidB2A, mapper );
+    return boolean( Mesh( meshA ), Mesh( meshB ), operation, rigidB2A, mapper );
 }
 
-BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation opearation,
+BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
 {
     MR_TIMER;
@@ -100,8 +97,8 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation opearation,
     PreciseCollisionResult intersections;
     ContinuousContours contours;
 
-    bool needCutMeshA = opearation != BooleanOperation::InsideB && opearation != BooleanOperation::OutsideB;
-    bool needCutMeshB = opearation != BooleanOperation::InsideA && opearation != BooleanOperation::OutsideA;
+    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
+    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
 
     converters = getVectorConverters( meshA, meshB, rigidB2A );
 
@@ -284,7 +281,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation opearation,
         cutB = std::move( res.resultCut );
     }
     // do operation
-    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, opearation, rigidB2A, mapper );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, rigidB2A, mapper );
     if ( res.has_value() )
         result.mesh = std::move( res.value() );
     else

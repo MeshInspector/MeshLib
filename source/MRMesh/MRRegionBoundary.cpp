@@ -264,6 +264,26 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
     return res;
 }
 
+UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBitSet& region )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+
+    for ( auto f0 : region )
+    { 
+        EdgeId e[3];
+        topology.getTriEdges( f0, e );
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert( topology.left( e[i] ) == f0 );
+            FaceId f1 = topology.right( e[i] );
+            if ( f0 < f1 && region.test( f1 ) )
+                res.set( e[i].undirected() );
+        }
+    }
+    return res;
+}
+
 FaceBitSet getIncidentFaces_( const MeshTopology & topology, const VertBitSet & verts )
 {
     MR_TIMER

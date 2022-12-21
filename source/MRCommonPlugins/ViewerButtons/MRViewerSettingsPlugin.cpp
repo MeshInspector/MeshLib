@@ -79,7 +79,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             auto winHandler = std::dynamic_pointer_cast<SpaceMouseHandlerWindows>( spaceMouseHandler );
             if ( winHandler )
-                disableMouseScrollZoom_ = winHandler->getDisableMouseScrollZoom();
+                activeMouseScrollZoom_ = winHandler->isMouseScrollZoomActive();
         }
 #endif
         ImGui::OpenPopup( "Spacemouse settings" );
@@ -527,7 +527,7 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 400 * scaling, 285 * scaling );
+    ImVec2 windowSize( 400 * scaling, 305 * scaling );
     ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
@@ -568,14 +568,14 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
 
 #ifdef _WIN32
-    if ( RibbonButtonDrawer::GradientCheckbox( "Disable mouse scroll zoom", &disableMouseScrollZoom_ ) )
+    if ( RibbonButtonDrawer::GradientCheckbox( "Activate mouse scroll zoom", &activeMouseScrollZoom_ ) )
     {
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
             auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
             if ( winHandler )
             {
-                winHandler->setDisableMouseScrollZoom( disableMouseScrollZoom_ );
+                winHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
             }
         }
     }

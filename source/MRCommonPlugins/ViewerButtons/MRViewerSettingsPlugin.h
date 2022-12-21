@@ -51,7 +51,7 @@ private:
 
     SpaceMouseController::Params spaceMouseParams_;
 #ifdef _WIN32
-    bool disableMouseScrollZoom_{ false };
+    bool activeMouseScrollZoom_{ false };
 #endif
 };
 

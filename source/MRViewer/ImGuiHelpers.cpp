@@ -253,7 +253,7 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     return res;
 }
 
-void InputTextCenteredReadOnly( const char* label, const std::string& str, float width )
+void InputTextCenteredReadOnly( const char* label, const std::string& str, float width, std::optional<ImVec4> textColor )
 {
     const auto& style = ImGui::GetStyle();
     const auto& viewer = MR::Viewer::instanceRef();
@@ -264,9 +264,17 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
 
     SetNextItemWidth( actualWidth );
     PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
-    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-    transparentColor.w *= 0.5f;
-    PushStyleColor( ImGuiCol_Text, transparentColor );
+
+    if ( textColor )
+    {
+        PushStyleColor( ImGuiCol_Text, *textColor );
+    }
+    else
+    {
+        auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+        transparentColor.w *= 0.5f;
+        PushStyleColor( ImGuiCol_Text, transparentColor );
+    }
     InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
     ImGui::SameLine();

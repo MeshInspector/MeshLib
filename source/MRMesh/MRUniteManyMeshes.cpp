@@ -13,7 +13,7 @@
 namespace MR
 {
 
-tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b, 
+tl::expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
     bool fixDegenerations, float maxError, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
@@ -24,8 +24,8 @@ tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b,
     AffineXf3f xf = AffineXf3f::translation( shift ? *shift : Vector3f() );
     BooleanResultMapper mapper_;
     auto res = MR::boolean(
-        a,
-        b,
+        std::move( a ),
+        std::move( b ),
         BooleanOperation::Union,
         shift ? &xf : nullptr,
         fixDegenerations || mapper ? &mapper_ : nullptr
@@ -80,7 +80,8 @@ public:
         }
         Vector3f shift = y.resShift - resShift;
         BooleanResultMapper mapper;
-        auto res = unitePairOfMeshes( resultMesh, y.resultMesh, fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
+        // sorry for const_cast
+        auto res = unitePairOfMeshes( std::move( resultMesh ), std::move( const_cast< BooleanReduce& > ( y ).resultMesh ), fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
         if ( !res.has_value() )
         {
             error = std::move( res.error() );

@@ -134,7 +134,7 @@ struct DecimateParallelInplaceSettings : DecimateSettings
 
 /// decimate given mesh in parallel (using many threads);
 /// unlike \ref decimateParallelMesh does not create copies of mesh regions, so may take less memory to operate;
-/// the other benefits i that FaceIds and EdgeIds are preserved unlike \ref decimateParallelMesh;
+/// the other benefits is that FaceIds and EdgeIds are preserved unlike \ref decimateParallelMesh;
 /// IMPORTANT: please call mesh.packOptimally() before calling this, otherwise performance will be bad
 MRMESH_API DecimateResult decimateParallelMeshInplace( MR::Mesh & mesh, const DecimateParallelInplaceSettings & settings );
 

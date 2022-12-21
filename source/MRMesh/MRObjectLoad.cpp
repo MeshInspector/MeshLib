@@ -20,7 +20,13 @@
 namespace MR
 {
 
-const IOFilters allFilters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | VoxelsLoad::Filters;
+const IOFilters allFilters = SceneFileFilters
+                             | MeshLoad::getFilters()
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+                             | VoxelsLoad::Filters
+#endif
+                             | LinesLoad::Filters
+                             | PointsLoad::Filters;
 
 tl::expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path & file, ProgressCallback callback )
 {

@@ -45,7 +45,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-          MESHLIB_VERSION: ${{ inputs.version }}
+          MR_VERSION: ${{ inputs.version }}
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest

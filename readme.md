@@ -213,6 +213,10 @@ python3 ./scripts/local_server.py
 ```
 
 # Integration
+
+## Linux Ubuntu/Fedora
+You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager
+
 ## Windows
 There are two general options of integrating MeshLib into your project:
 1. [Submodule](#submodule)
@@ -240,5 +244,9 @@ Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to
 
 > **_NOTE:_** Distribution is build with ITERATOR_DEBUG_LEVEL=0 in debug so you will need to setup this for your projects
 
-## Linux Ubuntu/Fedora
-You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager
+# Our clients and users
+
+The following companies use MeshLib in their software
+* [Smile Direct Club](https://smiledirectclub.com/)
+* [Mantle](https://www.mantle3d.com/)
+* Many smaller firms and start-ups

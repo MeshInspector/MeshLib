@@ -4,11 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (MeshViewer CXX)
 
-IF(APPLE)
-	add_executable(${PROJECT_NAME} MACOSX_BUNDLE MRViewerApp.cpp)
-ELSE()
-	add_executable(${PROJECT_NAME} MRViewerApp.cpp)
-ENDIF() # APPLE
+add_executable(${PROJECT_NAME} MRViewerApp.cpp)
 
 file(GLOB LIB_LIST "../*.json")
 file(GLOB PNGS "*.png")

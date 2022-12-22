@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>MeshLib</title>
+    <background alignment="bottomleft" file="./background.png" mime-type="image/png" scaling="proportional"/>
+    <background-darkAqua alignment="bottomleft" file="./background.png" mime-type="image/png" scaling="proportional"/>
+    <license file="LICENSE" mime-type="text/richtext"/>
+    <conclusion file="Conclusion.rtf" mime-type="text/richtext"/>
+    <pkg-ref id="com.MeshInspector.MeshLib"/>
+    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.MeshInspector.MeshLib"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.MeshInspector.MeshLib" visible="false">
+        <pkg-ref id="com.MeshInspector.MeshLib"/>
+    </choice>
+    <pkg-ref id="com.MeshInspector.MeshLib" version="0" onConclusion="none">MeshLib.pkg</pkg-ref>
+</installer-gui-script>

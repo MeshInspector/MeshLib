@@ -141,7 +141,11 @@ std::filesystem::path GetResourcesDirectory()
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
     #ifdef __APPLE__
+        #ifdef MR_FRAMEWORK
+    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
+        #else
     return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
+        #endif
     #else
     return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
     #endif
@@ -177,7 +181,11 @@ std::filesystem::path GetLibsDirectory()
     if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
         return exePath;
     #ifdef __APPLE__
+        #ifdef MR_FRAMEWORK
+    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
+        #else
     return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
+        #endif
     #else
     return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
     #endif

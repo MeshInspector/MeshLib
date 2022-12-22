@@ -728,7 +728,8 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
     OneMeshContour res;
     std::vector<OneMeshContour> surfacePaths( meshTriPoints.size() );
     for ( int i = 0; i < meshTriPoints.size(); ++i )
-    {        
+    {
+        // using DijkstraAStar here might be faster, in most case points are close to each other
         auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()],GeodesicPathApprox::DijkstraAStar );
         if ( !sp.has_value() )
             continue;

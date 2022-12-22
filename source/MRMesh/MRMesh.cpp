@@ -770,15 +770,18 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     *this = std::move( packed );
 }
 
-PackMapping Mesh::packOptimally()
+PackMapping Mesh::packOptimally( bool preserveAABBTree )
 {
     MR_TIMER
 
+    bool resetAABBTree = !preserveAABBTree && AABBTreeOwner_.get() == nullptr;
     getAABBTree(); // ensure that tree is constructed
 
     PackMapping map;
     map.f.b.resize( topology.faceSize() );
     AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    if ( resetAABBTree )
+        AABBTreeOwner_.reset();
     map.v = getVertexOrdering( map.f, topology );
     map.e = getEdgeOrdering( map.f, topology );
     topology.pack( map );

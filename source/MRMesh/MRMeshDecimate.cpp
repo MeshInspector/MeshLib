@@ -110,6 +110,7 @@ private:
     const float maxErrorSq_;
     Vector<QuadraticForm3f, VertId> myVertForms_;
     Vector<QuadraticForm3f, VertId> * pVertForms_ = nullptr;
+    UndirectedEdgeBitSet regionEdges_;
     VertBitSet myBdVerts_;
     VertBitSet * pBdVerts_ = nullptr;
 
@@ -151,11 +152,14 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
 
 bool MeshDecimator::isInRegion( EdgeId e ) const
 {
-    if ( !mesh_.topology.isInnerOrBdEdge( e, settings_.region ) )
+    if ( settings_.region && !regionEdges_.test( e.undirected() ) )
         return false;
+    const auto vo = mesh_.topology.org( e );
+    if ( !vo )
+        return false; // skip lone edges
     if ( !settings_.touchBdVertices )
     {
-        if ( pBdVerts_->test( mesh_.topology.org( e ) ) ||
+        if ( pBdVerts_->test( vo ) ||
              pBdVerts_->test( mesh_.topology.dest( e ) ) )
             return false;
     }
@@ -174,12 +178,9 @@ public:
 
     void operator()( const tbb::blocked_range<UndirectedEdgeId> & r ) 
     {
-        const auto & mesh = decimator_.mesh_;
         for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
         {
             EdgeId e{ ue };
-            if ( mesh.topology.isLoneEdge( e ) )
-                continue;
             if ( !decimator_.isInRegion( e ) )
                 continue;
             if ( auto qe = decimator_.computeQueueElement_( ue ) )
@@ -255,6 +256,9 @@ bool MeshDecimator::initializeQueue_()
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
+
+    if ( settings_.region )
+        regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
 
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );

@@ -73,20 +73,20 @@ jobs:
       - name: Select image tag
         id: select-tag
         run: |
-          echo "::set-output name=image_tag::$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
-          echo "latest")"
-          echo "::set-output name=windows_image_tag::$([ ${{steps.windows-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
-          echo "latest")"
+          echo "image_tag=$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
+          echo "latest")" >> $GITHUB_OUTPUT
+          echo "windows_image_tag=$([ ${{steps.windows-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
+          echo "latest")" >> $GITHUB_OUTPUT
 
       - name: Set image tag base path
         id: set-path
         run: |
           repo_path="MeshRUs/MeshLib"
-          echo "::set-output name=image_path::${repo_path,,}"
+          echo "image_path=${repo_path,,}" >> $GITHUB_OUTPUT
 
       - name: Checking whether to start image rebuild
         id: need-rebuild
-        run: echo "::set-output name=need_rebuild::${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}"
+        run: echo "need_rebuild=${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
@@ -96,11 +96,11 @@ jobs:
         run: |
           echo ${{github.repository}}
           if [ "${{ steps.changes.outputs.src }}" == "true" ] && [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"                    
+            echo "matrix={\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}" >> $GITHUB_OUTPUT                   
           elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}"
+            echo "matrix={\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}" >> $GITHUB_OUTPUT
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "::set-output name=matrix::{\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}"      
+            echo "matrix={\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}" >> $GITHUB_OUTPUT    
           fi
 
   image-build-upload:

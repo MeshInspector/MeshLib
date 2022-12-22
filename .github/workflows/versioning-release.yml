@@ -53,7 +53,7 @@ jobs:
         run: |
           version_tag=${{steps.version.outputs.version}}
           version_tag=${version_tag%%-*}
-          echo "::set-output name=version_tag::${version_tag}"
+          echo "version_tag=${version_tag}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         if: ${{ inputs.UPLOAD_ARTIFACTS }}

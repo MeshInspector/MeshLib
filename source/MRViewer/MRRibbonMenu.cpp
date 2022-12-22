@@ -1821,7 +1821,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
-    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y ) * scaling;
+    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y  + 2 * style.WindowPadding.y ) * scaling;
     // find max column size
     int leftNumCategories = 0;
     int rightNumCategories = 0;
@@ -1856,7 +1856,8 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ) );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { style.WindowPadding.x, cDefaultItemSpacing * scaling } );
-    ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
+    ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing );
     ImGui::PopStyleVar();
     
     ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
@@ -1878,7 +1879,7 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
     if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) )
     {
-        ImGui::PopStyleColor( 2 );
+        ImGui::PopStyleColor( 3 );
         ImGui::PopFont();
         ImGui::PopStyleVar( 2 );
         ImGui::End();
@@ -1994,6 +1995,7 @@ void RibbonMenu::drawShortcutsWindow_()
     }
 
     ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleColor();
     ImGui::End();
 }
 

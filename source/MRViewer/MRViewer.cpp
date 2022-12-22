@@ -41,6 +41,8 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerWindows.h"
+#include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRSerializer.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -86,7 +88,6 @@ EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent( int forceFrames )
 
 }
 #endif
-#include "MRMesh/MRSerializer.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {

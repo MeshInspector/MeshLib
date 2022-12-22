@@ -774,14 +774,19 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
 {
     MR_TIMER
 
-    bool resetAABBTree = !preserveAABBTree && AABBTreeOwner_.get() == nullptr;
     getAABBTree(); // ensure that tree is constructed
 
     PackMapping map;
     map.f.b.resize( topology.faceSize() );
-    AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
-    if ( resetAABBTree )
+    if ( preserveAABBTree )
+    {
+        AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
+    }
+    else
+    {
+        AABBTreeOwner_.get()->getLeafOrder( map.f );
         AABBTreeOwner_.reset();
+    }
     map.v = getVertexOrdering( map.f, topology );
     map.e = getEdgeOrdering( map.f, topology );
     topology.pack( map );

@@ -131,7 +131,7 @@ void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
     {
         if ( !n.leaf() )
             continue;
-        faceMap.b[n.leafId()] = f;
+        faceMap.b[n.leafId()] = f++;
     }
     faceMap.tsize = int( f );
 }

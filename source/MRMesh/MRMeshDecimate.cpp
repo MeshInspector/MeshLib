@@ -1,5 +1,4 @@
 #include "MRMeshDecimate.h"
-#include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
@@ -600,6 +599,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 {
     MR_TIMER
     assert( settings.subdivideParts > 1 );
+    const auto sz = std::max( 2, settings.subdivideParts );
 
     DecimateResult res;
 
@@ -610,10 +610,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     assert( !settings.vertForms );
 
     MR_WRITER( mesh );
-    const auto & tree = mesh.getAABBTree();
-    const auto subroots = tree.getSubtrees( settings.subdivideParts );
-    const auto sz = subroots.size();
-    if ( settings.progressCallback && !settings.progressCallback( 0.05f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 0 ) )
         return res;
 
     struct alignas(64) Parts
@@ -623,13 +620,19 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
+    const auto facesPerPart = mesh.topology.faceSize() / sz;
 
     // determine faces for each part
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            parts[i].faces = tree.getSubtreeFaces( subroots[i] );
+            const auto fromFace = i * facesPerPart;
+            const auto toFace = ( i + 1 ) < sz ? ( i + 1 ) * facesPerPart : mesh.topology.faceSize();
+            FaceBitSet fs( toFace );
+            fs.set( FaceId{ fromFace }, toFace - fromFace, true );
+            fs &= mesh.topology.getValidFaces();
+            parts[i].faces = std::move( fs );
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
         }
     } );

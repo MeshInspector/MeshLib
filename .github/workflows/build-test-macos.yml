@@ -58,7 +58,7 @@ jobs:
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         run: |
           ./scripts/distribution_apple.sh
-          mv meshlib.pkg meshlib_${{matrix.os}}.pkg
+          mv MeshLib.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}

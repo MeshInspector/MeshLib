@@ -156,9 +156,12 @@ ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
-IF(NOT MESHLIB_VERSION)
+IF(NOT $ENV{MR_VERSION} STREQUAL "")
+    set(MESHLIB_VERSION $ENV{MR_VERSION})
+ELSE()
     set(MESHLIB_VERSION 0.0.0)
 ENDIF()
+message("version: ${MESHLIB_VERSION}")
 
 if(NOT APPLE)
     set(MR_ROOT "./usr/local")
@@ -179,8 +182,6 @@ else()
     set(MR_FONTS_DIR "${MR_ROOT}/Resources/fonts")
     set(MR_CONFIG_DIR ${MR_ROOT}/Resources)
 endif()
-
-
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ -d "./Library" ];
   then rm -rf "./Library";
 fi
@@ -14,8 +16,8 @@ cp -rL ./lib "${MR_PREFIX}/lib/"
 cp -rL ./include "${MR_PREFIX}/include/"
 
 cp ./LICENSE ./macos/Resources
-mkdir "${MR_PREFIX}"/requirements
-cp ./requirements/macos.txt ./macos/requirements
+mkdir "${MR_PREFIX}"/requirements/
+cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
 
 ln -s "/Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "./Library/Frameworks/MeshLib.framework/Versions/Current"
 ln -s "/Library/Frameworks/MeshLib.framework/Resources" "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}/Resources"
@@ -24,10 +26,10 @@ pkgbuild \
             --root Library \
             --identifier com.MeshInspector.MeshLib \
             --install-location  /Library \
-            tmp.pkg
+            MeshLibTmp.pkg
 
 productbuild \
           --distribution ./macos/Distribution.xml \
-          --package-path ./tmp.pkg \
+          --package-path ./MeshLibTmp.pkg \
           --resources ./macos/Resources \
-          meshlib.pkg
+          MeshLib.pkg

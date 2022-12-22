@@ -729,7 +729,7 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
     std::vector<OneMeshContour> surfacePaths( meshTriPoints.size() );
     for ( int i = 0; i < meshTriPoints.size(); ++i )
     {        
-        auto sp = computeSurfacePath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()] );
+        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()],GeodesicPathApprox::DijkstraAStar );
         if ( !sp.has_value() )
             continue;
         auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );

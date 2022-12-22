@@ -168,19 +168,19 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( const MeshEdgePo
     if ( fo < fd )
     {
         const auto poSq = po.lengthSq();
-        if ( poSq > 0 )
+        if ( poSq >= 0 ) // not strict to handle cases with `inVertex` fail but coordinates same as vertex
         {
             result = MeshEdgePoint{ ep.e, 0 };
-            maxGradSq = sqr( vo ) / poSq;
+            maxGradSq = poSq == 0 ? 0.0f : ( sqr( vo ) / poSq );
         }
     }
     else if ( fd < fo )
     {
         const auto pdSq = pd.lengthSq();
-        if ( pdSq > 0 )
+        if ( pdSq >= 0 ) // not strict to handle cases with `inVertex` fail but coordinates same as vertex
         {
             result = MeshEdgePoint{ ep.e.sym(), 0 };
-            maxGradSq = sqr( vd ) / pdSq;
+            maxGradSq = pdSq == 0 ? 0.0f : ( sqr( vd ) / pdSq );
         }
     }
 

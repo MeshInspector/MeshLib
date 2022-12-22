@@ -2,6 +2,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRGridSampling.h"
 #include "MRMesh/MRUniformSampling.h"
+#include <pybind11/functional.h>
 
 using namespace MR;
 

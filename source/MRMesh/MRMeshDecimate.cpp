@@ -100,9 +100,6 @@ public:
     MeshDecimator( Mesh & mesh, const DecimateSettings & settings );
     DecimateResult run();
 
-    // returns true if the collapse of given edge is permitted by the region and settings
-    bool isInRegion( EdgeId e ) const;
-
 private: 
     Mesh & mesh_;
     const DecimateSettings & settings_;
@@ -150,22 +147,6 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
 {
 }
 
-bool MeshDecimator::isInRegion( EdgeId e ) const
-{
-    if ( settings_.region && !regionEdges_.test( e.undirected() ) )
-        return false;
-    const auto vo = mesh_.topology.org( e );
-    if ( !vo )
-        return false; // skip lone edges
-    if ( !settings_.touchBdVertices )
-    {
-        if ( pBdVerts_->test( vo ) ||
-             pBdVerts_->test( mesh_.topology.dest( e ) ) )
-            return false;
-    }
-    return true;
-}
-
 class MeshDecimator::EdgeMetricCalc 
 {
 public:
@@ -181,13 +162,21 @@ public:
         for ( UndirectedEdgeId ue = r.begin(); ue < r.end(); ++ue ) 
         {
             EdgeId e{ ue };
-            if ( !decimator_.isInRegion( e ) )
-                continue;
+            if ( decimator_.regionEdges_.empty() )
+            {
+                if ( decimator_.mesh_.topology.isLoneEdge( e ) )
+                    continue;
+            }
+            else
+            {
+                if ( !decimator_.regionEdges_.test( ue ) )
+                    continue;
+            }
             if ( auto qe = decimator_.computeQueueElement_( ue ) )
                 elems_.push_back( *qe );
         }
     }
-            
+
 public:
     const MeshDecimator & decimator_;
     std::vector<QueueElement> elems_;
@@ -257,8 +246,36 @@ bool MeshDecimator::initializeQueue_()
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
 
+    // initialize regionEdges_ if some edges (out-of-region or touching boundary) cannot be collapsed
     if ( settings_.region )
+    {
+        // all region edges
         regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        if ( !settings_.touchBdVertices )
+        {
+            // exclude edges touching boundary
+            BitSetParallelFor( regionEdges_, [&]( UndirectedEdgeId ue )
+            {
+                if ( pBdVerts_->test( mesh_.topology.org( ue ) ) ||
+                     pBdVerts_->test( mesh_.topology.dest( ue ) ) )
+                    regionEdges_.reset( ue );
+            } );
+        }
+    }
+    else if ( !settings_.touchBdVertices )
+    {
+        assert( !settings_.region );
+        regionEdges_.clear();
+        regionEdges_.resize( mesh_.topology.undirectedEdgeSize(), true );
+        // exclude lone edges and edges touching boundary
+        BitSetParallelForAll( regionEdges_, [&]( UndirectedEdgeId ue )
+        {
+            if ( mesh_.topology.isLoneEdge( ue ) ||
+                 pBdVerts_->test( mesh_.topology.org( ue ) ) ||
+                 pBdVerts_->test( mesh_.topology.dest( ue ) ) )
+                regionEdges_.reset( ue );
+        } );
+    }
 
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );
@@ -347,8 +364,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, QuadraticForm3f *
 
 void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
-    EdgeId e{ ue };
-    if ( !isInRegion( e ) )
+    if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
     if ( presentInQueue_.test_set( ue ) )
         return;
@@ -470,9 +486,6 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     }
     auto eo = collapseEdge( topology, edgeToCollapse );
     const auto remainingVertex = eo ? vo : VertId{};
-    if ( !settings_.touchBdVertices && remainingVertex )
-       pBdVerts_->set( remainingVertex, mesh_.topology.isBdVertex( remainingVertex, settings_.region ) );
-
     return remainingVertex;
 }
 

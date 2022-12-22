@@ -68,12 +68,11 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane )
         assert( o * d < 0 );
         const auto p = ( o * pd - d * po ) / ( o - d );
         mesh.splitEdge( e, p );
-        positiveVerts.autoResizeSet( mesh.topology.org( e ) ); // add new vertices on the plane in "positive" vertices
         for ( EdgeId ei : orgRing( mesh.topology, e ) )
         {
             const auto l = mesh.topology.left( ei );
-            if ( l && positiveVerts.test( mesh.topology.dest( ei ) )
-                   && positiveVerts.test( mesh.topology.dest( mesh.topology.next( ei ) ) ) )
+            if ( l && !negativeVerts.test( mesh.topology.dest( ei ) )
+                   && !negativeVerts.test( mesh.topology.dest( mesh.topology.next( ei ) ) ) )
                 positiveFaces.autoResizeSet( l );
         }
     }

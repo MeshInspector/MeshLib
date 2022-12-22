@@ -22,14 +22,16 @@ cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
 ln -s "/Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "./Library/Frameworks/MeshLib.framework/Versions/Current"
 ln -s "/Library/Frameworks/MeshLib.framework/Resources" "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}/Resources"
 
+# be carefull with pkg names! The pkg can fail to build
 pkgbuild \
             --root Library \
             --identifier com.MeshInspector.MeshLib \
             --install-location  /Library \
-            MeshLibTmp.pkg
+            MeshLib.pkg
+
 
 productbuild \
           --distribution ./macos/Distribution.xml \
-          --package-path ./MeshLibTmp.pkg \
+          --package-path ./MeshLib.pkg \
           --resources ./macos/Resources \
-          MeshLib.pkg
+          MeshLib_.pkg

@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # run from repo root
-# NODE: using this script is deprecated! Better install meshrus(-dev).rpm package
-# This script installs requirements by `dnf` if not already installed
-# `distribution.sh` uses this script as preinstall
+# NODE: using this script is deprecated! Better install meshlib(-dev).pkg package
+# This script installs requirements by `brew` if not already installed
 
 requirements_file=requirements/macos.txt
 for req in `cat $requirements_file`

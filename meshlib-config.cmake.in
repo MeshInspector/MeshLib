@@ -10,3 +10,7 @@ get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(${SELF_DIR}/cmake/MRMeshConfig.cmake)
 include(${SELF_DIR}/cmake/MRViewerConfig.cmake)
 include(${SELF_DIR}/cmake/MRCommonPluginsConfig.cmake)
+
+if(APPLE)
+    message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt '")
+endif(APPLE)

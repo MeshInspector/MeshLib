@@ -63,18 +63,18 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
 
     // process the span in this thread only
     Timer t( "finishing" );
-    std::stack<FacePointSpan> stack;
-    stack.push( span );
+    std::vector<FacePointSpan> stack;
+    stack.push_back( span );
 
     while ( !stack.empty() )
     {
-        const auto x = stack.top();
-        stack.pop();
+        const auto x = stack.back();
+        stack.pop_back();
         const auto mid = partitionFacePoints( x );
         if ( mid + 1 < x.size() )
-            stack.push( FacePointSpan( x.begin() + mid, x.end() ) );
+            stack.emplace_back( x.begin() + mid, x.end() );
         if ( mid > 1 )
-            stack.push( FacePointSpan( x.begin(), x.begin() + mid ) );
+            stack.emplace_back( x.begin(), x.begin() + mid );
     }
 }
 

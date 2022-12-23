@@ -42,8 +42,8 @@ jobs:
       - name: Set variables
         id: set-vars
         run: |
-          echo "::set-output name=file_name::meshlib_${{steps.get_release.outputs.tag_name }}${{matrix.file-path-end}}"
-          echo "::set-output name=file_url::https://github.com/MeshInspector/MeshLib/releases/download/${{steps.get_release.outputs.tag_name}}"
+          echo "file_name=meshlib_${{steps.get_release.outputs.tag_name }}${{matrix.file-path-end}}" >> $GITHUB_OUTPUT
+          echo "file_url=https://github.com/MeshInspector/MeshLib/releases/download/${{steps.get_release.outputs.tag_name}}" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v3

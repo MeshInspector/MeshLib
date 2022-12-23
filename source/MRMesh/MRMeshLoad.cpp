@@ -121,7 +121,7 @@ tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Color, VertId>
 
 tl::expected<Mesh, std::string> fromObj( const std::filesystem::path & file, Vector<Color, VertId>*, ProgressCallback callback )
 {
-    std::ifstream in( file );
+    std::ifstream in( file, std::ios::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 

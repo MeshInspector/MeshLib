@@ -25,6 +25,7 @@ struct NamedMesh
 };
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
+/// important on Windows: in stream must be open in binary mode
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,

@@ -950,12 +950,12 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                     for ( const auto& file : loadedFiles )
                         viewerInst.recentFilesStore.storeFile( file );
                 }
-                if ( loadedObjects.size() == 1 && ( sceneFile || sceneEmpty ) )
+                if ( loadedFiles.size() == 1 && ( sceneFile || sceneEmpty ) )
                 {
                     auto path = loadedFiles[0];
                     if ( !sceneFile )
                         path.replace_extension( ".mru" );
-                    getViewerInstance().onSceneSaved( path );
+                    getViewerInstance().onSceneSaved( path, sceneFile );
                 }
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
             }
@@ -1973,9 +1973,9 @@ bool Viewer::globalHistoryRedo()
     return false;
 }
 
-void Viewer::onSceneSaved( const std::filesystem::path& savePath )
+void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
 {
-    if ( !savePath.empty() )
+    if ( !savePath.empty() && storeInRecent )
         recentFilesStore.storeFile( savePath );
 
     if (!SceneFileFilters.empty() && savePath.extension() == SceneFileFilters.front().extension.substr(1))

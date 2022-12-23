@@ -1973,9 +1973,9 @@ bool Viewer::globalHistoryRedo()
     return false;
 }
 
-void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInResent )
+void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
 {
-    if ( !savePath.empty() && storeInResent )
+    if ( !savePath.empty() && storeInRecent )
         recentFilesStore.storeFile( savePath );
 
     if (!SceneFileFilters.empty() && savePath.extension() == SceneFileFilters.front().extension.substr(1))

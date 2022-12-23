@@ -392,7 +392,7 @@ public:
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
-    MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath, bool storeInResent = true );
+    MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent = true );
 
     // Get/Set menu plugin (which is separated from other plugins to be inited first before splash window starts)
     MRVIEWER_API const std::shared_ptr<ImGuiMenu>& getMenuPlugin() const;

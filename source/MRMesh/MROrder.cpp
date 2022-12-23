@@ -55,8 +55,8 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
         const int rThreads = numThreads / 2;
         const int lThreads = numThreads - rThreads;
         tbb::task_group group;
-        group.run( [&] () { orderFacePoints( FacePointSpan( span.begin() + mid, span.end() ), rThreads ); } );
-        orderFacePoints( FacePointSpan( span.begin(), span.begin() + mid ), lThreads );
+        group.run( [&] () { orderFacePoints( FacePointSpan( span.data() + mid, span.size() - mid ), rThreads ); } );
+        orderFacePoints( FacePointSpan( span.data(), mid ), lThreads );
         group.wait();
         return;
     }
@@ -72,9 +72,9 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
         stack.pop_back();
         const auto mid = partitionFacePoints( x );
         if ( mid + 1 < x.size() )
-            stack.push_back( { x.begin() + mid, x.end() } );
+            stack.push_back( { x.data() + mid, x.size() - mid } );
         if ( mid > 1 )
-            stack.push_back( { x.begin(), x.begin() + mid } );
+            stack.push_back( { x.data(), mid } );
     }
 }
 

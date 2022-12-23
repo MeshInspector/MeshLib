@@ -929,12 +929,13 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
         {
             if ( !loadedObjects.empty() )
             {
-                if ( loadedObjects.size() == 1 && std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() ) )
+                bool sceneFile = std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() );
+                bool sceneEmpty = SceneRoot::get().children().empty();
+                if ( loadedObjects.size() == 1 && sceneFile )
                 {
                     AppendHistory<SwapRootAction>( "Load Scene File" );
                     auto newRoot = loadedObjects[0];
                     std::swap( newRoot, SceneRoot::getSharedPtr() );
-                    getViewerInstance().onSceneSaved( loadedFiles[0] );
                 }
                 else
                 {
@@ -948,6 +949,13 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                     auto& viewerInst = getViewerInstance();
                     for ( const auto& file : loadedFiles )
                         viewerInst.recentFilesStore.storeFile( file );
+                }
+                if ( loadedObjects.size() == 1 && ( sceneFile || sceneEmpty ) )
+                {
+                    auto path = loadedFiles[0];
+                    if ( !sceneFile )
+                        path.replace_extension( ".mru" );
+                    getViewerInstance().onSceneSaved( path );
                 }
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
             }

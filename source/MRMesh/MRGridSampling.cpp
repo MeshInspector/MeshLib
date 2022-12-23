@@ -98,7 +98,7 @@ VertBitSet Grid::getSamples() const
     return res;
 }
 
-VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize )
+VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressCallback cb )
 {
     MR_TIMER;
     if (voxelSize <= 0.f)
@@ -120,6 +120,9 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize )
     };
 
     Grid grid( bbox, dims );
+    if ( cb && !cb( 0.5f ) )
+        return {};
+
     if ( mp.region )
     {
         VertBitSet regionVerts = getIncidentVerts( mp.mesh.topology, *mp.region );
@@ -132,10 +135,14 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize )
             grid.addVertex( mp.mesh.points[v], v );
     }
 
-    return grid.getSamples();
+    const auto res =  grid.getSamples();
+    if ( cb && !cb( 1.0f ) )
+        return {};
+
+    return res;
 }
 
-VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize )
+VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, ProgressCallback cb )
 {
     if (voxelSize <= 0.f)
         return cloud.validPoints;
@@ -152,10 +159,17 @@ VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize )
     };
 
     Grid grid( bbox, dims );
+    if ( cb && !cb( 0.5f ) )
+        return {};
+
     for ( auto v : cloud.validPoints )
         grid.addVertex( cloud.points[v], v );
 
-    return grid.getSamples();
+    const auto res = grid.getSamples();
+    if ( cb && !cb( 1.0f ) )
+        return {};
+    
+    return res;
 }
 
 TEST( MRMesh, GridSampling )

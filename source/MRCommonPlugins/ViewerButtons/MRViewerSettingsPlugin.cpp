@@ -568,7 +568,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
 
 #ifdef _WIN32
-    if ( RibbonButtonDrawer::GradientCheckbox( "Activate mouse scroll zoom", &activeMouseScrollZoom_ ) )
+    if ( RibbonButtonDrawer::GradientCheckbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {
         if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
         {
@@ -579,6 +579,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
             }
         }
     }
+    ImGui::SetTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
 #endif
 
     if ( anyChanged )

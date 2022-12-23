@@ -18,3 +18,4 @@ thirdparty_build/*
 distr/*
 *.log
 /docker/logs/
+macos/Resources/LICENSE

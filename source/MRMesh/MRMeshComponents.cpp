@@ -192,12 +192,13 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence )
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
     const auto& allRoots = unionFindStruct.roots();
-    FaceHashSet componentRoots;
+    size_t res = 0;
     for ( auto f : region )
     {
-        componentRoots.insert( allRoots[f] );
+        if ( allRoots[f]  == f )
+            ++res;
     }
-    return componentRoots.size();
+    return res;
 }
 
 std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence/* = FaceIncidence::PerEdge*/ )

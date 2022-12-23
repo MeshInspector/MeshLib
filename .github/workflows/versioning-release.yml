@@ -53,7 +53,7 @@ jobs:
         run: |
           version_tag=${{steps.version.outputs.version}}
           version_tag=${version_tag%%-*}
-          echo "::set-output name=version_tag::${version_tag}"
+          echo "version_tag=${version_tag}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -95,15 +95,23 @@ jobs:
                     <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}_ubuntu22-dev.deb">deb</a>
                   </td>
                 </tr>
-                  <tr>
-                    <td align="center">Fedora 35 x64</td>
-                    <td align="center">
-                      <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}-dev.rpm">rpm</a>
-                    </td>
-                  </tr>
                 <tr>
-                  <td align="center">MacOS</td>
-                  <td colspan=3 align="center"> Coming soon! :green_apple:</td>
+                  <td align="center">Fedora 35 x64</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}-dev.rpm">rpm</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">MacOS x64</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}_x64.pkg">x64 pkg</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">MacOS arm</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}_arm.pkg">arm pkg</a>
+                  </td>
                 </tr>
               </tbody>
             </table>

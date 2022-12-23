@@ -25,7 +25,7 @@ MR_INSTALL_RES_DIR="$RPM_BUILD_ROOT/usr/local/etc/MeshLib/"
 MR_INSTALL_INCLUDE_DIR="$RPM_BUILD_ROOT/usr/local/include/MeshLib/"
 
 cd ./build/Release
-cmake --install . --prefix "$RPM_BUILD_ROOT/usr/local/"
+cmake --install . --prefix "$RPM_BUILD_ROOT/"
 cd -
 
 #mkdirs

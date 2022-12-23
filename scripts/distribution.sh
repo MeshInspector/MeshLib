@@ -25,7 +25,7 @@ if [ -d "./distr/" ]; then
 fi
 
 cd ./build/Release
-cmake --install . --prefix "../../distr/meshlib-dev/usr/local"
+cmake --install . --prefix "../../distr/meshlib-dev"
 cd -
 
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib"

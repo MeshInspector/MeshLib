@@ -84,3 +84,45 @@ jobs:
         if: ${{ always() && matrix.os == 'fedora:35' }}
         working-directory: test_python
         run: python3.9 -m pytest -s -v
+
+  macos-test:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Download Distributive
+        uses: actions/download-artifact@v3
+        with:
+          name: Distributives
+
+      - name: Install Pkg
+        run: sudo installer -pkg meshlib_x64.pkg  -target /
+
+      - name: Run MeshViewer
+        if: always()
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Show meshconv help
+        if: always()
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+
+      - name: Build example
+        if: always()
+        working-directory: examples/cmake-example
+        run: |
+          mkdir build && \
+          cd build && \
+          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
+          cmake --build . && \
+          ./cmake-example
+
+      - name: Python test
+        if: ${{ always() }}
+        working-directory: test_python
+        run: |
+          python3 -m pip install -r ../requirements/python.txt
+          python3 -m pytest -s -v

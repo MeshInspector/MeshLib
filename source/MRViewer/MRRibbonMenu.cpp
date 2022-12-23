@@ -2032,6 +2032,7 @@ void RibbonMenu::beginTopPanel_()
 
 void RibbonMenu::endTopPanel_()
 {
+    ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::End();
 
     ImGui::PopStyleColor();

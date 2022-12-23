@@ -70,38 +70,39 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
     {
         const auto x = stack.top();
         stack.pop();
-        const auto mid = partitionFacePoints( span );
-        if ( mid + 1 < span.size() )
-            stack.push( FacePointSpan( span.begin() + mid, span.end() ) );
+        const auto mid = partitionFacePoints( x );
+        if ( mid + 1 < x.size() )
+            stack.push( FacePointSpan( x.begin() + mid, x.end() ) );
         if ( mid > 1 )
-            stack.push( FacePointSpan( span.begin(), span.begin() + mid ) );
+            stack.push( FacePointSpan( x.begin(), x.begin() + mid ) );
     }
 }
 
 } // anonymous namespace
 
-/*FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
+FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
 {
     MR_TIMER
 
+    FaceBMap res;
     const auto numFaces = mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
-        return;
+        return res;
 
-    Buffer<FacePoint> facePoints( numFaces );
+    Buffer<FacePoint, FaceId> facePoints( numFaces );
     const bool packed = numFaces == mesh.topology.faceSize();
     if ( !packed )
     {
-        int n = 0;
+        FaceId n = 0_f;
         for ( auto f : mesh.topology.getValidFaces() )
             facePoints[n++].f = f;
     }
 
     // compute minimal point of each face
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)numFaces ),
-        [&]( const tbb::blocked_range<int>& range )
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
+        [&]( const tbb::blocked_range<FaceId>& range )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        for ( FaceId i = range.begin(); i < range.end(); ++i )
         {
             FaceId f;
             if ( packed )
@@ -130,7 +131,19 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
         target = ( target + 1 ) / 2;
     }
     orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
-}*/
+
+    res.b.resize( mesh.topology.faceSize() );
+    res.tsize = numFaces;
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
+        [&]( const tbb::blocked_range<FaceId>& range )
+    {
+        for ( FaceId newf = range.begin(); newf < range.end(); ++newf )
+        {
+            res.b[facePoints[newf].f] = newf;
+        }
+    } );
+    return res;
+}
 
 VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {

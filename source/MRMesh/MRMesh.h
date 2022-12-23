@@ -241,7 +241,7 @@ struct [[nodiscard]] Mesh
     // optionally returns mappings: old.id -> new.id
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
-    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it may occupy considerable memory)
+    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will longer to compute and it will occupy more memory)
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
 
     // finds closest point on this mesh (or its region) to given point;

@@ -1371,10 +1371,12 @@ void Viewer::postResize( int w, int h )
             for ( auto& viewport : viewport_list )
             {
                 auto rect = viewport.getViewportRect();
+                auto oldWidth = width( rect );
+                auto oldHeight = height( rect );
                 rect.min.x = float( rect.min.x / window_width ) * w;
                 rect.min.y = float( rect.min.y / window_height ) * h;
-                rect.max.x = rect.min.x + float( width( rect ) / window_width ) * w;
-                rect.max.y = rect.min.y + float( height( rect ) / window_height ) * h;
+                rect.max.x = rect.min.x + float( oldWidth / window_width ) * w;
+                rect.max.y = rect.min.y + float( oldHeight / window_height ) * h;
                 viewport.setViewportRect( rect );
             }
     }

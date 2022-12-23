@@ -122,7 +122,7 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     // to equally balance the load on threads, subdivide the task on
     // a power of two subtasks, which is at least twice the hardware concurrency
     int numThreads = 1;
-    int target = std::thread::hardware_concurrency();
+    int target = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     if ( target > 1 )
         numThreads *= 2;
     while ( target > 1 )

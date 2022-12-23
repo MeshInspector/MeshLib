@@ -93,19 +93,19 @@ inline T getAt( const Buffer<T, I> & bmap, I key )
 }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( const Buffer<T> & a )
+[[nodiscard]] inline auto begin( const Buffer<T, I> & a )
     { return a.data(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( Buffer<T> & a )
+[[nodiscard]] inline auto begin( Buffer<T, I> & a )
     { return a.data(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( const Buffer<T> & a )
+[[nodiscard]] inline auto end( const Buffer<T, I> & a )
     { return a.data() + a.size(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( Buffer<T> & a )
+[[nodiscard]] inline auto end( Buffer<T, I> & a )
     { return a.data() + a.size(); }
 
 /// flat map: I -> T

@@ -101,7 +101,9 @@ jobs:
           name: Distributives
 
       - name: Install Pkg
-        run: sudo installer -pkg meshlib_x64.pkg  -target /
+        run: |
+          sudo installer -pkg meshlib_x64.pkg  -target /
+          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt
 
       - name: Run MeshViewer
         if: always()
@@ -117,13 +119,6 @@ jobs:
         run: |
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
+          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
           cmake --build . && \
           ./cmake-example
-
-      - name: Python test
-        if: ${{ always() }}
-        working-directory: test_python
-        run: |
-          python3 -m pip install -r ../requirements/python.txt
-          python3 -m pytest -s -v

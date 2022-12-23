@@ -72,9 +72,9 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
         stack.pop_back();
         const auto mid = partitionFacePoints( x );
         if ( mid + 1 < x.size() )
-            stack.push_back( { x.data() + mid, x.size() - mid } );
+            stack.emplace_back( x.data() + mid, x.size() - mid );
         if ( mid > 1 )
-            stack.push_back( { x.data(), mid } );
+            stack.emplace_back( x.data(), mid );
     }
 }
 

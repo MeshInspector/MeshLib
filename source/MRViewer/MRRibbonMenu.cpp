@@ -1321,8 +1321,8 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
-    sceneSize_.x = std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling );
-    sceneSize_.y = viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling;
+    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
+    sceneSize_.y = std::round( viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.window_width / 2.f, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
@@ -1339,12 +1339,11 @@ void RibbonMenu::drawRibbonSceneList_()
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = ImGui::GetWindowSize();
-    if ( fixFirstGetSize_ && ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y ) )
+    if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
-    fixFirstGetSize_ = true;
 
     ImGui::End();
     ImGui::PopStyleColor();
@@ -2129,9 +2128,9 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
         auto heightRect = MR::height( rect );
 
         rect.min.x = ( rect.min.x - viewportsBounds.min.x ) / minMaxDiff.x * ( width - sceneWidth ) + sceneWidth;
-        rect.min.y = ( rect.min.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
+        rect.min.y = ( rect.min.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 2 ) ); // -2 - buffer pixel
         rect.max.x = rect.min.x + widthRect / minMaxDiff.x * ( width - sceneWidth );
-        rect.max.y = rect.min.y + heightRect / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
+        rect.max.y = rect.min.y + heightRect / minMaxDiff.y * ( height - ( topPanelHeightScaled - 2 ) ); // -2 - buffer pixel
         if ( MR::width( rect ) <= 0 || MR::height( rect ) <= 0 )
             continue;
         vp.setViewportRect( rect );

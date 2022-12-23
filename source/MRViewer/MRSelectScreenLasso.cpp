@@ -105,8 +105,8 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const std::vector<BitSet
     {
         if ( clipSpacePoint[0] < -1.f || clipSpacePoint[0] > 1.f || clipSpacePoint[1] < -1.f || clipSpacePoint[1] > 1.f )
             return false;
-        auto x = std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width( vpRect ) );
-        auto y = std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height( vpRect ) );
+        auto y = std::clamp( std::lround( ( -clipSpacePoint[1] / 2.f + 0.5f ) * height( vpRect ) ), long( 0 ), long( bsVec.size() ) - 1 );
+        auto x = std::clamp( std::lround( ( clipSpacePoint[0] / 2.f + 0.5f ) * width( vpRect ) ), long( 0 ), long( bsVec[y].size() ) - 1 );
         return bsVec[y].test( x );
     };
 

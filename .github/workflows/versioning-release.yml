@@ -43,8 +43,7 @@ jobs:
         uses: paulhatch/semantic-version@v5.0.0
         id: version
         with:
-          format: "v${major}.${minor}.${patch}.${increment}"
-          short_tags: false
+          version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           namespace: ${{inputs.version-namespace}}
 

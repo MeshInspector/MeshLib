@@ -734,6 +734,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     DecimateSettings seqSettings = settings;
+    seqSettings.vertForms = &mVertForms;
     if ( settings.progressCallback )
         seqSettings.progressCallback = [cb = settings.progressCallback](float p) { return cb( 0.9f + 0.1f * p ); };
     res = decimateMeshSerial( mesh, seqSettings );

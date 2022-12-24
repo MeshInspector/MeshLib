@@ -57,9 +57,8 @@ struct DecimateSettings
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
     /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
-    /// if bdVerts is not null, then they are output there;
-    /// if on input the set is not empty then initialization is skipped in favor of values from there;
-    VertBitSet * bdVerts = nullptr;
+    /// if the pointer is not null then boundary vertices detection is skipped in favor of values from there
+    const VertBitSet * bdVerts = nullptr;
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
     /// if it does change dihedral angle more than on this value (negative value prohibits any edge flips)
     float maxAngleChange = -1;

@@ -109,7 +109,7 @@ private:
     Vector<QuadraticForm3f, VertId> * pVertForms_ = nullptr;
     UndirectedEdgeBitSet regionEdges_;
     VertBitSet myBdVerts_;
-    VertBitSet * pBdVerts_ = nullptr;
+    const VertBitSet * pBdVerts_ = nullptr;
 
     struct QueueElement
     {
@@ -493,9 +493,14 @@ DecimateResult MeshDecimator::run()
 {
     MR_TIMER;
 
-    pBdVerts_ = settings_.bdVerts ? settings_.bdVerts : &myBdVerts_;
-    if ( !settings_.touchBdVertices && pBdVerts_->empty() )
-        *pBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
+    if ( settings_.bdVerts )
+        pBdVerts_ = settings_.bdVerts;
+    else
+    {
+        pBdVerts_ = &myBdVerts_;
+        if ( !settings_.touchBdVertices )
+            myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
+    }
 
     if ( !initializeQueue_() )
         return res_;
@@ -616,12 +621,6 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
     DecimateResult res;
 
-    // not implemented in parallel version of decimate:
-    assert( settings.maxDeletedVertices >= mesh.topology.vertSize() );
-    assert( settings.maxDeletedFaces >= mesh.topology.faceSize() );
-    assert( !settings.bdVerts );
-    assert( !settings.vertForms );
-
     MR_WRITER( mesh );
     if ( settings.progressCallback && !settings.progressCallback( 0 ) )
         return res;
@@ -677,7 +676,11 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         return res;
 
     // compute quadratic form in each vertex
-    auto mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer );
+    Vector<QuadraticForm3f, VertId> mVertForms;
+    if ( settings.vertForms )
+        mVertForms = std::move( *settings.vertForms );
+    if ( mVertForms.empty() )
+        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer );
     if ( settings.progressCallback && !settings.progressCallback( 0.2f ) )
         return res;
 
@@ -705,6 +708,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 break;
 
             DecimateSettings subSeqSettings = settings;
+            subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
+            subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
             subSeqSettings.touchBdVertices = false;
@@ -745,6 +750,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         res.vertsDeleted += submesh.decimRes.vertsDeleted;
     }
 
+    if ( settings.vertForms )
+        *settings.vertForms = std::move( mVertForms );
     return res;
 }
 

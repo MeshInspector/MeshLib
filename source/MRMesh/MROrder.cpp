@@ -1,15 +1,149 @@
 #include "MROrder.h"
-#include "MRMeshTopology.h"
+#include "MRBox.h"
+#include "MRBuffer.h"
+#include "MRMesh.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <span>
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #include <execution>
 #endif
 
 namespace MR
 {
+
+namespace
+{
+
+struct FacePoint
+{
+    Vector3f pt; // minimal bounding box point of the face
+    FaceId f;
+};
+static_assert( sizeof( FacePoint ) == 16 );
+
+using FacePointSpan = std::span<FacePoint>;
+
+// [0, result) will go to left span and [result, lastLeaf) - to the right child
+size_t partitionFacePoints( const FacePointSpan & span )
+{
+    assert( span.begin() + 1 < span.end() );
+    Box3f box;
+    for ( const auto & fp : span )
+        box.include( fp.pt );
+    const auto boxDiag = box.max - box.min;
+    const int splitDim = int( std::max_element( begin( boxDiag ), end( boxDiag ) ) - begin( boxDiag ) );
+
+    const auto mid = span.size() / 2;
+    std::nth_element( span.begin(), span.begin() + mid, span.end(),
+        [&]( const FacePoint & a, const FacePoint & b )
+        {
+            return a.pt[splitDim] < b.pt[splitDim];
+        } );
+    return mid;
+}
+
+// optimally orders given span, optionally splitting the job on given number of threads
+void orderFacePoints( const FacePointSpan & span, int numThreads )
+{
+    if ( numThreads >= 2 && span.size() >= 32 )
+    {
+        // split the span between two threads
+        const auto mid = partitionFacePoints( span );
+        const int rThreads = numThreads / 2;
+        const int lThreads = numThreads - rThreads;
+        tbb::task_group group;
+        group.run( [&] () { orderFacePoints( FacePointSpan( span.data() + mid, span.size() - mid ), rThreads ); } );
+        orderFacePoints( FacePointSpan( span.data(), mid ), lThreads );
+        group.wait();
+        return;
+    }
+
+    // process the span in this thread only
+    Timer t( "finishing" );
+    std::vector<FacePointSpan> stack;
+    stack.push_back( span );
+
+    while ( !stack.empty() )
+    {
+        const auto x = stack.back();
+        stack.pop_back();
+        const auto mid = partitionFacePoints( x );
+        if ( mid + 1 < x.size() )
+            stack.emplace_back( x.data() + mid, x.size() - mid );
+        if ( mid > 1 )
+            stack.emplace_back( x.data(), mid );
+    }
+}
+
+} // anonymous namespace
+
+FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
+{
+    MR_TIMER
+
+    FaceBMap res;
+    const auto numFaces = mesh.topology.numValidFaces();
+    if ( numFaces <= 0 )
+        return res;
+
+    Buffer<FacePoint, FaceId> facePoints( numFaces );
+    const bool packed = numFaces == mesh.topology.faceSize();
+    if ( !packed )
+    {
+        FaceId n = 0_f;
+        for ( auto f : mesh.topology.getValidFaces() )
+            facePoints[n++].f = f;
+    }
+
+    // compute minimal point of each face
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
+        [&]( const tbb::blocked_range<FaceId>& range )
+    {
+        for ( FaceId i = range.begin(); i < range.end(); ++i )
+        {
+            FaceId f;
+            if ( packed )
+                facePoints[i].f = f = FaceId( i );
+            else
+                f = facePoints[i].f;
+            Box3f box;
+            Vector3f a, b, c;
+            mesh.getTriPoints( f, a, b, c );
+            box.include( a );
+            box.include( b );
+            box.include( c );
+            facePoints[i].pt = box.min;
+        }
+    } );
+
+    // to equally balance the load on threads, subdivide the task on
+    // a power of two subtasks, which is at least twice the hardware concurrency
+    int numThreads = 1;
+    int target = (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    if ( target > 1 )
+        numThreads *= 2;
+    while ( target > 1 )
+    {
+        numThreads *= 2;
+        target = ( target + 1 ) / 2;
+    }
+    orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
+
+    res.b.resize( mesh.topology.faceSize() );
+    res.tsize = numFaces;
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
+        [&]( const tbb::blocked_range<FaceId>& range )
+    {
+        for ( FaceId newf = range.begin(); newf < range.end(); ++newf )
+        {
+            res.b[facePoints[newf].f] = newf;
+        }
+    } );
+    return res;
+}
 
 VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topology )
 {

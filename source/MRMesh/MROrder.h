@@ -7,6 +7,10 @@
 namespace MR
 {
 
+/// computes optimal order of faces: old face id -> new face id,
+/// the order is similar as in AABB tree, but faster to compute
+[[nodiscard]] MRMESH_API FaceBMap getOptimalFaceOrdering( const Mesh & mesh );
+
 /// compute the order of vertices given the order of faces:
 /// vertices near first faces also appear first;
 /// \param faceMap old face id -> new face id

@@ -49,7 +49,7 @@ private:
 
 private:
     // [firstLeaf, result) will go to left child and [result, lastLeaf) - to the right child
-    int partitionLeaves_( BoxT & box, int firstLeaf, int lastLeaf );
+    int partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf );
     // constructs not-leaf node
     std::pair<Subtree, Subtree> makeNode_( const Subtree & s );
     // constructs given subtree, optionally splitting the job on given number of threads
@@ -57,7 +57,7 @@ private:
 };
 
 template<typename T>
-int AABBTreeMaker<T>::partitionLeaves_( BoxT & box, int firstLeaf, int lastLeaf )
+int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf )
 {
     assert( firstLeaf + 1 < lastLeaf );
     auto boxDiag = box.max - box.min;

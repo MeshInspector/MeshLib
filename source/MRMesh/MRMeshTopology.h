@@ -108,34 +108,34 @@ public:
     /// returns valid edge if given vertex is present in the mesh
     [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) ? edgePerVertex_[a] : EdgeId(); }
     /// returns true if given vertex is present in the mesh
-    [[nodiscard]] bool hasVert( VertId a ) const { return validVerts_.test( a ); }
+    [[nodiscard]] bool hasVert( VertId a ) const { assert( updateValids_ ); return validVerts_.test( a ); }
     /// returns the number of valid vertices
-    [[nodiscard]] int numValidVerts() const { return numValidVerts_; }
+    [[nodiscard]] int numValidVerts() const { assert( updateValids_ ); return numValidVerts_; }
     /// returns last valid vertex id, or invalid id if no single valid vertex exists
     [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     /// creates new vert-id not associated with any edge yet
-    [[nodiscard]] VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
+    [[nodiscard]] VertId addVertId() { edgePerVertex_.emplace_back(); if ( updateValids_ ) { validVerts_.push_back( false ); } return edgePerVertex_.backId(); }
     /// explicitly increases the size of verts vector
-    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); validVerts_.resize( newSize ); } }
+    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); if ( updateValids_ ) { validVerts_.resize( newSize ); } } }
     /// sets the capacity of verts vector
-    void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
+    void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); if ( updateValids_ ) { validVerts_.reserve( newCapacity ); } }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
     /// returns the number of allocated vert records
     [[nodiscard]] size_t vertCapacity() const { return edgePerVertex_.capacity(); }
     /// returns cached set of all valid vertices
-    [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
+    [[nodiscard]] const VertBitSet & getValidVerts() const { assert( updateValids_ ); return validVerts_; }
     /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
     void flip( VertBitSet & vs ) const { vs = getValidVerts() - vs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
-    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validVerts_; }
 
     /// for all valid faces this vector contains an edge with that face at left
     [[nodiscard]] const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
     /// returns valid edge if given vertex is present in the mesh
     [[nodiscard]] EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) ? edgePerFace_[a] : EdgeId(); }
     /// returns true if given face is present in the mesh
-    [[nodiscard]] bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
+    [[nodiscard]] bool hasFace( FaceId a ) const { assert( updateValids_ ); return validFaces_.test( a ); }
     /// if two valid faces share the same edge then it is found and returned
     [[nodiscard]] MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
     /// if two valid edges share the same vertex then it is found and returned as Edge with this vertex in origin
@@ -145,29 +145,29 @@ public:
     /// if two valid edges belong to same valid face then it is found and returned
     [[nodiscard]] MRMESH_API FaceId sharedFace( EdgeId a, EdgeId b ) const;
     /// returns the number of valid faces
-    [[nodiscard]] int numValidFaces() const{ return numValidFaces_; }
+    [[nodiscard]] int numValidFaces() const { assert( updateValids_ ); return numValidFaces_; }
     /// returns last valid face id, or invalid id if no single valid face exists
     [[nodiscard]] MRMESH_API FaceId lastValidFace() const;
     /// creates new face-id not associated with any edge yet
-    [[nodiscard]] FaceId addFaceId() { edgePerFace_.push_back( {} ); validFaces_.push_back( false ); return FaceId( (int)edgePerFace_.size() - 1 ); }
+    [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
     /// deletes the face, also deletes its edges and vertices if they were not shared with other faces
     MRMESH_API void deleteFace( FaceId f );
     /// deletes multiple given faces
     MRMESH_API void deleteFaces( const FaceBitSet& fs );
     /// explicitly increases the size of faces vector
-    void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); validFaces_.resize( newSize ); } }
+    void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); if ( updateValids_ ) { validFaces_.resize( newSize ); } } }
     /// sets the capacity of faces vector
-    void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); validFaces_.reserve( newCapacity ); }
+    void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); if ( updateValids_ ) { validFaces_.reserve( newCapacity ); } }
     /// returns the number of face records including invalid ones
     [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
     /// returns the number of allocated face records
     [[nodiscard]] size_t faceCapacity() const { return edgePerFace_.capacity(); }
     /// returns cached set of all valid faces
-    [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
+    [[nodiscard]] const FaceBitSet & getValidFaces() const { assert( updateValids_ ); return validFaces_; }
     /// sets in (fs) all valid faces that were not selected before the call, and resets other bits
     void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
-    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
+    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validFaces_; }
 
     /// return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
     [[nodiscard]] bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }
@@ -299,10 +299,18 @@ public:
     /// \param fmap,vmap mapping of vertices and faces if it is given ( from.id -> this.id )
     MRMESH_API void addPackedPart( const MeshTopology & from, EdgeId toEdgeId,
         const FaceMap & fmap, const VertMap & vmap );
-    /// after all packed parts have been added, compute 
+    /// compute
     /// 1) numValidVerts_ and validVerts_ from edgePerVertex_
     /// 2) numValidFaces_ and validFaces_ from edgePerFace_
+    /// and activates their auto-update
     MRMESH_API void computeValidsFromEdges();
+    /// stops updating validVerts(), validFaces(), numValidVerts(), numValidFaces() for parallel processing of mesh parts
+    MRMESH_API void stopUpdatingValids();
+    /// returns whether the methods validVerts(), validFaces(), numValidVerts(), numValidFaces() can be called
+    [[nodiscard]] bool updatingValids() const { return updateValids_; }
+    /// for incident vertices and faces of given edges, remember one of them as edgeWithOrg and edgeWithLeft;
+    /// this is important in parallel algorithms where other edges may change but stable ones will survive
+    MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
@@ -355,6 +363,8 @@ private:
 
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
+
+    bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
 };
 
 template <typename T>

@@ -63,8 +63,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version.outputs.version}}
         with:
-          tag_name: ${{steps.version.outputs.version }}
           name: Release ${{steps.version.outputs.version}}
+          tag_name: ${{steps.version.outputs.version }}
           draft: true
           prerelease: false
           body: |

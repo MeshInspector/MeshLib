@@ -12,5 +12,5 @@ include(${SELF_DIR}/cmake/MRViewerConfig.cmake)
 include(${SELF_DIR}/cmake/MRCommonPluginsConfig.cmake)
 
 if(APPLE)
-    message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt '")
+    message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")
 endif(APPLE)

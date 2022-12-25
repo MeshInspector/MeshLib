@@ -103,7 +103,7 @@ jobs:
       - name: Install Pkg
         run: |
           sudo installer -pkg meshlib_x64.pkg  -target /
-          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt
+          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       - name: Run MeshViewer
         if: always()

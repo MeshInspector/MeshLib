@@ -77,16 +77,6 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
     if( b == d )
         return true; // consider condition satisfied to avoid creation of loop edges
 
-    for ( auto e : orgRing( mesh.topology, mesh.topology.next( edge ).sym() ) )
-    {
-        assert( mesh.topology.org( e ) == d );
-        if ( mesh.topology.dest( e ) == b )
-        {
-            // flipping this edge will produce multiple-edges
-            return true;
-        }
-    }
-
     const Vector3d ap{ mesh.points[a] };
     const Vector3d bp{ mesh.points[b] };
     const Vector3d cp{ mesh.points[c] };
@@ -109,6 +99,38 @@ static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
             continue;
         }
         mesh.topology.flipEdge( testEdge );
+    } 
+}
+
+static void eliminateDoubleTris( MeshTopology & topology, EdgeId e )
+{
+    EdgeId e0 = e;
+    for (;;)
+    {
+        const auto ex = topology.next( e.sym() );
+        if ( ex != topology.prev( e.sym() ) )
+        {
+            e = topology.next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+            continue;
+        }
+        // left( e ) and right( e ) are double triangles
+        topology.setLeft( e, {} );
+        topology.setLeft( e.sym(), {} );
+        topology.setOrg( e.sym(), {} );
+        const EdgeId ep = topology.prev( e );
+        const EdgeId en = topology.next( e );
+        topology.splice( e.sym(), ex );
+        topology.splice( ep, e );
+        assert( topology.isLoneEdge( e ) );
+        topology.splice( en.sym(), ex.sym() );
+        assert( topology.isLoneEdge( ex ) );
+        topology.splice( ep, en );
+        topology.splice( topology.prev( en.sym() ), en.sym() );
+        assert( topology.isLoneEdge( en ) );
+
+        e0 = e = ep;
     } 
 }
 
@@ -206,9 +228,8 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         }
         auto myverts = std::move( it->second );
         face2verts.erase( it );
-        assert( !myverts.empty() );
 
-        if ( myverts.empty() )
+        if ( myverts.empty() || !res.topology.hasFace( myFace ) )
         {
             queue.setSmallerValue( myFace, NoDist );
             continue;
@@ -240,14 +261,9 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         makeConvexOriginRing( res, res.topology.edgeWithOrg( newv ) );
         queue.resize( (int)res.topology.faceSize() );
 
-        newFp.clear();
         for ( EdgeId e : orgRing( res.topology, newv ) )
         {
-            newFp.emplace_back();
-            auto & x = newFp.back();
-            x.face = res.topology.left( e );
-            x.plane = getPlane3d( x.face );
-            auto it1 = face2verts.find( x.face );
+            auto it1 = face2verts.find( res.topology.left( e ) );
             if ( it1 != face2verts.end() )
             {
                 for ( auto v : it1->second )
@@ -258,6 +274,16 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
 
         std::sort( myverts.begin(), myverts.end() );
         myverts.erase( std::unique( myverts.begin(), myverts.end() ), myverts.end() );
+
+        eliminateDoubleTris( res.topology, res.topology.edgeWithOrg( newv ) );
+        newFp.clear();
+        for ( EdgeId e : orgRing( res.topology, newv ) )
+        {
+            newFp.emplace_back();
+            auto & x = newFp.back();
+            x.face = res.topology.left( e );
+            x.plane = getPlane3d( x.face );
+        }
 
         for ( auto v : myverts )
         {
@@ -276,16 +302,9 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         for ( auto & x : newFp )
         {
             queue.setValue( x.face, x.maxDist );
-            auto it2 = face2verts.find( x.face );
             if ( x.verts.empty() )
             {
-                if ( it2 != face2verts.end() )
-                    face2verts.erase( it2 );
-                continue;
-            }
-            if ( it2 != face2verts.end() )
-            {
-                it2->second = std::move( x.verts );
+                face2verts.erase( x.face );
                 continue;
             }
             face2verts[x.face] = std::move( x.verts );

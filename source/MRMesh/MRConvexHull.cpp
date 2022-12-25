@@ -174,11 +174,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         return Plane3d::fromDirAndPt( cross( bp - ap, cp - ap ).normalized(), ap );
     };
 
-    // these points are on the convex hull
-    VertBitSet hullPoints( validPoints.find_last() + 1 );
-    hullPoints.set( v0 );
-    hullPoints.set( v1 );
-    hullPoints.set( v2 );
     // separate all remaining points as above face #0 or face #1
     {
         const auto pl0 = getPlane3d( 0_f );
@@ -240,8 +235,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         const auto pl = getPlane3d( myFace );
         for ( auto v : myverts )
         {
-            if ( hullPoints.test( v ) )
-                continue;
             auto dist = pl.distance( Vector3d{ points[v] } );
             if ( !topmostVert || dist > maxDist )
             {
@@ -254,7 +247,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             queue.setSmallerValue( myFace, NoDist );
             continue;
         }
-        hullPoints.set( topmostVert );
         auto newv = res.splitFace( myFace );
         res.points[newv] = points[topmostVert];
 
@@ -272,9 +264,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             }
         }
 
-        std::sort( myverts.begin(), myverts.end() );
-        myverts.erase( std::unique( myverts.begin(), myverts.end() ), myverts.end() );
-
         eliminateDoubleTris( res.topology, res.topology.edgeWithOrg( newv ) );
         newFp.clear();
         for ( EdgeId e : orgRing( res.topology, newv ) )
@@ -287,16 +276,23 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
 
         for ( auto v : myverts )
         {
-            if ( hullPoints.test( v ) )
+            if ( v == topmostVert )
                 continue;
+            int bestFace = -1;
+            double bestDist = 0;
             for ( int i = 0; i < newFp.size(); ++i )
             {
                 const auto dist = newFp[i].plane.distance( Vector3d{ points[v] } );
-                if ( dist > 0 )
+                if ( dist > bestDist )
                 {
-                    newFp[i].verts.push_back( v );
-                    newFp[i].maxDist = std::max( newFp[i].maxDist, dist );
+                    bestFace = i;
+                    bestDist = dist;
                 }
+            }
+            if ( bestFace >= 0 )
+            {
+                newFp[bestFace].verts.push_back( v );
+                newFp[bestFace].maxDist = std::max( newFp[bestFace].maxDist, bestDist );
             }
         }
         for ( auto & x : newFp )

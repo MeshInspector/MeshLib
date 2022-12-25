@@ -63,6 +63,7 @@ This list is not full and updating each day
  - Boolean ops (union, intersection, difference) 
    - Boolean ops on meshes via voxels. Efficient but not so accurate as explicit mesh operations.
    - Explicit mesh boolean ops, very exact, fast and accurate.
+ - Construction of Convex Hull of a point cloud or a mesh.
 ### 3D Data problems fixing
  - Fixing holes in mesh
    - Holes stitching (removing two holes by stitching their boundaries) 

@@ -1192,12 +1192,10 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
-        spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }
     else if ( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) && importPlaneModeOld == planeWidget.importPlaneMode() )
     {
-        spdlog::info( "false" );
         planeWidget.setImportPlaneMode( false );
     }
     if ( importPlaneModeOld )

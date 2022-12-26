@@ -27,7 +27,7 @@ inline int getNumNodes( int numLeaves )
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves );
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<NoDefInit<BoxedLeaf<T>>> boxedLeaves );
 
 /// \}
 

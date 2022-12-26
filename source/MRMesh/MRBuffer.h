@@ -1,10 +1,8 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#include "MRId.h" //to check requires
+#include "MRNoDefInit.h"
 #include <cassert>
 #include <memory>
-#include <type_traits>
 
 namespace MR
 {
@@ -38,8 +36,7 @@ public:
     using const_iterator = const T*;
 
     Buffer() = default;
-    explicit Buffer( size_t size ) requires( std::is_trivially_constructible_v<T> ) { resize( size ); }
-    Buffer( size_t size, NoInit ) { resize( size, noInit ); }
+    explicit Buffer( size_t size ) { resize( size ); }
 
     [[nodiscard]] auto capacity() const { return capacity_.val; }
     [[nodiscard]] auto size() const { return size_.val; }
@@ -47,7 +44,7 @@ public:
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
-    void resize( size_t newSize ) requires( std::is_trivially_constructible_v<T> )
+    void resize( size_t newSize ) 
     {
         if ( size_.val == newSize )
             return;
@@ -59,15 +56,6 @@ public:
             data_.reset( new T[capacity_.val = newSize] );
 #endif
         }
-        size_.val = newSize;
-    }
-
-    void resize( size_t newSize, NoInit )
-    {
-        if ( size_.val == newSize )
-            return;
-        if ( newSize > capacity_.val )
-            data_.reset( new T[capacity_.val = newSize]( noInit ) );
         size_.val = newSize;
     }
 
@@ -99,9 +87,9 @@ private:
 
 /// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
 template <typename T, typename I>
-inline T getAt( const Buffer<T, I> & bmap, I key )
+inline T getAt( const Buffer<NoDefInit<T>, I> & bmap, I key )
 {
-    return key ? bmap[key] : T{};
+    return key ? T{bmap[key]} : T{};
 }
 
 template <typename T, typename I>

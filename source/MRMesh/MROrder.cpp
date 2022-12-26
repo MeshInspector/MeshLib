@@ -2,6 +2,7 @@
 #include "MRBox.h"
 #include "MRBuffer.h"
 #include "MRMesh.h"
+#include "MRNoDefInit.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -19,8 +20,7 @@ namespace
 
 struct FacePoint
 {
-    FacePoint() = default;
-    FacePoint( NoInit ) : pt( noInit ), f( noInit ) {}
+    FacePoint() noexcept : pt( noInit ), f( noInit ) {}
 
     Vector3f pt; // minimal bounding box point of the face
     FaceId f;
@@ -92,7 +92,7 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     if ( numFaces <= 0 )
         return res;
 
-    Buffer<FacePoint, FaceId> facePoints( numFaces, noInit );
+    Buffer<FacePoint, FaceId> facePoints( numFaces );
     const bool packed = numFaces == mesh.topology.faceSize();
     if ( !packed )
     {
@@ -135,7 +135,7 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     }
     orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
 
-    res.b.resize( mesh.topology.faceSize(), noInit );
+    res.b.resize( mesh.topology.faceSize() );
     res.tsize = numFaces;
     tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
         [&]( const tbb::blocked_range<FaceId>& range )
@@ -154,9 +154,8 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
 
     struct OrderedVertex
     {
-        OrderedVertex() = default;
-        OrderedVertex( NoInit ) : v( noInit ) {}
-        OrderedVertex( VertId v, std::uint32_t f ) : v( v ), f( f ) {}
+        OrderedVertex() noexcept : v( noInit ) {}
+        OrderedVertex( VertId v, std::uint32_t f ) noexcept : v( v ), f( f ) {}
         VertId v;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedVertex & b ) const
@@ -167,7 +166,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     using VertexOrdering = Buffer<OrderedVertex, VertId>;
 
     assert( topology.lastValidFace() < faceMap.b.size() );
-    VertexOrdering ord( topology.vertSize(), noInit );
+    VertexOrdering ord( topology.vertSize() );
 
     Timer t( "fill" );
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
@@ -190,7 +189,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
 #endif
 
     VertBMap res;
-    res.b.resize( topology.vertSize(), noInit );
+    res.b.resize( topology.vertSize() );
     res.tsize = topology.numValidVerts();
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ topology.vertSize() } ),
     [&]( const tbb::blocked_range<VertId>& range )
@@ -210,9 +209,8 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 
     struct OrderedEdge
     {
-        OrderedEdge() = default;
-        OrderedEdge( NoInit ) : ue( noInit ) {}
-        OrderedEdge( UndirectedEdgeId ue, std::uint32_t f ) : ue( ue ), f( f ) {}
+        OrderedEdge() noexcept : ue( noInit ) {}
+        OrderedEdge( UndirectedEdgeId ue, std::uint32_t f ) noexcept : ue( ue ), f( f ) {}
         UndirectedEdgeId ue;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedEdge & b ) const
@@ -223,7 +221,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     using EdgeOrdering = Buffer<OrderedEdge, UndirectedEdgeId>;
 
     assert( topology.lastValidFace() < faceMap.b.size() );
-    EdgeOrdering ord( topology.undirectedEdgeSize(), noInit );
+    EdgeOrdering ord( topology.undirectedEdgeSize() );
 
     Timer t( "fill" );
     std::atomic<int> notLoneEdges{0};
@@ -251,7 +249,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 #endif
 
     UndirectedEdgeBMap res;
-    res.b.resize( topology.undirectedEdgeSize(), noInit );
+    res.b.resize( topology.undirectedEdgeSize() );
     res.tsize = notLoneEdges;
     tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ),
     [&]( const tbb::blocked_range<UndirectedEdgeId>& range )

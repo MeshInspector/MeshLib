@@ -1533,70 +1533,122 @@ inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, Ed
     return res;
 }
 
-void MeshTopology::pack( const PackMapping & map )
+template<typename T, typename G, typename P>
+static void shuffle( const BMap<Id<T>, Id<T>> & map, G && get, P && put )
 {
     MR_TIMER
 
-    Vector<HalfEdgeRecord, EdgeId> newEdges;
-    resizeNoInit( newEdges, 2 * map.e.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
+    TaggedBitSet<T> replacedByNew( map.tsize );
+    for ( Id<T> i{0}; i < map.b.size(); ++i )
+    {
+        if ( replacedByNew.test( i ) )
+            continue;
+        auto j = map.b[i];
+        if ( !j || i == j )
+            continue;
+        if ( j < i )
+        {
+            // value at #j has been copied already
+            put( j, get( i ) );
+            continue;
+        }
+        auto storedVal = get( j );
+        put( j, get( i ) );
+        replacedByNew.set( j );
+        for ( j = map.b[j]; j > i; j = map.b[j] )
+        {
+            assert ( !replacedByNew.test( j ) );
+            auto tmp = get( j );
+            put( j, storedVal );
+            replacedByNew.set( j );
+            storedVal = tmp;
+        }
+        if ( j )
+            put( j, storedVal );
+    }
+}
+
+void MeshTopology::pack( const PackMapping & map )
+{
+    MR_TIMER
+    assert( map.f.tsize == numValidFaces_ );
+    assert( map.v.tsize == numValidVerts_ );
+    assert( map.e.tsize <= edgeSize() );
+
+    Timer m( "shuffle" );
+    tbb::task_group group;
+
+    group.run( [&] ()
+    {
+        shuffle( map.f,
+            [&]( FaceId f ) { return edgePerFace_[f]; },
+            [&]( FaceId f, EdgeId val ) { edgePerFace_[f] = val; } );
+        edgePerFace_.resize( numValidFaces_ );
+    } );
+
+    group.run( [&] ()
+    {
+        shuffle( map.v,
+            [&]( VertId v ) { return edgePerVertex_[v]; },
+            [&]( VertId v, EdgeId val ) { edgePerVertex_[v] = val; } );
+        edgePerVertex_.resize( numValidVerts_ );
+    } );
+
+    group.run( [&] ()
+    {
+        validFaces_.clear();
+        validFaces_.resize( numValidFaces_, true );
+    } );
+
+    group.run( [&] ()
+    {
+        validVerts_.clear();
+        validVerts_.resize( numValidVerts_, true );
+    } );
+
+    shuffle( map.e,
+        [&]( UndirectedEdgeId ue ) { return std::make_pair( edges_[ EdgeId{ue} ], edges_[ EdgeId{ue}.sym() ] ); },
+        [&]( UndirectedEdgeId ue, const auto & val ) { edges_[ EdgeId{ue} ] = val.first; edges_[ EdgeId{ue}.sym() ] = val.second; } );
+    edges_.resize( 2 * map.e.tsize );
+
+    group.wait();
+
+    m.restart( "translate" );
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
-        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
+        for ( auto ue = range.begin(); ue < range.end(); ++ue )
         {
-            auto newUe = map.e.b[oldUe];
-            if ( !newUe )
-                continue;
-            auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
+            auto translateHalfEdge = [&]( HalfEdgeRecord & he )
             {
-                HalfEdgeRecord res;
-                res.next = getAt( map.e.b, he.next );
-                res.prev = getAt( map.e.b, he.prev );
-                res.org = getAt( map.v.b, he.org );
-                res.left = getAt( map.f.b, he.left );
-                return res;
+                he.next = getAt( map.e.b, he.next );
+                he.prev = getAt( map.e.b, he.prev );
+                he.org = getAt( map.v.b, he.org );
+                he.left = getAt( map.f.b, he.left );
             };
-            newEdges[ EdgeId{newUe} ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
-            newEdges[ EdgeId{newUe}.sym() ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
+            translateHalfEdge( edges_[ EdgeId{ue} ] );
+            translateHalfEdge( edges_[ EdgeId{ue}.sym() ] );
         }
     } );
-    edges_ = std::move( newEdges );
 
-    Vector<EdgeId, FaceId> newEdgePerFace;
-    resizeNoInit( newEdgePerFace, map.f.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
+    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( map.f.tsize ) ),
         [&]( const tbb::blocked_range<FaceId> & range )
     {
-        for ( auto oldf = range.begin(); oldf < range.end(); ++oldf )
+        for ( auto f = range.begin(); f < range.end(); ++f )
         {
-            auto newf = map.f.b[oldf];
-            if ( !newf )
-                continue;
-            newEdgePerFace[newf] = getAt( map.e.b, edgePerFace_[oldf] );
+            edgePerFace_[f] = getAt( map.e.b, edgePerFace_[f] );
         }
     } );
-    edgePerFace_ = std::move( newEdgePerFace );
-    assert( edgePerFace_.size() == numValidFaces_ );
-    validFaces_.resize( edgePerFace_.size() );
-    validFaces_.set( 0_f, edgePerFace_.size(), true );
 
-    Vector<EdgeId, VertId> newEdgePerVertex;
-    resizeNoInit( newEdgePerVertex, map.v.tsize );
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( map.v.tsize ) ),
         [&]( const tbb::blocked_range<VertId> & range )
     {
-        for ( auto oldv = range.begin(); oldv < range.end(); ++oldv )
+        for ( auto v = range.begin(); v < range.end(); ++v )
         {
-            auto newv = map.v.b[oldv];
-            if ( !newv )
-                continue;
-            newEdgePerVertex[newv] = getAt( map.e.b, edgePerVertex_[oldv] );
+            edgePerVertex_[v] = getAt( map.e.b, edgePerVertex_[v] );
         }
     } );
-    edgePerVertex_ = std::move( newEdgePerVertex );
-    assert( edgePerVertex_.size() == numValidVerts_ );
-    validVerts_.resize( edgePerVertex_.size() );
-    validVerts_.set( 0_v, edgePerVertex_.size(), true );
+
     updateValids_ = true;
 }
 

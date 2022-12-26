@@ -156,7 +156,7 @@ void drawTris( const std::vector<Tri>& tris, const std::vector<TriCornerColors>&
     GL_EXEC( glEnableVertexAttribArray( colorsId ) );
 
     GL_EXEC( GLint normalId = glGetAttribLocation( shader, "normal" ) );
-    Buffer<NoDefInit<Vector3f>> normals( tris.size() * 3 );
+    Buffer<Vector3f> normals( tris.size() * 3 );
     for ( int i = 0; i < tris.size(); ++i )
     {
         auto* norm = &normals[i * 3];

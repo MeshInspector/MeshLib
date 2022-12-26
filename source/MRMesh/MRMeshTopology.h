@@ -338,7 +338,7 @@ private:
 
         bool operator ==( const HalfEdgeRecord & b ) const = default;
         HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,

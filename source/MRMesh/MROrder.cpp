@@ -2,7 +2,6 @@
 #include "MRBox.h"
 #include "MRBuffer.h"
 #include "MRMesh.h"
-#include "MRNoDefInit.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -20,8 +19,6 @@ namespace
 
 struct FacePoint
 {
-    FacePoint() noexcept : pt( noInit ), f( noInit ) {}
-
     Vector3f pt; // minimal bounding box point of the face
     FaceId f;
 };
@@ -154,8 +151,6 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
 
     struct OrderedVertex
     {
-        OrderedVertex() noexcept : v( noInit ) {}
-        OrderedVertex( VertId v, std::uint32_t f ) noexcept : v( v ), f( f ) {}
         VertId v;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedVertex & b ) const
@@ -209,8 +204,6 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 
     struct OrderedEdge
     {
-        OrderedEdge() noexcept : ue( noInit ) {}
-        OrderedEdge( UndirectedEdgeId ue, std::uint32_t f ) noexcept : ue( ue ), f( f ) {}
         UndirectedEdgeId ue;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedEdge & b ) const

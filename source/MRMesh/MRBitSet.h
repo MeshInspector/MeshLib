@@ -116,7 +116,7 @@ public:
 
     /// constructs another bit set from this where every set bit index is transformed using given map
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map ) const;
-    [[nodiscard]] TaggedBitSet getMapping( const BMap<NoDefInit<IndexType>, IndexType> & map ) const;
+    [[nodiscard]] TaggedBitSet getMapping( const BMap<IndexType, IndexType> & map ) const;
     [[nodiscard]] TaggedBitSet getMapping( const HashMap<IndexType, IndexType> & map ) const;
     /// this is a faster version if the result size is known beforehand
     [[nodiscard]] TaggedBitSet getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const;
@@ -221,7 +221,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const BMap<NoDefInit<IndexType>, IndexType> & map ) const
+[[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const BMap<IndexType, IndexType> & map ) const
 {
     TaggedBitSet<T> res( map.tsize );
     for ( auto b : *this )

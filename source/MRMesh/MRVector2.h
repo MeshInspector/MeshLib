@@ -20,10 +20,9 @@ struct Vector2
     using SymMatrixType = SymMatrix2<T>;
     static constexpr int elements = 2;
 
-    T x, y;
+    T x = 0, y = 0;
 
-    constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
-    explicit constexpr Vector2( NoInit ) noexcept { }
+    constexpr Vector2() noexcept = default;
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
     explicit constexpr Vector2( const Vector3<T> & v ) noexcept : x( v.x ), y( v.y ) { }
 

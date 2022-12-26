@@ -24,15 +24,15 @@ struct Box
 public:
     using T = typename V::ValueType;
 
-    V min, max;
+    /// create invalid box by default
+    V min = V::diagonal( std::numeric_limits<T>::max() );
+    V max = V::diagonal( std::numeric_limits<T>::lowest() );
 
     /// min/max access by 0/1 index
     const V & operator []( int e ) const { return *( &min + e ); }
           V & operator []( int e )       { return *( &min + e ); }
 
-    /// create invalid box by default
-    Box() : min{ V::diagonal( std::numeric_limits<T>::max() ) }, max{ V::diagonal( std::numeric_limits<T>::lowest() ) } { }
-    explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
+    Box() = default;
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
     template <typename U>

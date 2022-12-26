@@ -28,7 +28,7 @@ AABBTree::AABBTree( const Mesh & mesh )
     if ( numFaces <= 0 )
         return;
 
-    Buffer<NoDefInit<BoxedFace>> boxedFaces( numFaces );
+    Buffer<BoxedFace> boxedFaces( numFaces );
     const bool packed = numFaces == mesh.topology.faceSize();
     if ( !packed )
     {

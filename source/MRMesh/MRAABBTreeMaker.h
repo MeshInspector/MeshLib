@@ -14,6 +14,9 @@ struct BoxedLeaf
 {
     typename T::LeafId leafId;
     typename T::BoxT box;
+
+    BoxedLeaf() noexcept = default;
+    explicit BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
 };
 
 /// returns the number of nodes in the binary tree with given number of leaves
@@ -24,7 +27,7 @@ inline int getNumNodes( int numLeaves )
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves );
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<NoDefInit<BoxedLeaf<T>>> boxedLeaves );
 
 /// \}
 

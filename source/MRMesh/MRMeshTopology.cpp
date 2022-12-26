@@ -1521,7 +1521,7 @@ void MeshTopology::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * ou
     *this = std::move( packed );
 }
 
-inline EdgeId getAt( const Buffer<UndirectedEdgeId, UndirectedEdgeId> & bmap, EdgeId key )
+inline EdgeId getAt( const Buffer<NoDefInit<UndirectedEdgeId>, UndirectedEdgeId> & bmap, EdgeId key )
 {
     EdgeId res;
     if ( key )

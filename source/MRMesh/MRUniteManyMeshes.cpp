@@ -160,8 +160,14 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     Box3d box = meshBoxes[m];
                     box.include( meshBoxes[group[i]] );
                     auto intConverter = getToIntConverter( box );
-                    auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
-                    if ( !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty() )
+                    auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
+                    if ( !collidingResAB.edgesAtrisB.empty() || !collidingResAB.edgesBtrisA.empty() )
+                    {
+                        intersects.store( true, std::memory_order::relaxed );
+                        break;
+                    }
+                    auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
+                    if ( !collidingResBA.edgesAtrisB.empty() || !collidingResBA.edgesBtrisA.empty() )
                     {
                         intersects.store( true, std::memory_order::relaxed );
                         break;

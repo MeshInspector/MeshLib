@@ -30,7 +30,8 @@ VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance, P
     for ( auto v : pointCloud.validPoints )
     {
         projes[n++] = { dot( pointCloud.points[v],axis ),v };
-        if ( n % 100 == 0 && cb && !cb( 0.5f * float( n ) / float( size ) ) )
+        // n & 0x7f == 0 ~ n % 128 == 0
+        if ( ( ( n & 0x7f ) == 0 ) && cb && !cb( 0.5f * float( n ) / float( size ) ) )
             return {};
     }
 
@@ -46,7 +47,8 @@ VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance, P
         } );
         if ( !ballHasPrevVert )
             res.set( proj.id );
-        if ( n++ % 100 == 0 && cb && !cb( 0.5f + 0.5f * float( n ) / float( size ) ) )
+        // n & 0x7f == 0 ~ n % 128 == 0
+        if ( ( ( ( n++ ) & 0x7f ) == 0 ) && cb && !cb( 0.5f + 0.5f * float( n ) / float( size ) ) )
             return {};
     }
 

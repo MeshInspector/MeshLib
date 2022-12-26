@@ -51,6 +51,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          MR_VERSION: ${{ inputs.version }}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ubuntu20 ${{matrix.config}} "${{matrix.compiler}}"

@@ -1884,7 +1884,7 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopStyleVar( 2 );
         ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
-        setShowShortcuts( false );
+        showShortcuts_ =  false;
         return;
     }
     ImGui::PopStyleColor( 2 );

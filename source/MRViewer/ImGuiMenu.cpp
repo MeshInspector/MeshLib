@@ -298,7 +298,7 @@ void ImGuiMenu::preDraw_()
   }
   auto& style = ImGui::GetStyle();
   if ( storedError_.empty() )
-      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.8f, 0.8f, 0.8f, 0.5f );
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
   else
       style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
   ImGui::NewFrame();

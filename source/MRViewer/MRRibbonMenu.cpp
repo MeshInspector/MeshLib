@@ -1854,10 +1854,11 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ) );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { style.WindowPadding.x, cDefaultItemSpacing * scaling } );
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TopPanelBackground ).getUInt32() );
-    ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing );
-    ImGui::PopStyleVar();
+    if ( !ImGui::IsPopupOpen( "HotKeys" ) )
+        ImGui::OpenPopup( "HotKeys" );
+
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        return;
     
     ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
@@ -1876,13 +1877,14 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::SetCursorPosY( 2 * cDefaultWindowPaddingY * scaling );
     ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) )
+    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed(ImGuiKey_Escape) )
     {
-        ImGui::PopStyleColor( 3 );
+        ImGui::PopStyleColor( 2 );
         ImGui::PopFont();
         ImGui::PopStyleVar( 2 );
-        ImGui::End();
-        showShortcuts_ = false;
+        ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+        setShowShortcuts( false );
         return;
     }
     ImGui::PopStyleColor( 2 );
@@ -1994,8 +1996,7 @@ void RibbonMenu::drawShortcutsWindow_()
     }
 
     ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor();
-    ImGui::End();
+    ImGui::EndPopup();
 }
 
 void RibbonMenu::beginTopPanel_()

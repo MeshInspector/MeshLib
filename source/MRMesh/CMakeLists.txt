@@ -114,6 +114,12 @@ ELSE()
 	)
 ENDIF()
 
+# alternative Eigen include for external project
+find_package(Eigen3 REQUIRED)
+if(DEFINED EIGEN3_INCLUDE_DIRS)
+  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
+endif()
+
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED )
   find_package( TBB REQUIRED )
@@ -141,6 +147,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
 		    jsoncpp
 		    fmt
 		    tbb
+			Eigen3::Eigen
 			${MRMESH_OPTIONAL_DEPENDENCIES}
 			${COCOA_LIBRARY}
 		)
@@ -167,6 +174,7 @@ ELSE()
 		Boost::boost
 		jsoncpp
 		tbb
+		Eigen3::Eigen
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 ENDIF()

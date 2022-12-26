@@ -13,7 +13,7 @@ class Id
 {
 public:
     Id() noexcept : id_( -1 ) { }
-    Id( NoInit ) noexcept { }
+    explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
     template <typename U> Id( Id<U> ) = delete;
@@ -52,7 +52,7 @@ class Id<EdgeTag>
 {
 public:
     Id() noexcept : id_( -1 ) { }
-    Id( NoInit ) noexcept { }
+    explicit Id( NoInit ) noexcept { }
     Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }

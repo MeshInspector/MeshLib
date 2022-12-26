@@ -32,7 +32,7 @@ public:
 
     /// create invalid box by default
     Box() : min{ V::diagonal( std::numeric_limits<T>::max() ) }, max{ V::diagonal( std::numeric_limits<T>::lowest() ) } { }
-    Box( NoInit ) : min{ noInit }, max{ noInit } { }
+    explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
     template <typename U>

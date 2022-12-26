@@ -115,7 +115,7 @@ ELSE()
 ENDIF()
 
 # alternative Eigen include for external project
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 NO_MODULE)
 if(DEFINED EIGEN3_INCLUDE_DIRS)
   target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
 endif()

@@ -7,9 +7,6 @@
 namespace MR
 {
  
-struct NoInit {};
-inline constexpr NoInit noInit;
-
 // stores index of some element, it is made as template class to avoid mixing faces, edges and vertices
 template <typename T> 
 class Id

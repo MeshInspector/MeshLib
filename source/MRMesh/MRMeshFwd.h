@@ -39,7 +39,10 @@
 
 namespace MR
 {
- 
+
+struct NoInit {};
+inline constexpr NoInit noInit;
+
 class MRMESH_CLASS EdgeTag;
 class MRMESH_CLASS UndirectedEdgeTag;
 class MRMESH_CLASS FaceTag;

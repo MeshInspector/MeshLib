@@ -1,8 +1,10 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRId.h" //to check requires
 #include <cassert>
 #include <memory>
+#include <type_traits>
 
 namespace MR
 {
@@ -36,7 +38,8 @@ public:
     using const_iterator = const T*;
 
     Buffer() = default;
-    explicit Buffer( size_t size ) { resize( size ); }
+    explicit Buffer( size_t size ) requires( std::is_trivially_constructible_v<T> ) { resize( size ); }
+    Buffer( size_t size, NoInit ) { resize( size, noInit ); }
 
     [[nodiscard]] auto capacity() const { return capacity_.val; }
     [[nodiscard]] auto size() const { return size_.val; }
@@ -44,7 +47,7 @@ public:
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
-    void resize( size_t newSize ) 
+    void resize( size_t newSize ) requires( std::is_trivially_constructible_v<T> )
     {
         if ( size_.val == newSize )
             return;
@@ -56,6 +59,15 @@ public:
             data_.reset( new T[capacity_.val = newSize] );
 #endif
         }
+        size_.val = newSize;
+    }
+
+    void resize( size_t newSize, NoInit )
+    {
+        if ( size_.val == newSize )
+            return;
+        if ( newSize > capacity_.val )
+            data_.reset( new T[capacity_.val = newSize]( noInit ) );
         size_.val = newSize;
     }
 

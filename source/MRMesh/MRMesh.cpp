@@ -778,7 +778,7 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     if ( preserveAABBTree )
     {
         getAABBTree(); // ensure that tree is constructed
-        map.f.b.resize( topology.faceSize() );
+        map.f.b.resize( topology.faceSize(), noInit );
         AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
     }
     else

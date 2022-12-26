@@ -17,9 +17,10 @@ struct Vector3
     using SymMatrixType = SymMatrix3<T>;
     static constexpr int elements = 3;
 
-    T x = 0, y = 0, z = 0;
+    T x, y, z;
 
-    constexpr Vector3() noexcept = default;
+    constexpr Vector3() noexcept : x( 0 ), y( 0 ), z( 0 ) { }
+    constexpr Vector3( NoInit ) noexcept { }
     constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
     explicit constexpr Vector3( const Vector2<T> & v ) noexcept : x( v.x ), y( v.y ) { }
 

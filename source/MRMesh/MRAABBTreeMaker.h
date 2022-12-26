@@ -14,6 +14,9 @@ struct BoxedLeaf
 {
     typename T::LeafId leafId;
     typename T::BoxT box;
+
+    BoxedLeaf() noexcept = default;
+    BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
 };
 
 /// returns the number of nodes in the binary tree with given number of leaves

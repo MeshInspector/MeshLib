@@ -17,8 +17,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    Buffer<BoxedLine> boxedLines;
-    boxedLines.resize( polyline.topology.undirectedEdgeSize() );
+    Buffer<BoxedLine> boxedLines( polyline.topology.undirectedEdgeSize(), noInit );
 
     int numLines = 0;
     for ( UndirectedEdgeId ue{ 0 }; ue < polyline.topology.undirectedEdgeSize(); ++ue )
@@ -26,7 +25,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
         if ( !polyline.topology.isLoneEdge( ue ) )
             boxedLines[numLines++].leafId = ue;
     }
-    boxedLines.resize( numLines );
+    boxedLines.resize( numLines, noInit );
     if ( numLines <= 0 )
         return;
 
@@ -52,7 +51,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
 
     using BoxedLine = BoxedLeaf<Traits>;
     Buffer<BoxedLine> boxedLines;
-    boxedLines.resize( edgeSet.count() );
+    boxedLines.resize( edgeSet.count(), noInit );
     if ( boxedLines.size() <= 0 )
         return;
 

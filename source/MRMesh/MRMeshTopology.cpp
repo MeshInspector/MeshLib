@@ -1537,8 +1537,19 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER
 
-    Vector<HalfEdgeRecord, EdgeId> newEdges;
-    resizeNoInit( newEdges, 2 * map.e.tsize );
+    Vector<HalfEdgeRecord, UndirectedEdgeId> tmp;
+    resizeNoInit( tmp, map.e.tsize );
+    auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
+    {
+        HalfEdgeRecord res;
+        res.next = getAt( map.e.b, he.next );
+        res.prev = getAt( map.e.b, he.prev );
+        res.org = getAt( map.v.b, he.org );
+        res.left = getAt( map.f.b, he.left );
+        return res;
+    };
+
+    // translate even half-edges
     tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
         [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
@@ -1547,20 +1558,43 @@ void MeshTopology::pack( const PackMapping & map )
             auto newUe = map.e.b[oldUe];
             if ( !newUe )
                 continue;
-            auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
-            {
-                HalfEdgeRecord res;
-                res.next = getAt( map.e.b, he.next );
-                res.prev = getAt( map.e.b, he.prev );
-                res.org = getAt( map.v.b, he.org );
-                res.left = getAt( map.f.b, he.left );
-                return res;
-            };
-            newEdges[ EdgeId{newUe} ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
-            newEdges[ EdgeId{newUe}.sym() ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
+            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe} ] );
         }
     } );
-    edges_ = std::move( newEdges );
+    // copy back even half-edges
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
+        {
+            edges_[ EdgeId{newUe} ] = tmp[ newUe ];
+        }
+    } );
+
+    // translate odd half-edges
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( auto oldUe = range.begin(); oldUe < range.end(); ++oldUe )
+        {
+            auto newUe = map.e.b[oldUe];
+            if ( !newUe )
+                continue;
+            tmp[ newUe ] = translateHalfEdge( edges_[ EdgeId{oldUe}.sym() ] );
+        }
+    } );
+    // copy back odd half-edges
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( auto newUe = range.begin(); newUe < range.end(); ++newUe )
+        {
+            edges_[ EdgeId{newUe}.sym() ] = tmp[ newUe ];
+        }
+    } );
+
+    tmp = Vector<HalfEdgeRecord, UndirectedEdgeId>{};
+    edges_.resize( 2 * map.e.tsize );
 
     Vector<EdgeId, FaceId> newEdgePerFace;
     resizeNoInit( newEdgePerFace, map.f.tsize );
@@ -1577,8 +1611,8 @@ void MeshTopology::pack( const PackMapping & map )
     } );
     edgePerFace_ = std::move( newEdgePerFace );
     assert( edgePerFace_.size() == numValidFaces_ );
-    validFaces_.resize( edgePerFace_.size() );
-    validFaces_.set( 0_f, edgePerFace_.size(), true );
+    validFaces_.clear();
+    validFaces_.resize( edgePerFace_.size(), true );
 
     Vector<EdgeId, VertId> newEdgePerVertex;
     resizeNoInit( newEdgePerVertex, map.v.tsize );
@@ -1595,8 +1629,8 @@ void MeshTopology::pack( const PackMapping & map )
     } );
     edgePerVertex_ = std::move( newEdgePerVertex );
     assert( edgePerVertex_.size() == numValidVerts_ );
-    validVerts_.resize( edgePerVertex_.size() );
-    validVerts_.set( 0_v, edgePerVertex_.size(), true );
+    validVerts_.clear();
+    validVerts_.resize( edgePerVertex_.size(), true );
     updateValids_ = true;
 }
 

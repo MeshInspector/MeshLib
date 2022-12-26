@@ -66,7 +66,7 @@ IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
   # need to hardcode some path to fix wheel (no option to pass path)
-  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
+  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 ELSE()
  # set platform dependent flags

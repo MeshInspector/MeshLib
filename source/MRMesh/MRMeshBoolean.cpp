@@ -64,6 +64,36 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
+OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours, 
+    const AffineXf3f* rigidB2A = nullptr )
+{
+    AffineXf3f inverseXf;
+    if ( rigidB2A )
+        inverseXf = rigidB2A->inverse();
+    OneMeshContours bMeshContours = aContours;
+    for ( int j = 0; j < bMeshContours.size(); ++j )
+    {
+        const auto& inCont = contours[j];
+        auto& outCont = bMeshContours[j].intersections;
+        assert( inCont.size() == outCont.size() );
+        tbb::parallel_for( tbb::blocked_range<int>( 0, int( inCont.size() ) ),
+                [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( int i = range.begin(); i < range.end(); ++i )
+            {
+                const auto& inInter = inCont[i];
+                auto& outInter = outCont[i];
+                outInter.primitiveId = inInter.isEdgeATriB ?
+                    std::variant<FaceId, EdgeId, VertId>( inInter.tri ) : 
+                    std::variant<FaceId, EdgeId, VertId>( inInter.edge );
+                if ( rigidB2A )
+                    outInter.coordinate = inverseXf( outCont[i].coordinate );
+            }
+        } );
+    }
+    return bMeshContours;
+}
+
 }
 
 namespace MR
@@ -192,6 +222,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
 
     std::vector<EdgePath> cutA, cutB;
     BooleanResult result;
+    OneMeshContours meshAContours;
     OneMeshContours meshBContours;
     // prepare it before as far as MeshA will be changed after cut
     Mesh meshACopyBuffer; // second copy may be necessary because sort data need mesh after separation, and cut A will break it
@@ -210,13 +241,19 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
             dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, rigidB2A, meshA.topology.vertSize(), true } );
         }
     }
+    if ( needCutMeshA )
+        meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, converters, rigidB2A );
     if ( needCutMeshB )
-        meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters, rigidB2A );
+    {
+        if ( needCutMeshA )
+            meshBContours = getOtherMeshContoursByHint( meshAContours, contours, rigidB2A );
+        else
+            meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters, rigidB2A );
+    }
 
     if ( needCutMeshA )
     {
         // prepare contours per mesh
-        auto meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, converters, rigidB2A );
         SortIntersectionsData dataForA{ meshB,contours,converters.toInt,rigidB2A,meshA.topology.vertSize(),false};
         FaceMap* cut2oldAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
         // cut meshes
@@ -224,6 +261,8 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         params.sortData = &dataForA;
         params.new2OldMap = cut2oldAPtr;
         auto res = cutMesh( meshA, meshAContours, params );
+        meshAContours.clear();
+        meshAContours.shrink_to_fit(); // free memory
         if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
         {
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldAPtr->size() ) ) ),
@@ -256,6 +295,8 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
         params.sortData = dataForB.get();
         params.new2OldMap = cut2oldBPtr;
         auto res = cutMesh( meshB, meshBContours, params );
+        meshBContours.clear();
+        meshBContours.shrink_to_fit(); // free memory
         if ( cut2oldBPtr && !new2orgSubdivideMapB.empty() )
         {
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldBPtr->size() ) ) ),

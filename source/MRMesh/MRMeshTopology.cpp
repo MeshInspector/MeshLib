@@ -5,6 +5,7 @@
 #include "MREdgePaths.h"
 #include "MRBuffer.h"
 #include "MRphmap.h"
+#include "MRNoDefInit.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPch/MRTBB.h"
@@ -1537,8 +1538,7 @@ void MeshTopology::pack( const PackMapping & map )
 {
     MR_TIMER
 
-    Vector<HalfEdgeRecord, UndirectedEdgeId> tmp;
-    resizeNoInit( tmp, map.e.tsize );
+    Vector<NoDefInit<HalfEdgeRecord>, UndirectedEdgeId> tmp( map.e.tsize );
     auto translateHalfEdge = [&]( const HalfEdgeRecord & he )
     {
         HalfEdgeRecord res;
@@ -1593,7 +1593,7 @@ void MeshTopology::pack( const PackMapping & map )
         }
     } );
 
-    tmp = Vector<HalfEdgeRecord, UndirectedEdgeId>{};
+    tmp = {};
     edges_.resize( 2 * map.e.tsize );
 
     Vector<EdgeId, FaceId> newEdgePerFace;

@@ -474,45 +474,48 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
 EdgeBitSet MeshTopology::findBoundaryEdges() const
 {
     MR_TIMER
-    EdgeBitSet res;
-    const EdgeId elast = lastNotLoneEdge();
-    for ( EdgeId e{0}; e <= elast; ++e )
+    EdgeBitSet res( edges_.size() );
+    BitSetParallelForAll( res, [&]( EdgeId e )
     {
-        if ( !left( e ) && right( e ) )
-            res.autoResizeSet( e );
-    }
+        if ( !left( e ) )
+            res.set( e );
+    } );
     return res;
 }
 
 FaceBitSet MeshTopology::findBoundaryFaces() const
 {
     MR_TIMER
-    FaceBitSet res;
-    const EdgeId elast = lastNotLoneEdge();
-    for ( EdgeId e{0}; e <= elast; ++e )
+    FaceBitSet res( faceSize() );
+    BitSetParallelForAll( res, [&]( FaceId f )
     {
-        FaceId r;
-        if ( !left( e ) && ( r = right( e ) ).valid() )
-            res.autoResizeSet( r );
-    }
+        for ( EdgeId e : leftRing( *this, f ) )
+        {
+            if ( !right( e ) )
+            {
+                res.set( f );
+                break;
+            }
+        }
+    } );
     return res;
 }
 
 VertBitSet MeshTopology::findBoundaryVerts() const
 {
     MR_TIMER
-    VertBitSet res;
-    const EdgeId elast = lastNotLoneEdge();
-    for ( EdgeId e{0}; e <= elast; ++e )
+    VertBitSet res( vertSize() );
+    BitSetParallelForAll( res, [&]( VertId v )
     {
-        if ( !left( e ) && right( e ) )
+        for ( EdgeId e : orgRing( *this, v ) )
         {
-            if ( auto o = org( e ) )
-                res.autoResizeSet( o );
-            if ( auto d = dest( e ) )
-                res.autoResizeSet( d );
+            if ( !left( e ) )
+            {
+                res.set( v );
+                break;
+            }
         }
-    }
+    } );
     return res;
 }
 

@@ -1092,7 +1092,7 @@ PaletteChanges Palette(
             palette.setRangeMinMaxNegPos( ranges[0], ranges[1], ranges[2], ranges[3] );
     }
 
-    std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
+    std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( -1, 0 ) ) )
@@ -1103,7 +1103,7 @@ PaletteChanges Palette(
     ImVec2 windowSize( 2 * scaledWidth, 0 );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
     {
         PopStyleVar();
         return PaletteChanges( changes );

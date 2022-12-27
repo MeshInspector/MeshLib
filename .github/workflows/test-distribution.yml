@@ -108,7 +108,7 @@ jobs:
 
       - name: Run MeshViewer
         if: always()
-        run: xvfb :1337 & export DISPLAY=:1337 & /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -hidden -noEventLoop
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop
 
       - name: Show meshconv help
         if: always()

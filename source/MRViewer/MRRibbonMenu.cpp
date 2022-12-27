@@ -1857,7 +1857,7 @@ void RibbonMenu::drawShortcutsWindow_()
     if ( !ImGui::IsPopupOpen( "HotKeys" ) )
         ImGui::OpenPopup( "HotKeys" );
 
-    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
         return;
     
     ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );

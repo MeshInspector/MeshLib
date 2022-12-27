@@ -779,6 +779,13 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     {
         getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
+        const bool packed = topology.numValidFaces() == topology.faceSize();
+        if ( !packed )
+        {
+            for ( FaceId f = 0_f; f < map.f.b.size(); ++f )
+                if ( !topology.hasFace( f ) )
+                    map.f.b[f] = FaceId{};
+        }
         AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
     }
     else

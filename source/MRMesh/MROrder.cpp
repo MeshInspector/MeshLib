@@ -91,13 +91,19 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     if ( numFaces <= 0 )
         return res;
 
+    res.b.resize( mesh.topology.faceSize() );
+    res.tsize = numFaces;
+
     Buffer<FacePoint, FaceId> facePoints( numFaces );
     const bool packed = numFaces == mesh.topology.faceSize();
     if ( !packed )
     {
         FaceId n = 0_f;
-        for ( auto f : mesh.topology.getValidFaces() )
-            facePoints[n++].f = f;
+        for ( FaceId f = 0_f; f < res.b.size(); ++f )
+            if ( mesh.topology.hasFace( f ) )
+                facePoints[n++].f = f;
+            else
+                res.b[f] = FaceId{};
     }
 
     // compute minimal point of each face
@@ -134,8 +140,6 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     }
     orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
 
-    res.b.resize( mesh.topology.faceSize() );
-    res.tsize = numFaces;
     tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
         [&]( const tbb::blocked_range<FaceId>& range )
     {

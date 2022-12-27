@@ -192,8 +192,129 @@ TrianglesSortRes sortTriangles( const SortIntersectionsData& sortData, FaceId fl
     return sortTrianglesNoShared( sortData, fl, fr );
 }
 
+// try determine sort looking on next or prev intersection
+TrianglesSortRes sortPropagateContour( 
+    const MeshTopology& tp,
+    const SortIntersectionsData& sortData, 
+    const IntersectionData& il, const IntersectionData& ir,
+    EdgeId baseEdgeOr )
+{
+    const auto& lContour = sortData.contours[il.contourId];
+    const auto& rContour = sortData.contours[ir.contourId];
+    EdgeId el = lContour[il.intersectionId].edge;
+    EdgeId er = rContour[ir.intersectionId].edge;
+
+    bool edgeATriB = lContour[il.intersectionId].isEdgeATriB;
+    bool sameContour = il.contourId == ir.contourId;
+    int stepRight = el == er ? 1 : -1;
+
+    auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
+    {
+        const auto& contour = left ? lContour : rContour;
+        int step = left ? 1 : stepRight;
+        if ( !next )
+            step *= -1;
+        IntersectionId nextL = interData;
+        int size = int( contour.size() );
+        for ( ;;)
+        {
+            int nextIndex = nextL + step;
+            if ( !isClosed( contour ) && ( nextIndex < 0 || nextIndex >= size ) )
+                return {};
+            nextL = IntersectionId( ( nextIndex + size ) % size );
+            if ( nextL == stopInter )
+                return {};
+            if ( contour[nextL].isEdgeATriB == edgeATriB )
+                return nextL;
+        }
+    };
+
+    bool tryNext = true;
+    bool tryPrev = true;
+
+    IntersectionId lNext = il.intersectionId;
+    IntersectionId rNext = ir.intersectionId;
+    IntersectionId lPrev = il.intersectionId;
+    IntersectionId rPrev = ir.intersectionId;
+    EdgeId lastCommonEdgeId = baseEdgeOr;
+    auto checkOther = [&] ( bool next )->TrianglesSortRes
+    {
+        auto& tryThis = next ? tryNext : tryPrev;
+        if ( !tryThis )
+            return TrianglesSortRes::Undetermined;
+        auto& lOther = next ? lNext : lPrev;
+        auto& rOther = next ? rNext : rPrev;
+        auto otherL = getNextPrev( lOther, sameContour ? rOther : lOther, true, next );
+        if ( !otherL )
+        {
+            tryThis = false;
+            return TrianglesSortRes::Undetermined;
+        }
+        auto otherR = getNextPrev( rOther, sameContour ? lOther : rOther, false, next );
+        if ( !otherR )
+        {
+            tryThis = false;
+            return TrianglesSortRes::Undetermined;
+        }
+        auto otherEL = lContour[lOther].edge.undirected();
+        auto otherER = rContour[rOther].edge.undirected();
+        bool lReturned = otherEL == lastCommonEdgeId.undirected();
+        bool rReturned = otherER == lastCommonEdgeId.undirected();
+        if ( lReturned )
+            lOther = otherL;
+        else if ( rReturned )
+            rOther = otherR;
+        else
+        {
+            lOther = otherL;
+            rOther = otherR;
+        }
+
+        otherEL = lContour[lOther].edge.undirected();
+        otherER = rContour[rOther].edge.undirected();
+        FaceId fl = lContour[lOther].tri;
+        FaceId fr = rContour[rOther].tri;
+        if ( otherEL == otherER && !lReturned )
+        {
+            auto ne = tp.next( lastCommonEdgeId );
+            if ( otherEL == ne.undirected() )
+                lastCommonEdgeId = ne;
+            else
+            {
+                assert( otherEL.undirected() == tp.prev( lastCommonEdgeId.sym() ).undirected() );
+                lastCommonEdgeId = tp.prev( lastCommonEdgeId.sym() ).sym();
+            }
+        }
+        else
+        {
+            auto baseOrgV = tp.org( lastCommonEdgeId );
+        }
+
+        TrianglesSortRes res = sortTriangles( sortData, fl, fr );
+        if ( res != TrianglesSortRes::Undetermined )
+            return ( el == baseEdgeOr ) == ( res == TrianglesSortRes::Left ) ? TrianglesSortRes::Left : TrianglesSortRes::Right;
+        res = sortTriangles( sortData, fr, fl );
+        if ( res != TrianglesSortRes::Undetermined )
+            return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ? TrianglesSortRes::Left : TrianglesSortRes::Right;
+        return TrianglesSortRes::Undetermined;
+    };
+    for ( ; tryNext || tryPrev; )
+    {
+        auto res = checkOther( true );
+        if ( res != TrianglesSortRes::Undetermined )
+            return res;
+        res = checkOther( false );
+        if ( res != TrianglesSortRes::Undetermined )
+            return res;
+    }
+
+    return TrianglesSortRes::Undetermined;
+}
+
 // baseEdge - cutting edge representation with orientation of first intersection
-std::function<bool( int, int )> getLessFunc( const EdgeData& edgeData, const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
+std::function<bool( int, int )> getLessFunc(
+    const MeshTopology& tp, const EdgeData& edgeData, 
+    const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
 {
     if ( !sortData )
     {
@@ -205,7 +326,7 @@ std::function<bool( int, int )> getLessFunc( const EdgeData& edgeData, const std
     // sym baseEdge if other is not A:
     // if other is A intersection edge is going inside - out
     // otherwise it is going outside - in
-    return[&edgeData, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]( int l, int r ) -> bool
+    return[&tp, &edgeData, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]( int l, int r ) -> bool
     {
         const auto & il = edgeData.intersections[l];
         const auto & ir = edgeData.intersections[r];
@@ -223,6 +344,10 @@ std::function<bool( int, int )> getLessFunc( const EdgeData& edgeData, const std
         res = sortTriangles( *sortData, fr, fl );
         if ( res != TrianglesSortRes::Undetermined )
             return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right );
+
+        res = sortPropagateContour( tp, *sortData, il, ir, baseEdgeOr );
+        if ( res != TrianglesSortRes::Undetermined )
+            return  res == TrianglesSortRes::Left;
 
         return dots[l] < dots[r];
     };
@@ -1396,7 +1521,7 @@ std::vector<int> sortIntersectionsAlongBaseEdge( const Mesh& mesh, EdgeId baseE,
     for ( int i = 0; i < verts.size(); ++i )
         dotProds[i] = dot( Vector3d{ mesh.points[verts[i]] } - orgPoint, abVec );
 
-    std::sort( res.begin(), res.end(), getLessFunc( edgeData, dotProds, baseE, sortData ) );
+    std::sort( res.begin(), res.end(), getLessFunc( mesh.topology, edgeData, dotProds, baseE, sortData ) );
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );

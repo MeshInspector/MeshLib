@@ -128,9 +128,9 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["LeaderLineWidth"] = leaderLineWidth_;
     root["BackgroundPadding"] = backgroundPadding_;
 
-    serializeToJson( sourcePointColor_, root["Colors"]["SourcePoint"] );
-    serializeToJson( leaderLineColor_, root["Colors"]["LeaderLine"] );
-    serializeToJson( contourColor_, root["Colors"]["Contour"] );
+    serializeToJson( sourcePointColor_.get(), root["Colors"]["SourcePoint"] );
+    serializeToJson( leaderLineColor_.get(), root["Colors"]["LeaderLine"] );
+    serializeToJson( contourColor_.get(), root["Colors"]["Contour"] );
 }
 
 void ObjectLabel::deserializeFields_( const Json::Value& root )
@@ -152,9 +152,9 @@ void ObjectLabel::deserializeFields_( const Json::Value& root )
     if ( root["BackgroundPadding"].isDouble() )
         backgroundPadding_ = root["BackgroundPadding"].asFloat();
 
-    deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_ );
-    deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_ );
-    deserializeFromJson( root["Colors"]["Contour"], contourColor_ );
+    deserializeFromJson( root["Colors"]["SourcePoint"], sourcePointColor_.get() );
+    deserializeFromJson( root["Colors"]["LeaderLine"], leaderLineColor_.get() );
+    deserializeFromJson( root["Colors"]["Contour"], contourColor_.get() );
 }
 
 void ObjectLabel::setupRenderObject_() const
@@ -169,6 +169,7 @@ void ObjectLabel::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::Labels ), false );
     setSourcePointColor( Color::gray() );
     setLeaderLineColor( Color::gray() );
+    setContourColor( Color::gray() );
 }
 
 void ObjectLabel::buildMesh_()
@@ -305,28 +306,28 @@ void ObjectLabel::setBackgroundPadding( float padding )
     needRedraw_ = true;
 }
 
-void ObjectLabel::setSourcePointColor( const Color &color )
+void ObjectLabel::setSourcePointColor( const Color &color, ViewportId id )
 {
-    if ( sourcePointColor_ == color )
+    if ( sourcePointColor_.get( id ) == color )
         return;
 
-    sourcePointColor_ = color;
+    sourcePointColor_.set( color, id );
 }
 
-void ObjectLabel::setLeaderLineColor( const Color &color )
+void ObjectLabel::setLeaderLineColor( const Color &color, ViewportId id )
 {
-    if ( leaderLineColor_ == color )
+    if ( leaderLineColor_.get( id ) == color )
         return;
 
-    leaderLineColor_ = color;
+    leaderLineColor_.set( color, id );
 }
 
-void ObjectLabel::setContourColor( const Color& color )
+void ObjectLabel::setContourColor( const Color& color, ViewportId id )
 {
-    if ( contourColor_ == color )
+    if ( contourColor_.get( id ) == color )
         return;
 
-    contourColor_ = color;
+    contourColor_.set( color, id );
 }
 
 }

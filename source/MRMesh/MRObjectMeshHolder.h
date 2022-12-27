@@ -54,16 +54,16 @@ public:
     const FaceBitSet& getSelectedFaces() const { return selectedTriangles_; }
     MRMESH_API virtual void selectFaces( FaceBitSet newSelection );
     /// returns colors of selected triangles
-    MRMESH_API const Color& getSelectedFacesColor() const;
+    MRMESH_API const Color& getSelectedFacesColor( ViewportId id = {} ) const;
     /// sets colors of selected triangles
-    MRMESH_API virtual void setSelectedFacesColor( const Color& color );
+    MRMESH_API virtual void setSelectedFacesColor( const Color& color, ViewportId id = {} );
 
     const UndirectedEdgeBitSet& getSelectedEdges() const { return selectedEdges_; }
     MRMESH_API virtual void selectEdges( UndirectedEdgeBitSet newSelection );
     /// returns colors of selected edges
-    MRMESH_API const Color& getSelectedEdgesColor() const;
+    MRMESH_API const Color& getSelectedEdgesColor( ViewportId id = {} ) const;
     /// sets colors of selected edges
-    MRMESH_API virtual void setSelectedEdgesColor( const Color& color );
+    MRMESH_API virtual void setSelectedEdgesColor( const Color& color, ViewportId id = {} );
 
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return creases_; }
@@ -88,13 +88,13 @@ public:
     virtual void setEdgeWidth( float edgeWidth )
     { edgeWidth_ = edgeWidth; needRedraw_ = true; }
 
-    const Color& getEdgesColor() const { return edgesColor_; }
-    virtual void setEdgesColor( const Color& color )
-    { edgesColor_ = color; needRedraw_ = true; }
+    const Color& getEdgesColor( ViewportId id = {} ) const { return edgesColor_.get(id); }
+    virtual void setEdgesColor( const Color& color, ViewportId id = {} )
+    { edgesColor_.set( color, id ); needRedraw_ = true; }
 
-    const Color& getBordersColor() const { return bordersColor_; }
-    virtual void setBordersColor( const Color& color )
-    { bordersColor_ = color; needRedraw_ = true; }
+    const Color& getBordersColor( ViewportId id = {} ) const { return bordersColor_.get( id ); }
+    virtual void setBordersColor( const Color& color, ViewportId id = {} )
+    { bordersColor_.set( color, id ); needRedraw_ = true; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
@@ -172,10 +172,10 @@ protected:
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
     ViewportMask onlyOddFragments_;
 
-    Color edgesColor_ = Color::black();
-    Color bordersColor_ = Color::black();
-    Color edgeSelectionColor_ = Color::black();
-    Color faceSelectionColor_;
+    ViewportProperty<Color> edgesColor_;
+    ViewportProperty<Color> bordersColor_;
+    ViewportProperty<Color> edgeSelectionColor_;
+    ViewportProperty<Color> faceSelectionColor_;
 
     Vector<Color, FaceId> facesColorMap_;
     float edgeWidth_{ 0.5f };

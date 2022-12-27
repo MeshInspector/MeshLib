@@ -143,6 +143,8 @@ protected:
   // this function should be called after BeginChild("Meshes") (child window with scene tree)
   MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
 
+  ViewportId selectedViewport_ = {};
+
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 

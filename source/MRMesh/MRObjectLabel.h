@@ -94,17 +94,26 @@ public:
     float getBackgroundPadding() const { return backgroundPadding_; }
 
     /// sets color of source point
-    MRMESH_API virtual void setSourcePointColor( const Color& color );
+    MRMESH_API virtual void setSourcePointColor( const Color& color, ViewportId id = {} );
     /// returns color of source point
-    const Color& getSourcePointColor() const { return sourcePointColor_; }
+    const Color& getSourcePointColor( ViewportId id = {} ) const
+    {
+        return sourcePointColor_.get( id );
+    }
     /// sets color of leader line
-    MRMESH_API virtual void setLeaderLineColor( const Color& color );
+    MRMESH_API virtual void setLeaderLineColor( const Color& color, ViewportId id = {} );
     /// return color of leader line
-    const Color& getLeaderLineColor() const { return leaderLineColor_; }
+    const Color& getLeaderLineColor( ViewportId id = {} ) const
+    {
+        return leaderLineColor_.get( id );
+    }
     /// sets contour color
-    MRMESH_API void setContourColor( const Color& color );
+    MRMESH_API void setContourColor( const Color& color, ViewportId id = {} );
     /// return contour color
-    const Color& getContourColor() const { return contourColor_; }
+    const Color& getContourColor( ViewportId id = {} ) const
+    {
+        return contourColor_.get( id );
+    }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
@@ -145,9 +154,9 @@ protected:
     ViewportMask contour_;
     ViewportMask leaderLine_;
 
-    Color sourcePointColor_;
-    Color leaderLineColor_;
-    Color contourColor_{ Color( 0.5f, 0.5f, 0.5f, 1.f ) };
+    ViewportProperty<Color> sourcePointColor_;
+    ViewportProperty<Color> leaderLineColor_;
+    ViewportProperty<Color> contourColor_;
 
     ObjectLabel( const ObjectLabel& other ) = default;
 

@@ -8,8 +8,9 @@
 #include "MRNoDefInit.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
-#include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
+#include "MRPch/MRTBB.h"
+#include <atomic>
 
 namespace MR
 {
@@ -1712,65 +1713,93 @@ tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCa
     return {};
 }
 
-#define CHECK(x) { assert(x); if (!(x)) return false; }
 
 bool MeshTopology::checkValidity() const
 {
     MR_TIMER
 
+    #define CHECK(x) { assert(x); if (!(x)) return false; }
     CHECK( updateValids_ );
-    for ( EdgeId e{0}; e < edges_.size(); ++e )
-    {
-        CHECK( edges_[edges_[e].next].prev == e );
-        CHECK( edges_[edges_[e].prev].next == e );
-        if ( auto v = edges_[e].org )
-            CHECK( validVerts_.test( v ) );
-        if ( auto f = edges_[e].left )
-            CHECK( validFaces_.test( f ) );
-    }
-
     const auto vSize = edgePerVertex_.size();
     CHECK( vSize == validVerts_.size() )
-
-    int realValidVerts = 0;
-    for ( VertId v{0}; v < edgePerVertex_.size(); ++v )
-    {
-        if ( edgePerVertex_[v].valid() )
-        {
-            CHECK( validVerts_.test( v ) )
-            CHECK( edgePerVertex_[v] < edges_.size() );
-            CHECK( edges_[edgePerVertex_[v]].org == v );
-            ++realValidVerts;
-            for ( EdgeId e : orgRing( *this, v ) )
-                CHECK( org(e) == v );
-        }
-        else
-        {
-            CHECK( !validVerts_.test( v ) )
-        }
-    }
-    CHECK( numValidVerts_ == realValidVerts );
-
     const auto fSize = edgePerFace_.size();
     CHECK( fSize == validFaces_.size() )
 
-    int realValidFaces = 0;
-    for ( FaceId f{0}; f < edgePerFace_.size(); ++f )
+    std::atomic<bool> failed{ false };
+    const auto parCheck = [&]( bool b )
     {
-        if ( edgePerFace_[f].valid() )
+        if ( !b )
+            failed.store( true, std::memory_order_relaxed );
+    };
+
+    tbb::parallel_for( tbb::blocked_range( 0_e, edges_.endId() ), [&]( const tbb::blocked_range<EdgeId> & range )
+    {
+        for ( EdgeId e = range.begin(); e < range.end(); ++e )
         {
-            CHECK( validFaces_.test( f ) )
-            CHECK( edgePerFace_[f] < edges_.size() );
-            CHECK( edges_[edgePerFace_[f]].left == f );
-            ++realValidFaces;
-            for ( EdgeId e : leftRing( *this, f ) )
-                CHECK( left(e) == f );
+            if ( failed.load( std::memory_order_relaxed ) )
+                break;
+            parCheck( edges_[edges_[e].next].prev == e );
+            parCheck( edges_[edges_[e].prev].next == e );
+            if ( auto v = edges_[e].org )
+                parCheck( validVerts_.test( v ) );
+            if ( auto f = edges_[e].left )
+                parCheck( validFaces_.test( f ) );
         }
-        else
+    } );
+    CHECK( !failed );
+
+    std::atomic<int> realValidVerts{ 0 };
+    tbb::parallel_for( tbb::blocked_range( 0_v, edgePerVertex_.endId() ), [&]( const tbb::blocked_range<VertId> & range )
+    {
+        int myValidVerts = 0;
+        for ( VertId v = range.begin(); v < range.end(); ++v )
         {
-            CHECK( !validFaces_.test( f ) )
+            if ( failed.load( std::memory_order_relaxed ) )
+                break;
+            if ( edgePerVertex_[v].valid() )
+            {
+                parCheck( validVerts_.test( v ) );
+                parCheck( edgePerVertex_[v] < edges_.size() );
+                parCheck( edges_[edgePerVertex_[v]].org == v );
+                ++myValidVerts;
+                for ( EdgeId e : orgRing( *this, v ) )
+                    parCheck( org(e) == v );
+            }
+            else
+            {
+                parCheck( !validVerts_.test( v ) );
+            }
         }
-    }
+        realValidVerts.fetch_add( myValidVerts, std::memory_order_relaxed );
+    } );
+    CHECK( !failed );
+    CHECK( numValidVerts_ == realValidVerts );
+
+    std::atomic<int> realValidFaces{ 0 };
+    tbb::parallel_for( tbb::blocked_range( 0_f, edgePerFace_.endId() ), [&]( const tbb::blocked_range<FaceId> & range )
+    {
+        int myValidFaces = 0;
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+        {
+            if ( failed.load( std::memory_order_relaxed ) )
+                break;
+            if ( edgePerFace_[f].valid() )
+            {
+                parCheck( validFaces_.test( f ) );
+                parCheck( edgePerFace_[f] < edges_.size() );
+                parCheck( edges_[edgePerFace_[f]].left == f );
+                ++myValidFaces;
+                for ( EdgeId e : leftRing( *this, f ) )
+                    parCheck( left(e) == f );
+            }
+            else
+            {
+                parCheck( !validFaces_.test( f ) );
+            }
+        }
+        realValidFaces.fetch_add( myValidFaces, std::memory_order_relaxed );
+    } );
+    CHECK( !failed );
     CHECK( numValidFaces_ == realValidFaces );
 
     return true;

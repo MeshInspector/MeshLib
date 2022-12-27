@@ -37,8 +37,10 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
         for ( int i = range.begin(); i < range.end(); ++i )
         {
             const auto e = boxedLines[i].leafId;
-            boxedLines[i].box.include( polyline.orgPnt( e ) );
-            boxedLines[i].box.include( polyline.destPnt( e ) );
+            Box<V> box;
+            box.include( polyline.orgPnt( e ) );
+            box.include( polyline.destPnt( e ) );
+            boxedLines[i].box = box;
         }
     } );
 
@@ -67,8 +69,10 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
         for ( int i = range.begin(); i < range.end(); ++i )
         {
             const auto e = boxedLines[i].leafId;
-            boxedLines[i].box.include( mesh.orgPnt( e ) );
-            boxedLines[i].box.include( mesh.destPnt( e ) );
+            Box<V> box;
+            box.include( mesh.orgPnt( e ) );
+            box.include( mesh.destPnt( e ) );
+            boxedLines[i].box = box;
         }
     } );
 

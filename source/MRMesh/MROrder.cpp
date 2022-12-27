@@ -19,14 +19,14 @@ namespace
 
 struct FacePoint
 {
-    FacePoint() noexcept : pt( noInit ), f( noInit ) {}
+    FacePoint( NoInit ) noexcept : pt( noInit ), f( noInit ) {}
 
     Vector3f pt; // minimal bounding box point of the face
     FaceId f;
 };
 static_assert( sizeof( FacePoint ) == 16 );
 
-using FacePointSpan = std::span<FacePoint>;
+using FacePointSpan = std::span<NoDefInit<FacePoint>>;
 
 // [0, result) will go to left span and [result, lastLeaf) - to the right child
 size_t partitionFacePoints( const FacePointSpan & span )
@@ -153,7 +153,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
 
     struct OrderedVertex
     {
-        OrderedVertex() noexcept : v( noInit ) {}
+        OrderedVertex( NoInit ) : v( noInit ) {}
         OrderedVertex( VertId v, std::uint32_t f ) noexcept : v( v ), f( f ) {}
         VertId v;
         std::uint32_t f; // the smallest nearby face
@@ -208,7 +208,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 
     struct OrderedEdge
     {
-        OrderedEdge() noexcept : ue( noInit ) {}
+        OrderedEdge( NoInit ) noexcept : ue( noInit ) {}
         OrderedEdge( UndirectedEdgeId ue, std::uint32_t f ) noexcept : ue( ue ), f( f ) {}
         UndirectedEdgeId ue;
         std::uint32_t f; // the smallest nearby face

@@ -1,8 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRNoDefInit.h"
+#include "MRId.h"
 #include <cassert>
+#include <concepts>
 #include <memory>
+#include <type_traits>
 
 namespace MR
 {
@@ -18,18 +21,39 @@ struct ZeroOnMove
     constexpr ZeroOnMove& operator =( ZeroOnMove && z ) noexcept { val = z.val; z.val = 0; return * this; }
 };
 
+template <typename T>
+struct NoCtor;
+
+template <typename T>
+concept Trivial = std::is_trivially_constructible_v<T>;
+
+// for trivial types, return the type itself
+template <Trivial T>
+struct NoCtor<T>
+{
+    using type = T;
+};
+
+// for our complex types, return wrapped type with default constructor doing nothing
+template <std::constructible_from<NoInit> T>
+struct NoCtor<T>
+{
+    using type = NoDefInit<T>;
+};
+
 /**
- * \brief std::vector<T>-like container that is
+ * \brief std::vector<V>-like container that is
  *  1) resized without initialization of its elements,
  *  2) much simplified: no push_back and many other methods
- * \tparam T type of stored elements
+ * \tparam V type of stored elements
  * \tparam I type of index (shall be convertible to size_t)
  * \ingroup BasicGroup
  */
-template <typename T, typename I>
+template <typename V, typename I>
 class Buffer
 {
 public:
+    using T = typename NoCtor<V>::type;
     using reference = T&;
     using const_reference = const T&;
     using iterator = T*;
@@ -89,7 +113,7 @@ private:
 template <typename T, typename I>
 inline T getAt( const Buffer<T, I> & bmap, I key )
 {
-    return key ? bmap[key] : T{};
+    return key ? T{bmap[key]} : T{};
 }
 
 template <typename T, typename I>

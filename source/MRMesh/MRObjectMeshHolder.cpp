@@ -21,28 +21,28 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectMeshHolder )
 
-const Color& ObjectMeshHolder::getSelectedFacesColor() const
+const Color& ObjectMeshHolder::getSelectedFacesColor( ViewportId id ) const
 {
-    return faceSelectionColor_;
+    return faceSelectionColor_.get( id );
 }
 
-const Color& ObjectMeshHolder::getSelectedEdgesColor() const
+const Color& ObjectMeshHolder::getSelectedEdgesColor( ViewportId id ) const
 {
-    return edgeSelectionColor_;
+    return edgeSelectionColor_.get( id );
 }
 
-void ObjectMeshHolder::setSelectedFacesColor( const Color& color )
+void ObjectMeshHolder::setSelectedFacesColor( const Color& color, ViewportId id )
 {
-    if ( color == faceSelectionColor_ )
+    if ( color == faceSelectionColor_.get( id ) )
         return;
-    faceSelectionColor_ = color;
+    faceSelectionColor_.set( color, id );
 }
 
-void ObjectMeshHolder::setSelectedEdgesColor( const Color& color )
+void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id )
 {
-    if ( color == edgeSelectionColor_ )
+    if ( color == edgeSelectionColor_.get( id ) )
         return;
-    edgeSelectionColor_ = color;
+    edgeSelectionColor_.set( color, id );
 }
 
 tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
@@ -79,11 +79,11 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
 
     // edges
-    serializeToJson( Vector4f( edgesColor_ ), root["Colors"]["Edges"] );
+    serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // borders
-    serializeToJson( Vector4f( bordersColor_ ), root["Colors"]["Borders"] );
+    serializeToJson( Vector4f( bordersColor_.get() ), root["Colors"]["Borders"] );
 
-    serializeToJson( Vector4f( faceSelectionColor_ ), root["Colors"]["Selection"]["Diffuse"] );
+    serializeToJson( Vector4f( faceSelectionColor_.get() ), root["Colors"]["Selection"]["Diffuse"] );
 
     serializeToJson( selectedTriangles_, root["SelectionFaceBitSet"] );
     serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
@@ -120,13 +120,13 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
-    faceSelectionColor_ = Color( resVec );
+    faceSelectionColor_.set( Color( resVec ) );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
-    edgesColor_ = Color( resVec );
+    edgesColor_.set( Color( resVec ) );
     // borders
     deserializeFromJson( root["Colors"]["Borders"], resVec );
-    bordersColor_ = Color( resVec );
+    bordersColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionFaceBitSet"], selectedTriangles_ );
     deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );

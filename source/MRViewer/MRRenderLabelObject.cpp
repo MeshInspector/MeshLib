@@ -105,7 +105,7 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 	Vector2f shift = objLabel_->getPivotShift();
 	if ( objLabel_->getVisualizeProperty( LabelVisualizePropertyType::Contour, renderParams.viewportId ) )
 	{
-		const auto color = Vector4f( objLabel_->getContourColor() );
+		const auto color = Vector4f( objLabel_->getContourColor( renderParams.viewportId ) );
 		GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), color[0], color[1], color[2], color[3] ) );
 
 		auto contourFn = [&] ( Vector2f contourShift )
@@ -153,7 +153,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
 
-    const auto& mainColor = Vector4f( objLabel_->getSourcePointColor() );
+    const auto& mainColor = Vector4f( objLabel_->getSourcePointColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
@@ -307,7 +307,7 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
     const auto& pos = objLabel_->getLabel().position;
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "basePos" ), pos.x, pos.y, pos.z ) );
 
-    const auto mainColor = Vector4f( objLabel_->getLeaderLineColor() );
+    const auto mainColor = Vector4f( objLabel_->getLeaderLineColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndicesSize );

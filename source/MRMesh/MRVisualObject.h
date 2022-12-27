@@ -110,17 +110,17 @@ public:
 
     /// if selected returns color of object when it is selected
     /// otherwise returns color of object when it is not selected
-    MRMESH_API const Color& getFrontColor( bool selected = true ) const;
+    MRMESH_API const Color& getFrontColor( bool selected = true, ViewportId viewportId = {} ) const;
     /// if selected sets color of object when it is selected
     /// otherwise sets color of object when it is not selected
-    MRMESH_API virtual void setFrontColor( const Color& color, bool selected );
+    MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
 
-    MRMESH_API const Color& getBackColor() const;
-    MRMESH_API virtual void setBackColor( const Color& color );
+    MRMESH_API const Color& getBackColor( ViewportId viewportId = {} ) const;
+    MRMESH_API virtual void setBackColor( const Color& color, ViewportId viewportId = {} );
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API const Color& getLabelsColor() const;
+    MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
-    MRMESH_API virtual void setLabelsColor( const Color& color );
+    MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
     MRMESH_API const uint32_t& getDirtyFlags() const;
@@ -220,7 +220,7 @@ protected:
     ViewportMask invertNormals_; ///< invert mesh normals
     ViewportMask depthTest_ = ViewportMask::all();
 
-    Color labelsColor_ = Color::black();
+    ViewportProperty<Color> labelsColor_ = {};
 
     float shininess_{35.0f}; ///< specular exponent
     float specularStrength_{ 0.5f }; // reflection intensity
@@ -229,9 +229,9 @@ protected:
     /// Main coloring options
     ColoringType coloringType_{ColoringType::SolidColor};
     Vector<Color, VertId> vertsColorMap_;
-    Color selectedColor_;
-    Color unselectedColor_;
-    Color backFacesColor_;
+    ViewportProperty<Color> selectedColor_;
+    ViewportProperty<Color> unselectedColor_;
+    ViewportProperty<Color> backFacesColor_;
 
     /// Texture options
     MeshTexture texture_;

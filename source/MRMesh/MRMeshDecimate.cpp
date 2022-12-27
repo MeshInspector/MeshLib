@@ -395,7 +395,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
     auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
-    float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
+    float maxOldAspectRatio = 0;
     float maxNewAspectRatio = 0;
     float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), ( po - pd ).lengthSq() );
     float maxNewEdgeLenSq = 0;
@@ -454,7 +454,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
-    if ( maxNewAspectRatio > maxOldAspectRatio )
+    if ( maxNewAspectRatio > settings_.maxTriangleAspectRatio && maxNewAspectRatio >= maxOldAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )

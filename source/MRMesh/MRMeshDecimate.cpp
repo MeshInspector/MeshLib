@@ -437,9 +437,11 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         const auto pDest = mesh_.points[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
+        if ( !topology.left( e ) )
+            continue;
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
-        if ( eDest != vl && topology.left( e ) )
+        if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );

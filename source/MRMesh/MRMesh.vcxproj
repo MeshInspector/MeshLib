@@ -275,6 +275,7 @@
     <ClInclude Include="MRPolylineRelax.h" />
     <ClInclude Include="MRRelaxParams.h" />
     <ClInclude Include="MRMatrix3Decompose.h" />
+    <ClInclude Include="MRNoDefInit.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

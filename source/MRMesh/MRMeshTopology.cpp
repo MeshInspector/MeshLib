@@ -539,11 +539,11 @@ FaceBitSet MeshTopology::findBoundaryFaces() const
         for ( EdgeId e : leftRing( *this, f ) )
         {
             if ( !right( e ) )
-    {
+            {
                 res.set( f );
                 break;
             }
-    }
+        }
     } );
     return res;
 }
@@ -556,13 +556,13 @@ VertBitSet MeshTopology::findBoundaryVerts() const
     BitSetParallelFor( validVerts_, [&]( VertId v )
     {
         for ( EdgeId e : orgRing( *this, v ) )
-    {
-            if ( !left( e ) )
         {
+            if ( !left( e ) )
+            {
                 res.set( v );
                 break;
+            }
         }
-    }
     } );
     return res;
 }
@@ -1906,16 +1906,16 @@ bool MeshTopology::checkValidity() const
     tbb::parallel_for( tbb::blocked_range( 0_e, edges_.endId() ), [&]( const tbb::blocked_range<EdgeId> & range )
     {
         for ( EdgeId e = range.begin(); e < range.end(); ++e )
-    {
+        {
             if ( failed.load( std::memory_order_relaxed ) )
                 break;
             parCheck( edges_[edges_[e].next].prev == e );
             parCheck( edges_[edges_[e].prev].next == e );
-        if ( auto v = edges_[e].org )
+            if ( auto v = edges_[e].org )
                 parCheck( validVerts_.test( v ) );
-        if ( auto f = edges_[e].left )
+            if ( auto f = edges_[e].left )
                 parCheck( validFaces_.test( f ) );
-    }
+        }
     } );
     CHECK( !failed );
 
@@ -1924,23 +1924,23 @@ bool MeshTopology::checkValidity() const
     {
         int myValidVerts = 0;
         for ( VertId v = range.begin(); v < range.end(); ++v )
-    {
+        {
             if ( failed.load( std::memory_order_relaxed ) )
                 break;
-        if ( edgePerVertex_[v].valid() )
-        {
+            if ( edgePerVertex_[v].valid() )
+            {
                 parCheck( validVerts_.test( v ) );
                 parCheck( edgePerVertex_[v] < edges_.size() );
                 parCheck( edges_[edgePerVertex_[v]].org == v );
                 ++myValidVerts;
-            for ( EdgeId e : orgRing( *this, v ) )
+                for ( EdgeId e : orgRing( *this, v ) )
                     parCheck( org(e) == v );
-        }
-        else
-        {
+            }
+            else
+            {
                 parCheck( !validVerts_.test( v ) );
+            }
         }
-    }
         realValidVerts.fetch_add( myValidVerts, std::memory_order_relaxed );
     } );
     CHECK( !failed );
@@ -1951,23 +1951,23 @@ bool MeshTopology::checkValidity() const
     {
         int myValidFaces = 0;
         for ( FaceId f = range.begin(); f < range.end(); ++f )
-    {
+        {
             if ( failed.load( std::memory_order_relaxed ) )
                 break;
-        if ( edgePerFace_[f].valid() )
-        {
+            if ( edgePerFace_[f].valid() )
+            {
                 parCheck( validFaces_.test( f ) );
                 parCheck( edgePerFace_[f] < edges_.size() );
                 parCheck( edges_[edgePerFace_[f]].left == f );
                 ++myValidFaces;
-            for ( EdgeId e : leftRing( *this, f ) )
+                for ( EdgeId e : leftRing( *this, f ) )
                     parCheck( left(e) == f );
-        }
-        else
-        {
+            }
+            else
+            {
                 parCheck( !validFaces_.test( f ) );
+            }
         }
-    }
         realValidFaces.fetch_add( myValidFaces, std::memory_order_relaxed );
     } );
     CHECK( !failed );

@@ -282,6 +282,10 @@ public:
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
     MRMESH_API void pack( const PackMapping & map );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;
+    /// unlike \ref pack method, this method allocates minimal amount of memory for its operation but works much slower
+    MRMESH_API void packMinMem( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;

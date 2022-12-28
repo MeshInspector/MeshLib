@@ -1686,6 +1686,126 @@ void MeshTopology::pack( const PackMapping & map )
     updateValids_ = true;
 }
 
+/// reorders elements given \ref map: old -> new, a getter \ref get and a setter \ref put
+template<typename T, typename G, typename P>
+static void shuffle( const BMap<Id<T>, Id<T>> & map, G && get, P && put )
+{
+    MR_TIMER
+
+    TaggedBitSet<T> replacedByNew( map.tsize );
+    for ( Id<T> i{0}; i < map.b.size(); ++i )
+    {
+        if ( replacedByNew.test( i ) )
+            continue;
+        auto j = map.b[i];
+        if ( !j || i == j )
+            continue;
+        if ( j < i )
+        {
+            // value at #j has been copied already
+            put( j, get( i ) );
+            continue;
+        }
+        auto storedVal = get( j );
+        put( j, get( i ) );
+        replacedByNew.set( j );
+        for ( j = map.b[j]; j > i; j = map.b[j] )
+        {
+            assert ( !replacedByNew.test( j ) );
+            auto tmp = get( j );
+            put( j, storedVal );
+            replacedByNew.set( j );
+            storedVal = tmp;
+        }
+        if ( j )
+            put( j, storedVal );
+    }
+}
+
+void MeshTopology::packMinMem( const PackMapping & map )
+{
+    MR_TIMER
+    assert( map.f.tsize == numValidFaces_ );
+    assert( map.v.tsize == numValidVerts_ );
+    assert( map.e.tsize <= edgeSize() );
+
+    Timer m( "shuffle" );
+    tbb::task_group group;
+
+    group.run( [&] ()
+    {
+        shuffle( map.f,
+            [&]( FaceId f ) { return edgePerFace_[f]; },
+            [&]( FaceId f, EdgeId val ) { edgePerFace_[f] = val; } );
+        edgePerFace_.resize( numValidFaces_ );
+    } );
+
+    group.run( [&] ()
+    {
+        shuffle( map.v,
+            [&]( VertId v ) { return edgePerVertex_[v]; },
+            [&]( VertId v, EdgeId val ) { edgePerVertex_[v] = val; } );
+        edgePerVertex_.resize( numValidVerts_ );
+    } );
+
+    group.run( [&] ()
+    {
+        validFaces_.clear();
+        validFaces_.resize( numValidFaces_, true );
+    } );
+
+    group.run( [&] ()
+    {
+        validVerts_.clear();
+        validVerts_.resize( numValidVerts_, true );
+    } );
+
+    shuffle( map.e,
+        [&]( UndirectedEdgeId ue ) { return std::make_pair( edges_[ EdgeId{ue} ], edges_[ EdgeId{ue}.sym() ] ); },
+        [&]( UndirectedEdgeId ue, const auto & val ) { edges_[ EdgeId{ue} ] = val.first; edges_[ EdgeId{ue}.sym() ] = val.second; } );
+    edges_.resize( 2 * map.e.tsize );
+
+    group.wait();
+
+    m.restart( "translate" );
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( map.e.tsize ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
+    {
+        for ( auto ue = range.begin(); ue < range.end(); ++ue )
+        {
+            auto translateHalfEdge = [&]( HalfEdgeRecord & he )
+            {
+                he.next = getAt( map.e.b, he.next );
+                he.prev = getAt( map.e.b, he.prev );
+                he.org = getAt( map.v.b, he.org );
+                he.left = getAt( map.f.b, he.left );
+            };
+            translateHalfEdge( edges_[ EdgeId{ue} ] );
+            translateHalfEdge( edges_[ EdgeId{ue}.sym() ] );
+        }
+    } );
+
+    tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( map.f.tsize ) ),
+        [&]( const tbb::blocked_range<FaceId> & range )
+    {
+        for ( auto f = range.begin(); f < range.end(); ++f )
+        {
+            edgePerFace_[f] = getAt( map.e.b, edgePerFace_[f] );
+        }
+    } );
+
+    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( map.v.tsize ) ),
+        [&]( const tbb::blocked_range<VertId> & range )
+    {
+        for ( auto v = range.begin(); v < range.end(); ++v )
+        {
+            edgePerVertex_[v] = getAt( map.e.b, edgePerVertex_[v] );
+        }
+    } );
+
+    updateValids_ = true;
+}
+
 void MeshTopology::write( std::ostream & s ) const
 {
     // write edges

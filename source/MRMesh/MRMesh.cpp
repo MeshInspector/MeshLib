@@ -207,9 +207,36 @@ Vector3f Mesh::leftDirDblArea( EdgeId e ) const
 
 double Mesh::area( const FaceBitSet & fs ) const
 {
+    MR_TIMER
+    constexpr int NUM_PARTS = 64; // independent on hardware concurrency
+    const auto facesInPart = topology.faceSize() / NUM_PARTS;
+    if ( facesInPart < 16 )
+    {
+        double twiceRes = 0;
+        for ( auto f : fs )
+            twiceRes += dblArea( f );
+        return 0.5 * twiceRes;
+    }
+
+    double partDblArea[NUM_PARTS] = {};
+    tbb::parallel_for( tbb::blocked_range( 0, NUM_PARTS ),
+        [&]( const tbb::blocked_range<int> & range )
+    {
+        for ( int part = range.begin(); part < range.end(); ++part )
+        {
+            double myDblArea = 0;
+            const FaceId fBeg( part * facesInPart );
+            const FaceId fEnd( part + 1 < NUM_PARTS ? ( part + 1 ) * facesInPart : topology.faceSize() );
+            for ( auto f = fBeg; f < fEnd; ++f )
+                if ( fs.test( f ) )
+                    myDblArea += dblArea( f );
+            partDblArea[part] = myDblArea;
+        }
+    } );
+
     double twiceRes = 0;
-    for ( auto f : fs )
-        twiceRes += dblArea( f );
+    for ( auto da : partDblArea )
+        twiceRes += da;
     return 0.5 * twiceRes;
 }
 

@@ -120,19 +120,19 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressC
     };
 
     Grid grid( bbox, dims );
-    if ( cb && !cb( 0.5f ) )
+    if ( cb && !cb( 0.1f ) )
         return {};
 
-    if ( mp.region )
+    VertBitSet store;
+    const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
+    int counter = 0;
+    int size = int( regionVerts.count() );
+    for ( auto v : regionVerts )
     {
-        VertBitSet regionVerts = getIncidentVerts( mp.mesh.topology, *mp.region );
-        for ( auto v : regionVerts )
-            grid.addVertex( mp.mesh.points[v], v );
-    }
-    else
-    {
-        for ( auto v : mp.mesh.topology.getValidVerts() )
-            grid.addVertex( mp.mesh.points[v], v );
+        grid.addVertex( mp.mesh.points[v], v );
+        // counter & 0x7f == 0 ~ counter % 128 == 0
+        if ( cb && ( ( ( counter++ ) & 0x7f ) == 0 ) && !cb( 0.1f + 0.8f * float( counter ) / float( size ) ) )
+            return {};
     }
 
     const auto res =  grid.getSamples();
@@ -159,11 +159,18 @@ VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, Progres
     };
 
     Grid grid( bbox, dims );
-    if ( cb && !cb( 0.5f ) )
+    if ( cb && !cb( 0.1f ) )
         return {};
 
+    int counter = 0;
+    int size = int( cloud.validPoints.count() );
     for ( auto v : cloud.validPoints )
+    {
         grid.addVertex( cloud.points[v], v );
+        // counter & 0x7f == 0 ~ counter % 128 == 0
+        if ( cb && ( ( ( counter++ ) & 0x7f ) == 0 ) && !cb( 0.1f + 0.8f * float( counter ) / float( size ) ) )
+            return {};
+    }
 
     const auto res = grid.getSamples();
     if ( cb && !cb( 1.0f ) )

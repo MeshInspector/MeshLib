@@ -205,6 +205,8 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns the number of hole loops in the mesh
+    [[nodiscard]] MRMESH_API int findNumHoles() const;
     /// returns full edge-loop of left face from (e) starting from (e) itself
     [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
     /// returns full edge-loops of left faces from every edge in (es);
@@ -280,6 +282,10 @@ public:
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
     MRMESH_API void pack( const PackMapping & map );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;
+    /// unlike \ref pack method, this method allocates minimal amount of memory for its operation but works much slower
+    MRMESH_API void packMinMem( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
@@ -338,7 +344,7 @@ private:
 
         bool operator ==( const HalfEdgeRecord & b ) const = default;
         HalfEdgeRecord() noexcept = default;
-        HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,

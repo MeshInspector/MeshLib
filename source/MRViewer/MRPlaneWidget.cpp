@@ -117,7 +117,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     auto viewer = Viewer::instance();
-
+    viewer->select_hovered_viewport();
     if ( importPlaneMode_ )
     {
         const auto [obj, point] = viewer->viewport().pick_render_object();

@@ -207,10 +207,17 @@ Vector3f Mesh::leftDirDblArea( EdgeId e ) const
 
 double Mesh::area( const FaceBitSet & fs ) const
 {
-    double twiceRes = 0;
-    for ( auto f : fs )
-        twiceRes += dblArea( f );
-    return 0.5 * twiceRes;
+    MR_TIMER
+
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() } ), 0.0,
+    [&] ( const auto & range, double curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( fs.test( f ) )
+                curr += dblArea( f );
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
 }
 
 class FaceVolumeCalc
@@ -258,7 +265,7 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
     FaceVolumeCalc calc( *this, faces );
-    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
     return calc.volume() / 6.0;
 }
 
@@ -779,6 +786,13 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     {
         getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
+        const bool packed = topology.numValidFaces() == topology.faceSize();
+        if ( !packed )
+        {
+            for ( FaceId f = 0_f; f < map.f.b.size(); ++f )
+                if ( !topology.hasFace( f ) )
+                    map.f.b[f] = FaceId{};
+        }
         AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
     }
     else

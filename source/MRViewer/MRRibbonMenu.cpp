@@ -1852,12 +1852,13 @@ void RibbonMenu::drawShortcutsWindow_()
     windowPos.y = ( Viewer::instanceRef().window_height - windowHeight ) * 0.5f;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ) );
+    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Appearing );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowWidth, -1 ), ImVec2( windowWidth, 0 ) );
 
     if ( !ImGui::IsPopupOpen( "HotKeys" ) )
         ImGui::OpenPopup( "HotKeys" );
 
-    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
         return;
     
     ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
@@ -1871,13 +1872,13 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGui::PopFont();
 
     const float exitButtonSize = 30.0f * scaling;
-    ImGui::SameLine( windowWidth - exitButtonSize - 2.0f * cDefaultItemSpacing * scaling );
+    ImGui::SameLine( ImGui::GetWindowWidth() - exitButtonSize - 2.0f * cDefaultItemSpacing * scaling );
 
     ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::Icons ) );
     ImGui::SetCursorPosY( 2 * cDefaultWindowPaddingY * scaling );
     ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed(ImGuiKey_Escape) )
+    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
     {
         ImGui::PopStyleColor( 2 );
         ImGui::PopFont();

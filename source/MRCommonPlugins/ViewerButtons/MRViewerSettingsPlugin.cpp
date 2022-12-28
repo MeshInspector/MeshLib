@@ -58,8 +58,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    if ( RibbonButtonDrawer::GradientButton( "Quick Access Menu Settings", ImVec2( -1, 0 ) ) )
-        ImGui::OpenPopup( "Quick Access Menu Settings" );
+    if ( RibbonButtonDrawer::GradientButton( "Toolbar Settings", ImVec2( -1, 0 ) ) )
+        ImGui::OpenPopup( "Toolbar Settings" );
     drawDialogQuickAccessSettings_( menuScaling );
 
     if ( RibbonButtonDrawer::GradientButton( "Scene mouse controls", ImVec2( -1, 0 ) ) )
@@ -342,10 +342,10 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
     ImVec2 windowSize( 500 * scaling, 150 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    if ( !ImGui::BeginModalNoAnimation( "Scene mouse controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( "Scene mouse controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
         return;
 
     ImGui::Text( "%s", "Mouse scene controls" );
@@ -417,10 +417,10 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
     ImVec2 windowSize( 500 * scaling, 400 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    if ( !ImGui::BeginModalNoAnimation( "Quick Access Menu Settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( "Toolbar Settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
         return;
 
     ImGui::Text( "%s", "Toolbar Settings" );
@@ -528,10 +528,10 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
     auto& viewerRef = Viewer::instanceRef();
     ImVec2 windowSize( 400 * scaling, 305 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    if ( !ImGui::BeginModalNoAnimation( "Spacemouse settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( "Spacemouse settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
         return;
 
     ImGui::Text( "%s", "Spacemouse settings" );

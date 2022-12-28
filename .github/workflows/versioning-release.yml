@@ -40,10 +40,11 @@ jobs:
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: paulhatch/semantic-version@v5.0.0
+        uses: paulhatch/semantic-version@v4.0.3
         id: version
         with:
-          version_format: "v${major}.${minor}.${patch}.${increment}"
+          format: "v${major}.${minor}.${patch}.${increment}"
+          short_tags: false
           bump_each_commit: false
           namespace: ${{inputs.version-namespace}}
 

@@ -900,6 +900,9 @@
     <ClInclude Include="MRMeshTrimWithPlane.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRNoDefInit.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

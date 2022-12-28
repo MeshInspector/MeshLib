@@ -5,7 +5,6 @@ on:
 
 jobs:
   linux-test:
-    if: ${{ false }}
     timeout-minutes: 20
     runs-on: ubuntu-latest
     container:
@@ -106,9 +105,10 @@ jobs:
           sudo installer -pkg meshlib_x64.pkg  -target /
           xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
-      - name: Run MeshViewer
-        if: always()
-        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop
+      # [error] NSGL: Failed to find a suitable pixel format
+      #- name: Run MeshViewer
+        #if: always()
+        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop
 
       - name: Show meshconv help
         if: always()

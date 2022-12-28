@@ -443,6 +443,52 @@ std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
     return res;
 }
 
+int MeshTopology::findNumHoles() const
+{
+    MR_TIMER
+
+    auto bdEdges = findBoundaryEdges();
+    std::atomic<int> res;
+
+    const int endBlock = int( bdEdges.size() + bdEdges.bits_per_block - 1 ) / bdEdges.bits_per_block;
+    tbb::parallel_for( tbb::blocked_range<int>( 0, endBlock ), 
+        [&]( const tbb::blocked_range<int> & range )
+        {
+            int myHoles = 0; // with smallest edge in my range
+            const EdgeId eBeg{ range.begin() * BitSet::bits_per_block };
+            const EdgeId eEnd{ range.end() < endBlock ? range.end() * bdEdges.bits_per_block : bdEdges.size() };
+            for ( auto e = eBeg; e < eEnd; ++e )
+            {
+                if ( !bdEdges.test( e ) )
+                    continue;
+                assert( !left( e ) );
+                EdgeId smallestHoleEdge = e;
+                for ( EdgeId ei : leftRing0( *this, e ) )
+                {
+                    if ( ei > e )
+                    {
+                        if ( ei < eEnd )
+                        {
+                            // skip this hole when its edge is encountered again,
+                            // we can safely change only bits of our part
+                            assert( bdEdges.test( ei ) );
+                            bdEdges.reset( ei );
+                            assert( !bdEdges.test( ei ) );
+                        }
+                    }
+                    else if ( ei < smallestHoleEdge )
+                        smallestHoleEdge = ei;
+                }
+                assert( smallestHoleEdge < eEnd );
+                if ( smallestHoleEdge >= eBeg )
+                    ++myHoles;
+            }
+            res.fetch_add( myHoles, std::memory_order_relaxed );
+        } );
+
+    return res;
+}
+
 EdgeLoop MeshTopology::getLeftRing( EdgeId e ) const
 {
     EdgeLoop res;
@@ -477,7 +523,7 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     EdgeBitSet res( edges_.size() );
     BitSetParallelForAll( res, [&]( EdgeId e )
     {
-        if ( !left( e ) )
+        if ( !left( e ) && !isLoneEdge( e ) )
             res.set( e );
     } );
     return res;
@@ -487,7 +533,7 @@ FaceBitSet MeshTopology::findBoundaryFaces() const
 {
     MR_TIMER
     FaceBitSet res( faceSize() );
-    BitSetParallelForAll( res, [&]( FaceId f )
+    BitSetParallelFor( validFaces_, [&]( FaceId f )
     {
         for ( EdgeId e : leftRing( *this, f ) )
         {
@@ -505,7 +551,7 @@ VertBitSet MeshTopology::findBoundaryVerts() const
 {
     MR_TIMER
     VertBitSet res( vertSize() );
-    BitSetParallelForAll( res, [&]( VertId v )
+    BitSetParallelFor( validVerts_, [&]( VertId v )
     {
         for ( EdgeId e : orgRing( *this, v ) )
         {

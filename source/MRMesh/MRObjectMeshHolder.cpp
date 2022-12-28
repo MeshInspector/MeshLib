@@ -191,7 +191,7 @@ void ObjectMeshHolder::updateMeshStat_() const
         MeshStat ms;
         ms.numComponents = MeshComponents::getNumComponents( *mesh_ );
         ms.numUndirectedEdges = mesh_->topology.computeNotLoneUndirectedEdges();
-        ms.numHoles = mesh_->topology.findHoleRepresentiveEdges().size();
+        ms.numHoles = mesh_->topology.findNumHoles();
         meshStat_ = ms;
     }
 }

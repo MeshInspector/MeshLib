@@ -532,6 +532,7 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
 FaceBitSet MeshTopology::findBoundaryFaces() const
 {
     MR_TIMER
+    assert( updateValids_ );
     FaceBitSet res( faceSize() );
     BitSetParallelFor( validFaces_, [&]( FaceId f )
     {
@@ -550,6 +551,7 @@ FaceBitSet MeshTopology::findBoundaryFaces() const
 VertBitSet MeshTopology::findBoundaryVerts() const
 {
     MR_TIMER
+    assert( updateValids_ );
     VertBitSet res( vertSize() );
     BitSetParallelFor( validVerts_, [&]( VertId v )
     {

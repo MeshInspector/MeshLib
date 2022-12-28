@@ -239,6 +239,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         viewer->dragDrop( paths );
     } } );
+    viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )
@@ -794,6 +795,7 @@ void Viewer::EventQueue::execute()
 {
     while ( !queue_.empty() )
     {
+        auto dbg = queue_.front();
         if ( queue_.front().cb )
             queue_.front().cb();
         queue_.pop();

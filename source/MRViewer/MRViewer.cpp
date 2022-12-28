@@ -239,6 +239,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         viewer->dragDrop( paths );
     } } );
+    viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )

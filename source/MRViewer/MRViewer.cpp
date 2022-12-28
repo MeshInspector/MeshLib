@@ -795,7 +795,6 @@ void Viewer::EventQueue::execute()
 {
     while ( !queue_.empty() )
     {
-        auto dbg = queue_.front();
         if ( queue_.front().cb )
             queue_.front().cb();
         queue_.pop();

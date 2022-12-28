@@ -208,36 +208,16 @@ Vector3f Mesh::leftDirDblArea( EdgeId e ) const
 double Mesh::area( const FaceBitSet & fs ) const
 {
     MR_TIMER
-    constexpr int NUM_PARTS = 64; // independent on hardware concurrency
-    const auto facesInPart = topology.faceSize() / NUM_PARTS;
-    if ( facesInPart < 16 )
-    {
-        double twiceRes = 0;
-        for ( auto f : fs )
-            twiceRes += dblArea( f );
-        return 0.5 * twiceRes;
-    }
 
-    double partDblArea[NUM_PARTS] = {};
-    tbb::parallel_for( tbb::blocked_range( 0, NUM_PARTS ),
-        [&]( const tbb::blocked_range<int> & range )
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() } ), 0.0,
+    [&] ( const auto & range, double curr )
     {
-        for ( int part = range.begin(); part < range.end(); ++part )
-        {
-            double myDblArea = 0;
-            const FaceId fBeg( part * facesInPart );
-            const FaceId fEnd( part + 1 < NUM_PARTS ? ( part + 1 ) * facesInPart : topology.faceSize() );
-            for ( auto f = fBeg; f < fEnd; ++f )
-                if ( fs.test( f ) )
-                    myDblArea += dblArea( f );
-            partDblArea[part] = myDblArea;
-        }
-    } );
-
-    double twiceRes = 0;
-    for ( auto da : partDblArea )
-        twiceRes += da;
-    return 0.5 * twiceRes;
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( fs.test( f ) )
+                curr += dblArea( f );
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
 }
 
 class FaceVolumeCalc
@@ -285,7 +265,7 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
     FaceVolumeCalc calc( *this, faces );
-    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
     return calc.volume() / 6.0;
 }
 

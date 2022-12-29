@@ -422,8 +422,7 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
 
             const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
 
-            if ( ( needInsidePartB && inside ) ||
-                ( !needInsidePartB && !inside ) )
+            if ( needInsidePartB == inside  )
             {
                 result.meshBVerts |= bComponentVerts;
             }

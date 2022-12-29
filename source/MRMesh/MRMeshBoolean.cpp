@@ -13,6 +13,8 @@
 #include "MRFillContour.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
+#include "MRMeshCollide.h"
 
 namespace
 {
@@ -373,36 +375,57 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
 
     if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
     {
-        if ( needInsidePartA )
-            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-            {
-                return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-            } );
-        else
-            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-            {
-                return collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-            } );
+        std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return needInsidePartA != collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
 
         collFacesA = fillContourLeft( meshA.topology, collBordersA );
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+
+        const auto aComponents = MeshComponents::getAllComponents(meshA);
+
+        for ( const auto& aComponent : aComponents )
+        {
+            const auto aComponentVerts = getInnerVerts( meshA.topology, aComponent );
+            if ( aComponentVerts.intersects( result.meshAVerts ) )
+                continue;
+            const bool inside = isInside( MeshPart( meshA, &aComponent ), MeshPart( meshB ), rigidB2A );
+            if ( needInsidePartA == inside )
+            {
+                result.meshAVerts |= aComponentVerts;
+            }
+        }
     }
 
     if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
     {
-        if ( needInsidePartB )
-            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
         {
-            return !collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
-        } );
-        else
-            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
-        {
-            return collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
+            return needInsidePartB != collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
         } );
 
-        collFacesB = fillContourLeft( meshB.topology, collBordersB );
+        collFacesB = fillContourLeft(meshB.topology, collBordersB);
         result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+        
+        const auto bComponents = MeshComponents::getAllComponents(meshB);
+        std::unique_ptr<AffineXf3f> rigidA2B;
+        if ( rigidB2A )
+            rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );
+
+        for ( const auto& bComponent : bComponents )
+        {
+            const auto bComponentVerts = getInnerVerts( meshB.topology, bComponent );
+            if ( bComponentVerts.intersects( result.meshBVerts ) )
+                continue;
+
+            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
+
+            if ( needInsidePartB == inside  )
+            {
+                result.meshBVerts |= bComponentVerts;
+            }
+        }
     }
 
     return result;

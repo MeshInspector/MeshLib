@@ -45,10 +45,12 @@ public:
     // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     // \param freeVerts must not include all vertices of a mesh connected component
     MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem = RememberShape::Yes );
-    // notify Laplacian that given vertex has changed after init and must be fixed during apply
-    MRMESH_API void fixVertex( VertId v );
-    // sets position of given vertex after init and it must be fixed during apply (THIS METHOD CHANGES THE MESH)
-    MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos );
+    // notify Laplacian that given vertex has changed after init and must be fixed during apply;
+    // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
+    MRMESH_API void fixVertex( VertId v, bool smooth = true );
+    // sets position of given vertex after init and it must be fixed during apply (THIS METHOD CHANGES THE MESH);
+    // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
+    MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
     // if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
     // given fixed vertices, computes positions of remaining region vertices
@@ -74,6 +76,9 @@ private:
 
     // currently free vertices
     VertBitSet freeVerts_;
+
+    // fixed vertices where no smoothness is required
+    VertBitSet fixedSharpVertices_;
 
     // fixed vertices from the first layer around free vertices
     VertBitSet firstLayerFixedVerts_;

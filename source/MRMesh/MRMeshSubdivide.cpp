@@ -9,6 +9,7 @@
 #include "MRTriMath.h"
 #include "MRGTest.h"
 #include "MRPositionVertsSmoothly.h"
+#include "MRRegionBoundary.h"
 #include <queue>
 
 namespace MR
@@ -127,7 +128,14 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     {
         if ( settings.progressCallback && !settings.progressCallback( 0.75f ) )
             return 0;
-        positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Unit );
+        const UndirectedEdgeBitSet creaseUEdges = mesh.findCreaseEdges( settings.maxAngleChangeAfterFlip );
+        if ( settings.progressCallback && !settings.progressCallback( 0.76f ) )
+            return 0;
+        const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
+        if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
+            return 0;
+
+        positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Unit, &sharpVerts );
     }
 
     return splitsDone;

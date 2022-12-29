@@ -391,8 +391,7 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
             if ( aComponentVerts.intersects( result.meshAVerts ) )
                 continue;
             const bool inside = isInside( MeshPart( meshA, &aComponent ), MeshPart( meshB ), rigidB2A );
-            if (( needInsidePartA &&  inside) ||
-                ( !needInsidePartA && !inside ) )
+            if ( needInsidePartA == inside )
             {
                 result.meshAVerts |= aComponentVerts;
             }

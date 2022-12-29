@@ -81,17 +81,19 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
     equations_.push_back( eq );
 }
 
-void Laplacian::fixVertex( VertId v ) 
+void Laplacian::fixVertex( VertId v, bool smooth ) 
 {
     rhsValid_ = false;
     if ( freeVerts_.autoResizeTestSet( v, false ) )
         solverValid_ = false;
+    if ( fixedSharpVertices_.autoResizeTestSet( v, !smooth ) != !smooth )
+        solverValid_ = false;
 }
 
-void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos ) 
+void Laplacian::fixVertex( VertId v, const Vector3f & fixedPos, bool smooth ) 
 { 
     mesh_.points[v] = fixedPos; 
-    fixVertex( v ); 
+    fixVertex( v, smooth ); 
 }
 
 void Laplacian::updateSolver()
@@ -123,6 +125,7 @@ void Laplacian::updateSolver_()
 
     firstLayerFixedVerts_ = freeVerts_;
     expand( mesh_.topology, firstLayerFixedVerts_ );
+    firstLayerFixedVerts_ -= fixedSharpVertices_;
     const auto rowSz = firstLayerFixedVerts_.count();
     firstLayerFixedVerts_ -= freeVerts_;
 

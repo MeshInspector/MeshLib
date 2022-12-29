@@ -368,45 +368,37 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
     auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
 
+    const bool needInsidePartA = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideA || operation == BooleanOperation::DifferenceBA );
+    const bool needInsidePartB = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideB || operation == BooleanOperation::DifferenceAB );
+
     if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
     {
-        std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-        {
-            switch ( operation )
+        if ( needInsidePartA )
+            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
             {
-            case BooleanOperation::Intersection:
-            case BooleanOperation::InsideA:
-            case BooleanOperation::DifferenceBA:
                 return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-            case BooleanOperation::Union:
-            case BooleanOperation::OutsideA:
-            case BooleanOperation::DifferenceAB:
+            } );
+        else
+            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+            {
                 return collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-            default:
-                return false;
-            }
-        } );
+            } );
+
         collFacesA = fillContourLeft( meshA.topology, collBordersA );
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
     }
 
     if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
     {
-        std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        if ( needInsidePartB )
+            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
         {
-            switch ( operation )
-            {
-            case BooleanOperation::Intersection:
-            case BooleanOperation::InsideB:
-            case BooleanOperation::DifferenceAB:
-                return !collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
-            case BooleanOperation::Union:
-            case BooleanOperation::OutsideB:
-            case BooleanOperation::DifferenceBA:
-                return collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
-            default:
-                return false;
-            }
+            return !collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
+        else
+            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
         } );
 
         collFacesB = fillContourLeft( meshB.topology, collBordersB );

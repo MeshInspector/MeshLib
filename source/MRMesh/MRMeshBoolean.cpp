@@ -391,9 +391,8 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
             if ( aComponentVerts.intersects( result.meshAVerts ) )
                 continue;
             const bool inside = isInside( MeshPart( meshA, &aComponent ), MeshPart( meshB ), rigidB2A );
-            if ( !intersects &&
-                ( ( needInsidePartA &&  inside) ||
-                ( !needInsidePartA && !inside ) ) )
+            if (( needInsidePartA &&  inside) ||
+                ( !needInsidePartA && !inside ) )
             {
                 result.meshAVerts |= aComponentVerts;
             }
@@ -418,12 +417,13 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
         for ( const auto& bComponent : bComponents )
         {
             const auto bComponentVerts = getInnerVerts( meshB.topology, bComponent );
-            const bool intersects = bComponentVerts.intersects( result.meshBVerts );
+            if ( bComponentVerts.intersects( result.meshBVerts ) )
+                continue;
+
             const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
 
-            if ( !intersects &&
-                ( ( needInsidePartB && inside ) ||
-                ( !needInsidePartB && !inside ) ) )
+            if ( ( needInsidePartB && inside ) ||
+                ( !needInsidePartB && !inside ) )
             {
                 result.meshBVerts |= bComponentVerts;
             }

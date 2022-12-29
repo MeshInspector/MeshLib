@@ -330,7 +330,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     return result;
 }
 
-BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
 
@@ -367,21 +367,43 @@ BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh
 
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
     auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
-    // filter out contours not lying outside the other mesh
-    std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-    } );
-    std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
-    } );
 
-    collFacesA = fillContourLeft( meshA.topology, collBordersA );
-    collFacesB = fillContourLeft( meshB.topology, collBordersB );
+    const bool needInsidePartA = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideA || operation == BooleanOperation::DifferenceBA );
+    const bool needInsidePartB = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideB || operation == BooleanOperation::DifferenceAB );
 
-    result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
-    result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+    if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
+    {
+        if ( needInsidePartA )
+            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+            {
+                return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+            } );
+        else
+            std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+            {
+                return collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+            } );
+
+        collFacesA = fillContourLeft( meshA.topology, collBordersA );
+        result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+    }
+
+    if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
+    {
+        if ( needInsidePartB )
+            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return !collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
+        else
+            std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return collOuterVertsB.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
+
+        collFacesB = fillContourLeft( meshB.topology, collBordersB );
+        result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+    }
 
     return result;
 }

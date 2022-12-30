@@ -188,16 +188,22 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence )
 {
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
-    const auto& allRoots = unionFindStruct.roots();
-    size_t res = 0;
-    for ( auto f : region )
+    std::atomic<size_t> res{ 0 };
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId( unionFindStruct.size() ) ),
+        [&]( const tbb::blocked_range<FaceId> & range )
     {
-        if ( allRoots[f]  == f )
-            ++res;
-    }
+        size_t myRoots = 0;
+        for ( auto f = range.begin(); f < range.end(); ++f )
+        {
+            if ( !region.test( f ) )
+                continue;
+            if ( f == unionFindStruct.findUpdateRange( f, range.begin(), range.end() ) )
+                ++myRoots;
+        }
+        res.fetch_add( myRoots, std::memory_order_relaxed );
+    } );
     return res;
 }
 

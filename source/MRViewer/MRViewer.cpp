@@ -1403,15 +1403,11 @@ void Viewer::postResize( int w, int h )
 
 void Viewer::postSetPosition( int xPos, int yPos )
 {
-    if ( !windowMaximized )
-    {
-        if ( yPos == 0 )
-        {
-            assert( false ); // to catch it once it happens
-            yPos = 40; // handle for one rare issue
-        }
-        windowSavePos = { xPos,yPos };
-    }
+    const bool isFullScreen = nullptr != glfwGetWindowMonitor( this->window );
+    std::cout << "isFullScreen=" << isFullScreen << "  windowMaximized=" << windowMaximized << "xPos=" << xPos << "  yPos=" << yPos << std::endl;
+
+    if ( !windowMaximized && !isFullScreen )
+        windowSavePos = { xPos, yPos };
 }
 
 void Viewer::postSetMaximized( bool maximized )

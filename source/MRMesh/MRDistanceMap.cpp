@@ -309,7 +309,7 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
 
             for ( size_t x = range.begin(); x < range.end(); x++ )
             {
-                if ( !keepGoing.load( std::memory_order_relaxed ) )
+                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
                     break;
 
                 for ( size_t y = 0; y < params.resolution.y; y++ )
@@ -325,9 +325,9 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                     }
                 }
 
-                if ( std::this_thread::get_id() == mainThreadId )
+                if ( cb && std::this_thread::get_id() == mainThreadId )
                 {
-                    if ( !cb( float( x - xMin ) / float( xMax - xMin ) ) )
+                    if ( cb && !cb( float( x - xMin ) / float( xMax - xMin ) ) )
                         keepGoing.store( false, std::memory_order_relaxed );
                 }
             }
@@ -345,7 +345,7 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
             //for ( size_t x = 0; x < params.resX; x++ )
             {
                 
-                if ( !keepGoing.load( std::memory_order_relaxed ) )
+                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
                     break;
 
                 for ( size_t y = 0; y < params.resolution.y; y++ )
@@ -360,16 +360,16 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                     }
                 }
 
-                if ( std::this_thread::get_id() == mainThreadId )
+                if ( cb && std::this_thread::get_id() == mainThreadId )
                 {
-                    if ( !cb( float( x - xMin ) / float ( xMax - xMin ) ) )
+                    if ( cb && !cb( float( x - xMin ) / float ( xMax - xMin ) ) )
                         keepGoing.store( false, std::memory_order_relaxed );
                 }
             }
         }, tbb::static_partitioner() );
     }
 
-    if ( !keepGoing.load( std::memory_order_relaxed ) || ! cb (1.0f) )
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
         return DistanceMap{};
 
     if ( params.allowNegativeValues )

@@ -24,7 +24,7 @@ jobs:
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64
-            runner: macos-latest
+            runner: macos-latest-test
           - os: arm
             runner: macos-arm-build
 

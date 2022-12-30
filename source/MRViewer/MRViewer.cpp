@@ -1403,15 +1403,8 @@ void Viewer::postResize( int w, int h )
 
 void Viewer::postSetPosition( int xPos, int yPos )
 {
-    if ( !windowMaximized )
-    {
-        if ( yPos == 0 )
-        {
-            assert( false ); // to catch it once it happens
-            yPos = 40; // handle for one rare issue
-        }
-        windowSavePos = { xPos,yPos };
-    }
+    if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
+        windowSavePos = { xPos, yPos };
 }
 
 void Viewer::postSetMaximized( bool maximized )

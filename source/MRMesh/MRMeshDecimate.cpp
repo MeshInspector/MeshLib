@@ -779,7 +779,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = 2 * settings.targetEdgeLen;
     subs.maxEdgeSplits = 10'000'000;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
-    subs.useCurvature = settings.useCurvature;
+    subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
     subs.onEdgeSplit = settings.onEdgeSplit;

@@ -220,7 +220,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 auto backUpSamples = storedSamples_;
                 ImGui::Text( "Multisample anti-aliasing (MSAA):" );
                 ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
-                int couter = 0;
+                int counter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
                     if ( i == 0 )
@@ -233,8 +233,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                         std::string label = 'x' + std::to_string( i );
                         RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
                     }
-                    if ( i << 1 <= maxSamples_ && ( ++couter ) % 3 != 0 )
-                        ImGui::SameLine( ( couter % 3 ) * menuScaling * 80.0f );
+                    if ( i << 1 <= maxSamples_ && ( ++counter ) % 3 != 0 )
+                        ImGui::SameLine( ( counter % 3 ) * menuScaling * 80.0f );
                 }
                 if ( backUpSamples != storedSamples_ )
                 {

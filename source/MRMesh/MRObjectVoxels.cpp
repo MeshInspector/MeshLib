@@ -163,9 +163,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         insideY = ( y >= activeBox_.min.y && y < activeBox_.max.y );
         insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
-        ++counter;
-        if ( cb && ( counter % 256 == 0 ) )
-            cb( cbModifier * float( counter ) / volume );
+        reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
     }
     if ( updateSurface )
     {

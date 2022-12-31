@@ -18,12 +18,31 @@ inline bool reportProgress( ProgressCallback cb, float v )
     return true;
 }
 
+/// safely invokes \param cv with given value if \param counter is divisible by \param divider (preferably a power of 2);
+/// just returning true for empty callback
+inline bool reportProgress( ProgressCallback cb, float v, int counter, int divider )
+{
+    if ( cb && ( counter % divider == 0 ) )
+        return cb( v );
+    return true;
+}
+
 /// safely invokes \param cv with the value produced by given functor;
 /// just returning true for empty callback and not evaluating the function
 template<typename F>
 inline bool reportProgress( ProgressCallback cb, F && f )
 {
     if ( cb )
+        return cb( f() );
+    return true;
+}
+
+/// safely invokes \param cv with the value produced by given functor if \param counter is divisible by \param divider (preferably a power of 2);
+/// just returning true for empty callback and not evaluating the function
+template<typename F>
+inline bool reportProgress( ProgressCallback cb, F && f, int counter, int divider )
+{
+    if ( cb && ( counter % divider == 0 ) )
         return cb( f() );
     return true;
 }

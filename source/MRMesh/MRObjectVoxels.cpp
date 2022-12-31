@@ -169,12 +169,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     }
     if ( updateSurface )
     {
-        ProgressCallback isoProgressCallback;
-        if ( cb )
-            isoProgressCallback = [&] ( float p )->bool
-        {
-            return cb( cbModifier + ( 1.0f - cbModifier ) * p );
-        };
+        ProgressCallback isoProgressCallback = subprogress( cb, cbModifier, 1.0f );
         auto recRes = recalculateIsoSurface( isoValue_, isoProgressCallback );
         std::shared_ptr<Mesh> recMesh;
         if ( recRes.has_value() )

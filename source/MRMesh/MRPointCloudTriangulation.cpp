@@ -79,16 +79,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
         optimizedFans_[v] = optimizedRes;
     };
 
-    ProgressCallback partialProgressCb;
-    if ( progressCb )
-    {
-        // 0% - 35%
-        partialProgressCb = [&] ( float p )
-        {
-            return progressCb( 0.35f * p );
-        };
-    }
-    return BitSetParallelFor( pointCloud_.validPoints, body, partialProgressCb );
+    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, 0.0f, 0.35f ) );
 }
 
 struct VertTriplet

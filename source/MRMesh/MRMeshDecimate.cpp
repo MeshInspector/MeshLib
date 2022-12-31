@@ -744,8 +744,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
     DecimateSettings seqSettings = settings;
     seqSettings.vertForms = &mVertForms;
-    if ( settings.progressCallback )
-        seqSettings.progressCallback = [cb = settings.progressCallback](float p) { return cb( 0.9f + 0.1f * p ); };
+    seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
     res = decimateMeshSerial( mesh, seqSettings );
     // update res from submesh decimations
     for ( const auto & submesh : parts )
@@ -783,8 +782,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
     subs.onEdgeSplit = settings.onEdgeSplit;
-    if ( settings.progressCallback )
-        subs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( arg * 0.5f ); };
+    subs.progressCallback = subprogress( settings.progressCallback, 0.0f, 0.5f );
     subdivideMesh( mesh, subs );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.5f ) )
@@ -795,8 +793,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.maxError = settings.targetEdgeLen / 2;
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
-    if ( settings.progressCallback )
-        decs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( 0.5f + arg * 0.5f ); };
+    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );
     decimateMesh( mesh, decs );
 
     if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )

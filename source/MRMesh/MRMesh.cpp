@@ -209,7 +209,7 @@ double Mesh::area( const FaceBitSet & fs ) const
 {
     MR_TIMER
 
-    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() } ), 0.0,
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
     [&] ( const auto & range, double curr )
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
@@ -265,7 +265,7 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
     FaceVolumeCalc calc( *this, faces );
-    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), calc );
     return calc.volume() / 6.0;
 }
 

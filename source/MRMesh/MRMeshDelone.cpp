@@ -40,8 +40,8 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
             return true;
     }
 
-    auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
-    auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
+    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
     return metricAC <= metricBD;
 }
 

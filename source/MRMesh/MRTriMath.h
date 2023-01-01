@@ -9,24 +9,32 @@
 namespace MR
 {
 
-/// Computes the diameter of the triangle's ABC circumcircle
+/// Computes the squared diameter of the triangle's ABC circumcircle;
 /// \ingroup MathGroup
 template <typename T>
-T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+T circumcircleDiameterSq( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
 {
-    const auto ab = ( b - a ).length();
-    const auto ca = ( a - c ).length();
-    const auto bc = ( c - b ).length();
+    const auto ab = ( b - a ).lengthSq();
+    const auto ca = ( a - c ).lengthSq();
+    const auto bc = ( c - b ).lengthSq();
     if ( ab <= 0 )
         return ca;
     if ( ca <= 0 )
         return bc;
     if ( bc <= 0 )
         return ab;
-    const auto f = cross( b - a, c - a ).length();
+    const auto f = cross( b - a, c - a ).lengthSq();
     if ( f <= 0 )
-        return std::numeric_limits<T>::max();
+        return std::numeric_limits<T>::infinity();
     return ab * ca * bc / f;
+}
+
+/// Computes the diameter of the triangle's ABC circumcircle
+/// \ingroup MathGroup
+template <typename T>
+inline T circumcircleDiameter( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    return std::sqrt( circumcircleDiameterSq( a, b, c ) );
 }
 
 /// Computes sine of minimal angle in ABC triangle, which is equal to ratio of minimal edge length to circumcircle diameter

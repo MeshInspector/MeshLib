@@ -165,19 +165,10 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
 {
     MR_WRITER( mesh );
-    const EdgeId e0 = e;
-    for (;;)
+    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge )
     {
-        auto testEdge = mesh.topology.prev( e.sym() );
-        if ( checkDeloneQuadrangleInMesh( mesh, testEdge, settings ) )
-        {
-            e = mesh.topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-            continue;
-        }
-        mesh.topology.flipEdge( testEdge );
-    } 
+        return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
+    } );
 }
 
 } //namespace MR

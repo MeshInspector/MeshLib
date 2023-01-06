@@ -903,6 +903,9 @@
     <ClInclude Include="MRNoDefInit.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MREdgePathsBuilder.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

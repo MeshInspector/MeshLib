@@ -3,8 +3,9 @@
 
 #include "MRVector3.h"
 #include <algorithm>
-#include <limits>
 #include <cmath>
+#include <limits>
+#include <optional>
 
 namespace MR
 {
@@ -108,6 +109,28 @@ T dihedralAngle( const Vector3<T>& leftNorm, const Vector3<T>& rightNorm, const 
     auto sin = dihedralAngleSin( leftNorm, rightNorm, edgeVec );
     auto cos = dihedralAngleCos( leftNorm, rightNorm );
     return std::atan2( sin, cos );
+}
+
+/// given the lengths of 3 edges of triangle ABC, and
+/// assuming that point B has coordinates (0,0); point A - (0,c);
+/// computes the coordinates of point C (where c.x >= 0) or returns std::nullopt if input lengths are invalid for a triangle
+template <typename T>
+std::optional<Vector2<T>> posFromTriEdgeLengths( T a, T b, T c )
+{
+    if ( c == 0 )
+    {
+        if ( a == b )
+            return Vector2<T>{ a, 0 };
+        else
+            return {};
+    }
+    const auto aa = sqr( a );
+    const auto y = ( aa - sqr( b ) + sqr( c ) ) / ( 2 * c );
+    const auto yy = sqr( y );
+    if ( yy > aa )
+        return {};
+    const auto x = std::sqrt( aa - yy );
+    return Vector2<T>{ x, y };
 }
 
 } // namespace MR

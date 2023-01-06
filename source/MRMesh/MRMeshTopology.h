@@ -229,6 +229,14 @@ public:
     /// given the edge with left and right triangular faces, which form together a quadrangle,
     /// rotates the edge counter-clockwise inside the quadrangle
     MRMESH_API void flipEdge( EdgeId e );
+    /// tests all edges e having valid left and right faces and org(e0) == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of org(e0)
+    template<typename T>
+    void flipEdgesAround( EdgeId e0, T && flipNeeded );
+    /// tests all edges e having valid left and right faces and v == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of vertex v
+    template<typename T>
+    void flipEdgesAround( VertId v, T && flipNeeded ) { flipEdgesAround( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
 
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
@@ -392,6 +400,24 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
     getLeftTriVerts( p.e, v );
     for ( int i = 0; i < 3; ++i )
         callback( v[i] );
+}
+
+template<typename T>
+void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        auto testEdge = prev( e.sym() );
+        if ( left( testEdge ) && right( testEdge ) && flipNeeded( testEdge ) )
+            flipEdge( testEdge );
+        else
+        {
+            e = next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
 }
 
 inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )

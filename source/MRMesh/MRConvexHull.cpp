@@ -86,20 +86,10 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
 
 static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
 {
-    const EdgeId e0 = e;
-    for (;;)
+    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge ) 
     {
-        auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid() 
-            || goodConvexEdge( mesh, testEdge ) )
-        {
-            e = mesh.topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-            continue;
-        }
-        mesh.topology.flipEdge( testEdge );
-    } 
+        return !goodConvexEdge( mesh, testEdge );
+    } );
 }
 
 static void eliminateDoubleTris( MeshTopology & topology, EdgeId e )

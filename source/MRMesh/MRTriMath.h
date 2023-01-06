@@ -133,4 +133,23 @@ std::optional<Vector2<T>> posFromTriEdgeLengths( T a, T b, T c )
     return Vector2<T>{ x, y };
 }
 
+/// given the lengths of 4 edges of a quadrangle, and one of its diagonals (c);
+/// returns the length of the other diagonal if the quadrangle is valid and convex or std::nullopt otherwise
+template <typename T>
+std::optional<T> quadrangleOtherDiagonal( T a, T b, T c, T a1, T b1 )
+{
+    const auto p = posFromTriEdgeLengths( a, b, c );
+    if ( !p )
+        return {};
+    auto p1 = posFromTriEdgeLengths( a1, b1, c );
+    if ( !p1 )
+        return {};
+    p1->x = -p1->x;
+    //where the other diagonal crosses axis Oy
+    auto y = ( p->x * p1->y - p1->x * p->y ) / ( p->x - p1->x );
+    if ( y < 0 || y > c )
+        return {};
+    return ( *p - *p1 ).length();
+}
+
 } // namespace MR

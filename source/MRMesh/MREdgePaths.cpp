@@ -199,22 +199,24 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
     for ( int fi = 0; fi < numFinishes; ++fi )
         bf.addStart( finishes[fi].v, finishes[fi].metric );
 
+    bool keepGrowing = true;
     for (;;)
     {
         auto ds = bs.doneDistance();
         auto df = bf.doneDistance();
-        if ( bs.keepGrowing() && join && joinPathMetric <= ds + df )
+        if ( keepGrowing && join && joinPathMetric <= ds + df )
         {
-            bs.stopGrowing();
-            bf.stopGrowing();
+            keepGrowing = false;
         }
         if ( ds <= df )
         {
             if ( ds >= FLT_MAX )
                 break;
-            auto c = bs.growOneEdge();
+            auto c = bs.reachNext();
             if ( !c.v )
                 continue;
+            if ( keepGrowing )
+                bs.addOrgRingSteps( c );
             if ( auto info = bf.getVertInfo( c.v ) )
             {
                 auto newMetric = c.metric + info->metric;
@@ -227,9 +229,11 @@ EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const Edge
         }
         else
         {
-            auto c = bf.growOneEdge();
+            auto c = bf.reachNext();
             if ( !c.v )
                 continue;
+            if ( keepGrowing )
+                bf.addOrgRingSteps( c );
             if ( auto info = bs.getVertInfo( c.v ) )
             {
                 auto newMetric = c.metric + info->metric;

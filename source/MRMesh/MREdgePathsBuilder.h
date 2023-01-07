@@ -50,13 +50,15 @@ public:
         // summed metric to reach this vertex
         float metric = FLT_MAX;
     };
+
     // include one more vertex in the final forest, returning vertex-info for the newly reached vertex;
     // returns invalid VertId in v-field if no more vertices left
+    ReachedVert reachNext();
+    // adds steps for all origin ring edges of the reached vertex;
+    // returns true if at least one step was added
+    bool addOrgRingSteps( const ReachedVert & rv );
+    // the same as reachNext() + addOrgRingSteps()
     ReachedVert growOneEdge();
-
-    // whether new candidates are added in growOneEdge (true), or only old candidates are returned (false)
-    bool keepGrowing() const { return keepGrowing_; }
-    void stopGrowing() { keepGrowing_ = false; }
 
 public:
     // returns true if further edge forest growth is impossible
@@ -92,15 +94,11 @@ private:
         }
     };
     std::priority_queue<CandidateVert> nextSteps_;
-    bool keepGrowing_ = true;
 
     // compares proposed step with the value known for org( c.back );
     // if proposed step is smaller then adds it in the queue and returns true;
     // otherwise if the known metric to org( c.back ) is already not greater than returns false
     bool addNextStep_( const VertPathInfo & c );
-    // adds steps for all origin ring edges of org( back ) including back itself and exluding skipRegion vertices;
-    // returns true if at least one step was added
-    bool addOrgRingSteps_( float orgMetric, EdgeId back, const VertBitSet * skipRegion = nullptr );
 };
 
 /// the vertices in the queue are ordered by their metric from a start location
@@ -174,13 +172,18 @@ bool EdgePathsBuilderT<MetricToPenalty>::addNextStep_( const VertPathInfo & c )
 }
 
 template<class MetricToPenalty>
-bool EdgePathsBuilderT<MetricToPenalty>::addOrgRingSteps_( float orgMetric, EdgeId back, const VertBitSet * skipRegion )
+bool EdgePathsBuilderT<MetricToPenalty>::addOrgRingSteps( const ReachedVert & rv )
 {
     bool aNextStepAdded = false;
+    if ( !rv.v )
+    {
+        assert( !rv.backward );
+        return aNextStepAdded;
+    }
+    const float orgMetric = rv.metric;
+    const EdgeId back = rv.backward ? rv.backward : topology_.edgeWithOrg( rv.v );
     for ( EdgeId e : orgRing( topology_, back ) )
     {
-        if ( skipRegion && skipRegion->test( topology_.dest( e ) ) )
-            continue;
         VertPathInfo c;
         c.back = e.sym();
         c.metric = orgMetric + metric_( e );
@@ -190,7 +193,7 @@ bool EdgePathsBuilderT<MetricToPenalty>::addOrgRingSteps_( float orgMetric, Edge
 }
 
 template<class MetricToPenalty>
-auto EdgePathsBuilderT<MetricToPenalty>::growOneEdge() -> ReachedVert
+auto EdgePathsBuilderT<MetricToPenalty>::reachNext() -> ReachedVert
 {
     while ( !nextSteps_.empty() )
     {
@@ -203,11 +206,17 @@ auto EdgePathsBuilderT<MetricToPenalty>::growOneEdge() -> ReachedVert
             continue;
         }
         assert( metricToPenalty_( vi.metric, c.v ) == c.penalty );
-        if ( keepGrowing_ )
-            addOrgRingSteps_( vi.metric, vi.back ? vi.back : topology_.edgeWithOrg( c.v ) );
         return { .v = c.v, .backward = vi.back, .penalty = c.penalty, .metric = vi.metric };
     }
     return {};
+}
+
+template<class MetricToPenalty>
+auto EdgePathsBuilderT<MetricToPenalty>::growOneEdge() -> ReachedVert
+{
+    auto res = reachNext();
+    addOrgRingSteps( res );
+    return res;
 }
 
 /// the vertices in the queue are ordered by the sum of their metric from a start location and the

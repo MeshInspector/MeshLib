@@ -18,7 +18,7 @@
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
-//#include <tbb/global_control.h>
+
 namespace MR
 {
 
@@ -1569,7 +1569,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 {
     MR_TIMER;
     MR_WRITER( mesh );
-    tbb::global_control c( tbb::global_control::max_allowed_parallelism, 1 );
     CutMeshResult res;
 
     if ( params.new2OldMap )

@@ -1332,4 +1332,25 @@ void Separator( float scaling, const std::string& text )
     }
 }
 
+
+void Spinner( float radius, float scaling )
+{
+    auto pos = GetCursorScreenPos();
+
+    static float angle = 0.0f;
+    const int numCircles = 7;
+    auto color = ImGui::GetColorU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    for ( int i = 0; i < numCircles; ++i )
+    {
+        float angleShift = float( i ) / float( numCircles ) * MR::PI_F * 2.0f;
+        ImVec2 center = ImVec2( pos.x + radius * std::cos( angle + angleShift ), pos.y + radius * std::sin( angle + angleShift ) );
+        ImGui::GetWindowDrawList()->AddCircleFilled( center, radius * 0.1f * scaling, color );
+    }
+    angle += ImGui::GetIO().DeltaTime * 2.2f;
+
+    SetCursorPosY( GetCursorPosY() + radius );
+    ImGui::Dummy( ImVec2( 0, 0 ) );
+    MR::getViewerInstance().incrementForceRedrawFrames();
+}
+
 } // namespace ImGui

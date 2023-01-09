@@ -55,6 +55,8 @@ public:
     MRMESH_API void updateSolver();
     // given fixed vertices, computes positions of remaining region vertices
     MRMESH_API void apply();
+    // given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
+    MRMESH_API void applyToScalar( Vector<float,VertId> & scalarField );
 
     // return all initially free vertices and the first layer around the them
     const VertBitSet & region() const { return region_; }
@@ -68,6 +70,8 @@ private:
     void updateSolver_();
     // updates rhs_ only
     void updateRhs_();
+    template <typename I, typename G, typename S>
+    void prepareRhs_( I && iniRhs, G && g, S && s );
 
     Mesh & mesh_;
 

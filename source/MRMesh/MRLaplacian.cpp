@@ -172,6 +172,48 @@ void Laplacian::updateSolver_()
     solver_->compute( A );
 }
 
+template <typename I, typename G, typename S>
+void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
+{
+    // equations for free vertices
+    int n = 0;
+    for ( auto v : freeVerts_ )
+    {
+        assert( n == freeVert2id_[v] );
+        int eqN = regionVert2id_[v];
+        const auto eq = equations_[eqN];
+        auto r = iniRhs( eq );
+        const auto lastElem = equations_[eqN+1].firstElem;
+        for ( int ei = eq.firstElem; ei < lastElem; ++ ei )
+        {
+            const auto el = nonZeroElements_[ei];
+            if ( !freeVerts_.test( el.neiVert ) )
+                r -= el.coeff * g( el.neiVert );
+        }
+        s( n, r );
+        ++n;
+    }
+
+    // equations for fixed neighbors of free vertices
+    for ( auto v : firstLayerFixedVerts_ )
+    {
+        int eqN = regionVert2id_[v];
+        const auto eq = equations_[eqN];
+        auto r = iniRhs( eq );
+        r -= eq.centerCoeff * g( v );
+        const auto lastElem = equations_[eqN+1].firstElem;
+        for ( int ei = eq.firstElem; ei < lastElem; ++ ei )
+        {
+            const auto el = nonZeroElements_[ei];
+            if ( !freeVerts_.test( el.neiVert ) )
+                r -= el.coeff * g( el.neiVert );
+        }
+        s( n, r );
+        ++n;
+    }
+    assert( n == M_.rows() );
+}
+
 void Laplacian::updateRhs_()
 {
     assert( solverValid_ );
@@ -181,51 +223,19 @@ void Laplacian::updateRhs_()
 
     MR_TIMER
 
-    const auto rowSz = M_.rows();
-
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
-        rhs[i].resize( rowSz );
+        rhs[i].resize( M_.rows() );
 
-    // equations for free vertices
-    int n = 0;
-    for ( auto v : freeVerts_ )
-    {
-        assert( n == freeVert2id_[v] );
-        int eqN = regionVert2id_[v];
-        const auto eq = equations_[eqN];
-        auto r = eq.rhs;
-        const auto lastElem = equations_[eqN+1].firstElem;
-        for ( int ei = eq.firstElem; ei < lastElem; ++ ei )
+    prepareRhs_(
+        [&]( const Equation & eq ) { return eq.rhs; },
+        [&]( VertId v ) { return Vector3d{ mesh_.points[v] }; },
+        [&]( int n, const Vector3d & r )
         {
-            const auto el = nonZeroElements_[ei];
-            if ( !freeVerts_.test( el.neiVert ) )
-                r -= el.coeff * Vector3d{ mesh_.points[el.neiVert] };
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = r[i];
         }
-        for ( int i = 0; i < 3; ++i )
-            rhs[i][n] = r[i];
-        ++n;
-    }
-
-    // equations for fixed neighbors of free vertices
-    for ( auto v : firstLayerFixedVerts_ )
-    {
-        int eqN = regionVert2id_[v];
-        const auto eq = equations_[eqN];
-        auto r = eq.rhs;
-        r -= eq.centerCoeff * Vector3d{ mesh_.points[v] };
-        const auto lastElem = equations_[eqN+1].firstElem;
-        for ( int ei = eq.firstElem; ei < lastElem; ++ ei )
-        {
-            const auto el = nonZeroElements_[ei];
-            if ( !freeVerts_.test( el.neiVert ) )
-                r -= el.coeff * Vector3d{ mesh_.points[el.neiVert] };
-        }
-        for ( int i = 0; i < 3; ++i )
-            rhs[i][n] = r[i];
-        ++n;
-    }
-    assert( n == rowSz );
+    );
 
     tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
     {
@@ -256,6 +266,29 @@ void Laplacian::apply()
         pt.x = (float) sol[0][mapv];
         pt.y = (float) sol[1][mapv];
         pt.z = (float) sol[2][mapv];
+    }
+}
+
+void Laplacian::applyToScalar( Vector<float,VertId> & scalarField )
+{
+    MR_TIMER;
+    if ( !freeVerts_.any() )
+        return;
+    updateSolver();
+
+    Eigen::VectorXd rhs( M_.rows() );
+
+    prepareRhs_(
+        [&]( const Equation & ) { return 0.0; },
+        [&]( VertId v ) { return scalarField[v]; },
+        [&]( int n, double r ) { rhs[n] = r; }
+    );
+
+    Eigen::VectorXd sol = solver_->solve( M_.adjoint() * rhs );
+    for ( auto v : freeVerts_ )
+    {
+        int mapv = freeVert2id_[v];
+        scalarField[v] = float( sol[mapv] );
     }
 }
 

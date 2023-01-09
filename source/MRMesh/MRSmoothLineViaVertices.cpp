@@ -7,10 +7,10 @@
 namespace MR
 {
 
-IsoLines getSmoothLinesViaVertices( const Mesh & mesh, const VertBitSet & vs )
+MeshLines getSmoothLinesViaVertices( const Mesh & mesh, const VertBitSet & vs )
 {
     MR_TIMER
-    IsoLines res;
+    MeshLines res;
     if ( vs.empty() )
         return res;
 
@@ -18,7 +18,7 @@ IsoLines getSmoothLinesViaVertices( const Mesh & mesh, const VertBitSet & vs )
     VertBitSet freeVerts;
     for ( const auto & cc : MeshComponents::getAllComponentsVerts( mesh ) )
     {
-        auto freeCC = cc - freeVerts;
+        auto freeCC = cc - vs;
         auto numfree = freeCC.count();
         if ( numfree <= 0 )
             continue; // too small connected component

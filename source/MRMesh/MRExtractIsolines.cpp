@@ -331,4 +331,25 @@ Contours2f planeSectionsToContours2f( const Mesh& mesh, const PlaneSections& sec
     return res;
 }
 
+Contour3f meshLineToContour3f( const Mesh & mesh, const MeshLine & line )
+{
+    MR_TIMER;
+    Contour3f res;
+    res.reserve( line.size() );
+    for ( const auto& s : line )
+        res.push_back( mesh.edgePoint( s ) );
+
+    return res;
+}
+
+Contours3f meshLinesToContours3f( const Mesh & mesh, const MeshLines & lines )
+{
+    MR_TIMER;
+    Contours3f res;
+    res.reserve( lines.size() );
+    for ( const auto& l : lines )
+        res.push_back( meshLineToContour3f( mesh, l ) );
+    return res;
+}
+
 } //namespace MR

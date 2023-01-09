@@ -330,9 +330,6 @@
     <ClInclude Include="MRStringConvert.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRExtractIsolines.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshTexture.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
@@ -906,6 +903,12 @@
     <ClInclude Include="MREdgePathsBuilder.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
+    <ClInclude Include="MRExtractIsolines.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSmoothLineViaVertices.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1057,9 +1060,6 @@
     </ClCompile>
     <ClCompile Include="MRStringConvert.cpp">
       <Filter>Source Files\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="MRExtractIsolines.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MROffset.cpp">
       <Filter>Source Files\VDBConversions</Filter>
@@ -1507,6 +1507,12 @@
     </ClCompile>
     <ClCompile Include="MRTriMath.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRExtractIsolines.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSmoothLineViaVertices.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

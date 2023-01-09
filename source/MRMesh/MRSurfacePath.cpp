@@ -1,16 +1,19 @@
 #include "MRSurfacePath.h"
-#include "MRSurfaceDistance.h"
-#include "MRMesh.h"
-#include "MRMeshPart.h"
-#include "MRRingIterator.h"
-#include "MRPlanarPath.h"
-#include "MRTimer.h"
-#include "MRGTest.h"
-#include "MRRegionBoundary.h"
-#include "MRMeshLoad.h"
 #include "MRBitSetParallelFor.h"
-#include "MRMeshBuilder.h"
 #include "MREdgePaths.h"
+#include "MRExtractIsolines.h"
+#include "MRGTest.h"
+#include "MRLaplacian.h"
+#include "MRMesh.h"
+#include "MRMeshBuilder.h"
+#include "MRMeshComponents.h"
+#include "MRMeshLoad.h"
+#include "MRMeshPart.h"
+#include "MRPlanarPath.h"
+#include "MRRegionBoundary.h"
+#include "MRRingIterator.h"
+#include "MRSurfaceDistance.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -482,6 +485,40 @@ HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh & mesh,
     return res;
 }
 
+SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs )
+{
+    MR_TIMER
+    SurfacePaths res;
+    if ( vs.empty() )
+        return res;
+
+    Vector<float,VertId> scalarField( mesh.topology.vertSize(), 0 );
+    VertBitSet freeVerts;
+    for ( const auto & cc : MeshComponents::getAllComponentsVerts( mesh ) )
+    {
+        auto freeCC = cc - vs;
+        auto numfree = freeCC.count();
+        if ( numfree <= 0 )
+            continue; // too small connected component
+        if ( numfree == cc.count() )
+            continue; // no single fixed vertex in the component
+
+        // fix one additional vertex in each connected component with the value 1
+        // (to avoid constant 0 solution)
+        VertId fixedV = *begin( freeCC );
+        scalarField[fixedV] = 1;
+        freeCC.reset( fixedV );
+        freeVerts |= freeCC;
+    }
+
+    Laplacian lap( const_cast<Mesh&>( mesh ) ); //mesh will not be changed
+    lap.init( freeVerts, Laplacian::EdgeWeights::Unit, Laplacian::RememberShape::No );
+    lap.applyToScalar( scalarField );
+    res = extractIsolines( mesh.topology, scalarField, 0 );
+
+    return res;
+}
+
 float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )
 {
     if ( surfacePath.empty() )
@@ -495,6 +532,27 @@ float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )
         prevPoint = curPoint;
     }
     return sum;
+}
+
+Contour3f surfacePathToContour3f( const Mesh & mesh, const SurfacePath & line )
+{
+    MR_TIMER;
+    Contour3f res;
+    res.reserve( line.size() );
+    for ( const auto& s : line )
+        res.push_back( mesh.edgePoint( s ) );
+
+    return res;
+}
+
+Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lines )
+{
+    MR_TIMER;
+    Contours3f res;
+    res.reserve( lines.size() );
+    for ( const auto& l : lines )
+        res.push_back( surfacePathToContour3f( mesh, l ) );
+    return res;
 }
 
 TEST(MRMesh, SurfacePath) 

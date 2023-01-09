@@ -903,6 +903,9 @@
     <ClInclude Include="MRNoDefInit.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MREdgePathsBuilder.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1501,6 +1504,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshTrimWithPlane.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTriMath.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

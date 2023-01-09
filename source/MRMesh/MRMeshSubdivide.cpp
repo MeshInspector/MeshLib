@@ -86,7 +86,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     int splitsDone = 0;
     int lastProgressSplitsDone = 0;
     VertBitSet newVerts;
-    const float whileProgress = settings.useCurvature ? 0.5f : 0.75f;
+    const float whileProgress = settings.smoothMode ? 0.5f : 0.75f;
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
         if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
@@ -106,7 +106,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
 
-        if ( settings.useCurvature )
+        if ( settings.smoothMode )
             newVerts.autoResizeSet( newVertId );
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
@@ -118,24 +118,29 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
             .maxAngleChange = settings.maxAngleChangeAfterFlip,
+            .criticalTriAspectRatio = 1000,
             .region = settings.region,
             .notFlippable = settings.notFlippable } );
         for ( auto ei : orgRing( mesh.topology, e ) )
             addInQueue( ei.undirected() );
     }
 
-    if ( settings.useCurvature )
+    if ( settings.smoothMode )
     {
         if ( settings.progressCallback && !settings.progressCallback( 0.75f ) )
             return 0;
-        const UndirectedEdgeBitSet creaseUEdges = mesh.findCreaseEdges( settings.maxAngleChangeAfterFlip );
-        if ( settings.progressCallback && !settings.progressCallback( 0.76f ) )
-            return 0;
-        const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
-        if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
-            return 0;
-
-        positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Unit, &sharpVerts );
+        if ( settings.minSharpDihedralAngle < PI )
+        {
+            const UndirectedEdgeBitSet creaseUEdges = mesh.findCreaseEdges( settings.minSharpDihedralAngle );
+            if ( settings.progressCallback && !settings.progressCallback( 0.76f ) )
+                return 0;
+            const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
+            if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
+                return 0;
+            positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Unit, &sharpVerts );
+        }
+        else
+            positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Unit );
     }
 
     return splitsDone;

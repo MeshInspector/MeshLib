@@ -51,6 +51,7 @@
     <ClInclude Include="MRDistanceMapLoad.h" />
     <ClInclude Include="MRDistanceMapParams.h" />
     <ClInclude Include="MRDistanceMapSave.h" />
+    <ClInclude Include="MREdgePathsBuilder.h" />
     <ClInclude Include="MREmbeddedPython.h" />
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
@@ -418,6 +419,7 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
+    <ClCompile Include="MRTriMath.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />

@@ -5,15 +5,6 @@
 namespace MR
 {
 
-using MeshLine = std::vector<MeshEdgePoint>;
-using MeshLines = std::vector<MeshLine>;
-
-using IsoLine = MeshLine;
-using IsoLines = MeshLines;
-
-using PlaneSection = MeshLine;
-using PlaneSections = MeshLines;
-
 /// extracts all iso-lines from given scalar field and iso-value
 MRMESH_API IsoLines extractIsolines( const MeshTopology & topology,
     const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region = nullptr );
@@ -37,9 +28,5 @@ MRMESH_API PlaneSection trackSection( const MeshPart& mp,
 /// converts PlaneSections in 2D contours by computing coordinate of each point, applying given xf to it, and retaining only x and y
 MRMESH_API Contour2f planeSectionToContour2f( const Mesh & mesh, const PlaneSection & section, const AffineXf3f & meshToPlane );
 MRMESH_API Contours2f planeSectionsToContours2f( const Mesh & mesh, const PlaneSections & sections, const AffineXf3f & meshToPlane );
-
-/// converts lines on mesh in 3D contours by computing coordinate of each point
-MRMESH_API Contour3f meshLineToContour3f( const Mesh & mesh, const MeshLine & line );
-MRMESH_API Contours3f meshLinesToContours3f( const Mesh & mesh, const MeshLines & lines );
 
 } //namespace MR

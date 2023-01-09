@@ -127,7 +127,6 @@
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
-    <ClInclude Include="MRSmoothLineViaVertices.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />
@@ -415,7 +414,6 @@
     <ClCompile Include="MRRestoringStreamsSink.cpp" />
     <ClCompile Include="MRSceneRoot.cpp" />
     <ClCompile Include="MRSceneSettings.cpp" />
-    <ClCompile Include="MRSmoothLineViaVertices.cpp" />
     <ClCompile Include="MRSphere.cpp" />
     <ClCompile Include="MRSphereObject.cpp" />
     <ClCompile Include="MRString.cpp" />

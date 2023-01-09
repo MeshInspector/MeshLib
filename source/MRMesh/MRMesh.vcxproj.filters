@@ -906,9 +906,6 @@
     <ClInclude Include="MRExtractIsolines.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRSmoothLineViaVertices.h">
-      <Filter>Source Files\SurfacePath</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1509,9 +1506,6 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
-      <Filter>Source Files\SurfacePath</Filter>
-    </ClCompile>
-    <ClCompile Include="MRSmoothLineViaVertices.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>

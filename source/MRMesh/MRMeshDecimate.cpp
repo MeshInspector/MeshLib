@@ -636,7 +636,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
-    const auto facesPerPart = mesh.topology.faceSize() / sz;
+    // parallel threads shall be able to safely modify settings.region faces
+    const auto facesPerPart = ( mesh.topology.faceSize() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
 
     // determine faces for each part
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )

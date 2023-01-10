@@ -1188,7 +1188,7 @@ MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject
     if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
         return VisualObjectRenderType::NoDepthTest;
 
-    if ( obj->getBackColor().a < 255 || obj->getFrontColor( obj->isSelected() ).a < 255 )
+    if ( obj->getBackColor( viewportId ).a < 255 || obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 )
         return VisualObjectRenderType::Transparent;
 
     return VisualObjectRenderType::Opaque;

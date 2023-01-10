@@ -79,10 +79,10 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objPoints_->getAmbientStrength() ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
 
-    const auto& backColor = Vector4f( objPoints_->getBackColor() );
+    const auto& backColor = Vector4f( objPoints_->getBackColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
 
-    const auto& mainColor = Vector4f( objPoints_->getFrontColor( objPoints_->isSelected() ) );
+    const auto& mainColor = Vector4f( objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelectedVertices" ), objPoints_->getVisualizeProperty( PointsVisualizePropertyType::SelectedVertices, renderParams.viewportId ) ) );

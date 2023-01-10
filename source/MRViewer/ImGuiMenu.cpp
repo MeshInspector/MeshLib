@@ -1380,36 +1380,57 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    make_color_selector<VisualObject>( selectedVisualObjs, "Selected color", [&] ( const VisualObject* data )
+    if ( getViewerInstance().viewport_list.size() > 1 )
     {
-        return Vector4f( data->getFrontColor() );
+        ImGui::SetNextItemWidth( 75.0f * menu_scaling() );
+
+        if (ImGui::BeginCombo( "Viewport Id",
+            selectedViewport_.value() == 0 ? "Default" :
+            std::to_string( selectedViewport_.value() ).c_str() ) )
+        {
+            if ( ImGui::Selectable( "Default" ) )
+                selectedViewport_ = ViewportId{ 0 };
+
+            for ( const auto& viewport : getViewerInstance().viewport_list )
+            {
+                if ( ImGui::Selectable( std::to_string( viewport.id.value() ).c_str() ) )
+                    selectedViewport_ = viewport.id;
+            }
+
+            ImGui::EndCombo();
+        }
+    }
+
+    make_color_selector<VisualObject>( selectedVisualObjs, ("Selected color##" + std::to_string(selectedViewport_.value())).c_str(), [&] ( const VisualObject* data )
+    {
+        return Vector4f( data->getFrontColor(true, selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setFrontColor( Color( color ), true );
+        data->setFrontColor( Color( color ), true, selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Unselected color", [&] ( const VisualObject* data )
     {
-        return Vector4f( data->getFrontColor( false ) );
+        return Vector4f( data->getFrontColor( false, selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setFrontColor( Color( color ), false );
+        data->setFrontColor( Color( color ), false, selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Back Faces color", [&] ( const VisualObject* data )
     {
-        return Vector4f( data->getBackColor() );
+        return Vector4f( data->getBackColor( selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setBackColor( Color( color ) );
+        data->setBackColor( Color( color ), selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-        return Vector4f( data->getLabelsColor() );
+        return Vector4f( data->getLabelsColor( selectedViewport_ ) );
 MR_SUPPRESS_WARNING_POP
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-        data->setLabelsColor( Color( color ) );
+        data->setLabelsColor( Color( color ), selectedViewport_ );
 MR_SUPPRESS_WARNING_POP
     } );
 
@@ -1417,58 +1438,58 @@ MR_SUPPRESS_WARNING_POP
     {
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Edges color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getEdgesColor() );
+            return Vector4f( data->getEdgesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setEdgesColor( Color( color ) );
+            data->setEdgesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getSelectedFacesColor() );
+            return Vector4f( data->getSelectedFacesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setSelectedFacesColor( Color( color ) );
+            data->setSelectedFacesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Edges color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getSelectedEdgesColor() );
+            return Vector4f( data->getSelectedEdgesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setSelectedEdgesColor( Color( color ) );
+            data->setSelectedEdgesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Borders color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getBordersColor() );
+            return Vector4f( data->getBordersColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setBordersColor( Color( color ) );
+            data->setBordersColor( Color( color ), selectedViewport_ );
         } );
     }
     if ( !selectedPointsObjs.empty() )
     {
         make_color_selector<ObjectPointsHolder>( selectedPointsObjs, "Selected Points color", [&] ( const ObjectPointsHolder* data )
         {
-            return Vector4f( data->getSelectedVerticesColor() );
+            return Vector4f( data->getSelectedVerticesColor( selectedViewport_ ) );
         }, [&] ( ObjectPointsHolder* data, const Vector4f& color )
         {
-            data->setSelectedVerticesColor( Color( color ) );
+            data->setSelectedVerticesColor( Color( color ), selectedViewport_ );
         } );
     }
     if ( !selectedLabelObjs.empty() )
     {
         make_color_selector<ObjectLabel>( selectedLabelObjs, "Source point color", [&] ( const ObjectLabel* data )
         {
-            return Vector4f( data->getSourcePointColor() );
+            return Vector4f( data->getSourcePointColor( selectedViewport_ ) );
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
-            data->setSourcePointColor( Color( color ) );
+            data->setSourcePointColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectLabel>( selectedLabelObjs, "Leader line color", [&] ( const ObjectLabel* data )
         {
-            return Vector4f( data->getLeaderLineColor() );
+            return Vector4f( data->getLeaderLineColor( selectedViewport_ ) );
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
-            data->setLeaderLineColor( Color( color ) );
+            data->setLeaderLineColor( Color( color ), selectedViewport_ );
         } );
     }
 

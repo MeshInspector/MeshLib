@@ -93,41 +93,44 @@ AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
     return res;
 }
 
-const Color& VisualObject::getFrontColor( bool selected /*= true */ ) const
+const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
 {
-    return selected ? selectedColor_ : unselectedColor_;
+    return selected ? selectedColor_.get( viewportId ) : unselectedColor_.get( viewportId );
 }
 
-void VisualObject::setFrontColor( const Color& color, bool selected )
+void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId viewportId )
 {
-    auto& oldColor = selected ? selectedColor_ : unselectedColor_;
-    if ( oldColor == color )
+    if ( selected && selectedColor_.get( viewportId ) != color)
+    {
+        selectedColor_.set( color, viewportId );
+    }
+    else if ( !selected && unselectedColor_.get( viewportId ) != color )
+    {
+        unselectedColor_.set( color, viewportId );
+    }
+}
+
+const Color& VisualObject::getBackColor( ViewportId viewportId ) const
+{
+    return backFacesColor_.get( viewportId );
+}
+
+void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
+{
+    if ( backFacesColor_.get( viewportId ) == color )
         return;
-
-    oldColor = color;
-}
-
-const Color& VisualObject::getBackColor() const
-{
-    return backFacesColor_;
-}
-
-void VisualObject::setBackColor( const Color& color )
-{
-    if ( backFacesColor_ == color )
-        return;
-    backFacesColor_ = color;
+    backFacesColor_.set( color, viewportId );
     dirty_ |= DIRTY_BACK_FACES;
 }
 
-const Color& VisualObject::getLabelsColor() const
+const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
 {
-    return labelsColor_;
+    return labelsColor_.get( viewportId );
 }
 
-void VisualObject::setLabelsColor( const Color& color )
+void VisualObject::setLabelsColor( const Color& color, ViewportId viewportId )
 {
-    labelsColor_ = color;
+    labelsColor_.set( color, viewportId );
     needRedraw_ = true;
 }
 
@@ -282,12 +285,12 @@ MR_SUPPRESS_WARNING_POP
         serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version 
     };
 
-    writeColors( "SelectedMode", selectedColor_ );
-    writeColors( "UnselectedMode", unselectedColor_ );
-    writeColors( "BackFaces", backFacesColor_ );
+    writeColors( "SelectedMode", selectedColor_.get() );
+    writeColors( "UnselectedMode", unselectedColor_.get() );
+    writeColors( "BackFaces", backFacesColor_.get() );
 
     // labels
-    serializeToJson( Vector4f( labelsColor_ ), root["Colors"]["Labels"] );
+    serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
 
     // append base type
     root["Type"].append( VisualObject::TypeName() );
@@ -311,14 +314,14 @@ MR_SUPPRESS_WARNING_POP
         res = Color( resVec );
     };
 
-    readColors( "SelectedMode", selectedColor_ );
-    readColors( "UnselectedMode", unselectedColor_ );
-    readColors( "BackFaces", backFacesColor_ );
+    readColors( "SelectedMode", selectedColor_.get() );
+    readColors( "UnselectedMode", unselectedColor_.get() );
+    readColors( "BackFaces", backFacesColor_.get() );
 
     Vector4f resVec;
     // labels
     deserializeFromJson( root["Colors"]["Labels"], resVec );
-    labelsColor_ = Color( resVec );
+    labelsColor_.set( Color( resVec ) );
 
     dirty_ = DIRTY_ALL;
 }

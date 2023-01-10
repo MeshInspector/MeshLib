@@ -94,7 +94,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "light_position_eye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
-    const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected() ) );
+    const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelectedFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objMesh_->getSelectedFacesColor() );
@@ -127,9 +127,9 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
         renderMeshEdges_( renderParams );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_( renderParams, borderArrayObjId_, borderBuffer_, objMesh_->getBordersColor(), DIRTY_BORDER_LINES );
+        renderEdges_( renderParams, borderArrayObjId_, borderBuffer_, objMesh_->getBordersColor( renderParams.viewportId ), DIRTY_BORDER_LINES );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBuffer_, objMesh_->getSelectedEdgesColor(), DIRTY_EDGES_SELECTION );
+        renderEdges_( renderParams, selectedEdgesArrayObjId_, selectedEdgesBuffer_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
 
     if ( renderParams.alphaSort )
     {
@@ -270,7 +270,7 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y, renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
     // colors
-    auto color = Vector4f( objMesh_->getEdgesColor() );
+    auto color = Vector4f( objMesh_->getEdgesColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "uniformColor" ),
         color[0], color[1], color[2], color[3] ) );
 

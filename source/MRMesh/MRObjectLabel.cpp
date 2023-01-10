@@ -297,20 +297,20 @@ void ObjectLabel::setBackgroundPadding( float padding )
     needRedraw_ = true;
 }
 
-void ObjectLabel::setSourcePointColor( const Color &color )
+void ObjectLabel::setSourcePointColor( const Color &color, ViewportId id )
 {
-    if ( sourcePointColor_ == color )
+    if ( sourcePointColor_.get( id ) == color )
         return;
 
-    sourcePointColor_ = color;
+    sourcePointColor_.set( color, id );
 }
 
-void ObjectLabel::setLeaderLineColor( const Color &color )
+void ObjectLabel::setLeaderLineColor( const Color &color, ViewportId id )
 {
-    if ( leaderLineColor_ == color )
+    if ( leaderLineColor_.get( id ) == color )
         return;
 
-    leaderLineColor_ = color;
+    leaderLineColor_.set( color, id );
 }
 
 }

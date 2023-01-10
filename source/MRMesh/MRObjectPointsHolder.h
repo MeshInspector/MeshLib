@@ -44,9 +44,12 @@ public:
     const VertBitSet& getSelectedPoints() const { return selectedPoints_; }
     MRMESH_API virtual void selectPoints( VertBitSet newSelection );
     /// returns colors of selected vertices
-    const Color& getSelectedVerticesColor() const { return selectedVerticesColor_; }
+    const Color& getSelectedVerticesColor( ViewportId id = {} ) const
+    {
+        return selectedVerticesColor_.get( id );
+    }
     /// sets colors of selected vertices
-    MRMESH_API virtual void setSelectedVerticesColor( const Color& color );
+    MRMESH_API virtual void setSelectedVerticesColor( const Color& color, ViewportId id = {} );
 
     /// get all visualize properties masks as array
     MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
@@ -77,7 +80,7 @@ protected:
     VertBitSet selectedPoints_;
     mutable std::optional<size_t> numValidPoints_;
     mutable std::optional<size_t> numSelectedPoints_;
-    Color selectedVerticesColor_;
+    ViewportProperty<Color> selectedVerticesColor_;
     ViewportMask showSelectedVertices_ = ViewportMask::all();
 
     std::shared_ptr<PointCloud> points_;

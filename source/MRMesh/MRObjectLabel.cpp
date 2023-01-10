@@ -124,8 +124,8 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["LeaderLineWidth"] = leaderLineWidth_;
     root["BackgroundPadding"] = backgroundPadding_;
 
-    serializeToJson( sourcePointColor_, root["Colors"]["SourcePoint"] );
-    serializeToJson( leaderLineColor_, root["Colors"]["LeaderLine"] );
+    serializeToJson( sourcePointColor_.get(), root["Colors"]["SourcePoint"] );
+    serializeToJson( leaderLineColor_.get(), root["Colors"]["LeaderLine"] );
 }
 
 void ObjectLabel::deserializeFields_( const Json::Value& root )

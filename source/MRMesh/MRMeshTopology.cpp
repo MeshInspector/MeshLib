@@ -11,6 +11,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRPch/MRTBB.h"
 #include <atomic>
+#include <initializer_list>
 
 namespace MR
 {
@@ -821,7 +822,21 @@ void MeshTopology::flipEdge( EdgeId e )
         edgePerFace_[r] = e.sym();
 }
 
-EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
+static inline void setNewToOld( FaceHashMap * new2Old, std::initializer_list<FaceId> newFaces, FaceId fromFace )
+{
+    if ( !new2Old )
+        return;
+    if ( auto it = new2Old->find( fromFace ); it != new2Old->end() )
+    {
+        // fromFace is already new, find its origin
+        fromFace = it->second;
+        assert( new2Old->find( fromFace ) != new2Old->end() );
+    }
+    for ( auto newFace: newFaces )
+        (*new2Old)[newFace] = fromFace;
+}
+
+EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new2Old )
 {
     FaceId l = left( e );
     if ( l.valid() )
@@ -869,6 +884,7 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
         setLeft( el, newFace );
         if ( region && region->test( l ) )
             region->autoResizeSet( newFace );
+        setNewToOld( new2Old, {newFace}, l );
     }
     if ( r.valid() && ePrev != e )
     {
@@ -879,6 +895,7 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
         setLeft( er.sym(), newFace );
         if ( region && region->test( r ) )
             region->autoResizeSet( newFace );
+        setNewToOld( new2Old, {newFace}, r );
     }
 
     setLeft_( e, l );
@@ -895,7 +912,7 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region )
     return e0;
 }
 
-VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region )
+VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new2Old )
 {
     assert( !region || region->test( f ) );
 
@@ -936,6 +953,8 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region )
         region->autoResizeSet( f1 );
         region->autoResizeSet( f2 );
     }
+
+    setNewToOld( new2Old, { f1, f2 }, f );
 
     return newv;
 }

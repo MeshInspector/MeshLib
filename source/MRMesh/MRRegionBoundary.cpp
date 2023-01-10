@@ -121,6 +121,24 @@ std::vector<EdgeLoop> findRegionBoundaryInsideMesh( const MeshTopology & topolog
     return res;
 }
 
+UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopology& topology, const FaceBitSet & region )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        const auto l = topology.left( ue );
+        if ( !l )
+            return;
+        const auto r = topology.right( ue );
+        if ( !r )
+            return;
+        if ( region.test( l ) != region.test( r ) )
+            res.set( ue );
+    } );
+    return res;
+}
+
 FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet& region )
 {
     MR_TIMER;

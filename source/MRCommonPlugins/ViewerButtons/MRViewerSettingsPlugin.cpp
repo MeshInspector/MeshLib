@@ -591,7 +591,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     ImGui::NewLine();
     if ( RibbonButtonDrawer::GradientCheckbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {
-        if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
+        if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {
             auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
             if ( winHandler )

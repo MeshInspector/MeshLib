@@ -1355,15 +1355,11 @@ void Spinner( float radius, float scaling )
 
 bool ModalBigTitle( const char* title, float scaling )
 {
-    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-    const MR::RibbonFontManager* fontManager = nullptr;
-    if ( menu )
-        fontManager = &menu->getFontManager();
-
-    if ( fontManager )
-        ImGui::PushFont( fontManager->getFontByType( MR::RibbonFontManager::FontType::Headline ) );
+    auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Headline );
+    if ( font )
+        ImGui::PushFont( font );
     ImGui::Text( "%s", title);
-    if ( fontManager )
+    if ( font )
         ImGui::PopFont();
 
     const float exitButtonSize = 30.0f * scaling;
@@ -1373,13 +1369,14 @@ bool ModalBigTitle( const char* title, float scaling )
     ImGui::SetCursorPosY( 2 * MR::cDefaultWindowPaddingY * scaling );
     ImGui::PushStyleColor( ImGuiCol_Button, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Border, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    if ( fontManager )
+    font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( font )
     {
-        ImGui::PushFont( fontManager->getFontByType( MR::RibbonFontManager::FontType::Icons ) );
+        ImGui::PushFont( font );
         closeBtnTxt = "\xef\x80\x8d";
     }
     const bool shoudClose = ImGui::Button( closeBtnTxt.c_str(), ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape );
-    if ( fontManager )
+    if ( font )
         ImGui::PopFont();
     ImGui::PopStyleColor( 2 );
     ImGui::NewLine();

@@ -356,7 +356,9 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
     ImGui::PopStyleVar();
 
     if ( ImGui::ModalBigTitle( "Scene Mouse Controls", scaling ) )
+    {
         ImGui::CloseCurrentPopup();
+    }
 
 	const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Set other" ).y;
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
@@ -530,7 +532,6 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
-    auto& viewerRef = Viewer::instanceRef();
     ImVec2 windowSize = ImVec2( 450 * scaling, 0);
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
@@ -549,14 +550,11 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         ImGui::CloseCurrentPopup();
 
 
-    auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-    const MR::RibbonFontManager* fontManager = nullptr;
-    if ( menu )
-        fontManager = &menu->getFontManager();
-    if ( fontManager )
-        ImGui::PushFont( fontManager->getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
+    auto font = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::BigSemiBold );
+    if ( font )
+        ImGui::PushFont( font );
     ImGui::Text( "%s", "Translation scales" );
-    if ( fontManager )
+    if ( font )
         ImGui::PopFont();
 
     bool anyChanged = false;
@@ -580,10 +578,10 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
     drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
 
     ImGui::NewLine();
-    if ( fontManager )
-        ImGui::PushFont( fontManager->getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
+    if ( font )
+        ImGui::PushFont( font );
     ImGui::Text( "%s", "Rotation scales" );
-    if ( fontManager )
+    if ( font )
         ImGui::PopFont();
     drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
     drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );

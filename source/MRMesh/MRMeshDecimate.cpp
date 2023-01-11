@@ -423,7 +423,10 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, pDest, pDest2 ) );
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            if ( triAspect >= settings_.criticalTriAspectRatio )
+                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
@@ -456,7 +459,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
-    if ( maxNewAspectRatio > maxOldAspectRatio )
+    if ( maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )

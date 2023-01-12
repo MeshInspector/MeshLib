@@ -205,6 +205,17 @@ Vector3f Mesh::leftDirDblArea( EdgeId e ) const
     return cross( bp - ap, cp - ap );
 }
 
+float Mesh::triangleAspectRatio( FaceId f ) const
+{
+    VertId a, b, c;
+    topology.getTriVerts( f, a, b, c );
+    assert( a.valid() && b.valid() && c.valid() );
+    const auto & ap = points[a];
+    const auto & bp = points[b];
+    const auto & cp = points[c];
+    return MR::triangleAspectRatio( ap, bp, cp );
+}
+
 double Mesh::area( const FaceBitSet & fs ) const
 {
     MR_TIMER

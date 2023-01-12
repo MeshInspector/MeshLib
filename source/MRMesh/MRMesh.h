@@ -81,6 +81,8 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float dblArea( FaceId f ) const { return dirDblArea( f ).length(); }
     // returns the area of given face
     [[nodiscard]] float area( FaceId f ) const { return 0.5f * dblArea( f ); }
+    // returns aspect ratio of a triangle equal to the ratio of the circum-radius to twice its in-radius
+    [[nodiscard]] MRMESH_API float triangleAspectRatio( FaceId f ) const;
     // returns the area of given face-region
     [[nodiscard]] MRMESH_API double area( const FaceBitSet & fs ) const;
     // this version returns the area of whole mesh if argument is nullptr

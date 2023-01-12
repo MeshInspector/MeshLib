@@ -63,18 +63,29 @@ void printSummarizedRecords( const TimeRecord& root, const std::string& name, co
     ss << "    Name";
     loggerHandle->info( ss.str() );
 
+    int skipCount = 0;
+    double skipSec = 0;
     for ( const auto & p : sumPairs )
     {
         auto sec = p.second.seconds();
         if ( sec < minTimeSec )
         {
-            loggerHandle->info( "Skip places faster than {} sec", minTimeSec );
-            break;
+            skipCount += p.second.count;
+            skipSec += sec;
+            continue;
         }
         ss = std::stringstream{};
         ss << std::setw( 9 )  << std::right << p.second.count;
         ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << sec;
         ss << "    " << p.first;
+        loggerHandle->info( ss.str() );
+    }
+    if ( skipCount > 0 )
+    {
+        ss = std::stringstream{};
+        ss << std::setw( 9 )  << std::right << skipCount;
+        ss << std::setw( 12 ) << std::right << std::fixed << std::setprecision( 3 ) << skipSec;
+        ss << std::defaultfloat << "    (others, each faster than " << minTimeSec << " sec)";
         loggerHandle->info( ss.str() );
     }
 }
@@ -97,7 +108,7 @@ void ThreadRootTimeRecord::printTree()
     loggerHandle->info( ss.str() );
     time = high_resolution_clock::now() - started;
     printTimeRecord( *this, "(total)", 4, loggerHandle, minTimeSec );
-    printSummarizedRecords( *this, "(other)", loggerHandle, minTimeSec );
+    printSummarizedRecords( *this, "(not covered by timers)", loggerHandle, minTimeSec );
 }
 
 ThreadRootTimeRecord::~ThreadRootTimeRecord()

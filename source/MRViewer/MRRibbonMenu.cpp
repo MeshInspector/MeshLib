@@ -1817,7 +1817,6 @@ void RibbonMenu::drawShortcutsWindow_()
     const auto scaling = menu_scaling();
     float windowWidth = 920.0f * scaling;
 
-
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
     float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y  + 2 * style.WindowPadding.y ) * scaling;
@@ -1852,45 +1851,32 @@ void RibbonMenu::drawShortcutsWindow_()
     windowPos.y = ( Viewer::instanceRef().window_height - windowHeight ) * 0.5f;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ) );
+    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Appearing );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowWidth, -1 ), ImVec2( windowWidth, 0 ) );
 
     if ( !ImGui::IsPopupOpen( "HotKeys" ) )
         ImGui::OpenPopup( "HotKeys" );
 
-    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
-        return;
-    
-    ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
-
-    ImGui::Indent();
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * cDefaultItemSpacing * scaling );
-
-    ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Headline ) );
-    ImGui::Text( "Hotkeys" );
-    ImGui::PopFont();
-
-    const float exitButtonSize = 30.0f * scaling;
-    ImGui::SameLine( windowWidth - exitButtonSize - 2.0f * cDefaultItemSpacing * scaling );
-
-    ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::Icons ) );
-    ImGui::SetCursorPosY( 2 * cDefaultWindowPaddingY * scaling );
-    ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed(ImGuiKey_Escape) )
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        ImGui::PopStyleColor( 2 );
-        ImGui::PopFont();
-        ImGui::PopStyleVar( 2 );
-        ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
-        showShortcuts_ = false;
+        ImGui::PopStyleVar();
         return;
     }
-    ImGui::PopStyleColor( 2 );
-    ImGui::PopFont();
+    ImGui::PopStyleVar();
 
-    auto addReadOnlyLine = [scaling, &style] ( const std::string& line )
+    if ( ImGui::ModalBigTitle( "HotKeys", scaling ) )
+    {
+        ImGui::CloseCurrentPopup();
+        showShortcuts_ = false;
+        ImGui::EndPopup();
+        return;
+    }
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
+
+    int lineIndexer = 0;
+    auto addReadOnlyLine = [scaling, &style, &lineIndexer] ( const std::string& line )
     {
         const auto textWidth = ImGui::CalcTextSize( line.c_str() ).x;
         // read only so const_sast should be ok
@@ -1899,7 +1885,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
         auto framePaddingX = std::max( style.FramePadding.x, ( itemWidth - textWidth ) / 2.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { framePaddingX, cButtonPadding * scaling } );
-        ImGui::InputText( ( "##" + line ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::InputText( ( "##" + line + std::to_string( ++lineIndexer ) ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };
@@ -1995,7 +1981,7 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::EndTable();
     }
 
-    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
 

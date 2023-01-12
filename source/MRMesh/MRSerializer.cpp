@@ -300,7 +300,7 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
 }
 
 tl::expected<void, std::string> serializeObjectTree( const Object& object, const std::filesystem::path& path, 
-    ProgressCallback progress, FolderCallback preCompress )
+    ProgressCallback progressCb, FolderCallback preCompress )
 {
     MR_TIMER;
     if (path.empty())
@@ -310,7 +310,7 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
     if ( !scenePath )
         return tl::make_unexpected( "Cannot create temporary folder" );
 
-    if ( progress && !progress( 0.0f ) )
+    if ( progressCb && !progressCb( 0.0f ) )
         return tl::make_unexpected( "Canceled" );
 
     Json::Value root;
@@ -332,8 +332,7 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
     for ( auto & f : saveModelFutures.value() )
         f.get();
 #else
-    if ( progress )
-        progress( 0.1f );
+    reportProgress( progressCb, 0.1f );
 
     auto allSavesDone = [&]()
     {
@@ -354,13 +353,13 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
     // wait for all models are saved before making compressed folder
     while ( !allSavesDone() )
     {
-        if ( progress )
+        if ( progressCb )
         {
-            progress( 0.1f + 0.8f * numFinishedSaves() / saveModelFutures.value().size() );
+            progressCb( 0.1f + 0.8f * numFinishedSaves() / saveModelFutures.value().size() );
         }
     }
 
-    if ( progress && !progress( 0.9f ) )
+    if ( progressCb && !progressCb( 0.9f ) )
     {
         return tl::make_unexpected( "Canceled" );
     }
@@ -370,8 +369,7 @@ tl::expected<void, std::string> serializeObjectTree( const Object& object, const
 
     auto res = compressZip( path, scenePath );
 
-    if ( progress )
-        progress( 1.0f );
+    reportProgress( progressCb, 1.0f );
 
     return res;
 }

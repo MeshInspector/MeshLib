@@ -142,6 +142,8 @@ protected:
   bool selectionChangedToSingleObj_{ false };
   // this function should be called after BeginChild("Meshes") (child window with scene tree)
   MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
+  // menu will change objects' colors in this viewport
+  ViewportId selectedViewport_ = {};
 
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;

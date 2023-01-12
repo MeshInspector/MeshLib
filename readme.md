@@ -216,7 +216,14 @@ python3 ./scripts/local_server.py
 # Integration
 
 ## Linux Ubuntu/Fedora
-You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager
+You can download [dev package](https://github.com/MeshInspector/MeshLib/releases) and install it with your Linux OS package manager. 
+Examples of integration with cmake can be found in the `./examples` directory.
+
+
+## MacOS
+Same as for Linux, but requires brew packages to be installed:
+`xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt`
+
 
 ## Windows
 There are two general options of integrating MeshLib into your project:

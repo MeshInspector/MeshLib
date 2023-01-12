@@ -239,6 +239,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         viewer->dragDrop( paths );
     } } );
+    viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )
@@ -1211,7 +1212,7 @@ MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject
     if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
         return VisualObjectRenderType::NoDepthTest;
 
-    if ( obj->getBackColor().a < 255 || obj->getFrontColor( obj->isSelected() ).a < 255 )
+    if ( obj->getBackColor( viewportId ).a < 255 || obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 )
         return VisualObjectRenderType::Transparent;
 
     return VisualObjectRenderType::Opaque;
@@ -1402,15 +1403,8 @@ void Viewer::postResize( int w, int h )
 
 void Viewer::postSetPosition( int xPos, int yPos )
 {
-    if ( !windowMaximized )
-    {
-        if ( yPos == 0 )
-        {
-            assert( false ); // to catch it once it happens
-            yPos = 40; // handle for one rare issue
-        }
-        windowSavePos = { xPos,yPos };
-    }
+    if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
+        windowSavePos = { xPos, yPos };
 }
 
 void Viewer::postSetMaximized( bool maximized )

@@ -133,7 +133,7 @@ std::optional<Mesh> PlanarTriangulator::run()
         params.metric = getSimplePlanarMetric( mesh_, dirE );
         fillHole( mesh_, dirE, params );
     }
-    makeDeloneEdgeFlips( mesh_, { .maxDeviationAfterFlip = std::numeric_limits<float>::epsilon() }, 100 );
+    makeDeloneEdgeFlips( mesh_, {}, 100 );
 
     return std::move( mesh_ ); // move here to avoid copy of class member
 }

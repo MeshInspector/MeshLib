@@ -38,10 +38,10 @@ public:
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
     /// returns FaceId -> leaf#;
-    /// \param buffer in faceMap must be resized before the call
+    /// \param buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
     MRMESH_API void getLeafOrder( FaceBMap & faceMap ) const;
     /// returns FaceId -> leaf#, then resets leaf order to 0,1,2,...;
-    /// \param buffer in faceMap must be resized before the call
+    /// \param buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
     MRMESH_API void getLeafOrderAndReset( FaceBMap & faceMap );
 
     /// returns set of nodes containing among direct or indirect children given faces

@@ -188,16 +188,22 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence )
 {
     MR_TIMER;
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
 
-    const auto& allRoots = unionFindStruct.roots();
-    size_t res = 0;
-    for ( auto f : region )
+    std::atomic<size_t> res{ 0 };
+    tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId( unionFindStruct.size() ) ),
+        [&]( const tbb::blocked_range<FaceId> & range )
     {
-        if ( allRoots[f]  == f )
-            ++res;
-    }
+        size_t myRoots = 0;
+        for ( auto f = range.begin(); f < range.end(); ++f )
+        {
+            if ( !region.test( f ) )
+                continue;
+            if ( f == unionFindStruct.findUpdateRange( f, range.begin(), range.end() ) )
+                ++myRoots;
+        }
+        res.fetch_add( myRoots, std::memory_order_relaxed );
+    } );
     return res;
 }
 
@@ -319,50 +325,98 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
     return false;
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence/* = FaceIncidence::PerEdge*/ )
+static UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart )
 {
-    MR_TIMER;
+    MR_TIMER
 
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-    UnionFind<FaceId> unionFindStructure( region.find_last() + 1 );
+    const FaceBitSet* lastPassFaces = &region;
+    const auto numFaces = region.find_last() + 1;
+    UnionFind<FaceId> res( numFaces );
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    FaceBitSet bdFaces;
+    if ( numThreads > 1 )
+    {
+        bdFaces.resize( numFaces );
+        lastPassFaces = &bdFaces;
+        const int endBlock = int( bdFaces.size() + bdFaces.bits_per_block - 1 ) / bdFaces.bits_per_block;
+        const auto bitsPerThread = ( endBlock + numThreads - 1 ) / numThreads * BitSet::bits_per_block;
+
+        tbb::parallel_for( tbb::blocked_range<int>( 0, numThreads ),
+            [&]( const tbb::blocked_range<int> & range )
+            {
+                const FaceId fBeg{ range.begin() * bitsPerThread };
+                const FaceId fEnd{ range.end() < numThreads ? range.end() * bitsPerThread : bdFaces.size() };
+                for ( auto f0 = fBeg; f0 < fEnd; ++f0 )
+                {
+                    if ( !contains( region, f0 ) )
+                        continue;
+                    EdgeId e[3];
+                    mesh.topology.getTriEdges( f0, e );
+                    for ( int i = 0; i < 3; ++i )
+                    {
+                        assert( mesh.topology.left( e[i] ) == f0 );
+                        FaceId f1 = mesh.topology.right( e[i] );
+                        if ( f0 < f1 && contains( meshPart.region, f1 ) )
+                        {
+                            if ( f1 < fEnd )
+                                res.unite( f0, f1 ); // our region
+                            else
+                                bdFaces.set( f0 ); // remember the face to unite later in a sequential region
+                        }
+                    }
+                }
+            } );
+    }
+
+    for ( auto f0 : *lastPassFaces )
+    { 
+        EdgeId e[3];
+        mesh.topology.getTriEdges( f0, e );
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert( mesh.topology.left( e[i] ) == f0 );
+            FaceId f1 = mesh.topology.right( e[i] );
+            if ( f0 < f1 && contains( meshPart.region, f1 ) )
+                res.unite( f0, f1 );
+        }
+    }
+
+    return res;
+}
+UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence/* = FaceIncidence::PerEdge*/ )
+{
+    UnionFind<FaceId> res;
     if ( incidence == FaceIncidence::PerEdge )
     {
-        for ( auto f0 : region )
-        { 
-            EdgeId e[3];
-            mesh.topology.getTriEdges( f0, e );
-            for ( int i = 0; i < 3; ++i )
-            {
-                assert( mesh.topology.left( e[i] ) == f0 );
-                FaceId f1 = mesh.topology.right( e[i] );
-                if ( f1 < f0 && contains( meshPart.region, f1 ) )
-                    unionFindStructure.unite( f0, f1 );
-            }
-        }
+        res = getUnionFindStructureFacesPerEdge( meshPart );
+        return res;
     }
-    else
+
+    MR_TIMER
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+    res.reset( region.find_last() + 1 );
+    assert ( incidence == FaceIncidence::PerVertex );
+    VertBitSet store;
+    for ( auto v : getIncidentVerts( mesh.topology, meshPart.region, store ) )
     {
-        assert ( incidence == FaceIncidence::PerVertex );
-        VertBitSet store;
-        for ( auto v : getIncidentVerts( mesh.topology, meshPart.region, store ) )
+        FaceId f0;
+        for ( auto edge : orgRing( mesh.topology, v ) )
         {
-            FaceId f0;
-            for ( auto edge : orgRing( mesh.topology, v ) )
+            FaceId f1 = mesh.topology.left( edge );
+            if ( !contains( meshPart.region, f1 ) )
+                continue;
+            if ( !f0 )
             {
-                FaceId f1 = mesh.topology.left( edge );
-                if ( !contains( meshPart.region, f1 ) )
-                    continue;
-                if ( !f0 )
-                {
-                    f0 = f1;
-                    continue;
-                }
-                unionFindStructure.unite( f0, f1 );
+                f0 = f1;
+                continue;
             }
+            res.unite( f0, f1 );
         }
     }
-    return unionFindStructure;
+    return res;
 }
 
 UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region )

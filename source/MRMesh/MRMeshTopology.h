@@ -205,6 +205,8 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns the number of hole loops in the mesh
+    [[nodiscard]] MRMESH_API int findNumHoles() const;
     /// returns full edge-loop of left face from (e) starting from (e) itself
     [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
     /// returns full edge-loops of left faces from every edge in (es);
@@ -227,6 +229,14 @@ public:
     /// given the edge with left and right triangular faces, which form together a quadrangle,
     /// rotates the edge counter-clockwise inside the quadrangle
     MRMESH_API void flipEdge( EdgeId e );
+    /// tests all edges e having valid left and right faces and org(e0) == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of org(e0)
+    template<typename T>
+    void flipEdgesAround( EdgeId e0, T && flipNeeded );
+    /// tests all edges e having valid left and right faces and v == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of vertex v
+    template<typename T>
+    void flipEdgesAround( VertId v, T && flipNeeded ) { flipEdgesAround( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
 
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
@@ -234,11 +244,13 @@ public:
     /// dest(e) = dest(e-before-split)
     /// \details left and right faces of given edge if valid are also subdivided on two parts each;
     /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
-    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// split given triangle on three triangles, introducing new vertex (which is returned) inside original triangle and connecting it to its vertices
     /// \details if region is given, then it must include (f) and new faces will be added there as well
-    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// flip orientation (normals) of all faces
     MRMESH_API void flipOrientation();
@@ -280,6 +292,10 @@ public:
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
     MRMESH_API void pack( const PackMapping & map );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;
+    /// unlike \ref pack method, this method allocates minimal amount of memory for its operation but works much slower
+    MRMESH_API void packMinMem( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
@@ -338,7 +354,7 @@ private:
 
         bool operator ==( const HalfEdgeRecord & b ) const = default;
         HalfEdgeRecord() noexcept = default;
-        HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,
@@ -386,6 +402,24 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
     getLeftTriVerts( p.e, v );
     for ( int i = 0; i < 3; ++i )
         callback( v[i] );
+}
+
+template<typename T>
+void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        auto testEdge = prev( e.sym() );
+        if ( left( testEdge ) && right( testEdge ) && flipNeeded( testEdge ) )
+            flipEdge( testEdge );
+        else
+        {
+            e = next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
 }
 
 inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )

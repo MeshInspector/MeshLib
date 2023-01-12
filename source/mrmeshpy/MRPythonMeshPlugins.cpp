@@ -238,9 +238,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "critAspectRatio", &SubdivideSettings::critAspectRatio,
             "If subdivideBorder is off subdivider can produce narrow triangles near border\n"
             "this parameter prevents subdivision of such triangles" ).
-        def_readwrite( "useCurvature", &SubdivideSettings::useCurvature,
-            "This option works best for natural surfaces, where all triangles are close to equilateral and have similar area,\n"
-            "and no sharp edges in between" );
+        def_readwrite( "smoothMode", &SubdivideSettings::smoothMode,
+            "Puts new vertices so that they form a smooth surface together with existing vertices.\n"
+            "This option works best for natural surfaces without sharp edges in between triangles" ).
+        def_readwrite( "minSharpDihedralAngle", &SubdivideSettings::minSharpDihedralAngle,
+            "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg( "settings" ) = MR::SubdivideSettings{},
@@ -300,7 +302,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
             "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
 
-    m.def( "computeDistanceMapD", &MR::computeDistanceMapD, pybind11::arg( "mp" ), pybind11::arg( "params" ),
+    m.def( "computeDistanceMapD", &MR::computeDistanceMapD, pybind11::arg( "mp" ), pybind11::arg( "params" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "computes distance map for presented projection parameters\n"
         "use MeshToDistanceMapParams constructor instead of overloads of this function\n"
         "MeshPart - input 3d model\n"
@@ -347,6 +349,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "egdeWeightsType" ) = MR::Laplacian::EdgeWeights::Cotan,
+        pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 

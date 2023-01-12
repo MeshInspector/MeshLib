@@ -19,12 +19,14 @@ namespace
 
 struct FacePoint
 {
+    FacePoint( NoInit ) noexcept : pt( noInit ), f( noInit ) {}
+
     Vector3f pt; // minimal bounding box point of the face
     FaceId f;
 };
 static_assert( sizeof( FacePoint ) == 16 );
 
-using FacePointSpan = std::span<FacePoint>;
+using FacePointSpan = std::span<NoDefInit<FacePoint>>;
 
 // [0, result) will go to left span and [result, lastLeaf) - to the right child
 size_t partitionFacePoints( const FacePointSpan & span )
@@ -89,13 +91,19 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     if ( numFaces <= 0 )
         return res;
 
+    res.b.resize( mesh.topology.faceSize() );
+    res.tsize = numFaces;
+
     Buffer<FacePoint, FaceId> facePoints( numFaces );
     const bool packed = numFaces == mesh.topology.faceSize();
     if ( !packed )
     {
         FaceId n = 0_f;
-        for ( auto f : mesh.topology.getValidFaces() )
-            facePoints[n++].f = f;
+        for ( FaceId f = 0_f; f < res.b.size(); ++f )
+            if ( mesh.topology.hasFace( f ) )
+                facePoints[n++].f = f;
+            else
+                res.b[f] = FaceId{};
     }
 
     // compute minimal point of each face
@@ -132,8 +140,6 @@ FaceBMap getOptimalFaceOrdering( const Mesh & mesh )
     }
     orderFacePoints( { begin( facePoints ), end( facePoints ) }, numThreads );
 
-    res.b.resize( mesh.topology.faceSize() );
-    res.tsize = numFaces;
     tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, facePoints.endId() ),
         [&]( const tbb::blocked_range<FaceId>& range )
     {
@@ -151,6 +157,8 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
 
     struct OrderedVertex
     {
+        OrderedVertex( NoInit ) : v( noInit ) {}
+        OrderedVertex( VertId v, std::uint32_t f ) noexcept : v( v ), f( f ) {}
         VertId v;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedVertex & b ) const
@@ -204,6 +212,8 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
 
     struct OrderedEdge
     {
+        OrderedEdge( NoInit ) noexcept : ue( noInit ) {}
+        OrderedEdge( UndirectedEdgeId ue, std::uint32_t f ) noexcept : ue( ue ), f( f ) {}
         UndirectedEdgeId ue;
         std::uint32_t f; // the smallest nearby face
         bool operator <( const OrderedEdge & b ) const

@@ -22,6 +22,9 @@ namespace MR
 // every path has region faces on the left, and valid not-region faces on the right
 [[nodiscard]] MRMESH_API std::vector<EdgePath> findRegionBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region );
 
+// returns all region boundary edges, where each edge has a region face on one side, and a valid not-region face on another side
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopology & topology, const FaceBitSet & region );
+
 /// \returns All out of region faces that have a common edge with at least one region face
 [[nodiscard]] MRMESH_API FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet& region );
 

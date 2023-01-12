@@ -205,12 +205,30 @@ Vector3f Mesh::leftDirDblArea( EdgeId e ) const
     return cross( bp - ap, cp - ap );
 }
 
+float Mesh::triangleAspectRatio( FaceId f ) const
+{
+    VertId a, b, c;
+    topology.getTriVerts( f, a, b, c );
+    assert( a.valid() && b.valid() && c.valid() );
+    const auto & ap = points[a];
+    const auto & bp = points[b];
+    const auto & cp = points[c];
+    return MR::triangleAspectRatio( ap, bp, cp );
+}
+
 double Mesh::area( const FaceBitSet & fs ) const
 {
-    double twiceRes = 0;
-    for ( auto f : fs )
-        twiceRes += dblArea( f );
-    return 0.5 * twiceRes;
+    MR_TIMER
+
+    return 0.5 * parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), 0.0,
+    [&] ( const auto & range, double curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( fs.test( f ) )
+                curr += dblArea( f );
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
 }
 
 class FaceVolumeCalc
@@ -258,7 +276,7 @@ double Mesh::volume( const FaceBitSet* region /*= nullptr */ ) const
     const auto lastValidFace = topology.lastValidFace();
     const auto& faces = topology.getFaceIds( region );
     FaceVolumeCalc calc( *this, faces );
-    parallel_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1 ), calc );
+    parallel_deterministic_reduce( tbb::blocked_range<FaceId>( 0_f, lastValidFace + 1, 1024 ), calc );
     return calc.volume() / 6.0;
 }
 
@@ -643,17 +661,17 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
     invalidateCaches();
 }
 
-EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region )
+EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region, FaceHashMap * new2Old )
 {
-    EdgeId newe = topology.splitEdge( e, region );
+    EdgeId newe = topology.splitEdge( e, region, new2Old );
     points.autoResizeAt( topology.org( e ) ) = newVertPos;
     return newe;
 }
 
-VertId Mesh::splitFace( FaceId f, FaceBitSet * region )
+VertId Mesh::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new2Old )
 {
     auto newPos = triCenter( f );
-    VertId newv = topology.splitFace( f, region );
+    VertId newv = topology.splitFace( f, region, new2Old );
     points.autoResizeAt( newv ) = newPos;
     return newv;
 }
@@ -779,6 +797,13 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     {
         getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
+        const bool packed = topology.numValidFaces() == topology.faceSize();
+        if ( !packed )
+        {
+            for ( FaceId f = 0_f; f < map.f.b.size(); ++f )
+                if ( !topology.hasFace( f ) )
+                    map.f.b[f] = FaceId{};
+        }
         AABBTreeOwner_.get()->getLeafOrderAndReset( map.f );
     }
     else

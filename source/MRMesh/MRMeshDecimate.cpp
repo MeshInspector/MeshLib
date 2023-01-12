@@ -414,14 +414,19 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         const auto pDest = mesh_.points[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( po - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
+        if ( !topology.left( e ) )
+            continue;
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
-        if ( eDest != vr && topology.left( e ) )
+        if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triangleAspectRatio( collapsePos, pDest, pDest2 ) );
+            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+            if ( triAspect >= settings_.criticalTriAspectRatio )
+                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
+            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
@@ -437,9 +442,11 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         const auto pDest = mesh_.points[eDest];
         maxOldEdgeLenSq = std::max( maxOldEdgeLenSq, ( pd - pDest ).lengthSq() );
         maxNewEdgeLenSq = std::max( maxNewEdgeLenSq, ( collapsePos - pDest ).lengthSq() );
+        if ( !topology.left( e ) )
+            continue;
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
-        if ( eDest != vl && topology.left( e ) )
+        if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
             triDblAreas_.push_back( da );
@@ -452,7 +459,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
-    if ( maxNewAspectRatio > maxOldAspectRatio )
+    if ( maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
@@ -632,7 +639,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
-    const auto facesPerPart = mesh.topology.faceSize() / sz;
+    // parallel threads shall be able to safely modify settings.region faces
+    const auto facesPerPart = ( mesh.topology.faceSize() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
 
     // determine faces for each part
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
@@ -740,8 +748,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
     DecimateSettings seqSettings = settings;
     seqSettings.vertForms = &mVertForms;
-    if ( settings.progressCallback )
-        seqSettings.progressCallback = [cb = settings.progressCallback](float p) { return cb( 0.9f + 0.1f * p ); };
+    seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
     res = decimateMeshSerial( mesh, seqSettings );
     // update res from submesh decimations
     for ( const auto & submesh : parts )
@@ -775,12 +782,11 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = 2 * settings.targetEdgeLen;
     subs.maxEdgeSplits = 10'000'000;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
-    subs.useCurvature = settings.useCurvature;
+    subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
     subs.onEdgeSplit = settings.onEdgeSplit;
-    if ( settings.progressCallback )
-        subs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( arg * 0.5f ); };
+    subs.progressCallback = subprogress( settings.progressCallback, 0.0f, 0.5f );
     subdivideMesh( mesh, subs );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.5f ) )
@@ -791,8 +797,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.maxError = settings.targetEdgeLen / 2;
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
-    if ( settings.progressCallback )
-        decs.progressCallback = [settings] ( float arg ) { return settings.progressCallback( 0.5f + arg * 0.5f ); };
+    decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );
     decimateMesh( mesh, decs );
 
     if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )

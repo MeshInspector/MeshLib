@@ -21,7 +21,7 @@ inline auto area( const auto& p, const auto& q, const auto& r )
     return dir( p, q, r ).length();
 }
 
-bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
+bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
 {
     const auto dirABD = dir( a, b, d );
     const auto dirDBC = dir( d, b, c );
@@ -37,63 +37,29 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
         const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
         const auto angleChange = std::abs( oldAngle - newAngle );
         if ( angleChange > maxAngleChange )
-            return true;
+        {
+            if ( criticalTriAspectRatio < FLT_MAX )
+            {
+                const auto maxAspect = std::max( {
+                    triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ),
+                    triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) } );
+                if ( maxAspect <= criticalTriAspectRatio )
+                    return true;
+                // otherwise the angle between degenerate triangles cannot be trusted
+            }
+            else
+                return true;
+        }
     }
 
-    auto metricAC = std::max( circumcircleDiameter( a, c, d ), circumcircleDiameter( c, a, b ) );
-    auto metricBD = std::max( circumcircleDiameter( b, d, a ), circumcircleDiameter( d, b, c ) );
+    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
     return metricAC <= metricBD;
 }
 
-bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange )
+bool checkDeloneQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio )
 {
-    return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange );
-}
-
-template<typename T>
-bool checkAspectRatiosInQuadrangleT( const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c, const Vector3<T>& d, T maxAngleChange, T criticalTriAspectRatio )
-{
-    auto metricAC = std::max( triangleAspectRatio( a, c, d ), triangleAspectRatio( c, a, b ) );
-    auto metricBD = std::max( triangleAspectRatio( b, d, a ), triangleAspectRatio( d, b, c ) );
-    if ( metricAC <= metricBD )
-        return true;
-    if ( metricAC < criticalTriAspectRatio && maxAngleChange < NoAngleChangeLimit )
-    {
-        const auto dirABD = dir( a, b, d );
-        const auto dirDBC = dir( d, b, c );
-        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
-
-        const auto dirABC = dir( a, b, c );
-        const auto dirACD = dir( a, c, d );
-        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
-
-        const auto angleChange = std::abs( oldAngle - newAngle );
-        if ( angleChange > maxAngleChange )
-            return true;
-    }
-    else if ( metricAC >= criticalTriAspectRatio )
-    {
-        const auto sABC = area( a, b, c );
-        const auto sACD = area( a, c, d );
-
-        const auto sABD = area( a, b, d );
-        const auto sDBC = area( d, b, c );
-
-        // in case of degenerate triangles, select the subdivision with smaller total area
-        if ( sABC + sACD < sABD + sDBC )
-            return true;
-    }
-    return false;
-}
-
-bool checkAspectRatiosInQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange, double criticalTriAspectRatio )
-{
-    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
-}
-
-bool checkAspectRatiosInQuadrangle( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float maxAngleChange, float criticalTriAspectRatio )
-{
-    return checkAspectRatiosInQuadrangleT( a, b, c, d, maxAngleChange, criticalTriAspectRatio );
+    return checkDeloneQuadrangle( Vector3d{a}, Vector3d{b}, Vector3d{c}, Vector3d{d}, maxAngleChange, criticalTriAspectRatio );
 }
 
 bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings, float * deviationSqAfterFlip )
@@ -158,10 +124,7 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     if ( !isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
         return true; // cannot flip because 2d quadrangle is concave
 
-    if ( settings.criticalTriAspectRatio < FLT_MAX )
-        return checkAspectRatiosInQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );
-    else
-        return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange );
+    return checkDeloneQuadrangle( ap, bp, cp, dp, settings.maxAngleChange, settings.criticalTriAspectRatio );
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )
@@ -202,19 +165,10 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
 {
     MR_WRITER( mesh );
-    const EdgeId e0 = e;
-    for (;;)
+    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge )
     {
-        auto testEdge = mesh.topology.prev( e.sym() );
-        if ( checkDeloneQuadrangleInMesh( mesh, testEdge, settings ) )
-        {
-            e = mesh.topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-            continue;
-        }
-        mesh.topology.flipEdge( testEdge );
-    } 
+        return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
+    } );
 }
 
 } //namespace MR

@@ -13,6 +13,8 @@
 #include "MRFillContour.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
+#include "MRMeshCollide.h"
 
 namespace
 {
@@ -330,7 +332,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     return result;
 }
 
-BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
 
@@ -367,21 +369,64 @@ BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh
 
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
     auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
-    // filter out contours not lying outside the other mesh
-    std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-    } );
-    std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
-    } );
 
-    collFacesA = fillContourLeft( meshA.topology, collBordersA );
-    collFacesB = fillContourLeft( meshB.topology, collBordersB );
+    const bool needInsidePartA = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideA || operation == BooleanOperation::DifferenceBA );
+    const bool needInsidePartB = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideB || operation == BooleanOperation::DifferenceAB );
 
-    result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
-    result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+    if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
+    {
+        std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return needInsidePartA != collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
+
+        collFacesA = fillContourLeft( meshA.topology, collBordersA );
+        result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+
+        const auto aComponents = MeshComponents::getAllComponents(meshA);
+
+        for ( const auto& aComponent : aComponents )
+        {
+            const auto aComponentVerts = getInnerVerts( meshA.topology, aComponent );
+            if ( aComponentVerts.intersects( result.meshAVerts ) )
+                continue;
+            const bool inside = isInside( MeshPart( meshA, &aComponent ), MeshPart( meshB ), rigidB2A );
+            if ( needInsidePartA == inside )
+            {
+                result.meshAVerts |= aComponentVerts;
+            }
+        }
+    }
+
+    if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
+    {
+        std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return needInsidePartB != collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
+        } );
+
+        collFacesB = fillContourLeft(meshB.topology, collBordersB);
+        result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+        
+        const auto bComponents = MeshComponents::getAllComponents(meshB);
+        std::unique_ptr<AffineXf3f> rigidA2B;
+        if ( rigidB2A )
+            rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );
+
+        for ( const auto& bComponent : bComponents )
+        {
+            const auto bComponentVerts = getInnerVerts( meshB.topology, bComponent );
+            if ( bComponentVerts.intersects( result.meshBVerts ) )
+                continue;
+
+            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
+
+            if ( needInsidePartB == inside  )
+            {
+                result.meshBVerts |= bComponentVerts;
+            }
+        }
+    }
 
     return result;
 }

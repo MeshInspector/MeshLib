@@ -130,8 +130,7 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressC
     for ( auto v : regionVerts )
     {
         grid.addVertex( mp.mesh.points[v], v );
-        // counter & 0x7f == 0 ~ counter % 128 == 0
-        if ( cb && ( ( ( counter++ ) & 0x7f ) == 0 ) && !cb( 0.1f + 0.8f * float( counter ) / float( size ) ) )
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
             return {};
     }
 
@@ -167,8 +166,7 @@ VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, Progres
     for ( auto v : cloud.validPoints )
     {
         grid.addVertex( cloud.points[v], v );
-        // counter & 0x7f == 0 ~ counter % 128 == 0
-        if ( cb && ( ( ( counter++ ) & 0x7f ) == 0 ) && !cb( 0.1f + 0.8f * float( counter ) / float( size ) ) )
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
             return {};
     }
 

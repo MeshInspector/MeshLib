@@ -26,15 +26,7 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
-        ProgressCallback internalCb;
-        if ( cb )
-        {
-            internalCb = [&] ( float p )
-            {
-                return cb( ( float( i ) + p ) / float( params.iterations ) );
-            };
-        }
-
+        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
         newPoints = mesh.points;
         keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
@@ -85,18 +77,8 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
-        ProgressCallback internalCb1, internalCb2;
-        if ( cb )
-        {
-            internalCb1 = [&] ( float p )
-            {
-                return cb( ( float( i ) + p * 0.5f ) / float( params.iterations ) );
-            };
-            internalCb2 = [&] ( float p )
-            {
-                return cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
-            };
-        }
+        auto internalCb1 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f ) / float( params.iterations ); } );
+        auto internalCb2 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ); } );
         newPoints = mesh.points;
         keepGoing = BitSetParallelFor( zone, [&]( VertId v )
         {
@@ -163,14 +145,7 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
     bool keepGoing = true;
     for ( int i = 0; i < params.iterations; ++i )
     {
-        ProgressCallback internalCb;
-        if ( cb )
-        {
-            internalCb = [&] ( float p )
-            {
-                return cb( ( float( i ) + p ) / float( params.iterations ) );
-            };
-        }
+        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
         newPoints = mesh.points;
         keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
         {

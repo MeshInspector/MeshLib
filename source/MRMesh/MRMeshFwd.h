@@ -39,7 +39,11 @@
 
 namespace MR
 {
- 
+
+struct NoInit {};
+inline constexpr NoInit noInit;
+template <typename T> struct MRMESH_CLASS NoDefInit;
+
 class MRMESH_CLASS EdgeTag;
 class MRMESH_CLASS UndirectedEdgeTag;
 class MRMESH_CLASS FaceTag;
@@ -230,13 +234,18 @@ class PointAccumulator;
 
 struct EdgePoint;
 using MeshEdgePoint = EdgePoint;
+using SurfacePath = std::vector<MeshEdgePoint>;
+using SurfacePaths = std::vector<SurfacePath>;
+using IsoLine = SurfacePath;
+using IsoLines = SurfacePaths;
+using PlaneSection = SurfacePath;
+using PlaneSections = SurfacePaths;
 struct EdgePointPair;
 
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 struct PointOnFace;
-using SurfacePath = std::vector<MeshEdgePoint>;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;

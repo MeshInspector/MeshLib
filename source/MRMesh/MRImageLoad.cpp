@@ -73,7 +73,7 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
     ReadPng png( file );
 
     if ( !png.fp )
-        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
     if ( !png.pngPtr )
         return tl::make_unexpected( std::string( "Cannot read png " ) + utf8string( file ) );

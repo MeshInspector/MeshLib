@@ -7,8 +7,10 @@
 #include "MRTimer.h"
 #include "MRMeshBuilder.h"
 #include "MRTriMath.h"
-#include <queue>
 #include "MRGTest.h"
+#include "MRPositionVertsSmoothly.h"
+#include "MRRegionBoundary.h"
+#include <queue>
 
 namespace MR
 {
@@ -83,11 +85,13 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 
     int splitsDone = 0;
     int lastProgressSplitsDone = 0;
+    VertBitSet newVerts;
+    const float whileProgress = settings.smoothMode ? 0.5f : 0.75f;
     while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
         if ( settings.progressCallback && splitsDone >= 1000 + lastProgressSplitsDone ) 
         {
-            if ( !settings.progressCallback( 0.25f + 0.75f * splitsDone / settings.maxEdgeSplits ) )
+            if ( !settings.progressCallback( 0.25f + whileProgress * splitsDone / settings.maxEdgeSplits ) )
                 return splitsDone;
             lastProgressSplitsDone = splitsDone;
         }
@@ -99,21 +103,11 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( el.lenSq != mesh.edgeLengthSq( e ) )
             continue; // outdated record in the queue
 
-        Vector3f newVertPos;
-        if ( settings.useCurvature )
-        {
-            const auto po = mesh.orgPnt( e );
-            const auto pd = mesh.destPnt( e );
-            const auto no = mesh.pseudonormal( mesh.topology.org( e ) );
-            const auto nd = mesh.pseudonormal( mesh.topology.dest( e ) );
-            const float sign = dot( pd - po, nd - no ) >= 0 ? 1.f : -1.f;
-            newVertPos = 0.5f * ( po + pd + sign * std::tan( angle( no, nd ) / 4 ) * ( pd - po ).length() * ( no + nd ).normalized()  );
-        }
-        else
-            newVertPos = mesh.edgeCenter( e );
-        const auto e1 = mesh.splitEdge( e, newVertPos, settings.region );
+        const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
 
+        if ( settings.smoothMode )
+            newVerts.autoResizeSet( newVertId );
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
         if ( settings.onVertCreated )
@@ -124,10 +118,29 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
             .maxAngleChange = settings.maxAngleChangeAfterFlip,
+            .criticalTriAspectRatio = 1000,
             .region = settings.region,
             .notFlippable = settings.notFlippable } );
         for ( auto ei : orgRing( mesh.topology, e ) )
             addInQueue( ei.undirected() );
+    }
+
+    if ( settings.smoothMode )
+    {
+        if ( settings.progressCallback && !settings.progressCallback( 0.75f ) )
+            return 0;
+        if ( settings.minSharpDihedralAngle < PI )
+        {
+            const UndirectedEdgeBitSet creaseUEdges = mesh.findCreaseEdges( settings.minSharpDihedralAngle );
+            if ( settings.progressCallback && !settings.progressCallback( 0.76f ) )
+                return 0;
+            const auto sharpVerts = getIncidentVerts( mesh.topology, creaseUEdges );
+            if ( settings.progressCallback && !settings.progressCallback( 0.77f ) )
+                return 0;
+            positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Cotan, &sharpVerts );
+        }
+        else
+            positionVertsSmoothly( mesh, newVerts, Laplacian::EdgeWeights::Cotan );
     }
 
     return splitsDone;

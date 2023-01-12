@@ -1092,7 +1092,7 @@ PaletteChanges Palette(
             palette.setRangeMinMaxNegPos( ranges[0], ranges[1], ranges[2], ranges[3] );
     }
 
-    std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
+    std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( -1, 0 ) ) )
@@ -1103,7 +1103,7 @@ PaletteChanges Palette(
     ImVec2 windowSize( 2 * scaledWidth, 0 );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
     {
         PopStyleVar();
         return PaletteChanges( changes );
@@ -1113,7 +1113,7 @@ PaletteChanges Palette(
     ImGui::InputText( "Config name", currentPaletteName );
 
     const float btnWidth = 80.0f * ImGui::GetIO().DisplayFramebufferScale.x;
-    if ( ImGui::ButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, ImGui::GetFrameHeight() ) ) )
     {
         std::error_code ec;
         if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
@@ -1330,6 +1330,58 @@ void Separator( float scaling, const std::string& text )
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
+}
+
+
+void Spinner( float radius, float scaling )
+{
+    auto pos = GetCursorScreenPos();
+
+    static float angle = 0.0f;
+    const int numCircles = 7;
+    auto color = ImGui::GetColorU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    for ( int i = 0; i < numCircles; ++i )
+    {
+        float angleShift = float( i ) / float( numCircles ) * MR::PI_F * 2.0f;
+        ImVec2 center = ImVec2( pos.x + radius * std::cos( angle + angleShift ), pos.y + radius * std::sin( angle + angleShift ) );
+        ImGui::GetWindowDrawList()->AddCircleFilled( center, radius * 0.1f * scaling, color );
+    }
+    angle += ImGui::GetIO().DeltaTime * 2.2f;
+
+    SetCursorPosY( GetCursorPosY() + radius );
+    ImGui::Dummy( ImVec2( 0, 0 ) );
+    MR::getViewerInstance().incrementForceRedrawFrames();
+}
+
+bool ModalBigTitle( const char* title, float scaling )
+{
+    auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Headline );
+    if ( font )
+        ImGui::PushFont( font );
+    ImGui::Text( "%s", title);
+    if ( font )
+        ImGui::PopFont();
+
+    const float exitButtonSize = 30.0f * scaling;
+    ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );
+
+    std::string closeBtnTxt = "x";
+    ImGui::SetCursorPosY( 2 * MR::cDefaultWindowPaddingY * scaling );
+    ImGui::PushStyleColor( ImGuiCol_Button, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_Border, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( font )
+    {
+        ImGui::PushFont( font );
+        closeBtnTxt = "\xef\x80\x8d";
+    }
+    const bool shoudClose = ImGui::Button( closeBtnTxt.c_str(), ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape );
+    if ( font )
+        ImGui::PopFont();
+    ImGui::PopStyleColor( 2 );
+    ImGui::NewLine();
+
+    return shoudClose;
 }
 
 } // namespace ImGui

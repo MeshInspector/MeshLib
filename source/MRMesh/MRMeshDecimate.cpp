@@ -466,7 +466,7 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     {
         const auto n = Vector3f{ sumDblArea_.normalized() };
         //cannot trust direction of tiny by area triangles
-        const auto areaSqThr = sumDblArea_.lengthSq() * 1e-6f; // 0.001 of area
+        const auto areaSqThr = sumDblArea_.lengthSq() * 1e-10f; // 0.001% of area
         for ( const auto da : triDblAreas_ )
             if ( dot( da, n ) < 0 && da.lengthSq() > areaSqThr )
                 return {};

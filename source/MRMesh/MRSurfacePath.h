@@ -59,8 +59,16 @@ MRMESH_API HashMap<VertId, VertId> computeClosestSurfacePathTargets( const Mesh 
     const VertBitSet & starts, const VertBitSet & ends, const VertBitSet * vertRegion = nullptr,
     Vector<float, VertId> * outSurfaceDistances = nullptr );
 
+/// returns a set of mesh lines passing via most of given vertices in auto-selected order;
+/// the lines try to avoid sharp turns in the vertices
+MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
+
 /// computes the length of surface path
 MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
+
+/// converts lines on mesh in 3D contours by computing coordinate of each point
+MRMESH_API Contour3f surfacePathToContour3f( const Mesh & mesh, const SurfacePath & line );
+MRMESH_API Contours3f surfacePathsToContours3f( const Mesh & mesh, const SurfacePaths & lines );
 
 /// \}
 

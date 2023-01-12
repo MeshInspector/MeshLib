@@ -650,17 +650,17 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
     invalidateCaches();
 }
 
-EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region )
+EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region, FaceHashMap * new2Old )
 {
-    EdgeId newe = topology.splitEdge( e, region );
+    EdgeId newe = topology.splitEdge( e, region, new2Old );
     points.autoResizeAt( topology.org( e ) ) = newVertPos;
     return newe;
 }
 
-VertId Mesh::splitFace( FaceId f, FaceBitSet * region )
+VertId Mesh::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new2Old )
 {
     auto newPos = triCenter( f );
-    VertId newv = topology.splitFace( f, region );
+    VertId newv = topology.splitFace( f, region, new2Old );
     points.autoResizeAt( newv ) = newPos;
     return newv;
 }

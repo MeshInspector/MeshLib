@@ -5,12 +5,6 @@
 namespace MR
 {
 
-using IsoLine = std::vector<MeshEdgePoint>;
-using IsoLines = std::vector<IsoLine>;
-
-using PlaneSection = std::vector<MeshEdgePoint>;
-using PlaneSections = std::vector<PlaneSection>;
-
 /// extracts all iso-lines from given scalar field and iso-value
 MRMESH_API IsoLines extractIsolines( const MeshTopology & topology,
     const Vector<float,VertId> & vertValues, float isoValue, const FaceBitSet * region = nullptr );

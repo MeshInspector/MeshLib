@@ -244,11 +244,13 @@ public:
     /// dest(e) = dest(e-before-split)
     /// \details left and right faces of given edge if valid are also subdivided on two parts each;
     /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
-    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// split given triangle on three triangles, introducing new vertex (which is returned) inside original triangle and connecting it to its vertices
     /// \details if region is given, then it must include (f) and new faces will be added there as well
-    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// flip orientation (normals) of all faces
     MRMESH_API void flipOrientation();

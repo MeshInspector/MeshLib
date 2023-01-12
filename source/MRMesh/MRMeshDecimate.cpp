@@ -424,8 +424,6 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
@@ -452,8 +450,6 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
             triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
@@ -468,9 +464,11 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
     // checks that all new normals are consistent (do not check for degenerate edges)
     if ( ( po != pd ) || ( po != collapsePos ) )
     {
-        auto n = Vector3f{ sumDblArea_.normalized() };
+        const auto n = Vector3f{ sumDblArea_.normalized() };
+        //cannot trust direction of tiny by area triangles
+        const auto areaSqThr = sumDblArea_.lengthSq() * 1e-6f; // 0.001 of area
         for ( const auto da : triDblAreas_ )
-            if ( dot( da, n ) < 0 )
+            if ( dot( da, n ) < 0 && da.lengthSq() > areaSqThr )
                 return {};
     }
 

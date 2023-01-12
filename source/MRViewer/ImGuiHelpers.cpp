@@ -740,7 +740,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 {
     const auto color = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32();
     ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
-    ImGui::PushStyleColor( ImGuiCol_Text, { 0 } );
+    ImGui::PushStyleColor( ImGuiCol_Text, 0 );
 
     bool started = BeginPopupModal( label, open, flags );
     ImGui::PopStyleColor( 2 );

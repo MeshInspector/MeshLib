@@ -60,7 +60,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( RibbonButtonDrawer::GradientButton( "Toolbar Customize", ImVec2( -1, 0 ) ) )
         ImGui::OpenPopup( "Toolbar Customize" );
-    drawDialogQuickAccessSettings_( menuScaling );
+    drawDialogToolbarSettings_( menuScaling );
 
     if ( RibbonButtonDrawer::GradientButton( "Scene Mouse Controls", ImVec2( -1, 0 ) ) )
         ImGui::OpenPopup( "Scene Mouse Controls" );
@@ -416,15 +416,24 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
     ImGui::EndPopup();
 }
 
-void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
+void ViewerSettingsPlugin::drawDialogToolbarSettings_( float scaling )
 {
-    ImVec2 windowSize( 500 * scaling, 420 * scaling );
+    ImVec2 windowPaddingSize = ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling );
+    ImVec2 childWindowPadding = ImVec2( 12 * scaling, 4 * scaling );
+    ImVec2 itemSpacing = ImVec2( 12 * scaling, 0 );
+    const ImVec2 smallItemSize = { cQuickAccessBarHeight * scaling - 2.0f * childWindowPadding.y, cQuickAccessBarHeight * scaling - 2.0f * childWindowPadding.y };
+
+    const float itemsWindowWidth = childWindowPadding.x * 2
+        + smallItemSize.x * maxQuickAccessSize_
+        + itemSpacing.x * ( maxQuickAccessSize_ - 1 );
+
+    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 470 * scaling );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
     ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPaddingSize );
     if ( !ImGui::BeginModalNoAnimation( "Toolbar Customize", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         ImGui::PopStyleVar();
@@ -445,24 +454,88 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
     const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
     const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+
+    DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar, true };
+    
+    ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarCustomizeBg ).getUInt32() );
+    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
+    if ( quickAccessList_ )
+    {
+        auto& quickAccessListRef = *quickAccessList_;
+        for ( int i = 0; i < quickAccessListRef.size(); ++i )
+        {
+            const auto& item = quickAccessListRef[i];
+            auto it = RibbonSchemaHolder::schema().items.find( item );
+            if ( it == RibbonSchemaHolder::schema().items.end() )
+            {
+#ifndef __EMSCRIPTEN__
+                spdlog::warn( "Plugin \"{}\" not found!", item ); // TODO don't flood same message
+#endif
+                continue;
+            }
+
+            ImVec2 cursorPos = ImGui::GetCursorPos();
+            ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+            ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
+            ImGui::SetItemAllowOverlap();
+
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
+            ImGui::SetNextWindowSize( params.itemSize );
+            if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
+            {
+                ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
+                ribbonMenu_->getRibbonButtonDrawer().drawButtonIcon( it->second, params );
+                ImGui::EndDragDropSource();
+            }
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor( 3 );
+
+            if ( ImGui::BeginDragDropTarget() )
+            {
+                if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "ToolbarItemNumber" ) )
+                {
+                    IM_ASSERT( payload->DataSize == sizeof( int ) );
+                    int oldIndex = *( const int* )payload->Data;
+                    auto movedItem = quickAccessListRef[oldIndex];
+                    quickAccessListRef.erase( quickAccessListRef.begin() + oldIndex );
+                    quickAccessListRef.insert( quickAccessListRef.begin() + i, movedItem );
+
+                }
+                ImGui::EndDragDropTarget();
+            }
+            ImGui::SetCursorPos( cursorPos );
+            ribbonMenu_->getRibbonButtonDrawer().drawButtonIcon( it->second, params );
+
+            ImGui::SameLine();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y );
+
     ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
 
-    drawQuickAccessList_();
+    drawToolbarAllItems_();
 
     ImGui::EndChild();
+    ImGui::PopStyleColor();
 
-    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
+    ImGui::PopStyleVar();
+
+    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) && ribbonMenu_ )
     {
-        auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        if ( ribbonMenu )
-            ribbonMenu->resetQuickAccessList();
+        ribbonMenu_->resetQuickAccessList();
     }
 
     ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
 
-void ViewerSettingsPlugin::drawQuickAccessList_()
+void ViewerSettingsPlugin::drawToolbarAllItems_()
 {
     auto& tabsOrder = schema_->tabsOrder;
     auto& tabsMap = schema_->tabsMap;
@@ -471,7 +544,6 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 
     bool canAdd = int( quickAccessList.size() ) < maxQuickAccessSize_;
 
-    int quickAccessListIndex = 0;
     for ( const auto& [tabName, tabPriority]  : tabsOrder )
     {
         if ( !ImGui::TreeNodeEx( tabName.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -492,8 +564,6 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
             {
                 if ( item == "Quick Access Settings" )
                     continue;
-                if ( quickAccessListIndex < quickAccessList.size() && quickAccessList[quickAccessListIndex] == item )
-                    ++quickAccessListIndex;
 
                 auto itemIt = std::find( quickAccessList.begin(), quickAccessList.end(), item );
                 bool itemInQA = itemIt != quickAccessList.end();
@@ -511,7 +581,7 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
                     if ( itemInQA )
                     {
                         if ( canAdd )
-                            quickAccessList.emplace( quickAccessList.begin() + quickAccessListIndex, item );
+                            quickAccessList.emplace_back( item );
                         else
                             itemInQA = false;
                     }

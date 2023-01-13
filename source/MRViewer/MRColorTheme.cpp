@@ -324,6 +324,8 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "ToolbarHovered",
         "ToolbarClicked",
 
+        "ToolbarCustomizeBg",
+
         "Text",
         "TextEnabled",
         "TextDisabled",

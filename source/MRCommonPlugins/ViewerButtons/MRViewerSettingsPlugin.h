@@ -23,9 +23,9 @@ private:
 
     void drawMouseSceneControlsSettings_( float menuScaling );
 
-    void drawDialogQuickAccessSettings_( float menuScaling );
+    void drawDialogToolbarSettings_( float menuScaling );
 
-    void drawQuickAccessList_();
+    void drawToolbarAllItems_();
 
     void drawSpaceMouseSettings_( float menuScaling );
 

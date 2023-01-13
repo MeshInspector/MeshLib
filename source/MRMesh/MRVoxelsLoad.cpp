@@ -666,6 +666,8 @@ struct TiffParams
 };
 
 #ifndef MRMESH_NO_TIFF
+// if headerOnly is true, only check that file is valid tiff
+// otherwise load whole file
 std::tuple<TIFF*, TiffParams> OpenTiff( const std::filesystem::path& path, bool headerOnly = false )
 {
     TiffParams tp;

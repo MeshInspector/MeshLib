@@ -742,9 +742,13 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
     ImGui::PushStyleColor( ImGuiCol_Text, 0 );
 
-    bool started = BeginPopupModal( label, open, flags );
-    ImGui::PopStyleColor( 2 );
+    if ( !BeginPopupModal( label, open, flags ) )
+    {
+        ImGui::PopStyleColor( 2 );
+        return false;
+    }
 
+    ImGui::PopStyleColor( 2 );
     if ( auto window = FindWindowByName( label ) )
     {
         auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
@@ -755,7 +759,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 
         ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
         ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 0 } );
-        ImGui::TextUnformatted( label, strstr(label, "##") );
+        ImGui::TextUnformatted( label, strstr( label, "##" ) );
 
         ImGui::SetCursorPos( backupPos );
         ImGui::PopClipRect();
@@ -764,9 +768,8 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
             ImGui::PopFont();
     }
 
-    if ( started )
-        GetCurrentContext()->DimBgRatio = 1.0f;
-    return started;
+    GetCurrentContext()->DimBgRatio = 1.0f;
+    return true;
 }
 
 bool ButtonValid( const char* label, bool valid, const ImVec2& size )

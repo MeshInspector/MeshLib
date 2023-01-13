@@ -83,6 +83,7 @@ enum class GridType
     LevelSet = 1
 };
 
+#ifndef MRMESH_NO_TIFF
 struct LoadingTiffSettings
 {
     std::filesystem::path dir;
@@ -92,7 +93,7 @@ struct LoadingTiffSettings
 };
 /// Load voxels from a set of TIFF files
 MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
-
+#endif
 }
 
 }

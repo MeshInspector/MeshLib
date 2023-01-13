@@ -213,6 +213,7 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
     {
         .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
+        .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
@@ -397,7 +398,9 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
 
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
-    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), ( po - pd ).lengthSq() );
+    const float edgeLenSq = ( po - pd ).lengthSq();
+    const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 ) ? edgeLenSq <= sqr( settings_.tinyEdgeLength ) : false;
+    float maxOldEdgeLenSq = std::max( sqr( settings_.maxEdgeLen ), edgeLenSq );
     float maxNewEdgeLenSq = 0;
 
     originNeis_.clear();
@@ -459,14 +462,14 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }
 
-    if ( maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
+    if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return {}; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
     if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
         return {}; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // checks that all new normals are consistent (do not check for degenerate edges)
-    if ( ( po != pd ) || ( po != collapsePos ) )
+    if ( !tinyEdge && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
         auto n = Vector3f{ sumDblArea_.normalized() };
         for ( const auto da : triDblAreas_ )

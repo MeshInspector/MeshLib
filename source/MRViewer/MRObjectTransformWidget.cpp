@@ -31,7 +31,7 @@ Vector3f findClosestPointOfSkewLines( const Vector3f& p11, const Vector3f& p12, 
     auto n2 = cross( d2, n );
     auto lSq = n.lengthSq();
     auto l2Sq = n2.lengthSq();
-    if ( std::isnan( lSq ) || std::isnan( l2Sq ) )
+    if ( std::isnan( lSq ) || std::isnan( l2Sq ) || l2Sq == 0 )
         return {};
 
     return p11 + dot( ( p21 - p11 ), n2 ) / dot( d1, n2 ) * d1;

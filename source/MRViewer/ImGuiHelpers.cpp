@@ -749,7 +749,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     }
 
     ImGui::PopStyleColor( 2 );
-    if ( auto window = FindWindowByName(label) )
+    if ( auto window = FindWindowByName( label ) )
     {
         auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
         if ( font )
@@ -757,9 +757,9 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 
         const auto backupPos = ImGui::GetCursorPos();
 
-        ImGui::PushClipRect( { window->Pos.x, window->Pos.y}, {window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
+        ImGui::PushClipRect( { window->Pos.x, window->Pos.y}, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
         ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 0 } );
-        ImGui::TextUnformatted( label, strstr(label, "##") );
+        ImGui::TextUnformatted( label, strstr( label, "##" ) );
 
         ImGui::SetCursorPos( backupPos );
         ImGui::PopClipRect();

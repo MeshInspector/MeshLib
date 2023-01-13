@@ -665,20 +665,32 @@ struct TiffParams
     }
 };
 
-std::tuple<TIFF*, TiffParams> OpenTiff( const std::filesystem::path& path )
+#ifndef MRMESH_NO_TIFF
+std::tuple<TIFF*, TiffParams> OpenTiff( const std::filesystem::path& path, bool headerOnly = false )
 {
     TiffParams tp;
-    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "r" );
+    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), headerOnly ? "rh" : "r" );
     if ( !tif )
         return { tif, tp };
 
     TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &tp.bitsPerSample );
     TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &tp.samplesPerPixel );
     TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &tp.height );
-    tp.width = int ( TIFFScanlineSize( tif ) / ( tp.samplesPerPixel * ( tp.bitsPerSample >> 3 ) ) );
+    if ( !headerOnly )
+        tp.width = int( TIFFScanlineSize( tif ) / ( tp.samplesPerPixel * ( tp.bitsPerSample >> 3 ) ) );
 
     return { tif, tp };
 }
+
+bool isTIFFFile( const std::filesystem::path& path )
+{
+    auto [tif, tp] = OpenTiff( path, true );
+    if ( !tif )
+        return false;
+    TIFFClose( tif );
+    return true;
+}
+#endif
 
 template<typename SampleType>
 bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
@@ -727,28 +739,47 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
+#ifndef MRMESH_NO_TIFF
+tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
 {
-    const auto dirEnd = std::filesystem::directory_iterator{};
-    const auto fileCount = std::distance( std::filesystem::directory_iterator( settings.dir ), dirEnd );
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( settings.dir, ec ) )
+        return tl::make_unexpected( "Given path is not directory" );
 
-    if ( fileCount < 2 )
-        return tl::make_unexpected( "Too few files in the directory" );
+    int filesNum = 0;
+    std::vector<std::filesystem::path> files;
+    const std::filesystem::directory_iterator dirEnd;
+    for ( auto it = std::filesystem::directory_iterator( settings.dir, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    {
+        if ( it->is_regular_file( ec ) )
+            ++filesNum;
+    }
+    files.reserve( filesNum );
+    for ( auto it = std::filesystem::directory_iterator( settings.dir, ec ); !ec && it != dirEnd; it.increment( ec ) )
+    {
+        auto filePath = it->path();
+        if ( it->is_regular_file( ec ) && isTIFFFile( filePath ) )
+            files.push_back( filePath );
+    }
+
+    if ( files.size() < 2 )
+        return tl::make_unexpected( "Too few TIFF files in the directory" );
     
-    auto dirIt = std::filesystem::directory_iterator( settings.dir );
-    auto [tif, tp] = OpenTiff( dirIt->path() );
+    sortFilesByName( files );
+
+    auto [tif, tp] = OpenTiff( files.front() );
 
     SimpleVolume outVolume;
-    outVolume.dims = { tp.width, tp.height, int (fileCount) };
+    outVolume.dims = { tp.width, tp.height, int( files.size() ) };
     outVolume.min = FLT_MAX;
     outVolume.max = FLT_MIN;
 
     outVolume.voxelSize = settings.voxelSize;
     outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
     
-    for (size_t layerIndex = 0; tif; ++layerIndex)
+    for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
-        if ( settings.cb && !settings.cb( float( layerIndex ) / fileCount ) )
+        if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return tl::make_unexpected( "Loading was cancelled" );
 
         switch ( tp.bitsPerSample )
@@ -767,12 +798,11 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSe
         
         TIFFClose( tif );
         tif = nullptr;
-        ++dirIt;
 
-        if ( dirIt != dirEnd )
+        if ( layerIndex + 1 < files.size() )
         {
             TiffParams currentTiffParams;
-            std::tie(tif, currentTiffParams) = OpenTiff( dirIt->path() );
+            std::tie( tif, currentTiffParams ) = OpenTiff( files[layerIndex + 1] );
             if ( currentTiffParams != tp )
                 return tl::make_unexpected( "Unable to process images with different params" );
         }
@@ -806,6 +836,7 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSe
     
     return res;
 }
+#endif
 
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )

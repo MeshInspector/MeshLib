@@ -8,12 +8,13 @@ namespace
 {
 
 using namespace MR;
+// returns 4 * (contour area)^2
 float calcLoneContourAreaSq( const OneMeshContour& contour )
 {
-    Vector3f norm;
+    Vector3f dblDirArea;
     for ( int i = 0; i + 1 < contour.intersections.size(); ++i )
-        norm += cross( contour.intersections[i].coordinate, contour.intersections[i + 1].coordinate );
-    return norm.lengthSq();
+        dblDirArea += cross( contour.intersections[i].coordinate, contour.intersections[i + 1].coordinate );
+    return dblDirArea.lengthSq();
 }
 
 }

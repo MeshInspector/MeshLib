@@ -168,17 +168,31 @@ void fixMultipleEdges( Mesh & mesh )
 
 FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio /*= FLT_MAX */ )
 {
-    FaceBitSet selection( mp.mesh.topology.getValidFaces().size() );
+    MR_TIMER
+    FaceBitSet res( mp.mesh.topology.faceSize() );
     BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
         if ( !mp.mesh.topology.hasFace( f ) )
             return;
-        Vector3f vp[3];
-        mp.mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-        if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) >= criticalAspectRatio )
-            selection.set( f );
+        if ( mp.mesh.triangleAspectRatio( f ) >= criticalAspectRatio )
+            res.set( f );
     } );
-    return selection;
+    return res;
+}
+
+UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
+{
+    MR_TIMER
+    const auto criticalLengthSq = sqr( criticalLength );
+    UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
+    {
+        if ( !mp.mesh.topology.isInnerOrBdEdge( ue, mp.region ) )
+            return;
+        if ( mp.mesh.edgeLength( ue ) <= criticalLengthSq )
+            res.set( ue );
+    } );
+    return res;
 }
 
 } //namespace MR

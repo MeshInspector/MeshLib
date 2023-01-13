@@ -187,8 +187,8 @@ public:
     [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
     /// returns true if left face of given edge belongs to given region (if provided) and right face either does not exist or does not belong
     [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
-    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr)
-    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ) ) : true; }
+    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
+    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;

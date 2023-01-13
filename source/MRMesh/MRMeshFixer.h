@@ -23,8 +23,11 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> &
 /// finds and resolves multiple edges
 MRMESH_API void fixMultipleEdges( Mesh & mesh );
 
-/// finds faces which aspect ratio >= criticalAspectRatio
+/// finds faces having aspect ratio >= criticalAspectRatio
 MRMESH_API FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio = FLT_MAX );
+
+/// finds edges having length <= criticalLength
+MRMESH_API UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength );
 
 /// finds vertices in region with complete ring of N edges
 MRMESH_API VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );

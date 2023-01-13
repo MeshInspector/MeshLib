@@ -269,8 +269,8 @@ FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-// Very simple metric for cut mesh holes, only penalty for normal flip and area
-FillHoleMetric getSimplePlanarMetric( const Mesh& mesh, EdgeId e0 )
+// This simple metric penalizes for large triangle area and large triangle aspect ratio
+FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 )
 {
     assert( !mesh.topology.left( e0 ) );
     auto norm = Vector3d();
@@ -278,10 +278,10 @@ FillHoleMetric getSimplePlanarMetric( const Mesh& mesh, EdgeId e0 )
     {
         norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
     }
-    norm = norm.normalized();
-
+    auto holeDblArea = norm.length();
+    auto aspectDenom = 1e-2 / sqrt( std::numeric_limits<double>::max() );
     FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, norm] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&mesh, holeDblArea, aspectDenom] ( VertId a, VertId b, VertId c )
     {
         Vector3d aP = Vector3d( mesh.points[a] );
         Vector3d bP = Vector3d( mesh.points[b] );
@@ -289,10 +289,11 @@ FillHoleMetric getSimplePlanarMetric( const Mesh& mesh, EdgeId e0 )
 
         auto faceNorm = cross( bP - aP, cP - aP );
         auto faceDblArea = faceNorm.length();
-        if ( dot( norm, faceNorm ) < 0.5f * faceDblArea )
-            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
+        auto areaRatio = faceDblArea / holeDblArea; // [0;1]
+        // sqrt because `triangleAspectRatio` grows very fast
+        auto aspectRatio = sqrt( triangleAspectRatio( aP, bP, cP ) - 1.0 ) * aspectDenom; // [0;0.01]
 
-        return faceDblArea; // area
+        return areaRatio + aspectRatio;
     };
     return metric;
 }

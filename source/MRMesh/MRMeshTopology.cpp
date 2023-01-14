@@ -181,16 +181,21 @@ bool MeshTopology::fromSameLeftRing( EdgeId a, EdgeId b ) const
     } 
 }
 
+int MeshTopology::getOrgDegree( EdgeId a ) const
+{
+    assert( a.valid() );
+    int degree = 0;
+    for ( auto e : orgRing( *this, a ) )
+        ++degree;
+    return degree;
+}
+
 int MeshTopology::getLeftDegree( EdgeId a ) const
 {
     assert( a.valid() );
-    EdgeId b = a;
     int degree = 0;
-    do
-    {
-        b = prev( b.sym() );
+    for ( auto e : leftRing( *this, a ) )
         ++degree;
-    } while ( a != b );
     return degree;
 }
 

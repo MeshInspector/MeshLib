@@ -195,4 +195,50 @@ UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
     return res;
 }
 
+bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
+{
+    return topology.next( e.sym() ) == topology.prev( e.sym() ) &&
+        topology.isLeftTri( e ) && topology.isLeftTri( e.sym() );
+}
+
+EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
+{
+    const auto ex = topology.next( e.sym() );
+    const EdgeId ep = topology.prev( e );
+    const EdgeId en = topology.next( e );
+    if ( ex != topology.prev( e.sym() ) || ep == en || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
+        return {};
+    // left( e ) and right( e ) are double triangles
+    topology.setLeft( e, {} );
+    topology.setLeft( e.sym(), {} );
+    topology.setOrg( e.sym(), {} );
+    topology.splice( e.sym(), ex );
+    topology.splice( ep, e );
+    assert( topology.isLoneEdge( e ) );
+    topology.splice( en.sym(), ex.sym() );
+    assert( topology.isLoneEdge( ex ) );
+    topology.splice( ep, en );
+    topology.splice( topology.prev( en.sym() ), en.sym() );
+    assert( topology.isLoneEdge( en ) );
+    return ep;
+}
+
+void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
+{
+    EdgeId e = topology.edgeWithOrg( v );
+    EdgeId e0 = e;
+    for (;;)
+    {
+        if ( auto ep = eliminateDoubleTris( topology, e ) )
+            e0 = e = ep;
+        else
+        {
+            e = topology.next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+            continue;
+        }
+    } 
+}
+
 } //namespace MR

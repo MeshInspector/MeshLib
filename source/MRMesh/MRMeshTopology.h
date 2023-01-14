@@ -73,6 +73,10 @@ public:
     /// returns true if a and b are both from the same left face ring
     [[nodiscard]] MRMESH_API bool fromSameLeftRing( EdgeId a, EdgeId b ) const;
 
+    /// returns the number of edges around the origin vertex, returns 1 for lone edges
+    [[nodiscard]] MRMESH_API int getOrgDegree( EdgeId a ) const;
+    /// returns the number of edges around the given vertex
+    [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
     /// returns the number of edges around the given face: 3 for triangular faces, ...

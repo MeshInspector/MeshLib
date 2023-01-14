@@ -185,7 +185,7 @@ int MeshTopology::getOrgDegree( EdgeId a ) const
 {
     assert( a.valid() );
     int degree = 0;
-    for ( auto e : orgRing( *this, a ) )
+    for( [[maybe_unused]] auto e : orgRing( *this, a ) )
         ++degree;
     return degree;
 }
@@ -194,7 +194,7 @@ int MeshTopology::getLeftDegree( EdgeId a ) const
 {
     assert( a.valid() );
     int degree = 0;
-    for ( auto e : leftRing( *this, a ) )
+    for( [[maybe_unused]] auto e : leftRing( *this, a ) )
         ++degree;
     return degree;
 }

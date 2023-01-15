@@ -92,38 +92,6 @@ static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
     } );
 }
 
-static void eliminateDoubleTris( MeshTopology & topology, EdgeId e )
-{
-    EdgeId e0 = e;
-    for (;;)
-    {
-        const auto ex = topology.next( e.sym() );
-        if ( ex != topology.prev( e.sym() ) )
-        {
-            e = topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-            continue;
-        }
-        // left( e ) and right( e ) are double triangles
-        topology.setLeft( e, {} );
-        topology.setLeft( e.sym(), {} );
-        topology.setOrg( e.sym(), {} );
-        const EdgeId ep = topology.prev( e );
-        const EdgeId en = topology.next( e );
-        topology.splice( e.sym(), ex );
-        topology.splice( ep, e );
-        assert( topology.isLoneEdge( e ) );
-        topology.splice( en.sym(), ex.sym() );
-        assert( topology.isLoneEdge( ex ) );
-        topology.splice( ep, en );
-        topology.splice( topology.prev( en.sym() ), en.sym() );
-        assert( topology.isLoneEdge( en ) );
-
-        e0 = e = ep;
-    } 
-}
-
 const double NoDist = -1.0;
 
 Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
@@ -254,7 +222,7 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             }
         }
 
-        eliminateDoubleTris( res.topology, res.topology.edgeWithOrg( newv ) );
+        eliminateDoubleTrisAround( res.topology, newv );
         newFp.clear();
         for ( EdgeId e : orgRing( res.topology, newv ) )
         {

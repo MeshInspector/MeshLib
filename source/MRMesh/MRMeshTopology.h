@@ -73,6 +73,10 @@ public:
     /// returns true if a and b are both from the same left face ring
     [[nodiscard]] MRMESH_API bool fromSameLeftRing( EdgeId a, EdgeId b ) const;
 
+    /// returns the number of edges around the origin vertex, returns 1 for lone edges
+    [[nodiscard]] MRMESH_API int getOrgDegree( EdgeId a ) const;
+    /// returns the number of edges around the given vertex
+    [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
     /// returns the number of edges around the given face: 3 for triangular faces, ...
@@ -187,8 +191,8 @@ public:
     [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
     /// returns true if left face of given edge belongs to given region (if provided) and right face either does not exist or does not belong
     [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
-    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr)
-    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ) ) : true; }
+    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
+    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;

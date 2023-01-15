@@ -215,6 +215,7 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
         .criticalTriAspectRatio = settings.criticalAspectRatio,
         .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
+        .optimizeVertexPos = false,
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
     };

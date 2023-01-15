@@ -214,6 +214,7 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
         .maxError = settings.maxDeviation,
         .criticalTriAspectRatio = settings.criticalAspectRatio,
         .stabilizer = settings.stabilizer,
+        .optimizeVertexPos = false,
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
     };
@@ -421,12 +422,15 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( eDest != vr )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( da.lengthSq() > sqr( 1e-8 ) )
+            {
+                triDblAreas_.push_back( da );
+                const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+                if ( triAspect >= settings_.criticalTriAspectRatio )
+                    triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
+                maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
     }
@@ -449,12 +453,15 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         if ( eDest != vl )
         {
             auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            triDblAreas_.push_back( da );
             sumDblArea_ += Vector3d{ da };
-            const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
-            if ( triAspect >= settings_.criticalTriAspectRatio )
-                triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
-            maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            if ( da.lengthSq() > sqr( 1e-8 ) )
+            {
+                triDblAreas_.push_back( da );
+                const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
+                if ( triAspect >= settings_.criticalTriAspectRatio )
+                    triDblAreas_.back() = Vector3f{}; //cannot trust direction of degenerate triangles
+                maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
+            }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
     }

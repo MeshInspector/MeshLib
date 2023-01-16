@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-        compiler: [Clang 13, GCC 11]
+        compiler: [Clang 15, GCC 12]
         include:
           - compiler: Clang 15
             cxx-compiler: /usr/bin/clang++-15

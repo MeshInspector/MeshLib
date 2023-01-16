@@ -43,6 +43,18 @@ MRMESH_API EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e );
 ///  eliminates all double triangles around given vertex preserving vertex valid
 MRMESH_API void eliminateDoubleTrisAround( MeshTopology & topology, VertId v );
 
+/// returns true if the destination of given edge has degree 3 and 3 incident triangles
+[[nodiscard]] MRMESH_API bool isDegree3Dest( const MeshTopology& topology, EdgeId e );
+
+/// if the destination of given edge has degree 3 and 3 incident triangles,
+/// then eliminates the destination vertex with all its edges and all but one faces, and returns valid remaining edge with same origin as e;
+/// otherwise returns invalid edge
+MRMESH_API EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e );
+
+/// eliminates from the mesh all vertices having degree 3 and 3 incident triangles from given region (which is updated);
+/// \return the number of vertices eliminated
+MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region );
+
 /// \}
 
 } // namespace MR

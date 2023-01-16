@@ -96,7 +96,7 @@ jobs:
                   </td>
                 </tr>
                 <tr>
-                  <td align="center">Fedora 35 x64</td>
+                  <td align="center">Fedora 37 x64</td>
                   <td align="center">
                     <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version.outputs.version}}-dev.rpm">rpm</a>
                   </td>

@@ -168,17 +168,77 @@ void fixMultipleEdges( Mesh & mesh )
 
 FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio /*= FLT_MAX */ )
 {
-    FaceBitSet selection( mp.mesh.topology.getValidFaces().size() );
+    MR_TIMER
+    FaceBitSet res( mp.mesh.topology.faceSize() );
     BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
         if ( !mp.mesh.topology.hasFace( f ) )
             return;
-        Vector3f vp[3];
-        mp.mesh.getTriPoints( f, vp[0], vp[1], vp[2] );
-        if ( triangleAspectRatio( vp[0], vp[1], vp[2] ) >= criticalAspectRatio )
-            selection.set( f );
+        if ( mp.mesh.triangleAspectRatio( f ) >= criticalAspectRatio )
+            res.set( f );
     } );
-    return selection;
+    return res;
+}
+
+UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
+{
+    MR_TIMER
+    const auto criticalLengthSq = sqr( criticalLength );
+    UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
+    {
+        if ( !mp.mesh.topology.isInnerOrBdEdge( ue, mp.region ) )
+            return;
+        if ( mp.mesh.edgeLength( ue ) <= criticalLengthSq )
+            res.set( ue );
+    } );
+    return res;
+}
+
+bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
+{
+    return topology.next( e.sym() ) == topology.prev( e.sym() ) &&
+        topology.isLeftTri( e ) && topology.isLeftTri( e.sym() );
+}
+
+EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
+{
+    const auto ex = topology.next( e.sym() );
+    const EdgeId ep = topology.prev( e );
+    const EdgeId en = topology.next( e );
+    if ( ex != topology.prev( e.sym() ) || ep == en || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
+        return {};
+    // left( e ) and right( e ) are double triangles
+    topology.setLeft( e, {} );
+    topology.setLeft( e.sym(), {} );
+    topology.setOrg( e.sym(), {} );
+    topology.splice( e.sym(), ex );
+    topology.splice( ep, e );
+    assert( topology.isLoneEdge( e ) );
+    topology.splice( en.sym(), ex.sym() );
+    assert( topology.isLoneEdge( ex ) );
+    topology.splice( ep, en );
+    topology.splice( topology.prev( en.sym() ), en.sym() );
+    assert( topology.isLoneEdge( en ) );
+    return ep;
+}
+
+void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
+{
+    EdgeId e = topology.edgeWithOrg( v );
+    EdgeId e0 = e;
+    for (;;)
+    {
+        if ( auto ep = eliminateDoubleTris( topology, e ) )
+            e0 = e = ep;
+        else
+        {
+            e = topology.next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+            continue;
+        }
+    } 
 }
 
 } //namespace MR

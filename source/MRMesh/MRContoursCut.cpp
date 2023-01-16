@@ -1393,7 +1393,7 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 
     auto res = getFillHolePlan( mesh, e, params );
     if ( stopOnBad )
-        res = getFillHolePlan( mesh, e, { getSimplePlanarMetric( mesh,e ) } );
+        res = getFillHolePlan( mesh, e, { getSimpleAreaMetric( mesh,e ) } );
     return res;
 }
 
@@ -1694,7 +1694,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 {
     MR_TIMER;
     MR_WRITER( mesh );
-
     CutMeshResult res;
 
     if ( params.new2OldMap )

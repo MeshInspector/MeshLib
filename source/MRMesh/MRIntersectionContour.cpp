@@ -4,6 +4,21 @@
 #include "MRTimer.h"
 #include <parallel_hashmap/phmap.h>
 
+namespace
+{
+
+using namespace MR;
+// returns 4 * (contour area)^2
+float calcLoneContourAreaSq( const OneMeshContour& contour )
+{
+    Vector3f dblDirArea;
+    for ( int i = 0; i + 1 < contour.intersections.size(); ++i )
+        dblDirArea += cross( contour.intersections[i].coordinate, contour.intersections[i + 1].coordinate );
+    return dblDirArea.lengthSq();
+}
+
+}
+
 namespace MR
 {
 
@@ -191,21 +206,7 @@ void removeDegeneratedContours( OneMeshContours& contours )
     std::vector<int> contsToRemove;
     for ( int i = int( contours.size() ) - 1; i >= 0; --i )
     {
-        bool sameCoord = true;
-        if ( !contours[i].intersections.empty() )
-        {
-            const auto& firstCoord = contours[i].intersections[0].coordinate;
-            for ( int j = 1; j < contours[i].intersections.size(); ++j )
-            {
-                // we can compare floats here as far as it is result of back-conversion from int
-                if ( contours[i].intersections[j].coordinate != firstCoord )
-                {
-                    sameCoord = false;
-                    break;
-                }
-            }
-        }
-        if ( sameCoord )
+        if ( contours[i].closed && calcLoneContourAreaSq( contours[i] ) == 0.0f )
             contours.erase( contours.begin() + i );
     }
 }

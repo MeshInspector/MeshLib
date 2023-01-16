@@ -44,7 +44,7 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     Plane3f plane2 = Plane3f::fromDirAndPt( cross( ray.d, center - ray.p ), center ).normalized();
     auto centerVp = vp.projectToViewportSpace( center );
     auto centerRay = vp.unprojectPixelRay( to2dim( centerVp ) );
-    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.05f;
+    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.25f;
     auto planeIntersectionLine = intersection( plane1, plane2 );
     auto radiusVec = ( zeroPoint - center );
     if ( parallel || !planeIntersectionLine )

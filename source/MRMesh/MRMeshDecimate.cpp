@@ -215,7 +215,7 @@ bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & sett
         .criticalTriAspectRatio = settings.criticalAspectRatio,
         .tinyEdgeLength = settings.tinyEdgeLength,
         .stabilizer = settings.stabilizer,
-        .optimizeVertexPos = false,
+        .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = settings.region,
         .maxAngleChange = settings.maxAngleChange
     };

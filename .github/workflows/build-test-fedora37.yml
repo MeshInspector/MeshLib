@@ -1,4 +1,4 @@
-name: Build and test Fedora35
+name: Build and test Fedora37
 
 on:
   workflow_call:
@@ -14,11 +14,11 @@ on:
         type: boolean
 
 jobs:
-  fedora35-build-test:
+  fedora37-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-fedora:${{inputs.image_tag}}
+      image: meshrus/meshlib-fedora37:${{inputs.image_tag}}
       options: --user root
     strategy:
       matrix:
@@ -53,7 +53,7 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh fedora35 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh fedora37 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings

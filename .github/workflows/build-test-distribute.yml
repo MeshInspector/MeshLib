@@ -54,9 +54,9 @@ jobs:
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
-  fedora35-build-test:
+  fedora37-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: ./.github/workflows/build-test-fedora35.yml
+    uses: ./.github/workflows/build-test-fedora37.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -119,7 +119,7 @@ jobs:
       - update-win-version
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - fedora35-build-test
+      - fedora37-build-test
       - emscripten-build-test
       - macos-build-test
       - versioning-and-release-url

@@ -1,4 +1,4 @@
-FROM fedora:35 AS build
+FROM fedora:37 AS build
 
 RUN dnf -y update && \
     dnf -y install git && \
@@ -20,7 +20,7 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM fedora:35 AS production
+FROM fedora:37 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"

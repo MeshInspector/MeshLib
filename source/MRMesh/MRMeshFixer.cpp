@@ -241,4 +241,55 @@ void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
     } 
 }
 
+bool isDegree3Dest( const MeshTopology& topology, EdgeId e )
+{
+    const EdgeId ex = topology.next( e.sym() );
+    const EdgeId ey = topology.prev( e.sym() );
+    return topology.next( ex ) == ey &&
+        topology.isLeftTri( e ) && topology.isLeftTri( e.sym() ) && topology.isLeftTri( ex );
+}
+
+EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e )
+{
+    const EdgeId ex = topology.next( e.sym() );
+    const EdgeId ey = topology.prev( e.sym() );
+    const EdgeId ep = topology.prev( e );
+    const EdgeId en = topology.next( e );
+    if ( ep == en || topology.next( ex ) != ey ||
+        !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) || !topology.isLeftTri( ex ) )
+        return {};
+    topology.flipEdge( ex );
+    auto res = eliminateDoubleTris( topology, e );
+    assert( res == ex );
+    return res;
+}
+
+int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region )
+{
+    MR_TIMER
+    auto candidates = region;
+    int res = 0;
+    for (;;)
+    {
+        const int x = res;
+        for ( auto v : candidates )
+        {
+            candidates.reset( v );
+            const auto e0 = topology.edgeWithOrg( v );
+            if ( !isDegree3Dest( topology, e0.sym() ) )
+                continue;
+            ++res;
+            region.reset( v );
+            for ( auto e : orgRing( topology, e0 ) )
+                if ( auto vn = topology.dest( e ); region.test( vn ) )
+                    candidates.autoResizeSet( vn );
+            [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym() );
+            assert( ep );
+        }
+        if ( res == x )
+            break;
+    }
+    return res;
+}
+
 } //namespace MR

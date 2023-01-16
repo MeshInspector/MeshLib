@@ -236,67 +236,75 @@ TrianglesSortRes sortPropagateContour(
     IntersectionId rNext = ir.intersectionId;
     IntersectionId lPrev = il.intersectionId;
     IntersectionId rPrev = ir.intersectionId;
-    EdgeId lastCommonEdgeId = baseEdgeOr;
+    EdgeId lastCommonEdgeNext = baseEdgeOr;
+    EdgeId lastCommonEdgePrev = baseEdgeOr;
     auto checkOther = [&] ( bool next )->TrianglesSortRes
     {
         auto& tryThis = next ? tryNext : tryPrev;
-        if ( !tryThis )
-            return TrianglesSortRes::Undetermined;
-        auto& lOther = next ? lNext : lPrev;
-        auto& rOther = next ? rNext : rPrev;
-        auto otherL = getNextPrev( lOther, sameContour ? rOther : lOther, true, next );
+        assert( tryThis );
+
+        auto& lOtherRef = next ? lNext : lPrev;
+        auto& rOtherRef = next ? rNext : rPrev;
+        auto& lastCommonEdgeRef = next ? lastCommonEdgeNext : lastCommonEdgePrev;
+        auto otherL = getNextPrev( lOtherRef, sameContour ? rOtherRef : lOtherRef, true, next );
         if ( !otherL )
         {
-            tryThis = false;
+            tryThis = false; // terminal
             return TrianglesSortRes::Undetermined;
         }
-        auto otherR = getNextPrev( rOther, sameContour ? lOther : rOther, false, next );
+        auto otherR = getNextPrev( rOtherRef, sameContour ? lOtherRef : rOtherRef, false, next );
         if ( !otherR )
         {
-            tryThis = false;
+            tryThis = false; // terminal
             return TrianglesSortRes::Undetermined;
         }
-        auto otherEL = lContour[lOther].edge.undirected();
-        auto otherER = rContour[rOther].edge.undirected();
-        bool lReturned = otherEL == lastCommonEdgeId.undirected();
-        bool rReturned = otherER == lastCommonEdgeId.undirected();
-        if ( lReturned )
-            lOther = otherL;
-        else if ( rReturned )
-            rOther = otherR;
-        else
+        lOtherRef = otherL;
+        rOtherRef = otherR;
+        auto otherEL = lContour[lOtherRef].edge.undirected();
+        auto otherER = rContour[rOtherRef].edge.undirected();
+        bool lReturned = otherEL == lastCommonEdgeRef.undirected();
+        bool rReturned = otherER == lastCommonEdgeRef.undirected();
+        if ( lReturned || rReturned )
         {
-            lOther = otherL;
-            rOther = otherR;
+            // if one of candidates return sort is not determined
+            tryThis = false; // terminal
+            return TrianglesSortRes::Undetermined;
         }
 
-        otherEL = lContour[lOther].edge.undirected();
-        otherER = rContour[rOther].edge.undirected();
-        FaceId fl = lContour[lOther].tri;
-        FaceId fr = rContour[rOther].tri;
-        if ( otherEL == otherER && !lReturned )
+        if ( otherEL != otherER )
         {
-            auto ne = tp.next( lastCommonEdgeId );
-            if ( otherEL == ne.undirected() )
-                lastCommonEdgeId = ne;
+            // determined condition
+            if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+                return TrianglesSortRes::Left; // terminal
             else
-            {
-                assert( otherEL.undirected() == tp.prev( lastCommonEdgeId.sym() ).undirected() );
-                lastCommonEdgeId = tp.prev( lastCommonEdgeId.sym() ).sym();
-            }
-        }
-        else
-        {
-            auto baseOrgV = tp.org( lastCommonEdgeId );
+                return TrianglesSortRes::Right; // terminal
         }
 
+        // undetermined condition, but not terminal
+        assert( otherEL == otherER && !lReturned && !rReturned );
+        if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef );
+        else if ( otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() )
+            lastCommonEdgeRef = tp.prev( lastCommonEdgeRef.sym() ).sym();
+        else
+            lastCommonEdgeRef = tp.next( lastCommonEdgeRef.sym() ).sym();
+        
+        FaceId fl = lContour[lOtherRef].tri;
+        FaceId fr = rContour[rOtherRef].tri;
+        
         TrianglesSortRes res = sortTriangles( sortData, fl, fr );
         if ( res != TrianglesSortRes::Undetermined )
-            return ( el == baseEdgeOr ) == ( res == TrianglesSortRes::Left ) ? TrianglesSortRes::Left : TrianglesSortRes::Right;
+            return ( el == baseEdgeOr ) == ( res == TrianglesSortRes::Left ) ? 
+            TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
+        
         res = sortTriangles( sortData, fr, fl );
         if ( res != TrianglesSortRes::Undetermined )
-            return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ? TrianglesSortRes::Left : TrianglesSortRes::Right;
-        return TrianglesSortRes::Undetermined;
+            return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ? 
+            TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
+
+        return TrianglesSortRes::Undetermined; // not terminal
     };
     for ( ; tryNext || tryPrev; )
     {

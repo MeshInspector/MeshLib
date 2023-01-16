@@ -290,6 +290,8 @@ FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 )
 
         auto faceNorm = cross( bP - aP, cP - aP );
         auto faceDblArea = faceNorm.length();
+        if ( holeDblArea == 0.0f )
+            return faceDblArea;
         auto areaRatio = faceDblArea / holeDblArea; // [0;1]
         // sqrt because `triangleAspectRatio` grows very fast
         auto aspectRatio = sqrt( triangleAspectRatio( aP, bP, cP ) - 1.0 ) * aspectDenom; // [0;0.01]

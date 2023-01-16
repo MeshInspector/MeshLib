@@ -51,7 +51,7 @@ jobs:
           dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3 curl
           dnf -y install ./*.rpm
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
-          python3.9 -m pip install --upgrade -r ./requirements/python.txt
+          python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Debug output
         if: always()

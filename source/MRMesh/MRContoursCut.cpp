@@ -273,11 +273,19 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
+            /// DEBUG: sort after cut is not secure
+            /// this assert fails
+            assert( 
+                ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+                ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
+                ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
+                ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
+
             // determined condition
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
-                return TrianglesSortRes::Left; // terminal
+                return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
             else
-                return TrianglesSortRes::Right; // terminal
+                return sortData.isOtherA ? TrianglesSortRes::Right : TrianglesSortRes::Left; // terminal
         }
 
         // undetermined condition, but not terminal
@@ -303,7 +311,7 @@ TrianglesSortRes sortPropagateContour(
         if ( res != TrianglesSortRes::Undetermined )
             return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ? 
             TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-
+        
         return TrianglesSortRes::Undetermined; // not terminal
     };
     TrianglesSortRes res = TrianglesSortRes::Undetermined;

@@ -220,9 +220,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, NewEdge
 }
 
 // add next candidate to queue
-// return true if reaches end of loop
-// otherwise returns false
-bool processCandidate( const Mesh& mesh, const WeightedConn& current,
+void processCandidate( const Mesh& mesh, const WeightedConn& current,
     std::priority_queue<WeightedConn>& queue, NewEdgesMap& map,
     const std::vector<EdgeId>& aEdgesMap,
     const std::vector<EdgeId>& bEdgesMap,
@@ -240,9 +238,13 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     auto aEdgesMapSize = ( int )aEdgesMap.size();
     auto bEdgesMapSize = ( int )bEdgesMap.size();
     if ( nextA > aEdgesMapSize )
-        return false;
+        return;
     if ( nextB > bEdgesMapSize )
-        return false;
+        return;
+
+    // do not allow full ring from one loop
+    if ( ( nextA == aEdgesMapSize && nextB == 0 ) || ( nextB == bEdgesMapSize && nextA == 0 ) )
+        return;
 
     auto& nextConn = map[nextA][nextB];
 
@@ -266,14 +268,12 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
             cOp = mesh.topology.org( bEdgesMap[current.prevB % bEdgesMapSize] );
     }
 
-    // do not allow full ring from one loop
-    if ( ( nextA == aEdgesMapSize && nextB == 0 ) || ( nextB == bEdgesMapSize && nextA == 0 ) )
-        return false;
-
     double sumMetric = current.weight;
     if ( metrics.triangleMetric )
     {
-        auto triMetric = metrics.triangleMetric( aVert, bVert, cVert );
+        auto triMetric = addALoop ?
+            metrics.triangleMetric( bVert, aVert, cVert ):
+            metrics.triangleMetric( aVert, bVert, cVert ); // always cw oriented
         sumMetric = metrics.combineMetric( sumMetric, triMetric );
     }
 
@@ -281,18 +281,22 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     {
         if ( cOp )
         {
-            auto edgeACMetric = metrics.edgeMetric( aVert, bVert, cOp, cVert );
+            auto edgeACMetric = addALoop ? 
+                metrics.edgeMetric( bVert, aVert, cOp, cVert ) :
+                metrics.edgeMetric( aVert, bVert, cOp, cVert ); // always cw oriented
             sumMetric = metrics.combineMetric( sumMetric, edgeACMetric );
         }
         if ( aOp )
         {
-            auto edgeCBMetric = metrics.edgeMetric( bVert, cVert, aOp, aVert );
+            auto edgeCBMetric = addALoop ?
+                metrics.edgeMetric( cVert, bVert, aOp, aVert ) :
+                metrics.edgeMetric( bVert, cVert, aOp, aVert ); // always cw oriented
             sumMetric = metrics.combineMetric( sumMetric, edgeCBMetric );
         }
     }
 
     if ( sumMetric >= nextConn.weight )
-        return false;
+        return;
     // push to queue only if new variant is better as other way to this conn
     nextConn.a = nextA;
     nextConn.b = nextB;
@@ -300,10 +304,8 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
     nextConn.prevA = current.a;
     nextConn.prevB = current.b;
     // this means that we reached end
-    if ( nextA == aEdgesMapSize && nextB == bEdgesMapSize )
+    if ( nextA == aEdgesMapSize && nextB == bEdgesMapSize && metrics.edgeMetric )
     {
-        if ( !metrics.edgeMetric )
-            return true;
         // we need to spin back candidate to find first edge to count edge metric of last edge
         WeightedConn currentSpin;
         WeightedConn prevSpin = map[nextConn.prevA][nextConn.prevB];
@@ -317,21 +319,18 @@ bool processCandidate( const Mesh& mesh, const WeightedConn& current,
             else
             {
                 assert( currentSpin.a == 1 || currentSpin.b == 1 );
-                double lastEdgeMetric = metrics.edgeMetric( mesh.topology.org( aEdgesMap.front() ), mesh.topology.org( bEdgesMap.front() ),
-                    cOp, currentSpin.a == 1 ? mesh.topology.org( aEdgesMap[1] ) : mesh.topology.org( bEdgesMap[1] ) );
+                double lastEdgeMetric = metrics.edgeMetric( 
+                    mesh.topology.org( aEdgesMap.front() ), mesh.topology.org( bEdgesMap.front() ), // 0-a,0-b
+                    bVert, // if addLoopA - last a, otherwise last b
+                    currentSpin.a == 1 ? mesh.topology.org( aEdgesMap[1] ) : mesh.topology.org( bEdgesMap[1] ) ); // 1-a or 1-b
                 
                 nextConn.weight = metrics.combineMetric( nextConn.weight, lastEdgeMetric );
                 break;
             }
-
         }
     }
-    else
-    {
-        queue.push( nextConn );
-    }
-
-    return false;
+    // push last one too to terminate main loop
+    queue.push( nextConn );
 }
 
 void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
@@ -346,6 +345,10 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
             params.outNewFaces->autoResizeSet( res );
         return res;
     };
+
+    // stitch direction should be independent of input order
+    if ( a0 < b0 )
+        std::swap( a0, b0 );
 
     size_t aLoopEdgesCounter = 0;
     size_t bLoopEdgesCounter = 0;
@@ -410,10 +413,11 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     {
         current = queue.top(); // cannot use std::move unfortunately since top() returns const reference
         queue.pop();
+        if ( current.a == aEdgeMap.size() && current.b == bEdgeMap.size() )
+            break; // if minimal one is [sizeA,sizeB] then terminate loop
         //add to queue next a variant and next b variant
-        if ( processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, true ) ||
-            processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, false ) )
-            break;
+        processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, true );
+        processCandidate( mesh, current, queue, newEdgesMap, aEdgeMap, bEdgeMap, metrics, false );
     } while ( !queue.empty() );
 
     current = newEdgesMap.back().back();

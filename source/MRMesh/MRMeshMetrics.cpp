@@ -253,7 +253,8 @@ FillHoleMetric getUniversalMetric( const Mesh& mesh )
         auto ab = bP - aP;
         auto normL = cross( lP - aP, ab ); //it is ok not to normalize for dihedralAngle call
         auto normR = cross( ab, rP - aP );
-        return ab.length() * std::exp( 10 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
+        // exp(10* angle) - was too big and broke even double precision
+        return ab.length() * std::exp( 5 * ( std::abs( dihedralAngle( normL, normR, ab ) ) ) );
     };
     return metric;
 }

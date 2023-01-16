@@ -25,10 +25,10 @@ jobs:
         config: [Debug, Release]
         compiler: [Clang 13, GCC 11]
         include:
-          - compiler: Clang 13
-            cxx-compiler: /usr/bin/clang++-13
-            c-compiler: /usr/bin/clang-13
-          - compiler: GCC 11
+          - compiler: Clang 15
+            cxx-compiler: /usr/bin/clang++-15
+            c-compiler: /usr/bin/clang-15
+          - compiler: GCC 12
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc
 
@@ -74,14 +74,14 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 12' && matrix.config == 'Release'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.version}}
         env:
           MESHRUS_BUILD_RELEASE: ON
           MESHRUS_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 12' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives

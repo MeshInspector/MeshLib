@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             name: "ubuntu20"
@@ -20,9 +20,9 @@ jobs:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             cxx-compiler: /usr/bin/clang++-14
-          - os: "fedora:35"
-            name: "fedora35"
-            cxx-compiler: /usr/bin/clang++-13
+          - os: "fedora:37"
+            name: "fedora37"
+            cxx-compiler: /usr/bin/clang++-15
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,7 +36,7 @@ jobs:
           name: Distributives
 
       - name: Install Ubuntu Release
-        if: ${{ matrix.os != 'fedora:35' }}
+        if: ${{ matrix.os != 'fedora:37' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
@@ -45,7 +45,7 @@ jobs:
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Install Fedora Release
-        if: ${{ matrix.os == 'fedora:35' }}
+        if: ${{ matrix.os == 'fedora:37' }}
         run: |
           dnf --refresh -y upgrade
           dnf -y install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel python3.9 curl
@@ -76,12 +76,12 @@ jobs:
           ./cmake-example
 
       - name: Ubuntu python test
-        if: ${{ always() && matrix.os != 'fedora:35' }}
+        if: ${{ always() && matrix.os != 'fedora:37' }}
         working-directory: test_python
         run: python3 -m pytest -s -v
 
       - name: Fedora python test
-        if: ${{ always() && matrix.os == 'fedora:35' }}
+        if: ${{ always() && matrix.os == 'fedora:37' }}
         working-directory: test_python
         run: python3.9 -m pytest -s -v
 

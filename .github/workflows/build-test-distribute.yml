@@ -115,7 +115,7 @@ jobs:
     needs:
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - fedora35-build-test
+      - fedora37-build-test
       - macos-build-test
     uses: ./.github/workflows/test-distribution.yml
 

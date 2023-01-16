@@ -306,17 +306,20 @@ TrianglesSortRes sortPropagateContour(
 
         return TrianglesSortRes::Undetermined; // not terminal
     };
+    TrianglesSortRes res = TrianglesSortRes::Undetermined;
     for ( ; tryNext || tryPrev; )
     {
-        auto res = checkOther( true );
+        if ( tryNext )
+            res = checkOther( true );
         if ( res != TrianglesSortRes::Undetermined )
             return res;
-        res = checkOther( false );
+        if ( tryPrev )
+            res = checkOther( false );
         if ( res != TrianglesSortRes::Undetermined )
             return res;
     }
 
-    return TrianglesSortRes::Undetermined;
+    return res;
 }
 
 // baseEdge - cutting edge representation with orientation of first intersection

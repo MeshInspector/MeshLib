@@ -269,7 +269,7 @@ tl::expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::
 }
 
 template <typename T = float>
-DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params )
+DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb = {} )
 {
     DistanceMap distMap( params.resolution.x, params.resolution.y );
 
@@ -295,13 +295,23 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
 
     T xStep_1 = T( 1 ) / T( params.resolution.x );
     T yStep_1 = T( 1 ) / T( params.resolution.y );
+
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+
     if ( params.useDistanceLimits )
     {
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, params.resolution.x ),
             [&] ( const tbb::blocked_range<size_t>& range )
         {
+            const auto xMin = range.begin();
+            const auto xMax = xMin + range.size();
+
             for ( size_t x = range.begin(); x < range.end(); x++ )
             {
+                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                    break;
+
                 for ( size_t y = 0; y < params.resolution.y; y++ )
                 {
                     Vector3<T> rayOri = Vector3<T>( ori ) +
@@ -314,18 +324,30 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                             distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
                     }
                 }
+
+                if ( cb && std::this_thread::get_id() == mainThreadId )
+                {
+                    if ( cb && !cb( float( x - xMin ) / float( xMax - xMin ) ) )
+                        keepGoing.store( false, std::memory_order_relaxed );
+                }
             }
-        } );
+        }, tbb::static_partitioner() );
     }
     else
     {
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, params.resolution.x ),
             [&] ( const tbb::blocked_range<size_t>& range )
         {
+            const auto xMin = range.begin();
+            const auto xMax = xMin + range.size();
             for ( size_t x = range.begin(); x < range.end(); x++ )
             //debug line
             //for ( size_t x = 0; x < params.resX; x++ )
             {
+                
+                if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                    break;
+
                 for ( size_t y = 0; y < params.resolution.y; y++ )
                 {
                     Vector3<T> rayOri = Vector3<T>( ori ) +
@@ -337,9 +359,18 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                         distMap.set( x, y, meshIntersectionRes->distanceAlongLine );
                     }
                 }
+
+                if ( cb && std::this_thread::get_id() == mainThreadId )
+                {
+                    if ( cb && !cb( float( x - xMin ) / float ( xMax - xMin ) ) )
+                        keepGoing.store( false, std::memory_order_relaxed );
+                }
             }
-        } );
+        }, tbb::static_partitioner() );
     }
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        return DistanceMap{};
 
     if ( params.allowNegativeValues )
     {
@@ -354,14 +385,14 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
     return distMap;
 }
 
-DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params )
+DistanceMap computeDistanceMap( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
 {
-    return computeDistanceMap_<float>( mp, params );
+    return computeDistanceMap_<float>( mp, params, cb );
 }
 
-DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params )
+DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
 {
-    return computeDistanceMap_<double>( mp, params );
+    return computeDistanceMap_<double>( mp, params, cb );
 }
 
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,

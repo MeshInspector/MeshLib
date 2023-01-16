@@ -95,6 +95,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
     const auto streamSize = posEnd - posStart;
 
     Buffer<char> data( streamSize );
+    // important on Windows: in stream must be open in binary mode, otherwise next will fail
     in.read( data.data(), (ptrdiff_t)data.size() );
     if ( !in )
         return tl::make_unexpected( std::string( "OBJ-format read error" ) );

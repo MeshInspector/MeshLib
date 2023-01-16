@@ -298,7 +298,7 @@ void ImGuiMenu::preDraw_()
   }
   auto& style = ImGui::GetStyle();
   if ( storedError_.empty() )
-      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.8f, 0.8f, 0.8f, 0.5f );
+      style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.0f, 0.0f, 0.0f, 0.8f );
   else
       style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 1.0f, 0.2f, 0.2f, 0.5f );
   ImGui::NewFrame();
@@ -336,12 +336,12 @@ void ImGuiMenu::postRescale_( float /*x*/, float /*y*/)
 
 bool ImGuiMenu::spaceMouseMove_( const Vector3f& /*translate*/, const Vector3f& /*rotate*/ )
 {
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
 bool ImGuiMenu::spaceMouseDown_( int /*key*/ )
 {
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
 }
 
 void ImGuiMenu::rescaleStyle_()
@@ -666,14 +666,14 @@ void ImGuiMenu::draw_helpers()
 
         float w = ImGui::GetContentRegionAvail().x;
         float p = ImGui::GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Ok", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Ok", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -753,13 +753,12 @@ void ImGuiMenu::draw_scene_list_content( const std::vector<std::shared_ptr<Objec
 {
     // mesh with index 0 is Ancillary, and cannot be removed
     // it can be cleaned but it is inconsistent, so this mesh is untouchable
-    int uniqueCounter = 0;
     ImGui::BeginChild( "Meshes", ImVec2( -1, -1 ), true );
     updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all, uniqueCounter );
-    makeDragDropTarget_( SceneRoot::get(), false, true, uniqueCounter + 1 );
+        draw_object_recurse_( *child, selected, all );
+    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
     ImGui::EndChild();
     sceneOpenCommands_.clear();
 
@@ -844,7 +843,7 @@ void ImGuiMenu::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>&
 
 }
 
-void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLine, int counter )
+void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr )
 {
     if ( !allowSceneReorder_ )
         return;
@@ -856,7 +855,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
         lineDrawed = true;
         curPos = ImGui::GetCursorPos();
         auto width = ImGui::GetContentRegionAvail().x;
-        ImGui::ColorButton( ( "##InternalDragDropArea" + std::to_string( counter ) ).c_str(),
+        ImGui::ColorButton( ( "##InternalDragDropArea" + uniqueStr ).c_str(),
             ImVec4( 0, 0, 0, 0 ),
             0, ImVec2( width, 4 * menu_scaling() ) );
     }
@@ -866,7 +865,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
         {
             ImGui::SetCursorPos( curPos );
             auto width = ImGui::GetContentRegionAvail().x;
-            ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + std::to_string( counter ) ).c_str(),
+            ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
                 0, ImVec2( width, 4 * menu_scaling() ) );
         }
@@ -884,10 +883,9 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
     }
 }
 
-void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, int& counter )
+void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
-    ++counter;
-    std::string counterStr = std::to_string( counter );
+    std::string uniqueStr = std::to_string( intptr_t( &object ) );
     const bool isObjSelectable = !object.isAncillary();
 
     // has selectable children
@@ -895,7 +893,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
     bool isOpen{ false };
     if ( ( hasRealChildren || isObjSelectable ) )
     {
-        makeDragDropTarget_( object, true, true, counter );
+        makeDragDropTarget_( object, true, true, uniqueStr );
         {
             // Visibility checkbox
             bool isVisible = object.isVisible( viewer->viewport().id );
@@ -905,7 +903,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + counterStr ).c_str(), &isVisible ) )
+            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
@@ -935,7 +933,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = drawCollapsingHeader_( ( object.name() + "##" + counterStr ).c_str(),
+        isOpen = drawCollapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
                                     ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -946,7 +944,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         ImGui::PopStyleVar();
 
         makeDragDropSource_( selected );
-        makeDragDropTarget_( object, false, false, 0 );
+        makeDragDropTarget_( object, false, false, "0" );
 
         if ( isObjSelectable && ImGui::IsItemHovered() )
         {
@@ -1002,7 +1000,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         auto lines = object.getInfoLines();
         if ( hasRealChildren && !lines.empty() )
         {
-            auto infoId = std::string("Info: ##") + std::to_string(counter);
+            auto infoId = std::string( "Info: ##" ) + uniqueStr;
             infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
         }
 
@@ -1036,9 +1034,9 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::Indent();
             for ( const auto& child : children )
             {
-                draw_object_recurse_( *child, selected, all, counter );
+                draw_object_recurse_( *child, selected, all );
             }
-            makeDragDropTarget_( object, false, true, 0 );
+            makeDragDropTarget_( object, false, true, "0" );
             ImGui::Unindent();
         }
     }
@@ -1425,6 +1423,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Always on top", VisualizeMaskType::DepthTest, viewportid, true );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Source point", LabelVisualizePropertyType::SourcePoint, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Background", LabelVisualizePropertyType::Background, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Contour", LabelVisualizePropertyType::Contour, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
     }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
@@ -1445,36 +1444,57 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
-    make_color_selector<VisualObject>( selectedVisualObjs, "Selected color", [&] ( const VisualObject* data )
+    if ( getViewerInstance().viewport_list.size() > 1 )
     {
-        return Vector4f( data->getFrontColor() );
+        ImGui::SetNextItemWidth( 75.0f * menu_scaling() );
+
+        if (ImGui::BeginCombo( "Viewport Id",
+            selectedViewport_.value() == 0 ? "Default" :
+            std::to_string( selectedViewport_.value() ).c_str() ) )
+        {
+            if ( ImGui::Selectable( "Default" ) )
+                selectedViewport_ = ViewportId{ 0 };
+
+            for ( const auto& viewport : getViewerInstance().viewport_list )
+            {
+                if ( ImGui::Selectable( std::to_string( viewport.id.value() ).c_str() ) )
+                    selectedViewport_ = viewport.id;
+            }
+
+            ImGui::EndCombo();
+        }
+    }
+
+    make_color_selector<VisualObject>( selectedVisualObjs, ("Selected color##" + std::to_string(selectedViewport_.value())).c_str(), [&] ( const VisualObject* data )
+    {
+        return Vector4f( data->getFrontColor(true, selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setFrontColor( Color( color ), true );
+        data->setFrontColor( Color( color ), true, selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Unselected color", [&] ( const VisualObject* data )
     {
-        return Vector4f( data->getFrontColor( false ) );
+        return Vector4f( data->getFrontColor( false, selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setFrontColor( Color( color ), false );
+        data->setFrontColor( Color( color ), false, selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Back Faces color", [&] ( const VisualObject* data )
     {
-        return Vector4f( data->getBackColor() );
+        return Vector4f( data->getBackColor( selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-        data->setBackColor( Color( color ) );
+        data->setBackColor( Color( color ), selectedViewport_ );
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-        return Vector4f( data->getLabelsColor() );
+        return Vector4f( data->getLabelsColor( selectedViewport_ ) );
 MR_SUPPRESS_WARNING_POP
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
-        data->setLabelsColor( Color( color ) );
+        data->setLabelsColor( Color( color ), selectedViewport_ );
 MR_SUPPRESS_WARNING_POP
     } );
 
@@ -1482,58 +1502,65 @@ MR_SUPPRESS_WARNING_POP
     {
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Edges color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getEdgesColor() );
+            return Vector4f( data->getEdgesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setEdgesColor( Color( color ) );
+            data->setEdgesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getSelectedFacesColor() );
+            return Vector4f( data->getSelectedFacesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setSelectedFacesColor( Color( color ) );
+            data->setSelectedFacesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Edges color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getSelectedEdgesColor() );
+            return Vector4f( data->getSelectedEdgesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setSelectedEdgesColor( Color( color ) );
+            data->setSelectedEdgesColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Borders color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getBordersColor() );
+            return Vector4f( data->getBordersColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setBordersColor( Color( color ) );
+            data->setBordersColor( Color( color ), selectedViewport_ );
         } );
     }
     if ( !selectedPointsObjs.empty() )
     {
         make_color_selector<ObjectPointsHolder>( selectedPointsObjs, "Selected Points color", [&] ( const ObjectPointsHolder* data )
         {
-            return Vector4f( data->getSelectedVerticesColor() );
+            return Vector4f( data->getSelectedVerticesColor( selectedViewport_ ) );
         }, [&] ( ObjectPointsHolder* data, const Vector4f& color )
         {
-            data->setSelectedVerticesColor( Color( color ) );
+            data->setSelectedVerticesColor( Color( color ), selectedViewport_ );
         } );
     }
     if ( !selectedLabelObjs.empty() )
     {
         make_color_selector<ObjectLabel>( selectedLabelObjs, "Source point color", [&] ( const ObjectLabel* data )
         {
-            return Vector4f( data->getSourcePointColor() );
+            return Vector4f( data->getSourcePointColor( selectedViewport_ ) );
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
-            data->setSourcePointColor( Color( color ) );
+            data->setSourcePointColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectLabel>( selectedLabelObjs, "Leader line color", [&] ( const ObjectLabel* data )
         {
-            return Vector4f( data->getLeaderLineColor() );
+            return Vector4f( data->getLeaderLineColor( selectedViewport_ ) );
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
-            data->setLeaderLineColor( Color( color ) );
+            data->setLeaderLineColor( Color( color ), selectedViewport_ );
+        } );
+        make_color_selector<ObjectLabel>( selectedLabelObjs, "Contour color", [&] ( const ObjectLabel* data )
+        {
+            return Vector4f( data->getContourColor( selectedViewport_ ) );
+        }, [&] ( ObjectLabel* data, const Vector4f& color )
+        {
+            data->setContourColor( Color( color ), selectedViewport_ );
         } );
     }
 

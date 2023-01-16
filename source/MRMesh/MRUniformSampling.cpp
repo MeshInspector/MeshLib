@@ -7,7 +7,7 @@
 namespace MR
 {
 
-VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance )
+VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance, ProgressCallback cb )
 {
     auto box = pointCloud.getBoundingBox();
     if ( !box.valid() )
@@ -28,9 +28,14 @@ VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance )
     std::vector<VertProj> projes( size );
     int n = 0;
     for ( auto v : pointCloud.validPoints )
-        projes[n++] = {dot( pointCloud.points[v],axis ),v};
+    {
+        projes[n++] = { dot( pointCloud.points[v],axis ),v };
+        if ( !reportProgress( cb, [&]{ return 0.5f * float( n ) / float( size ); }, n, 128 ) )
+            return {};
+    }
 
     VertBitSet res( pointCloud.validPoints.size() );
+    n = 0;
     for ( const auto& proj : projes )
     {
         bool ballHasPrevVert = false;
@@ -41,6 +46,8 @@ VertBitSet pointUniformSampling( const PointCloud& pointCloud, float distance )
         } );
         if ( !ballHasPrevVert )
             res.set( proj.id );
+        if ( !reportProgress( cb, [&]{ return 0.5f + 0.5f * float( n ) / float( size ); }, n++, 128 ) )
+            return {};
     }
 
     return res;

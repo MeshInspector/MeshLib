@@ -34,6 +34,8 @@ MRMESH_API tl::expected<Mesh, std::string> fromOff( std::istream& in, Vector<Col
 /// loads from .obj file
 MRMESH_API tl::expected<Mesh, std::string> fromObj( const std::filesystem::path& file, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
+/// loads from .obj format
+/// important on Windows: in stream must be open in binary mode
 MRMESH_API tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>* colors = nullptr,
                                                     ProgressCallback callback = {} );
 /// loads from any .stl

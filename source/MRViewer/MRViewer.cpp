@@ -41,6 +41,8 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerWindows.h"
+#include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRSerializer.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -86,7 +88,6 @@ EMSCRIPTEN_KEEPALIVE void emsPostEmptyEvent( int forceFrames )
 
 }
 #endif
-#include "MRMesh/MRSerializer.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -168,36 +169,24 @@ static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
 #ifndef __EMSCRIPTEN__
 static void glfw_window_maximize( GLFWwindow* /*window*/, int maximized )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window maximaze", [maximized, viewer] ()
-    {
-        viewer->postSetMaximized( bool( maximized ) );
-    } } );
+    MR::getViewerInstance().postSetMaximized( bool( maximized ) );
 }
 
 static void glfw_window_iconify( GLFWwindow* /*window*/, int iconified )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window iconify", [iconified, viewer] ()
-    {
-        viewer->postSetIconified( bool( iconified ) );
-    } } );
+    MR::getViewerInstance().postSetIconified( bool( iconified ) );
 }
 
 static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
-    auto viewer = &MR::getViewerInstance();
-    viewer->postFocus( bool( focused ) );
+    MR::getViewerInstance().postFocus( bool( focused ) );
 }
 #endif
 
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
 {
     auto viewer = &MR::getViewerInstance();
-    viewer->eventQueue.emplace( { "Window scale", [xscale, yscale, viewer] ()
-    {
-        viewer->postRescale( xscale, yscale );
-    } } );
+    viewer->postRescale( xscale, yscale );
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
@@ -250,6 +239,7 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     {
         viewer->dragDrop( paths );
     } } );
+    viewer->postEmptyEvent();
 }
 
 static void glfw_joystick_callback( int jid, int event )
@@ -435,6 +425,8 @@ int Viewer::launch( const LaunchParams& params )
         glfwShowWindow( window );
 
     parseCommandLine_( params.argc, params.argv );
+
+    CommandLoop::setWindowAppeared();
 
     if ( params.startEventLoop )
     {
@@ -938,12 +930,13 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
         {
             if ( !loadedObjects.empty() )
             {
-                if ( loadedObjects.size() == 1 && std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() ) )
+                bool sceneFile = std::string( loadedObjects[0]->typeName() ) == std::string( Object::TypeName() );
+                bool sceneEmpty = SceneRoot::get().children().empty();
+                if ( loadedObjects.size() == 1 && sceneFile )
                 {
                     AppendHistory<SwapRootAction>( "Load Scene File" );
                     auto newRoot = loadedObjects[0];
                     std::swap( newRoot, SceneRoot::getSharedPtr() );
-                    getViewerInstance().onSceneSaved( loadedFiles[0] );
                 }
                 else
                 {
@@ -957,6 +950,13 @@ bool Viewer::loadFiles( const std::vector< std::filesystem::path>& filesList )
                     auto& viewerInst = getViewerInstance();
                     for ( const auto& file : loadedFiles )
                         viewerInst.recentFilesStore.storeFile( file );
+                }
+                if ( loadedFiles.size() == 1 && ( sceneFile || sceneEmpty ) )
+                {
+                    auto path = loadedFiles[0];
+                    if ( !sceneFile )
+                        path.replace_extension( ".mru" );
+                    getViewerInstance().onSceneSaved( path, sceneFile );
                 }
                 getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
             }
@@ -1212,7 +1212,7 @@ MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject
     if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
         return VisualObjectRenderType::NoDepthTest;
 
-    if ( obj->getBackColor().a < 255 || obj->getFrontColor( obj->isSelected() ).a < 255 )
+    if ( obj->getBackColor( viewportId ).a < 255 || obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 )
         return VisualObjectRenderType::Transparent;
 
     return VisualObjectRenderType::Opaque;
@@ -1372,10 +1372,12 @@ void Viewer::postResize( int w, int h )
             for ( auto& viewport : viewport_list )
             {
                 auto rect = viewport.getViewportRect();
+                auto oldWidth = width( rect );
+                auto oldHeight = height( rect );
                 rect.min.x = float( rect.min.x / window_width ) * w;
                 rect.min.y = float( rect.min.y / window_height ) * h;
-                rect.max.x = rect.min.x + float( width( rect ) / window_width ) * w;
-                rect.max.y = rect.min.y + float( height( rect ) / window_height ) * h;
+                rect.max.x = rect.min.x + float( oldWidth / window_width ) * w;
+                rect.max.y = rect.min.y + float( oldHeight / window_height ) * h;
                 viewport.setViewportRect( rect );
             }
     }
@@ -1394,22 +1396,15 @@ void Viewer::postResize( int w, int h )
     if ( isLaunched_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
-        do draw(); while ( !isCurrentFrameSwapping() );
+        do draw( true ); while ( !isCurrentFrameSwapping() );
     }
 #endif
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
 {
-    if ( !windowMaximized )
-    {
-        if ( yPos == 0 )
-        {
-            assert( false ); // to catch it once it happens
-            yPos = 40; // handle for one rare issue
-        }
-        windowSavePos = { xPos,yPos };
-    }
+    if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
+        windowSavePos = { xPos, yPos };
 }
 
 void Viewer::postSetMaximized( bool maximized )
@@ -1972,9 +1967,9 @@ bool Viewer::globalHistoryRedo()
     return false;
 }
 
-void Viewer::onSceneSaved( const std::filesystem::path& savePath )
+void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
 {
-    if ( !savePath.empty() )
+    if ( !savePath.empty() && storeInRecent )
         recentFilesStore.storeFile( savePath );
 
     if (!SceneFileFilters.empty() && savePath.extension() == SceneFileFilters.front().extension.substr(1))

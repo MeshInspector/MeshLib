@@ -12,6 +12,8 @@
 #include "MRRenderLinesObject.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRPlaneWidget.h"
+#include "MRColorTheme.h"
+#include "MRMesh/MRColor.h"
 
 namespace ImGui
 {
@@ -251,7 +253,7 @@ bool InputTextCentered( const char* label, std::string& str, float width, ImGuiI
     return res;
 }
 
-void InputTextCenteredReadOnly( const char* label, const std::string& str, float width )
+void InputTextCenteredReadOnly( const char* label, const std::string& str, float width, const std::optional<ImVec4>& textColor )
 {
     const auto& style = ImGui::GetStyle();
     const auto& viewer = MR::Viewer::instanceRef();
@@ -261,10 +263,19 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     SetNextItemWidth( actualWidth );
-    PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
-    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-    transparentColor.w *= 0.5f;
-    PushStyleColor( ImGuiCol_Text, transparentColor );
+    if ( actualWidth > estimatedSize.x )
+        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
+    if ( textColor )
+    {
+        PushStyleColor( ImGuiCol_Text, *textColor );
+    }
+    else
+    {
+        auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+        transparentColor.w *= 0.5f;
+        PushStyleColor( ImGuiCol_Text, transparentColor );
+    }
     InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
     ImGui::SameLine();
@@ -272,7 +283,8 @@ void InputTextCenteredReadOnly( const char* label, const std::string& str, float
     if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
         ImGui::Text( "%s", label );
 
-    PopStyleVar();
+    if ( actualWidth > estimatedSize.x )
+        PopStyleVar();
 }
 
 MRVIEWER_API void TransparentText( const char* fmt, ... )
@@ -551,7 +563,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     window = context->CurrentWindow;
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y )
+    if ( window->SizeFull.y < window->ContentSizeIdeal.y + 2 * style.WindowPadding.y && !params.changedSize )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
@@ -726,12 +738,38 @@ void EndCustomStatePlugin()
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
 {
-	ImGui::PushStyleColor( ImGuiCol_TitleBgActive, 0xFF000000 );
-    bool started = BeginPopupModal( label, open, flags );
-    ImGui::PopStyleColor();
-    if ( started )
-        GetCurrentContext()->DimBgRatio = 1.0f;
-    return started;
+    const auto color = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32();
+    ImGui::PushStyleColor( ImGuiCol_TitleBgActive, color );
+    ImGui::PushStyleColor( ImGuiCol_Text, 0 );
+
+    if ( !BeginPopupModal( label, open, flags ) )
+    {
+        ImGui::PopStyleColor( 2 );
+        return false;
+    }
+
+    ImGui::PopStyleColor( 2 );
+    if ( auto window = FindWindowByName( label ) )
+    {
+        auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold );
+        if ( font )
+            ImGui::PushFont( font );
+
+        const auto backupPos = ImGui::GetCursorPos();
+
+        ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
+        ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 0 } );
+        ImGui::TextUnformatted( label, strstr( label, "##" ) );
+
+        ImGui::SetCursorPos( backupPos );
+        ImGui::PopClipRect();
+
+        if ( font )
+            ImGui::PopFont();
+    }
+
+    GetCurrentContext()->DimBgRatio = 1.0f;
+    return true;
 }
 
 bool ButtonValid( const char* label, bool valid, const ImVec2& size )
@@ -1079,7 +1117,7 @@ PaletteChanges Palette(
             palette.setRangeMinMaxNegPos( ranges[0], ranges[1], ranges[2], ranges[3] );
     }
 
-    std::string popupName = std::string( "Save Palette Config" ) + std::string( label );
+    std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( -1, 0 ) ) )
@@ -1090,7 +1128,7 @@ PaletteChanges Palette(
     ImVec2 windowSize( 2 * scaledWidth, 0 );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
     {
         PopStyleVar();
         return PaletteChanges( changes );
@@ -1100,7 +1138,7 @@ PaletteChanges Palette(
     ImGui::InputText( "Config name", currentPaletteName );
 
     const float btnWidth = 80.0f * ImGui::GetIO().DisplayFramebufferScale.x;
-    if ( ImGui::ButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, ImGui::GetFrameHeight() ) ) )
     {
         std::error_code ec;
         if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
@@ -1122,7 +1160,7 @@ PaletteChanges Palette(
         ImGui::Text( "Palette preset with this name already exists, override?" );
         auto w = GetContentRegionAvail().x;
         auto p = GetStyle().FramePadding.x;
-        if ( ImGui::Button( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
             PalettePresets::savePreset( currentPaletteName, palette );
             presetName = currentPaletteName;
@@ -1130,7 +1168,7 @@ PaletteChanges Palette(
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( ImGui::Button( "No", ImVec2( ( w - p ) * 0.5f, 0 ) ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "No", ImVec2( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -1142,7 +1180,7 @@ PaletteChanges Palette(
     ImGui::SameLine();
     const auto& style = ImGui::GetStyle();
     ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-    if ( ImGui::Button( "Cancel", ImVec2( btnWidth, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
         ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();
@@ -1179,12 +1217,10 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
-        spdlog::info( "importPlaneMode_ = !importPlaneMode_;" );
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }
     else if ( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) && importPlaneModeOld == planeWidget.importPlaneMode() )
     {
-        spdlog::info( "false" );
         planeWidget.setImportPlaneMode( false );
     }
     if ( importPlaneModeOld )
@@ -1319,6 +1355,58 @@ void Separator( float scaling, const std::string& text )
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
     }
+}
+
+
+void Spinner( float radius, float scaling )
+{
+    auto pos = GetCursorScreenPos();
+
+    static float angle = 0.0f;
+    const int numCircles = 7;
+    auto color = ImGui::GetColorU32( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    for ( int i = 0; i < numCircles; ++i )
+    {
+        float angleShift = float( i ) / float( numCircles ) * MR::PI_F * 2.0f;
+        ImVec2 center = ImVec2( pos.x + radius * std::cos( angle + angleShift ), pos.y + radius * std::sin( angle + angleShift ) );
+        ImGui::GetWindowDrawList()->AddCircleFilled( center, radius * 0.1f * scaling, color );
+    }
+    angle += ImGui::GetIO().DeltaTime * 2.2f;
+
+    SetCursorPosY( GetCursorPosY() + radius );
+    ImGui::Dummy( ImVec2( 0, 0 ) );
+    MR::getViewerInstance().incrementForceRedrawFrames();
+}
+
+bool ModalBigTitle( const char* title, float scaling )
+{
+    auto font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Headline );
+    if ( font )
+        ImGui::PushFont( font );
+    ImGui::Text( "%s", title);
+    if ( font )
+        ImGui::PopFont();
+
+    const float exitButtonSize = 30.0f * scaling;
+    ImGui::SameLine( ImGui::GetWindowContentRegionMax().x - exitButtonSize );
+
+    std::string closeBtnTxt = "x";
+    ImGui::SetCursorPosY( 2 * MR::cDefaultWindowPaddingY * scaling );
+    ImGui::PushStyleColor( ImGuiCol_Button, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_Border, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::Background ).getUInt32() );
+    font = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
+    if ( font )
+    {
+        ImGui::PushFont( font );
+        closeBtnTxt = "\xef\x80\x8d";
+    }
+    const bool shoudClose = ImGui::Button( closeBtnTxt.c_str(), ImVec2( 30.0f * scaling, 30.0f * scaling ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape );
+    if ( font )
+        ImGui::PopFont();
+    ImGui::PopStyleColor( 2 );
+    ImGui::NewLine();
+
+    return shoudClose;
 }
 
 } // namespace ImGui

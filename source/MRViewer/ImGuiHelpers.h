@@ -17,6 +17,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <optional>
 
 namespace MR
 {
@@ -81,7 +82,7 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
 MRVIEWER_API bool InputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL );
 
 /// draw read-only text box with text aligned by center
-MRVIEWER_API void InputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f );
+MRVIEWER_API void InputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {} );
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void TransparentText( const char* fmt, ... );
@@ -269,5 +270,11 @@ MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, con
 MRVIEWER_API void SetTooltipIfHovered( const std::string& text, float scaling );
 ///add text with separator line 
 MRVIEWER_API void Separator( float scaling, const std::string& text = "" );
+
+/// draw spinner in given place, radius with respect to scaling
+MRVIEWER_API void Spinner( float radius, float scaling );
+
+/// draw big title with close cross (i.e. for settings modal popup )
+MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
 
 } // namespace ImGui

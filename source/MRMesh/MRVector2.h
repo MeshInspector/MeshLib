@@ -20,9 +20,10 @@ struct Vector2
     using SymMatrixType = SymMatrix2<T>;
     static constexpr int elements = 2;
 
-    T x = 0, y = 0;
+    T x, y;
 
-    constexpr Vector2() noexcept = default;
+    constexpr Vector2() noexcept : x( 0 ), y( 0 ) { }
+    explicit constexpr Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
     explicit constexpr Vector2( const Vector3<T> & v ) noexcept : x( v.x ), y( v.y ) { }
 
@@ -54,6 +55,9 @@ struct Vector2
 
     /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
     Vector2 furthestBasisVector() const;
+
+    /// returns same length vector orthogonal to this (rotated 90 degrees counter-clockwise)
+    Vector2 perpendicular() const { return Vector2{ -y, x }; }
 
     Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
     Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }

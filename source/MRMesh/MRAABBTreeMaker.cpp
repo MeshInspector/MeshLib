@@ -8,6 +8,8 @@
 #include <atomic>
 #include <stack>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #if __has_include(<fmt/std.h>)
 #include <fmt/std.h> // This formats `std::thread::id`.
@@ -47,7 +49,7 @@ private:
 
 private:
     // [firstLeaf, result) will go to left child and [result, lastLeaf) - to the right child
-    int partitionLeaves_( BoxT & box, int firstLeaf, int lastLeaf );
+    int partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf );
     // constructs not-leaf node
     std::pair<Subtree, Subtree> makeNode_( const Subtree & s );
     // constructs given subtree, optionally splitting the job on given number of threads
@@ -55,7 +57,7 @@ private:
 };
 
 template<typename T>
-int AABBTreeMaker<T>::partitionLeaves_( BoxT & box, int firstLeaf, int lastLeaf )
+int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf )
 {
     assert( firstLeaf + 1 < lastLeaf );
     auto boxDiag = box.max - box.min;
@@ -176,19 +178,30 @@ TEST(MRMesh, TBBTask)
     spdlog::info( "Hardware concurrency is {}", std::thread::hardware_concurrency() );
 
     const auto mainThreadId = std::this_thread::get_id();
+    decltype( std::this_thread::get_id() ) taskThreadId;
     tbb::task_group group;
-    std::atomic<bool> sameThread;
-    group.run( [mainThreadId, &sameThread]
+    std::atomic<bool> taskFinished{ false };
+    std::mutex mutex;
+    std::condition_variable cvar;
+    group.run( [&]
     {
-        const auto taskThreadId = std::this_thread::get_id();
-        spdlog::info( "Task in thread {}", taskThreadId );
-        sameThread = mainThreadId == taskThreadId;
+        std::unique_lock lock( mutex );
+        taskThreadId = std::this_thread::get_id();
+        taskFinished = true;
+        cvar.notify_one();
     } );
 
-    spdlog::info( "Main in thread {}", mainThreadId );
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for( 10ms ); // wait for task to run in another thread
+    if ( numThreads > 1 )
+    {
+        std::unique_lock lock( mutex );
+        cvar.wait( lock, [&taskFinished]() { return taskFinished.load(); } );
+    }
+
     group.wait();
+    spdlog::info( "Main in thread {}", mainThreadId );
+    spdlog::info( "Task in thread {}", taskThreadId );
+    const bool sameThread = mainThreadId == taskThreadId;
+
     EXPECT_TRUE( ( numThreads == 1 && sameThread ) || ( numThreads > 1 && !sameThread ) );
 }
 

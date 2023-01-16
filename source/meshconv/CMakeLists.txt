@@ -17,3 +17,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         spdlog
         Boost::boost
 )
+
+install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_BIN_DIR}")
+install(TARGETS ${PROJECT_NAME} EXPORT MeshLib DESTINATION "${MR_MAIN_LIB_DIR}")

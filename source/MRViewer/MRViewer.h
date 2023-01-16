@@ -388,9 +388,11 @@ public:
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
     const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
+    // Return spacemouse handler 
+    const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
-    MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath );
+    MRVIEWER_API void onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent = true );
 
     // Get/Set menu plugin (which is separated from other plugins to be inited first before splash window starts)
     MRVIEWER_API const std::shared_ptr<ImGuiMenu>& getMenuPlugin() const;
@@ -666,7 +668,7 @@ private:
 
     std::shared_ptr<HistoryStore> globalHistoryStore_;
 
-    std::unique_ptr<SpaceMouseHandler> spaceMouseHandler_;
+    std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
     friend MRVIEWER_API Viewer& getViewerInstance();
 };

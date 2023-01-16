@@ -84,11 +84,11 @@ void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
     dirty_ |= DIRTY_SELECTION;
 }
 
-void ObjectPointsHolder::setSelectedVerticesColor( const Color& color )
+void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportId id )
 {
-    if ( color == selectedVerticesColor_ )
+    if ( color == selectedVerticesColor_.get( id ) )
         return;
-    selectedVerticesColor_ = color;
+    selectedVerticesColor_.set( color, id );
 }
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
@@ -218,7 +218,7 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
-    serializeToJson( Vector4f( selectedVerticesColor_ ), root["Colors"]["Selection"]["Points"] );
+    serializeToJson( Vector4f( selectedVerticesColor_.get() ), root["Colors"]["Selection"]["Points"] );
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
 }
 
@@ -228,7 +228,7 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     Vector4f resVec;
     deserializeFromJson( root["Colors"]["Selection"]["Points"], resVec );
-    selectedVerticesColor_ = Color( resVec );
+    selectedVerticesColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionVertBitSet"], selectedPoints_ );
 }

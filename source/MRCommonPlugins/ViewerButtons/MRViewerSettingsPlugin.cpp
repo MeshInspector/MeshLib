@@ -11,6 +11,8 @@
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
+#include "MRMesh/MRSystem.h"
+#include "MRViewer/MRSpaceMouseHandlerWindows.h"
 
 namespace MR
 {
@@ -29,6 +31,25 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
             *storedSamples = *curSamples;
         }
     } );
+#ifndef __EMSCRIPTEN__
+    CommandLoop::appendCommandAfterWindowAppear( [] ()
+    {
+        auto& viewer = getViewerInstance();
+        int samples = 0;
+        if ( auto& settingsManager = viewer.getViewportSettingsManager() )
+            samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
+        if ( viewer.isGLInitialized() && loadGL() )
+        {
+            int realSamples;
+            GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
+            if ( realSamples != samples )
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( "GPU multisampling settings override application value." );
+            }
+        }
+    } );
+#endif
 }
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
@@ -37,22 +58,31 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    if ( RibbonButtonDrawer::GradientButton( "Quick Access Menu Settings", ImVec2( -1, 0 ) ) )
-        ImGui::OpenPopup( "Quick Access Menu Settings" );
+    if ( RibbonButtonDrawer::GradientButton( "Toolbar Customize", ImVec2( -1, 0 ) ) )
+        ImGui::OpenPopup( "Toolbar Customize" );
     drawDialogQuickAccessSettings_( menuScaling );
 
-    if ( RibbonButtonDrawer::GradientButton( "Scene mouse controls", ImVec2( -1, 0 ) ) )
-        ImGui::OpenPopup( "Scene mouse controls" );
+    if ( RibbonButtonDrawer::GradientButton( "Scene Mouse Controls", ImVec2( -1, 0 ) ) )
+        ImGui::OpenPopup( "Scene Mouse Controls" );
     drawMouseSceneControlsSettings_( menuScaling );
 
-    if ( RibbonButtonDrawer::GradientButton( "Show hotkeys", ImVec2( -1, 0 ) ) && ribbonMenu_ )
+    if ( RibbonButtonDrawer::GradientButton( "Show Hotkeys", ImVec2( -1, 0 ) ) && ribbonMenu_ )
     {
         ribbonMenu_->setShowShortcuts( true );
     }
-    if ( RibbonButtonDrawer::GradientButton( "Spacemouse settings", ImVec2( -1, 0 ) ) )
+    if ( RibbonButtonDrawer::GradientButton( "Spacemouse Settings", ImVec2( -1, 0 ) ) )
     {
-        spaceMouseParams = getViewerInstance().spaceMouseController.getParams();
-        ImGui::OpenPopup( "Spacemouse settings" );
+        auto& viewerRef = getViewerInstance();
+        spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
+#ifdef _WIN32
+        if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
+        {
+            auto winHandler = std::dynamic_pointer_cast<SpaceMouseHandlerWindows>( spaceMouseHandler );
+            if ( winHandler )
+                activeMouseScrollZoom_ = winHandler->isMouseScrollZoomActive();
+        }
+#endif
+        ImGui::OpenPopup( "Spacemouse Settings" );
     }
     drawSpaceMouseSettings_( menuScaling );
 
@@ -190,7 +220,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 auto backUpSamples = storedSamples_;
                 ImGui::Text( "Multisample anti-aliasing (MSAA):" );
                 ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
-                int couter = 0;
+                int counter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
                     if ( i == 0 )
@@ -203,8 +233,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                         std::string label = 'x' + std::to_string( i );
                         RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
                     }
-                    if ( i << 1 <= maxSamples_ && ( ++couter ) % 3 != 0 )
-                        ImGui::SameLine( ( couter % 3 ) * menuScaling * 80.0f );
+                    if ( i << 1 <= maxSamples_ && ( ++counter ) % 3 != 0 )
+                        ImGui::SameLine( ( counter % 3 ) * menuScaling * 80.0f );
                 }
                 if ( backUpSamples != storedSamples_ )
                 {
@@ -310,22 +340,27 @@ bool ViewerSettingsPlugin::onDisable_()
 
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {
-    auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 500 * scaling, 165 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImVec2 windowSize = ImVec2( 500 * scaling, 0 );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    if ( !ImGui::BeginModalNoAnimation( "Scene mouse controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
+
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "Scene Mouse Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        ImGui::PopStyleVar();
         return;
+    }
+    ImGui::PopStyleVar();
 
-    ImGui::Text( "%s", "Mouse scene controls" );
+    if ( ImGui::ModalBigTitle( "Scene Mouse Controls", scaling ) )
+    {
+        ImGui::CloseCurrentPopup();
+    }
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 20.f );
-
-    drawModalExitButton_( scaling );
-
-    ImGui::BeginChild( "##MouseSceneControlsList", ImVec2( -1, -1 ), true );
-
+	const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Set other" ).y;
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
     {
         MouseMode mode = MouseMode( i );
@@ -338,7 +373,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
             ctrlStr = MouseController::getControlString( *ctrl );
 
         const float posY = ImGui::GetCursorPosY();
-        ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling );
+        ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling / 2.f );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
@@ -347,7 +382,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SetCursorPosX( windowSize.x - 150.0f );
 
 		ImGui::SetCursorPosY( posY );
-        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, 0 ) );
+        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, buttonHeight ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -375,28 +410,29 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         }
     }
 
+    ImGui::SetNextItemWidth( 100 * scaling );
     ImGui::DragFloatValid( "Scroll modifier", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
-
-    ImGui::EndChild();
 
     ImGui::EndPopup();
 }
 
 void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
 {
-    auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 500 * scaling, 400 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImVec2 windowSize( 500 * scaling, 420 * scaling );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
 
-    if ( !ImGui::BeginModalNoAnimation( "Quick Access Menu Settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "Toolbar Customize", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        ImGui::PopStyleVar();
         return;
+    }
 
-    ImGui::Text( "%s", "Toolbar Settings" );
-
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 20.f );
-
-    drawModalExitButton_( scaling );
+    if ( ImGui::ModalBigTitle( "Toolbar Customize", scaling ) )
+        ImGui::CloseCurrentPopup();
 
     ImGui::Text( "%s", "Select icons to show in Toolbar" );
 
@@ -406,7 +442,7 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
     ImGui::SetCursorPosX( textPosX );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( quickAccessList_->size() ), maxQuickAccessSize_ );
     
-    const float buttonHeight = cGradientButtonFramePadding * 2 * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
+    const float buttonHeight = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Reset to default" ).y;
     const float height = ImGui::GetStyle().ItemSpacing.y + buttonHeight;
 
     ImGui::BeginChild( "##QuickAccessSettingsList", ImVec2( -1, -height ), true );
@@ -422,6 +458,7 @@ void ViewerSettingsPlugin::drawDialogQuickAccessSettings_( float scaling )
             ribbonMenu->resetQuickAccessList();
     }
 
+    ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
 
@@ -495,29 +532,39 @@ void ViewerSettingsPlugin::drawQuickAccessList_()
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 {
-    auto& viewerRef = Viewer::instanceRef();
-    ImVec2 windowSize( 400 * scaling, 300 * scaling );
-    ImGui::SetNextWindowPos( ImVec2( ( viewerRef.window_width - windowSize.x ) / 2.f, ( viewerRef.window_height - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImVec2 windowSize = ImVec2( 450 * scaling, 0);
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
 
-    if ( !ImGui::BeginModalNoAnimation( "Spacemouse settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "Spacemouse Settings", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        ImGui::PopStyleVar();
         return;
+    }
 
-    ImGui::Text( "%s", "Spacemouse settings" );
+    if ( ImGui::ModalBigTitle( "Spacemouse Settings", scaling ) )
+        ImGui::CloseCurrentPopup();
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 20.f );
 
-    drawModalExitButton_( scaling );
-
+    auto font = RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::BigSemiBold );
+    if ( font )
+        ImGui::PushFont( font );
     ImGui::Text( "%s", "Translation scales" );
+    if ( font )
+        ImGui::PopFont();
 
     bool anyChanged = false;
     auto drawSlider = [&anyChanged, &windowSize] ( const char* label, float& value )
     {
         int valueAbs = int( std::fabs( value ) );
         bool inverse = value < 0.f;
+        ImGui::SetNextItemWidth( windowSize.x * 0.6f );
         bool changed = ImGui::SliderInt( label, &valueAbs, 1, 100 );
-        ImGui::SameLine( windowSize.x * 0.8f);
+        ImGui::SameLine( windowSize.x * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );
         changed = RibbonButtonDrawer::GradientCheckbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
@@ -526,19 +573,40 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         anyChanged = anyChanged || changed;
     };
 
-    drawSlider( "X##translate", spaceMouseParams.translateScale[0] );
-    drawSlider( "Y##translate", spaceMouseParams.translateScale[2] );
-    drawSlider( "Zoom##translate", spaceMouseParams.translateScale[1] );
+    drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );
+    drawSlider( "Y##translate", spaceMouseParams_.translateScale[2] );
+    drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
 
     ImGui::NewLine();
+    if ( font )
+        ImGui::PushFont( font );
     ImGui::Text( "%s", "Rotation scales" );
-    drawSlider( "Ox##rotate", spaceMouseParams.rotateScale[0] );
-    drawSlider( "Oy##rotate", spaceMouseParams.rotateScale[1] );
-    drawSlider( "Oz##rotate", spaceMouseParams.rotateScale[2] );
+    if ( font )
+        ImGui::PopFont();
+    drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
+    drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
+    drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );
+
+#ifdef _WIN32
+    ImGui::NewLine();
+    if ( RibbonButtonDrawer::GradientCheckbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
+    {
+        if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
+        {
+            auto winHandler = std::dynamic_pointer_cast< SpaceMouseHandlerWindows >( spaceMouseHandler );
+            if ( winHandler )
+            {
+                winHandler->activateMouseScrollZoom( activeMouseScrollZoom_ );
+            }
+        }
+    }
+    ImGui::SetTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
+#endif
 
     if ( anyChanged )
-        getViewerInstance().spaceMouseController.setParams( spaceMouseParams );
+        getViewerInstance().spaceMouseController.setParams( spaceMouseParams_ );
 
+    ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
 
@@ -553,7 +621,8 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
         return;
     font->Scale = 0.6f;
     ImGui::PushFont( font );
-    if ( ImGui::Button( "\xef\x80\x8d" ) )
+    const float btnSize = 20 * scaling;
+    if ( RibbonButtonDrawer::GradientButton( "\xef\x80\x8d", ImVec2( btnSize , btnSize ) ) )
         ImGui::CloseCurrentPopup();
     ImGui::PopFont();
     ImGui::SetCursorPos( oldCursorPos );

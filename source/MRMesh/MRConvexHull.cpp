@@ -77,16 +77,6 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
     if( b == d )
         return true; // consider condition satisfied to avoid creation of loop edges
 
-    for ( auto e : orgRing( mesh.topology, mesh.topology.next( edge ).sym() ) )
-    {
-        assert( mesh.topology.org( e ) == d );
-        if ( mesh.topology.dest( e ) == b )
-        {
-            // flipping this edge will produce multiple-edges
-            return true;
-        }
-    }
-
     const Vector3d ap{ mesh.points[a] };
     const Vector3d bp{ mesh.points[b] };
     const Vector3d cp{ mesh.points[c] };
@@ -96,20 +86,10 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
 
 static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
 {
-    const EdgeId e0 = e;
-    for (;;)
+    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge ) 
     {
-        auto testEdge = mesh.topology.prev( e.sym() );
-        if ( !mesh.topology.left( testEdge ).valid() || !mesh.topology.right( testEdge ).valid() 
-            || goodConvexEdge( mesh, testEdge ) )
-        {
-            e = mesh.topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-            continue;
-        }
-        mesh.topology.flipEdge( testEdge );
-    } 
+        return !goodConvexEdge( mesh, testEdge );
+    } );
 }
 
 const double NoDist = -1.0;
@@ -152,11 +132,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         return Plane3d::fromDirAndPt( cross( bp - ap, cp - ap ).normalized(), ap );
     };
 
-    // these points are on the convex hull
-    VertBitSet hullPoints( validPoints.find_last() + 1 );
-    hullPoints.set( v0 );
-    hullPoints.set( v1 );
-    hullPoints.set( v2 );
     // separate all remaining points as above face #0 or face #1
     {
         const auto pl0 = getPlane3d( 0_f );
@@ -206,9 +181,8 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         }
         auto myverts = std::move( it->second );
         face2verts.erase( it );
-        assert( !myverts.empty() );
 
-        if ( myverts.empty() )
+        if ( myverts.empty() || !res.topology.hasFace( myFace ) )
         {
             queue.setSmallerValue( myFace, NoDist );
             continue;
@@ -219,8 +193,6 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         const auto pl = getPlane3d( myFace );
         for ( auto v : myverts )
         {
-            if ( hullPoints.test( v ) )
-                continue;
             auto dist = pl.distance( Vector3d{ points[v] } );
             if ( !topmostVert || dist > maxDist )
             {
@@ -233,21 +205,15 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             queue.setSmallerValue( myFace, NoDist );
             continue;
         }
-        hullPoints.set( topmostVert );
         auto newv = res.splitFace( myFace );
         res.points[newv] = points[topmostVert];
 
         makeConvexOriginRing( res, res.topology.edgeWithOrg( newv ) );
         queue.resize( (int)res.topology.faceSize() );
 
-        newFp.clear();
         for ( EdgeId e : orgRing( res.topology, newv ) )
         {
-            newFp.emplace_back();
-            auto & x = newFp.back();
-            x.face = res.topology.left( e );
-            x.plane = getPlane3d( x.face );
-            auto it1 = face2verts.find( x.face );
+            auto it1 = face2verts.find( res.topology.left( e ) );
             if ( it1 != face2verts.end() )
             {
                 for ( auto v : it1->second )
@@ -256,36 +222,43 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             }
         }
 
-        std::sort( myverts.begin(), myverts.end() );
-        myverts.erase( std::unique( myverts.begin(), myverts.end() ), myverts.end() );
+        eliminateDoubleTrisAround( res.topology, newv );
+        newFp.clear();
+        for ( EdgeId e : orgRing( res.topology, newv ) )
+        {
+            newFp.emplace_back();
+            auto & x = newFp.back();
+            x.face = res.topology.left( e );
+            x.plane = getPlane3d( x.face );
+        }
 
         for ( auto v : myverts )
         {
-            if ( hullPoints.test( v ) )
+            if ( v == topmostVert )
                 continue;
+            int bestFace = -1;
+            double bestDist = 0;
             for ( int i = 0; i < newFp.size(); ++i )
             {
                 const auto dist = newFp[i].plane.distance( Vector3d{ points[v] } );
-                if ( dist > 0 )
+                if ( dist > bestDist )
                 {
-                    newFp[i].verts.push_back( v );
-                    newFp[i].maxDist = std::max( newFp[i].maxDist, dist );
+                    bestFace = i;
+                    bestDist = dist;
                 }
+            }
+            if ( bestFace >= 0 )
+            {
+                newFp[bestFace].verts.push_back( v );
+                newFp[bestFace].maxDist = std::max( newFp[bestFace].maxDist, bestDist );
             }
         }
         for ( auto & x : newFp )
         {
             queue.setValue( x.face, x.maxDist );
-            auto it2 = face2verts.find( x.face );
             if ( x.verts.empty() )
             {
-                if ( it2 != face2verts.end() )
-                    face2verts.erase( it2 );
-                continue;
-            }
-            if ( it2 != face2verts.end() )
-            {
-                it2->second = std::move( x.verts );
+                face2verts.erase( x.face );
                 continue;
             }
             face2verts[x.face] = std::move( x.verts );

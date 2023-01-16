@@ -19,5 +19,6 @@ MRVIEWER_API void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>&
 /// it is a good idea to make SCOPED_HISTORY before calling this function
 MRVIEWER_API void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap );
 MRVIEWER_API void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeHashMap & emap );
+MRVIEWER_API void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const UndirectedEdgeBMap & emap );
 
 } //namespace MR

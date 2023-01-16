@@ -30,7 +30,8 @@ ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
 project (MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshViewer\")
+add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
+add_compile_definitions(MR_FRAMEWORK)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -65,7 +66,7 @@ IF(NOT MR_EMSCRIPTEN)
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
   # need to hardcode some path to fix wheel (no option to pass path)
-  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
+  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 ELSE()
  # set platform dependent flags
@@ -155,9 +156,37 @@ ENDIF()
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 
+IF(NOT $ENV{MR_VERSION} STREQUAL "")
+    set(MESHLIB_VERSION $ENV{MR_VERSION})
+ELSE()
+    set(MESHLIB_VERSION 0.0.0)
+ENDIF()
+message("version: ${MESHLIB_VERSION}")
+
+if(NOT APPLE)
+    set(MR_ROOT "./usr/local")
+    set(MR_BIN_DIR "${MR_ROOT}/bin")
+    set(MR_INCLUDE_DIR "${MR_ROOT}/include/MeshLib")
+    set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib/MeshLib")
+    set(MR_PY_LIB_DIR "${MR_MAIN_LIB_DIR}/meshlib")
+    set(MR_RESOURCES_DIR "${MR_ROOT}/etc/MeshLib")
+    set(MR_FONTS_DIR "${MR_ROOT}/share/fonts")
+    set(MR_CONFIG_DIR ${MR_MAIN_LIB_DIR})
+else()
+    set(MR_ROOT "./Library/Frameworks/MeshLib.framework/Versions/${MESHLIB_VERSION}")
+    set(MR_BIN_DIR "${MR_ROOT}/bin")
+    set(MR_INCLUDE_DIR "${MR_ROOT}/include")
+    set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib")
+    set(MR_PY_LIB_DIR "${MR_MAIN_LIB_DIR}/meshlib")
+    set(MR_RESOURCES_DIR "${MR_ROOT}/Resources")
+    set(MR_FONTS_DIR "${MR_ROOT}/Resources/fonts")
+    set(MR_CONFIG_DIR ${MR_ROOT}/Resources)
+endif()
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 IF(NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshpy ./mrmeshpy)
   add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
@@ -166,3 +195,19 @@ IF(NOT MR_EMSCRIPTEN)
 ENDIF() # NOT MR_EMSCRIPTEN
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(meshlib-config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
+        INSTALL_DESTINATION ${MR_CONFIG_DIR}
+        PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR)
+
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        VERSION ${MESHLIB_VERSION}
+        COMPATIBILITY ExactVersion)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+        DESTINATION ${MR_CONFIG_DIR})
+
+set(CPACK_GENERATOR "DRAGNDROP")
+include(CPack)

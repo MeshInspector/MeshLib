@@ -123,23 +123,31 @@ auto AABBTree::getSubtrees( int minNum ) const -> std::vector<NodeId>
     return res;
 }
 
-FaceMap AABBTree::getLeafOrderAndReset()
+void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
 {
     MR_TIMER;
-    FaceMap res;
-    const auto sz = ( nodes_.size() + 1 ) / 2;
-    res.reserve( sz );
     FaceId f = 0_f;
     for ( auto & n : nodes_ )
     {
         if ( !n.leaf() )
             continue;
-        res.push_back( n.leafId() );
+        faceMap.b[n.leafId()] = f++;
+    }
+    faceMap.tsize = int( f );
+}
+
+void AABBTree::getLeafOrderAndReset( FaceBMap & faceMap )
+{
+    MR_TIMER;
+    FaceId f = 0_f;
+    for ( auto & n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        faceMap.b[n.leafId()] = f;
         n.setLeafId( f++ );
     }
-    assert( res.size() == sz );
-
-    return res;
+    faceMap.tsize = int( f );
 }
 
 auto AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const -> NodeBitSet

@@ -13,6 +13,8 @@
 #include "MRFillContour.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
+#include "MRMeshCollide.h"
 
 namespace
 {
@@ -64,42 +66,73 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
+OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, const ContinuousContours& contours, 
+    const AffineXf3f* rigidB2A = nullptr )
+{
+    AffineXf3f inverseXf;
+    if ( rigidB2A )
+        inverseXf = rigidB2A->inverse();
+    OneMeshContours bMeshContours = aContours;
+    for ( int j = 0; j < bMeshContours.size(); ++j )
+    {
+        const auto& inCont = contours[j];
+        auto& outCont = bMeshContours[j].intersections;
+        assert( inCont.size() == outCont.size() );
+        tbb::parallel_for( tbb::blocked_range<int>( 0, int( inCont.size() ) ),
+                [&] ( const tbb::blocked_range<int>& range )
+        {
+            for ( int i = range.begin(); i < range.end(); ++i )
+            {
+                const auto& inInter = inCont[i];
+                auto& outInter = outCont[i];
+                outInter.primitiveId = inInter.isEdgeATriB ?
+                    std::variant<FaceId, EdgeId, VertId>( inInter.tri ) : 
+                    std::variant<FaceId, EdgeId, VertId>( inInter.edge );
+                if ( rigidB2A )
+                    outInter.coordinate = inverseXf( outCont[i].coordinate );
+            }
+        } );
+    }
+    return bMeshContours;
+}
+
 }
 
 namespace MR
 {
 
-BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation opearation,
+BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
 {
-    MR_TIMER;
-    CoordinateConverters converters;
-    PreciseCollisionResult intersections;
-    ContinuousContours contours;
-    Mesh meshACut, meshBCut;
-
-    bool needCutMeshA = opearation != BooleanOperation::InsideB && opearation != BooleanOperation::OutsideB;
-    bool needCutMeshB = opearation != BooleanOperation::InsideA && opearation != BooleanOperation::OutsideA;
-
+    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
+    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
     if ( needCutMeshA )
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshA.getAABBTree();
-        meshACut = meshA;
     }
     if ( needCutMeshB )
     {
         // build tree for input mesh for the cloned mesh to copy the tree,
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshB.getAABBTree();
-        meshBCut = meshB;
     }
+    return boolean( Mesh( meshA ), Mesh( meshB ), operation, rigidB2A, mapper );
+}
+
+BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
+                       const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */ )
+{
+    MR_TIMER;
+    CoordinateConverters converters;
+    PreciseCollisionResult intersections;
+    ContinuousContours contours;
+
+    bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
+    bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
 
     converters = getVectorConverters( meshA, meshB, rigidB2A );
-
-    const Mesh& constMeshARef = needCutMeshA ? meshACut : meshA;
-    const Mesh& constMeshBRef = needCutMeshB ? meshBCut : meshB;
 
     FaceMap new2orgSubdivideMapA;
     FaceMap new2orgSubdivideMapB;
@@ -107,9 +140,9 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     for ( ;;)
     {
         // find intersections
-        intersections = findCollidingEdgeTrisPrecise( constMeshARef, constMeshBRef, converters.toInt, rigidB2A );
+        intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, rigidB2A );
         // order intersections
-        contours = orderIntersectionContours( constMeshARef.topology, constMeshBRef.topology, intersections );
+        contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
         // find lone
         auto loneContoursIds = detectLoneContours( contours );
 
@@ -141,11 +174,11 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         // subdivide owners of lone
         if ( !loneA.empty() && needCutMeshA )
         {
-            auto loneIntsA = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, loneA, true, converters, rigidB2A );
+            auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, rigidB2A );
             removeDegeneratedContours( loneIntsA );
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
-            subdivideLoneContours( meshACut, loneIntsA, mapPointer );
+            subdivideLoneContours( meshA, loneIntsA, mapPointer );
             if ( new2orgSubdivideMapA.size() < new2orgLocalMap.size() )
                 new2orgSubdivideMapA.resize( new2orgLocalMap.size() );
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( new2orgLocalMap.size() ) ) ),
@@ -164,11 +197,11 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         }
         if ( !loneB.empty() && needCutMeshB )
         {
-            auto loneIntsB = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, loneB, false, converters, rigidB2A );
+            auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, rigidB2A );
             removeDegeneratedContours( loneIntsB );
             FaceMap new2orgLocalMap;
             FaceMap* mapPointer = mapper ? &new2orgLocalMap : nullptr;
-            subdivideLoneContours( meshBCut, loneIntsB, mapPointer );
+            subdivideLoneContours( meshB, loneIntsB, mapPointer );
             if ( new2orgSubdivideMapB.size() < new2orgLocalMap.size() )
                 new2orgSubdivideMapB.resize( new2orgLocalMap.size() );
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( new2orgLocalMap.size() ) ) ),
@@ -186,8 +219,12 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
             } );
         }
     }
+    // clear intersections
+    intersections = {};
+
     std::vector<EdgePath> cutA, cutB;
     BooleanResult result;
+    OneMeshContours meshAContours;
     OneMeshContours meshBContours;
     // prepare it before as far as MeshA will be changed after cut
     Mesh meshACopyBuffer; // second copy may be necessary because sort data need mesh after separation, and cut A will break it
@@ -197,29 +234,37 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         if ( needCutMeshA )
         {
             // cutMesh A will break mesh so make copy
-            meshACopyBuffer = constMeshARef;
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshACopyBuffer, contours, converters.toInt, rigidB2A, constMeshARef.topology.vertSize(), true } );
+            meshACopyBuffer = meshA;
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshACopyBuffer, contours, converters.toInt, rigidB2A, meshA.topology.vertSize(), true } );
         }
         else
         {
             // no need to cut A, so no need to copy
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ constMeshARef, contours, converters.toInt, rigidB2A, constMeshARef.topology.vertSize(), true } );
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, rigidB2A, meshA.topology.vertSize(), true } );
         }
     }
+    if ( needCutMeshA )
+        meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, converters, rigidB2A );
     if ( needCutMeshB )
-        meshBContours = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, contours, false, converters, rigidB2A );
+    {
+        if ( needCutMeshA )
+            meshBContours = getOtherMeshContoursByHint( meshAContours, contours, rigidB2A );
+        else
+            meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, converters, rigidB2A );
+    }
 
     if ( needCutMeshA )
     {
         // prepare contours per mesh
-        auto meshAContours = getOneMeshIntersectionContours( constMeshARef, constMeshBRef, contours, true, converters, rigidB2A );
-        SortIntersectionsData dataForA{ constMeshBRef,contours,converters.toInt,rigidB2A,constMeshARef.topology.vertSize(),false};
+        SortIntersectionsData dataForA{ meshB,contours,converters.toInt,rigidB2A,meshA.topology.vertSize(),false};
         FaceMap* cut2oldAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
         // cut meshes
         CutMeshParameters params;
         params.sortData = &dataForA;
         params.new2OldMap = cut2oldAPtr;
-        auto res = cutMesh( meshACut, meshAContours, params );
+        auto res = cutMesh( meshA, meshAContours, params );
+        meshAContours.clear();
+        meshAContours.shrink_to_fit(); // free memory
         if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
         {
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldAPtr->size() ) ) ),
@@ -251,7 +296,9 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         CutMeshParameters params;
         params.sortData = dataForB.get();
         params.new2OldMap = cut2oldBPtr;
-        auto res = cutMesh( meshBCut, meshBContours, params );
+        auto res = cutMesh( meshB, meshBContours, params );
+        meshBContours.clear();
+        meshBContours.shrink_to_fit(); // free memory
         if ( cut2oldBPtr && !new2orgSubdivideMapB.empty() )
         {
             tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldBPtr->size() ) ) ),
@@ -277,7 +324,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         cutB = std::move( res.resultCut );
     }
     // do operation
-    auto res = doBooleanOperation( constMeshARef, constMeshBRef, cutA, cutB, opearation, rigidB2A, mapper );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, rigidB2A, mapper );
     if ( res.has_value() )
         result.mesh = std::move( res.value() );
     else
@@ -285,7 +332,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     return result;
 }
 
-BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A )
+BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
 
@@ -322,21 +369,64 @@ BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh
 
     auto collBordersA = findRegionBoundary( meshA.topology, collFacesA );
     auto collBordersB = findRegionBoundary( meshB.topology, collFacesB );
-    // filter out contours not lying outside the other mesh
-    std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
-    } );
-    std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
-    {
-        return !collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
-    } );
 
-    collFacesA = fillContourLeft( meshA.topology, collBordersA );
-    collFacesB = fillContourLeft( meshB.topology, collBordersB );
+    const bool needInsidePartA = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideA || operation == BooleanOperation::DifferenceBA );
+    const bool needInsidePartB = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideB || operation == BooleanOperation::DifferenceAB );
 
-    result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
-    result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+    if ( operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB )
+    {
+        std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return needInsidePartA != collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+        } );
+
+        collFacesA = fillContourLeft( meshA.topology, collBordersA );
+        result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+
+        const auto aComponents = MeshComponents::getAllComponents(meshA);
+
+        for ( const auto& aComponent : aComponents )
+        {
+            const auto aComponentVerts = getInnerVerts( meshA.topology, aComponent );
+            if ( aComponentVerts.intersects( result.meshAVerts ) )
+                continue;
+            const bool inside = isInside( MeshPart( meshA, &aComponent ), MeshPart( meshB ), rigidB2A );
+            if ( needInsidePartA == inside )
+            {
+                result.meshAVerts |= aComponentVerts;
+            }
+        }
+    }
+
+    if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
+    {
+        std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
+        {
+            return needInsidePartB != collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
+        } );
+
+        collFacesB = fillContourLeft(meshB.topology, collBordersB);
+        result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
+        
+        const auto bComponents = MeshComponents::getAllComponents(meshB);
+        std::unique_ptr<AffineXf3f> rigidA2B;
+        if ( rigidB2A )
+            rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );
+
+        for ( const auto& bComponent : bComponents )
+        {
+            const auto bComponentVerts = getInnerVerts( meshB.topology, bComponent );
+            if ( bComponentVerts.intersects( result.meshBVerts ) )
+                continue;
+
+            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
+
+            if ( needInsidePartB == inside  )
+            {
+                result.meshBVerts |= bComponentVerts;
+            }
+        }
+    }
 
     return result;
 }

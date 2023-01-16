@@ -39,7 +39,11 @@
 
 namespace MR
 {
- 
+
+struct NoInit {};
+inline constexpr NoInit noInit;
+template <typename T> struct MRMESH_CLASS NoDefInit;
+
 class MRMESH_CLASS EdgeTag;
 class MRMESH_CLASS UndirectedEdgeTag;
 class MRMESH_CLASS FaceTag;
@@ -49,7 +53,8 @@ class MRMESH_CLASS VoxelTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
-template <typename T> class MRMESH_CLASS Buffer;
+template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
+struct PackMapping;
 
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
@@ -229,13 +234,18 @@ class PointAccumulator;
 
 struct EdgePoint;
 using MeshEdgePoint = EdgePoint;
+using SurfacePath = std::vector<MeshEdgePoint>;
+using SurfacePaths = std::vector<SurfacePath>;
+using IsoLine = SurfacePath;
+using IsoLines = SurfacePaths;
+using PlaneSection = SurfacePath;
+using PlaneSections = SurfacePaths;
 struct EdgePointPair;
 
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 struct PointOnFace;
-using SurfacePath = std::vector<MeshEdgePoint>;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;
@@ -252,6 +262,13 @@ using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
+
+template <typename T, typename I> struct MRMESH_CLASS BMap;
+using FaceBMap = BMap<FaceId, FaceId>;
+using VertBMap = BMap<VertId, VertId>;
+using EdgeBMap = BMap<EdgeId, EdgeId>;
+using UndirectedEdgeBMap = BMap<UndirectedEdgeId, UndirectedEdgeId>;
+using WholeEdgeBMap = BMap<EdgeId, UndirectedEdgeId>;
 
 template <typename K>
 using HashSet = phmap::flat_hash_set<K>;

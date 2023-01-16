@@ -40,8 +40,11 @@ struct DecimateSettings
     float maxEdgeLen = 1;
     /// Maximal possible aspect ratio of a triangle introduced during decimation
     float maxTriangleAspectRatio = 20;
-    /// the algorithm will try to eliminate triangles with equal or larger aspect ratio, ignoring normal orientation checks
+    /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
+    /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
+    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    float tinyEdgeLength = -1;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 0.001f;
@@ -56,6 +59,9 @@ struct DecimateSettings
     FaceBitSet * region = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
+    /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
+    /// if the pointer is not null then boundary vertices detection is skipped in favor of values from there
+    const VertBitSet * bdVerts = nullptr;
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
     /// if it does change dihedral angle more than on this value (negative value prohibits any edge flips)
     float maxAngleChange = -1;
@@ -85,6 +91,10 @@ struct DecimateSettings
     bool packMesh = false;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback = {};
+    /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
+    /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
+    /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
+    int subdivideParts = 1;
 };
 
 /**
@@ -140,11 +150,13 @@ struct ResolveMeshDegenSettings
     int maxIters = 1;
     /// maximum permitted deviation from the original surface
     float maxDeviation = 0;
+    /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
+    float tinyEdgeLength = 0;
     /// Permit edge flips if it does change dihedral angle more than on this value
     float maxAngleChange = PI_F / 3;
-    /// if this value is less than FLT_MAX then the algorithm will try to minimize maximal triangle aspect ratio,
-    /// and ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value
-    float criticalAspectRatio = 1e7f;
+    /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
+    /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
+    float criticalAspectRatio = 10000;
     /// Small stabilizer is important to achieve good results on completely planar mesh parts,
     /// if your mesh is not-planer everywhere, then you can set it to zero
     float stabilizer = 1e-6f;
@@ -162,7 +174,7 @@ struct ResolveMeshDegenSettings
  */
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );
 [[deprecated(" use the version with parameter struct instead" )]]
-MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 1e7 );
+MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, int maxIters, float maxDeviation = 0, float maxAngleChange = PI_F / 3, float criticalAspectRatio = 10000 );
 
 
 struct RemeshSettings

@@ -193,7 +193,6 @@ private:
     int topPanelOpenedHeight_ = 111;
     int topPanelHiddenHeight_ = 33;
 
-    bool fixFirstGetSize_{ false };
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };
     float transformHeight_{ 0.f };

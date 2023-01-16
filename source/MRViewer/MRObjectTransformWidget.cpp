@@ -31,7 +31,7 @@ Vector3f findClosestPointOfSkewLines( const Vector3f& p11, const Vector3f& p12, 
     auto n2 = cross( d2, n );
     auto lSq = n.lengthSq();
     auto l2Sq = n2.lengthSq();
-    if ( std::isnan( lSq ) || std::isnan( l2Sq ) )
+    if ( std::isnan( lSq ) || std::isnan( l2Sq ) || l2Sq == 0 )
         return {};
 
     return p11 + dot( ( p21 - p11 ), n2 ) / dot( d1, n2 ) * d1;
@@ -44,7 +44,7 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
     Plane3f plane2 = Plane3f::fromDirAndPt( cross( ray.d, center - ray.p ), center ).normalized();
     auto centerVp = vp.projectToViewportSpace( center );
     auto centerRay = vp.unprojectPixelRay( to2dim( centerVp ) );
-    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.05f;
+    bool parallel = std::abs( dot( centerRay.d.normalized(), norm.normalized() ) ) < 0.25f;
     auto planeIntersectionLine = intersection( plane1, plane2 );
     auto radiusVec = ( zeroPoint - center );
     if ( parallel || !planeIntersectionLine )

@@ -142,6 +142,8 @@ protected:
   bool selectionChangedToSingleObj_{ false };
   // this function should be called after BeginChild("Meshes") (child window with scene tree)
   MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
+  // menu will change objects' colors in this viewport
+  ViewportId selectedViewport_ = {};
 
 public:
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
@@ -298,10 +300,10 @@ protected:
     // "target" and "before" are "to" and "before" of SceneReorder struct
     // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
     // counter - unique number of object in tree (needed for ImGui to differ new lines)
-    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, int counter );
+    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
     MRVIEWER_API void reorderSceneIfNeeded_();
 
-    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, int& counter );
+    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );

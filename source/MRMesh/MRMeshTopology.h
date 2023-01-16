@@ -27,8 +27,12 @@ public:
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
+    /// returns the number of allocated edge records
+    [[nodiscard]] size_t edgeCapacity() const { return edges_.capacity(); }
     /// returns the number of undirected edges (pairs of half-edges) including lone ones
     [[nodiscard]] size_t undirectedEdgeSize() const { return edges_.size() >> 1; }
+    /// returns the number of allocated undirected edges (pairs of half-edges)
+    [[nodiscard]] size_t undirectedEdgeCapacity() const { return edges_.capacity() >> 1; }
     /// computes the number of not-lone (valid) undirected edges
     [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
     /// sets the capacity of half-edges vector
@@ -69,6 +73,10 @@ public:
     /// returns true if a and b are both from the same left face ring
     [[nodiscard]] MRMESH_API bool fromSameLeftRing( EdgeId a, EdgeId b ) const;
 
+    /// returns the number of edges around the origin vertex, returns 1 for lone edges
+    [[nodiscard]] MRMESH_API int getOrgDegree( EdgeId a ) const;
+    /// returns the number of edges around the given vertex
+    [[nodiscard]] int getVertDegree( VertId v ) const { return getOrgDegree( edgeWithOrg( v ) ); }
     /// returns the number of edges around the left face: 3 for triangular faces, ...
     [[nodiscard]] MRMESH_API int getLeftDegree( EdgeId a ) const;
     /// returns the number of edges around the given face: 3 for triangular faces, ...
@@ -104,32 +112,34 @@ public:
     /// returns valid edge if given vertex is present in the mesh
     [[nodiscard]] EdgeId edgeWithOrg( VertId a ) const { assert( a.valid() ); return a < int(edgePerVertex_.size()) ? edgePerVertex_[a] : EdgeId(); }
     /// returns true if given vertex is present in the mesh
-    [[nodiscard]] bool hasVert( VertId a ) const { return validVerts_.test( a ); }
+    [[nodiscard]] bool hasVert( VertId a ) const { assert( updateValids_ ); return validVerts_.test( a ); }
     /// returns the number of valid vertices
-    [[nodiscard]] int numValidVerts() const { return numValidVerts_; }
+    [[nodiscard]] int numValidVerts() const { assert( updateValids_ ); return numValidVerts_; }
     /// returns last valid vertex id, or invalid id if no single valid vertex exists
     [[nodiscard]] MRMESH_API VertId lastValidVert() const;
     /// creates new vert-id not associated with any edge yet
-    [[nodiscard]] VertId addVertId() { edgePerVertex_.push_back( {} ); validVerts_.push_back( false ); return VertId( (int)edgePerVertex_.size() - 1 ); }
+    [[nodiscard]] VertId addVertId() { edgePerVertex_.emplace_back(); if ( updateValids_ ) { validVerts_.push_back( false ); } return edgePerVertex_.backId(); }
     /// explicitly increases the size of verts vector
-    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); validVerts_.resize( newSize ); } }
+    void vertResize( size_t newSize ) { if ( edgePerVertex_.size() < newSize ) { edgePerVertex_.resize( newSize ); if ( updateValids_ ) { validVerts_.resize( newSize ); } } }
     /// sets the capacity of verts vector
-    void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); validVerts_.reserve( newCapacity ); }
+    void vertReserve( size_t newCapacity ) { edgePerVertex_.reserve( newCapacity ); if ( updateValids_ ) { validVerts_.reserve( newCapacity ); } }
     /// returns the number of vertex records including invalid ones
     [[nodiscard]] size_t vertSize() const { return edgePerVertex_.size(); }
+    /// returns the number of allocated vert records
+    [[nodiscard]] size_t vertCapacity() const { return edgePerVertex_.capacity(); }
     /// returns cached set of all valid vertices
-    [[nodiscard]] const VertBitSet & getValidVerts() const { return validVerts_; }
+    [[nodiscard]] const VertBitSet & getValidVerts() const { assert( updateValids_ ); return validVerts_; }
     /// sets in (vs) all valid vertices that were not selected before the call, and resets other bits
     void flip( VertBitSet & vs ) const { vs = getValidVerts() - vs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid vertices in the mesh
-    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { return region ? *region : validVerts_; }
+    [[nodiscard]] const VertBitSet & getVertIds( const VertBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validVerts_; }
 
     /// for all valid faces this vector contains an edge with that face at left
     [[nodiscard]] const Vector<EdgeId, FaceId> & edgePerFace() const { return edgePerFace_; }
     /// returns valid edge if given vertex is present in the mesh
     [[nodiscard]] EdgeId edgeWithLeft( FaceId a ) const { assert( a.valid() ); return a < int(edgePerFace_.size()) ? edgePerFace_[a] : EdgeId(); }
     /// returns true if given face is present in the mesh
-    [[nodiscard]] bool hasFace( FaceId a ) const { return validFaces_.test( a ); }
+    [[nodiscard]] bool hasFace( FaceId a ) const { assert( updateValids_ ); return validFaces_.test( a ); }
     /// if two valid faces share the same edge then it is found and returned
     [[nodiscard]] MRMESH_API EdgeId sharedEdge( FaceId l, FaceId r ) const;
     /// if two valid edges share the same vertex then it is found and returned as Edge with this vertex in origin
@@ -139,27 +149,29 @@ public:
     /// if two valid edges belong to same valid face then it is found and returned
     [[nodiscard]] MRMESH_API FaceId sharedFace( EdgeId a, EdgeId b ) const;
     /// returns the number of valid faces
-    [[nodiscard]] int numValidFaces() const{ return numValidFaces_; }
+    [[nodiscard]] int numValidFaces() const { assert( updateValids_ ); return numValidFaces_; }
     /// returns last valid face id, or invalid id if no single valid face exists
     [[nodiscard]] MRMESH_API FaceId lastValidFace() const;
     /// creates new face-id not associated with any edge yet
-    [[nodiscard]] FaceId addFaceId() { edgePerFace_.push_back( {} ); validFaces_.push_back( false ); return FaceId( (int)edgePerFace_.size() - 1 ); }
+    [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
     /// deletes the face, also deletes its edges and vertices if they were not shared with other faces
     MRMESH_API void deleteFace( FaceId f );
     /// deletes multiple given faces
     MRMESH_API void deleteFaces( const FaceBitSet& fs );
     /// explicitly increases the size of faces vector
-    void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); validFaces_.resize( newSize ); } }
+    void faceResize( size_t newSize ) { if ( edgePerFace_.size() < newSize ) { edgePerFace_.resize( newSize ); if ( updateValids_ ) { validFaces_.resize( newSize ); } } }
     /// sets the capacity of faces vector
-    void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); validFaces_.reserve( newCapacity ); }
+    void faceReserve( size_t newCapacity ) { edgePerFace_.reserve( newCapacity ); if ( updateValids_ ) { validFaces_.reserve( newCapacity ); } }
     /// returns the number of face records including invalid ones
     [[nodiscard]] size_t faceSize() const { return edgePerFace_.size(); }
+    /// returns the number of allocated face records
+    [[nodiscard]] size_t faceCapacity() const { return edgePerFace_.capacity(); }
     /// returns cached set of all valid faces
-    [[nodiscard]] const FaceBitSet & getValidFaces() const { return validFaces_; }
+    [[nodiscard]] const FaceBitSet & getValidFaces() const { assert( updateValids_ ); return validFaces_; }
     /// sets in (fs) all valid faces that were not selected before the call, and resets other bits
     void flip( FaceBitSet & fs ) const { fs = getValidFaces() - fs; }
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
-    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { return region ? *region : validFaces_; }
+    [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const { assert( region || updateValids_ ); return region ? *region : validFaces_; }
 
     /// return true if left face of given edge belongs to region (or just have valid id if region is nullptr)
     [[nodiscard]] bool isLeftInRegion( EdgeId e, const FaceBitSet * region = nullptr ) const { return contains( region, left( e ) ); }
@@ -179,8 +191,8 @@ public:
     [[nodiscard]] bool isBdVertex( VertId v, const FaceBitSet * region = nullptr ) const { return isBdVertexInOrg( edgeWithOrg( v ), region ); }
     /// returns true if left face of given edge belongs to given region (if provided) and right face either does not exist or does not belong
     [[nodiscard]] bool isLeftBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) && !isLeftInRegion( e.sym(), region ) ) : !right( e ); }
-    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr)
-    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return region ? ( isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ) ) : true; }
+    /// return true if given edge is inner or boundary for given region (or for whole mesh if region is nullptr), returns false for lone edges
+    [[nodiscard]] bool isInnerOrBdEdge( EdgeId e, const FaceBitSet * region = nullptr ) const { return isLeftInRegion( e, region ) || isLeftInRegion( e.sym(), region ); }
 
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
@@ -197,6 +209,8 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
+    /// returns the number of hole loops in the mesh
+    [[nodiscard]] MRMESH_API int findNumHoles() const;
     /// returns full edge-loop of left face from (e) starting from (e) itself
     [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
     /// returns full edge-loops of left faces from every edge in (es);
@@ -219,6 +233,14 @@ public:
     /// given the edge with left and right triangular faces, which form together a quadrangle,
     /// rotates the edge counter-clockwise inside the quadrangle
     MRMESH_API void flipEdge( EdgeId e );
+    /// tests all edges e having valid left and right faces and org(e0) == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of org(e0)
+    template<typename T>
+    void flipEdgesAround( EdgeId e0, T && flipNeeded );
+    /// tests all edges e having valid left and right faces and v == dest(next(e));
+    /// if the test has passed, then flips the edge so increasing the degree of vertex v
+    template<typename T>
+    void flipEdgesAround( VertId v, T && flipNeeded ) { flipEdgesAround( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
 
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
@@ -226,11 +248,13 @@ public:
     /// dest(e) = dest(e-before-split)
     /// \details left and right faces of given edge if valid are also subdivided on two parts each;
     /// if left or right faces of the original edge were in the region, then include new parts of these faces in the region
-    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API EdgeId splitEdge( EdgeId e, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// split given triangle on three triangles, introducing new vertex (which is returned) inside original triangle and connecting it to its vertices
     /// \details if region is given, then it must include (f) and new faces will be added there as well
-    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr );
+    /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
+    MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// flip orientation (normals) of all faces
     MRMESH_API void flipOrientation();
@@ -264,11 +288,18 @@ public:
         const std::vector<std::vector<EdgeId>> & fromContours = {},
         const PartMapping & map = {} );
 
-    /// tightly packs all arrays eliminating lone edges and invalid face and verts
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
     /// \param rearrangeTriangles if true then calls rotateTriangles() 
     /// and selects the order of triangles according to the order of their vertices
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
+    MRMESH_API void pack( const PackMapping & map );
+    /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
+    /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;
+    /// unlike \ref pack method, this method allocates minimal amount of memory for its operation but works much slower
+    MRMESH_API void packMinMem( const PackMapping & map );
 
     /// saves in binary stream
     MRMESH_API void write( std::ostream & s ) const;
@@ -288,10 +319,18 @@ public:
     /// \param fmap,vmap mapping of vertices and faces if it is given ( from.id -> this.id )
     MRMESH_API void addPackedPart( const MeshTopology & from, EdgeId toEdgeId,
         const FaceMap & fmap, const VertMap & vmap );
-    /// after all packed parts have been added, compute 
+    /// compute
     /// 1) numValidVerts_ and validVerts_ from edgePerVertex_
     /// 2) numValidFaces_ and validFaces_ from edgePerFace_
+    /// and activates their auto-update
     MRMESH_API void computeValidsFromEdges();
+    /// stops updating validVerts(), validFaces(), numValidVerts(), numValidFaces() for parallel processing of mesh parts
+    MRMESH_API void stopUpdatingValids();
+    /// returns whether the methods validVerts(), validFaces(), numValidVerts(), numValidFaces() can be called
+    [[nodiscard]] bool updatingValids() const { return updateValids_; }
+    /// for incident vertices and faces of given edges, remember one of them as edgeWithOrg and edgeWithLeft;
+    /// this is important in parallel algorithms where other edges may change but stable ones will survive
+    MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
@@ -319,7 +358,7 @@ private:
 
         bool operator ==( const HalfEdgeRecord & b ) const = default;
         HalfEdgeRecord() noexcept = default;
-        HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,
@@ -344,6 +383,8 @@ private:
 
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
+
+    bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
 };
 
 template <typename T>
@@ -365,6 +406,24 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
     getLeftTriVerts( p.e, v );
     for ( int i = 0; i < 3; ++i )
         callback( v[i] );
+}
+
+template<typename T>
+void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        auto testEdge = prev( e.sym() );
+        if ( left( testEdge ) && right( testEdge ) && flipNeeded( testEdge ) )
+            flipEdge( testEdge );
+        else
+        {
+            e = next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
 }
 
 inline EdgeId mapEdge( const WholeEdgeMap & map, EdgeId src )

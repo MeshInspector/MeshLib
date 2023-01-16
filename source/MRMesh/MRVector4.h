@@ -15,12 +15,11 @@ struct Vector4
     using MatrixType = Matrix4<T>;
     static constexpr int elements = 4;
 
-    T x = 0, y = 0, z = 0, w = 0;
+    T x, y, z, w;
 
-    constexpr Vector4() noexcept = default;
-    constexpr Vector4( T x, T y, T z, T w ) noexcept : x( x ), y( y ), z( z ), w( w )
-    {
-    }
+    constexpr Vector4() noexcept : x( 0 ), y( 0 ), z( 0 ), w( 0 ) { }
+    explicit constexpr Vector4( NoInit ) noexcept { }
+    constexpr Vector4( T x, T y, T z, T w ) noexcept : x( x ), y( y ), z( z ), w( w ) { }
     static constexpr Vector4 diagonal( T a ) noexcept
     {
         return Vector4( a, a, a, a );

@@ -54,6 +54,8 @@ struct BooleanResult
   */
 MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
+MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
+                                  const AffineXf3f* rigidB2A = nullptr, BooleanResultMapper* mapper = nullptr );
 
 /// vertices and points representing mesh intersection result
 struct BooleanResultPoints
@@ -63,16 +65,17 @@ struct BooleanResultPoints
     std::vector<Vector3f> intersectionPoints;
 };
 
-/** \brief Returns the points of mesh intersection's result mesh
+/** \brief Returns the points of mesh boolean's result mesh
  *
  * \ingroup BooleanGroup
- * Returns vertices and intersection points of mesh that is result of intersection of mesh `A` and mesh `B`.
+ * Returns vertices and intersection points of mesh that is result of boolean operation of mesh `A` and mesh `B`.
  * Can be used as fast alternative for cases where the mesh topology can be ignored (bounding box, convex hull, etc.)
  * \param meshA Input mesh `A`
  * \param meshB Input mesh `B`
+ * \param operation Boolean operation to perform
  * \param rigidB2A Transform from mesh `B` space to mesh `A` space
  */
- MRMESH_API BooleanResultPoints getIntersectionAndInnerPoints( const Mesh& meshA, const Mesh& meshB,
+ MRMESH_API BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                                                const AffineXf3f* rigidB2A = nullptr );
 
 } //namespace MR

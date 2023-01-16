@@ -110,6 +110,14 @@ jobs:
           path: MeshLibDist.zip
           retention-days: 1
 
+  test-distribution:
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    needs:
+      - ubuntu20-build-test
+      - ubuntu22-build-test
+      - fedora35-build-test
+      - macos-build-test
+    uses: ./.github/workflows/test-distribution.yml
 
   upload-distributions:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -123,6 +131,7 @@ jobs:
       - emscripten-build-test
       - macos-build-test
       - versioning-and-release-url
+      - test-distribution
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -140,6 +149,8 @@ jobs:
           mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb
           mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
+          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg
+          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
 
       - name: Upload Distributives
         run: |
@@ -149,6 +160,8 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg \
+                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
 
   update-artifacts:
     timeout-minutes: 15

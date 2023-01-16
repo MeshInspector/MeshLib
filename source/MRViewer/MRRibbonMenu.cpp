@@ -1321,8 +1321,8 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
-    sceneSize_.x = std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling );
-    sceneSize_.y = viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling;
+    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
+    sceneSize_.y = std::round( viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.window_width / 2.f, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
@@ -1339,12 +1339,11 @@ void RibbonMenu::drawRibbonSceneList_()
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = ImGui::GetWindowSize();
-    if ( fixFirstGetSize_ && ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y ) )
+    if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
-    fixFirstGetSize_ = true;
 
     ImGui::End();
     ImGui::PopStyleColor();
@@ -1354,15 +1353,12 @@ void RibbonMenu::drawRibbonSceneList_()
 void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
     drawSceneListButtons_();
-    // mesh with index 0 is Ancillary, and cannot be removed
-    // it can be cleaned but it is inconsistent, so this mesh is untouchable
-    int uniqueCounter = 0;
     ImGui::BeginChild( "Meshes", ImVec2( -1, -( informationHeight_ + transformHeight_ ) ), false );
     updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all, uniqueCounter );
-    makeDragDropTarget_( SceneRoot::get(), false, true, uniqueCounter + 1 );
+        draw_object_recurse_( *child, selected, all );
+    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
 
     // any click on empty space below Scene Tree removes object selection
     ImGui::BeginChild( "EmptySpace" );
@@ -1821,10 +1817,9 @@ void RibbonMenu::drawShortcutsWindow_()
     const auto scaling = menu_scaling();
     float windowWidth = 920.0f * scaling;
 
-
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
-    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y ) * scaling;
+    float windowHeight = ( 6 * cDefaultItemSpacing + fontManager_.getFontSizeByType( RibbonFontManager::FontType::Headline ) + style.CellPadding.y  + 2 * style.WindowPadding.y ) * scaling;
     // find max column size
     int leftNumCategories = 0;
     int rightNumCategories = 0;
@@ -1856,42 +1851,32 @@ void RibbonMenu::drawShortcutsWindow_()
     windowPos.y = ( Viewer::instanceRef().window_height - windowHeight ) * 0.5f;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Appearing );
-    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ) );
+    ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Appearing );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( windowWidth, -1 ), ImVec2( windowWidth, 0 ) );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { style.WindowPadding.x, cDefaultItemSpacing * scaling } );
-    ImGui::Begin( "HotKeys", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing );
-    ImGui::PopStyleVar();
-    
-    ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, 2 * cDefaultItemSpacing * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
+    if ( !ImGui::IsPopupOpen( "HotKeys" ) )
+        ImGui::OpenPopup( "HotKeys" );
 
-    ImGui::Indent();
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * cDefaultItemSpacing * scaling );
-
-    ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Headline ) );
-    ImGui::Text( "Hotkeys" );
-    ImGui::PopFont();
-
-    const float exitButtonSize = 30.0f * scaling;
-    ImGui::SameLine( windowWidth - exitButtonSize - 2.0f * cDefaultItemSpacing * scaling );
-
-    ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::Icons ) );
-    ImGui::SetCursorPosY( 2 * cDefaultWindowPaddingY * scaling );
-    ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    if ( ImGui::Button( "\xef\x80\x8d", ImVec2( 30.0f * scaling, 30.0f * scaling ) ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 3 * MR::cDefaultItemSpacing * scaling, 3 * MR::cDefaultItemSpacing * scaling ) );
+    if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
-        ImGui::PopStyleColor( 2 );
-        ImGui::PopFont();
-        ImGui::PopStyleVar( 2 );
-        ImGui::End();
-        showShortcuts_ = false;
+        ImGui::PopStyleVar();
         return;
     }
-    ImGui::PopStyleColor( 2 );
-    ImGui::PopFont();
+    ImGui::PopStyleVar();
 
-    auto addReadOnlyLine = [scaling, &style] ( const std::string& line )
+    if ( ImGui::ModalBigTitle( "HotKeys", scaling ) )
+    {
+        ImGui::CloseCurrentPopup();
+        showShortcuts_ = false;
+        ImGui::EndPopup();
+        return;
+    }
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * scaling, 2 * cDefaultItemSpacing * scaling } );
+
+    int lineIndexer = 0;
+    auto addReadOnlyLine = [scaling, &style, &lineIndexer] ( const std::string& line )
     {
         const auto textWidth = ImGui::CalcTextSize( line.c_str() ).x;
         // read only so const_sast should be ok
@@ -1900,7 +1885,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
         auto framePaddingX = std::max( style.FramePadding.x, ( itemWidth - textWidth ) / 2.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { framePaddingX, cButtonPadding * scaling } );
-        ImGui::InputText( ( "##" + line ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::InputText( ( "##" + line + std::to_string( ++lineIndexer ) ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };
@@ -1996,8 +1981,8 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::EndTable();
     }
 
-    ImGui::PopStyleVar( 2 );
-    ImGui::End();
+    ImGui::PopStyleVar();
+    ImGui::EndPopup();
 }
 
 void RibbonMenu::beginTopPanel_()
@@ -2034,6 +2019,7 @@ void RibbonMenu::beginTopPanel_()
 
 void RibbonMenu::endTopPanel_()
 {
+    ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::End();
 
     ImGui::PopStyleColor();
@@ -2130,9 +2116,9 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
         auto heightRect = MR::height( rect );
 
         rect.min.x = ( rect.min.x - viewportsBounds.min.x ) / minMaxDiff.x * ( width - sceneWidth ) + sceneWidth;
-        rect.min.y = ( rect.min.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
+        rect.min.y = ( rect.min.y - viewportsBounds.min.y ) / minMaxDiff.y * ( height - ( topPanelHeightScaled - 2 ) ); // -2 - buffer pixel
         rect.max.x = rect.min.x + widthRect / minMaxDiff.x * ( width - sceneWidth );
-        rect.max.y = rect.min.y + heightRect / minMaxDiff.y * ( height - ( topPanelHeightScaled - 1 ) ); // -1 - buffer pixel
+        rect.max.y = rect.min.y + heightRect / minMaxDiff.y * ( height - ( topPanelHeightScaled - 2 ) ); // -2 - buffer pixel
         if ( MR::width( rect ) <= 0 || MR::height( rect ) <= 0 )
             continue;
         vp.setViewportRect( rect );

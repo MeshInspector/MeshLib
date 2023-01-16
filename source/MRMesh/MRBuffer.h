@@ -1,8 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRNoDefInit.h"
+#include "MRId.h"
 #include <cassert>
+#include <concepts>
 #include <memory>
+#include <type_traits>
 
 namespace MR
 {
@@ -18,17 +21,39 @@ struct ZeroOnMove
     constexpr ZeroOnMove& operator =( ZeroOnMove && z ) noexcept { val = z.val; z.val = 0; return * this; }
 };
 
+template <typename T>
+struct NoCtor;
+
+template <typename T>
+concept Trivial = std::is_trivially_constructible_v<T>;
+
+// for trivial types, return the type itself
+template <Trivial T>
+struct NoCtor<T>
+{
+    using type = T;
+};
+
+// for our complex types, return wrapped type with default constructor doing nothing
+template <std::constructible_from<NoInit> T>
+struct NoCtor<T>
+{
+    using type = NoDefInit<T>;
+};
+
 /**
- * \brief std::vector<T>-like container that is
+ * \brief std::vector<V>-like container that is
  *  1) resized without initialization of its elements,
  *  2) much simplified: no push_back and many other methods
- * \tparam T type of stored elements
+ * \tparam V type of stored elements
+ * \tparam I type of index (shall be convertible to size_t)
  * \ingroup BasicGroup
  */
-template <typename T>
+template <typename V, typename I>
 class Buffer
 {
 public:
+    using T = typename NoCtor<V>::type;
     using reference = T&;
     using const_reference = const T&;
     using iterator = T*;
@@ -39,6 +64,7 @@ public:
 
     [[nodiscard]] auto capacity() const { return capacity_.val; }
     [[nodiscard]] auto size() const { return size_.val; }
+    [[nodiscard]] bool empty() const { return size_.val == 0; }
 
     void clear() { data_.reset(); capacity_ = {}; size_ = {}; }
 
@@ -57,12 +83,12 @@ public:
         size_.val = newSize;
     }
 
-    [[nodiscard]] const_reference operator[]( size_t i ) const
+    [[nodiscard]] const_reference operator[]( I i ) const
     {
         assert( i < size_.val );
         return data_[i];
     }
-    [[nodiscard]] reference operator[]( size_t i )
+    [[nodiscard]] reference operator[]( I i )
     {
         assert( i < size_.val );
         return data_[i];
@@ -70,8 +96,10 @@ public:
 
     [[nodiscard]] auto data() { return data_.get(); }
     [[nodiscard]] auto data() const { return data_.get(); }
-
-    void swap( Buffer & b ) { data_.swap( b.data_ ); std::swap( capacity_, b.capacity_ ); std::swap( size_, b.size_ ); }
+    /// returns the identifier of the back() element
+    [[nodiscard]] I backId() const { assert( !empty() ); return I{ size() - 1 }; }
+    /// returns backId() + 1
+    [[nodiscard]] I endId() const { return I{ size() }; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
@@ -81,20 +109,44 @@ private:
     ZeroOnMove<size_t> capacity_, size_;
 };
 
+/// given some buffer map and a key, returns the value associated with the key, or default value if key is invalid
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( const Buffer<T> & a )
+inline T getAt( const Buffer<T, I> & bmap, I key )
+{
+    return key ? T{bmap[key]} : T{};
+}
+
+template <typename T, typename I>
+[[nodiscard]] inline auto begin( const Buffer<T, I> & a )
     { return a.data(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( Buffer<T> & a )
+[[nodiscard]] inline auto begin( Buffer<T, I> & a )
     { return a.data(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( const Buffer<T> & a )
+[[nodiscard]] inline auto end( const Buffer<T, I> & a )
     { return a.data() + a.size(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( Buffer<T> & a )
+[[nodiscard]] inline auto end( Buffer<T, I> & a )
     { return a.data() + a.size(); }
+
+/// flat map: I -> T
+template <typename T, typename I>
+struct BMap
+{
+    Buffer<T, I> b;
+    size_t tsize = 0; ///< target size, all values inside b must be less than this value
+};
+
+// mapping of mesh elements: old -> new,
+// the mapping is tight (or packing) in the sense that there are no unused new elements within [0, (e/f/v).tsize)
+struct PackMapping
+{
+    UndirectedEdgeBMap e;
+    FaceBMap f;
+    VertBMap v;
+};
 
 } // namespace MR

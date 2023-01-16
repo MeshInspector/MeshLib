@@ -131,7 +131,7 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        meshRes = gridToMesh( std::move( downsampledGrid ), 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
         if ( !meshRes.has_value() )
             return tl::make_unexpected( meshRes.error() );
     }
@@ -163,18 +163,11 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         insideY = ( y >= activeBox_.min.y && y < activeBox_.max.y );
         insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
         accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
-        ++counter;
-        if ( cb && ( counter % 256 == 0 ) )
-            cb( cbModifier * float( counter ) / volume );
+        reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
     }
     if ( updateSurface )
     {
-        ProgressCallback isoProgressCallback;
-        if ( cb )
-            isoProgressCallback = [&] ( float p )->bool
-        {
-            return cb( cbModifier + ( 1.0f - cbModifier ) * p );
-        };
+        ProgressCallback isoProgressCallback = subprogress( cb, cbModifier, 1.0f );
         auto recRes = recalculateIsoSurface( isoValue_, isoProgressCallback );
         std::shared_ptr<Mesh> recMesh;
         if ( recRes.has_value() )

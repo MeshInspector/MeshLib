@@ -66,7 +66,10 @@ struct DecimateParallelSettings
  * \brief Collapse edges in mesh region according to the settings
  * \ingroup DecimateGroup
  * \details Analog of decimateMesh for parallel computing. If accuracy is preferable to speed, use \ref decimateMesh.
- * 
+ * Limitations:
+ * 1) original FaceIds and EdgeIds are not preserved;
+ * 2) multiple edges are not supported.
+ *
  * \sa \ref decimateMesh
  */
 MRMESH_API DecimateResult decimateParallelMesh( Mesh & mesh, const DecimateParallelSettings & settings = {} );

@@ -64,6 +64,81 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const F
     return res;
 }
 
+std::vector<EdgeLoop> findRegionBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )
+{
+    MR_TIMER
+
+    std::vector<EdgeLoop> res;
+    phmap::flat_hash_set<EdgeId> reportedBdEdges;
+
+    for ( auto f : region )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( !topology.right( e ) || !topology.isLeftBdEdge( e, &region ) )
+                continue;
+            if ( reportedBdEdges.count( e ) )
+                continue;
+            auto loop = trackRegionBoundaryLoop( topology, e, &region );
+            int holeEdgeIdx = -1;
+            for ( int i = 0; i < loop.size(); ++i )
+            {
+                if ( topology.right( loop[i] ) )
+                {
+                    [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
+                    assert( inserted );
+                }
+                else if ( holeEdgeIdx < 0 )
+                    holeEdgeIdx = i;
+            }
+            if ( holeEdgeIdx >= 0 )
+            {
+                // found loop goes partially along hole boundary,
+                // rotate it to put first hole edge in the end
+                assert( holeEdgeIdx + 1 < loop.size() ); // there shall be some not-hole edges
+                std::rotate( loop.begin(), loop.begin() + holeEdgeIdx + 1, loop.end() );
+                for ( int i = 0; i < loop.size(); )
+                {
+                    // skip hole edges
+                    for ( ; i < loop.size() && !topology.right( loop[i] ); ++i )
+                        {}
+                    const auto beg = loop.begin() + i;
+                    // skip not-hole edges
+                    for ( ; i < loop.size() && topology.right( loop[i] ); ++i )
+                        {}
+                    if ( beg < loop.begin() + i )
+                        res.emplace_back( beg, loop.begin() + i );
+                }
+            }
+            else
+            {
+                // found loop is entirely inside the mesh, and have all valid right faces
+                res.push_back( std::move( loop ) );
+            }
+        }
+    }
+
+    return res;
+}
+
+UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopology& topology, const FaceBitSet & region )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        const auto l = topology.left( ue );
+        if ( !l )
+            return;
+        const auto r = topology.right( ue );
+        if ( !r )
+            return;
+        if ( region.test( l ) != region.test( r ) )
+            res.set( ue );
+    } );
+    return res;
+}
+
 FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet& region )
 {
     MR_TIMER;
@@ -147,6 +222,22 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & face
     return topology.getValidVerts() - getIncidentVerts_( topology, topology.getValidFaces() - faces );
 }
 
+VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region )
+{
+    MR_TIMER
+
+    VertBitSet store;
+    const VertBitSet & regionVertices = getIncidentVerts( topology, region, store );
+
+    VertBitSet bdVerts( regionVertices.size() );
+    BitSetParallelFor( regionVertices, [&]( VertId v )
+    {
+        if ( topology.isBdVertex( v, region ) )
+            bdVerts.set( v );
+    } );
+    return bdVerts;
+}
+
 EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
     MR_TIMER
@@ -162,6 +253,20 @@ EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces
     return res;
 }
 
+UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceBitSet& faces )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    for ( auto f : faces )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            res.set( e.undirected() );
+        }
+    }
+    return res;
+}
+
 UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBitSet& verts )
 {
     MR_TIMER
@@ -172,6 +277,26 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
         {
             if ( verts.test( topology.dest( e ) ) )
                 res.set( e.undirected() );
+        }
+    }
+    return res;
+}
+
+UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBitSet& region )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+
+    for ( auto f0 : region )
+    { 
+        EdgeId e[3];
+        topology.getTriEdges( f0, e );
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert( topology.left( e[i] ) == f0 );
+            FaceId f1 = topology.right( e[i] );
+            if ( f0 < f1 && region.test( f1 ) )
+                res.set( e[i].undirected() );
         }
     }
     return res;

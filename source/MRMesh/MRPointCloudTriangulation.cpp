@@ -79,16 +79,7 @@ bool PointCloudTriangulator::optimizeAll_( ProgressCallback progressCb )
         optimizedFans_[v] = optimizedRes;
     };
 
-    ProgressCallback partialProgressCb;
-    if ( progressCb )
-    {
-        // 0% - 35%
-        partialProgressCb = [&] ( float p )
-        {
-            return progressCb( 0.35f * p );
-        };
-    }
-    return BitSetParallelFor( pointCloud_.validPoints, body, partialProgressCb );
+    return BitSetParallelFor( pointCloud_.validPoints, body, subprogress( progressCb, 0.0f, 0.35f ) );
 }
 
 struct VertTriplet
@@ -150,11 +141,8 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
             else
                 ++mIt->second;
         }
-        if ( progressCb )
-        {
-            if ( !progressCb( 0.35f + 0.30f * float( cV ) / float( pointCloud_.validPoints.size() ) ) ) // 35% - 65%
-                return {};
-        }
+        if ( !reportProgress( progressCb, [&]{ return 0.35f + 0.30f * float( cV ) / float( pointCloud_.validPoints.size() ); } ) ) // 35% - 65%
+            return {};
     }
     Mesh mesh;
     mesh.points = pointCloud_.points;
@@ -173,13 +161,11 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
     // create topology
     MeshBuilder::addTriangles( mesh.topology, t, { .region = &region3, .allowNonManifoldEdge = false } );
     region2 |= region3;
-    if ( progressCb )
-        if ( !progressCb( 0.67f ) ) // 67%
-            return {};
+    if ( !reportProgress( progressCb, 0.67f ) )
+        return {};
     MeshBuilder::addTriangles( mesh.topology, t, { .region = &region2, .allowNonManifoldEdge = false } );
-    if ( progressCb )
-        if ( !progressCb( 0.70f ) ) // 70%
-            return {};
+    if ( !reportProgress( progressCb, 0.70f ) )
+        return {};
 
     // fill small holes
     const auto bigLength = params_.critHoleLength >= 0.0f ? params_.critHoleLength : pointCloud_.getBoundingBox().diagonal() * 0.7f;
@@ -193,9 +179,8 @@ std::optional<Mesh> PointCloudTriangulator::triangulate_( ProgressCallback progr
 
         if ( length < bigLength )
             fillHole( mesh, boundary.front() );
-        if ( progressCb )
-            if ( !progressCb( 0.7f + 0.3f * float( i + 1 ) / float( boundaries.size() ) ) ) // 70% - 100%
-                return {};
+        if ( !reportProgress( progressCb, [&]{ return 0.7f + 0.3f * float( i + 1 ) / float( boundaries.size() ); } ) ) // 70% - 100%
+            return {};
     }
 
     return mesh;

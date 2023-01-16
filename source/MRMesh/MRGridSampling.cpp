@@ -98,7 +98,7 @@ VertBitSet Grid::getSamples() const
     return res;
 }
 
-VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize )
+VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize, ProgressCallback cb )
 {
     MR_TIMER;
     if (voxelSize <= 0.f)
@@ -120,22 +120,28 @@ VertBitSet verticesGridSampling( const MeshPart & mp, float voxelSize )
     };
 
     Grid grid( bbox, dims );
-    if ( mp.region )
+    if ( cb && !cb( 0.1f ) )
+        return {};
+
+    VertBitSet store;
+    const auto& regionVerts = getIncidentVerts( mp.mesh.topology, mp.region, store );
+    int counter = 0;
+    int size = int( regionVerts.count() );
+    for ( auto v : regionVerts )
     {
-        VertBitSet regionVerts = getIncidentVerts( mp.mesh.topology, *mp.region );
-        for ( auto v : regionVerts )
-            grid.addVertex( mp.mesh.points[v], v );
-    }
-    else
-    {
-        for ( auto v : mp.mesh.topology.getValidVerts() )
-            grid.addVertex( mp.mesh.points[v], v );
+        grid.addVertex( mp.mesh.points[v], v );
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
+            return {};
     }
 
-    return grid.getSamples();
+    const auto res =  grid.getSamples();
+    if ( cb && !cb( 1.0f ) )
+        return {};
+
+    return res;
 }
 
-VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize )
+VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize, ProgressCallback cb )
 {
     if (voxelSize <= 0.f)
         return cloud.validPoints;
@@ -152,10 +158,23 @@ VertBitSet pointGridSampling( const PointCloud & cloud, float voxelSize )
     };
 
     Grid grid( bbox, dims );
-    for ( auto v : cloud.validPoints )
-        grid.addVertex( cloud.points[v], v );
+    if ( cb && !cb( 0.1f ) )
+        return {};
 
-    return grid.getSamples();
+    int counter = 0;
+    int size = int( cloud.validPoints.count() );
+    for ( auto v : cloud.validPoints )
+    {
+        grid.addVertex( cloud.points[v], v );
+        if ( !reportProgress( cb, [&]{ return 0.1f + 0.8f * float( counter ) / float( size ); }, counter++, 128 ) )
+            return {};
+    }
+
+    const auto res = grid.getSamples();
+    if ( cb && !cb( 1.0f ) )
+        return {};
+    
+    return res;
 }
 
 TEST( MRMesh, GridSampling )

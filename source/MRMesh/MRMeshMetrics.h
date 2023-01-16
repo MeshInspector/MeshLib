@@ -95,6 +95,9 @@ MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
 /// This metric maximizes the minimal angle among all faces in the triangulation
 MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );
 
+// This simple metric penalizes for large triangle area and large triangle aspect ratio
+MRMESH_API FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 );
+
 /// \}
 
 }

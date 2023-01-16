@@ -67,74 +67,92 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
     }
 }
 
-tl::expected<Mesh, std::string> convertFromVDMMesh( const Vector3f& voxelSize,
-    const std::vector<openvdb::Vec3s>& pointsArg, 
-    const std::vector<openvdb::Vec3I>& trisArg,
-    const std::vector<openvdb::Vec4I>& quadArg,
-    ProgressCallback cb )
+template<typename GridType>
+inline typename std::enable_if<std::is_scalar<typename GridType::ValueType>::value, void>::type
+gridToPointsAndTris(
+    const GridType& grid, const Vector3f& voxelSize,
+    VertCoords & points, Triangulation & t,
+    double isovalue,
+    double adaptivity,
+    bool relaxDisorientedTriangles )
 {
-    if ( cb && !cb( 0.0f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-    std::vector<Vector3f> points( pointsArg.size() );
-    Triangulation t;
-    const size_t tNum = trisArg.size() + 2 * quadArg.size();
+    MR_TIMER
+
+    openvdb::tools::VolumeToMesh mesher(isovalue, adaptivity, relaxDisorientedTriangles);
+    mesher(grid);
+
+    // Preallocate the point list
+    points.clear();
+    points.resize(mesher.pointListSize());
+
+    // Copy points
+    auto & inPts = mesher.pointList();
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    {
+        for ( auto i = range.begin(); i < range.end(); ++i )
+        {
+            auto inPt = inPts[i];
+            points[ VertId{ i } ] = Vector3f{
+                inPt.x() * voxelSize.x,
+                inPt.y() * voxelSize.y,
+                inPt.z() * voxelSize.z };
+        }
+    } );
+    inPts.reset(nullptr);
+
+    auto& polygonPoolList = mesher.polygonPoolList();
+
+    // Preallocate primitive lists
+    size_t numQuads = 0, numTriangles = 0;
+    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) {
+        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
+        numTriangles += polygons.numTriangles();
+        numQuads += polygons.numQuads();
+    }
+
+    const size_t tNum = numTriangles + 2 * numQuads;
+    t.clear();
     t.reserve( tNum );
-    for ( int i = 0; i < points.size(); ++i )
+
+    // Copy primitives
+    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) 
     {
-        points[i][0] = pointsArg[i][0] * voxelSize[0];
-        points[i][1] = pointsArg[i][1] * voxelSize[1];
-        points[i][2] = pointsArg[i][2] * voxelSize[2];
+        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
 
-        if ( cb && !(i & 0x3FF) && !cb( 0.5f * ( float( i ) / float( points.size() ) ) ) )
-                return tl::make_unexpected( "Operation was canceled." );
-    }
-    size_t tCounter = 0;
-    for ( const auto& tri : trisArg )
-    {
-
-        ThreeVertIds newTri
+        for ( size_t i = 0, I = polygons.numQuads(); i < I; ++i )
         {
-            VertId( ( int )tri[2] ),
-            VertId( ( int )tri[1] ),
-            VertId( ( int )tri[0] )
-        };
-        t.push_back( newTri );
+            auto quad = polygons.quad(i);
 
-        ++tCounter;
-        if ( cb && !(tCounter & 0x3FF) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
-                return tl::make_unexpected( "Operation was canceled." );
-    }
-    for ( const auto& quad : quadArg )
-    {
-        ThreeVertIds newTri
+            ThreeVertIds newTri
+            {
+                VertId( ( int )quad[2] ),
+                VertId( ( int )quad[1] ),
+                VertId( ( int )quad[0] ),
+            };
+            t.push_back( newTri );
+
+            newTri =
+            {
+                VertId( ( int )quad[0] ),
+                VertId( ( int )quad[3] ),
+                VertId( ( int )quad[2] ),
+            };
+            t.push_back( newTri );
+        }
+
+        for ( size_t i = 0, I = polygons.numTriangles(); i < I; ++i )
         {
-            VertId( ( int )quad[2] ),
-            VertId( ( int )quad[1] ),
-            VertId( ( int )quad[0] ),
-        };
-        t.push_back( newTri );
+            auto tri = polygons.triangle(i);
 
-        newTri =
-        {
-            VertId( ( int )quad[0] ),
-            VertId( ( int )quad[3] ),
-            VertId( ( int )quad[2] ),
-        };
-        t.push_back( newTri );
-
-        tCounter += 2;
-        if ( cb && !(tCounter & 0x3FE) && !cb( 0.5f + 0.5f * ( float( tCounter ) / tNum ) ) )
-                return tl::make_unexpected( "Operation was canceled." );
+            ThreeVertIds newTri
+            {
+                VertId( ( int )tri[2] ),
+                VertId( ( int )tri[1] ),
+                VertId( ( int )tri[0] )
+            };
+            t.push_back( newTri );
+        }
     }
-
-    Mesh res;
-    res.topology = MeshBuilder::fromTriangles( t );
-    res.points.vec_ = std::move( points );
-
-    if ( cb && !cb( 1.0f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-
-    return res;
 }
 
 FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
@@ -272,33 +290,49 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     return res;
 }
 
-tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize, 
+tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
 {
     MR_TIMER;
-    if ( cb )
-        if ( !cb( 0.0f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-    std::vector<openvdb::Vec3s> pointsRes;
-    std::vector<openvdb::Vec3I> trisRes;
-    std::vector<openvdb::Vec4I> quadRes;
-    openvdb::tools::volumeToMesh( *grid, pointsRes, trisRes, quadRes,
-                                  offsetVoxels, adaptivity );
+    if ( cb && !cb( 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
 
-    if ( trisRes.size() + 2 * quadRes.size() > maxFaces )
+    VertCoords pts;
+    Triangulation t;
+    gridToPointsAndTris( *grid, voxelSize, pts, t, offsetVoxels, adaptivity, true );
+
+    if ( t.size() > maxFaces )
         return tl::make_unexpected( "Triangles number limit exceeded." );
     
-    ProgressCallback passCallback;
-    if ( cb )
-    {
-        if ( !cb( 0.2f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-        passCallback = [cb] ( float p )
-        {
-            return cb( 0.2f + 0.8f * p );
-        };
-    }
-    return convertFromVDMMesh( voxelSize, pointsRes, trisRes, quadRes, passCallback );
+    if ( cb && !cb( 0.2f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
+    cb && !cb( 1.0f );
+    return res;
+}
+
+tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
+    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
+{
+    MR_TIMER;
+    if ( cb && !cb( 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    VertCoords pts;
+    Triangulation t;
+    gridToPointsAndTris( *grid, voxelSize, pts, t, offsetVoxels, adaptivity, true );
+    grid.reset(); // free grid's memory
+
+    if ( t.size() > maxFaces )
+        return tl::make_unexpected( "Triangles number limit exceeded." );
+    
+    if ( cb && !cb( 0.2f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
+    cb && !cb( 1.0f );
+    return res;
 }
 
 tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
@@ -307,16 +341,34 @@ tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int 
     return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, maxFaces, isoValue, adaptivity, cb );
 }
 
+tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
+{
+    return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, maxFaces, isoValue, adaptivity, cb );
+}
+
 tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( grid, voxelSize, INT_MAX, isoValue, adaptivity, cb );
 }
 
+tl::expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
+{
+    return gridToMesh( std::move( grid ), voxelSize, INT_MAX, isoValue, adaptivity, cb );
+}
+
 tl::expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
     float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
 {
     return gridToMesh( vdbVolume.data, vdbVolume.voxelSize, isoValue, adaptivity, cb );
+}
+
+tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
+    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
+{
+    return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, isoValue, adaptivity, cb );
 }
 
 tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
@@ -370,23 +422,16 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
-    if ( interrupter2.getWasInterrupted() )
+    if ( interrupter2.getWasInterrupted() || ( cb && !cb( 0.9f ) ) )
         return tl::make_unexpected( "Operation was canceled." );
 
-    openvdb::tools::volumeToMesh( *grid, points, tris, quads,
-                                  offsetInVoxelsB, adaptivity );
+    VertCoords pts;
+    Triangulation t;
+    gridToPointsAndTris( *grid, Vector3f::diagonal( voxelSize ), pts, t, offsetInVoxelsB, adaptivity, true );
 
-    if ( cb )
-    {
-        if ( !cb( 0.9f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-        passCb = [cb] ( float p )
-        {
-            return cb( 0.9f + 0.1f * p );
-        };
-    }
-
-    return convertFromVDMMesh( Vector3f::diagonal( voxelSize ), points, tris, quads, passCb );
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
+    cb && !cb( 1.0f );
+    return res;
 }
 
 } //namespace MR

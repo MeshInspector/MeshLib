@@ -73,7 +73,7 @@ IF(NOT MR_EMSCRIPTEN)
 		target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESH_NO_JPEG)
 	ELSE()
 		IF(APPLE)
-			target_include_directories(${PROJECT_NAME} PUBLIC ${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
+			target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
 		ELSE()
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES turbojpeg)
@@ -99,8 +99,6 @@ IF(NOT MR_EMSCRIPTEN)
 		IF(APPLE)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES OpenVDB)
 		ELSE()
-			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb)
-			target_include_directories(${PROJECT_NAME} PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR}/openvdb/openvdb/openvdb/openvdb)
 			list(APPEND MRMESH_OPTIONAL_DEPENDENCIES openvdb)
 		ENDIF()
 	ENDIF()
@@ -115,6 +113,13 @@ ELSE()
 			MRMESH_NO_VOXEL
 	)
 ENDIF()
+
+# alternative Eigen include for external project
+find_package(Eigen3 NO_MODULE)
+if(DEFINED EIGEN3_FOUND)
+  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
+  list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Eigen3::Eigen)
+endif()
 
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED )
@@ -172,3 +177,21 @@ ELSE()
 		${MRMESH_OPTIONAL_DEPENDENCIES}
 		)
 ENDIF()
+
+set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
+install(TARGETS ${PROJECT_NAME}
+		EXPORT ${PROJECT_NAME}
+		DESTINATION "${MR_MAIN_LIB_DIR}")
+
+install(FILES ${HEADERS}
+		DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
+		DESTINATION ${MR_CONFIG_DIR}/cmake)
+
+
+install(EXPORT ${PROJECT_NAME}
+		FILE ${PROJECT_NAME}Targets.cmake
+		NAMESPACE MeshLib::
+		DESTINATION ${MR_CONFIG_DIR}/cmake)
+

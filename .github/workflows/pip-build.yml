@@ -61,7 +61,9 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
 
       - name: Install thirdparty libs
-        run: ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -129,6 +131,9 @@ jobs:
           - py-version: "3.10"
             py-tag: "cp310"
             py-short-version: "310"
+            py-dir: "Python310"
+            py-file: "python310"
+            embed-version: "3.10.0"
           - py-version: "3.11"
             py-tag: "cp311"
             py-short-version: "311"
@@ -149,17 +154,10 @@ jobs:
         run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
 
       - name: Setup python
-        if: ${{ matrix.py-version != '3.10' }}
         run: |
           docker exec meshlib-win choco uninstall python python3 -y
           docker exec meshlib-win choco install python3 --version=${{matrix.py-version}} -y
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\lib meshlib-win powershell.exe -c "Remove-Item python310.*"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\bin meshlib-win powershell.exe -c "Remove-Item python310.*"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -Destination bin"
           docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Remove-Item python3.10 -Recurse"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "mkdir python3.10"
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus\include meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\include\* -Destination python3.10 -Recurse"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
@@ -168,20 +166,13 @@ jobs:
       - name: Build
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll
-
-      # cant fix embedded python 3.9 for windows yet, but this embedded python is not used in wheel, so we can just disable it this way
-      - name: Embedded Python3.9 fix
-        if: ${{ matrix.py-version == '3.9' }}
-        working-directory: source\x64\Release
-        run: del python39.zip
-        shell: cmd
+          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -p:PythonIncludePath=C:\${{matrix.py-dir}}\include\
 
       - name: Run Test
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
-      - name: Unit Tests Default
+      - name: Unit Tests
         run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py Release
 
       - name: Python Tests
@@ -290,7 +281,7 @@ jobs:
       - name: Create and fix Wheel
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip install wheel setuptools delocate
+          ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
           ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
@@ -322,12 +313,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:35", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"
-          - os: "fedora:35"
+          - os: "debian:11-slim"
             py-version: "3.9"
             py-cmd: "python3.9"
           - os: "ubuntu:22.04"
@@ -343,14 +334,8 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Ubuntu system setup
-        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04'}}
+        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
-
-      - name: Fedora 35 system setup
-        if: ${{ matrix.os == 'fedora:35'}}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.py-version }}
 
       - name: Fedora 37 system setup
         if: ${{matrix.os == 'fedora:37'}}

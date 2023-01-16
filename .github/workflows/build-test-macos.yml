@@ -13,15 +13,20 @@ on:
 jobs:
   macos-build-test:
     timeout-minutes: 60
-    runs-on: [macos-latest]
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
+        os: [ x64, arm ]
         config: [Release]
         compiler: [Сlang]
         include:
           - compiler: Сlang
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
+          - os: x64
+            runner: macos-latest
+          - os: arm
+            runner: macos-arm-build
 
     steps:
       - name: Checkout
@@ -40,6 +45,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          MR_VERSION: ${{ inputs.version }}
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
@@ -47,3 +53,17 @@ jobs:
       - name: Python Tests
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Create Pkg
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        run: |
+          ./scripts/distribution_apple.sh
+          mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+
+      - name: Upload Macos Distribution
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Distributives
+          path: meshlib_${{matrix.os}}.pkg
+          retention-days: 1

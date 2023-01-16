@@ -55,7 +55,7 @@ struct RemovedFaceInfo
 using FullRemovedFacesInfo = std::vector<std::vector<RemovedFaceInfo>>;
 struct PreCutResult
 {
-    Vector<EdgeData, UndirectedEdgeId> edgeData;
+    HashMap<UndirectedEdgeId, EdgeData> edgeData;
     std::vector<EdgePath> paths;
     FullRemovedFacesInfo removedFaces;
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
@@ -728,8 +728,9 @@ OneMeshContour convertMeshTriPointsToClosedContour( const Mesh& mesh, const std:
     OneMeshContour res;
     std::vector<OneMeshContour> surfacePaths( meshTriPoints.size() );
     for ( int i = 0; i < meshTriPoints.size(); ++i )
-    {        
-        auto sp = computeSurfacePath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()] );
+    {
+        // using DijkstraAStar here might be faster, in most case points are close to each other
+        auto sp = computeGeodesicPath( mesh, meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()],GeodesicPathApprox::DijkstraAStar );
         if ( !sp.has_value() )
             continue;
         auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
@@ -1229,7 +1230,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             if ( newVertId.valid() && inter.primitiveId.index() == OneMeshIntersection::Edge )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
-                auto& edgeData = res.edgeData.autoResizeAt( thisEdge.undirected() );
+                auto& edgeData = res.edgeData[thisEdge.undirected()];
                 edgeData.orgEdgeInLeftTri.push_back( newEdgeId );
                 edgeData.newVerts.push_back( newVertId );
                 edgeData.intersections.push_back( {ContourId( contourId ),IntersectionId( intersectionId )} );
@@ -1258,33 +1259,6 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
-// Very simple metric for cut mesh holes, only fines for normal flip and area
-FillHoleMetric getCutMeshMetric( const Mesh& mesh, EdgeId e0 )
-{
-    auto norm = Vector3d();
-    for ( auto e : leftRing( mesh.topology, e0 ) )
-    {
-        norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-    }
-    norm = norm.normalized();
-
-    FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, norm] ( VertId a, VertId b, VertId c )
-    {
-        Vector3d aP = Vector3d( mesh.points[a] );
-        Vector3d bP = Vector3d( mesh.points[b] );
-        Vector3d cP = Vector3d( mesh.points[c] );
-
-        auto faceNorm = cross( bP - aP, cP - aP );
-        auto faceDblArea = faceNorm.length();
-        if ( dot( norm, faceNorm ) < 0.5f * faceDblArea )
-            return BadTriangulationMetric; // DBL_MAX break any triangulation, just return big value to allow some bad meshes
-
-        return faceDblArea; // area
-    };
-    return metric;
-}
-
 FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 {
     bool stopOnBad{ false };
@@ -1294,7 +1268,7 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
 
     auto res = getFillHolePlan( mesh, e, params );
     if ( stopOnBad )
-        res = getFillHolePlan( mesh, e, { getCutMeshMetric( mesh,e ) } );
+        res = getFillHolePlan( mesh, e, { getSimpleAreaMetric( mesh,e ) } );
     return res;
 }
 
@@ -1537,17 +1511,17 @@ void cutOneEdge( Mesh& mesh,
 // this function cut mesh edge and connects it with result path, 
 // after it each path edge left and right faces are invalid (they are removed)
 void cutEdgesIntoPieces( Mesh& mesh, 
-                         const Vector<EdgeData, UndirectedEdgeId>& edgeData, const OneMeshContours& contours, 
+                         HashMap<UndirectedEdgeId, EdgeData>&& edgeData, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap )
 {
     MR_TIMER;
     for ( const auto& edgeInfo : edgeData )
     {
-        if ( edgeInfo.intersections.empty() )
+        if ( edgeInfo.second.intersections.empty() )
             continue;
 
-        cutOneEdge( mesh, edgeInfo, contours, sortData, new2OldMap );
+        cutOneEdge( mesh, edgeInfo.second, contours, sortData, new2OldMap );
     }
 }
 
@@ -1595,14 +1569,13 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 {
     MR_TIMER;
     MR_WRITER( mesh );
-
     CutMeshResult res;
 
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
     auto preRes = doPreCutMesh( mesh, contours );
-    cutEdgesIntoPieces( mesh, preRes.edgeData, contours, params.sortData, params.new2OldMap );
+    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap );
 
     res.fbsWithCountourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces );

@@ -13,19 +13,19 @@
 namespace MR
 {
 
-tl::expected<Mesh, std::string> unitePairOfMeshes( const Mesh& a, const Mesh& b, 
+tl::expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
     bool fixDegenerations, float maxError, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
-        return b;
+        return std::move( b );
     else if ( b.points.empty() )
-        return a;
+        return std::move( a );
 
     AffineXf3f xf = AffineXf3f::translation( shift ? *shift : Vector3f() );
     BooleanResultMapper mapper_;
     auto res = MR::boolean(
-        a,
-        b,
+        std::move( a ),
+        std::move( b ),
         BooleanOperation::Union,
         shift ? &xf : nullptr,
         fixDegenerations || mapper ? &mapper_ : nullptr
@@ -69,7 +69,7 @@ public:
     {
     }
 
-    void join( const BooleanReduce& y )
+    void join( BooleanReduce& y )
     {
         if ( !error.empty() )
             return;
@@ -80,7 +80,7 @@ public:
         }
         Vector3f shift = y.resShift - resShift;
         BooleanResultMapper mapper;
-        auto res = unitePairOfMeshes( resultMesh, y.resultMesh, fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
+        auto res = unitePairOfMeshes( std::move( resultMesh ), std::move( y.resultMesh ), fixDegenerations_, maxError_, shifts_.empty() ? nullptr : &shift, collectNewFaces_ ? &mapper : nullptr );
         if ( !res.has_value() )
         {
             error = std::move( res.error() );
@@ -160,8 +160,14 @@ tl::expected<Mesh, std::string> uniteManyMeshes(
                     Box3d box = meshBoxes[m];
                     box.include( meshBoxes[group[i]] );
                     auto intConverter = getToIntConverter( box );
-                    auto collidingRes = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
-                    if ( !collidingRes.edgesAtrisB.empty() || !collidingRes.edgesBtrisA.empty() )
+                    auto collidingResAB = findCollidingEdgeTrisPrecise( *mesh, *groupMesh, intConverter, nullptr, true );
+                    if ( !collidingResAB.edgesAtrisB.empty() || !collidingResAB.edgesBtrisA.empty() )
+                    {
+                        intersects.store( true, std::memory_order::relaxed );
+                        break;
+                    }
+                    auto collidingResBA = findCollidingEdgeTrisPrecise( *groupMesh, *mesh, intConverter, nullptr, true );
+                    if ( !collidingResBA.edgesAtrisB.empty() || !collidingResBA.edgesBtrisA.empty() )
                     {
                         intersects.store( true, std::memory_order::relaxed );
                         break;

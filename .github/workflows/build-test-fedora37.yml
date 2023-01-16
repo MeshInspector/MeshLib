@@ -21,7 +21,6 @@ jobs:
       image: meshrus/meshlib-fedora37:${{inputs.image_tag}}
       options: --user root
     strategy:
-      fail-fast: false
       matrix:
         config: [Debug, Release]
         compiler: [Clang 15, GCC 12]

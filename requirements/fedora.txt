@@ -18,7 +18,7 @@ libzip-devel
 libzstd-devel
 pkg-config
 podofo-devel
-python3.9
+python3
 spdlog-devel
 tbb-devel
 time

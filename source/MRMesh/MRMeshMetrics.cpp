@@ -288,8 +288,9 @@ FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 )
         Vector3d bP = Vector3d( mesh.points[b] );
         Vector3d cP = Vector3d( mesh.points[c] );
 
-        auto faceNorm = cross( bP - aP, cP - aP );
-        auto faceDblArea = faceNorm.length();
+        auto faceDblArea = dblArea( aP, bP, cP );
+        if ( holeDblArea == 0.0f )
+            return faceDblArea; // prefer degenerate faces in this case, not to have flipped faces
         auto areaRatio = faceDblArea / holeDblArea; // [0;1]
         // sqrt because `triangleAspectRatio` grows very fast
         auto aspectRatio = sqrt( triangleAspectRatio( aP, bP, cP ) - 1.0 ) * aspectDenom; // [0;0.01]

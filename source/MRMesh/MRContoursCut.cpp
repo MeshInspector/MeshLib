@@ -33,12 +33,15 @@ struct IntersectionData
     IntersectionId intersectionId;
 };
 
-struct EdgeData
+struct EdgeIntersectoinData
 {
-    std::vector<IntersectionData> intersections;
-    std::vector<VertId> newVerts;
-    std::vector<EdgeId> orgEdgeInLeftTri;
+    IntersectionData interOnEdge;
+    VertId newVert;
+    EdgeId orgEdgeInLeftTri;
+    int beforeSortIndex{ 0 }; // useful for next sort
 };
+
+using EdgeData = std::vector<EdgeIntersectoinData>;
 
 struct PathsEdgeIndex
 {
@@ -273,14 +276,12 @@ TrianglesSortRes sortPropagateContour(
 
         if ( otherEL != otherER )
         {
-            /// DEBUG: sort after cut is not secure
-            /// this assert fails
             assert( 
                 ( otherEL == tp.next( lastCommonEdgeRef ).undirected() && otherER == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherER == tp.next( lastCommonEdgeRef ).undirected() && otherEL == tp.prev( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherEL == tp.prev( lastCommonEdgeRef ).undirected() && otherER == tp.next( lastCommonEdgeRef.sym() ).undirected() ) ||
                 ( otherER == tp.prev( lastCommonEdgeRef ).undirected() && otherEL == tp.next( lastCommonEdgeRef.sym() ).undirected() ) );
-
+            
             // determined condition
             if ( otherEL == tp.next( lastCommonEdgeRef ).undirected() || otherEL == tp.prev( lastCommonEdgeRef ).undirected() )
                 return sortData.isOtherA ? TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
@@ -331,24 +332,25 @@ TrianglesSortRes sortPropagateContour(
 }
 
 // baseEdge - cutting edge representation with orientation of first intersection
-std::function<bool( int, int )> getLessFunc(
-    const MeshTopology& tp, const EdgeData& edgeData, 
+std::function<bool( const EdgeIntersectoinData&, const EdgeIntersectoinData& )> getLessFunc(
+    const MeshTopology& tp, 
     const std::vector<double>& dots, EdgeId baseEdge, const SortIntersectionsData* sortData )
 {
     if ( !sortData )
     {
-        return [&]( int l, int r ) -> bool
+        return [&]( const EdgeIntersectoinData& l, const EdgeIntersectoinData& r ) -> bool
         {
-            return dots[l] < dots[r];
+            return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
         };
     }
     // sym baseEdge if other is not A:
     // if other is A intersection edge is going inside - out
     // otherwise it is going outside - in
-    return[&tp, &edgeData, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]( int l, int r ) -> bool
+    return[&tp, &dots, sortData, baseEdgeOr = sortData->isOtherA ? baseEdge : baseEdge.sym()]
+    ( const EdgeIntersectoinData& l, const EdgeIntersectoinData& r ) -> bool
     {
-        const auto & il = edgeData.intersections[l];
-        const auto & ir = edgeData.intersections[r];
+        const auto & il = l.interOnEdge;
+        const auto & ir = r.interOnEdge;
 
         FaceId fl = sortData->contours[il.contourId][il.intersectionId].tri;
         FaceId fr = sortData->contours[ir.contourId][ir.intersectionId].tri;
@@ -368,7 +370,7 @@ std::function<bool( int, int )> getLessFunc(
         if ( res != TrianglesSortRes::Undetermined )
             return  res == TrianglesSortRes::Left;
 
-        return dots[l] < dots[r];
+        return dots[l.beforeSortIndex] < dots[r.beforeSortIndex];
     };
 }
 
@@ -1375,9 +1377,11 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             {
                 EdgeId thisEdge = std::get<EdgeId>( inter.primitiveId );
                 auto& edgeData = res.edgeData[thisEdge.undirected()];
-                edgeData.orgEdgeInLeftTri.push_back( newEdgeId );
-                edgeData.newVerts.push_back( newVertId );
-                edgeData.intersections.push_back( {ContourId( contourId ),IntersectionId( intersectionId )} );
+                edgeData.emplace_back( EdgeIntersectoinData{
+                    .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( intersectionId )},
+                    .newVert = newVertId,
+                    .orgEdgeInLeftTri = newEdgeId,
+                    .beforeSortIndex = int( edgeData.size() ) } );
                 // fill removed tris
                 removedFacesInfo[intersectionId].f = mesh.topology.left( thisEdge );
             }
@@ -1499,8 +1503,7 @@ void debugSortingInfo( EdgeId baseE,
                        const std::vector<float>& dotProds,
                        const SortIntersectionsData* sortData )
 {
-    const auto& verts = edgeData.newVerts;
-    if ( verts.size() > 1 )
+    if ( edgeData.size() > 1 )
     {
         bool edgeInfoPrinted{false};
         for ( int i = 0; i + 1 < res.size(); ++i )
@@ -1513,8 +1516,8 @@ void debugSortingInfo( EdgeId baseE,
             }
             if ( sortData )
             {
-                FaceId f1 = sortData->contours[edgeData.intersections[res[i]].contourId][edgeData.intersections[res[i]].intersectionId].tri;
-                FaceId f2 = sortData->contours[edgeData.intersections[res[i + 1]].contourId][edgeData.intersections[res[i + 1]].intersectionId].tri;
+                FaceId f1 = sortData->contours[edgeData[res[i]].interOnEdge.contourId][edgeData[res[i]].interOnEdge.intersectionId].tri;
+                FaceId f2 = sortData->contours[edgeData[res[i + 1]].interOnEdge.contourId][edgeData[res[i + 1]].interOnEdge.intersectionId].tri;
 
                 auto sharedEdge = sortData->otherMesh.topology.sharedEdge( f1, f2 );
                 spdlog::info( "  {}", dotProds[res[i + 1]] - dotProds[res[i]] );
@@ -1524,28 +1527,23 @@ void debugSortingInfo( EdgeId baseE,
     }
 }
 
-std::vector<int> sortIntersectionsAlongBaseEdge( const Mesh& mesh, EdgeId baseE,
-                                                 const EdgeData& edgeData, 
-                                                 const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
+void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
+    const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
 {
-    const auto& verts = edgeData.newVerts;
-    if ( verts.empty() )
-        return {};
-    std::vector<int> res( verts.size() );
-    std::iota( res.begin(), res.end(), 0 );
+    assert( !edgeData.empty() );
+    const auto& intInfo = edgeData.front().interOnEdge;
+    EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
 
-    std::vector<double> dotProds( verts.size() );
-    Vector3d orgPoint{ mesh.orgPnt( baseE ) };
-    auto abVec = Vector3d{ mesh.destPnt( baseE ) } - orgPoint;
-    for ( int i = 0; i < verts.size(); ++i )
-        dotProds[i] = dot( Vector3d{ mesh.points[verts[i]] } - orgPoint, abVec );
+    std::vector<double> dotProds( edgeData.size() );
+    Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
+    auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
+    for ( int i = 0; i < edgeData.size(); ++i )
+        dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
 
-    std::sort( res.begin(), res.end(), getLessFunc( mesh.topology, edgeData, dotProds, baseE, sortData ) );
+    std::sort( edgeData.begin(), edgeData.end(), getLessFunc( mesh.topology, dotProds, baseEdge, sortData ) );
 
     // DEBUG Output
     //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );
-
-    return res;
 }
 
 //            ^
@@ -1579,13 +1577,15 @@ void connectEdges( MeshTopology& topology, EdgeId botEdge, EdgeId topEdge, EdgeI
 
 // cuts one edge and connects all intersecting contours with pieces
 void cutOneEdge( Mesh& mesh,
-                 const EdgeData& edgeData, const OneMeshContours& contours, 
-                 const SortIntersectionsData* sortData,
+                 const EdgeData& edgeData, const OneMeshContours& contours,
                  FaceMap* new2OldMap )
 {
-    assert( !edgeData.intersections.empty() );
+    assert( !edgeData.empty() );
 
-    const auto& intInfo = edgeData.intersections[0];
+    const auto& intInfo = std::find_if( edgeData.begin(), edgeData.end(), [] ( const auto& data )
+    {
+        return data.beforeSortIndex == 0;
+    } )->interOnEdge;
     EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
 
     // will need this to restore lost face on first or last intersection (only for open contours)
@@ -1595,8 +1595,6 @@ void cutOneEdge( Mesh& mesh,
     // remove incident faces
     mesh.topology.setLeft( baseEdge, FaceId{} );
     mesh.topology.setLeft( baseEdge.sym(), FaceId{} );
-
-    auto sortedIntersectionsIndices = sortIntersectionsAlongBaseEdge( mesh, baseEdge, edgeData, sortData );
 
     EdgeId e = baseEdge;       
     // disconnect edge e from its origin
@@ -1613,10 +1611,10 @@ void cutOneEdge( Mesh& mesh,
 
     bool isAllLeftOnly = true;
     bool isAllRightOnly = true;
-    for ( int i = 0; i < sortedIntersectionsIndices.size(); ++i )
+    for ( int i = 0; i < edgeData.size(); ++i )
     {
-        const auto& vertEdge = edgeData.orgEdgeInLeftTri[sortedIntersectionsIndices[i]];
-        const auto& interIndex = edgeData.intersections[sortedIntersectionsIndices[i]];
+        const auto& vertEdge = edgeData[i].orgEdgeInLeftTri;
+        const auto& interIndex = edgeData[i].interOnEdge;
         const auto& inter = contours[interIndex.contourId].intersections[interIndex.intersectionId];
 
         bool isBaseSym = std::get<EdgeId>( inter.primitiveId ).sym() == baseEdge;
@@ -1626,12 +1624,12 @@ void cutOneEdge( Mesh& mesh,
         EdgeId& baserigth = isBaseSym ? leftEdge : rightEdge;
 
         baseleft = vertEdge;
-        baserigth = baseleft.valid() ? mesh.topology.next( baseleft ) : mesh.topology.edgePerVertex()[edgeData.newVerts[sortedIntersectionsIndices[i]]];
+        baserigth = baseleft.valid() ? mesh.topology.next( baseleft ) : mesh.topology.edgePerVertex()[edgeData[i].newVert];
         if ( baseleft == baserigth )
             baserigth = EdgeId{};
 
         EdgeId lastEdge = e;
-        if ( i + 1 < sortedIntersectionsIndices.size() )
+        if ( i + 1 < edgeData.size() )
             lastEdge = mesh.topology.makeEdge();
 
         if ( isAllLeftOnly && rightEdge.valid() )
@@ -1660,13 +1658,13 @@ void cutEdgesIntoPieces( Mesh& mesh,
                          FaceMap* new2OldMap )
 {
     MR_TIMER;
+    // sort all
+    // can be parallel
+    for ( auto& edgeInfo : edgeData )
+        sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
+    // cut all
     for ( const auto& edgeInfo : edgeData )
-    {
-        if ( edgeInfo.second.intersections.empty() )
-            continue;
-
-        cutOneEdge( mesh, edgeInfo.second, contours, sortData, new2OldMap );
-    }
+        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

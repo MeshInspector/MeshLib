@@ -95,8 +95,8 @@ MRMESH_API FillHoleMetric getUniversalMetric( const Mesh& mesh );
 /// This metric maximizes the minimal angle among all faces in the triangulation
 MRMESH_API FillHoleMetric getMinTriAngleMetric( const Mesh& mesh );
 
-/// This simple metric penalizes for large triangle area
-/// warning: this metric can produce degenerated triangles
+/// This metric is for triangulation construction with minimal summed area of triangles.
+/// Warning: this metric can produce degenerated triangles
 MRMESH_API FillHoleMetric getMinAreaMetric( const Mesh& mesh );
 
 /// \}

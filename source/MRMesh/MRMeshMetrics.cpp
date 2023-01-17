@@ -270,7 +270,6 @@ FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-/// This simple metric penalizes for large triangle area
 FillHoleMetric getMinAreaMetric( const Mesh& mesh )
 {
     FillHoleMetric metric;

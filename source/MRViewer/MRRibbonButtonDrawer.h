@@ -28,7 +28,6 @@ struct DrawButtonParams
         Toolbar, // button is on toolbar
         Header // button is on header quick access bar
     } rootType{ RootType::Ribbon };
-    bool onlyIcon = false; // view without text (caption, tooltip, requirements) and drop button 
 };
 
 /// class for drawing ribbon menu buttons

@@ -43,6 +43,8 @@ private:
 
     const RibbonSchema* schema_ = nullptr;
     MenuItemsList* quickAccessList_ = nullptr;
+    MenuItemsList quickAccessListPreview_;
+    bool toolbarDragDrop_ = false;
     int maxQuickAccessSize_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
 

@@ -16,6 +16,7 @@ jsoncpp-devel
 libtiff-devel
 libzip-devel
 libzstd-devel
+openvdb
 pkg-config
 podofo-devel
 python3

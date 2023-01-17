@@ -61,16 +61,16 @@ exit
 set -eo pipefail
 
 #TODO: handle 'home' python installations (conda, ...)
-if [ -d /usr/lib/python3.9 ]; then
- printf "\rPython3 was found                       \n"
+if [ -d /usr/lib/python3.11 ]; then
+ printf "\rPython3.11 was found                       \n"
  if [ "$EUID" -ne 0 ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo mkdir -p /usr/lib/python3.9/site-packages/meshlib/
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.9/site-packages/meshlib/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.9/site-packages/meshlib/mrviewerpy.so
+ sudo mkdir -p /usr/lib/python3.11/site-packages/meshlib/
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.11/site-packages/meshlib/mrmeshpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.11/site-packages/meshlib/mrmeshnumpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.11/site-packages/meshlib/mrviewerpy.so
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 fi
 

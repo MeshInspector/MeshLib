@@ -1,4 +1,4 @@
-FROM fedora:35 AS build
+FROM fedora:37 AS build
 
 ARG FILE_NAME
 ARG FILE_URL

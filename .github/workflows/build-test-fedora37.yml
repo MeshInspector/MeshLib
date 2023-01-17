@@ -1,4 +1,4 @@
-name: Build and test Fedora35
+name: Build and test Fedora37
 
 on:
   workflow_call:
@@ -14,23 +14,20 @@ on:
         type: boolean
 
 jobs:
-  fedora35-build-test:
+  fedora37-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-fedora:${{inputs.image_tag}}
+      image: meshrus/meshlib-fedora37:${{inputs.image_tag}}
       options: --user root
     strategy:
       matrix:
         config: [Debug, Release]
-        compiler: [Clang 13, GCC 11]
+        compiler: [Clang 15]
         include:
-          - compiler: Clang 13
-            cxx-compiler: /usr/bin/clang++-13
-            c-compiler: /usr/bin/clang-13
-          - compiler: GCC 11
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
+          - compiler: Clang 15
+            cxx-compiler: /usr/bin/clang++-15
+            c-compiler: /usr/bin/clang-15
 
     steps:
       - name: Checkout
@@ -54,7 +51,7 @@ jobs:
           MR_VERSION: ${{ inputs.version }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh fedora35 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh fedora37 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -74,14 +71,14 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 15' && matrix.config == 'Release'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.version}}
         env:
           MESHRUS_BUILD_RELEASE: ON
           MESHRUS_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'GCC 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 15' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives

@@ -81,6 +81,13 @@ template<typename T>
     return cross( q - p, r - p );
 }
 
+/// computes unitNormal of given triangle
+template<typename T>
+[[nodiscard]] inline Vector3<T> normal( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )
+{
+    return dirDblArea( p, q, r ).normalized();
+}
+
 /// computes the square of double area of given triangle
 template<typename T>
 [[nodiscard]] inline T dblAreaSq( const Vector3<T> & p, const Vector3<T> & q, const Vector3<T> & r )

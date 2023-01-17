@@ -56,9 +56,10 @@ struct RemovedFaceInfo
 };
 
 using FullRemovedFacesInfo = std::vector<std::vector<RemovedFaceInfo>>;
+using EdgeDataMap = ParallelHashMap<UndirectedEdgeId, EdgeData>;
 struct PreCutResult
 {
-    HashMap<UndirectedEdgeId, EdgeData> edgeData;
+    EdgeDataMap edgeData;
     std::vector<EdgePath> paths;
     FullRemovedFacesInfo removedFaces;
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
@@ -1653,15 +1654,28 @@ void cutOneEdge( Mesh& mesh,
 // this function cut mesh edge and connects it with result path, 
 // after it each path edge left and right faces are invalid (they are removed)
 void cutEdgesIntoPieces( Mesh& mesh, 
-                         HashMap<UndirectedEdgeId, EdgeData>&& edgeData, const OneMeshContours& contours,
+                         EdgeDataMap&& edgeData, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap )
 {
     MR_TIMER;
     // sort all
-    // can be parallel
-    for ( auto& edgeInfo : edgeData )
-        sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
+        [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t i = range.begin(); i != range.end(); ++i )
+        {
+            edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet )
+            {
+                // const_cast here is safe, we don't write to map, just sort internal data
+                for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
+                {
+                    sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
+                }
+            } );
+        }
+    } );
     // cut all
     for ( const auto& edgeInfo : edgeData )
         cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap );

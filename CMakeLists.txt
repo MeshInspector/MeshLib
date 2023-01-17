@@ -155,10 +155,6 @@ IF(${MR_FEDORA} OR ${MR_UBUNTU22})
  add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 ENDIF()
 
-IF(${MR_FEDORA})
- find_package(OpenVDB REQUIRED)
-ENDIF()
-
 add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
 ENDIF() # NOT MR_EMSCRIPTEN
 

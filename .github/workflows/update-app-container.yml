@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ Ubuntu-20, Ubuntu-22, Fedora-35 ]
+        os: [ Ubuntu-20, Ubuntu-22, Fedora-37 ]
         include:
           - os: Ubuntu-20
             image-tag: ubuntu20
@@ -19,8 +19,8 @@ jobs:
           - os: Ubuntu-22
             image-tag: ubuntu22
             file-path-end: _ubuntu22-dev.deb
-          - os: Fedora-35
-            image-tag: fedora35
+          - os: Fedora-37
+            image-tag: fedora37
             file-path-end: -dev.rpm
     steps:
       - name: Checkout

@@ -9,7 +9,7 @@ Python is one of the most popular and widely used programming language in scient
 |     Windows x64     |      3.10      |
 |    Ubuntu 20 x64    |       3.8      |
 |    Ubuntu 22 x64    |      3.10      |
-|    Fedora 35 x64    |       3.9      |
+|    Fedora 35 x64    |       3.11      |
 | pip install meshlib |    3.8 - 3.11  |
 
 MeshLib library allows you to call python scripts directly from the command line or use particular functions by `from meshlib import mrmeshpy`.

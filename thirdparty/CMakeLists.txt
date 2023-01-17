@@ -58,20 +58,27 @@ ELSE()
  message("using ${distro} ${version_id}")
 
  IF( ${distro} STREQUAL "Ubuntu")
+ SET(MR_OPENVDB TRUE)
   IF( ${version_id} STREQUAL "20")
    SET(MR_OPENVDB_OLD TRUE)
   ENDIF() # Ubuntu 20
  ENDIF() # Ubuntu
 
- set(OPENVDB_ENABLE_UNINSTALL OFF)
- set(OPENVDB_ENABLE_INSTALL OFF)
- set(OPENVDB_CORE_SHARED "ON")
- set(OPENVDB_CORE_STATIC "OFF")
+ IF( ${distro} STREQUAL "Fedora Linux")
+  SET(MR_FEDORA TRUE)
+ ENDIF() # Fedora
 
- IF(MR_OPENVDB_OLD)
-  add_subdirectory(./openvdb/v9/openvdb)
- ELSE()
-  add_subdirectory(./openvdb/v10/openvdb)
+ IF(MR_OPENVDB)
+  set(OPENVDB_ENABLE_UNINSTALL OFF)
+  set(OPENVDB_ENABLE_INSTALL OFF)
+  set(OPENVDB_CORE_SHARED "ON")
+  set(OPENVDB_CORE_STATIC "OFF")
+
+  IF(MR_OPENVDB_OLD)
+   add_subdirectory(./openvdb/v9/openvdb)
+  ELSE()
+   add_subdirectory(./openvdb/v10/openvdb)
+  ENDIF()
  ENDIF()
 
  set(CPR_ENABLE_UNINSTALL "OFF")

@@ -462,7 +462,7 @@ void ViewerSettingsPlugin::drawDialogToolbarSettings_( float scaling )
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
 
-    DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar, true };
+    DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar };
     
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarCustomizeBg ).getUInt32() );
     ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );

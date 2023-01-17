@@ -692,7 +692,6 @@ bool isTIFFFile( const std::filesystem::path& path )
     TIFFClose( tif );
     return true;
 }
-#endif
 
 template<typename SampleType>
 bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const TiffParams& tp, float& min, float& max )
@@ -741,7 +740,6 @@ bool ReadVoxels( SimpleVolume& outVolume, size_t layerIndex, TIFF* tif, const Ti
     return true;
 }
 
-#ifndef MRMESH_NO_TIFF
 tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;

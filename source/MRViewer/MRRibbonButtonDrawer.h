@@ -73,10 +73,13 @@ public:
         float baseWidth{ 0.0f };
         float additionalWidth{ 0.0f }; // for small drop buttons
     };
-    MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType );
+    MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType ) const;
 
     /// draw item button
-    MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params );
+    MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params ) const;
+
+    /// draw item button icon
+    MRVIEWER_API void drawButtonIcon( const MenuItemInfo& item, const DrawButtonParams& params ) const;
 
     /// draw custom styled button
     MRVIEWER_API bool drawCustomStyledButton( const char* icon, const ImVec2& size, float iconSize );
@@ -91,9 +94,9 @@ public:
     void setScaling( float scaling ) { scaling_ = scaling; };
 
 private:
-    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params );
-    void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem );
-    void drawTooltip_( const MenuItemInfo& item, const std::string& requirements );
+    void drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const;
+    void drawDropList_( const std::shared_ptr<RibbonMenuItem>& baseDropItem ) const;
+    void drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const;
 
     // returns num of pushed colors
     int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const;

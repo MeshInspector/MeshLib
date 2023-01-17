@@ -87,6 +87,8 @@ public:
         ToolbarHovered,
         ToolbarClicked,
 
+        ToolbarCustomizeBg,
+
         Text,
         TextEnabled,
         TextDisabled,

@@ -130,7 +130,8 @@ std::optional<Mesh> PlanarTriangulator::run()
         if ( !windingInfo_[e].inside() )
             continue;
         FillHoleParams params;
-        params.metric = getSimpleAreaMetric( mesh_, dirE );
+        // as far as we call makeDeloneEdgeFlips, degenerated faces is not real problem
+        params.metric = getMinAreaMetric( mesh_ );
         fillHole( mesh_, dirE, params );
     }
     makeDeloneEdgeFlips( mesh_, {}, 100 );

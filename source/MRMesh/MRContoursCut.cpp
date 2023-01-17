@@ -1420,8 +1420,8 @@ FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
     params.stopBeforeBadTriangulation = &stopOnBad;
 
     auto res = getFillHolePlan( mesh, e, params );
-    if ( stopOnBad )
-        res = getFillHolePlan( mesh, e, { getSimpleAreaMetric( mesh,e ) } );
+    if ( stopOnBad ) // triangulation cannot be good if we fall in this `if`, so let it create degenerated faces
+        res = getFillHolePlan( mesh, e, { getMinAreaMetric( mesh ) } );
     return res;
 }
 

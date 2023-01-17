@@ -523,7 +523,7 @@ void ViewerSettingsPlugin::drawDialogToolbarSettings_( float scaling )
             
             if ( ImGui::BeginDragDropTarget() )
             {
-                const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "ToolbarItemNumber" )
+                const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "ToolbarItemNumber" );
                 if ( payload )
                 {
                     IM_ASSERT( payload->DataSize == sizeof( int ) );

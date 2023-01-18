@@ -9,6 +9,8 @@
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
 #include "MRMeshFixer.h"
+#include "MRRegionBoundary.h"
+#include <MRPch/MROpenvdb.h>
 
 namespace MR
 {
@@ -143,11 +145,15 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
     VertCoords newPoints;
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
     bool keepGoing = true;
+
+    auto creaseEdges = mesh.findCreaseEdges( PI_F / 6 );
+    auto creaseVerts = zone & getIncidentVerts( mesh.topology, creaseEdges );
+
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
         newPoints = mesh.points;
-        keepGoing = BitSetParallelFor( zone, [&] ( VertId v )
+        keepGoing = BitSetParallelFor( creaseVerts, [&] ( VertId v )
         {
             auto e0 = mesh.topology.edgeWithOrg( v );
             if ( !e0.valid() )
@@ -157,47 +163,24 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
 
             dilateRegion( mesh, neighbors, surfaceRadius );
 
-            PointAccumulator accum;
-            int count = 0;
+            using namespace openvdb;
+            using namespace openvdb::tools;
+            std::vector<Vec3d> points, normals;
+
             for ( auto newV : neighbors )
             {
-                Vector3d ptD = Vector3d( mesh.points[newV] );
-                accum.addPoint( ptD );
-                ++count;
+                auto p = mesh.points[newV];
+                points.emplace_back( p.x, p.y, p.z );
+                auto n = mesh.normal( newV );
+                normals.emplace_back( n.x, n.y, n.z );
             }
-            if ( count < 6 )
+            if ( points.size() < 3 )
                 return;
 
+            auto f = findFeaturePoint( points, normals );
+
             auto& np = newPoints[v];
-
-            Vector3f target;
-            if ( params.type == RelaxApproxType::Planar )
-                target = accum.getBestPlanef().project( np );
-            else if ( params.type == RelaxApproxType::Quadric )
-            {
-                AffineXf3d basis = accum.getBasicXf();
-                basis.A = basis.A.transposed();
-                std::swap( basis.A.x, basis.A.y );
-                std::swap( basis.A.y, basis.A.z );
-                basis.A = basis.A.transposed();
-                auto basisInv = basis.inverse();
-
-                QuadricApprox approxAccum;
-                for ( auto newV : neighbors )
-                    approxAccum.addPoint( basisInv( Vector3d( mesh.points[newV] ) ) );
-
-                auto centerPoint = basisInv( Vector3d( mesh.points[v] ) );
-                const auto coefs = approxAccum.calcBestCoefficients();
-                centerPoint.z =
-                    coefs[0] * centerPoint.x * centerPoint.x +
-                    coefs[1] * centerPoint.x * centerPoint.y +
-                    coefs[2] * centerPoint.y * centerPoint.y +
-                    coefs[3] * centerPoint.x +
-                    coefs[4] * centerPoint.y +
-                    coefs[5];
-                target = Vector3f( basis( centerPoint ) );
-            }
-            np += ( params.force * ( target - np ) );
+            np = Vector3f( (float)f.x(), (float)f.y(), (float)f.z() );
         }, internalCb );
         mesh.points.swap( newPoints );
         if ( !keepGoing )

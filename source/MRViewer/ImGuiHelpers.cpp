@@ -1159,7 +1159,7 @@ PaletteChanges Palette(
     ImGui::InputText( "Palette Name", currentPaletteName );
     ImGui::PopStyleVar();
 
-    const float btnWidth = 104.0f * ImGui::GetIO().DisplayFramebufferScale.x;
+    const float btnWidth = cModalButtonWidth * menuScaling;
     
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )

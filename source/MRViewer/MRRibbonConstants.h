@@ -51,4 +51,8 @@ constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
 
 constexpr float cRadioButtonSize = 20.0f;
 
+constexpr float cModalWindowWidth = 368.0f;
+constexpr float cModalWindowPaddingX = 28.0f;
+constexpr float cModalWindowPaddingY = 20.0f;
+
 }

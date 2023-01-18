@@ -1127,20 +1127,42 @@ PaletteChanges Palette(
 
     ImGui::PopStyleVar();
 
-    ImVec2 windowSize( 2 * scaledWidth, 0 );
+    ImVec2 windowSize( cModalWindowWidth, 0.0f );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
+    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
-        PopStyleVar();
+        PopStyleVar( 4 );
         return PaletteChanges( changes );
     }
 
-    static std::string currentPaletteName;
-    ImGui::InputText( "Config name", currentPaletteName );
+    auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+    if ( headerFont )
+        PushFont( headerFont );
 
-    const float btnWidth = 80.0f * ImGui::GetIO().DisplayFramebufferScale.x;
-    if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, ImGui::GetFrameHeight() ) ) )
+    const auto headerWidth = CalcTextSize( "Save Palette" ).x;
+
+    ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+    Text( "Save Palette" );
+
+    if ( headerFont )
+        PopFont();
+    
+    const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+    static std::string currentPaletteName;
+
+    ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
+    ImGui::InputText( "Palette Name", currentPaletteName );
+    ImGui::PopStyleVar();
+
+    const float btnWidth = 104.0f * ImGui::GetIO().DisplayFramebufferScale.x;
+    
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+    if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
     {
         std::error_code ec;
         if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
@@ -1154,6 +1176,7 @@ PaletteChanges Palette(
             ImGui::CloseCurrentPopup();
         }
     }
+    ImGui::PopStyleVar();
 
     bool closeTopPopup = false;
     if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
@@ -1180,13 +1203,15 @@ PaletteChanges Palette(
         ImGui::CloseCurrentPopup();
 
     ImGui::SameLine();
-    const auto& style = ImGui::GetStyle();
+
     ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
         ImGui::CloseCurrentPopup();
+    ImGui::PopStyleVar();
 
     ImGui::EndPopup();
-    PopStyleVar();
+    PopStyleVar( 4 );
 
     return PaletteChanges( changes );
 }

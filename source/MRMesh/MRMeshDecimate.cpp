@@ -253,6 +253,8 @@ bool MeshDecimator::initializeQueue_()
     {
         // all region edges
         regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        if ( settings_.edgesToCollapse )
+            regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchBdVertices )
         {
             // exclude edges touching boundary
@@ -272,12 +274,15 @@ bool MeshDecimator::initializeQueue_()
         // exclude lone edges and edges touching boundary
         BitSetParallelForAll( regionEdges_, [&]( UndirectedEdgeId ue )
         {
-            if ( mesh_.topology.isLoneEdge( ue ) ||
+            if ( ( settings_.edgesToCollapse && !settings_.edgesToCollapse->test( ue ) ) ||
+                 mesh_.topology.isLoneEdge( ue ) ||
                  pBdVerts_->test( mesh_.topology.org( ue ) ) ||
                  pBdVerts_->test( mesh_.topology.dest( ue ) ) )
                 regionEdges_.reset( ue );
         } );
     }
+    else if ( settings_.edgesToCollapse )
+        regionEdges_ = *settings_.edgesToCollapse;
 
     EdgeMetricCalc calc( *this );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( UndirectedEdgeId{0}, UndirectedEdgeId{mesh_.topology.undirectedEdgeSize()} ), calc );

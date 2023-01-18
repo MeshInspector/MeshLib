@@ -57,6 +57,8 @@ struct DecimateSettings
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
+    const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
     bool touchBdVertices = true;
     /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;

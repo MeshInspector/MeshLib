@@ -270,32 +270,16 @@ FillHoleMetric getMinTriAngleMetric( const Mesh& mesh )
     return metric;
 }
 
-// This simple metric penalizes for large triangle area and large triangle aspect ratio
-FillHoleMetric getSimpleAreaMetric( const Mesh& mesh, EdgeId e0 )
+FillHoleMetric getMinAreaMetric( const Mesh& mesh )
 {
-    assert( !mesh.topology.left( e0 ) );
-    auto norm = Vector3d();
-    for ( auto e : leftRing( mesh.topology, e0 ) )
-    {
-        norm += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-    }
-    auto holeDblArea = norm.length();
-    auto aspectDenom = 1e-2 / sqrt( std::numeric_limits<double>::max() );
     FillHoleMetric metric;
-    metric.triangleMetric = [&mesh, holeDblArea, aspectDenom] ( VertId a, VertId b, VertId c )
+    metric.triangleMetric = [&mesh] ( VertId a, VertId b, VertId c )
     {
         Vector3d aP = Vector3d( mesh.points[a] );
         Vector3d bP = Vector3d( mesh.points[b] );
         Vector3d cP = Vector3d( mesh.points[c] );
 
-        auto faceDblArea = dblArea( aP, bP, cP );
-        if ( holeDblArea == 0.0f )
-            return faceDblArea; // prefer degenerate faces in this case, not to have flipped faces
-        auto areaRatio = faceDblArea / holeDblArea; // [0;1]
-        // sqrt because `triangleAspectRatio` grows very fast
-        auto aspectRatio = sqrt( triangleAspectRatio( aP, bP, cP ) - 1.0 ) * aspectDenom; // [0;0.01]
-
-        return areaRatio + aspectRatio;
+        return dblArea( aP, bP, cP );
     };
     return metric;
 }

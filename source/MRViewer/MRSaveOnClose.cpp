@@ -25,7 +25,8 @@ void SaveOnClosePlugin::preDraw_()
     {
         auto* modal = ImGui::GetTopMostPopupModal();
         auto& viewerRef = getViewerInstance();
-        if ( !modal && ( !viewerRef.getGlobalHistoryStore() || !viewerRef.getGlobalHistoryStore()->isSceneModified() ) )
+        bool noModalWasPresent = activeModalHighlightTimer_ == 2.0f;
+        if ( !modal && ( !viewerRef.getGlobalHistoryStore() || !viewerRef.getGlobalHistoryStore()->isSceneModified() ) && noModalWasPresent )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
@@ -43,9 +44,13 @@ void SaveOnClosePlugin::preDraw_()
             if ( activeModalHighlightTimer_ < 0.0f )
                 showCloseModal_ = false;
         }
-        else
+        else if ( noModalWasPresent )
         {
             ImGui::OpenPopup( "Application close##modal" );
+            showCloseModal_ = false;
+        }
+        else
+        {
             showCloseModal_ = false;
         }
     }

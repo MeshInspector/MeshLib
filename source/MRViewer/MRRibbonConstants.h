@@ -54,5 +54,6 @@ constexpr float cRadioButtonSize = 20.0f;
 constexpr float cModalWindowWidth = 368.0f;
 constexpr float cModalWindowPaddingX = 28.0f;
 constexpr float cModalWindowPaddingY = 20.0f;
+constexpr float cModalButtonWidth = 104.0f;
 
 }

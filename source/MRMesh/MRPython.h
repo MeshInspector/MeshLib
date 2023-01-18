@@ -127,5 +127,48 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
+
+template<typename R, typename... Args>
+auto decorateExpected( std::function<tl::expected<R, std::string>( Args... )>&& f ) -> std::function<tl::expected<R, std::string>( Args... )>
+{
+    return[fLocal = std::move( f )]( Args&&... args ) mutable
+    {
+        PyErr_WarnEx(PyExc_DeprecationWarning,
+                     "tl:expected() return value is deprecated and this function can raise ValueError in future releases", 1);
+        auto res = fLocal(std::forward<Args>( args )...);
+        // @todo
+        //if (!res.has_value())
+            //throw pybind11::value_error(res.error());
+        //return res.value();
+        return res;
+    };
+}
+
+template<typename... Args>
+auto decorateExpected( std::function<tl::expected<void, std::string>( Args... )>&& f ) -> std::function<tl::expected<void, std::string>( Args... )>
+{
+    return[fLocal = std::move( f )]( Args&&... args ) mutable
+    {
+        PyErr_WarnEx(PyExc_DeprecationWarning,
+                     "tl:expected() return value is deprecated and this function can raise ValueError in future releases", 1);
+        auto res = fLocal(std::forward<Args>( args )...);
+        //if (!res.has_value())
+            //throw pybind11::value_error(res.error());
+        return res;
+    };
+}
+
+template<typename F>
+auto decorateExpected( F&& f )
+{
+    return decorateExpected( std::function( std::forward<F>( f ) ) );
+}
+
+template<typename R, typename T, typename... Args>
+auto decorateExpected( R( T::* memFunction )( Args... ) )
+{
+    return decorateExpected( std::function<R( T*, Args... )>( std::mem_fn( memFunction ) ) );
+}
+
 }
 #endif

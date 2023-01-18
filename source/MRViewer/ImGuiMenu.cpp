@@ -74,6 +74,7 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
+#include "MRRibbonFontManager.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -652,9 +653,28 @@ void ImGuiMenu::draw_helpers()
         popUpRenameBuffer_ = renameBuffer_;
     }
 
+    const auto menuScaling = menu_scaling();
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
+    
+    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
+    ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( "Rename Object" ).x ) * 0.5f );
+        ImGui::Text( "Rename Object" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
         auto obj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected ).front();
         if ( !obj )
         {
@@ -662,22 +682,28 @@ void ImGuiMenu::draw_helpers()
         }
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
 
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Ok", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
+        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
+        ImGui::PopStyleVar();
+
+        const float btnWidth = cModalButtonWidth * menuScaling;
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( RibbonButtonDrawer::GradientButton( "Ok", ImVec2( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        ImGui::SameLine();
+        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
-
+        ImGui::PopStyleVar();
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
         {
             ImGui::CloseCurrentPopup();
@@ -685,6 +711,7 @@ void ImGuiMenu::draw_helpers()
 
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 3 );
 
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
 

@@ -1605,7 +1605,7 @@ void RibbonMenu::drawQuickAccessMenu_()
     auto menuScaling = menu_scaling();
     auto windowPadding = ImVec2( 12 * menuScaling, 4 * menuScaling );
     auto itemSpacing = ImVec2( 12 * menuScaling, 0 );
-    const ImVec2 smallItemSize = { cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y, cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y };
+    const ImVec2 itemSize = { cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y, cQuickAccessBarHeight * menuScaling - 2.0f * windowPadding.y };
 
     int itemCount = 0;
     int droppedItemCount = 0;
@@ -1623,8 +1623,8 @@ void RibbonMenu::drawQuickAccessMenu_()
     if ( !itemCount ) return;
 
     const float windowWidth = windowPadding.x * 2
-        + smallItemSize.x * itemCount
-        + smallItemSize.x * cSmallItemDropSizeModifier * droppedItemCount
+        + itemSize.x * itemCount
+        + itemSize.x * cSmallItemDropSizeModifier * droppedItemCount
         + itemSpacing.x * ( itemCount - 1 );
 
     if ( windowWidth >= getViewerInstance().window_width - sceneSize_.x )
@@ -1647,7 +1647,7 @@ void RibbonMenu::drawQuickAccessMenu_()
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor();
 
-    DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
+    DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
     for ( const auto& item : quickAccessList_ )

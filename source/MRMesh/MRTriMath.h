@@ -109,6 +109,20 @@ template<typename T>
     return dblArea( p, q, r ) / 2; 
 }
 
+/// computes twice the area of given triangle
+template<typename T>
+[[nodiscard]] inline T dblArea( const Vector2<T> & p, const Vector2<T> & q, const Vector2<T> & r )
+{
+    return std::abs( cross( q - p, r - p ) );
+}
+
+/// computes twice the area of given triangle
+template<typename T>
+[[nodiscard]] inline T area( const Vector2<T> & p, const Vector2<T> & q, const Vector2<T> & r )
+{
+    return dblArea( p, q, r ) / 2;
+}
+
 /// given an edge direction between two faces with given normals, computes sine of dihedral angle between the faces:
 /// 0 if both faces are in the same plane,
 /// positive if the faces form convex surface,

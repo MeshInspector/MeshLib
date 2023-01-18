@@ -80,6 +80,8 @@ public:
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
 
+    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+
 protected:
 
     // draw single item

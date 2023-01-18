@@ -10,7 +10,6 @@
 #include "MRVector4.h"
 #include "MRMeshFixer.h"
 #include "MRRegionBoundary.h"
-#include <MRPch/MROpenvdb.h>
 
 namespace MR
 {
@@ -139,8 +138,8 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
     MR_TIMER;
     MR_WRITER( mesh );
 
-    float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
-        ( float( std::sqrt( mesh.area() ) ) * 1e-3f ) : params.surfaceDilateRadius;
+//    float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
+//        ( float( std::sqrt( mesh.area() ) ) * 1e-3f ) : params.surfaceDilateRadius;
 
     VertCoords newPoints;
     const VertBitSet& zone = mesh.topology.getVertIds( params.region );
@@ -155,32 +154,44 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
         newPoints = mesh.points;
         keepGoing = BitSetParallelFor( creaseVerts, [&] ( VertId v )
         {
-            auto e0 = mesh.topology.edgeWithOrg( v );
-            if ( !e0.valid() )
+            if ( !mesh.topology.hasVert( v ) )
                 return;
-            VertBitSet neighbors( mesh.topology.lastValidVert() + 1 );
+
+            const auto p = mesh.points[ v ];
+            const auto n = mesh.normal( v );
+            double nom = 0, den = 0;
+
+            FaceBitSet ring0;
+            for ( auto e : orgRing( mesh.topology, v ) )
+                if ( auto l = mesh.topology.left( e ) )
+                    ring0.autoResizeSet( l );
+
+            for ( auto e1 : orgRing( mesh.topology, v ) )
+                for ( auto e2 : orgRing( mesh.topology, e1.sym() ) )
+                    if ( auto l = mesh.topology.left( e2 ); l && !ring0.test( l ) )
+                    {
+                        const auto ni = mesh.normal( l );
+                        const auto pi = mesh.points[ mesh.topology.dest( e1 ) ];
+                        const auto nn = dot( n, ni );
+                        nom += dot( pi - p, ni ) * nn;
+                        den += nn * nn;
+                    }
+
+/*            VertBitSet neighbors( mesh.topology.lastValidVert() + 1 );
             neighbors.set( v );
 
             dilateRegion( mesh, neighbors, surfaceRadius );
 
-            using namespace openvdb;
-            using namespace openvdb::tools;
-            std::vector<Vec3d> points, normals;
-
             for ( auto newV : neighbors )
             {
-                auto p = mesh.points[newV];
-                points.emplace_back( p.x, p.y, p.z );
-                auto n = mesh.normal( newV );
-                normals.emplace_back( n.x, n.y, n.z );
-            }
-            if ( points.size() < 3 )
-                return;
-
-            auto f = findFeaturePoint( points, normals );
-
-            auto& np = newPoints[v];
-            np = Vector3f( (float)f.x(), (float)f.y(), (float)f.z() );
+                auto pi = mesh.points[newV];
+                auto ni = mesh.normal( newV );
+                const auto nn = dot( n, ni );
+                nom += dot( pi - p, ni ) * nn;
+                den += nn * nn;
+            }*/
+            if ( den > 0 )
+                newPoints[v] = p + float( nom / den ) * n;
         }, internalCb );
         mesh.points.swap( newPoints );
         if ( !keepGoing )

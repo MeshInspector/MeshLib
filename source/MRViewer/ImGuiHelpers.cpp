@@ -1155,7 +1155,7 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
     static std::string currentPaletteName;
 
-    ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Save Palette as" ).x );
+    ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
     ImGui::InputText( "Palette Name", currentPaletteName );
     ImGui::PopStyleVar();
 

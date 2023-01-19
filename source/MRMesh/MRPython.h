@@ -53,9 +53,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
 {\
     using expectedType = tl::expected<type,errorType>;\
     pybind11::class_<expectedType>(m, #name ).\
-        def( "has_value", &expectedType::has_value ).\
-        def( "value", ( type& ( expectedType::* )( )& )& expectedType::value, pybind11::return_value_policy::reference_internal ).\
-        def( "error", ( const errorType& ( expectedType::* )( )const& )& expectedType::error );\
+        def( "has_value", []() \
+        { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except ValueError'", 1); \
+            return &expectedType::has_value; \
+        }).\
+        def( "value", []() \
+        { \
+            PyErr_WarnEx(PyExc_DeprecationWarning, ".value is deprecated. Please use 'try - except ValueError'", 1); \
+            return ( type& ( expectedType::* )( )& )& expectedType::value; \
+        }, pybind11::return_value_policy::reference_internal ).\
+        def( "error", []() \
+        { \
+            PyErr_WarnEx(PyExc_DeprecationWarning, ".error is deprecated. Please use 'try - except ValueError'", 1); \
+            return ( const errorType& ( expectedType::* )( )const& )& expectedType::error; \
+        } );\
 } )
 
 enum StreamType
@@ -126,6 +137,44 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func );
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
+
+// overload `toString` functoion to throw exception from custom `tl::expected::error` type
+template<typename E>
+void throwExceptionFromExpected(const E& err)
+{
+    if constexpr (std::is_nothrow_convertible<E, std::string>::value)
+         throw std::runtime_error(err);
+    else
+        throw std::runtime_error(toString(err));
+}
+
+template<typename R, typename E, typename... Args>
+auto decorateExpected( std::function<tl::expected<R, E>( Args... )>&& f ) -> std::function<R( Args... )>
+{
+    return[fLocal = std::move( f )]( Args&&... args ) mutable -> R
+    {
+        auto res = fLocal(std::forward<Args>( args )...);
+        if (!res.has_value())
+            throwExceptionFromExpected(res.error());
+
+        if constexpr (std::is_void<R>::value)
+            return;
+        else
+            return res.value();
+    };
+}
+
+template<typename F>
+auto decorateExpected( F&& f )
+{
+    return decorateExpected( std::function( std::forward<F>( f ) ) );
+}
+
+template<typename R, typename T, typename... Args>
+auto decorateExpected( R( T::* memFunction )( Args... ) )
+{
+    return decorateExpected( std::function<R( T*, Args... )>( std::mem_fn( memFunction ) ) );
+}
 
 }
 #endif

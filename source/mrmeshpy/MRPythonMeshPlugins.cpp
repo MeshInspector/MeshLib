@@ -311,7 +311,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
         "converts distance map back to the mesh fragment with presented params" );
     
-    m.def( "saveDistanceMapToImage", &MR::saveDistanceMapToImage,
+    m.def( "saveDistanceMapToImage",
+        MR::decorateExpected( &MR::saveDistanceMapToImage ),
         pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "saves distance map to monochrome image in scales of gray:\n"
         "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -319,7 +320,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "maximum (far): threshold\n"
         "invalid (infinity): 0.0 (black)" );
 
-    m.def( "loadDistanceMapFromImage", &loadDistanceMapFromImage,
+    m.def( "loadDistanceMapFromImage",
+        MR::decorateExpected( &loadDistanceMapFromImage ),
         pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
         "load distance map from monochrome image file\n"
         "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
@@ -336,8 +338,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
 
 } )
-
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedDistanceMap, DistanceMap, std::string )
 
 // Position Verts Smooth
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::module_& m )
@@ -369,7 +369,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
             "note: it does not work good, better use common decimation after offsetting" ).
         def_readwrite( "type", &MR::OffsetParameters::type, "Type of offsetting" );
 
-    m.def( "offsetMesh", &MR::offsetMesh,
+    m.def( "offsetMesh",
+        MR::decorateExpected( &MR::offsetMesh ),
         pybind11::arg( "mp" ), pybind11::arg( "offset" ), pybind11::arg( "params" ) = MR::OffsetParameters{},
         "Offsets mesh by converting it to voxels and back\n"
         "use Shell type for non closed meshes\n"
@@ -382,13 +383,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     pybind11::enum_<MR::GeodesicPathApprox>( m, "GeodesicPathApprox", "Method of approximation" ).
         value( "DijkstraBiDir", MR::GeodesicPathApprox::DijkstraBiDir, "Bidirectional Dijkstra algorithm" ).
         value( "DijkstraAStar", MR::GeodesicPathApprox::DijkstraAStar, "Dijkstra algorithm with A* modification" ).
-        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );  
+        value( "FastMarching", MR::GeodesicPathApprox::FastMarching, "Fast marching algorithm" );
 
-    pybind11::enum_<MR::PathError>( m, "PathError" ).
-        value( "StartEndNotConnected", MR::PathError::StartEndNotConnected, "no path can be found from start to end, because they are not from the same connected component" ).
-        value( "InternalError", MR::PathError::InternalError, "report to developers for investigation" );
-
-    m.def( "computeGeodesicPath", &MR::computeGeodesicPath,
+    m.def( "computeGeodesicPath",
+        MR::decorateExpected( &MR::computeGeodesicPath ),
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "end" ), pybind11::arg( "atype" ), pybind11::arg( "maxGeodesicIters") = 100,
         "Returns intermediate points of the geodesic path from start to end, where it crosses mesh edges"
     );
@@ -412,4 +410,3 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     );
 })
 
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedGeodesicPath, MR::SurfacePath, MR::PathError )

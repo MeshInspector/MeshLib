@@ -135,9 +135,13 @@ In this section we provide the same examples but with python code\n
 Load and save example:
 \code
 import meshlib.mrmeshpy as mrmeshpy
-expectedMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
-if expectedMesh.has_value():
-    mrmeshpy.saveMesh(expectedMesh.value(),mrmeshpy.Path("mesh.ply"))
+
+try:
+    mesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
+except ValueError as e:
+    print(e)
+
+mrmeshpy.saveMesh(mesh, mrmeshpy.Path("mesh.ply"))
 \endcode
 
 Using numpy to create mesh and get back its primitives

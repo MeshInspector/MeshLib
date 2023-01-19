@@ -1127,7 +1127,7 @@ PaletteChanges Palette(
 
     ImGui::PopStyleVar();
 
-    ImVec2 windowSize( cModalWindowWidth, 0.0f );
+    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );

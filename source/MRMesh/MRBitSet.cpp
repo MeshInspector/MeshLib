@@ -49,7 +49,7 @@ bool operator == ( const BitSet & a, const BitSet & b )
             return false;
     const auto& maxBitSet = aBlocksNum > bBlocksNum ? a : b;
     for ( size_t i = minBlocksNum; i < maxBitSet.num_blocks(); ++i )
-        if ( maxBitSet[i] != 0 )
+        if ( maxBitSet.m_bits[i] != 0 )
             return false;
     return true;
 }

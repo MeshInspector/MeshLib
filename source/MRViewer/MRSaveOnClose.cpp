@@ -104,8 +104,9 @@ void SaveOnClosePlugin::preDraw_()
                 };
             } );
         }
-        ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
 
+
+        ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
         ImGui::SameLine( 0, p );
         if ( RibbonButtonDrawer::GradientButton( "Don't Save", btnSize ) )
         {

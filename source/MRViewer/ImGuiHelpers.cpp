@@ -1127,7 +1127,7 @@ PaletteChanges Palette(
 
     ImGui::PopStyleVar();
 
-    ImVec2 windowSize( cModalWindowWidth, 0.0f );
+    ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
     ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
@@ -1346,6 +1346,10 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
         return;
     assert( scaling > 0.f );
 
+    // default ImGui values
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
+
     constexpr float cMaxWidth = 400.f;
     const auto& style = ImGui::GetStyle();
     auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
@@ -1354,6 +1358,8 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
     ImGui::BeginTooltip();
     ImGui::TextWrapped( "%s", text.c_str() );
     ImGui::EndTooltip();
+
+    ImGui::PopStyleVar( 2 );
 }
 
 void Separator( float scaling, const std::string& text )

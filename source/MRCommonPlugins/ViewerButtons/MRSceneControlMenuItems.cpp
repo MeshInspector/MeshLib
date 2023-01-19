@@ -89,8 +89,9 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
+    
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
     if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
@@ -133,6 +134,7 @@ void ResetSceneMenuItem::preDraw_()
                 };
             } );
         }
+
         ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", btnSize ) )
@@ -145,12 +147,11 @@ void ResetSceneMenuItem::preDraw_()
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        ImGui::PopStyleVar();
         ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();
-
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
     ImGui::PopStyleVar( 2 );

@@ -115,12 +115,24 @@ public:
     /// otherwise sets color of object when it is not selected
     MRMESH_API virtual void setFrontColor( const Color& color, bool selected, ViewportId viewportId = {} );
 
+    MRMESH_API const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const;
+    MRMESH_API virtual void setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected = true );
+
+    MRMESH_API const ViewportProperty<Color>& getBackColorsForAllViewports() const;
+    MRMESH_API virtual void setBackColorsForAllViewports( ViewportProperty<Color> val );
+
     MRMESH_API const Color& getBackColor( ViewportId viewportId = {} ) const;
     MRMESH_API virtual void setBackColor( const Color& color, ViewportId viewportId = {} );
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
+
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
+
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
     MRMESH_API const uint32_t& getDirtyFlags() const;

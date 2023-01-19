@@ -330,5 +330,35 @@ void ObjectLabel::setContourColor( const Color& color, ViewportId id )
     contourColor_.set( color, id );
 }
 
+const ViewportProperty<Color>& ObjectLabel::getSourcePointColorsForAllViewports() const
+{
+    return sourcePointColor_;
+}
+
+void ObjectLabel::setSourcePointColorsForAllViewports( ViewportProperty<Color> val )
+{
+    sourcePointColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectLabel::getLeaderLineColorsForAllViewports() const
+{
+    return leaderLineColor_;
+}
+
+void ObjectLabel::setLeaderLineColorsForAllViewports( ViewportProperty<Color> val )
+{
+    leaderLineColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectLabel::getContourColorsForAllViewports() const
+{
+    return contourColor_;
+}
+
+void ObjectLabel::setContourColorsForAllViewports( ViewportProperty<Color> val )
+{
+    contourColor_ = std::move( val );
+}
+
 }
 #endif

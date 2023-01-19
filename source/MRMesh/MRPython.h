@@ -2,7 +2,6 @@
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRMeshFwd.h"
-#include "MRSurfacePath.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
@@ -140,22 +139,22 @@ struct PythonFunctionAdder
 };
 
 template<typename E>
-void throwExceptionFromExpected(E& err)
+void throwExceptionFromExpected(const E& err)
 {
     if constexpr (std::is_nothrow_convertible<E, std::string>::value)
-        throw pybind11::value_error(err);
-    else if (std::is_same<E, MR::PathError>::value)
-        switch(err)
-        {
-            case MR::PathError::StartEndNotConnected:
-                throw pybind11::value_error("no path can be found from start to end, because they are not from the same connected component");
-            default:
-                throw std::runtime_error("please, report to the developers for further investigations");
-        }
+         throw std::runtime_error(err);
     else
-        throw std::runtime_error("please, report to the developers for further investigations");
+    {
+        try
+        {
+            throw std::runtime_error(to_string(err));
+        }
+        catch (...)
+        {
+             throw std::runtime_error("Unknown error type. Please report to developers for further investigations");
+        }
+    }
 }
-
 
 template<typename R, typename E, typename... Args>
 auto decorateExpected( std::function<tl::expected<R, E>( Args... )>&& f ) -> std::function<R( Args... )>

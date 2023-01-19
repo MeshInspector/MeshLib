@@ -18,7 +18,7 @@ enum class PathError
     InternalError         ///< report to developers for investigation
 };
 
-inline std::string to_string(PathError error)
+inline std::string toString(PathError error)
 {
     switch (error)
     {

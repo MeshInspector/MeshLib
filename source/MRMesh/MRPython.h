@@ -138,22 +138,14 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
+// to throw your custom exception, add function overload or template specialization
 template<typename E>
 void throwExceptionFromExpected(const E& err)
 {
     if constexpr (std::is_nothrow_convertible<E, std::string>::value)
          throw std::runtime_error(err);
     else
-    {
-        try
-        {
-            throw std::runtime_error(to_string(err));
-        }
-        catch (...)
-        {
-             throw std::runtime_error("Unknown error type. Please report to developers for further investigations");
-        }
-    }
+        throw std::runtime_error(toString(err));
 }
 
 template<typename R, typename E, typename... Args>

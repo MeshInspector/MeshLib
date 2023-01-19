@@ -7,6 +7,14 @@ def test_save_slice_to_image():
     params = mrmesh.MeshToVolumeParams()
     params.type = mrmesh.MeshToVolumeParamsType.Unsigned
     params.voxelSize = mrmesh.Vector3f(0.1, 0.1, 0.1)
-    expvdbvolume = mrmesh.meshToVolume(mesh, params)
-    assert (expvdbvolume.has_value())
-    assert (mrmesh.saveSliceToImage("slice.png", expvdbvolume.value(), mrmesh.SlicePlain.XY, 26).has_value())
+    try:
+        vdbvolume = mrmesh.meshToVolume(mesh, params)
+    except ValueError as e:
+        print(e)
+        assert False
+
+    try:
+        mrmesh.saveSliceToImage("slice.png", vdbvolume, mrmesh.SlicePlain.XY, 26)
+    except ValueError as e:
+        print(e)
+        assert False

@@ -2,6 +2,7 @@
 
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
 #include "MRMeshFwd.h"
+#include "MRSurfacePath.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
@@ -46,16 +47,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
         def( "size", &vecType::size ).\
         def( "resize", ( void ( vecType::* )( const vecType::size_type ) )& vecType::resize ).\
         def( "clear", &vecType::clear ); \
-} )
-
-#define MR_ADD_PYTHON_EXPECTED( moduleName, name, type, errorType )\
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] (pybind11::module_& m)\
-{\
-    using expectedType = tl::expected<type,errorType>;\
-    pybind11::class_<expectedType>(m, #name ).\
-        def( "has_value", &expectedType::has_value ).\
-        def( "value", ( type& ( expectedType::* )( )& )& expectedType::value, pybind11::return_value_policy::reference_internal ).\
-        def( "error", ( const errorType& ( expectedType::* )( )const& )& expectedType::error );\
 } )
 
 enum StreamType
@@ -127,34 +118,47 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
+template<typename R, typename... Args>
+auto decorateExpected( std::function<tl::expected<R, PathError>( Args... )>&& f ) -> std::function<R( Args... )>
+{
+    return[fLocal = std::move( f )]( Args&&... args ) mutable -> R
+    {
+        auto res = fLocal(std::forward<Args>( args )...);
+        if (!res.has_value())
+            switch(res.error())
+            {
+                case MR::PathError::StartEndNotConnected:
+                    throw pybind11::value_error("no path can be found from start to end, because they are not from the same connected component");
+                    break;
+                default:
+                    throw pybind11::value_error("please, report developers for investigation");
+                    break;
+            }
+        return res.value();
+    };
+}
 
 template<typename R, typename... Args>
-auto decorateExpected( std::function<tl::expected<R, std::string>( Args... )>&& f ) -> std::function<tl::expected<R, std::string>( Args... )>
+auto decorateExpected( std::function<tl::expected<R, std::string>( Args... )>&& f ) -> std::function<R( Args... )>
 {
-    return[fLocal = std::move( f )]( Args&&... args ) mutable
+    return[fLocal = std::move( f )]( Args&&... args ) mutable -> R
     {
-        PyErr_WarnEx(PyExc_DeprecationWarning,
-                     "tl:expected() return value is deprecated and this function can raise ValueError in future releases", 1);
         auto res = fLocal(std::forward<Args>( args )...);
-        // @todo
-        //if (!res.has_value())
-            //throw pybind11::value_error(res.error());
-        //return res.value();
-        return res;
+        if (!res.has_value())
+            throw pybind11::value_error(res.error());
+        return res.value();
     };
 }
 
 template<typename... Args>
-auto decorateExpected( std::function<tl::expected<void, std::string>( Args... )>&& f ) -> std::function<tl::expected<void, std::string>( Args... )>
+auto decorateExpected( std::function<tl::expected<void, std::string>( Args... )>&& f ) -> std::function<void( Args... )>
 {
-    return[fLocal = std::move( f )]( Args&&... args ) mutable
+    return[fLocal = std::move( f )]( Args&&... args ) mutable -> void
     {
-        PyErr_WarnEx(PyExc_DeprecationWarning,
-                     "tl:expected() return value is deprecated and this function can raise ValueError in future releases", 1);
         auto res = fLocal(std::forward<Args>( args )...);
-        //if (!res.has_value())
-            //throw pybind11::value_error(res.error());
-        return res;
+        if (!res.has_value())
+            throw pybind11::value_error(res.error());
+        return;
     };
 }
 

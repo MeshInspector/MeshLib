@@ -27,9 +27,10 @@ MeshLib provides several usage options\n
 \code
 from meshlib import mrmeshpy
 
-expMesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
-assert(expMesh.has_value())
-mesh = expMesh.value()
+try:
+    mesh = mrmeshpy.loadMesh(mrmeshpy.Path("mesh.stl"))
+except ValueError as e:
+    print(e)
 # ...
 # some mesh modifications can be perform here
 # ...

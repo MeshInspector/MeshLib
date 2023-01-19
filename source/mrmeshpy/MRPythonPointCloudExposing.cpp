@@ -34,9 +34,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 
-    m.def( "meshToPointCloud", MR::meshToPointCloud,
+    m.def( "meshToPointCloud", &MR::meshToPointCloud,
         pybind11::arg( "mesh" ), pybind11::arg( "saveNormals" ) = true, pybind11::arg( "verts" ) = nullptr,
         "Mesh to PointCloud" );
 } )
-
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedPointCloud, MR::PointCloud, std::string )

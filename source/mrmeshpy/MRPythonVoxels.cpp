@@ -134,10 +134,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         def_readwrite( "worldXf", &MR::MeshToVolumeParams::worldXf, "mesh initial transform" ).
         def_readwrite( "outXf", &MR::MeshToVolumeParams::outXf, "optional output: xf to original mesh (respecting worldXf)" );
 
-    m.def( "meshToVolume", &MR::meshToVolume,
+    m.def( "meshToVolume",
+        MR::decorateExpected( &MR::meshToVolume ),
         pybind11::arg( "mesh" ),
         pybind11::arg( "params" ) = MR::MeshToVolumeParams{},
         "convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box" );
 } )
-
-MR_ADD_PYTHON_EXPECTED( mrmeshpy, ExpectedVdbVolume, MR::VdbVolume, std::string )

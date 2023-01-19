@@ -373,10 +373,13 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 {
     if ( !regionEdges_.empty() && !regionEdges_.test( ue ) )
         return;
-    if ( presentInQueue_.test_set( ue ) )
+    if ( presentInQueue_.test( ue ) )
         return;
     if ( auto qe = computeQueueElement_( ue ) )
+    {
         queue_.push( *qe );
+        presentInQueue_.set( ue );
+    }
 }
 
 VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )

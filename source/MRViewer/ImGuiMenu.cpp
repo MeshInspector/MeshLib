@@ -659,7 +659,6 @@ void ImGuiMenu::draw_helpers()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
-    ImGui::SetNextWindowPos( ImVec2( ( ImGui::GetIO().DisplaySize.x - windowSize.x ) / 2.f, ( ImGui::GetIO().DisplaySize.y - windowSize.y ) / 2.f ), ImGuiCond_Always );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
     if ( ImGui::BeginModalNoAnimation( "Rename object", nullptr,

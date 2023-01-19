@@ -1865,11 +1865,6 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
     ImGui::EndPopup();
 }
 
-void RibbonMenu::drawToolbarCustomizeOrder_()
-{
-
-}
-
 void RibbonMenu::drawToolbarCustomizeItemsList_()
 {
     auto& schema = RibbonSchemaHolder::schema();

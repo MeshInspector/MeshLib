@@ -139,7 +139,6 @@ protected:
 
     MRVIEWER_API virtual void drawToolbarWindow_();
     MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
-    MRVIEWER_API virtual void drawToolbarCustomizeOrder_();
     MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
 
     // return icon (now it is symbol in icons font) based on typename

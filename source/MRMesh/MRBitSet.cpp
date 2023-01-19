@@ -1,6 +1,5 @@
 #include "MRBitSet.h"
 #include "MRGTest.h"
-#include <span>
 
 namespace MR
 {

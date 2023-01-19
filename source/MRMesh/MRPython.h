@@ -138,7 +138,7 @@ struct PythonFunctionAdder
     MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
-// to throw your custom exception, add function overload or template specialization
+// overload `toString` functoion to throw exception from custom `tl::expected::error` type
 template<typename E>
 void throwExceptionFromExpected(const E& err)
 {

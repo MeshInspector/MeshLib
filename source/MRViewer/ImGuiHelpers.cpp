@@ -1346,6 +1346,7 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
         return;
     assert( scaling > 0.f );
 
+    // default ImGui values
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
 

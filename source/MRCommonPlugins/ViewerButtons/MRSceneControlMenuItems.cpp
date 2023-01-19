@@ -135,14 +135,6 @@ void ResetSceneMenuItem::preDraw_()
             } );
         }
 
-        const auto setTooltip = [scaling, style] ( const char* label )
-        {
-            ImGui::PopStyleVar( 2 );
-            ImGui::SetTooltipIfHovered( label, scaling );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
-        };
-
         ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", btnSize ) )
@@ -155,12 +147,11 @@ void ResetSceneMenuItem::preDraw_()
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        ImGui::PopStyleVar();
         ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();
-
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
     ImGui::PopStyleVar( 2 );

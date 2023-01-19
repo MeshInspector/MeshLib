@@ -41,14 +41,17 @@ bool operator == ( const BitSet & a, const BitSet & b )
     if ( a.size() == b.size() )
         return static_cast<const BitSet::base &>( a ) == static_cast<const BitSet::base &>( b );
 
-    auto ai = begin( a );
-    auto bi = begin( b );
-    const auto ae = end( a );
-    const auto be = end( b );
-    for ( ; ai != ae && bi != be; ++ai, ++bi )
-        if ( *ai != *bi )
+    auto aBlocksNum = a.num_blocks();
+    auto bBlocksNum = b.num_blocks();
+    auto minBlocksNum = std::min( aBlocksNum, bBlocksNum );
+    for ( size_t i = 0; i < std::min( aBlocksNum, bBlocksNum ); ++i )
+        if ( a.m_bits[i] != b.m_bits[i] )
             return false;
-    return ai == ae && bi == be;
+    const auto& maxBitSet = aBlocksNum > bBlocksNum ? a : b;
+    for ( size_t i = minBlocksNum; i < maxBitSet.num_blocks(); ++i )
+        if ( maxBitSet[i] != 0 )
+            return false;
+    return true;
 }
 
 BitSet::IndexType BitSet::find_last() const

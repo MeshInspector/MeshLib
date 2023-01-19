@@ -1346,6 +1346,9 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
         return;
     assert( scaling > 0.f );
 
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
+
     constexpr float cMaxWidth = 400.f;
     const auto& style = ImGui::GetStyle();
     auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
@@ -1354,6 +1357,8 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
     ImGui::BeginTooltip();
     ImGui::TextWrapped( "%s", text.c_str() );
     ImGui::EndTooltip();
+
+    ImGui::PopStyleVar( 2 );
 }
 
 void Separator( float scaling, const std::string& text )

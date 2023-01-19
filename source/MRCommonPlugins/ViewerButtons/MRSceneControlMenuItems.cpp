@@ -89,6 +89,7 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
+    
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
     if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
@@ -142,20 +143,20 @@ void ResetSceneMenuItem::preDraw_()
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
         };
 
-        setTooltip( "Save current scene and then remove all objects" );
+        ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", btnSize ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
         }
-        setTooltip( "Remove all objects without saving and ability to restore them" );
+        ImGui::SetTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
         ImGui::SameLine();
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
         ImGui::PopStyleVar();
-        setTooltip( "Do not remove any objects, return back" );
+        ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

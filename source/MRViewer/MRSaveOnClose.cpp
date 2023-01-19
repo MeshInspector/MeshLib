@@ -56,9 +56,8 @@ void SaveOnClosePlugin::preDraw_()
     }
     const ImVec2 windowSize{ MR::cModalWindowWidth * scaling, -1 };
 	ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
     if ( ImGui::BeginModalNoAnimation( "Application close##modal", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
@@ -106,15 +105,9 @@ void SaveOnClosePlugin::preDraw_()
             } );
         }
 
-        const auto setTooltip = [scaling, style] ( const char* label )
-        {
-            ImGui::PopStyleVar( 2 );
-            ImGui::SetTooltipIfHovered( label, scaling );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
-        };
-
-        setTooltip( "Save the current scene and close the application" );
+        ImGui::PopStyleVar();
+        ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
         ImGui::SameLine( 0, p );
         if ( RibbonButtonDrawer::GradientButton( "Don't Save", btnSize ) )
         {
@@ -122,14 +115,14 @@ void SaveOnClosePlugin::preDraw_()
             shouldClose_ = true;
             ImGui::CloseCurrentPopup();
         }
-        setTooltip( "Close the application without saving" );
+        ImGui::SetTooltipIfHovered( "Close the application without saving", scaling );
 
         ImGui::SameLine( 0, p );
         if ( RibbonButtonDrawer::GradientButton( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
-        setTooltip( "Do not close the application" );
+        ImGui::SetTooltipIfHovered( "Do not close the application", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

@@ -110,6 +110,26 @@ void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId 
     }
 }
 
+const ViewportProperty<Color>& VisualObject::getFrontColorsForAllViewports( bool selected ) const
+{
+    return selected ? selectedColor_ : unselectedColor_;
+}
+
+void VisualObject::setFrontColorsForAllViewports( ViewportProperty<Color> val, bool selected )
+{
+    selected ? selectedColor_ = std::move( val ) : unselectedColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& VisualObject::getBackColorsForAllViewports() const
+{
+    return backFacesColor_;
+}
+
+void VisualObject::setBackColorsForAllViewports( ViewportProperty<Color> val )
+{
+    backFacesColor_ = std::move( val );
+}
+
 const Color& VisualObject::getBackColor( ViewportId viewportId ) const
 {
     return backFacesColor_.get( viewportId );

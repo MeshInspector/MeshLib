@@ -131,7 +131,7 @@ auto decorateExpected( std::function<tl::expected<R, PathError>( Args... )>&& f 
                     throw pybind11::value_error("no path can be found from start to end, because they are not from the same connected component");
                     break;
                 default:
-                    throw pybind11::value_error("please, report developers for investigation");
+                    throw std::runtime_error("please, report the developers for further investigations");
                     break;
             }
         return res.value();

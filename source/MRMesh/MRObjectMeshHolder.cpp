@@ -454,4 +454,44 @@ AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
     return res;
 }
 
+const ViewportProperty<Color>& ObjectMeshHolder::getSelectedEdgesColorsForAllViewports() const
+{
+    return edgeSelectionColor_;
+}
+
+void ObjectMeshHolder::setSelectedEdgesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    edgeSelectionColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getSelectedFacesColorsForAllViewports() const
+{
+    return faceSelectionColor_;
+}
+
+void ObjectMeshHolder::setSelectedFacesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    faceSelectionColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getBordersColorsForAllViewports() const
+{
+    return bordersColor_;
+}
+
+void ObjectMeshHolder::setBordersColorsForAllViewports( ViewportProperty<Color> val )
+{
+    bordersColor_ = std::move( val );
+}
+
+const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports() const
+{
+    return edgesColor_;
+}
+
+void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> val )
+{
+    edgesColor_ = std::move( val );
+}
+
 } //namespace MR

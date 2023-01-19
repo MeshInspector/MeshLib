@@ -115,6 +115,15 @@ public:
         return contourColor_.get( id );
     }
 
+    MRMESH_API const ViewportProperty<Color>& getSourcePointColorsForAllViewports() const;
+    MRMESH_API virtual void setSourcePointColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getLeaderLineColorsForAllViewports() const;
+    MRMESH_API virtual void setLeaderLineColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getContourColorsForAllViewports() const;
+    MRMESH_API virtual void setContourColorsForAllViewports( ViewportProperty<Color> val );
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLabel( ProtectedStruct, const ObjectLabel& obj ) : ObjectLabel( obj )
     {}

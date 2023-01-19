@@ -128,6 +128,12 @@ public:
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API virtual void setLabelsColor( const Color& color, ViewportId viewportId = {} );
 
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API const ViewportProperty<Color>& getLabelsColorsForAllViewports() const;
+
+    [[deprecated( "please use ObjectLabel mechanism instead" )]]
+    MRMESH_API virtual void setLabelsColorsForAllViewports( ViewportProperty<Color> val );
+
     MRMESH_API virtual void setDirtyFlags( uint32_t mask );
     MRMESH_API const uint32_t& getDirtyFlags() const;
 

@@ -65,6 +65,18 @@ public:
     /// sets colors of selected edges
     MRMESH_API virtual void setSelectedEdgesColor( const Color& color, ViewportId id = {} );
 
+    MRMESH_API const ViewportProperty<Color>& getSelectedEdgesColorsForAllViewports() const;
+    MRMESH_API virtual void setSelectedEdgesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getSelectedFacesColorsForAllViewports() const;
+    MRMESH_API virtual void setSelectedFacesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getEdgesColorsForAllViewports() const;
+    MRMESH_API virtual void setEdgesColorsForAllViewports( ViewportProperty<Color> val );
+
+    MRMESH_API const ViewportProperty<Color>& getBordersColorsForAllViewports() const;
+    MRMESH_API virtual void setBordersColorsForAllViewports( ViewportProperty<Color> val );
+
     /// Edges on mesh, that will have sharp visualization even with smooth shading
     const UndirectedEdgeBitSet& creases() const { return creases_; }
     MRMESH_API virtual void setCreases( UndirectedEdgeBitSet creases );

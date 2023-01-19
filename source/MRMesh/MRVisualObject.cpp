@@ -154,6 +154,16 @@ void VisualObject::setLabelsColor( const Color& color, ViewportId viewportId )
     needRedraw_ = true;
 }
 
+const ViewportProperty<Color>& VisualObject::getLabelsColorsForAllViewports() const
+{
+    return labelsColor_;
+}
+
+void VisualObject::setLabelsColorsForAllViewports( ViewportProperty<Color> val )
+{
+    labelsColor_ = val;
+}
+
 void VisualObject::setDirtyFlags( uint32_t mask )
 {
     if ( mask & DIRTY_POSITION )

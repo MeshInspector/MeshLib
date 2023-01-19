@@ -568,6 +568,7 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
+        presentInQueue_.reset( topQE.uedgeId() );
         if ( qe->x.flip )
         {
             EdgeId e = topQE.uedgeId();
@@ -583,7 +584,6 @@ DecimateResult MeshDecimator::run()
         else
         {
             // edge collapse
-            presentInQueue_.reset( topQE.uedgeId() );
             VertId collapseVert = collapse_( topQE.uedgeId(), collapsePos );
             if ( !collapseVert )
                 continue;

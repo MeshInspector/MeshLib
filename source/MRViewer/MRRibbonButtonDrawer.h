@@ -48,6 +48,8 @@ public:
     MRVIEWER_API static bool GradientButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2( 0, 0 ) );
     /// draw gradient checkbox
     MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
+    /// draw gradient checkbox
+    MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value );
     /// draw gradient checkbox with mixed state
     MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
     /// draw gradient checkbox
@@ -99,7 +101,7 @@ private:
     void drawTooltip_( const MenuItemInfo& item, const std::string& requirements ) const;
 
     // returns num of pushed colors
-    int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const;
+    static int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType );
 
     std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, bool ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };

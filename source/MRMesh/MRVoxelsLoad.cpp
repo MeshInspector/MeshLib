@@ -614,6 +614,15 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     auto xvString = filename.substr( sEndChar + 2, xvEndChar - ( sEndChar + 2 ) );
     outParams.voxelSize.x = float(std::atof( xvString.c_str() ) / 1000); // convert mm to meters
 
+    if ( filename[xvEndChar + 1] == 'G' )
+    {
+        auto gtEndChar = filename.find( "_", xvEndChar + 1 );
+        if ( gtEndChar != std::string::npos )
+        {
+            auto gtString = filename.substr( xvEndChar + 2, gtEndChar - ( xvEndChar + 2 ) );
+            outParams.gridLevelSet = gtString == "1"; // convert mm to meters
+        }
+    }
     if ( filename[xvEndChar + 1] == 'F' ) // end of prefix
     {
         outParams.voxelSize.y = outParams.voxelSize.z = outParams.voxelSize.x;
@@ -635,7 +644,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
         auto gtEndChar = filename.find( "_", zvEndChar + 1 );
         if ( gtEndChar != std::string::npos )
         {
-            auto gtString = filename.substr( zvEndChar + 1, gtEndChar - ( zvEndChar + 1 ) );
+            auto gtString = filename.substr( zvEndChar + 2, gtEndChar - ( zvEndChar + 2 ) );
             outParams.gridLevelSet = gtString == "1"; // convert mm to meters
         }
     }

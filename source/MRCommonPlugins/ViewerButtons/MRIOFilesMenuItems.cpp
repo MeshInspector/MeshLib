@@ -684,7 +684,6 @@ CaptureUIScreenshotMenuItem::CaptureUIScreenshotMenuItem():
 
 bool CaptureUIScreenshotMenuItem::action()
 {
-    ImGui::CloseCurrentPopup();
     getViewerInstance().captureUIScreenShot( [] ( const Image& image )
     {
         auto now = std::chrono::system_clock::now();
@@ -722,7 +721,6 @@ std::string CaptureScreenshotToClipBoardMenuItem::isAvailable( const std::vector
 
 bool CaptureScreenshotToClipBoardMenuItem::action()
 {
-    ImGui::CloseCurrentPopup();
 #ifndef __EMSCRIPTEN__
     auto bounds = Viewer::instanceRef().getViewportsBounds();
     auto image = Viewer::instanceRef().captureScreenShot( Vector2i( bounds.min ), Vector2i( bounds.max - bounds.min ) );

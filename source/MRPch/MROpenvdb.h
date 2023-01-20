@@ -48,6 +48,7 @@
 #include <openvdb/tools/MeshToVolume.h>
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
+#include <openvdb/tools/Morphology.h>
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

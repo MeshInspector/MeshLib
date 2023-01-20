@@ -5,11 +5,16 @@
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
+#include "MRPch/MROpenvdb.h"
 #include <tl/expected.hpp>
 #include <string>
 
 namespace MR
 {
+
+MRMESH_API void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
+                       std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris );
+
 // closed surface is required
 // surfaceOffset - number voxels around surface to calculate distance in (should be positive)
 // returns null if was canceled by progress callback
@@ -38,6 +43,34 @@ struct MeshToVolumeParams
     AffineXf3f worldXf; // mesh initial transform
     AffineXf3f* outXf{ nullptr }; // optional output: xf to original mesh (respecting worldXf)
     ProgressCallback cb;
+};
+
+struct Interrupter
+{
+    Interrupter( ProgressCallback cb ) :
+        cb_{ cb }
+    {};
+
+    void start( const char* name = nullptr )
+    {
+        ( void )name;
+    }
+    void end()
+    {}
+    bool wasInterrupted( int percent = -1 )
+    {
+        wasInterrupted_ = false;
+        if ( cb_ )
+            wasInterrupted_ = !cb_( float( percent ) / 100.0f );
+        return wasInterrupted_;
+    }
+    bool getWasInterrupted() const
+    {
+        return wasInterrupted_;
+    }
+private:
+    bool wasInterrupted_{ false };
+    ProgressCallback cb_;
 };
 
 // eval min max value from FloatGrid

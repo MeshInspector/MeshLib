@@ -12,34 +12,6 @@ namespace MR
 {
 constexpr float denseVolumeToGridTolerance = 1e-6f;
 
-struct Interrupter
-{
-    Interrupter( ProgressCallback cb ) :
-        cb_{ cb }
-    {};
-
-    void start( const char* name = nullptr )
-    {
-        ( void )name;
-    }
-    void end()
-    {}
-    bool wasInterrupted( int percent = -1 )
-    {
-        wasInterrupted_ = false;
-        if ( cb_ )
-            wasInterrupted_ = !cb_( float( percent ) / 100.0f );
-        return wasInterrupted_;
-    }
-    bool getWasInterrupted() const
-    {
-        return wasInterrupted_;
-    }
-private:
-    bool wasInterrupted_{ false };
-    ProgressCallback cb_;
-};
-
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
                        std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )
 {
@@ -74,11 +46,11 @@ gridToPointsAndTris(
     VertCoords & points, Triangulation & t,
     double isovalue,
     double adaptivity,
-    bool relaxDisorientedTriangles )
+    bool /*relaxDisorientedTriangles*/ )
 {
     MR_TIMER
 
-    openvdb::tools::VolumeToMesh mesher(isovalue, adaptivity, relaxDisorientedTriangles);
+    openvdb::tools::VolumeToMesh mesher(isovalue, adaptivity, /*relaxDisorientedTriangles*/false );
     mesher(grid);
 
     // Preallocate the point list
@@ -406,7 +378,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     if ( interrupter1.getWasInterrupted() )
         return tl::make_unexpected( "Operation was canceled." );
 
-    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity, false );
 
     if ( cb )
     {

@@ -23,10 +23,6 @@ private:
 
     void drawMouseSceneControlsSettings_( float menuScaling );
 
-    void drawDialogToolbarSettings_( float menuScaling );
-
-    void drawToolbarAllItems_();
-
     void drawSpaceMouseSettings_( float menuScaling );
 
     void drawModalExitButton_( float menuScaling );
@@ -41,11 +37,6 @@ private:
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;
 
-    const RibbonSchema* schema_ = nullptr;
-    MenuItemsList* quickAccessList_ = nullptr;
-    MenuItemsList quickAccessListPreview_;
-    bool toolbarDragDrop_ = false;
-    int maxQuickAccessSize_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
 
     Vector4f shadowColor4f_;

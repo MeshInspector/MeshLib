@@ -30,10 +30,11 @@ public:
     MRVIEWER_API virtual void shutdown() override;
 
     // get access to quick access menu items list
-    MenuItemsList& getQuickAccessList() { return quickAccessList_; };
-
+    MenuItemsList& getQuickAccessList() { return toolbarItemsList_; };
     /// get maximum items in quick access menu
-    int getQuickAccessMaxSize() const { return 14; };
+    MRVIEWER_API int getToolbarMaxItemCount() const;
+    /// open Toolbar Customize modal popup
+    MRVIEWER_API void openToolbarCustomize();
 
     MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
 
@@ -136,7 +137,9 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
-    MRVIEWER_API virtual void drawQuickAccessMenu_();
+    MRVIEWER_API virtual void drawToolbarWindow_();
+    MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
+    MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
 
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
@@ -213,12 +216,16 @@ private:
     float openedTimer_{ openedMaxSecs_ };
 
     int activeTabIndex_{ 0 };
-    MenuItemsList quickAccessList_;
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
 
     AsyncTimer asyncTimer_;
     std::thread timerThread_;
+
+    MenuItemsList toolbarItemsList_; // toolbar items list
+    MenuItemsList toolbarListCustomize_; // toolbar preview items list for Toolbar Customize window
+    bool toolbarDragDrop_ = false; // active drag&drop in Toolbar Customize window
+    bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
 };
 
 template<typename T>

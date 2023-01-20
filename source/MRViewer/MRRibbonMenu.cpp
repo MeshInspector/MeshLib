@@ -180,7 +180,7 @@ int RibbonMenu::getToolbarMaxItemCount() const
 void RibbonMenu::openToolbarCustomize()
 {
     openToolbarCustomizeFlag_ = true;
-    toolbarListCustomize_ = quickAccessList_;
+    toolbarListCustomize_ = toolbarItemsList_;
 }
 
 // we use design preset font size
@@ -211,12 +211,12 @@ bool RibbonMenu::isTopPannelPinned() const
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
 {
-    RibbonSchemaLoader::readMenuItemsList( root, quickAccessList_ );
+    RibbonSchemaLoader::readMenuItemsList( root, toolbarItemsList_ );
 }
 
 void RibbonMenu::resetQuickAccessList()
 {
-    quickAccessList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
+    toolbarItemsList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
 }
 
 void RibbonMenu::setSceneSize( const Vector2i& size )
@@ -1277,7 +1277,7 @@ void RibbonMenu::readMenuItemsStructure_()
 {
     RibbonSchemaLoader loader;
     loader.loadSchema();
-    quickAccessList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
+    toolbarItemsList_ = RibbonSchemaHolder::schema().defaultQuickAccessList;
 }
 
 void RibbonMenu::postResize_( int width, int height )
@@ -1624,7 +1624,7 @@ void RibbonMenu::drawToolbarWindow_()
     int itemCount = 0;
     int droppedItemCount = 0;
     //TODO calc if list changes
-    for ( const auto& item : quickAccessList_ )
+    for ( const auto& item : toolbarItemsList_ )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
         if ( it == RibbonSchemaHolder::schema().items.end() )
@@ -1666,7 +1666,7 @@ void RibbonMenu::drawToolbarWindow_()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
-    for ( const auto& item : quickAccessList_ )
+    for ( const auto& item : toolbarItemsList_ )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
         if ( it == RibbonSchemaHolder::schema().items.end() )
@@ -1796,7 +1796,7 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
-            const auto& item = quickAccessList_[i];
+            const auto& item = toolbarItemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
             if ( iterItem != RibbonSchemaHolder::schema().items.end() )
                 buttonDrawer_.drawButtonIcon( iterItem->second, params );
@@ -1809,16 +1809,16 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
         const ImGuiPayload* peekPayload = ImGui::GetDragDropPayload();
         if ( toolbarDragDrop_ && ( !peekPayload || !peekPayload->IsDataType( "ToolbarItemNumber" ) ) )
         {
-            toolbarListCustomize_ = quickAccessList_;
+            toolbarListCustomize_ = toolbarItemsList_;
             toolbarDragDrop_ = false;
         }
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) )
         {
             if ( peekPayload && peekPayload->IsDataType( "ToolbarItemNumber" ) )
             {
-                IM_ASSERT( peekPayload->DataSize == sizeof( int ) );
+                assert( peekPayload->DataSize == sizeof( int ) );
                 int oldIndex = *( const int* )peekPayload->Data;
-                toolbarListCustomize_ = quickAccessList_;
+                toolbarListCustomize_ = toolbarItemsList_;
                 auto movedItem = toolbarListCustomize_[oldIndex];
                 toolbarListCustomize_.erase( toolbarListCustomize_.begin() + oldIndex );
                 toolbarListCustomize_.insert( toolbarListCustomize_.begin() + i, movedItem );
@@ -1830,8 +1830,8 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
             const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "ToolbarItemNumber" );
             if ( payload )
             {
-                IM_ASSERT( payload->DataSize == sizeof( int ) );
-                quickAccessList_ = toolbarListCustomize_;
+                assert( payload->DataSize == sizeof( int ) );
+                toolbarItemsList_ = toolbarListCustomize_;
                 toolbarDragDrop_ = false;
             }
             ImGui::EndDragDropTarget();
@@ -1858,7 +1858,7 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
     if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( 0, buttonHeight ) ) )
     {
         resetQuickAccessList();
-        toolbarListCustomize_ = quickAccessList_;
+        toolbarListCustomize_ = toolbarItemsList_;
     }
 
     ImGui::PopStyleVar();
@@ -1919,16 +1919,16 @@ void RibbonMenu::drawToolbarCustomizeItemsList_()
                     {
                         if ( canAdd )
                         {
-                            quickAccessList_.emplace_back( item );
-                            toolbarListCustomize_ = quickAccessList_;
+                            toolbarListCustomize_.emplace_back( item );
+                            toolbarItemsList_ = toolbarListCustomize_;
                         }
                         else
                             itemInQA = false;
                     }
                     else
                     {
-                        quickAccessList_.erase( itemIt );
-                        toolbarListCustomize_ = quickAccessList_;
+                        toolbarListCustomize_.erase( itemIt );
+                        toolbarItemsList_ = toolbarListCustomize_;
                     }
                 }
 

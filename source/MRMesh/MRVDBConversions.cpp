@@ -235,8 +235,7 @@ tl::expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshT
         return tl::make_unexpected( "Operation canceled" );
 
     // to get proper normal orientation both for signed and unsigned cases
-    if ( params.type == MeshToVolumeParams::Type::Signed )
-        grid->setGridClass( openvdb::GRID_LEVEL_SET );
+    grid->setGridClass( openvdb::GRID_LEVEL_SET );
 
     if ( params.outXf )
         *params.outXf = shift;

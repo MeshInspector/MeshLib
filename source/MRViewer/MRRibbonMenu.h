@@ -30,7 +30,7 @@ public:
     MRVIEWER_API virtual void shutdown() override;
 
     // get access to quick access menu items list
-    MenuItemsList& getQuickAccessList() { return quickAccessList_; };
+    MenuItemsList& getQuickAccessList() { return toolbarItemsList_; };
     /// get maximum items in quick access menu
     MRVIEWER_API int getToolbarMaxItemCount() const;
     /// open Toolbar Customize modal popup
@@ -222,10 +222,10 @@ private:
     AsyncTimer asyncTimer_;
     std::thread timerThread_;
 
-    MenuItemsList quickAccessList_;
-    MenuItemsList toolbarListCustomize_;
-    bool toolbarDragDrop_ = false;
-    bool openToolbarCustomizeFlag_ = false;
+    MenuItemsList toolbarItemsList_; // toolbar items list
+    MenuItemsList toolbarListCustomize_; // toolbar preview items list for Toolbar Customize window
+    bool toolbarDragDrop_ = false; // active drag&drop in Toolbar Customize window
+    bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
 };
 
 template<typename T>

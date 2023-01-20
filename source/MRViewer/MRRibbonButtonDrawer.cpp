@@ -279,13 +279,13 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* value )
 {
     bool res = GradientCheckbox( ( "##" + item.item->name() ).c_str(), value );
-    const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+    const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
     drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height } );
     ImGui::SameLine( 0.f, spacing );
     std::string name = item.caption.empty() ? item.item->name() : item.caption;
-    ImGui::Text( name.c_str() );
+    ImGui::Text( "%s", name.c_str());
     return res;
 }
 
@@ -979,7 +979,7 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 }
 
 
-int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType )
+int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const
 {
     if ( active )
     {

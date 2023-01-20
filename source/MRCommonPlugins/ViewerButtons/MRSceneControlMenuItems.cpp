@@ -195,6 +195,7 @@ FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
 bool FitSelectedObjectsMenuItem::action()
 {
     Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::SelectedObjects } );
+    ImGui::CloseCurrentPopup();
     return false;
 }
 
@@ -216,6 +217,7 @@ FitSelectedPrimitivesMenuItem::FitSelectedPrimitivesMenuItem() :
 bool FitSelectedPrimitivesMenuItem::action()
 {
     Viewer::instanceRef().viewport().preciseFitDataToScreenBorder( { 0.9f, false, Viewport::FitMode::SelectedPrimitives } );
+    ImGui::CloseCurrentPopup();
     return false;
 }
 

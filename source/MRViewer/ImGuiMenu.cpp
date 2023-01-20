@@ -718,23 +718,49 @@ void ImGuiMenu::draw_helpers()
     {        
         ImGui::OpenPopup( " Error##modal" );
     }
-    
-    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
-    {
-        ImGui::Text( "%s", storedError_.c_str() );
 
-        ImGui::Spacing();
-        ImGui::SameLine( ImGui::GetContentRegionAvail().x * 0.5f - 40.0f, ImGui::GetStyle().FramePadding.x );
-        if ( ImGui::Button( "Okay", ImVec2( 80.0f, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
+    const ImVec2 errorWindowSize{ MR::cModalWindowWidth * menuScaling, -1 };
+    ImGui::SetNextWindowSize( errorWindowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    if ( ImGui::BeginModalNoAnimation( " Error##modal", nullptr,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
+
+        const auto headerWidth = ImGui::CalcTextSize( "Error" ).x;
+
+        ImGui::SetCursorPosX( ( errorWindowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "Error" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        const float textWidth = ImGui::CalcTextSize( storedError_.c_str() ).x;
+
+        if ( textWidth < errorWindowSize.x )
+        {
+            ImGui::SetCursorPosX( ( errorWindowSize.x - textWidth ) * 0.5f );
+            ImGui::Text( "%s", storedError_.c_str() );
+        }
+        else
+        {
+            ImGui::TextWrapped( "%s", storedError_.c_str() );
+        }
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( RibbonButtonDrawer::GradientButton( "Okay", ImVec2( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            
             ImGui::CloseCurrentPopup();
         }
-        
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor();
 }
 

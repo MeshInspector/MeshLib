@@ -153,6 +153,41 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     return res;
 }
 
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea )
+{
+    auto unionFind = getUnionFindStructureFacesPerEdge( mp );
+    return getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar )
+{
+    const float critCos = std::cos( angleFromPlanar );
+    auto unionFind = MeshComponents::getUnionFindStructureFacesPerEdge( mp, [&]( UndirectedEdgeId ue ) { return mp.mesh.dihedralAngleCos( ue ) >= critCos; } );
+    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea )
+{
+    MR_TIMER
+
+    HashMap<FaceId, float> root2area;
+    const FaceBitSet& region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+    {
+        auto root = unionFind.find( f );
+        root2area[ root ] += mp.mesh.area( f );
+    }
+
+    FaceBitSet res( mp.mesh.topology.faceSize() );
+    for ( auto f : region )
+    {
+        auto root = unionFind.find( f );
+        if ( root2area[ root ] >= minArea )
+            res.set( f );
+    }
+    return res;
+}
+
 VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region /*= nullptr */ )
 {
     MR_TIMER;
@@ -325,7 +360,7 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
     return false;
 }
 
-static UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart )
+UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, std::function<bool(UndirectedEdgeId)> uniteOverEdge )
 {
     MR_TIMER
 
@@ -358,7 +393,7 @@ static UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& mesh
                     {
                         assert( mesh.topology.left( e[i] ) == f0 );
                         FaceId f1 = mesh.topology.right( e[i] );
-                        if ( f0 < f1 && contains( meshPart.region, f1 ) )
+                        if ( f0 < f1 && contains( meshPart.region, f1 ) && ( !uniteOverEdge || uniteOverEdge( e[i].undirected() ) ) )
                         {
                             if ( f1 < fEnd )
                                 res.unite( f0, f1 ); // our region
@@ -378,7 +413,7 @@ static UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& mesh
         {
             assert( mesh.topology.left( e[i] ) == f0 );
             FaceId f1 = mesh.topology.right( e[i] );
-            if ( f0 < f1 && contains( meshPart.region, f1 ) )
+            if ( f0 < f1 && contains( meshPart.region, f1 ) && ( !uniteOverEdge || uniteOverEdge( e[i].undirected() ) ) )
                 res.unite( f0, f1 );
         }
     }

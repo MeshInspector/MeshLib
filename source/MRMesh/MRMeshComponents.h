@@ -1,6 +1,7 @@
 #pragma once
-#include "MRMeshFwd.h"
+
 #include "MRUnionFind.h"
+#include <functional>
 
 namespace MR
 {
@@ -33,6 +34,13 @@ enum FaceIncidence
 
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence = FaceIncidence::PerEdge );
+/// returns the union of connected components, each having at least given area
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea );
+/// given prepared union-find structure returns the union of connected components, each having at least given area
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea );
+/// returns the union of connected components, each having at least given area,
+/// and any two faces in a connected component have a path along the surface across the edges, where surface does not deviate from plane more than on given angle
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& meshPart, float minArea, float angleFromPlanar );
 /// returns union of connected components, each of which contains at least one seed vert
 [[nodiscard]] MRMESH_API VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region = nullptr );
 
@@ -50,8 +58,11 @@ enum FaceIncidence
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 
-/// gets union-find structure for given mesh part
+/// gets union-find structure for faces with different options of face-connectivity
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge );
+/// gets union-find structure for faces with connectivity by shared edge, and optional edge predicate whether to unite components over it
+[[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, std::function<bool(UndirectedEdgeId)> uniteOverEdge = {} );
+/// gets union-find structure for vertices
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 /// gets union-find structure for vertices, considering connections by given edges only
 [[nodiscard]] MRMESH_API UnionFind<VertId> getUnionFindStructureVerts( const Mesh& mesh, const EdgeBitSet & edges );

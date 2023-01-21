@@ -153,6 +153,19 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     return res;
 }
 
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea )
+{
+    auto unionFind = getUnionFindStructureFacesPerEdge( mp );
+    return getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar )
+{
+    const float critCos = std::cos( angleFromPlanar );
+    auto unionFind = MeshComponents::getUnionFindStructureFacesPerEdge( mp, [&]( UndirectedEdgeId ue ) { return mp.mesh.dihedralAngleCos( ue ) >= critCos; } );
+    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
 FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea )
 {
     MR_TIMER

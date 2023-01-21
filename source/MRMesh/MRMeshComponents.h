@@ -35,7 +35,12 @@ enum FaceIncidence
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence = FaceIncidence::PerEdge );
 /// returns the union of connected components, each having at least given area
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea );
+/// given prepared union-find structure returns the union of connected components, each having at least given area
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea );
+/// returns the union of connected components, each having at least given area,
+/// and any two faces in a connected component have a path along the surface across the edges, where surface does not deviate from plane more than on given angle
+[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& meshPart, float minArea, float angleFromPlanar );
 /// returns union of connected components, each of which contains at least one seed vert
 [[nodiscard]] MRMESH_API VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const VertBitSet* region = nullptr );
 

@@ -57,6 +57,8 @@ struct DecimateSettings
     int maxDeletedFaces = INT_MAX;
     /// Region on mesh to be decimated, it is updated during the operation
     FaceBitSet * region = nullptr;
+    /// Decimate will preserve the surface shape given by trusted triangles only (nullptr means by all mesh triangles)
+    FaceBitSet * trusted = nullptr;
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
     /// Whether to allow collapsing edges having at least one vertex on (region) boundary
@@ -138,13 +140,13 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
+[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer, const FaceBitSet * trusted = nullptr );
 
 /**
  * \brief Computes quadratic forms at every vertex of mesh part before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer );
+[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const FaceBitSet * trusted = nullptr );
 
 struct ResolveMeshDegenSettings
 {

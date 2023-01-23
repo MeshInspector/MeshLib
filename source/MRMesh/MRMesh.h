@@ -157,9 +157,9 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] float cotan( EdgeId e ) const { return leftCotan( e ) + leftCotan( e.sym() ); }
 
     // computes quadratic form in the vertex as the sum of squared distances from
-    // 1) planes of adjacent triangles
-    // 2) lines of adjacent boundary edges
-    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, const FaceBitSet * region = nullptr ) const;
+    // 1) planes of adjacent trusted triangles
+    // 2) lines of adjacent region boundary edges
+    [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, const FaceBitSet * region = nullptr, const FaceBitSet * trusted = nullptr ) const;
 
     // passes through all valid vertices and finds the minimal bounding box containing all of them;
     // if toWorld transformation is given then returns minimal bounding box in world space

@@ -509,14 +509,14 @@ float Mesh::leftCotan( EdgeId e ) const
     return nom / den;
 }
 
-QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
+QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region, const FaceBitSet * trusted ) const
 {
     QuadraticForm3f qf;
     for ( EdgeId e : orgRing( topology, v ) )
     {
         if ( topology.isBdEdge( e, region ) )
             qf.addDistToLine( edgeVector( e ).normalized() );
-        if ( topology.isLeftInRegion( e, region ) )
+        if ( topology.isLeftInRegion( e, trusted ) )
             qf.addDistToPlane( leftNormal( e ) );
     }
     return qf;

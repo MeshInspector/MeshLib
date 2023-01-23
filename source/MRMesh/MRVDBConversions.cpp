@@ -275,6 +275,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
     if ( cb )
         cb( 0.5f );
     std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>();
+    openvdb::tools::changeBackground( grid->tree(), std::numeric_limits<float>::max() );
     openvdb::tools::copyFromDense( dense, *grid, denseVolumeToGridTolerance );
     if ( cb )
         cb( 1.0f );

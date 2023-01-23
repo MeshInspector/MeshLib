@@ -43,8 +43,8 @@ jobs:
       - name: Build
         env:
           MR_EMSCRIPTEN: "ON"
-          MESHRUS_BUILD_RELEASE: "ON"
-          MESHRUS_BUILD_DEBUG: "OFF"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
         run: ./scripts/build_source.sh
 

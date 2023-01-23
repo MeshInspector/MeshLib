@@ -52,7 +52,7 @@ $ ./build/Release/bin/MRTest
 \note ./scripts/install*.sh scripts required root access sometimes during installation. However, it's not recommended to run the whole script with sudo.
 \endparblock
 \parblock
-\note You could specify build type to Debug by \c export \c MESHRUS_BUILD_TYPE=Debug , \a Release is default.
+\note You could specify build type to Debug by \c export \c MESHLIB_BUILD_TYPE=Debug , \a Release is default.
 \endparblock
 
 \section HomePageBuildWasm Build with Emscripten on Linux

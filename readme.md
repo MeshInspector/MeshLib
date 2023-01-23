@@ -185,7 +185,7 @@ sudo apt install ./distr/meshrus-dev.deb
 
 > **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
-> **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
+> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
 ## Build with Emscripten on Linux
 This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.

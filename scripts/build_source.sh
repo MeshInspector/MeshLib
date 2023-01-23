@@ -73,26 +73,26 @@ if [ $MR_EMSCRIPTEN == "ON" ]; then
  fi
 fi
 
-if [ ! -n "$MESHRUS_BUILD_RELEASE" ]; then
+if [ ! -n "$MESHLIB_BUILD_RELEASE" ]; then
  read -t 5 -p "Build MeshLib Release? Press (n) in 5 seconds to cancel (Y/n)" -rsn 1
  echo;
  if [[ $REPLY =~ ^[Nn]$ ]]; then
-  MESHRUS_BUILD_RELEASE="OFF"
+  MESHLIB_BUILD_RELEASE="OFF"
  else
-  MESHRUS_BUILD_RELEASE="ON"
+  MESHLIB_BUILD_RELEASE="ON"
  fi
- printf "Release ${MESHRUS_BUILD_RELEASE}\n"
+ printf "Release ${MESHLIB_BUILD_RELEASE}\n"
 fi
 
-if [ ! -n "$MESHRUS_BUILD_DEBUG" ]; then
+if [ ! -n "$MESHLIB_BUILD_DEBUG" ]; then
  read -t 5 -p "Build MeshLib Debug? Press (y) in 5 seconds to build (y/N)" -rsn 1
  echo;
  if [[ $REPLY =~ ^[Yy]$ ]]; then
-  MESHRUS_BUILD_DEBUG="ON"
+  MESHLIB_BUILD_DEBUG="ON"
  else
-  MESHRUS_BUILD_DEBUG="OFF"
+  MESHLIB_BUILD_DEBUG="OFF"
  fi
-  printf "Debug ${MESHRUS_BUILD_DEBUG}\n"
+  printf "Debug ${MESHLIB_BUILD_DEBUG}\n"
 fi
 
 # build MeshLib
@@ -106,7 +106,7 @@ fi
 set -eo pipefail
 
 #build Release
-if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
+if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
  if [ "${MESHRUS_KEEP_BUILD}" != "ON" ]; then
   mkdir -p Release
  fi
@@ -129,7 +129,7 @@ if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
 fi
 
 #build Debug
-if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
+if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
  if [ "${MESHRUS_KEEP_BUILD}" != "ON" ]; then
   mkdir Debug
  fi
@@ -151,10 +151,10 @@ if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
  cd ..
 fi
 
-if [ "${MESHRUS_BUILD_RELEASE}" = "ON" ]; then
+if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
  printf "\rAutoinstall script successfully finished. You could run ./build/Release/bin/MRTest next\n\n"
 else
- if [ "${MESHRUS_BUILD_DEBUG}" = "ON" ]; then
+ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
   printf "\rAutoinstall script successfully finished. You could run ./build/Debug/bin/MRTest next\n\n"
  else
   printf "\rNothing was built\n\n"

@@ -14,8 +14,8 @@ fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
  printf "Project release build was not found. Building...\n"
- export MESHRUS_BUILD_RELEASE="ON"
- export MESHRUS_BUILD_DEBUG="OFF"
+ export MESHLIB_BUILD_RELEASE="ON"
+ export MESHLIB_BUILD_DEBUG="OFF"
  ./scripts/build_source.sh
 fi
 

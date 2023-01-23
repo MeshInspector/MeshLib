@@ -738,7 +738,7 @@ void ImGuiMenu::draw_helpers()
         if ( headerFont )
             ImGui::PopFont();
 
-        const float textWidth = ImGui::CalcTextSize( storedError_.c_str() ).x;
+        const float textWidth = ImGui::CalcTextSize( storedError_.c_str() ).x * menuScaling;
 
         if ( textWidth < errorWindowSize.x )
         {

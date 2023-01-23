@@ -94,7 +94,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::PopFont();
 
         std::string text = "Theme with name " + themeName_ + " already exists, override it?";
-        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
+        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x * menuScaling;
 
         if ( textWidth < windowSize.x )
         {

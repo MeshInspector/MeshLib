@@ -599,7 +599,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
         return false;
     }
 
-    path /= name + ".json";
+    path /= asU8String( name ) + u8".json";
     if ( !std::filesystem::is_regular_file( path, ec ) )
     {
         spdlog::error( "PalettePresets: file \"{}\" not found!", utf8string( path ) );
@@ -633,7 +633,7 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
         return;
     }
 
-    path /= name + ".json";
+    path /= asU8String( name ) + u8".json";
 
     std::ofstream ofs( path );
     Json::StreamWriterBuilder builder;

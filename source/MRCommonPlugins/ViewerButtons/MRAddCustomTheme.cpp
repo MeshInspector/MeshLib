@@ -61,7 +61,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( RibbonButtonDrawer::GradientButton( "Apply & Save", ImVec2( -1, 0 ) ) )
     {
         std::error_code ec;
-        auto saveDir = ColorTheme::getUserThemesDirectory() / ( themeName_ + ".json" );
+        auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         if ( std::filesystem::is_regular_file( saveDir, ec ) )
         {
             ImGui::OpenPopup( "File already exists" );
@@ -160,7 +160,7 @@ void AddCustomThemePlugin::save_()
 {
     {
         std::error_code ec;
-        auto saveDir = ColorTheme::getUserThemesDirectory() / ( themeName_ + ".json" );
+        auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         std::filesystem::create_directories( saveDir.parent_path(), ec );
 
         auto json = makeJson_();

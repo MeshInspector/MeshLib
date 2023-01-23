@@ -11,6 +11,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
+#include "MRViewer/MRRibbonConstants.h"
 
 namespace MR
 {
@@ -73,25 +74,59 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
     }
 
+    const ImVec2 windowSize{ MR::cModalWindowWidth * menuScaling, -1 };
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
     if ( ImGui::BeginModalNoAnimation( "File already exists", nullptr,
-                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize ) )
+                                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            ImGui::PushFont( headerFont );
 
-        ImGui::Text( "Theme with name %s already exists, override it?", themeName_.c_str() );
-        float w = ImGui::GetContentRegionAvail().x;
-        float p = ImGui::GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Enter ) )
+        const auto headerWidth = ImGui::CalcTextSize( "File already exists" ).x;
+
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        ImGui::Text( "File already exists" );
+
+        if ( headerFont )
+            ImGui::PopFont();
+
+        std::string text = "Theme with name " + themeName_ + " already exists, override it?";
+        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
+
+        if ( textWidth < windowSize.x )
+        {
+            ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
+            ImGui::Text( "%s", text.c_str() );
+        }
+        else
+        {
+            ImGui::TextWrapped( "%s", text.c_str() );
+        }
+
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+
+        const float p = ImGui::GetStyle().ItemSpacing.x;
+        const ImVec2 btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
+
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
         {
             save_();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( ( w - p ) / 2.f, 0 ), ImGuiKey_Escape ) )
+        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
+
+        ImGui::PopStyleVar();
         ImGui::EndPopup();
     }
+    ImGui::PopStyleVar( 2 );
 
     ImGui::PopItemWidth();
     ImGui::EndCustomStatePlugin();

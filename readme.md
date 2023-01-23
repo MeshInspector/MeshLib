@@ -178,7 +178,7 @@ sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 ./scripts/install_thirdparty.sh
 ./scripts/build_sources.sh
 ./scripts/distribution.sh
-sudo apt install ./distr/meshrus-dev.deb
+sudo apt install ./distr/meshlib-dev.deb
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.

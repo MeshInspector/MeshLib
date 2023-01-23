@@ -96,7 +96,7 @@ if [ ! -n "$MESHLIB_BUILD_DEBUG" ]; then
 fi
 
 # build MeshLib
-if [ "${MESHRUS_KEEP_BUILD}" != "ON" ]; then
+if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
  rm -rf ./build
  mkdir build
  cd build
@@ -107,7 +107,7 @@ set -eo pipefail
 
 #build Release
 if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
- if [ "${MESHRUS_KEEP_BUILD}" != "ON" ]; then
+ if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
   mkdir -p Release
  fi
  cd Release
@@ -130,7 +130,7 @@ fi
 
 #build Debug
 if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
- if [ "${MESHRUS_KEEP_BUILD}" != "ON" ]; then
+ if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
   mkdir Debug
  fi
  cd Debug

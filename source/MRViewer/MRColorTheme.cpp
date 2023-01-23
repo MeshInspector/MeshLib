@@ -292,7 +292,7 @@ void ColorTheme::setupUserTheme( const std::string& themeName )
     spdlog::info( "Setup user color theme: {}", themeName );
     instance_().type_ = Type::User;
     instance_().themeName_ = themeName;
-    setupFromFile( getUserThemesDirectory() / ( themeName + ".json" ) );
+    setupFromFile( getUserThemesDirectory() / ( asU8String( themeName ) + u8".json" ) );
 }
 
 ColorTheme& ColorTheme::instance_()

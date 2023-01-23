@@ -228,6 +228,7 @@
     <ClInclude Include="MRVoxelPath.h" />
     <ClInclude Include="MRVisualObject.h" />
     <ClInclude Include="MRVolumeSegment.h" />
+    <ClInclude Include="MRVoxelsConversions.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
@@ -446,6 +447,7 @@
     <ClCompile Include="MRSerializer.cpp" />
     <ClCompile Include="MRVisualObject.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
+    <ClCompile Include="MRVoxelsConversions.cpp" />
     <ClCompile Include="MRVoxelsLoad.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRAligningTransform.cpp" />

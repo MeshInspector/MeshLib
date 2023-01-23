@@ -34,9 +34,6 @@
     <Filter Include="Source Files\IO">
       <UniqueIdentifier>{dd1e9625-263f-4192-bb1d-baa91613a15e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\VoxelsPath">
-      <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\AABBTree">
       <UniqueIdentifier>{8523856f-61f8-4a64-be2c-e62368f09852}</UniqueIdentifier>
     </Filter>
@@ -102,6 +99,9 @@
     </Filter>
     <Filter Include="Source Files\Relax">
       <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Voxels">
+      <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -232,7 +232,7 @@
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelPath.h">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRFixUndercuts.h">
       <Filter>Source Files</Filter>
@@ -271,7 +271,7 @@
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelGraphCut.h">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRHeap.h">
       <Filter>Source Files\Basic</Filter>
@@ -292,7 +292,7 @@
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeSegment.h">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRTriDist.h">
       <Filter>Source Files\Math</Filter>
@@ -361,7 +361,7 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeIndexer.h">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRGridSampling.h">
       <Filter>Source Files</Filter>
@@ -906,6 +906,9 @@
     <ClInclude Include="MRExtractIsolines.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
+    <ClInclude Include="MRVoxelsConversions.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -987,7 +990,7 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelPath.cpp">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRFixUndercuts.cpp">
       <Filter>Source Files</Filter>
@@ -1014,7 +1017,7 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelGraphCut.cpp">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLines.cpp">
       <Filter>Source Files\DataModel</Filter>
@@ -1032,7 +1035,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeSegment.cpp">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRTriDist.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1077,7 +1080,7 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexer.cpp">
-      <Filter>Source Files\VoxelsPath</Filter>
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRGridSampling.cpp">
       <Filter>Source Files</Filter>
@@ -1507,6 +1510,9 @@
     </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVoxelsConversions.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

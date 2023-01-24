@@ -159,14 +159,16 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea )
     return getLargeByAreaComponents( mp, unionFind, minArea );
 }
 
-FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar )
+FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar,
+    UndirectedEdgeBitSet * bdEdgesBetweenLargeComps )
 {
     const float critCos = std::cos( angleFromPlanar );
     auto unionFind = MeshComponents::getUnionFindStructureFacesPerEdge( mp, [&]( UndirectedEdgeId ue ) { return mp.mesh.dihedralAngleCos( ue ) >= critCos; } );
-    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea );
+    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea, bdEdgesBetweenLargeComps );
 }
 
-FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea )
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea,
+    UndirectedEdgeBitSet * bdEdgesBetweenLargeComps )
 {
     MR_TIMER
 
@@ -185,6 +187,31 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
         if ( root2area[ root ] >= minArea )
             res.set( f );
     }
+
+    if ( bdEdgesBetweenLargeComps )
+    {
+        bdEdgesBetweenLargeComps->clear();
+        bdEdgesBetweenLargeComps->resize( mp.mesh.topology.undirectedEdgeSize() );
+        const auto & roots = unionFind.parents();
+        BitSetParallelForAll( *bdEdgesBetweenLargeComps, [&]( UndirectedEdgeId ue )
+        {
+            auto l = mp.mesh.topology.left( ue );
+            if ( !l )
+                return;
+            auto lroot = roots[l];
+            if ( root2area[ lroot ] < minArea )
+                return;
+            auto r = mp.mesh.topology.right( ue );
+            if ( !r )
+                return;
+            auto rroot = roots[r];
+            if ( root2area[ rroot ] < minArea )
+                return;
+            if ( lroot != rroot )
+                bdEdgesBetweenLargeComps->set( ue );
+        } );
+    }
+
     return res;
 }
 

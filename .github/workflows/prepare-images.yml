@@ -81,7 +81,7 @@ jobs:
       - name: Set image tag base path
         id: set-path
         run: |
-          repo_path="MeshRUs/MeshLib"
+          repo_path="MeshLib/MeshLib"
           echo "image_path=${repo_path,,}" >> $GITHUB_OUTPUT
 
       - name: Checking whether to start image rebuild
@@ -126,7 +126,7 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-          username: meshrus
+          username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image

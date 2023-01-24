@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-fedora37:${{inputs.image_tag}}
+      image: meshlib/meshlib-fedora37:${{inputs.image_tag}}
       options: --user root
     strategy:
       matrix:

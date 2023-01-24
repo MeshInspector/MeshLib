@@ -2,7 +2,7 @@
 
 # This script creates `*.deb` packages with built thirdparty and project libs
 # usage: first argument - `*-dev.deb` package name, `*.deb` package name
-# ./distribution.sh /path/to/file/meshrus.deb
+# ./distribution.sh /path/to/file/meshlib.deb
 
 # exit if any command failed
 set -eo pipefail

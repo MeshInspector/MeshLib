@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-emscripten:${{inputs.image_tag}}
+      image: meshlib/meshlib-emscripten:${{inputs.image_tag}}
       options: --user 1001
     strategy:
       matrix:

@@ -245,7 +245,7 @@ Project settings:
 2. `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
 3. `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
 4. Debug: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
-5. `vcpkg -> Triplet` set `x64-windows-meshrus`
+5. `vcpkg -> Triplet` set `x64-windows-meshlib`
 
 Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
 > **_NOTE:_** MeshLib distribution has x64 build only

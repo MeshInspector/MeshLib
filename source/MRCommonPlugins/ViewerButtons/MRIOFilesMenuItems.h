@@ -17,6 +17,7 @@ public:
 private:
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
     void setupListUpdate_();
+    void loadFiles_( const std::vector<std::filesystem::path>& paths );
     bool checkPaths_( const std::vector<std::filesystem::path>& paths );
 
     boost::signals2::scoped_connection recentStoreConnection_;

@@ -73,7 +73,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors oreder 
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | VoxelsLoad::Filters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {

@@ -36,7 +36,7 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-          username: meshrus
+          username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set variables
@@ -50,7 +50,7 @@ jobs:
         with:
           file: ./docker/app/${{matrix.image-tag}}Dockerfile
           push: true
-          tags: meshrus/meshlib-app:${{ matrix.image-tag }}-${{steps.get_release.outputs.tag_name }}, meshrus/meshlib-app:${{ matrix.image-tag }}
+          tags: meshlib/meshlib-app:${{ matrix.image-tag }}-${{steps.get_release.outputs.tag_name }}, meshlib/meshlib-app:${{ matrix.image-tag }}
           build-args: |
             FILE_NAME=${{steps.set-vars.outputs.file_name}}
             FILE_URL=${{steps.set-vars.outputs.file_url}}/${{steps.set-vars.outputs.file_name}}

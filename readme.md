@@ -178,14 +178,14 @@ sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
 ./scripts/install_thirdparty.sh
 ./scripts/build_sources.sh
 ./scripts/distribution.sh
-sudo apt install ./distr/meshrus-dev.deb
+sudo apt install ./distr/meshlib-dev.deb
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
 > **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
-> **_NOTE:_** You could specify build type to Debug by `export MESHRUS_BUILD_TYPE=Debug`. Release is default.
+> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
 
 ## Build with Emscripten on Linux
 This installation was checked on Ubuntu 20.04.4 with emscripten 3.1.23.
@@ -245,7 +245,7 @@ Project settings:
 2. `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
 3. `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
 4. Debug: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
-5. `vcpkg -> Triplet` set `x64-windows-meshrus`
+5. `vcpkg -> Triplet` set `x64-windows-meshlib`
 
 Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
 > **_NOTE:_** MeshLib distribution has x64 build only

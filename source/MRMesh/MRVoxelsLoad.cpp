@@ -26,7 +26,8 @@ namespace VoxelsLoad
 
 const IOFilters Filters =
 {
-    {"Raw (.raw)","*.raw"}
+    {"Raw (.raw)","*.raw"},
+    {"OpenVDB (.vdb)","*.vdb"}
 };
 
 struct SliceInfoBase
@@ -651,6 +652,49 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     outParams.scalarType = RawParameters::ScalarType::Float32;
 
     return loadRaw( filepathToOpen, outParams, cb );
+}
+
+tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& path, const ProgressCallback& /*cb*/ /*= {} */ )
+{
+    openvdb::io::File file( path.string() );
+    openvdb::initialize();
+    file.open();
+
+    VdbVolume res;
+    auto grids = file.getGrids();
+    if ( grids && grids->size() == 1 )
+    {
+        if ( !( *grids )[0] )
+            tl::make_unexpected( std::string( "nothing to read" ) );
+
+        OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( ( *grids )[0] ) ) );
+        res.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
+    }
+    file.close();
+
+    if ( !res.data )
+        return tl::make_unexpected( std::string( "Error reading grid" ) );
+
+    const auto dims = res.data->evalActiveVoxelDim();
+    for ( int i = 0; i < 3; ++i )
+        res.dims[i] = dims[i];
+    const auto voxelSize = res.data->voxelSize();
+    for ( int i = 0; i < 3; ++i )
+        res.voxelSize[i] = float( voxelSize[i] );
+    res.data->evalMinMax( res.min, res.max );
+    return res;
+}
+
+tl::expected<MR::VdbVolume, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+{
+    auto ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    if ( ext == ".vdb" )
+        return loadVdb( path, cb );
+    else
+        return tl::make_unexpected( std::string( "unsupported file extension" ) );
 }
 
 struct TiffParams

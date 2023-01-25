@@ -290,7 +290,7 @@ void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSetti
 
     // reserve enough elements for faces and vertices
     const auto maxVertId = findMaxVertId( t, settings.region );
-    res.faceResize( t.size() );
+    res.faceResize( t.size() + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
     addTrianglesSeqCore( res, t, settings );

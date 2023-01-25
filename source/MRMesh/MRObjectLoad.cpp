@@ -7,6 +7,7 @@
 #include "MRDistanceMapLoad.h"
 #include "MRPointsLoad.h"
 #include "MRVoxelsLoad.h"
+#include "MRObjectVoxels.h"
 #include "MRObjectLines.h"
 #include "MRObjectPoints.h"
 #include "MRDistanceMap.h"
@@ -110,6 +111,24 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
 }
 
 
+tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    auto voxels = VoxelsLoad::fromAnySupportedFormat( file, callback );
+    if ( !voxels.has_value() )
+    {
+        return tl::make_unexpected( voxels.error() );
+    }
+
+    ObjectVoxels objVoxels;
+    objVoxels.setName( utf8string( file.stem() ) );
+    objVoxels.updateVdbVolume( *voxels );
+    objVoxels.setIsoValue( 1.f );
+
+    return objVoxels;
+}
+
 tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                         ProgressCallback callback )
 {
@@ -203,8 +222,20 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         auto obj = std::make_shared<ObjectDistanceMap>( std::move( objectDistanceMap.value() ) );
                         result = { obj };
                     }
-                    else
+                    else if ( result.error() == "unsupported file extension" )
+                    {
                         result = tl::make_unexpected( objectDistanceMap.error() );
+
+                        auto objVoxels = makeObjectVoxelsFromFile( filename, callback );
+                        if ( objVoxels.has_value() )
+                        {
+                            objVoxels->select( true );
+                            auto obj = std::make_shared<ObjectVoxels>( std::move( objVoxels.value() ) );
+                            result = { obj };
+                        }
+                        else
+                            result = tl::make_unexpected( objVoxels.error() );
+                    }
                 }
             }
         }

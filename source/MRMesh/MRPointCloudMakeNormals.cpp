@@ -59,7 +59,7 @@ VertCoords makeNormals( const PointCloud& pointCloud, int avgNeighborhoodSize )
     auto enweight = [&]( VertId base, VertId candidate )
     {
         Vector3f cb = pointCloud.points[base] - pointCloud.points[candidate];
-        return 0.1f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
+        return 0.01f * cb.lengthSq() + sqr( dot( cb, normals[base] ) ) + sqr( dot( cb, normals[candidate] ) );
     };
 
     auto enqueueNeighbors = [&]( VertId base )

@@ -570,10 +570,10 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     };
 
     // triangulate by table
-    tbb::enumerable_thread_specific<Triangulation> triangulationPerThread;
+    tbb::enumerable_thread_specific<std::pair<Triangulation, FaceBitSet>> triangulationPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, volume.data.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& localTriangulation = triangulationPerThread.local();
+        auto& localTriangulation = triangulationPerThread.local().first;
         std::array<SeparationPointMap::const_iterator, 7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
@@ -612,6 +612,7 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
             }
 
+            FaceId firstFace = FaceId( localTriangulation.size() );
             const auto& plan = cTriangleTable[voxelConfiguration];
             for ( int i = 0; i < plan.size(); i += 3 )
             {
@@ -635,6 +636,14 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
                     iters[interIndex2]->second[dir2].vid
                     } );
             }
+            if ( params.oddVoxelFaces && ( ( ( basePos.x + basePos.y + basePos.z ) % 2 ) == 1 ) )
+            {
+                FaceId lastAddedFaceId = FaceId( localTriangulation.size() ) - 1;
+                auto& localFaces = triangulationPerThread.local().second;
+                localFaces.autoResizeSet( lastAddedFaceId );
+                for ( FaceId f = firstFace; f < lastAddedFaceId; ++f )
+                    localFaces.set( f );
+            }
         }
     }, tbb::static_partitioner() );
 
@@ -644,8 +653,14 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     // create result triangulation
     Mesh result;
     Triangulation resTriangulation;
-    for ( auto& triangulation : triangulationPerThread )
+    for ( auto& [triangulation, oddFaces] : triangulationPerThread )
     {
+        if ( params.oddVoxelFaces )
+        {
+            oddFaces.resize( oddFaces.size() + resTriangulation.size() );
+            oddFaces <<= resTriangulation.size();
+            *params.oddVoxelFaces |= std::move( oddFaces );
+        }
         resTriangulation.vec_.insert( resTriangulation.vec_.end(),
             std::make_move_iterator( triangulation.vec_.begin() ), std::make_move_iterator( triangulation.vec_.end() ) );
     }

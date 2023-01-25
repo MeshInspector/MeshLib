@@ -30,6 +30,7 @@ struct SimpleVolumeToMeshParams : BaseVolumeConversionParams
 {
     float iso{ 0.0f };
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
+    FaceBitSet* oddVoxelFaces{ nullptr }; // optional output faces of odd voxels
 };
 
 // makes SimpleVolume from Mesh with given params

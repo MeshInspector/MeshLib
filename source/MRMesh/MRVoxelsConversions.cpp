@@ -7,6 +7,7 @@
 #include "MRMeshBuilder.h"
 #include "MRPch/MRTBB.h"
 #include "MRTimer.h"
+#include <thread>
 
 namespace MR
 {

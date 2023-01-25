@@ -406,7 +406,6 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         return {};
 
     MR_TIMER
-    auto transposedBasis = params.basis.A.transposed();
     VolumeIndexer indexer( volume.dims );
 
     const std::array<size_t, size_t( NeighborDir::Count )> cDirStep{

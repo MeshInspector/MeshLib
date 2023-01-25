@@ -2,6 +2,8 @@
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRSimpleVolume.h"
+#include "MRProgressCallback.h"
+#include <optional>
 
 namespace MR
 {
@@ -9,6 +11,7 @@ namespace MR
 struct BaseVolumeConversionParams
 {
     AffineXf3f basis; // position of lowest left voxel, and axes vectors (A.transposed().x == x axis of volume)
+    ProgressCallback cb{}; // progress callback
 };
 
 struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
@@ -26,10 +29,15 @@ struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
 struct SimpleVolumeToMeshParams : BaseVolumeConversionParams
 {
     float iso{ 0.0f };
+    bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
 };
 
-MRMESH_API SimpleVolume meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params = {} );
+// makes SimpleVolume from Mesh with given params
+// returns nullopt if operation was canceled
+MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params = {} );
 
-MRMESH_API Mesh simpleVolumeToMesh( const SimpleVolume& volume, const SimpleVolumeToMeshParams& params = {} );
+// makes Mesh from SimpleVolume with given params
+// returns nullopt if operation was canceled
+MRMESH_API std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const SimpleVolumeToMeshParams& params = {} );
 
 }

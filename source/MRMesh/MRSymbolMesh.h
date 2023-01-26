@@ -23,7 +23,8 @@ struct SymbolMeshParams
     int fontDetalization{5};
     // Additional offset between symbols
     // X: In symbol size: 1.0f adds one "space", 0.5 adds half "space". Should be >= 0.0f
-    // Y: 128 << 6 - the height of a standart char
+    // Y: 128 << 6 - the base height (equals to a standard symbols height).
+    //    Setting additional y offset to 128 << 6 will increase line spacing to the height of 2 standard symbols
     Vector2f symbolsDistanceAdditionalOffset{ 0.0f, 0.0f };
     // Symbols thickness will be modified by this value (newThickness = modifier*baseSymbolHeight + defaultThickness)
     // note: changing this to non-zero values cause costly calculations

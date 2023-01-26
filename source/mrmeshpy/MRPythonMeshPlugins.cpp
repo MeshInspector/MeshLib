@@ -150,7 +150,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "symbolsDistanceAdditionalOffset", &SymbolMeshParams::symbolsDistanceAdditionalOffset,
             "Additional offset between symbols\n"
             "X: In symbol size: 1.0f adds one \"space\", 0.5 adds half \"space\". Should be >= 0.0f\n"
-            "Y: 128 << 6 - the height of a standart char" ).
+            "Y: 128 << 6 - the base height (equals to a standard symbols height).\n"
+            "   Setting additional y offset to 128 << 6 will increase line spacing to the height of 2 standard symbols").
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
     m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );

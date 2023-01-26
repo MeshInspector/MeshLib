@@ -26,6 +26,7 @@ struct SymbolMeshParams
     // Symbols thickness will be modified by this value (newThickness = modifier*baseSymbolHeight + defaultThickness)
     // note: changing this to non-zero values cause costly calculations
     float symbolsThicknessOffsetModifier{ 0.0f };
+    int lineSpacing{ 128 };
     // alignment of the text inside bbox
     AlignType align{AlignType::Left};
 #ifdef _WIN32

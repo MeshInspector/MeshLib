@@ -146,7 +146,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
             contoursPrevSize = decomposer.contours.size();
             xOffset = 0;
-            yOffset -= 128 << 6;
+            yOffset -= params.lineSpacing << 6;
             continue;
         }
 

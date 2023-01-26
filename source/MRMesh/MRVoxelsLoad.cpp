@@ -655,7 +655,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+tl::expected<MR::VdbVolume, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.01f ) )
         return tl::make_unexpected( getCancelMessage( path ) );
@@ -664,15 +664,21 @@ tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& p
     file.open();
     VdbVolume res;
     auto grids = file.getGrids();
-    if ( grids && grids->size() == 1 )
+    file.close();
+    if ( grids )
     {
+        if ( grids->size() == 0 )
+            tl::make_unexpected( std::string( "Nothing to read" ) );
+        else if ( grids->size() > 1 )
+            tl::make_unexpected( std::string( "Too many grids" ) );
         if ( !( *grids )[0] )
-            tl::make_unexpected( std::string( "nothing to read" ) );
+            tl::make_unexpected( std::string( "Nothing to read" ) );
 
         OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( ( *grids )[0] ) ) );
         res.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
     }
-    file.close();
+    else
+        tl::make_unexpected( std::string( "Nothing to read" ) );
 
     if ( !res.data )
         return tl::make_unexpected( std::string( "Error reading grid" ) );
@@ -702,7 +708,7 @@ tl::expected<MR::VdbVolume, std::string> fromAnySupportedFormat( const std::file
         c = ( char )tolower( c );
 
     if ( ext == ".vdb" )
-        return loadVdb( path, cb );
+        return fromVdb( path, cb );
     else
         return tl::make_unexpected( std::string( "unsupported file extension" ) );
 }

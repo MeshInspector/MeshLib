@@ -25,7 +25,7 @@ MRMESH_API tl::expected<void, std::string> saveRaw( const std::filesystem::path&
                                                     ProgressCallback callback = {} );
 
 /// Save vdb voxels file, using openVdb methods
-MRMESH_API tl::expected<void, std::string> saveVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+MRMESH_API tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                     ProgressCallback callback = {} );
 
 MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,

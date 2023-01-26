@@ -23,8 +23,10 @@ MRMESH_API tl::expected<ObjectPoints, std::string> makeObjectPointsFromFile( con
 /// loads distance map from given file in new object
 MRMESH_API tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
+#ifndef __EMSCRIPTEN__
 /// loads voxels from given file in new object
 MRMESH_API tl::expected<ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+#endif
 
 /**
  * \brief load object (mesh, lines, points, voxels or scene) from file

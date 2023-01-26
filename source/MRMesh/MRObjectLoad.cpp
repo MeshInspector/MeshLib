@@ -110,7 +110,7 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     return objectDistanceMap;
 }
 
-
+#ifndef __EMSCRIPTEN__
 tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
@@ -133,6 +133,7 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
 
     return objVoxels;
 }
+#endif
 
 tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                         ProgressCallback callback )
@@ -231,6 +232,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     {
                         result = tl::make_unexpected( objectDistanceMap.error() );
 
+#ifndef __EMSCRIPTEN__
                         auto objVoxels = makeObjectVoxelsFromFile( filename, callback );
                         if ( objVoxels.has_value() )
                         {
@@ -240,6 +242,8 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         }
                         else
                             result = tl::make_unexpected( objVoxels.error() );
+#endif
+
                     }
                 }
             }

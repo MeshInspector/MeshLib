@@ -122,7 +122,7 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
     return {};
 }
  
-tl::expected<void, std::string> saveVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
+tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
 {
     openvdb::io::File file( path.string() );
     file.write( { vdbVolume.data } );
@@ -138,7 +138,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::pat
         c = ( char )tolower( c );
     
     if ( ext == ".vdb" )
-        return saveVdb( path, vdbVolume, callback );
+        return toVdb( path, vdbVolume, callback );
     else
         return tl::make_unexpected( std::string( "unsupported file extension" ) );
 }

@@ -200,47 +200,24 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         }
     }
 
-    Box2d tmpBox;
-    for ( auto& c : decomposer.contours )
-    {
-        for ( auto& p : c )
-            tmpBox.include( p );
-    }
-
-    Box2d box;
-    {
-        auto xOffsetIt = lastGlyphInLineIndex2Pos.begin();
-        auto width = tmpBox.max.x - tmpBox.min.x;
-        auto margin = params.align == AlignType::Right ? width - xOffsetIt->second : (width - xOffsetIt->second) / 2;
-        for (size_t i = 0; i < decomposer.contours.size(); ++i)
-        {
-            for ( auto& p : decomposer.contours[i] )
-            {
-                if ( params.align != AlignType::Left )
-                    p.x += margin;
-
-                p *= 1e-3;
-                box.include( p );
-            }
-
-
-            if ( decomposer.contours[i].size() > 2 )
-                decomposer.contours[i].push_back( decomposer.contours[i].front() );
-
-            if (i == xOffsetIt->first && next(xOffsetIt) != lastGlyphInLineIndex2Pos.end() )
-            {
-                ++xOffsetIt;
-                margin = params.align == AlignType::Right ? width - xOffsetIt->second : (width - xOffsetIt->second) / 2;
-            }
-        }
-    }
-
     // End
     if ( face )
     {
         FT_Done_Face( face );
     }
     FT_Done_FreeType( library );
+
+    Box2d box;
+    for ( auto& c : decomposer.contours )
+    {
+        for ( auto& p : c )
+        {
+            p *= 1e-3;
+            box.include( p );
+        }
+        if ( c.size() > 2 )
+            c.push_back( c.front() );
+    }
 
     if ( params.symbolsThicknessOffsetModifier != 0.0f )
     {

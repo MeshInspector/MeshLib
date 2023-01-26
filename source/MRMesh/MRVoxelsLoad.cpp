@@ -6,11 +6,12 @@
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
 #include "MRFloatGrid.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
+#include "MRStringConvert.h"
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#include "MRPch/MRSpdlog.h"
-#include "MRPch/MRTBB.h"
 #include <compare>
 #include <filesystem>
 
@@ -654,12 +655,13 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& path, const ProgressCallback& /*cb*/ /*= {} */ )
+tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
+    if ( cb && !cb( 0.01f ) )
+        return tl::make_unexpected( getCancelMessage( path ) );
     openvdb::io::File file( path.string() );
     openvdb::initialize();
     file.open();
-
     VdbVolume res;
     auto grids = file.getGrids();
     if ( grids && grids->size() == 1 )
@@ -675,13 +677,21 @@ tl::expected<MR::VdbVolume, std::string> loadVdb( const std::filesystem::path& p
     if ( !res.data )
         return tl::make_unexpected( std::string( "Error reading grid" ) );
 
+    if ( cb && !cb( 0.5f ) )
+        return tl::make_unexpected( getCancelMessage( path ) );
+
     const auto dims = res.data->evalActiveVoxelDim();
     for ( int i = 0; i < 3; ++i )
         res.dims[i] = dims[i];
     const auto voxelSize = res.data->voxelSize();
     for ( int i = 0; i < 3; ++i )
         res.voxelSize[i] = float( voxelSize[i] );
+    
     res.data->evalMinMax( res.min, res.max );
+
+    if ( cb && !cb( 0.99f ) )
+        return tl::make_unexpected( getCancelMessage( path ) );
+
     return res;
 }
 

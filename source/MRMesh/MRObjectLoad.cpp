@@ -115,16 +115,21 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
 {
     MR_TIMER;
 
-    auto voxels = VoxelsLoad::fromAnySupportedFormat( file, callback );
-    if ( !voxels.has_value() )
+    auto cb = callback;
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( v / 2.f ); };
+    auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
+    if ( !loadRes.has_value() )
     {
-        return tl::make_unexpected( voxels.error() );
+        return tl::make_unexpected( loadRes.error() );
     }
-
+    auto& vdbVolume = *loadRes;
     ObjectVoxels objVoxels;
     objVoxels.setName( utf8string( file.stem() ) );
-    objVoxels.updateVdbVolume( *voxels );
-    objVoxels.setIsoValue( 1.f );
+    objVoxels.updateVdbVolume( vdbVolume );
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( 0.5f + v / 2.f ); };
+    objVoxels.setIsoValue( ( vdbVolume.min + vdbVolume.max ) / 2.f, cb );
 
     return objVoxels;
 }

@@ -128,7 +128,7 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
     objVoxels.setName( utf8string( file.stem() ) );
     if ( cb )
         cb = [callback] ( float v ) { return callback( ( 1.f + v ) / 3.f ); };
-    objVoxels.construct( vdbVolume );
+    objVoxels.construct( vdbVolume, cb );
     if ( cb )
         cb = [callback] ( float v ) { return callback( ( 2.f + v ) / 3.f ); };
     objVoxels.setIsoValue( ( vdbVolume.min + vdbVolume.max ) / 2.f, cb );

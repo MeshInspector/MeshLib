@@ -148,8 +148,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "text", &SymbolMeshParams::text, "Text that will be made mesh" ).
         def_readwrite( "fontDetalization", &SymbolMeshParams::fontDetalization, "Detailization of Bezier curves on font glyphs" ).
         def_readwrite( "symbolsDistanceAdditionalOffset", &SymbolMeshParams::symbolsDistanceAdditionalOffset,
-            "Additional offset between symbols (in symbol size: 1.0f adds one \"space\", 0.5 adds half \"space\")\n"
-            "should be >= 0.0f" ).
+            "Additional offset between symbols\n"
+            "X: In symbol size: 1.0f adds one \"space\", 0.5 adds half \"space\". Should be >= 0.0f\n"
+            "Y: 128 << 6 - the height of a standart char" ).
         def_readwrite( "pathToFontFile", &TextMeshAlignParams::pathToFontFile, "Path to font file" );
 
     m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );

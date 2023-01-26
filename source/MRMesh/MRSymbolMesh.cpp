@@ -121,32 +121,42 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_UInt index = FT_Get_Char_Index( face, spaceSymbol[0] );
     [[maybe_unused]] auto loadError = FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP );
     assert( !loadError );
-    auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset * float( face->glyph->advance.x ) );
+    auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset.x * float( face->glyph->advance.x ) );
 
-    // Body
-    FT_Pos xOffset{ 0 };
-    FT_Pos yOffset{ 0 };
+
     // <the last contour index (before '\n') to xOffset of a line>
     std::vector<std::pair<size_t, double>> contourId2width;
     double maxLineWidth = -1;
     size_t contoursPrevSize = 0;
+
+    auto updateContourSizeAndWidth = [&]() {
+        double minX = decomposer.contours[contoursPrevSize][0].x;
+        double maxX = decomposer.contours[contoursPrevSize][0].x;
+        for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
+        {
+            for ( const auto& p : decomposer.contours[i] )
+            {
+                minX = std::min(minX, p.x);
+                maxX = std::max(maxX, p.x);
+            }
+        }
+        contourId2width.emplace_back( decomposer.contours.size() - 1, maxX - minX );
+        maxLineWidth = std::max( maxLineWidth, maxX - minX );
+        contoursPrevSize = decomposer.contours.size();
+    };
+
+    // Body
+    FT_Pos xOffset{ 0 };
+    FT_Pos yOffset{ 0 };
     FT_UInt previous = 0;
     FT_Bool kerning = FT_HAS_KERNING( face );
     for ( int i = 0; i < wideStr.length(); ++i )
     {
         if ( wideStr[i] == '\n' )
         {
-            Box2d lineBox;
-            for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
-            {
-                for ( const auto& p : decomposer.contours[i] )
-                    lineBox.include( p );
-            }
-            contourId2width.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
-            maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
-            contoursPrevSize = decomposer.contours.size();
+            updateContourSizeAndWidth();
             xOffset = 0;
-            yOffset -= params.lineSpacing << 6;
+            yOffset -= params.symbolsDistanceAdditionalOffset.y;
             continue;
         }
 
@@ -169,16 +179,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         xOffset += ( face->glyph->advance.x + addOffset );
         previous = index;
     }
-    {
-        Box2d lineBox;
-        for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
-        {
-            for ( const auto& p : decomposer.contours[i] )
-                lineBox.include( p );
-        }
-        contourId2width.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
-        maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
-    }
+    updateContourSizeAndWidth();
     decomposer.clearLast();
 
     if ( params.align != AlignType::Left )
@@ -291,7 +292,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     mesh2.topology.flipOrientation();
 
     mesh.addPart( mesh2 );
-    
+
     auto edges = mesh.topology.findHoleRepresentiveEdges();
     for ( int bi = 0; bi < edges.size() / 2; ++bi )
     {

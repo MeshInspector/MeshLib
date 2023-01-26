@@ -1,6 +1,7 @@
 #pragma once
 
 #ifndef MRMESH_NO_LABEL
+#include "MRMesh/MRVector2.h"
 #include "MRSystem.h"
 #include <string>
 #include <filesystem>
@@ -20,13 +21,13 @@ struct SymbolMeshParams
     std::string text;
     // Detailization of Bezier curves on font glyphs
     int fontDetalization{5};
-    // Additional offset between symbols (in symbol size: 1.0f adds one "space", 0.5 adds half "space")
-    // should be >= 0.0f
-    float symbolsDistanceAdditionalOffset{ 0.0f };
+    // Additional offset between symbols
+    // X: In symbol size: 1.0f adds one "space", 0.5 adds half "space". Should be >= 0.0f
+    // Y: 128 << 6 - the height of a standart char
+    Vector2f symbolsDistanceAdditionalOffset{ 0.0f, float(128 << 6) };
     // Symbols thickness will be modified by this value (newThickness = modifier*baseSymbolHeight + defaultThickness)
     // note: changing this to non-zero values cause costly calculations
     float symbolsThicknessOffsetModifier{ 0.0f };
-    int lineSpacing{ 128 };
     // alignment of the text inside bbox
     AlignType align{AlignType::Left};
 #ifdef _WIN32

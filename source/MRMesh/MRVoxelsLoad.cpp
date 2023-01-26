@@ -693,7 +693,9 @@ tl::expected<MR::VdbVolume, std::string> fromVdb( const std::filesystem::path& p
     for ( int i = 0; i < 3; ++i )
         res.voxelSize[i] = float( voxelSize[i] );
     
-    res.data->evalMinMax( res.min, res.max );
+    auto minMax = openvdb::tools::minMax( res.data->tree() );
+    res.min = float( minMax.min() );
+    res.max = float( minMax.max() );
 
     if ( cb && !cb( 0.99f ) )
         return tl::make_unexpected( getCancelMessage( path ) );

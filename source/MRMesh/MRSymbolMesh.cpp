@@ -163,7 +163,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         {
             updateContourSizeAndWidth();
             xOffset = 0;
-            yOffset -= (128 << 6) + params.symbolsDistanceAdditionalOffset.y;
+            yOffset -= FT_Pos((128 << 6) + params.symbolsDistanceAdditionalOffset.y);
             continue;
         }
 

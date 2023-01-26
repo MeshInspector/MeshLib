@@ -2,6 +2,8 @@
 #include "MRMeshTopology.h"
 #include "MRContoursCut.h"
 #include "MRTimer.h"
+#include "MRRegionBoundary.h"
+#include "MRFillContour.h"
 #include <parallel_hashmap/phmap.h>
 
 namespace
@@ -15,6 +17,24 @@ float calcLoneContourAreaSq( const OneMeshContour& contour )
     for ( int i = 0; i + 1 < contour.intersections.size(); ++i )
         dblDirArea += cross( contour.intersections[i].coordinate, contour.intersections[i + 1].coordinate );
     return dblDirArea.lengthSq();
+}
+
+bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour& contour )
+{
+    assert( contour.closed );
+    FaceBitSet fbs( topology.faceSize() );
+    for ( const auto& inter : contour.intersections )
+    {
+        assert( inter.primitiveId.index() == OneMeshIntersection::Edge );
+        auto eid = std::get<EdgeId>( inter.primitiveId );
+        if ( auto l = topology.left( eid ) )
+            fbs.set( l );
+    }
+    auto boundary = findRegionBoundary( topology, fbs );
+    if ( boundary.empty() )
+        return false;
+    auto fillRes = fillContourLeft( topology, boundary.front() );
+    return !fillRes.test( topology.right( boundary.front().front() ) );
 }
 
 }
@@ -201,13 +221,15 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours )
     return res;
 }
 
-void removeDegeneratedContours( OneMeshContours& contours )
+void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshContours& faceContours, OneMeshContours& edgeContours )
 {
-    std::vector<int> contsToRemove;
-    for ( int i = int( contours.size() ) - 1; i >= 0; --i )
+    for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
     {
-        if ( contours[i].closed && calcLoneContourAreaSq( contours[i] ) == 0.0f )
-            contours.erase( contours.begin() + i );
+        if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
+        {
+            faceContours.erase( faceContours.begin() + i );
+            edgeContours.erase( edgeContours.begin() + i );
+        }
     }
 }
 

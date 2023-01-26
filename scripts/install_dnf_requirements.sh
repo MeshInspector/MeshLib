@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # run from repo root
-# NODE: using this script is deprecated! Better install meshrus(-dev).rpm package
+# NODE: using this script is deprecated! Better install meshlib(-dev).rpm package
 # This script installs requirements by `dnf` if not already installed
 # `distribution.sh` uses this script as preinstall
 

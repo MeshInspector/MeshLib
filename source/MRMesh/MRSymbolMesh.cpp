@@ -132,9 +132,9 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     auto updateContourSizeAndWidth = [&]() {
         double minX = decomposer.contours[contoursPrevSize][0].x;
         double maxX = decomposer.contours[contoursPrevSize][0].x;
-        for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
+        for (size_t j = contoursPrevSize; j < decomposer.contours.size(); ++j)
         {
-            for ( const auto& p : decomposer.contours[i] )
+            for ( const auto& p : decomposer.contours[j] )
             {
                 minX = std::min(minX, p.x);
                 maxX = std::max(maxX, p.x);
@@ -156,7 +156,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         {
             updateContourSizeAndWidth();
             xOffset = 0;
-            yOffset -= params.symbolsDistanceAdditionalOffset.y;
+            yOffset -= 128 << 6 + params.symbolsDistanceAdditionalOffset.y;
             continue;
         }
 

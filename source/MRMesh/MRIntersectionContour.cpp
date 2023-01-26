@@ -19,8 +19,9 @@ float calcLoneContourAreaSq( const OneMeshContour& contour )
     return dblDirArea.lengthSq();
 }
 
-bool canRemoveContour( const MeshTopology& topology, const OneMeshContour& contour )
+bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour& contour )
 {
+    assert( contour.closed );
     FaceBitSet fbs( topology.faceSize() );
     for ( const auto& inter : contour.intersections )
     {
@@ -28,8 +29,6 @@ bool canRemoveContour( const MeshTopology& topology, const OneMeshContour& conto
         auto eid = std::get<EdgeId>( inter.primitiveId );
         if ( auto l = topology.left( eid ) )
             fbs.set( l );
-        if ( auto r = topology.left( eid ) )
-            fbs.set( r );
     }
     auto boundary = findRegionBoundary( topology, fbs );
     if ( boundary.empty() )
@@ -226,7 +225,7 @@ void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshCo
 {
     for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
     {
-        if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && canRemoveContour( edgesTopology, edgeContours[i] ) )
+        if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
         {
             faceContours.erase( faceContours.begin() + i );
             edgeContours.erase( edgeContours.begin() + i );

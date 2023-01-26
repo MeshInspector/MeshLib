@@ -117,7 +117,7 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
 
     auto cb = callback;
     if ( cb )
-        cb = [callback] ( float v ) { return callback( v / 2.f ); };
+        cb = [callback] ( float v ) { return callback( v / 3.f ); };
     auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
     if ( !loadRes.has_value() )
     {
@@ -126,9 +126,11 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
     auto& vdbVolume = *loadRes;
     ObjectVoxels objVoxels;
     objVoxels.setName( utf8string( file.stem() ) );
-    objVoxels.updateVdbVolume( vdbVolume );
     if ( cb )
-        cb = [callback] ( float v ) { return callback( 0.5f + v / 2.f ); };
+        cb = [callback] ( float v ) { return callback( ( 1.f + v ) / 3.f ); };
+    objVoxels.construct( vdbVolume );
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( ( 2.f + v ) / 3.f ); };
     objVoxels.setIsoValue( ( vdbVolume.min + vdbVolume.max ) / 2.f, cb );
 
     return objVoxels;

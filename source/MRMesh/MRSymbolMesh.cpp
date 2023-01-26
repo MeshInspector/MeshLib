@@ -127,7 +127,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_Pos xOffset{ 0 };
     FT_Pos yOffset{ 0 };
     // <the last contour index (before '\n') to xOffset of a line>
-    std::vector<std::pair<size_t, double> contourId2width;
+    std::vector<std::pair<size_t, double>> contourId2width;
     double maxLineWidth = -1;
     size_t contoursPrevSize = 0;
     FT_UInt previous = 0;
@@ -142,7 +142,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
                 for ( const auto& p : decomposer.contours[i] )
                     lineBox.include( p );
             }
-            contourId2MinMax.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
+            contourId2width.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
             maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
             contoursPrevSize = decomposer.contours.size();
             xOffset = 0;
@@ -176,14 +176,14 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             for ( const auto& p : decomposer.contours[i] )
                 lineBox.include( p );
         }
-        contourId2MinMax.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
+        contourId2width.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
         maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
     }
     decomposer.clearLast();
 
     if ( params.align != AlignType::Left )
     {
-        auto lineContourIt = contourId2MinMax.begin();
+        auto lineContourIt = contourId2width.begin();
         auto currentLineWidth = lineContourIt->second;
         auto shift = params.align == AlignType::Right ? maxLineWidth - currentLineWidth : (maxLineWidth - currentLineWidth) / 2;
         for (size_t i = 0; i < decomposer.contours.size(); ++i)
@@ -191,7 +191,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             for ( auto& p : decomposer.contours[i] )
                     p.x += shift;
 
-            if (i == lineContourIt->first && next(lineContourIt) != contourId2MinMax.end() )
+            if (i == lineContourIt->first && next(lineContourIt) != contourId2width.end() )
             {
                 ++lineContourIt;
                 currentLineWidth = lineContourIt->second;

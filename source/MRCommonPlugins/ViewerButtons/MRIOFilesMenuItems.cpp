@@ -79,6 +79,8 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         {
             return filter.extension == "*.*";
         } );
+#else
+        filters_ = filters_ | VoxelsLoad::Filters;
 #endif
     } );
 }

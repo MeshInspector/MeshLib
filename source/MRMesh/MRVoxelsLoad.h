@@ -72,6 +72,14 @@ MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::
 MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
                                                          const ProgressCallback& cb = {} );
 
+/// Load raw voxels file, parsing parameters from name 
+MRMESH_API tl::expected<VdbVolume, std::string> fromVdb( const std::filesystem::path& path,
+                                                         const ProgressCallback& cb = {} );
+
+/// Detects the format from file extension and loads voxels from it
+MRMESH_API tl::expected<VdbVolume, std::string> fromAnySupportedFormat( const std::filesystem::path& path,
+                                                                        const ProgressCallback& cb = {} );
+
 /// \}
 
 // Determines iso-surface orientation

@@ -124,29 +124,116 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset * float( face->glyph->advance.x ) );
 
     // Body
-    FT_Pos offset{ 0 };
+    FT_Pos xOffset{ 0 };
+    FT_Pos yOffset{ 0 };
+    // <the last contour index (before '\n') to xOffset of a line>
+    std::vector<std::pair<size_t, double> contourId2width;
+    double maxLineWidth = -1;
+    size_t contoursPrevSize = 0;
     FT_UInt previous = 0;
     FT_Bool kerning = FT_HAS_KERNING( face );
     for ( int i = 0; i < wideStr.length(); ++i )
     {
+        if ( wideStr[i] == '\n' )
+        {
+            Box2d lineBox;
+            for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
+            {
+                for ( const auto& p : decomposer.contours[i] )
+                    lineBox.include( p );
+            }
+            contourId2MinMax.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
+            maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
+            contoursPrevSize = decomposer.contours.size();
+            xOffset = 0;
+            yOffset -= 128 << 6;
+            continue;
+        }
+
         index = FT_Get_Char_Index( face, wideStr[i] );
         if ( kerning && previous && index )
         {
             FT_Vector delta;
             FT_Get_Kerning( face, previous, index, FT_KERNING_DEFAULT, &delta );
-            offset += delta.x;
+            xOffset += delta.x;
         }
         if ( FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP ) )
             continue;
 
         // decompose
         // y offset is needed to resolve degenerate intersections of some fonts (YN sequence of Times New Roman for example)
-        decomposer.decompose( &face->glyph->outline, { double( offset ), ( i % 2 == 0 ) ? 0.0 : 0.5 } );
+        decomposer.decompose( &face->glyph->outline,
+                              { double( xOffset ), ( i % 2 == 0 ) ? yOffset + 0.0 : yOffset + 0.5 } );
 
-        offset += ( face->glyph->advance.x + addOffset );
+
+        xOffset += ( face->glyph->advance.x + addOffset );
         previous = index;
     }
+    {
+        Box2d lineBox;
+        for (size_t i = contoursPrevSize; i < decomposer.contours.size(); ++i)
+        {
+            for ( const auto& p : decomposer.contours[i] )
+                lineBox.include( p );
+        }
+        contourId2MinMax.emplace_back( decomposer.contours.size() - 1, lineBox.max.x - lineBox.min.x );
+        maxLineWidth = std::max( maxLineWidth, lineBox.max.x - lineBox.min.x );
+    }
     decomposer.clearLast();
+
+    if ( params.align != AlignType::Left )
+    {
+        auto lineContourIt = contourId2MinMax.begin();
+        auto currentLineWidth = lineContourIt->second;
+        auto shift = params.align == AlignType::Right ? maxLineWidth - currentLineWidth : (maxLineWidth - currentLineWidth) / 2;
+        for (size_t i = 0; i < decomposer.contours.size(); ++i)
+        {
+            for ( auto& p : decomposer.contours[i] )
+                    p.x += shift;
+
+            if (i == lineContourIt->first && next(lineContourIt) != contourId2MinMax.end() )
+            {
+                ++lineContourIt;
+                currentLineWidth = lineContourIt->second;
+                shift = params.align == AlignType::Right ? maxLineWidth - currentLineWidth : (maxLineWidth - currentLineWidth) / 2;
+            }
+        }
+    }
+
+    Box2d tmpBox;
+    for ( auto& c : decomposer.contours )
+    {
+        for ( auto& p : c )
+            tmpBox.include( p );
+    }
+
+    Box2d box;
+    {
+        auto xOffsetIt = lastGlyphInLineIndex2Pos.begin();
+        auto width = tmpBox.max.x - tmpBox.min.x;
+        auto margin = params.align == AlignType::Right ? width - xOffsetIt->second : (width - xOffsetIt->second) / 2;
+        for (size_t i = 0; i < decomposer.contours.size(); ++i)
+        {
+            for ( auto& p : decomposer.contours[i] )
+            {
+                if ( params.align != AlignType::Left )
+                    p.x += margin;
+
+                p *= 1e-3;
+                box.include( p );
+            }
+
+
+            if ( decomposer.contours[i].size() > 2 )
+                decomposer.contours[i].push_back( decomposer.contours[i].front() );
+
+            if (i == xOffsetIt->first && next(xOffsetIt) != lastGlyphInLineIndex2Pos.end() )
+            {
+                ++xOffsetIt;
+                margin = params.align == AlignType::Right ? width - xOffsetIt->second : (width - xOffsetIt->second) / 2;
+            }
+        }
+    }
 
     // End
     if ( face )
@@ -154,18 +241,6 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         FT_Done_Face( face );
     }
     FT_Done_FreeType( library );
-
-    Box2d box;
-    for ( auto& c : decomposer.contours )
-    {
-        for ( auto& p : c )
-        {
-            p *= 1e-3;
-            box.include( p );
-        }
-        if ( c.size() > 2 )
-            c.push_back( c.front() );
-    }
 
     if ( params.symbolsThicknessOffsetModifier != 0.0f )
     {

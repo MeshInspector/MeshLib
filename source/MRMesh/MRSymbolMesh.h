@@ -8,6 +8,12 @@
 namespace MR
 {
 
+enum AlignType {
+    Left,
+    Center,
+    Right,
+};
+
 struct SymbolMeshParams
 {
     // Text that will be made mesh
@@ -20,6 +26,8 @@ struct SymbolMeshParams
     // Symbols thickness will be modified by this value (newThickness = modifier*baseSymbolHeight + defaultThickness)
     // note: changing this to non-zero values cause costly calculations
     float symbolsThicknessOffsetModifier{ 0.0f };
+    // alignment of the text inside bbox
+    AlignType align{AlignType::Left};
 #ifdef _WIN32
     // Path to font file
     std::filesystem::path pathToFontFile = GetWindowsInstallDirectory() / "Fonts" / "Consola.ttf";

@@ -121,32 +121,92 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_UInt index = FT_Get_Char_Index( face, spaceSymbol[0] );
     [[maybe_unused]] auto loadError = FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP );
     assert( !loadError );
-    auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset * float( face->glyph->advance.x ) );
+    auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset.x * float( face->glyph->advance.x ) );
+
+
+    // <the last contour index (before '\n') to xOffset of a line>
+    std::vector<std::pair<size_t, double>> contourId2width;
+    double maxLineWidth = -1;
+    size_t contoursPrevSize = 0;
+
+    auto updateContourSizeAndWidth = [&]() {
+        bool isInitialized = false;
+        double minX = 0.0f;
+        double maxX = 0.0f;
+        for (size_t j = contoursPrevSize; j < decomposer.contours.size(); ++j)
+        {
+            for ( const auto& p : decomposer.contours[j] )
+            {
+                if (!isInitialized)
+                {
+                    minX = p.x;
+                    maxX = p.x;
+                    isInitialized = true;
+                }
+                minX = std::min(minX, p.x);
+                maxX = std::max(maxX, p.x);
+            }
+        }
+        contourId2width.emplace_back( decomposer.contours.size() - 1, maxX - minX );
+        maxLineWidth = std::max( maxLineWidth, maxX - minX );
+        contoursPrevSize = decomposer.contours.size();
+    };
 
     // Body
-    FT_Pos offset{ 0 };
+    FT_Pos xOffset{ 0 };
+    FT_Pos yOffset{ 0 };
     FT_UInt previous = 0;
     FT_Bool kerning = FT_HAS_KERNING( face );
     for ( int i = 0; i < wideStr.length(); ++i )
     {
+        if ( wideStr[i] == '\n' )
+        {
+            updateContourSizeAndWidth();
+            xOffset = 0;
+            yOffset -= FT_Pos((128 << 6) + params.symbolsDistanceAdditionalOffset.y);
+            continue;
+        }
+
         index = FT_Get_Char_Index( face, wideStr[i] );
         if ( kerning && previous && index )
         {
             FT_Vector delta;
             FT_Get_Kerning( face, previous, index, FT_KERNING_DEFAULT, &delta );
-            offset += delta.x;
+            xOffset += delta.x;
         }
         if ( FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP ) )
             continue;
 
         // decompose
         // y offset is needed to resolve degenerate intersections of some fonts (YN sequence of Times New Roman for example)
-        decomposer.decompose( &face->glyph->outline, { double( offset ), ( i % 2 == 0 ) ? 0.0 : 0.5 } );
+        decomposer.decompose( &face->glyph->outline,
+                              { double( xOffset ), ( i % 2 == 0 ) ? yOffset + 0.0 : yOffset + 0.5 } );
 
-        offset += ( face->glyph->advance.x + addOffset );
+
+        xOffset += ( face->glyph->advance.x + addOffset );
         previous = index;
     }
+    updateContourSizeAndWidth();
     decomposer.clearLast();
+
+    if ( params.align != AlignType::Left )
+    {
+        auto lineContourIt = contourId2width.begin();
+        auto currentLineWidth = lineContourIt->second;
+        auto shift = params.align == AlignType::Right ? maxLineWidth - currentLineWidth : (maxLineWidth - currentLineWidth) / 2;
+        for (size_t i = 0; i < decomposer.contours.size(); ++i)
+        {
+            for ( auto& p : decomposer.contours[i] )
+                    p.x += shift;
+
+            if (i == lineContourIt->first && next(lineContourIt) != contourId2width.end() )
+            {
+                ++lineContourIt;
+                currentLineWidth = lineContourIt->second;
+                shift = params.align == AlignType::Right ? maxLineWidth - currentLineWidth : (maxLineWidth - currentLineWidth) / 2;
+            }
+        }
+    }
 
     // End
     if ( face )
@@ -239,7 +299,7 @@ void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
     mesh2.topology.flipOrientation();
 
     mesh.addPart( mesh2 );
-    
+
     auto edges = mesh.topology.findHoleRepresentiveEdges();
     for ( int bi = 0; bi < edges.size() / 2; ++bi )
     {

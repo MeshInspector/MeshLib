@@ -30,7 +30,7 @@ jobs:
           submodules: recursive
 
       - name: Start container
-        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:${{inputs.image_tag}} ping -t localhost
+        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshlib/meshlib-windows:${{inputs.image_tag}} ping -t localhost
 
       - name: Build
         run: |

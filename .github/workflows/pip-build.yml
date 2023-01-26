@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 25
     runs-on: ubuntu-latest
     container:
-      image: meshrus/meshlib-ubuntu:latest
+      image: meshlib/meshlib-ubuntu:latest
       options: --user root
     strategy:
       fail-fast: false
@@ -69,8 +69,8 @@ jobs:
         run: ./scripts/build_source.sh
         env:
           MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
-          MESHRUS_BUILD_RELEASE: "ON"
-          MESHRUS_BUILD_DEBUG: "OFF"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: /usr/bin/g++-10
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/gcc-10
@@ -151,13 +151,13 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Start container
-        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshrus/meshlib-windows:latest ping -t localhost
+        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshlib/meshlib-windows:latest ping -t localhost
 
       - name: Setup python
         run: |
           docker exec meshlib-win choco uninstall python python3 -y
           docker exec meshlib-win choco install python3 --version=${{matrix.py-version}} -y
-          docker exec -w C:\vcpkg\installed\x64-windows-meshrus meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
+          docker exec -w C:\vcpkg\installed\x64-windows-meshlib meshlib-win powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade pip
           docker exec meshlib-win py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
           docker exec -w C:\workspace\MeshLib\MeshLib\thirdparty\python meshlib-win curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
@@ -265,8 +265,8 @@ jobs:
         run: ./scripts/build_source.sh
         env:
           MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
-          MESHRUS_BUILD_RELEASE: "ON"
-          MESHRUS_BUILD_DEBUG: "OFF"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang

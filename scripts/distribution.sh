@@ -2,7 +2,7 @@
 
 # This script creates `*.deb` packages with built thirdparty and project libs
 # usage: first argument - `*-dev.deb` package name, `*.deb` package name
-# ./distribution.sh /path/to/file/meshrus.deb
+# ./distribution.sh /path/to/file/meshlib.deb
 
 # exit if any command failed
 set -eo pipefail
@@ -14,8 +14,8 @@ fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
  printf "Project release build was not found. Building...\n"
- export MESHRUS_BUILD_RELEASE="ON"
- export MESHRUS_BUILD_DEBUG="OFF"
+ export MESHLIB_BUILD_RELEASE="ON"
+ export MESHLIB_BUILD_DEBUG="OFF"
  ./scripts/build_source.sh
 fi
 

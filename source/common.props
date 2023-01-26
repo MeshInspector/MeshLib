@@ -7,7 +7,7 @@
   <PropertyGroup Label="Globals">
     <CustomPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRProps.props))</CustomPropertyDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <VcpkgTriplet>x64-windows-meshrus</VcpkgTriplet>
+    <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>
     <MeshLibSourceDir>$(MSBuildThisFileDirectory)</MeshLibSourceDir>
     <MeshLibDir>$(MeshLibSourceDir)\..\</MeshLibDir>
     <MeshLibProjectName>MeshLib</MeshLibProjectName>

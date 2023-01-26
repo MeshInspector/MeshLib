@@ -26,8 +26,12 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 // returns they indices in contours
 MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours );
 
-// Removes contours with all points in same coordinate
-MRMESH_API void removeDegeneratedContours( OneMeshContours& contours );
+// Removes contours with zero area (do not remove if contour is handle on topology)
+// edgesTopology - topology on which contours are represented with edges
+// faceContours - lone contours represented by faces (all intersections are in same mesh A face)
+// edgeContours - lone contours represented by edges (all intersections are in mesh B edges, edgesTopology: meshB.topology)
+MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, 
+    OneMeshContours& faceContours, OneMeshContours& edgeContours );
 
 // Removes contours that fully lay inside one triangle from the contours
 MRMESH_API void removeLoneContours( ContinuousContours& contours );

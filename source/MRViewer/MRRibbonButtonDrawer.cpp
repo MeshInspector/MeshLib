@@ -282,7 +282,8 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
-    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height } );
+    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height,
+                                           .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
     std::string name = item.caption.empty() ? item.item->name() : item.caption;
     ImGui::Text( "%s", name.c_str());

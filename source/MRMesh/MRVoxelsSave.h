@@ -24,6 +24,14 @@ MRMESH_API extern const IOFilters Filters;
 MRMESH_API tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                     ProgressCallback callback = {} );
 
+/// Save vdb voxels file, using openVdb methods
+MRMESH_API tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+                                                    ProgressCallback callback = {} );
+
+MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+                                                                 ProgressCallback callback = {} );
+
+
 /// save the slice by the active plane through the sliceNumber to an image file
 MRMESH_API tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback = {} );
 

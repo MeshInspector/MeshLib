@@ -1805,7 +1805,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
-        assert( params.new2OldMap->size() == expectedTotalTris );
+        assert( params.new2OldMap->size() == ( numNewTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
 
     res.resultCut = std::move( preRes.paths );
 

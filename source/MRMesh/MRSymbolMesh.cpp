@@ -121,7 +121,8 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     FT_UInt index = FT_Get_Char_Index( face, spaceSymbol[0] );
     [[maybe_unused]] auto loadError = FT_Load_Glyph( face, index, FT_LOAD_NO_BITMAP );
     assert( !loadError );
-    auto addOffset = FT_Pos( params.symbolsDistanceAdditionalOffset.x * float( face->glyph->advance.x ) );
+    auto addOffsetX = FT_Pos( params.symbolsDistanceAdditionalOffset.x * float( face->glyph->advance.x ) );
+    auto offsetY = FT_Pos( ( 128 << 6 ) * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) );
 
 
     // <the last contour index (before '\n') to xOffset of a line>
@@ -163,7 +164,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         {
             updateContourSizeAndWidth();
             xOffset = 0;
-            yOffset -= FT_Pos((128 << 6) + params.symbolsDistanceAdditionalOffset.y);
+            yOffset -= offsetY;
             continue;
         }
 
@@ -183,7 +184,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
                               { double( xOffset ), ( i % 2 == 0 ) ? yOffset + 0.0 : yOffset + 0.5 } );
 
 
-        xOffset += ( face->glyph->advance.x + addOffset );
+        xOffset += ( face->glyph->advance.x + addOffsetX );
         previous = index;
     }
     updateContourSizeAndWidth();

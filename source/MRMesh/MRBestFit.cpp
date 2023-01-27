@@ -127,4 +127,15 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
     }
 }
 
+void PlaneAccumulator::addPlane( const Plane3d & pl )
+{
+    mat_ += outerSquare( pl.n );
+    rhs_ += pl.d * pl.n;
+}
+
+Vector3d PlaneAccumulator::findBestCrossPoint( const Vector3d & p0, double tol ) const
+{
+    return p0 + mat_.solve( rhs_ - mat_ * p0, tol );
+}
+
 } //namespace MR

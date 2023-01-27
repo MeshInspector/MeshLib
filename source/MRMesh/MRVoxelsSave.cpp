@@ -1,13 +1,16 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRVoxelsSave.h"
+#include "MRMeshFwd.h"
 #include "MRImageSave.h"
 #include "MRFloatGrid.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"
 #include "MRMeshTexture.h"
+#include "MRPch/MROpenvdb.h"
 #include <fstream>
 #include <filesystem>
+#include "openvdb/io/File.h"
 
 #if FMT_VERSION < 80000
     const std::string & runtime( const std::string & str )
@@ -28,7 +31,8 @@ namespace VoxelsSave
 {
 const IOFilters Filters = 
 {
-    {"Raw (.raw)","*.raw"}
+    {"Raw (.raw)","*.raw"},
+    {"OpenVDB (.vdb)","*.vdb"}
 };
 
 tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
@@ -117,6 +121,29 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
         callback( 1.f );
     return {};
 }
+ 
+tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
+{
+    openvdb::io::File file( path.string() );
+    file.write( { vdbVolume.data } );
+    file.close();
+    return {};
+}
+
+tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+                                                      ProgressCallback callback /*= {} */ )
+{
+    auto ext = utf8string( path.extension() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+    
+    if ( ext == ".vdb" )
+        return toVdb( path, vdbVolume, callback );
+    else
+        return tl::make_unexpected( std::string( "unsupported file extension" ) );
+}
+
+
 
 tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback )
 {
@@ -178,7 +205,6 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
 
     return {};
 }
-
 
 
 tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& settings )

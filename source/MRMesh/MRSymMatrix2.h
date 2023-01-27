@@ -52,7 +52,7 @@ struct SymMatrix2
 
     /// solves the equation M*x = b and returns x;
     /// if M is degenerate then returns the solution closest to origin point
-    Vector2<T> solve( const Vector2<T> & b ) const;
+    Vector2<T> solve( const Vector2<T> & b, T tol = std::numeric_limits<T>::epsilon() ) const;
 };
 
 /// \related SymMatrix2
@@ -165,11 +165,11 @@ Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const
 }
 
 template <typename T> 
-Vector2<T> SymMatrix2<T>::solve( const Vector2<T> & b ) const
+Vector2<T> SymMatrix2<T>::solve( const Vector2<T> & b, T tol ) const
 {
     Matrix2<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );
-    const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[1] ) ) * std::numeric_limits<T>::epsilon();
+    const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[1] ) ) * tol;
     Vector2<T> res;
     for ( int i = 0; i < 2; ++i )
     {

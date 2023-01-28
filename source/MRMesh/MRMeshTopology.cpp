@@ -203,10 +203,11 @@ bool MeshTopology::isLeftTri( EdgeId a ) const
 {
     assert( a.valid() );
     EdgeId b = prev( a.sym() );
-    if ( a == b )
+    // org(b) == dest(a)
+    if ( a.sym() == b )
         return false;
     EdgeId c = prev( b.sym() );
-    if ( a == c )
+    if ( a == c || b.sym() == c )
         return false;
     EdgeId d = prev( c.sym() );
     return a == d;
@@ -252,13 +253,14 @@ bool MeshTopology::isLeftQuad( EdgeId a ) const
 {
     assert( a.valid() );
     EdgeId b = prev( a.sym() );
-    if ( a == b )
+    // org(b) == dest(a)
+    if ( a.sym() == b )
         return false;
     EdgeId c = prev( b.sym() );
-    if ( a == c )
+    if ( a == c || b.sym() == c )
         return false;
     EdgeId d = prev( c.sym() );
-    if ( a == d )
+    if ( a == d || c.sym() == d )
         return false;
     EdgeId e = prev( d.sym() );
     return a == e;
@@ -813,10 +815,14 @@ void MeshTopology::flipEdge( EdgeId e )
 
     EdgeId a = next( e.sym() ).sym();
     EdgeId b = next( e ).sym();
+    assert( !fromSameOriginRing( a, b ) ); //otherwise loop edge will appear
     splice( prev( e ), e );
     splice( prev( e.sym() ), e.sym() );
     splice( a, e );
     splice( b, e.sym() );
+
+    assert( isLeftTri( e ) );
+    assert( isLeftTri( e.sym() ) );
 
     setLeft_( e, l );
     setLeft_( e.sym(), r );

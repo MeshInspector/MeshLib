@@ -51,6 +51,7 @@
     <ClInclude Include="MRDistanceMapLoad.h" />
     <ClInclude Include="MRDistanceMapParams.h" />
     <ClInclude Include="MRDistanceMapSave.h" />
+    <ClInclude Include="MREdgeMetric.h" />
     <ClInclude Include="MREdgePathsBuilder.h" />
     <ClInclude Include="MREmbeddedPython.h" />
     <ClInclude Include="MRFile.h" />
@@ -321,6 +322,7 @@
     <ClCompile Include="MRDistanceMapParams.cpp" />
     <ClCompile Include="MRDistanceMapSave.cpp" />
     <ClCompile Include="MRDistanceMapTests.cpp" />
+    <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
     <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />

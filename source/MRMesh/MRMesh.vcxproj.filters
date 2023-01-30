@@ -912,6 +912,9 @@
     <ClInclude Include="MRSharpenMarchingCubesMesh.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MREdgeMetric.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">
@@ -1519,6 +1522,9 @@
     </ClCompile>
     <ClCompile Include="MRSharpenMarchingCubesMesh.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgeMetric.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

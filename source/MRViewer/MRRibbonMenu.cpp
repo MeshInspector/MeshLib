@@ -1358,7 +1358,7 @@ void RibbonMenu::drawRibbonSceneList_()
     static bool firstTime = true;
     if ( firstTime )
     {
-        firstTime = false; // this is needed because GetWindowSize() lag in on frame
+        firstTime = false; // this is needed because GetWindowSize() lag in one frame
     }
     else if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {

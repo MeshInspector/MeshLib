@@ -558,7 +558,7 @@ std::string Palette::getStringValue( float value )
     if ( needExp )
     {
         auto rangeDiff = std::abs( parameters_.ranges.back() - parameters_.ranges.front() );
-        needExp = rangeDiff > 1e4f || rangeDiff < 1e-2f;
+        needExp = rangeDiff != 0.0f && ( rangeDiff > 1e4f || rangeDiff < 1e-2f );
     }
     if ( needExp )
         return fmt::format( "{0: .2e}", value );

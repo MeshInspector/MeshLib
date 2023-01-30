@@ -28,6 +28,8 @@ struct OffsetParameters
 
     // Progress callback 
     ProgressCallback callBack{};
+    FaceBitSet* outFaces{ nullptr };
+    bool saveFeatures{ true }; // try to save features
 };
 
 // Offsets mesh by converting it to voxels and back

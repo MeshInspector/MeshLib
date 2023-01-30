@@ -282,7 +282,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
-    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height,
+    drawButtonIcon( item, DrawButtonParams{.itemSize = ImVec2( height + 4, height + 4 ), .iconSize = height / scaling_,
                                            .rootType = DrawButtonParams::RootType::Toolbar } );
     ImGui::SameLine( 0.f, spacing );
     std::string name = item.caption.empty() ? item.item->name() : item.caption;
@@ -589,14 +589,10 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     float fontScale = 1.f;
     if ( font ) {
-        const float iconSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( iconSize )
-        {
-            if ( params.iconSize != 0 )
-                font->Scale = params.iconSize / iconSize;
-            else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-                font->Scale = cSmallIconSize / iconSize;
-        }
+        if ( params.iconSize != 0 )
+            font->Scale = params.iconSize / cBigIconSize;
+        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+            font->Scale = cSmallIconSize / cBigIconSize;
         fontScale = font->Scale;
         ImGui::PushFont( font );
     }
@@ -701,14 +697,10 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
     float fontScale = 1.f;
     if ( font )
     {
-        const float iconSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
-        if ( iconSize )
-        {
-            if ( params.iconSize != 0 )
-                font->Scale = params.iconSize / iconSize;
-            else if ( params.sizeType != DrawButtonParams::SizeType::Big )
-                font->Scale = cSmallIconSize / iconSize;
-        }
+        if ( params.iconSize != 0 )
+            font->Scale = params.iconSize / cBigIconSize;
+        else if ( params.sizeType != DrawButtonParams::SizeType::Big )
+            font->Scale = cSmallIconSize / cBigIconSize;
         fontScale = font->Scale;
         ImGui::PushFont( font );
     }

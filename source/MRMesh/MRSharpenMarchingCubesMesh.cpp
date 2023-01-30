@@ -98,26 +98,18 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                 vox.points.autoResizeSet( v, sharpPt );
                 for ( auto ei : orgRing( vox.topology, v ) )
                     face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
+                // connect new vertex with every vertex from the voxel
                 vox.topology.flipEdgesAround( v, [&]( EdgeId e )
                 {
                     auto r = vox.topology.right( e );
                     assert( r );
-                    auto b = vox.topology.dest( vox.topology.prev( e ) );
-                    if ( face2voxel[r] == voxel || b >= firstNewVert )
+                    if ( face2voxel[r] == voxel )
                     {
-                        for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym()  ) )
+                        auto b = vox.topology.dest( vox.topology.prev( e ) );
+                        for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
                         {
                             assert( vox.topology.org( ei ) == v );
                             if ( vox.topology.dest( ei ) == b )
-                                return false;
-                        }
-                        if ( face2voxel[r] != voxel )
-                        {
-                            auto ap = vox.points[ vox.topology.org( e ) ];
-                            auto bp = vox.points[ b ];
-                            auto cp = vox.points[ vox.topology.dest( e ) ];
-                            auto dp = vox.points[ v ];
-                            if ( !isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
                                 return false;
                         }
                         return true;
@@ -126,6 +118,47 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                 } );
             }
         }
+    }
+
+    // find edges between voxels with new vertices
+    std::vector<EdgeId> sharpEdges;
+    for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
+    {
+        for ( auto ei : orgRing( vox.topology, v ) )
+        {
+            if ( !vox.topology.left( ei ) )
+                continue;
+            EdgeId e = vox.topology.prev( ei.sym() );
+            if ( !vox.topology.right( e ) )
+                continue;
+            auto b = vox.topology.dest( vox.topology.prev( e ) );
+            if ( b > v )
+            {
+                auto ap = vox.points[ vox.topology.org( e ) ];
+                auto bp = vox.points[ b ];
+                auto cp = vox.points[ vox.topology.dest( e ) ];
+                auto dp = vox.points[ v ];
+                if ( isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
+                    sharpEdges.push_back( e );
+            }
+        }
+    }
+
+    // flip edges between voxels with new vertices to form sharp ridges
+    for ( auto e : sharpEdges )
+    {
+        bool good = true;
+        auto b = vox.topology.dest( vox.topology.prev( e ) );
+        for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
+        {
+            if ( vox.topology.dest( ei ) == b )
+            {
+                good = false;
+                break;
+            }
+        }
+        if ( good )
+            vox.topology.flipEdge( e );
     }
 }
 

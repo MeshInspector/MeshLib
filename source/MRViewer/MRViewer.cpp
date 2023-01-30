@@ -76,6 +76,7 @@ EMSCRIPTEN_KEEPALIVE int resizeEmsCanvas( float width, float height )
     float newWidth = width * pixelRatio;
     float newHeight = height * pixelRatio;
     glfwSetWindowSize( MR::getViewerInstance().window, int( newWidth ), int( newHeight ) );
+    MR::getViewerInstance().incrementForceRedrawFrames( MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents, false );
     return 1;
 }
 

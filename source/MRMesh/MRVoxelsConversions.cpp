@@ -96,11 +96,12 @@ struct SeparationPoint
 {
     Vector3f position; // coordinate
     bool low{ false }; // orientation: true means that baseVoxelId has lower value
-    bool valid{ false };
-    VertId vid;
-    operator bool() const
+    VertId vid; // any valid VertId is ok
+    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
+    // so there are some points present in map that are not valid
+    explicit operator bool() const
     {
-        return valid;
+        return vid.valid();
     }
 };
 
@@ -439,7 +440,7 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         auto bPos = params.basis.b + params.basis.A * ( Vector3f( indexer.toPos( VoxelId( base ) ) ) + Vector3f::diagonal( 0.5f ) );
         auto dPos = params.basis.b + params.basis.A * ( Vector3f( indexer.toPos( VoxelId( nextId ) ) ) + Vector3f::diagonal( 0.5f ) );
         res.position = ( 1.0f - ratio ) * bPos + ratio * dPos;
-        res.valid = true;
+        res.vid = VertId{ 0 };
         return res;
     };
 
@@ -497,6 +498,8 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
     struct VertsNumeration
     {
+        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
+        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
         size_t initIndex{ 0 };
         size_t numVerts{ 0 };
     };
@@ -595,7 +598,7 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Z];
+            return bool( iter->second[NeighborDir::Z] );
         }
         case 4: // z + 1 voxel
         {
@@ -607,13 +610,13 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Y];
+            return bool( iter->second[NeighborDir::Y] );
         }
         case 6: // y + 1, z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X];
+            return bool( iter->second[NeighborDir::X] );
         }
         default:
             return false;

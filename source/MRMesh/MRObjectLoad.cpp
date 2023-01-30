@@ -23,7 +23,7 @@ namespace MR
 
 const IOFilters allFilters = SceneFileFilters
                              | MeshLoad::getFilters()
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
                              | VoxelsLoad::Filters
 #endif
                              | LinesLoad::Filters
@@ -110,7 +110,7 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
     return objectDistanceMap;
 }
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
 tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;

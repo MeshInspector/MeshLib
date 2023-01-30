@@ -1,4 +1,4 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
@@ -9,15 +9,51 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include "MRStringConvert.h"
+#include <compare>
+#include <filesystem>
+#include <fstream>
+
+#ifndef MRMESH_NO_DICOM
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#include <compare>
-#include <filesystem>
+#endif // MRMESH_NO_DICOM
 
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
-#endif
+#endif // MRMESH_NO_TIFF
+
+namespace
+{
+    using namespace MR::VoxelsLoad;
+
+#ifndef MRMESH_NO_DICOM
+    RawParameters::ScalarType convertToScalarType( const gdcm::PixelFormat& format )
+    {
+        switch ( gdcm::PixelFormat::ScalarType( format ) )
+        {
+        case gdcm::PixelFormat::UINT8:
+            return RawParameters::ScalarType::UInt8;
+        case gdcm::PixelFormat::INT8:
+            return RawParameters::ScalarType::Int8;
+        case gdcm::PixelFormat::UINT16:
+            return RawParameters::ScalarType::UInt16;
+        case gdcm::PixelFormat::INT16:
+            return RawParameters::ScalarType::Int16;
+        case gdcm::PixelFormat::UINT32:
+            return RawParameters::ScalarType::UInt32;
+        case gdcm::PixelFormat::INT32:
+            return RawParameters::ScalarType::Int32;
+        case gdcm::PixelFormat::UINT64:
+            return RawParameters::ScalarType::UInt64;
+        case gdcm::PixelFormat::INT64:
+            return RawParameters::ScalarType::Int64;
+        default:
+            return RawParameters::ScalarType::Unknown;
+        }
+    }
+#endif // MRMESH_NO_DICOM
+}
 
 namespace MR
 {
@@ -86,66 +122,68 @@ void sortFilesByName( std::vector<std::filesystem::path>& scans )
     sortByOrder( scans, zOrder );
 }
 
-std::function<float( char* )> getTypeConverter( const gdcm::PixelFormat& format, const uint64_t& range, const int64_t& min )
+std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType& scalarType, const uint64_t& range, const int64_t& min )
 {
-    switch ( gdcm::PixelFormat::ScalarType( format ) )
+    switch ( scalarType )
     {
-    case gdcm::PixelFormat::UINT8:
+    case RawParameters::ScalarType::UInt8:
         return [range, min]( char* c )
         {
             return float( *(uint8_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT16:
+    case RawParameters::ScalarType::UInt16:
         return [range, min]( char* c )
         {
             return float( *(uint16_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT8:
+    case RawParameters::ScalarType::Int8:
         return [range, min]( char* c )
         {
             return float( *(int8_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT16:
+    case RawParameters::ScalarType::Int16:
         return [range, min]( char* c )
         {
             return float( *(int16_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT32:
+    case RawParameters::ScalarType::Int32:
         return [range, min]( char* c )
         {
             return float( *(int32_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT32:
+    case RawParameters::ScalarType::UInt32:
         return [range, min]( char* c )
         {
             return float( *(uint32_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::UINT64:
+    case RawParameters::ScalarType::UInt64:
         return [range, min]( char* c )
         {
             return float( *(uint64_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::INT64:
+    case RawParameters::ScalarType::Int64:
         return [range, min]( char* c )
         {
             return float( *(int64_t*) (c) -min ) / float( range );
         };
-    case gdcm::PixelFormat::FLOAT32:
+    case RawParameters::ScalarType::Float32:
         return []( char* c )
         {
             return *(float*) ( c );
         };
-    case gdcm::PixelFormat::FLOAT64:
+    case RawParameters::ScalarType::Float64:
         return []( char* c )
         {
             return float( *(double*) ( c ) );
         };
-    default:
+    case RawParameters::ScalarType::Unknown:
+    case RawParameters::ScalarType::Count:
         break;
     }
     return {};
 }
 
+#ifndef MRMESH_NO_DICOM
 bool isDICOMFile( const std::filesystem::path& path )
 {
     gdcm::ImageReader ir;
@@ -284,7 +322,8 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     auto min = gimage.GetPixelFormat().GetMin();
     auto max = gimage.GetPixelFormat().GetMax();
     auto pixelSize = gimage.GetPixelFormat().GetPixelSize();
-    auto caster = getTypeConverter( gimage.GetPixelFormat(), max - min, min );
+    auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
+    auto caster = getTypeConverter( scalarType, max - min, min );
     if ( !caster )
     {
         spdlog::error( "loadSingle: cannot make type converter, file: {}", utf8string( path ) );
@@ -550,6 +589,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
     res.name = utf8string( path.stem() );
     return res;
 }
+#endif // MRMESH_NO_DICOM
 
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
@@ -907,7 +947,7 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
     
     return res;
 }
-#endif
+#endif // MRMESH_NO_TIFF
 
 tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
     const ProgressCallback& cb )
@@ -920,47 +960,36 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     outVolume.voxelSize = params.voxelSize;
 
     int unitSize = 0;
-    gdcm::PixelFormat format = gdcm::PixelFormat::FLOAT32;
     switch ( params.scalarType )
     {
     case RawParameters::ScalarType::UInt8:
-        format = gdcm::PixelFormat::UINT8;
         unitSize = 1;
         break;
     case RawParameters::ScalarType::Int8:
-        format = gdcm::PixelFormat::INT8;
         unitSize = 1;
         break;
     case RawParameters::ScalarType::UInt16:
-        format = gdcm::PixelFormat::UINT16;
         unitSize = 2;
         break;
     case RawParameters::ScalarType::Int16:
-        format = gdcm::PixelFormat::INT16;
         unitSize = 2;
         break;
     case RawParameters::ScalarType::UInt32:
-        format = gdcm::PixelFormat::UINT32;
         unitSize = 4;
         break;
     case RawParameters::ScalarType::Int32:
-        format = gdcm::PixelFormat::INT32;
         unitSize = 4;
         break;
     case RawParameters::ScalarType::Float32:
-        format = gdcm::PixelFormat::FLOAT32;
         unitSize = 4;
     break; 
     case RawParameters::ScalarType::UInt64:
-        format = gdcm::PixelFormat::UINT64;
         unitSize = 8;
         break;
     case RawParameters::ScalarType::Int64:
-        format = gdcm::PixelFormat::INT64;
         unitSize = 8;
         break;
     case RawParameters::ScalarType::Float64:
-        format = gdcm::PixelFormat::FLOAT64;
         unitSize = 8;
         break;
     default:
@@ -1021,7 +1050,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
             max = std::numeric_limits<uint32_t>::max();
         else if ( params.scalarType == RawParameters::ScalarType::UInt64 )
             max = std::numeric_limits<uint64_t>::max();
-        auto converter = getTypeConverter( format, max - min, min );
+        auto converter = getTypeConverter( params.scalarType, max - min, min );
         for ( int i = 0; i < outVolume.data.size(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );
@@ -1050,4 +1079,4 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
 
 }
 }
-#endif
+#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

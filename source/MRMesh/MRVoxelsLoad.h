@@ -1,5 +1,5 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"
@@ -24,6 +24,7 @@ MRMESH_API extern const IOFilters Filters;
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
+#ifndef MRMESH_NO_DICOM
 struct LoadDCMResult
 {
     VdbVolume vdbVolume;
@@ -43,6 +44,7 @@ MRMESH_API std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTr
 
 /// Load single DCM file as Object Voxels
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+#endif // MRMESH_NO_DICOM
 
 struct RawParameters
 {
@@ -61,6 +63,7 @@ struct RawParameters
         Int64,
         Float32,
         Float64,
+        Unknown,
         Count
     } scalarType{ ScalarType::Float32 };
 };
@@ -101,8 +104,8 @@ struct LoadingTiffSettings
 };
 /// Load voxels from a set of TIFF files
 MRMESH_API tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
-#endif
+#endif // MRMESH_NO_TIFF
 }
 
 }
-#endif
+#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

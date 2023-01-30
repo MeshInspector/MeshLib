@@ -955,7 +955,8 @@ PaletteChanges Palette(
 
         ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = currentIndex;
-        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, currentIndex != -1 ) )
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
+        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
         {
             if ( presetIndex != currentIndex )
             {
@@ -968,37 +969,33 @@ PaletteChanges Palette(
             changes = int( PaletteChanges::All );
             CloseCurrentPopup();
         }
+        ImGui::SetTooltipIfHovered( "Load one of custom presets", menuScaling );
     }
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * menuScaling, cSeparateBlocksSpacing * menuScaling } );
     bool fixZeroChanged = false;
     if ( fixZero )
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cDefaultItemSpacing * menuScaling } );
         fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
-        ImGui::PopStyleVar( 2 );
+        ImGui::SetTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
     }
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
     const auto& params = palette.getParameters();
 
-
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * menuScaling, cSeparateBlocksSpacing * menuScaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
         presetName.clear();
-    }   
-    ImGui::PopStyleVar();
-
+    }
+    ImGui::SetTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
     if ( isDiscrete )
     {
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * menuScaling * 0.5f - menuScaling );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cInputPadding * menuScaling * 0.5f - menuScaling );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
         if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
         {
@@ -1007,6 +1004,7 @@ PaletteChanges Palette(
             changes |= int( PaletteChanges::Texture );
             presetName.clear();
         }
+        ImGui::SetTooltipIfHovered( "Number of discrete levels", menuScaling );
         ImGui::PopStyleVar();
     }
 
@@ -1018,8 +1016,7 @@ PaletteChanges Palette(
     ImGui::PushItemWidth( scaledWidth );
 
     RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
-    ImGui::PopItemWidth();
-    ImGui::PushItemWidth( scaledWidth * 2.0f / 3.0f );
+    ImGui::SetTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     float ranges[4];
     ranges[0] = params.ranges.front();
     ranges[3] = params.ranges.back();
@@ -1118,13 +1115,13 @@ PaletteChanges Palette(
         else
             palette.setRangeMinMaxNegPos( ranges[0], ranges[1], ranges[2], ranges[3] );
     }
-
-    std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
+    ImGui::PopStyleVar();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
-    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( -1, 0 ) ) )
+    std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
+    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( scaledWidth - 10.0f * menuScaling, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
-
+    ImGui::SetTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
     ImGui::PopStyleVar();
 
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );

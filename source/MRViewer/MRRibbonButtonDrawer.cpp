@@ -402,7 +402,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
-bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips )
+bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips, const std::string& defaultText )
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
@@ -421,7 +421,8 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     auto res = ImGui::BeginCombo( label, nullptr, ImGuiComboFlags_NoArrowButton);
     if ( showPreview )
     {
-        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, options[*v].data(), nullptr, nullptr );
+        const char* previewText = ( v && *v >= 0 ) ? options[*v].data() : defaultText.data();
+        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, previewText, nullptr, nullptr );
     }
 
     const float halfHeight = arrowBox.GetHeight() * 0.5f;

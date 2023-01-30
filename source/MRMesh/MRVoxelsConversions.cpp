@@ -570,10 +570,15 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     };
 
     // triangulate by table
-    tbb::enumerable_thread_specific<Triangulation> triangulationPerThread;
+    struct PerThreadData
+    {
+        Triangulation t;
+        Vector<VoxelId, FaceId> faceMap;
+    };
+    tbb::enumerable_thread_specific<PerThreadData> triangulationPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, volume.data.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& localTriangulation = triangulationPerThread.local();
+        auto& [t, faceMap] = triangulationPerThread.local();
         std::array<SeparationPointMap::const_iterator, 7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
@@ -623,17 +628,19 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
                 assert( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );
 
                 if ( params.lessInside )
-                    localTriangulation.emplace_back( ThreeVertIds{
+                    t.emplace_back( ThreeVertIds{
                     iters[interIndex0]->second[dir0].vid,
                     iters[interIndex2]->second[dir2].vid,
                     iters[interIndex1]->second[dir1].vid
                     } );
                 else
-                    localTriangulation.emplace_back( ThreeVertIds{
+                    t.emplace_back( ThreeVertIds{
                     iters[interIndex0]->second[dir0].vid,
                     iters[interIndex1]->second[dir1].vid,
                     iters[interIndex2]->second[dir2].vid
                     } );
+                if ( params.outVoxelPerFaceMap )
+                    faceMap.emplace_back( VoxelId{ ind } );
             }
         }
     }, tbb::static_partitioner() );
@@ -644,10 +651,15 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     // create result triangulation
     Mesh result;
     Triangulation resTriangulation;
-    for ( auto& triangulation : triangulationPerThread )
+    if ( params.outVoxelPerFaceMap )
+        params.outVoxelPerFaceMap->clear();
+    for ( auto& [t,faceMap] : triangulationPerThread )
     {
         resTriangulation.vec_.insert( resTriangulation.vec_.end(),
-            std::make_move_iterator( triangulation.vec_.begin() ), std::make_move_iterator( triangulation.vec_.end() ) );
+            std::make_move_iterator( t.vec_.begin() ), std::make_move_iterator( t.vec_.end() ) );
+        if ( params.outVoxelPerFaceMap )
+            params.outVoxelPerFaceMap->vec_.insert( params.outVoxelPerFaceMap->vec_.end(),
+                std::make_move_iterator( faceMap.vec_.begin() ), std::make_move_iterator( faceMap.vec_.end() ) );
     }
     result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
     result.points.resize( result.topology.lastValidVert() + 1 );

@@ -96,13 +96,17 @@ struct SeparationPoint
 {
     Vector3f position; // coordinate
     bool low{ false }; // orientation: true means that baseVoxelId has lower value
-    VertId vid;
+    VertId vid; // any valid VertId is ok
+    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
+    // so there are some points present in map that are not valid
+    explicit operator bool() const
+    {
+        return vid.valid();
+    }
 };
 
 using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
 using SeparationPointMap = ParallelHashMap<size_t, SeparationPointSet>;
-
-using SubSetVertConter = std::vector<int>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -436,7 +440,7 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         auto bPos = params.basis.b + params.basis.A * ( Vector3f( indexer.toPos( VoxelId( base ) ) ) + Vector3f::diagonal( 0.5f ) );
         auto dPos = params.basis.b + params.basis.A * ( Vector3f( indexer.toPos( VoxelId( nextId ) ) ) + Vector3f::diagonal( 0.5f ) );
         res.position = ( 1.0f - ratio ) * bPos + ratio * dPos;
-        res.vid = VertId{ 0 }; // any valid VertId is ok
+        res.vid = VertId{ 0 };
         return res;
     };
 
@@ -446,12 +450,11 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
 
     SeparationPointMap hmap;
     const auto subcnt = hmap.subcnt();
-    tbb::enumerable_thread_specific<SubSetVertConter> threadSubSetVertCounters( SubSetVertConter( subcnt, 0 ) );
     // find all separate points
+    // fill map in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        auto& localSubSetCounter = threadSubSetVertCounters.local()[range.begin()];
         for ( size_t i = 0; i < volume.data.size(); ++i )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
@@ -466,9 +469,8 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
             for ( int n = NeighborDir::X; n < NeighborDir::Count; ++n )
             {
                 auto separation = setupSeparation( i, NeighborDir( n ) );
-                if ( separation.vid )
+                if ( separation )
                 {
-                    separation.vid = VertId( localSubSetCounter++ );
                     set[n] = std::move( separation );
                     atLeastOneOk = true;
                 }
@@ -493,36 +495,88 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     if ( params.cb && !keepGoing )
         return {};
 
-    SubSetVertConter resultSubSetVertCounter( subcnt, 0 );
-    for ( const auto& counter : threadSubSetVertCounters )
-        for ( int i = 0; i < counter.size(); ++i )
-            resultSubSetVertCounter[i] += counter[i];
-
-    // numerate verts in parallel (to have packed mesh as result)
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    // numerate verts in parallel (to have packed mesh as result, determined numeration independent of thread number)
+    struct VertsNumeration
+    {
+        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
+        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
+        size_t initIndex{ 0 };
+        size_t numVerts{ 0 };
+    };
+    using PerThreadVertNumeration = std::vector<VertsNumeration>;
+    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, volume.data.size() ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
+        auto& localNumeration = perThreadVertNumeration.local();
+        localNumeration.emplace_back( range.begin(), 0 );
+        auto& thisRangeNumeration = localNumeration.back().numVerts;
+        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
+        {
+            // as far as map is filled, change of each individual value should be safe
+            auto mapIter = hmap.find( ind );
+            if ( mapIter == hmap.cend() )
+                continue;
+            for ( auto& dir : mapIter->second )
+                if ( dir )
+                    dir.vid = VertId( thisRangeNumeration++ );
+        }
+    }, tbb::static_partitioner() );// static_partitioner to have bigger grains
+
+    // organize vert numeration
+    std::vector<VertsNumeration> resultVertNumeration;
+    for ( auto& perTrheadNum : perThreadVertNumeration )
+    {
+        // remove empty
+        perTrheadNum.erase( std::remove_if( perTrheadNum.begin(), perTrheadNum.end(),
+            [] ( const auto& obj ) { return obj.numVerts == 0; } ), perTrheadNum.end() );
+        if ( perTrheadNum.empty() )
+            continue;
+        // accum not empty
+        resultVertNumeration.insert( resultVertNumeration.end(),
+            std::make_move_iterator( perTrheadNum.begin() ), std::make_move_iterator( perTrheadNum.end() ) );
+    }
+    // sort by voxel index
+    std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
+    {
+        return l.initIndex < r.initIndex;
+    } );
+
+    auto getVertIndexShiftForVoxelId = [&] ( size_t ind )
+    {
+        size_t shift = 0;
+        for ( int i = 1; i < resultVertNumeration.size(); ++i )
+        {
+            if ( ind >= resultVertNumeration[i].initIndex )
+                shift += resultVertNumeration[i - 1].numVerts;
+        }
+        return VertId( shift );
+    };
+
+    // update map with determined vert indices
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    [&] ( const tbb::blocked_range<size_t>& range )
+    {
         assert( range.begin() + 1 == range.end() );
-        int sumShift = 0;
-        for ( int i = 0; i < range.begin(); ++i )
-            sumShift += resultSubSetVertCounter[i];
         hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
         {
             // const_cast here is safe, we don't write to map, just change internal data
-            for ( auto& separation : const_cast< SeparationPointMap::EmbeddedSet& >( subSet ) )
+            for ( auto& [ind, set] : const_cast< SeparationPointMap::EmbeddedSet& >( subSet ) )
             {
-                for ( int i = 0; i < NeighborDir::Count; ++i )
-                    if ( separation.second[i].vid.valid() )
-                        separation.second[i].vid += sumShift;
+                auto vertShift = getVertIndexShiftForVoxelId( ind );
+                for ( auto& sepPoint : set )
+                    if ( sepPoint )
+                        sepPoint.vid += vertShift;
             }
         } );
     } );
+
 
     if ( params.cb && !params.cb( 0.5f ) )
         return {};
 
     // check neighbor iterator valid
-    auto checkIter = [&] ( const auto& iter, int mode )
+    auto checkIter = [&] ( const auto& iter, int mode ) -> bool
     {
         switch ( mode )
         {
@@ -532,37 +586,37 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Y].vid.valid() || iter->second[NeighborDir::Z].vid.valid();
+            return iter->second[NeighborDir::Y] || iter->second[NeighborDir::Z];
         }
         case 2: // y + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X].vid.valid() || iter->second[NeighborDir::Z].vid.valid();
+            return iter->second[NeighborDir::X] || iter->second[NeighborDir::Z];
         }
         case 3: // x + 1, y + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Z].vid.valid();
+            return bool( iter->second[NeighborDir::Z] );
         }
         case 4: // z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X].vid.valid() || iter->second[NeighborDir::Y].vid.valid();
+            return iter->second[NeighborDir::X] || iter->second[NeighborDir::Y];
         }
         case 5: // x + 1, z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Y].vid.valid();
+            return bool( iter->second[NeighborDir::Y] );
         }
         case 6: // y + 1, z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X].vid.valid();
+            return bool( iter->second[NeighborDir::X] );
         }
         default:
             return false;
@@ -570,15 +624,25 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     };
 
     // triangulate by table
-    struct PerThreadData
+    struct TriangulationData
     {
+        size_t initInd{ 0 }; // this is needed to have determined topology independent of threads number
         Triangulation t;
         Vector<VoxelId, FaceId> faceMap;
     };
-    tbb::enumerable_thread_specific<PerThreadData> triangulationPerThread;
+    using PerThreadTriangulation = std::vector<TriangulationData>;
+    tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, volume.data.size() ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        auto& [t, faceMap] = triangulationPerThread.local();
+        // setup local triangulation
+        auto& localTriangulatoinData = triangulationPerThread.local();
+        localTriangulatoinData.emplace_back();
+        auto& thisTriData = localTriangulatoinData.back();
+        thisTriData.initInd = range.begin();
+        auto& t = thisTriData.t;
+        auto& faceMap = thisTriData.faceMap;
+
+        // cell data
         std::array<SeparationPointMap::const_iterator, 7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
@@ -648,12 +712,31 @@ std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Simple
     if ( params.cb && !keepGoing )
         return {};
 
+    // organize per thread triangulation
+    std::vector<TriangulationData> resTriangulatoinData;
+    for ( auto& threadTriData : triangulationPerThread )
+    {
+        // remove empty
+        threadTriData.erase( std::remove_if( threadTriData.begin(), threadTriData.end(),
+            [] ( const auto& obj ) { return obj.t.empty(); } ), threadTriData.end() );
+        if ( threadTriData.empty() )
+            continue;
+        // accum not empty
+        resTriangulatoinData.insert( resTriangulatoinData.end(),
+            std::make_move_iterator( threadTriData.begin() ), std::make_move_iterator( threadTriData.end() ) );
+    }
+    // sort by voxel index
+    std::sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r )
+    {
+        return l.initInd < r.initInd;
+    } );
+
     // create result triangulation
     Mesh result;
     Triangulation resTriangulation;
     if ( params.outVoxelPerFaceMap )
         params.outVoxelPerFaceMap->clear();
-    for ( auto& [t,faceMap] : triangulationPerThread )
+    for ( auto& [ind, t, faceMap] : resTriangulatoinData )
     {
         resTriangulation.vec_.insert( resTriangulation.vec_.end(),
             std::make_move_iterator( t.vec_.begin() ), std::make_move_iterator( t.vec_.end() ) );

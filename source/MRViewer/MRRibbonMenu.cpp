@@ -884,7 +884,7 @@ void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f - ImGui::GetStyle().CellPadding.y * 0.5f );
 
-    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons ) } );
+    buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,cBigIconSize } );
 }
 
 void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, int setFrontIndex, int setLength, bool withText )
@@ -1355,7 +1355,12 @@ void RibbonMenu::drawRibbonSceneList_()
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = ImGui::GetWindowSize();
-    if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
+    static bool firstTime = true;
+    if ( firstTime )
+    {
+        firstTime = false; // this is needed because GetWindowSize() lag in on frame
+    }
+    else if ( newSize.x != sceneSize_.x || newSize.y != sceneSize_.y )
     {
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
@@ -1694,7 +1699,7 @@ void RibbonMenu::drawToolbarWindow_()
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( font )
     {
-        font->Scale = customizeBtnSize.y * 0.5f / RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::Icons );
+        font->Scale = customizeBtnSize.y * 0.5f / ( cBigIconSize * menuScaling );
         ImGui::PushFont( font );
     }
 

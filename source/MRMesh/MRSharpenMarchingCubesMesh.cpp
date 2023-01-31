@@ -3,7 +3,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
-#include "MRGeodesicPath.h"
+#include "MRTriMath.h"
 
 namespace MR
 {
@@ -134,11 +134,16 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             auto b = vox.topology.dest( vox.topology.prev( e ) );
             if ( b > v )
             {
-                auto ap = vox.points[ vox.topology.org( e ) ];
-                auto bp = vox.points[ b ];
-                auto cp = vox.points[ vox.topology.dest( e ) ];
-                auto dp = vox.points[ v ];
-                if ( isUnfoldQuadrangleConvex( ap, bp, cp, dp ) )
+                 auto ap = vox.points[ vox.topology.org( e ) ];
+                 auto bp = vox.points[ b ];
+                 auto cp = vox.points[ vox.topology.dest( e ) ];
+                 auto dp = vox.points[ v ];
+                 auto nABD = normal( ap, bp, dp );
+                 auto nBCD = normal( bp, cp, dp );
+                 // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
+                 // which isUnfoldQuadrangleConvex here did not allow;
+                 // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
+                 if ( dot( nABD, nBCD ) > -0.9f )
                     sharpEdges.push_back( e );
             }
         }

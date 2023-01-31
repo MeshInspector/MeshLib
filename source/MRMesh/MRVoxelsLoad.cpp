@@ -19,6 +19,11 @@
 #include <gdcmTagKeywords.h>
 #endif // MRMESH_NO_DICOM
 
+#include <MRPch/MROpenvdb.h>
+#include <openvdb/tools/GridTransformer.h>
+#include <openvdb/tools/Interpolation.h>
+#include <MRPch/MRTBB.h>
+
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF
@@ -695,55 +700,97 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     return loadRaw( filepathToOpen, outParams, cb );
 }
 
-tl::expected<MR::VdbVolume, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
-    if ( cb && !cb( 0.01f ) )
+    if ( cb && !cb( 0.f ) )
         return tl::make_unexpected( getCancelMessage( path ) );
     openvdb::io::File file( path.string() );
     openvdb::initialize();
     file.open();
-    VdbVolume res;
+    std::vector<VdbVolume> res;
     auto grids = file.getGrids();
     file.close();
     if ( grids )
     {
+        auto& gridsRef = *grids;
         if ( grids->size() == 0 )
-            tl::make_unexpected( std::string( "Nothing to read" ) );
-        else if ( grids->size() > 1 )
-            tl::make_unexpected( std::string( "Too many grids" ) );
-        if ( !( *grids )[0] )
-            tl::make_unexpected( std::string( "Nothing to read" ) );
+            tl::make_unexpected( std::string( "Nothing to load" ) );
 
-        OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( ( *grids )[0] ) ) );
-        res.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
+        bool anyLoaded = false;
+        int size = int( gridsRef.size() );
+        int i = 0;
+        ProgressCallback scaledCb;
+        if ( cb )
+            scaledCb = [cb, &i, size] ( float v ) { return cb( ( i + v ) / size ); };
+        for ( i = 0; i < size; ++i )
+        {
+            if ( !gridsRef[i] )
+                continue;
+
+            OpenVdbFloatGrid ovfg( std::move( *std::dynamic_pointer_cast< openvdb::FloatGrid >( gridsRef[i] ) ) );
+            VdbVolume vdbVolume;
+            vdbVolume.data = std::make_shared<OpenVdbFloatGrid>( std::move( ovfg ) );
+
+            if ( !vdbVolume.data )
+                continue;
+
+            const auto dims = vdbVolume.data->evalActiveVoxelDim();
+            const auto voxelSize = vdbVolume.data->voxelSize();
+            for ( int j = 0; j < 3; ++j )
+            {
+                vdbVolume.dims[j] = dims[j];
+                vdbVolume.voxelSize[j] = float( voxelSize[j] );
+            }
+            auto minMax = openvdb::tools::minMax( vdbVolume.data->tree() );
+            vdbVolume.min = float( minMax.min() );
+            vdbVolume.max = float( minMax.max() );
+
+            if ( scaledCb && !scaledCb( 0.1f ) )
+                return tl::make_unexpected( getCancelMessage( path ) );
+
+            const auto gridBB = vdbVolume.data->evalActiveVoxelBoundingBox();
+            const Vector3i min{ gridBB.min().x(), gridBB.min().y(), gridBB.min().z() };
+            FloatGrid targetGrid = std::make_shared<OpenVdbFloatGrid>();
+            openvdb::tools::changeBackground( targetGrid->tree(), vdbVolume.data->background() );
+            targetGrid->setGridClass( vdbVolume.data->getGridClass() );
+            openvdb::FloatGrid::Accessor accessorSource = vdbVolume.data->getAccessor();
+            openvdb::FloatGrid::Accessor accessorTarget = targetGrid->getAccessor();
+            // TODO need parallelize
+            for ( int ix = 0; ix < dims.x(); ++ix )
+            {
+                for ( int iy = 0; iy < dims.y(); ++iy )
+                for ( int iz = 0; iz < dims.z(); ++iz )
+                {
+                    const float val = accessorSource.getValue( { ( ix + min.x ), ( iy + min.y ), ( iz + min.z ) } );
+                    accessorTarget.setValue( { ix, iy, iz }, val );
+                }
+
+                if ( scaledCb && !scaledCb( 0.1f + 0.9f * ix / dims.x() ) )
+                    return tl::make_unexpected( getCancelMessage( path ) );
+            }
+            vdbVolume.data = targetGrid;
+            // TODO END
+
+            if ( cb && !cb( (1.f + i ) / size ) )
+                return tl::make_unexpected( getCancelMessage( path ) );
+
+            res.emplace_back( std::move( vdbVolume ) );
+
+            anyLoaded = true;
+        }
+        if ( !anyLoaded )
+            tl::make_unexpected( std::string( "No loaded grids" ) );
     }
     else
         tl::make_unexpected( std::string( "Nothing to read" ) );
 
-    if ( !res.data )
-        return tl::make_unexpected( std::string( "Error reading grid" ) );
-
-    if ( cb && !cb( 0.5f ) )
-        return tl::make_unexpected( getCancelMessage( path ) );
-
-    const auto dims = res.data->evalActiveVoxelDim();
-    for ( int i = 0; i < 3; ++i )
-        res.dims[i] = dims[i];
-    const auto voxelSize = res.data->voxelSize();
-    for ( int i = 0; i < 3; ++i )
-        res.voxelSize[i] = float( voxelSize[i] );
-    
-    auto minMax = openvdb::tools::minMax( res.data->tree() );
-    res.min = float( minMax.min() );
-    res.max = float( minMax.max() );
-
-    if ( cb && !cb( 0.99f ) )
-        return tl::make_unexpected( getCancelMessage( path ) );
+    if ( cb )
+        cb( 1.f );
 
     return res;
 }
 
-tl::expected<MR::VdbVolume, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -752,7 +799,7 @@ tl::expected<MR::VdbVolume, std::string> fromAnySupportedFormat( const std::file
     if ( ext == ".vdb" )
         return fromVdb( path, cb );
     else
-        return tl::make_unexpected( std::string( "unsupported file extension" ) );
+        return tl::make_unexpected( std::string( "Unsupported file extension" ) );
 }
 
 struct TiffParams

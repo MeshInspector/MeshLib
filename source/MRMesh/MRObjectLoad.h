@@ -25,7 +25,7 @@ MRMESH_API tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFro
 
 #ifndef __EMSCRIPTEN__
 /// loads voxels from given file in new object
-MRMESH_API tl::expected<ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 #endif
 
 /**

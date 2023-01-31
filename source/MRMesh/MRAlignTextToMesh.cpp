@@ -23,7 +23,7 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
     AffineXf3f transform;
 
     const auto& vecx = params.direction;
-    const auto norm = mesh.leftNormal( params.startPoint.id );
+    const auto norm = params.textNormal != nullptr ? *params.textNormal : mesh.leftNormal( params.startPoint.id );
     const auto vecy = cross( vecx, -norm ).normalized();
 
     AffineXf3f rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusX(), vecx ) );

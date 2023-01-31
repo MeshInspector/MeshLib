@@ -22,6 +22,8 @@ struct TextMeshAlignParams : SymbolMeshParams
     EdgeIdAndCoord startPoint;
     // Direction of text
     Vector3f direction;
+    // Text normal. If nullptr - uses mesh normal
+    Vector3f* textNormal{nullptr};
     // Font height, meters
     float fontHeight{1.0f};
     // Text mesh inside and outside offset of input mesh

@@ -951,7 +951,7 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
     DrawTabConfig res( groupsInTab.size() );
     const auto& style = ImGui::GetStyle();
     const float screenWidth = float( getViewerInstance().window_width ) - ImGui::GetCursorScreenPos().x -
-        float( groupsInTab.size() ) - 1.0f;
+        ( float( groupsInTab.size() ) + 1.0f ) * menu_scaling();
     std::vector<float> groupWidths( groupsInTab.size() );
     float sumWidth = 0.0f;
 

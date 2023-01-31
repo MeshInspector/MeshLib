@@ -207,7 +207,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
 
     const auto itemsInBuffer = std::min( numTris, 32768u );
     std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
-    std::vector<MeshBuilder::ThreePoints> chunk( itemsInBuffer );
+    std::vector<ThreePoints> chunk( itemsInBuffer );
 
     // first chunk
     in.read( (char*)buffer.data(), sizeof(StlTriangle) * itemsInBuffer );

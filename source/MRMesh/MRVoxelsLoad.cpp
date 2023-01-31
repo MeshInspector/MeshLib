@@ -1067,6 +1067,8 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     }
 
     VdbVolume res;
+    if ( params.gridLevelSet )
+        outVolume.background = std::numeric_limits<float>::max();
     res.data = simpleVolumeToDenseGrid( outVolume );
     if ( params.gridLevelSet )
         res.data->setGridClass( openvdb::GRID_LEVEL_SET );

@@ -42,7 +42,7 @@ private:
     void bind_();
 };
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 // Class for easy controlling slice with seeds marks
 class MarkedVoxelSlice : public ImGuiImage
 {

@@ -31,12 +31,14 @@ public:
     virtual bool action() override;
 };
 
+#ifndef MRMESH_NO_DICOM
 class OpenDICOMsMenuItem : public RibbonMenuItem
 {
 public:
     OpenDICOMsMenuItem();
     virtual bool action() override;
 };
+#endif
 
 class SaveObjectMenuItem : public RibbonMenuItem, 
     public SceneStateOrCheck< 
@@ -44,7 +46,7 @@ class SaveObjectMenuItem : public RibbonMenuItem,
     , SceneStateExactCheck<1, ObjectLines>
     , SceneStateExactCheck<1, ObjectPoints>
     , SceneStateExactCheck<1, ObjectDistanceMap>
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     , SceneStateExactCheck<1, ObjectVoxels> 
 #endif
     >

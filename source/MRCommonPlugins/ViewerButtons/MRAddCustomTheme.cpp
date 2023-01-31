@@ -222,7 +222,7 @@ void AddCustomThemePlugin::save_()
 MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );

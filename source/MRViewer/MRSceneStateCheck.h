@@ -35,7 +35,7 @@ inline bool model( const ObjectMesh& obj )
 {
     return bool( obj.mesh() );
 }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 inline bool model( const ObjectVoxels& obj )
 {
     return bool( obj.grid() );

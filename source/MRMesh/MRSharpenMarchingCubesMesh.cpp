@@ -4,6 +4,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
 #include "MRTriMath.h"
+#include "MRMeshDelone.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -11,6 +13,7 @@ namespace MR
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
+    MR_TIMER
     Vector<Vector3f, VertId> normals( vox.topology.vertSize() );
     // find normals and correct points
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
@@ -165,6 +168,20 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         if ( good )
             vox.topology.flipEdge( e );
     }
+
+    // fix inversed triangles appeared during introduction of new vertices inside voxels
+    FaceBitSet checkFaces( vox.topology.faceSize() );
+    for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
+    {
+        for ( auto ei : orgRing( vox.topology, v ) )
+            if ( auto l = vox.topology.left( ei ) )
+                checkFaces.set( l );
+    }
+    makeDeloneEdgeFlips( vox,
+    {
+        .maxDeviationAfterFlip = settings.newVertDev,
+        .region = &checkFaces
+    }, 3 );
 }
 
 } //namespace MR

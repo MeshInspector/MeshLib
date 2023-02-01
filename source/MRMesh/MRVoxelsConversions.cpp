@@ -420,11 +420,6 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
 
     using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 
-    const std::array<size_t, size_t( NeighborDir::Count )> cDirStep{
-        1,
-        size_t( volume.dims.x ),
-        indexer.sizeXY()
-    };
     // function to find coordinate of new point on edge
     auto setupSeparation = [&] ( const ConstAccessor& acc, size_t base, NeighborDir dir )->SeparationPoint
     {

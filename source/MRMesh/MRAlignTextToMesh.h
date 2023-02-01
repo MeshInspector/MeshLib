@@ -15,6 +15,9 @@ struct TextMeshAlignParams : SymbolMeshParams
 {
     // Start coordinate on mesh, represent lowest left corner of text
     MeshTriPoint startPoint;
+    // Position of the startPoint in a text bounding box
+    // (0, 0) - bottom left, (0, 1) - bottom right, (0.5, 0.5) - center, (1, 1) - top right
+    Vector2f pivotPoint{0.0f, 0.0f};
     // Direction of text
     Vector3f direction;
     // Text normal to surface, if nullptr - use mesh normal at `startPoint`

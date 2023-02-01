@@ -158,6 +158,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "startPoint", &TextMeshAlignParams::startPoint, "Start coordinate on mesh, represent lowest left corner of text" ).
+        def_readwrite( "pivotPoint", &TextMeshAlignParams::pivotPoint, "Position of the startPoint in a text bounding box" ).
         def_readwrite( "direction", &TextMeshAlignParams::direction, "Direction of text" ).
         def_readwrite( "fontHeight", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).

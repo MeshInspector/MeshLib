@@ -26,12 +26,16 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
     const auto norm = params.textNormal != nullptr ? *params.textNormal : mesh.leftNormal( params.startPoint.e );
     const auto vecy = cross( vecx, -norm ).normalized();
 
+    const Vector3f pivotCoord{ bbox.min.x + (bbox.max.x - bbox.min.x) * params.pivotPoint.x,
+                               bbox.min.y + (bbox.max.y - bbox.min.y) * params.pivotPoint.y,
+                               0.0f };
+
     AffineXf3f rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusX(), vecx ) );
     AffineXf3f rot2 = AffineXf3f::linear( Matrix3f::rotation( rot1( Vector3f::plusY() ), vecy ) );
     float scale = params.fontHeight / diagonal.y;
     auto translation = mesh.triPoint( params.startPoint );
 
-    transform = AffineXf3f::translation( translation )*AffineXf3f::linear( Matrix3f::scale( scale ) )* rot2* rot1;
+    transform = AffineXf3f::translation( translation )*AffineXf3f::linear( Matrix3f::scale( scale ) )* rot2* rot1* AffineXf3f::translation( -pivotCoord );
 
     auto& textMeshPoints = textMesh.points;
     for ( auto& p : textMeshPoints )

@@ -8,6 +8,29 @@
 namespace MR
 {
 
+/// tests all edges e having valid left and right faces and v == org(e);
+/// if the test has passed, then flips the edge so decreasing the degree of vertex v
+template<typename T>
+void flipEdgesAway( MeshTopology & topology, EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        if ( topology.left( e ) && topology.right( e ) && flipNeeded( e ) )
+        {
+            e0 = topology.next( e );
+            topology.flipEdge( e );
+            e = e0;
+        }
+        else
+        {
+            e = topology.next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
+}
+
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
@@ -143,7 +166,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                  // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
                  // which isUnfoldQuadrangleConvex here did not allow;
                  // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
-                 if ( dot( nABD, nBCD ) > -0.9f )
+                 if ( dot( nABD, nBCD ) >= settings.minNormalDot )
                     sharpEdges.push_back( e );
             }
         }
@@ -164,6 +187,35 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         }
         if ( good )
             vox.topology.flipEdge( e );
+    }
+
+    // eliminate triangles with inversed normals appeared during new vertex introduction in a voxel
+    for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
+    {
+        flipEdgesAway( vox.topology, vox.topology.edgeWithOrg( v ), [&]( EdgeId e )
+        {
+            assert( vox.topology.org( e ) == v );
+            auto ap = vox.points[ v ];
+            auto b = vox.topology.dest( vox.topology.prev( e ) );
+            auto bp = vox.points[ b ];
+            auto cp = vox.points[ vox.topology.dest( e ) ];
+            auto d = vox.topology.dest( vox.topology.next( e ) );
+            auto dp = vox.points[ d ];
+            auto nABC = normal( ap, bp, cp );
+            auto nACD = normal( ap, cp, dp );
+            if ( dot( nABC, nACD ) >= settings.minNormalDot )
+                return false; // incident triangles are not inversed
+            auto nABD = normal( ap, bp, dp );
+            auto nBCD = normal( bp, cp, dp );
+            if ( dot( nABD, nBCD ) < settings.minNormalDot )
+                return false; // incident triangles will remain inversed after flipping
+            for ( auto ei : orgRing( vox.topology, b ) )
+            {
+                if ( vox.topology.dest( ei ) == d )
+                    return false; // multiple edges between b and d will appear
+            }
+            return true;
+        } );
     }
 }
 

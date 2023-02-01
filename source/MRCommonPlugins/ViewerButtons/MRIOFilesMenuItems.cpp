@@ -80,7 +80,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
             return filter.extension == "*.*";
         } );
 #else
+#ifndef MRMESH_NO_VOXEL
         filters_ = filters_ | VoxelsLoad::Filters;
+#endif
 #endif
     } );
 }
@@ -237,6 +239,7 @@ bool OpenDirectoryMenuItem::action()
                     };
             } );
         }
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
         else
         {
             ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = Viewer::instance()] () -> std::function<void()>
@@ -286,10 +289,12 @@ bool OpenDirectoryMenuItem::action()
                 };
             }, 3 );
         }
+#endif
     }
     return false;
 }
 
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
@@ -379,6 +384,7 @@ bool OpenDICOMsMenuItem::action()
     return false;
 }
 #endif
+#endif
 
 SaveObjectMenuItem::SaveObjectMenuItem() :
     RibbonMenuItem( "Save object" )
@@ -417,7 +423,7 @@ bool SaveObjectMenuItem::action()
             updateFilters( ObjType::Points, PointsSave::Filters );
         if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
             updateFilters( ObjType::DistanceMap, DistanceMapSave::Filters );
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             updateFilters( ObjType::Voxels, VoxelsSave::Filters );
 #endif
@@ -432,7 +438,7 @@ bool SaveObjectMenuItem::action()
             sortedFilters = PointsSave::Filters;
         if ( std::dynamic_pointer_cast< ObjectDistanceMap >( obj ) )
             sortedFilters = DistanceMapSave::Filters;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
         if ( std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             sortedFilters = VoxelsSave::Filters;
 #endif
@@ -857,7 +863,9 @@ MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
+#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
+#endif
 
 MR_REGISTER_RIBBON_ITEM( SaveSelectedMenuItem )
 

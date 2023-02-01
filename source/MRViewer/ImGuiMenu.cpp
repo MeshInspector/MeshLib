@@ -2293,7 +2293,7 @@ void ImGuiMenu::draw_mr_menu()
                     SceneRoot::get().addChild( obj );
                     viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
                 else
                 {
                     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
@@ -2336,7 +2336,7 @@ void ImGuiMenu::draw_mr_menu()
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
             auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             filters = filters | VoxelsSave::Filters;
 #endif
             auto savePath = saveFileDialog( { {}, {}, filters } );

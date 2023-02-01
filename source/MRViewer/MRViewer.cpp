@@ -753,9 +753,9 @@ void Viewer::shutdownPlugins_()
         menuPlugin_->shutdown();
 }
 
-void Viewer::parseCommandLine_( int argc, char** argv )
+void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char** argv )
 {
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PYTHON)
     std::vector<std::filesystem::path> supportedFiles;
     for ( int i = 1; i < argc; ++i )
     {
@@ -863,7 +863,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extension.find( ext ) != std::string::npos )
             return true;
     }
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM )
+#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM ) && !defined(MRMESH_NO_VOXEL)
     for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extension.find( ext ) != std::string::npos )

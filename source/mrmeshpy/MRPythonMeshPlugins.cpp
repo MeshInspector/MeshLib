@@ -155,11 +155,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
 
     m.def( "createSymbolsMesh", &MR::createSymbolsMesh, pybind11::arg( "params" ), "converts text string into Z-facing symbol mesh" );
 
-    pybind11::class_<EdgeIdAndCoord>( m, "EdgeIdAndCoord", "This structure represents point on mesh, by EdgeId (point should be in left triangle of this edge) and coordinate" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "id", &EdgeIdAndCoord::id ).
-        def_readwrite( "coord", &EdgeIdAndCoord::coord );
-
     pybind11::class_<TextMeshAlignParams, SymbolMeshParams>( m, "TextAlignParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "startPoint", &TextMeshAlignParams::startPoint, "Start coordinate on mesh, represent lowest left corner of text" ).

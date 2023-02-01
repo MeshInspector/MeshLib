@@ -136,8 +136,10 @@ tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::pat
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    
-    if ( ext == ".vdb" )
+
+    if ( ext == ".raw" )
+        return saveRaw( path, vdbVolume, callback );
+    else if ( ext == ".vdb" )
         return toVdb( path, vdbVolume, callback );
     else
         return tl::make_unexpected( std::string( "unsupported file extension" ) );

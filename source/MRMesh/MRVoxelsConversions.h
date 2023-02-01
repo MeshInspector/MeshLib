@@ -1,4 +1,5 @@
 #pragma once
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRSimpleVolume.h"
@@ -26,7 +27,7 @@ struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
     } signMode{ TopologyOrientation };
 };
 
-struct SimpleVolumeToMeshParams : BaseVolumeConversionParams
+struct VdbVolumeToMeshParams : BaseVolumeConversionParams
 {
     float iso{ 0.0f };
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
@@ -37,8 +38,9 @@ struct SimpleVolumeToMeshParams : BaseVolumeConversionParams
 // returns nullopt if operation was canceled
 MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params = {} );
 
-// makes Mesh from SimpleVolume with given params
+// makes Mesh from VdbVolume with given params
 // returns nullopt if operation was canceled
-MRMESH_API std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const SimpleVolumeToMeshParams& params = {} );
+MRMESH_API std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToMeshParams& params = {} );
 
 }
+#endif

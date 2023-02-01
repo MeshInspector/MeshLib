@@ -77,7 +77,7 @@ tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::
             result = tl::make_unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
     }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
     {
         auto ext = filename.extension().u8string();

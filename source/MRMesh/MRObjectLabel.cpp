@@ -88,7 +88,7 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
         MR::MeshSave::toMrmesh( *mesh, filename );
     };
 #else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
         MR::MeshSave::toMrmesh( *mesh, filename );
     };

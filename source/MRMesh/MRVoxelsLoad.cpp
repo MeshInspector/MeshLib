@@ -1,4 +1,4 @@
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRVoxelsLoad.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
@@ -1116,7 +1116,10 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( outVolume );
     if ( params.gridLevelSet )
+    {
+        openvdb::tools::changeBackground( res.data->tree(), outVolume.max );
         res.data->setGridClass( openvdb::GRID_LEVEL_SET );
+    }
     res.dims = outVolume.dims;
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;

@@ -1,5 +1,5 @@
 #pragma once
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"
@@ -24,7 +24,7 @@ MRMESH_API extern const IOFilters Filters;
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
-#ifndef MRMESH_NO_DICOM
+#if !defined(MRMESH_NO_DICOM)
 struct LoadDCMResult
 {
     VdbVolume vdbVolume;

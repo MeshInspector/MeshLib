@@ -19,7 +19,7 @@ struct EdgeIdAndCoord
 struct TextMeshAlignParams : SymbolMeshParams
 {
     // Start coordinate on mesh, represent lowest left corner of text
-    EdgeIdAndCoord startPoint;
+    MeshTriPoint startPoint;
     // Position of the startPoint in a text bounding box
     // (x, y), where 0 <= x,y <= 1,  x - horizontal, y - vertical
     // (0, 0) - bottom left, (0, 1) - bottom right, (0.5, 0.5) - center, (1, 1) - top right

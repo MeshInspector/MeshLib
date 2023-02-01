@@ -48,8 +48,12 @@ struct [[nodiscard]] Mesh
     // returns three points of left face of e
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
+    [[nodiscard]] ThreePoints getLeftTriPoints( EdgeId e ) const { ThreePoints res; getLeftTriPoints( e, res[0], res[1], res[2] ); return res; }
+    // returns three points of given face
     void getTriPoints( FaceId f, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const { getLeftTriPoints( topology.edgeWithLeft( f ), v0, v1, v2 ); }
     void getTriPoints( FaceId f, Vector3f (&v)[3] ) const { getTriPoints( f, v[0], v[1], v[2] ); }
+    [[nodiscard]] ThreePoints getTriPoints( FaceId f ) const { ThreePoints res; getTriPoints( f, res[0], res[1], res[2] ); return res; }
+
     // returns interpolated coordinates of given point
     [[nodiscard]] MRMESH_API Vector3f triPoint( const MeshTriPoint & p ) const;
     // returns the centroid of given triangle

@@ -87,37 +87,37 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             }
         } while ( e != e0 );
 
-        if ( sumArea > 0 )
+        if ( sumArea <= 0 )
+            continue; //degenerate triangles within voxel
+
+        Vector3f avgPt = sumAC / sumArea;
+        auto sharpPt = pacc.findBestCrossPoint( avgPt );
+        if ( ( avgPt - sharpPt ).lengthSq() <= sqr( settings.newVertDev ) )
+            continue; //too little deviation of new point to introduce a vertex in mesh
+
+        auto v = vox.splitFace( f );
+        assert( v >= firstNewVert );
+        vox.points.autoResizeSet( v, sharpPt );
+        for ( auto ei : orgRing( vox.topology, v ) )
+            face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
+        // connect new vertex with every vertex from the voxel
+        vox.topology.flipEdgesAround( v, [&]( EdgeId e )
         {
-            Vector3f avgPt = sumAC / sumArea;
-            auto sharpPt = pacc.findBestCrossPoint( avgPt );
-            if ( ( avgPt - sharpPt ).lengthSq() > sqr( settings.newVertDev ) )
+            auto r = vox.topology.right( e );
+            assert( r );
+            if ( face2voxel[r] == voxel )
             {
-                auto v = vox.splitFace( f );
-                assert( v >= firstNewVert );
-                vox.points.autoResizeSet( v, sharpPt );
-                for ( auto ei : orgRing( vox.topology, v ) )
-                    face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
-                // connect new vertex with every vertex from the voxel
-                vox.topology.flipEdgesAround( v, [&]( EdgeId e )
+                auto b = vox.topology.dest( vox.topology.prev( e ) );
+                for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
                 {
-                    auto r = vox.topology.right( e );
-                    assert( r );
-                    if ( face2voxel[r] == voxel )
-                    {
-                        auto b = vox.topology.dest( vox.topology.prev( e ) );
-                        for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
-                        {
-                            assert( vox.topology.org( ei ) == v );
-                            if ( vox.topology.dest( ei ) == b )
-                                return false;
-                        }
-                        return true;
-                    }
-                    return false;
-                } );
+                    assert( vox.topology.org( ei ) == v );
+                    if ( vox.topology.dest( ei ) == b )
+                        return false;
+                }
+                return true;
             }
-        }
+            return false;
+        } );
     }
 
     // find edges between voxels with new vertices

@@ -6,15 +6,10 @@
 #include "MRId.h"
 #include "MRVector3.h"
 #include "MRSymbolMesh.h"
+#include "MRMeshTriPoint.h"
 
 namespace MR
 {
-// This structure represents point on mesh, by EdgeId (point should be in left triangle of this edge) and coordinate
-struct EdgeIdAndCoord
-{
-    EdgeId id;
-    Vector3f coord;
-};
 
 struct TextMeshAlignParams : SymbolMeshParams
 {
@@ -26,6 +21,8 @@ struct TextMeshAlignParams : SymbolMeshParams
     Vector2f pivotPoint{0.0f, 0.0f};
     // Direction of text
     Vector3f direction;
+    // Text normal to surface, if nullptr - use mesh normal at `startPoint`
+    const Vector3f* textNormal{nullptr};
     // Font height, meters
     float fontHeight{1.0f};
     // Text mesh inside and outside offset of input mesh

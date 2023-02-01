@@ -56,7 +56,7 @@ tl::expected<std::future<void>, std::string> ObjectMeshHolder::serializeModel_( 
         MR::MeshSave::toCtm( *mesh, filename, {}, vertsColorMap_.empty() ? nullptr : &vertsColorMap_ );
     };
 #else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh", this]()
+    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
     {
         MR::MeshSave::toMrmesh( *mesh, filename );
     };

@@ -1060,13 +1060,14 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         {
             auto itemSpacing = ImGui::GetStyle().ItemSpacing;
             auto framePadding = ImGui::GetStyle().FramePadding;
-            framePadding.y = 2.0f;
-            itemSpacing.y = 2.0f;
+            auto scaling = menu_scaling();
+            framePadding.y = 2.0f * scaling;
+            itemSpacing.y = 2.0f * scaling;
             ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * menu_scaling() );
+            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
             ImGui::Indent();
 
             for ( const auto& str : lines )
@@ -1142,7 +1143,8 @@ float ImGuiMenu::drawSelectionInformation_()
         const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
         const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
             style.FramePadding.y * fieldCount * 2 +
-            style.ItemSpacing.y * 2 + smallItemSpacingY * (fieldCount - 3);
+            style.ItemSpacing.y + 
+            smallItemSpacingY * ( fieldCount + 1 );
         resultHeight += infoHeight + style.ItemSpacing.y;
 
         ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
@@ -1245,13 +1247,13 @@ float ImGuiMenu::drawSelectionInformation_()
         else
             lastRenameObj_.reset();
 
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, MR::cDefaultItemSpacing * 0.25f * menu_scaling() } );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
 
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
 
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 0.5f * MR::cDefaultItemSpacing * menu_scaling() );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
 
         if ( selectionBbox_.valid() )
         {
@@ -2291,7 +2293,7 @@ void ImGuiMenu::draw_mr_menu()
                     SceneRoot::get().addChild( obj );
                     viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
                 else
                 {
                     ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [directory, viewer = viewer] () -> std::function<void()>
@@ -2334,7 +2336,7 @@ void ImGuiMenu::draw_mr_menu()
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
             auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
             filters = filters | VoxelsSave::Filters;
 #endif
             auto savePath = saveFileDialog( { {}, {}, filters } );

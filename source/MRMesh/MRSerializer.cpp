@@ -535,6 +535,49 @@ void serializeToJson( const BitSet& bitset, Json::Value& root )
     root["bits"] = encode64( (const std::uint8_t*) bitset.m_bits.data(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
 }
 
+void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
+{
+    std::vector<VertId> verts;
+    verts.reserve( edges.count() * 2 );
+    for ( EdgeId e : edges )
+    {
+        auto o = topology.org( e );
+        auto d = topology.dest( e );
+        if ( o && d )
+        {
+            verts.push_back( o );
+            verts.push_back( d );
+        }
+    }
+    static_assert( sizeof( VertId ) == 4 );
+    root["size"] = Json::UInt( edges.size() );
+    root["vertpairs"] = encode64( (const std::uint8_t*) verts.data(), verts.size() * 4 );
+}
+
+void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitSet& edges, const MeshTopology & topology )
+{
+    if ( !root.isObject() || !root["size"].isNumeric() || !root["vertpairs"].isString() )
+    {
+        deserializeFromJson( root, edges ); // deserialize from old format
+        return;
+    }
+
+    edges.clear();
+    edges.resize( root["size"].asInt() );
+    auto bin = decode64( root["vertpairs"].asString() );
+
+    for ( size_t i = 0; i + 8 < bin.size(); i += 8 )
+    {
+        VertId o, d;
+        static_assert( sizeof( VertId ) == 4 );
+        memcpy( &o, bin.data() + i, 4 );
+        memcpy( &d, bin.data() + i + 4, 4 );
+        auto e = topology.findEdge( o, d );
+        if ( e && e.undirected() < edges.size() )
+            edges.set( e.undirected() );
+    }
+}
+
 tl::expected<void, std::string> serializeToJson( const Mesh& mesh, Json::Value& root )
 {
     std::ostringstream out;

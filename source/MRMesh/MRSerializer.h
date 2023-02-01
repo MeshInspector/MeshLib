@@ -123,6 +123,11 @@ MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
 MRMESH_API void serializeToJson( const MeshTriPoint& mtp, const MeshTopology& topology, Json::Value& root );
 MRMESH_API void serializeToJson( const PointOnFace& pf, Json::Value& root );
 
+/// serialize given edges into json first converting them into pairs of vertices,
+/// which is safer when edge ids change after saving/loading, but vertex ids are not
+MRMESH_API void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root );
+MRMESH_API void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitSet& edges, const MeshTopology & topology );
+
 /// loads an object from json value
 MRMESH_API void deserializeFromJson( const Json::Value& root, Vector2i& vec );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Vector2f& vec );

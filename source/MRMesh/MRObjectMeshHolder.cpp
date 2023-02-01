@@ -86,8 +86,16 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( Vector4f( faceSelectionColor_.get() ), root["Colors"]["Selection"]["Diffuse"] );
 
     serializeToJson( selectedTriangles_, root["SelectionFaceBitSet"] );
-    serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
-    serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
+    if ( mesh_ )
+    {
+        serializeViaVerticesToJson( selectedEdges_, mesh_->topology, root["SelectionEdgeBitSet"] );
+        serializeViaVerticesToJson( creases_, mesh_->topology, root["MeshCreasesUndirEdgeBitSet"] );
+    }
+    else
+    {
+        serializeToJson( selectedEdges_, root["SelectionEdgeBitSet"] );
+        serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
+    }
 
     root["Type"].append( ObjectMeshHolder::TypeName() );
 }
@@ -129,8 +137,17 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     bordersColor_.set( Color( resVec ) );
 
     deserializeFromJson( root["SelectionFaceBitSet"], selectedTriangles_ );
-    deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
-    deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
+
+    if ( mesh_ )
+    {
+        deserializeViaVerticesFromJson( root["SelectionEdgeBitSet"], selectedEdges_, mesh_->topology );
+        deserializeViaVerticesFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_, mesh_->topology );
+    }
+    else
+    {
+        deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
+        deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
+    }
 }
 
 tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )

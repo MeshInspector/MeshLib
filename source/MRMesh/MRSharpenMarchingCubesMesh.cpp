@@ -121,7 +121,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
     }
 
     // find edges between voxels with new vertices
-    std::vector<EdgeId> sharpEdges;
+    UndirectedEdgeBitSet sharpEdges( vox.topology.undirectedEdgeSize() );
     for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
     {
         for ( auto ei : orgRing( vox.topology, v ) )
@@ -143,14 +143,14 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                  // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
                  // which isUnfoldQuadrangleConvex here did not allow;
                  // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
-                 if ( dot( nABD, nBCD ) > -0.9f )
-                    sharpEdges.push_back( e );
+                 if ( dot( nABD, nBCD ) >= settings.minNormalDot )
+                    sharpEdges.set( e.undirected() );
             }
         }
     }
 
     // flip edges between voxels with new vertices to form sharp ridges
-    for ( auto e : sharpEdges )
+    for ( EdgeId e : sharpEdges )
     {
         bool good = true;
         auto b = vox.topology.dest( vox.topology.prev( e ) );
@@ -165,6 +165,9 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         if ( good )
             vox.topology.flipEdge( e );
     }
+
+    if ( settings.outSharpEdges )
+        *settings.outSharpEdges = std::move( sharpEdges );
 }
 
 } //namespace MR

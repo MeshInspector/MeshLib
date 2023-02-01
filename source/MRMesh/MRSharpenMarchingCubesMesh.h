@@ -13,7 +13,11 @@ struct SharpenMarchingCubesMeshSettings
     // relative to reference mesh
     float offset = 0;
     // correct positions of the input vertices using reference mesh
-    bool correctOldVertPos = false;
+    bool correctOldVertPos = true;
+    // minimum dot product of two normals of neighbor triangles created during sharpening
+    float minNormalDot = -0.9f;
+    // if non-null then created sharp edges will be saved here
+    UndirectedEdgeBitSet * outSharpEdges = nullptr;
 };
 
 /// adjust the mesh \param vox produced by marching cubes method (NOT dual marching cubes) by

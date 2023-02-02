@@ -52,8 +52,11 @@ struct SymMatrix3
     Vector3<T> eigenvector( T eigenvalue ) const;
 
     /// solves the equation M*x = b and returns x;
-    /// if M is degenerate then returns the solution closest to origin point
-    Vector3<T> solve( const Vector3<T> & b, T tol = std::numeric_limits<T>::epsilon() ) const;
+    /// if M is degenerate then returns the solution closest to origin point;
+    /// \param tol relative epsilon-tolerance for too small number detection
+    /// \param rank optional output for this matrix rank according to given tolerance
+    /// \param space rank=1: unit normal to solution plane, rank=2: unit direction of solution line, rank=3: zero vector
+    Vector3<T> solve( const Vector3<T> & b, T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const;
 };
 
 /// \related SymMatrix3
@@ -230,18 +233,31 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
 }
 
 template <typename T> 
-Vector3<T> SymMatrix3<T>::solve( const Vector3<T> & b, T tol ) const
+Vector3<T> SymMatrix3<T>::solve( const Vector3<T> & b, T tol, int * rank, Vector3<T> * space ) const
 {
     Matrix3<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );
     const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[2] ) ) * tol;
     Vector3<T> res;
+    int myRank = 0;
     for ( int i = 0; i < 3; ++i )
     {
         if ( std::abs( eigenvalues[i] ) <= threshold )
             continue;
         res += dot( b, eigenvectors[i] ) / eigenvalues[i] * eigenvectors[i];
+        ++myRank;
+        if ( space )
+        {
+            if ( myRank == 1 )
+                *space = eigenvectors[i];
+            else if ( myRank == 2 )
+                *space = cross( *space, eigenvectors[i] );
+            else
+                *space = Vector3<T>{};
+        }
     }
+    if ( rank )
+        *rank = myRank;
     return res;
 }
 

@@ -60,8 +60,11 @@ public:
 
     /// computes the point that minimizes the sum of squared distances to accumulated planes;
     /// if such point is not unique then returns the one closest to p0
-    MRMESH_API Vector3d findBestCrossPoint( const Vector3d & p0, double tol = 0.01 ) const;
-    Vector3f findBestCrossPoint( const Vector3f & p0, float tol = 0.01f ) const { return Vector3f{ findBestCrossPoint( Vector3d{ p0 }, tol ) }; }
+    /// \param tol relative epsilon-tolerance for too small number detection
+    /// \param rank optional output for solution matrix rank according to given tolerance
+    /// \param space rank=1: unit normal to solution plane, rank=2: unit direction of solution line, rank=3: zero vector
+    MRMESH_API Vector3d findBestCrossPoint( const Vector3d & p0, double tol, int * rank = nullptr, Vector3d * space = nullptr ) const;
+    MRMESH_API Vector3f findBestCrossPoint( const Vector3f & p0, float tol, int * rank = nullptr, Vector3f * space = nullptr ) const;
 
 private:
     SymMatrix3d mat_;

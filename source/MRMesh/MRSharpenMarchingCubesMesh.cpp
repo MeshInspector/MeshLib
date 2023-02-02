@@ -4,6 +4,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
 #include "MRTriMath.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -11,6 +12,8 @@ namespace MR
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
+    MR_TIMER
+    assert( settings.minNewVertDev < settings.maxNewVertDev );
     Vector<Vector3f, VertId> normals( vox.topology.vertSize() );
     // find normals and correct points
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
@@ -99,9 +102,9 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         if ( rank <= 1 )
             continue; // the surface is planar within the voxel
         const auto distSq = ( avgPt - sharpPt ).lengthSq();
-        if ( distSq < sqr( settings.newVertDev ) )
+        if ( distSq < sqr( settings.minNewVertDev ) )
             continue; //too little deviation of new point to introduce a vertex in mesh
-        if ( distSq > sqr( 50 * settings.newVertDev ) ) //TODO: introduce new parameter
+        if ( distSq > sqr( settings.maxNewVertDev ) )
             continue; //new point is too from existing mesh triangles
 
         auto v = vox.splitFace( f );

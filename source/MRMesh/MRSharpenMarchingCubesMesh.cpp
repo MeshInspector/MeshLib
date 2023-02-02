@@ -4,6 +4,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
 #include "MRTriMath.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -11,6 +12,8 @@ namespace MR
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
+    MR_TIMER
+    assert( settings.minNewVertDev < settings.maxNewVertDev );
     Vector<Vector3f, VertId> normals( vox.topology.vertSize() );
     // find normals and correct points
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
@@ -36,6 +39,8 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
 
     auto facesToProcess = vox.topology.getValidFaces();
     VertId firstNewVert( vox.topology.vertSize() );
+    // line directions in new vertices, dirs[i] contains the data for vertex firstNewVert+i
+    std::vector<Vector3f> dirs;
     for ( auto f : facesToProcess )
     {
         const auto voxel = face2voxel[f];
@@ -91,12 +96,20 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             continue; //degenerate triangles within voxel
 
         Vector3f avgPt = sumAC / sumArea;
-        auto sharpPt = pacc.findBestCrossPoint( avgPt );
-        if ( ( avgPt - sharpPt ).lengthSq() <= sqr( settings.newVertDev ) )
+        int rank = 0;
+        Vector3f dir;
+        auto sharpPt = pacc.findBestCrossPoint( avgPt, 0.01f, &rank, &dir );
+        if ( rank <= 1 )
+            continue; // the surface is planar within the voxel
+        const auto distSq = ( avgPt - sharpPt ).lengthSq();
+        if ( distSq < sqr( settings.minNewVertDev ) )
             continue; //too little deviation of new point to introduce a vertex in mesh
+        if ( distSq > sqr( settings.maxNewVertDev ) )
+            continue; //new point is too from existing mesh triangles
 
         auto v = vox.splitFace( f );
-        assert( v >= firstNewVert );
+        assert( v == dirs.size() + firstNewVert );
+        dirs.push_back( dir );
         vox.points.autoResizeSet( v, sharpPt );
         for ( auto ei : orgRing( vox.topology, v ) )
             face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
@@ -124,6 +137,15 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
     UndirectedEdgeBitSet sharpEdges( vox.topology.undirectedEdgeSize() );
     for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
     {
+        const auto vDir = dirs[ v - firstNewVert ];
+        const bool vIsCorner = vDir.lengthSq() < 0.1f; // unit length for edges
+        // not-corner vertices can have at most two sharp edges with other new vertices
+        struct CanditeEdge
+        {
+            float metric = 0;
+            UndirectedEdgeId edge;
+        };
+        CanditeEdge best, secondBest; // first maximal metrics
         for ( auto ei : orgRing( vox.topology, v ) )
         {
             if ( !vox.topology.left( ei ) )
@@ -132,21 +154,49 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             if ( !vox.topology.right( e ) )
                 continue;
             auto b = vox.topology.dest( vox.topology.prev( e ) );
-            if ( b > v )
+            if ( b >= firstNewVert )
             {
-                 auto ap = vox.points[ vox.topology.org( e ) ];
-                 auto bp = vox.points[ b ];
-                 auto cp = vox.points[ vox.topology.dest( e ) ];
-                 auto dp = vox.points[ v ];
-                 auto nABD = normal( ap, bp, dp );
-                 auto nBCD = normal( bp, cp, dp );
-                 // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
-                 // which isUnfoldQuadrangleConvex here did not allow;
-                 // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
-                 if ( dot( nABD, nBCD ) >= settings.minNormalDot )
-                    sharpEdges.set( e.undirected() );
+                auto ap = vox.points[ vox.topology.org( e ) ];
+                auto bp = vox.points[ b ];
+                auto cp = vox.points[ vox.topology.dest( e ) ];
+                auto dp = vox.points[ v ];
+                auto nABD = normal( ap, bp, dp );
+                auto nBCD = normal( bp, cp, dp );
+                // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
+                // which isUnfoldQuadrangleConvex here did not allow;
+                // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
+                if ( dot( nABD, nBCD ) >= settings.minNormalDot )
+                {
+                    if ( vIsCorner )
+                        sharpEdges.set( e.undirected() );
+                    else
+                    {
+                        const auto bDir = dirs[ b - firstNewVert ];
+                        const bool bIsCorner = bDir.lengthSq() < 0.1f; // unit length for edges
+                        const auto bvDir = ( vox.points[b] - vox.points[v] ).normalized();
+                        // dot( vDir, bDir ) worked bad for cone vertex
+                        const auto metric = bIsCorner ? 10.0f : std::abs( dot( vDir, bvDir ) );
+                        if ( metric > 0.5f ) // avoid connection with vertex not along v-line
+                        {
+                            CanditeEdge c{ .metric = metric, .edge = e.undirected() };
+                            if ( c.metric > best.metric )
+                            {
+                                secondBest = best;
+                                best = c;
+                            }
+                            else if ( c.metric > secondBest.metric )
+                            {
+                                secondBest = c;
+                            }
+                        }
+                    }
+                }
             }
         }
+        if ( best.edge )
+            sharpEdges.set( best.edge );
+        if ( secondBest.edge )
+            sharpEdges.set( secondBest.edge );
     }
 
     // flip edges between voxels with new vertices to form sharp ridges

@@ -659,9 +659,9 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
-            if ( basePos.x + 1 > volume.dims.x || 
-                basePos.y + 1 > volume.dims.y ||
-                basePos.z + 1 > volume.dims.z )
+            if ( basePos.x + 1 >= volume.dims.x || 
+                basePos.y + 1 >= volume.dims.y ||
+                basePos.z + 1 >= volume.dims.z )
                 continue;
 
             bool anyIterValid = false;

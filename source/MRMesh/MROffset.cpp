@@ -46,14 +46,14 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     // Make grid
     auto grid = ( !useShell ) ?
         // Make level set grid if it is closed
-        meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 1,
+        meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
                         params.callBack ?
                         [params]( float p )
     {
         return params.callBack( p * 0.5f );
     } : ProgressCallback{} ) :
         // Make distance field grid if it is not closed
-        meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 1,
+        meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
                         params.callBack ?
                              [params]( float p )
     {

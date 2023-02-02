@@ -3,7 +3,19 @@
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
+#include "MRMatrix3.h"
 #include "MRPch/MRTBB.h"
+#include "MRAffineXf3.h"
+#include "MRQuaternion.h"
+#pragma warning( push )
+#pragma warning( disable : 4062 4866 )
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <tiny_gltf.h>
+
+#pragma warning( pop)
+
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
@@ -377,6 +389,119 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     }
 
     finishObject();
+    return res;
+}
+
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::filesystem::path& file, bool, ProgressCallback )
+{
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err;
+    std::string warn;
+
+    loader.LoadASCIIFromFile( &model, &err, &warn, file.string() );
+
+    if ( !err.empty() )
+        return tl::make_unexpected( err );
+
+    if ( model.meshes.empty() )
+        return tl::make_unexpected( "No mesh in file" );
+
+    std::vector<NamedMesh> res;
+    res.reserve( model.meshes.size() );
+
+    std::vector<std::shared_ptr<AffineXf3f>> meshXfs;
+    meshXfs.resize( model.meshes.size() );
+    for ( const auto& node : model.nodes )
+    {
+        if ( node.mesh < 0 || node.mesh >= model.meshes.size() )
+            continue;
+
+        meshXfs[node.mesh] = std::make_shared<AffineXf3f>();
+
+        if ( node.matrix.size() == 16)
+        { 
+            meshXfs[node.mesh] = std::make_shared<AffineXf3f> (
+                Matrix3f{ { float( node.matrix[0] ), float( node.matrix[4] ), float( node.matrix[8] ) },
+                          { float( node.matrix[1] ), float( node.matrix[5] ), float( node.matrix[9] ) },
+                          { float( node.matrix[2] ), float( node.matrix[6] ), float( node.matrix[10] ) } },
+                 Vector3f { float( node.matrix[12] ), float( node.matrix[13] ), float( node.matrix[14] ) } );
+        }
+        else if ( node.translation.size() != 0 || node.rotation.size() != 0  || node.scale.size() != 0 )
+        {
+            if ( node.translation.size() == 3 )
+            {
+                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f::translation( { float( node.translation[0] ), float( node.translation[1] ), float( node.translation[2] ) } );
+            }
+
+            if ( node.rotation.size() == 4 )
+            {
+                const Quaternion<float> q( float( node.rotation[3] ), float( node.rotation[0] ), float( node.rotation[1] ), float( node.rotation[2] ) );
+                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f( Matrix3f( q ), {} );
+            }
+
+            if ( node.scale.size() == 3 )
+            {
+                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f( Matrix3f::scale( { float( node.scale[0] ), float( node.scale[1] ), float( node.scale[2] ) } ), {} );
+            }
+        }
+    }
+
+    for ( size_t i = 0; i < model.meshes.size(); ++i )
+    {
+        //Mesh resMesh;
+        const auto mesh = model.meshes[i];
+        VertCoords vertexCoordinates;
+        Triangulation t;
+
+        for ( const auto& primitive : mesh.primitives )
+        {
+            if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
+                return tl::make_unexpected( "This topology is not implemented" );
+
+            const auto posAttrib = primitive.attributes.find( "POSITION" );
+            if ( posAttrib == primitive.attributes.end() )
+                return tl::make_unexpected( "No vertex data" );
+
+            auto accessor = model.accessors[posAttrib->second];
+            auto bufferView = model.bufferViews[accessor.bufferView];
+            auto buffer = model.buffers[bufferView.buffer];
+
+            if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
+                return tl::make_unexpected( "This component type is not implemented" );
+
+            VertId start = VertId( vertexCoordinates.size() );
+            vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
+            memcpy( &vertexCoordinates[VertId( start )], &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector3f ) );
+
+            if ( primitive.indices < 0 )
+                return tl::make_unexpected( "No triangulation data" );
+
+            accessor = model.accessors[primitive.indices];
+            bufferView = model.bufferViews[accessor.bufferView];
+            buffer = model.buffers[bufferView.buffer];
+
+            if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT || accessor.type != TINYGLTF_TYPE_SCALAR )
+                return tl::make_unexpected( "Not implemented" );
+
+            const size_t triangleCount = accessor.count / 3;
+            t.reserve( t.size() + triangleCount );
+            uint16_t* pIndex = ( uint16_t* )&buffer.data[accessor.byteOffset + bufferView.byteOffset];
+
+            for ( size_t k = 0; k < triangleCount; ++k )
+            {
+                t.push_back( ThreeVertIds{ start + VertId( *pIndex ), start + VertId( *( pIndex + 1 ) ), start + VertId( *( pIndex + 2 ) ) } );
+                pIndex += 3;
+            }
+
+            //const auto component = Mesh::fromTriangles( vertexCoordinates, t );
+            //resMesh = MR::boolean( resMesh, component, MR::BooleanOperation::Union ).mesh;
+        }
+
+        res.push_back( { mesh.name, Mesh::fromTriangles( vertexCoordinates, t ) } );
+        res.back().xf = meshXfs[i];
+    }
+
     return res;
 }
 

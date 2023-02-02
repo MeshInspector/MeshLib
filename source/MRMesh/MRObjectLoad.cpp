@@ -150,9 +150,11 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         c = ( char )tolower( c );
 
 
-    if ( ext == u8".obj" )
+    if ( ext == u8".obj" || ext == u8".gltf" )
     {
-        auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
+        auto res = ( ext == u8".obj" ) ? MeshLoad::fromSceneObjFile( filename, false, callback )
+            : MeshLoad::fromSceneGltfFile( filename, false, callback );
+
         if ( res.has_value() )
         {
             std::vector<std::shared_ptr<Object>> objects( res.value().size() );
@@ -167,6 +169,8 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 objectMesh->select( true );
                 objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+                if ( resValue[i].xf )
+                    objectMesh->setXf( *resValue[i].xf );
             }
             result = objects;
         }

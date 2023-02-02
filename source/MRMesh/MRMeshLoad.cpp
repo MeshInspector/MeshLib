@@ -465,6 +465,22 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
     return std::move( res );
 }
 
+tl::expected<Mesh, std::string> fromGltf( const std::filesystem::path& file, Vector<Color, VertId>* , ProgressCallback callback )
+{
+    const auto objs = MeshLoad::fromSceneGltfFile( file, false, callback );
+    if ( !objs.has_value() )
+        return tl::make_unexpected( objs.error() );
+    if ( objs->size() != 1 )
+        return tl::make_unexpected( "OBJ-file is empty" );
+
+    return std::move( ( *objs )[0].mesh );
+}
+
+tl::expected<Mesh, std::string> fromGltf( std::istream&, Vector<Color, VertId>* , ProgressCallback  )
+{
+    return tl::make_unexpected( "Not implemented" );
+}
+
 #ifndef MRMESH_NO_OPENCTM
 tl::expected<Mesh, std::string> fromCtm( const std::filesystem::path & file, Vector<Color, VertId>* colors, ProgressCallback callback )
 {
@@ -619,6 +635,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl 
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
+MR_ADD_MESH_LOADER( IOFilter( "GLTF format (.gltf)", "*.gltf" ), fromGltf )
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif

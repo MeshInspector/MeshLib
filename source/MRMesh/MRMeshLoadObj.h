@@ -22,6 +22,7 @@ struct NamedMesh
 {
     std::string name;
     Mesh mesh;
+    std::shared_ptr<AffineXf3f> xf;
 };
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
@@ -30,6 +31,9 @@ MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( s
                                                                                ProgressCallback callback = {} );
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
+
+MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::filesystem::path& file, bool combineAllObjects,
+    ProgressCallback callback = {} );
 
 /// \}
 

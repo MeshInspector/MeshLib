@@ -741,7 +741,6 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
                 vdbVolume.dims[j] = dims[j];
                 vdbVolume.voxelSize[j] = float( voxelSize[j] );
             }
-            auto minMax = openvdb::tools::minMax( vdbVolume.data->tree() );
             evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
 
             if ( scaledCb && !scaledCb( 0.1f ) )

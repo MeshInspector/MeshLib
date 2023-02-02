@@ -98,8 +98,11 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         auto sharpPt = pacc.findBestCrossPoint( avgPt, 0.01f, &rank, &dir );
         if ( rank <= 1 )
             continue; // the surface is planar within the voxel
-        if ( ( avgPt - sharpPt ).lengthSq() <= sqr( settings.newVertDev ) )
+        const auto distSq = ( avgPt - sharpPt ).lengthSq();
+        if ( distSq < sqr( settings.newVertDev ) )
             continue; //too little deviation of new point to introduce a vertex in mesh
+        if ( distSq > sqr( 50 * settings.newVertDev ) ) //TODO: introduce new parameter
+            continue; //new point is too from existing mesh triangles
 
         auto v = vox.splitFace( f );
         assert( v == dirs.size() + firstNewVert );
@@ -167,16 +170,21 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                     {
                         const auto bDir = dirs[ b - firstNewVert ];
                         const bool bIsCorner = bDir.lengthSq() < 0.1f; // unit length for edges
-                        const auto metric = bIsCorner ? 10.0f : std::abs( dot( vDir, bDir ) );
-                        CanditeEdge c{ .metric = metric, .edge = e.undirected() };
-                        if ( c.metric > best.metric )
+                        const auto bvDir = ( vox.points[b] - vox.points[v] ).normalized();
+                        // dot( vDir, bDir ) worked bad for cone vertex
+                        const auto metric = bIsCorner ? 10.0f : std::abs( dot( vDir, bvDir ) );
+                        if ( metric > 0.5f ) // avoid connection with vertex not along v-line
                         {
-                            secondBest = best;
-                            best = c;
-                        }
-                        else if ( c.metric > secondBest.metric )
-                        {
-                            secondBest = c;
+                            CanditeEdge c{ .metric = metric, .edge = e.undirected() };
+                            if ( c.metric > best.metric )
+                            {
+                                secondBest = best;
+                                best = c;
+                            }
+                            else if ( c.metric > secondBest.metric )
+                            {
+                                secondBest = c;
+                            }
                         }
                     }
                 }

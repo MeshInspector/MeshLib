@@ -742,8 +742,7 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
                 vdbVolume.voxelSize[j] = float( voxelSize[j] );
             }
             auto minMax = openvdb::tools::minMax( vdbVolume.data->tree() );
-            vdbVolume.min = float( minMax.min() );
-            vdbVolume.max = float( minMax.max() );
+            evalGridMinMax( vdbVolume.data, vdbVolume.min, vdbVolume.max );
 
             if ( scaledCb && !scaledCb( 0.1f ) )
                 return tl::make_unexpected( getCancelMessage( path ) );

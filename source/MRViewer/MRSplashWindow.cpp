@@ -228,7 +228,7 @@ bool DefaultSplashWindow::frame_( float /*scaling*/ )
     ImGui::Image( *splashImage_, availableSize );
     ImGui::SetCursorPos( ImVec2( ImGui::GetFrameHeight() * 3, availableSize.y - ImGui::GetFrameHeight() * 2 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, Color( 90, 97, 105 ).getUInt32() );
-    ImGui::Text( "Copyright 2022, Mesh Inspector" );
+    ImGui::Text( "Copyright 2023, MeshInspector/MeshLib" );
     ImGui::SameLine( availableSize.x * 0.5f + ImGui::GetFrameHeight() * 4 );
     ImGui::Text( "%s", versionStr_.c_str() );
     ImGui::PopStyleColor();

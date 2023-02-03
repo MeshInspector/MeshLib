@@ -30,10 +30,17 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
                 n = np;
             else if ( dot( n, np ) < 0 )
                 n = -n;
-            normals[v] = n;
 
-            if ( settings.correctOldVertPos )
-                vox.points[v] = proj.proj.point + settings.offset * n;
+            if ( settings.maxOldVertPosCorrection > 0 )
+            {
+                const auto newPos = proj.proj.point + settings.offset * n;
+                if ( ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
+                    vox.points[v] = newPos;
+                else
+                    n = Vector3f{}; //undefined
+            }
+
+            normals[v] = n;
         }
     } );
 

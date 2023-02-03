@@ -465,15 +465,9 @@ tl::expected<Mesh, std::string> fromPly( std::istream& in, Vector<Color, VertId>
     return std::move( res );
 }
 
-tl::expected<Mesh, std::string> fromGltf( const std::filesystem::path& file, Vector<Color, VertId>* , ProgressCallback callback )
+tl::expected<Mesh, std::string> fromGltf( const std::filesystem::path&, Vector<Color, VertId>* , ProgressCallback )
 {
-    const auto objs = MeshLoad::fromSceneGltfFile( file, false, callback );
-    if ( !objs.has_value() )
-        return tl::make_unexpected( objs.error() );
-    if ( objs->size() != 1 )
-        return tl::make_unexpected( "OBJ-file is empty" );
-
-    return std::move( ( *objs )[0].mesh );
+    return tl::make_unexpected( "Not implemented" );
 }
 
 tl::expected<Mesh, std::string> fromGltf( std::istream&, Vector<Color, VertId>* , ProgressCallback  )

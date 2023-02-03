@@ -150,10 +150,9 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         c = ( char )tolower( c );
 
 
-    if ( ext == u8".obj" || ext == u8".gltf" )
+    if ( ext == u8".obj" )
     {
-        auto res = ( ext == u8".obj" ) ? MeshLoad::fromSceneObjFile( filename, false, callback )
-            : MeshLoad::fromSceneGltfFile( filename, false, callback );
+        auto res =  MeshLoad::fromSceneObjFile( filename, false, callback );
 
         if ( res.has_value() )
         {
@@ -169,13 +168,15 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 objectMesh->select( true );
                 objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
-                if ( resValue[i].xf )
-                    objectMesh->setXf( *resValue[i].xf );
             }
             result = objects;
         }
         else
             result = tl::make_unexpected( res.error() );
+    }
+    else if ( ext == u8".gltf" )
+    {
+        return MeshLoad::fromSceneGltfFile( filename, false, callback );
     }
     else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
     {

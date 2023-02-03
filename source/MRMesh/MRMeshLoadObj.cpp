@@ -5,8 +5,8 @@
 #include "MRBuffer.h"
 #include "MRMatrix3.h"
 #include "MRPch/MRTBB.h"
-#include "MRAffineXf3.h"
 #include "MRQuaternion.h"
+#include "MRObjectMesh.h"
 #pragma warning( push )
 #pragma warning( disable : 4062 4866 )
 #define TINYGLTF_IMPLEMENTATION
@@ -19,6 +19,8 @@
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
+
+#include <stack>
 
 namespace
 {
@@ -392,7 +394,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     return res;
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::filesystem::path& file, bool, ProgressCallback )
+tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFile( const std::filesystem::path& file, bool, ProgressCallback callback)
 {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
@@ -407,45 +409,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::
     if ( model.meshes.empty() )
         return tl::make_unexpected( "No mesh in file" );
 
-    std::vector<NamedMesh> res;
-    res.reserve( model.meshes.size() );
-
-    std::vector<std::shared_ptr<AffineXf3f>> meshXfs;
-    meshXfs.resize( model.meshes.size() );
-    for ( const auto& node : model.nodes )
-    {
-        if ( node.mesh < 0 || node.mesh >= model.meshes.size() )
-            continue;
-
-        meshXfs[node.mesh] = std::make_shared<AffineXf3f>();
-
-        if ( node.matrix.size() == 16)
-        { 
-            meshXfs[node.mesh] = std::make_shared<AffineXf3f> (
-                Matrix3f{ { float( node.matrix[0] ), float( node.matrix[4] ), float( node.matrix[8] ) },
-                          { float( node.matrix[1] ), float( node.matrix[5] ), float( node.matrix[9] ) },
-                          { float( node.matrix[2] ), float( node.matrix[6] ), float( node.matrix[10] ) } },
-                 Vector3f { float( node.matrix[12] ), float( node.matrix[13] ), float( node.matrix[14] ) } );
-        }
-        else if ( node.translation.size() != 0 || node.rotation.size() != 0  || node.scale.size() != 0 )
-        {
-            if ( node.translation.size() == 3 )
-            {
-                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f::translation( { float( node.translation[0] ), float( node.translation[1] ), float( node.translation[2] ) } );
-            }
-
-            if ( node.rotation.size() == 4 )
-            {
-                const Quaternion<float> q( float( node.rotation[3] ), float( node.rotation[0] ), float( node.rotation[1] ), float( node.rotation[2] ) );
-                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f( Matrix3f( q ), {} );
-            }
-
-            if ( node.scale.size() == 3 )
-            {
-                *meshXfs[node.mesh] = *meshXfs[node.mesh] * AffineXf3f( Matrix3f::scale( { float( node.scale[0] ), float( node.scale[1] ), float( node.scale[2] ) } ), {} );
-            }
-        }
-    }
+    std::vector<std::shared_ptr<Mesh>> meshes;
+    meshes.reserve( model.meshes.size() );
 
     for ( size_t i = 0; i < model.meshes.size(); ++i )
     {
@@ -468,7 +433,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::
             auto buffer = model.buffers[bufferView.buffer];
 
             if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
-                return tl::make_unexpected( "This component type is not implemented" );
+                return tl::make_unexpected( "This vertex component type is not implemented" );
 
             VertId start = VertId( vertexCoordinates.size() );
             vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
@@ -481,28 +446,151 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneGltfFile( const std::
             bufferView = model.bufferViews[accessor.bufferView];
             buffer = model.buffers[bufferView.buffer];
 
-            if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT || accessor.type != TINYGLTF_TYPE_SCALAR )
-                return tl::make_unexpected( "Not implemented" );
+            if ( accessor.componentType < TINYGLTF_COMPONENT_TYPE_BYTE || accessor.componentType > TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT || accessor.type != TINYGLTF_TYPE_SCALAR )
+                return tl::make_unexpected( "Not implemented triangulation component type" );
 
-            const size_t triangleCount = accessor.count / 3;
-            t.reserve( t.size() + triangleCount );
-            uint16_t* pIndex = ( uint16_t* )&buffer.data[accessor.byteOffset + bufferView.byteOffset];
-
-            for ( size_t k = 0; k < triangleCount; ++k )
+            const auto fillTriangles = [start]<typename ComponentType>( Triangulation & t, size_t triangleCount, ComponentType * pBuffer )
             {
-                t.push_back( ThreeVertIds{ start + VertId( *pIndex ), start + VertId( *( pIndex + 1 ) ), start + VertId( *( pIndex + 2 ) ) } );
-                pIndex += 3;
-            }
+                for ( size_t k = 0; k < triangleCount; ++k )
+                {
+                    t.push_back( ThreeVertIds{ start + VertId( int(*pBuffer) ), start + VertId( int (*( pBuffer + 1 ) ) ), start + VertId( int ( *( pBuffer + 2 ) ) ) } );
+                    pBuffer += 3;
+                }
+            };
 
-            //const auto component = Mesh::fromTriangles( vertexCoordinates, t );
-            //resMesh = MR::boolean( resMesh, component, MR::BooleanOperation::Union ).mesh;
+            auto pBuffer = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+            const size_t triangleCount = accessor.count / 3;
+
+            switch ( accessor.componentType )
+            {
+            case TINYGLTF_COMPONENT_TYPE_BYTE:
+                fillTriangles( t, triangleCount, (int8_t*)pBuffer );
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                fillTriangles( t, triangleCount, ( uint8_t* )pBuffer );
+                break;
+            case TINYGLTF_COMPONENT_TYPE_SHORT:
+                fillTriangles( t, triangleCount, ( int16_t* )pBuffer );
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                fillTriangles( t, triangleCount, ( uint16_t* )pBuffer );
+                break;
+            case TINYGLTF_COMPONENT_TYPE_INT:
+                fillTriangles( t, triangleCount, ( int32_t* )pBuffer );
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                fillTriangles( t, triangleCount, ( uint32_t* )pBuffer );
+                break;
+            default:
+                return tl::make_unexpected( "Not implemented triangulation component type" );
+            };
         }
 
-        res.push_back( { mesh.name, Mesh::fromTriangles( vertexCoordinates, t ) } );
-        res.back().xf = meshXfs[i];
+        meshes.push_back( std::make_shared<Mesh>( Mesh::fromTriangles( vertexCoordinates, t ) ) );
+        if ( !callback(0.8f * ( i + 1 ) / float( model.meshes.size() ) ) )
+            return tl::make_unexpected( "Operation was cancelled" );
     }
 
-    return res;
+    std::vector<std::shared_ptr<Object>> scene;
+    std::shared_ptr<Object> rootObject;
+
+    std::stack<int> nodeStack;
+    std::stack<std::shared_ptr<Object>> objectStack;
+
+    int counter = 0;
+    int groupCounter = 0;
+    int meshCounter = 0;
+
+    for ( const auto nodeIndex : model.scenes[0].nodes )
+    {
+        if ( model.nodes[nodeIndex].mesh < 0 && model.nodes[nodeIndex].children.empty() )
+            continue;
+
+        nodeStack.push( nodeIndex );
+        if ( model.nodes[nodeIndex].mesh >= 0 )
+            objectStack.push( std::make_shared<ObjectMesh>() );
+        else
+            objectStack.push( std::make_shared<Object>() );
+
+        rootObject = objectStack.top();
+
+        while ( !nodeStack.empty() )
+        {
+            if ( !callback( 0.8f + 0.2f * ( ++counter ) / float( model.nodes.size() ) ) )
+                return tl::make_unexpected( "Operation was cancelled" );
+
+            int curNodeIndex = nodeStack.top();
+            const auto& node = model.nodes[curNodeIndex];
+            nodeStack.pop();
+            auto curObject = objectStack.top();
+            objectStack.pop();
+
+            AffineXf3f xf;
+            if ( node.matrix.size() == 16 )
+            {
+                xf = AffineXf3f(
+                    Matrix3f{ { float( node.matrix[0] ), float( node.matrix[4] ), float( node.matrix[8] ) },
+                              { float( node.matrix[1] ), float( node.matrix[5] ), float( node.matrix[9] ) },
+                              { float( node.matrix[2] ), float( node.matrix[6] ), float( node.matrix[10] ) } },
+                     Vector3f{ float( node.matrix[12] ), float( node.matrix[13] ), float( node.matrix[14] ) } );
+            }
+            else if ( node.translation.size() != 0 || node.rotation.size() != 0 || node.scale.size() != 0 )
+            {
+                if ( node.translation.size() == 3 )
+                {
+                   xf = xf * AffineXf3f::translation( { float( node.translation[0] ), float( node.translation[1] ), float( node.translation[2] ) } );
+                }
+
+                if ( node.rotation.size() == 4 )
+                {
+                    const Quaternion<float> q( float( node.rotation[3] ), float( node.rotation[0] ), float( node.rotation[1] ), float( node.rotation[2] ) );
+                    xf = xf * AffineXf3f( Matrix3f( q ), {} );
+                }
+
+                if ( node.scale.size() == 3 )
+                {
+                    xf = xf * AffineXf3f( Matrix3f::scale( { float( node.scale[0] ), float( node.scale[1] ), float( node.scale[2] ) } ), {} );
+                }
+            }
+
+            curObject->setXf( xf );
+            curObject->setName( node.name );
+            if ( node.mesh >= 0 )
+            {
+                std::static_pointer_cast< ObjectMesh >( curObject )->setMesh( meshes[node.mesh] );
+                if ( node.name.empty() )
+                    curObject->setName( model.meshes[node.mesh].name );
+            }
+            else
+            {
+                curObject->setAncillary( true );
+            }
+
+            if ( curObject->name().empty() )
+            {
+                curObject->setName ( node.mesh >= 0 ? std::string( "Mesh " ) + std::to_string( meshCounter++ ) :
+                    std::string( "Group " ) + std::to_string( groupCounter++ ) );
+            }
+
+            for ( auto& childNode : node.children )
+            {
+                if ( model.nodes[childNode].mesh < 0 && model.nodes[childNode].children.empty() )
+                    continue;
+
+                nodeStack.push( childNode );
+                if ( model.nodes[childNode].mesh >= 0 )
+                    objectStack.push( std::make_shared<ObjectMesh>() );
+                else
+                    objectStack.push( std::make_shared<Object>() );
+
+                curObject->addChild( objectStack.top() );
+            }
+        }
+
+        scene.push_back( rootObject );
+    }
+
+    return scene;
 }
 
 } //namespace MeshLoad

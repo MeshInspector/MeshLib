@@ -34,7 +34,6 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             if ( settings.maxOldVertPosCorrection > 0 )
             {
                 const auto newPos = proj.proj.point + settings.offset * n;
-                const auto corr = ( proj.proj.point - vox.points[v] ).length() - std::abs( settings.offset );
                 if ( ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
                     vox.points[v] = newPos;
                 else

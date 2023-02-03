@@ -8,6 +8,8 @@
 #include "MRMeshFillHole.h"
 #include "MRRegionBoundary.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRVoxelsConversions.h"
+#include "MRSharpenMarchingCubesMesh.h"
 
 namespace
 {
@@ -93,6 +95,58 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
+}
+
+tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+{
+    MR_TIMER;
+
+    auto offsetInVoxels = offset / params.voxelSize;
+
+    ProgressCallback meshToLSCb;
+    if ( params.callBack )
+        meshToLSCb = [&] ( float p )
+    {
+        return params.callBack( p * 0.3f );
+    };
+
+    auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
+        Vector3f::diagonal( params.voxelSize ),
+        std::abs( offsetInVoxels ) + 2, meshToLSCb );
+
+    if ( !voxelRes )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    VdbVolume volume = floatGridToVdbVolume( voxelRes );
+
+
+    VdbVolumeToMeshParams vmParams;
+    vmParams.basis.A = Matrix3f::scale( params.voxelSize );
+    vmParams.iso = offsetInVoxels;
+    vmParams.lessInside = true;
+    if ( params.callBack )
+        vmParams.cb = [&] ( float p )
+    {
+        return params.callBack( 0.3f + 0.4f * p );
+    };
+    Vector<VoxelId, FaceId> map;
+    vmParams.outVoxelPerFaceMap = &map;
+    auto meshRes = vdbVolumeToMesh( volume, vmParams );
+    if ( !meshRes )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    SharpenMarchingCubesMeshSettings sharpenParams;
+    sharpenParams.minNewVertDev = params.voxelSize / 25;
+    sharpenParams.maxNewVertDev = 2 * params.voxelSize;
+    sharpenParams.maxOldVertPosCorrection = params.voxelSize / 2;
+    sharpenParams.offset = offset;
+    sharpenParams.outSharpEdges = params.outSharpEdges;
+
+    sharpenMarchingCubesMesh( mesh, *meshRes, map, sharpenParams );
+    if ( params.callBack && !params.callBack( 0.99f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    return *meshRes;
 }
 
 tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )

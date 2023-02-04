@@ -9,6 +9,29 @@
 namespace MR
 {
 
+/// tests all edges e having valid left and right faces and v == org(e);
+/// if the test has passed, then flips the edge so decreasing the degree of vertex v
+template<typename T>
+void flipEdgesAway( MeshTopology & topology, EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        if ( topology.left( e ) && topology.right( e ) && flipNeeded( e ) )
+        {
+            e0 = topology.next( e );
+            topology.flipEdge( e );
+            e = e0;
+        }
+        else
+        {
+            e = topology.next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
+}
+
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
@@ -105,7 +128,8 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         Vector3f avgPt = sumAC / sumArea;
         int rank = 0;
         Vector3f dir;
-        auto sharpPt = pacc.findBestCrossPoint( avgPt, 0.01f, &rank, &dir );
+        constexpr float tol = 0.01f; // tolerance for comparing eigenvalues
+        auto sharpPt = pacc.findBestCrossPoint( avgPt, tol, &rank, &dir );
         if ( rank <= 1 )
             continue; // the surface is planar within the voxel
         const auto distSq = ( avgPt - sharpPt ).lengthSq();
@@ -120,6 +144,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         vox.points.autoResizeSet( v, sharpPt );
         for ( auto ei : orgRing( vox.topology, v ) )
             face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
+
         // connect new vertex with every vertex from the voxel
         vox.topology.flipEdgesAround( v, [&]( EdgeId e )
         {
@@ -127,16 +152,31 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             assert( r );
             if ( face2voxel[r] == voxel )
             {
-                auto b = vox.topology.dest( vox.topology.prev( e ) );
-                for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
-                {
-                    assert( vox.topology.org( ei ) == v );
-                    if ( vox.topology.dest( ei ) == b )
-                        return false;
-                }
+                [[maybe_unused]] auto b = vox.topology.dest( vox.topology.prev( e ) );
+                assert( !vox.topology.findEdge( v, b ) ); //there is no edge between v and b yet
                 return true;
             }
             return false;
+        } );
+
+        // make triangles from old voxel vertices if all 3 vertices have similar normals;
+        // this reduces self-intersections appeared after previous flip
+        flipEdgesAway( vox.topology, vox.topology.edgeWithOrg( v ), [&]( EdgeId e )
+        {
+            assert( vox.topology.org( e ) == v );
+            auto b = vox.topology.dest( vox.topology.prev( e ) );
+            auto c = vox.topology.dest( e );
+            auto d = vox.topology.dest( vox.topology.next( e ) );
+            SymMatrix3f mat;
+            mat += outerSquare( normals[b] );
+            mat += outerSquare( normals[c] );
+            mat += outerSquare( normals[d] );
+            const auto eigenvalues = mat.eigens();
+            if ( eigenvalues[1] > eigenvalues[2] * tol )
+                return false; // normals in the vertices are not equal for given tolerance
+            if ( vox.topology.findEdge( d, b ) )
+                return false; // multiple edges between b and d will appear
+            return true;
         } );
     }
 
@@ -209,17 +249,9 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
     // flip edges between voxels with new vertices to form sharp ridges
     for ( EdgeId e : sharpEdges )
     {
-        bool good = true;
         auto b = vox.topology.dest( vox.topology.prev( e ) );
-        for ( auto ei : orgRing( vox.topology, vox.topology.next( e ).sym() ) )
-        {
-            if ( vox.topology.dest( ei ) == b )
-            {
-                good = false;
-                break;
-            }
-        }
-        if ( good )
+        auto d = vox.topology.dest( vox.topology.next( e ) );
+        if ( !vox.topology.findEdge( b, d ) )
             vox.topology.flipEdge( e );
     }
 

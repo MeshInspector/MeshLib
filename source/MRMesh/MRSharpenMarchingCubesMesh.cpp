@@ -9,29 +9,6 @@
 namespace MR
 {
 
-/// tests all edges e having valid left and right faces and v == org(e);
-/// if the test has passed, then flips the edge so decreasing the degree of vertex v
-template<typename T>
-void flipEdgesAway( MeshTopology & topology, EdgeId e0, T && flipNeeded )
-{
-    EdgeId e = e0;
-    for (;;)
-    {
-        if ( topology.left( e ) && topology.right( e ) && flipNeeded( e ) )
-        {
-            e0 = topology.next( e );
-            topology.flipEdge( e );
-            e = e0;
-        }
-        else
-        {
-            e = topology.next( e );
-            if ( e == e0 )
-                break; // full ring has been inspected
-        }
-    } 
-}
-
 void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
     const SharpenMarchingCubesMeshSettings & settings )
 {
@@ -146,7 +123,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
 
         // connect new vertex with every vertex from the voxel
-        vox.topology.flipEdgesAround( v, [&]( EdgeId e )
+        vox.topology.flipEdgesIn( v, [&]( EdgeId e )
         {
             auto r = vox.topology.right( e );
             assert( r );
@@ -161,7 +138,7 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
 
         // make triangles from old voxel vertices if all 3 vertices have similar normals;
         // this reduces self-intersections appeared after previous flip
-        flipEdgesAway( vox.topology, vox.topology.edgeWithOrg( v ), [&]( EdgeId e )
+        vox.topology.flipEdgesOut( v, [&]( EdgeId e )
         {
             assert( vox.topology.org( e ) == v );
             auto b = vox.topology.dest( vox.topology.prev( e ) );

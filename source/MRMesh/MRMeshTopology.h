@@ -236,11 +236,19 @@ public:
     /// tests all edges e having valid left and right faces and org(e0) == dest(next(e));
     /// if the test has passed, then flips the edge so increasing the degree of org(e0)
     template<typename T>
-    void flipEdgesAround( EdgeId e0, T && flipNeeded );
+    void flipEdgesIn( EdgeId e0, T && flipNeeded );
     /// tests all edges e having valid left and right faces and v == dest(next(e));
     /// if the test has passed, then flips the edge so increasing the degree of vertex v
     template<typename T>
-    void flipEdgesAround( VertId v, T && flipNeeded ) { flipEdgesAround( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
+    void flipEdgesIn( VertId v, T && flipNeeded ) { flipEdgesIn( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
+    /// tests all edges e having valid left and right faces and org(e0) == org(e);
+    /// if the test has passed, then flips the edge so decreasing the degree of org(e0)
+    template<typename T>
+    void flipEdgesOut( EdgeId e0, T && flipNeeded );
+    /// tests all edges e having valid left and right faces and v == org(e);
+    /// if the test has passed, then flips the edge so decreasing the degree of vertex v
+    template<typename T>
+    void flipEdgesOut( VertId v, T && flipNeeded ) { flipEdgesOut( edgeWithOrg( v ), std::forward<T>( flipNeeded ) ); }
 
     /// split given edge on two parts:
     /// dest(returned-edge) = org(e) - newly created vertex,
@@ -409,7 +417,7 @@ void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const
 }
 
 template<typename T>
-void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
+void MeshTopology::flipEdgesIn( const EdgeId e0, T && flipNeeded )
 {
     EdgeId e = e0;
     for (;;)
@@ -417,6 +425,27 @@ void MeshTopology::flipEdgesAround( const EdgeId e0, T && flipNeeded )
         auto testEdge = prev( e.sym() );
         if ( left( testEdge ) && right( testEdge ) && flipNeeded( testEdge ) )
             flipEdge( testEdge );
+        else
+        {
+            e = next( e );
+            if ( e == e0 )
+                break; // full ring has been inspected
+        }
+    } 
+}
+
+template<typename T>
+void MeshTopology::flipEdgesOut( EdgeId e0, T && flipNeeded )
+{
+    EdgeId e = e0;
+    for (;;)
+    {
+        if ( left( e ) && right( e ) && flipNeeded( e ) )
+        {
+            e0 = next( e );
+            flipEdge( e );
+            e = e0;
+        }
         else
         {
             e = next( e );

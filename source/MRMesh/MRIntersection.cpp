@@ -72,16 +72,17 @@ TEST( MRMesh, IntersectLineLine )
 
 
     auto dist0 = distance( line1, line2 );
-    ASSERT_FALSE( dist0.has_value() );
+    ASSERT_NEAR( dist0, 0, 1e-15 );
 
     auto dist1 = distance( line1, line3 );
-    ASSERT_TRUE( dist1.has_value() );
-    ASSERT_NEAR( *dist1, 1., 1e-15 );
+    ASSERT_NEAR( dist1, 1., 1e-15 );
 
     auto dist2 = distance( line1, line4 );
-    ASSERT_TRUE( dist2.has_value() );
-    ASSERT_NEAR( *dist2, 1., 1e-15 );
+    ASSERT_NEAR( dist2, 1., 1e-15 );
 
+    const Line3d line5( Vector3d( 0, 0, 1 ), Vector3d( 1, 1, 0 ).normalized() );
+    auto dist15 = distance( line1, line5 );
+    ASSERT_NEAR( dist15, 1, 1e-15 );
 
     auto cl0 = closestPoints( line1, line2 );
     ASSERT_FALSE( cl0.has_value() );

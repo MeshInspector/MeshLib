@@ -110,21 +110,17 @@ std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
 }
 
 /// finds distance between parallel or skew lines ( a line1 and a line2 )
-/// \return nullopt if they intersect
+/// \return zero if they intersect
 template<typename T>
-std::optional<T> distance( const Line3<T>& line1, const Line3<T>& line2,
+T distance( const Line3<T>& line1, const Line3<T>& line2,
     T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
 {
     const auto crossDir = cross( line1.d, line2.d );
-    if ( crossDir.lengthSq() < errorLimit * errorLimit )
-        return (line1.project( line2.p ) - line2.p ).length();
+    const auto crossDirSq = crossDir.lengthSq();
+    if ( crossDirSq <= sqr( errorLimit ) )
+        return ( line1.project( line2.p ) - line2.p ).length();
     
-    const auto p1 = dot( crossDir, line1.p );
-    const auto p2 = dot( crossDir, line2.p );
-    if ( std::abs( p1 - p2 ) < errorLimit )
-        return {};
-
-    return std::abs( p1 - p2 );
+    return std::abs( dot( crossDir, line1.p - line2.p ) ) / std::sqrt( crossDirSq );
 }
 
 /// finds closest point between skew lines ( a line1 and a line2 )

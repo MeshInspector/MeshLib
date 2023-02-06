@@ -450,6 +450,8 @@ std::string getOSNoSpaces()
 {
     #ifdef _WIN32
     return "Windows";
+    #elifdef __EMSCRIPTEN__
+    return "Wasm";
     #else
     // get platform from cmake variables
     std::string platform = MR_PLATFORM;

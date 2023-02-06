@@ -57,6 +57,9 @@ MRMESH_API void OpenLink( const std::string& url );
 // returns string identification of the CPU
 MRMESH_API std::string GetCpuId();
 
+// returns string identification of the OS
+MRMESH_API std::string getOSNoSpaces();
+
 using FileNamesStack = std::vector<std::filesystem::path>;
 
 } // namespace MR

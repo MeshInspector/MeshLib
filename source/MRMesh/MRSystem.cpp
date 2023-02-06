@@ -446,4 +446,16 @@ std::string GetCpuId()
 #endif
 }
 
+std::string getOSNoSpaces()
+{
+    #ifdef _WIN32
+    return "Windows";
+    #else
+    // get platform from cmake variables
+    std::string platform = MR_PLATFORM;
+    std::replace(platform.begin(), platform.end(), ' ', '_');
+    return platform;
+    #endif
+}
+
 } //namespace MR

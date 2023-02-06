@@ -1,14 +1,67 @@
+#ifndef MRMESH_NO_CPR
 #include "MRWebRequest.h"
 #include "MRCommandLoop.h"
+#include "MRPch/MRWasm.h"
+#include "MRPch/MRSpdlog.h"
+#ifndef __EMSCRIPTEN__
 #include <cpr/cpr.h>
 #include <thread>
+#endif
+
+namespace
+{
+bool sRequestReady{true};
+}
+
+#ifdef __EMSCRIPTEN__
+
+namespace
+{
+MR::WebRequest::ResponseCallback sCallback;
+bool sAsyncCall{false};
+}
+
+extern "C" 
+{
+EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response )
+{
+    using namespace MR;
+    std::string resStr = response;
+    Json::Value resJson;
+    Json::CharReaderBuilder readerBuilder;
+    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
+    std::string error;
+    if ( reader->parse( resStr.data(), resStr.data() + resStr.size(), &resJson, &error ) )
+    {
+        if ( !sAsyncCall )
+        {
+            sCallback( resJson );
+            sRequestReady = true;
+        }
+        else
+        {
+            CommandLoop::appendCommand( [resJson] ()
+            {
+                sCallback( resJson );
+                sRequestReady = true;
+            } );
+        }
+    }
+    else
+    {
+        spdlog::info(error);
+    }
+    return 1;
+}
+}
+#endif
 
 namespace MR
 {
 
 bool WebRequest::readyForNextRequest()
 {
-    return instance_().requestReady_;
+    return sRequestReady;
 }
 
 void WebRequest::clear()
@@ -49,14 +102,14 @@ void WebRequest::setBody( std::string body )
 bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /*= true */ )
 {
     auto& inst = instance_();
-    if ( !inst.requestReady_ )
+    if ( !sRequestReady )
     {
         assert( false );
         return false;
     }
 
-    inst.requestReady_ = false;
-
+    sRequestReady = false;
+#ifndef __EMSCRIPTEN__
     cpr::Timeout tm = cpr::Timeout{ inst.timeout_ };
     cpr::Body body = cpr::Body( inst.body_ );
 
@@ -86,7 +139,7 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
         resJson["text"] = res.text;
         resJson["error"] = res.error.message;
         callback( resJson );
-        inst.requestReady_ = true;
+        sRequestReady = true;
     }
     else
     {
@@ -97,14 +150,35 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
             resJson["code"] = int( res.status_code );
             resJson["text"] = res.text;
             resJson["error"] = res.error.message;
-            CommandLoop::appendCommand( [callback, resJson, &inst] ()
+            CommandLoop::appendCommand( [callback, resJson] ()
             {
                 callback( resJson );
-                inst.requestReady_ = true;
+                sRequestReady = true;
             } );
         } );
         requestThread.detach();
     }
+#else
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( {
+        web_req_clear();
+        web_req_timeout = $0;
+        web_req_body = UTF8ToString( $1 );
+        web_req_method = $2;
+        }, inst.timeout_, inst.body_.c_str(), int( inst.method_ ) );
+    for ( const auto& [key, value] : inst.params_ )
+        EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+    
+    for ( const auto& [key, value] : inst.headers_ )
+        EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+    
+    sCallback = callback;
+    sAsyncCall = async;
+
+    EM_ASM( web_req_send( UTF8ToString( $0 ), $1 ), urlP.c_str(), async );
+#pragma clang diagnostic pop
+#endif
     return true;
 }
 
@@ -115,3 +189,4 @@ MR::WebRequest& WebRequest::instance_()
 }
 
 }
+#endif

@@ -1,4 +1,5 @@
 #pragma once
+#ifndef MRMESH_NO_CPR
 #include "MRViewerFwd.h"
 #include "MRPch/MRJson.h"
 #include <unordered_map>
@@ -49,8 +50,6 @@ private:
     WebRequest() = default;
     ~WebRequest() = default;
 
-    bool requestReady_{ true };
-
     Method method_{ Method::Get };
     int timeout_{ 10000 };
     std::unordered_map<std::string, std::string> params_;
@@ -61,3 +60,4 @@ private:
 };
 
 }
+#endif

@@ -682,7 +682,8 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
-    glfwHideWindow( window );
+    if ( window )
+        glfwHideWindow( window );
 
     if ( settingsMng_ )
     {

@@ -42,7 +42,7 @@ public:
     using ResponseCallback = std::function<void( const Json::Value& response )>;
 
     // sends request, calling callback on answer, 
-    // if async than callback is called in next frame after getting response
+    // if async then callback is called in next frame after getting response
     // return true if request was sent, false if other request is processing now
     // note: check `readyForNextRequest` before sending
     MRVIEWER_API static bool send( std::string url, ResponseCallback callback, bool async = true );

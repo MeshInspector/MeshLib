@@ -143,7 +143,7 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     }
     else
     {
-        std::thread requestThread = std::thread( [sendLambda, callback, &inst] ()
+        std::thread requestThread = std::thread( [sendLambda, callback] ()
         {
             auto res = sendLambda();
             Json::Value resJson;

@@ -68,6 +68,7 @@
     <ClCompile Include="MRViewerEventsListener.cpp" />
     <ClCompile Include="MRViewerSettingsManager.cpp" />
     <ClCompile Include="MRViewportGL.cpp" />
+    <ClCompile Include="MRWebRequest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -141,6 +142,7 @@
     <ClInclude Include="MRViewerEventsListener.h" />
     <ClInclude Include="MRViewerSettingsManager.h" />
     <ClInclude Include="MRViewportGL.h" />
+    <ClInclude Include="MRWebRequest.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

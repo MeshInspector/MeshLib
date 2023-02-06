@@ -377,7 +377,7 @@ void OpenLink( const std::string& url )
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM( window.open( UTF8ToString( $0 ) ), url.c_str() );
+    EM_ASM( open_link( UTF8ToString( $0 ) ), url.c_str() );
 #pragma clang diagnostic pop
 #else
 #ifdef __APPLE__

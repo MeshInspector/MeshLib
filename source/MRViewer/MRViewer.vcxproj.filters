@@ -65,6 +65,9 @@
     <Filter Include="SpaceMouse">
       <UniqueIdentifier>{3637b9ba-3c3d-4da1-8ab3-268e00a54ffa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Requests">
+      <UniqueIdentifier>{c21997e0-58df-4ec0-b236-7f69f02151c3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -237,6 +240,9 @@
     </ClCompile>
     <ClCompile Include="MRSpaceMouseController.cpp">
       <Filter>ShortcutManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MRWebRequest.cpp">
+      <Filter>Requests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -448,6 +454,9 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseController.h">
       <Filter>ShortcutManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWebRequest.h">
+      <Filter>Requests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

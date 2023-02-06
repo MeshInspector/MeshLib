@@ -86,7 +86,7 @@ static bool goodConvexEdge( Mesh & mesh, EdgeId edge )
 
 static void makeConvexOriginRing( Mesh & mesh, EdgeId e )
 {
-    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge ) 
+    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge ) 
     {
         return !goodConvexEdge( mesh, testEdge );
     } );

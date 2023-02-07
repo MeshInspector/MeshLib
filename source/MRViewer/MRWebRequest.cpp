@@ -176,6 +176,9 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     sCallback = callback;
     sAsyncCall = async;
 
+    if ( urlP.back() == '/' )
+        urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
+
     EM_ASM( web_req_send( UTF8ToString( $0 ), $1 ), urlP.c_str(), async );
 #pragma clang diagnostic pop
 #endif
@@ -186,6 +189,33 @@ MR::WebRequest& WebRequest::instance_()
 {
     static WebRequest inst;
     return inst;
+}
+
+tl::expected<Json::Value, std::string> parseResponse( const Json::Value& response )
+{
+    if ( response["code"].asInt() == 0 )
+        return tl::make_unexpected( "Bad internet connection." );
+    if ( response["error"].isString() )
+    {
+        auto error = response["error"].asString();
+        if ( !error.empty() )
+            return tl::make_unexpected( error );
+    }
+    std::string text;
+    if ( !response["error"].isString() )
+        return tl::make_unexpected( "Unknown error." );
+
+    text = response["text"].asString();
+
+    Json::Value root;
+    Json::CharReaderBuilder readerBuilder;
+    std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
+    std::string error;
+    if ( !reader->parse( text.data(), text.data() + text.size(), &root, &error ) )
+        return tl::make_unexpected( "Unknown error." );
+    if ( root["message"].isString() )
+        return tl::make_unexpected( root["message"].asString() );
+    return root;
 }
 
 }

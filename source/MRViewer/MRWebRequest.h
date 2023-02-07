@@ -2,12 +2,15 @@
 #ifndef MRMESH_NO_CPR
 #include "MRViewerFwd.h"
 #include "MRPch/MRJson.h"
+#include <tl/expected.hpp>
 #include <unordered_map>
 #include <string>
 #include <functional>
 
 namespace MR
 {
+// returns json value of text or error if response failed
+MRVIEWER_API tl::expected<Json::Value, std::string> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
 // can perform only one request at a time

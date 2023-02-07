@@ -176,7 +176,7 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
     sCallback = callback;
     sAsyncCall = async;
 
-    if ( urlP.back() == '/' )
+    if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
     EM_ASM( web_req_send( UTF8ToString( $0 ), $1 ), urlP.c_str(), async );

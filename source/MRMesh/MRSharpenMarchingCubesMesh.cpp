@@ -232,6 +232,46 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             vox.topology.flipEdge( e );
     }
 
+    // best position new vertices on found lines
+    std::vector<Vector3f> newPos;
+    newPos.reserve( vox.topology.vertSize() - firstNewVert );
+    for ( int iPosSel = 0; iPosSel < settings.posSelIters; ++iPosSel )
+    {
+        // calculate optimal position of each vertex independently
+        newPos.clear();
+        for ( auto iv = firstNewVert; iv < vox.topology.vertSize(); ++iv )
+        {
+            const auto p = vox.points[iv];
+            newPos.push_back( p );
+            const auto vDir = dirs[ iv - firstNewVert ];
+            const bool vIsCorner = vDir.lengthSq() < 0.1f; // unit length for edges
+            if ( vIsCorner )
+                continue;
+            float uv = 0, vv = 0;
+            for ( auto ei : orgRing( vox.topology, iv ) )
+            {
+                if ( !vox.topology.left( ei ) )
+                    continue;
+                auto ap = vox.destPnt( ei );
+                auto bp = vox.destPnt( vox.topology.next( ei ) );
+                auto u = cross( bp - ap, p - ap );
+                auto v = cross( bp - ap, vDir );
+                uv += dot( u, v );
+                vv += dot( v, v );
+            }
+            if ( vv > 0 )
+                newPos.back() -= uv / vv * vDir;
+        }
+
+        // move each vertex half way toward its optimal position
+        for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
+        {
+            const auto pOld = vox.points[v];
+            const auto pNew = newPos[ v - firstNewVert ];
+            vox.points[v] = 0.5f * ( pOld + pNew );
+        }
+    }
+
     if ( settings.outSharpEdges )
         *settings.outSharpEdges = std::move( sharpEdges );
 }

@@ -154,7 +154,7 @@ bool WebRequest::send( std::string urlP, ResponseCallback callback, bool async /
             {
                 callback( resJson );
                 sRequestReady = true;
-            } );
+            }, CommandLoop::StartPosition::AfterPluginInit );
         } );
         requestThread.detach();
     }

@@ -15,7 +15,7 @@ class CommandLoop
 public:
     using CommandFunc = std::function<void()>;
 
-    // Specify exciton in specific time of application start
+    // Specify execution in specific time of application start
     enum class StartPosition
     {
         AfterPluginInit, // executes during splash, after plugins init)
@@ -30,7 +30,7 @@ public:
 
     // Adds command to the end of command loop, can be performed from any thread
     // do not block, so be careful with lambda captures
-    // note: state - specify exciton in specific time of application start
+    // note: state - specify execution in specific time of application start
     MRVIEWER_API static void appendCommand( CommandFunc func, StartPosition state = StartPosition::AfterSplash );
 
     // If caller thread is main - instantly run command, otherwise add command to the end of loop with

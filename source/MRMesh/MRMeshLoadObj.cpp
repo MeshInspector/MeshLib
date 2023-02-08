@@ -401,7 +401,7 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
     std::string err;
     std::string warn;
 
-    loader.LoadASCIIFromFile( &model, &err, &warn, file.string() );
+    loader.LoadASCIIFromFile( &model, &err, &warn, asString( file.u8string() ) );
 
     if ( !err.empty() )
         return tl::make_unexpected( err );
@@ -409,22 +409,69 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
     if ( model.meshes.empty() )
         return tl::make_unexpected( "No mesh in file" );
 
+    std::vector<MeshTexture> meshTextures;
+    for ( auto& image : model.images )
+    {
+        meshTextures.emplace_back();
+        auto& meshTexture = meshTextures.back();
+        meshTexture.resolution = { image.width, image.height };
+        meshTexture.pixels.resize( image.width * image.height );
+
+        memcpy( meshTexture.pixels.data(), image.image.data(), image.width * image.height * sizeof( Color ) );
+    }
+
+    std::vector<Color> materialColors;
+    std::vector<MeshTexture*> materialTextures;
+
+    for ( auto& material : model.materials )
+    {
+        auto colorIt = material.values.find( "baseColorFactor" );
+        if ( colorIt != material.values.end() )
+        {
+            const auto& comps = colorIt->second.number_array;
+            materialColors.push_back( Color( float( comps[0] ), float( comps[1] ), float( comps[2] ), float ( comps[3]  ) ) );
+        }
+        else
+        {
+            materialColors.push_back( Color::white() );
+        }
+
+        const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+        if ( textureIndex >= 0 && model.textures[textureIndex].source >= 0 )
+        {
+            materialTextures.push_back( &meshTextures[model.textures[textureIndex].source] );
+        }
+        else
+        {
+            materialTextures.push_back( nullptr );
+        }
+    }
+
     std::vector<std::shared_ptr<Mesh>> meshes;
+    std::vector< Vector<Color, VertId> > vertColorMaps;
+    std::vector< Vector<UVCoord, VertId> > uvCoordsVec;
+    std::vector<int> meshMaterialIndices( model.meshes.size(), -1 );
+
     meshes.reserve( model.meshes.size() );
+    vertColorMaps.reserve( model.meshes.size() );
 
     for ( size_t i = 0; i < model.meshes.size(); ++i )
     {
-        //Mesh resMesh;
         const auto mesh = model.meshes[i];
         VertCoords vertexCoordinates;
         Triangulation t;
+        vertColorMaps.emplace_back();
+        uvCoordsVec.emplace_back();
+
+        auto& vertColorMap = vertColorMaps.back();
+        auto& uvCoords = uvCoordsVec.back();
 
         for ( const auto& primitive : mesh.primitives )
         {
             if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
                 return tl::make_unexpected( "This topology is not implemented" );
 
-            const auto posAttrib = primitive.attributes.find( "POSITION" );
+            auto posAttrib = primitive.attributes.find( "POSITION" );
             if ( posAttrib == primitive.attributes.end() )
                 return tl::make_unexpected( "No vertex data" );
 
@@ -438,9 +485,34 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
             VertId start = VertId( vertexCoordinates.size() );
             vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
             memcpy( &vertexCoordinates[VertId( start )], &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector3f ) );
+            
+            
+            if ( primitive.material < 0 )
+            {
+                vertColorMap.resize( vertColorMap.size() + accessor.count );
+                memset( vertColorMap.data() + vertColorMap.size() - accessor.count, 0xFF, accessor.count * sizeof( Color ) );
+            }
+            else
+            {
+                if ( meshMaterialIndices[i] < 0 )
+                    meshMaterialIndices[i] = primitive.material;
+
+                vertColorMap.reserve( vertColorMap.size() + accessor.count );
+
+                for ( int j = 0; j < accessor.count; ++j )
+                {
+                    vertColorMap.push_back( materialColors[primitive.material] );
+                }
+            }
 
             if ( primitive.indices < 0 )
-                return tl::make_unexpected( "No triangulation data" );
+            {
+                t.reserve( t.size() + accessor.count / 3 );
+                for ( int j = 0; j < accessor.count / 3; ++j )
+                    t.push_back( { start + 3 * j, start + 3 * j + 1, start + 3 * j + 2 } );
+
+                continue;
+            }
 
             accessor = model.accessors[primitive.indices];
             bufferView = model.bufferViews[accessor.bufferView];
@@ -484,9 +556,43 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
             default:
                 return tl::make_unexpected( "Not implemented triangulation component type" );
             };
+
+            uvCoords.resize( uvCoords.size() + vertexCoordinates.size() );
+
+            posAttrib = primitive.attributes.find( "TEXCOORD_0" );
+            if ( posAttrib == primitive.attributes.end() )
+            {
+                continue;
+            }
+
+            accessor = model.accessors[posAttrib->second];
+            bufferView = model.bufferViews[accessor.bufferView];
+            buffer = model.buffers[bufferView.buffer];
+
+            //assert( accessor.count == vertexCoordinates.size() );
+
+            if ( ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.componentType != TINYGLTF_COMPONENT_TYPE_DOUBLE ) || accessor.type != TINYGLTF_TYPE_VEC2 )
+                return tl::make_unexpected( "Not implemented texcoord component type" );
+
+            if ( accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT )
+            {
+                memcpy( uvCoords.data() + uvCoords.size() - accessor.count, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector2f ) );
+            }
         }
 
-        meshes.push_back( std::make_shared<Mesh>( Mesh::fromTriangles( vertexCoordinates, t ) ) );
+        std::vector<MeshBuilder::VertDuplication> dups;
+        meshes.push_back( std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinates, t, &dups ) ) );
+        if ( !dups.empty() )
+        {
+            vertColorMap.resize( vertColorMap.size() + dups.size() );
+            uvCoords.resize( uvCoords.size() + dups.size() );
+            for ( const auto& dup : dups )
+            {
+                vertColorMap[dup.dupVert] = vertColorMap[dup.srcVert];
+                uvCoords[dup.dupVert] = uvCoords[dup.srcVert];
+            }
+        }
+
         if ( !callback(0.8f * ( i + 1 ) / float( model.meshes.size() ) ) )
             return tl::make_unexpected( "Operation was cancelled" );
     }
@@ -557,7 +663,22 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
             curObject->setName( node.name );
             if ( node.mesh >= 0 )
             {
-                std::static_pointer_cast< ObjectMesh >( curObject )->setMesh( meshes[node.mesh] );
+                auto objectMesh = std::static_pointer_cast< ObjectMesh >( curObject );
+                objectMesh->setMesh( meshes[node.mesh] );               
+
+                if ( materialTextures[meshMaterialIndices[node.mesh]] )
+                {
+                    objectMesh->setUVCoords( uvCoordsVec[node.mesh] );
+                    objectMesh->setTexture( *materialTextures[meshMaterialIndices[node.mesh]] );                    
+                    objectMesh->setVisualizeProperty( true, VisualizeMaskType::Texture, ViewportMask::all() );
+                }
+                else
+                {
+                    objectMesh->setColoringType( ColoringType::VertsColorMap );
+                    objectMesh->setVertsColorMap( vertColorMaps[node.mesh] );
+                    
+                }
+                //objectMesh->setTexture( model.meshes[node.mesh])
                 if ( node.name.empty() )
                     curObject->setName( model.meshes[node.mesh].name );
             }

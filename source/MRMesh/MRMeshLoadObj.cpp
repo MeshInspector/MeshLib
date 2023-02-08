@@ -79,6 +79,255 @@ namespace
             return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
         return {};
     }
+
+
+    struct MeshData
+    {
+        std::shared_ptr<Mesh> mesh;
+        Vector<Color, VertId> vertsColorMap;
+        Vector<UVCoord, VertId> uvCoords;
+        int materialIndex = -1;
+    };
+
+    struct Material
+    {
+        Color baseColor;
+        int textureIndex = -1;
+    };
+
+    std::vector<MeshTexture> readImages( const tinygltf::Model& model )
+    {
+        std::vector<MeshTexture> result;
+        result.reserve( model.images.size() );
+        for ( auto& image : model.images )
+        {
+            result.emplace_back();
+            auto& meshTexture = result.back();
+            meshTexture.resolution = { image.width, image.height };
+            meshTexture.pixels.resize( image.width * image.height );
+
+            memcpy( meshTexture.pixels.data(), image.image.data(), image.width * image.height * sizeof( Color ) );
+        }
+
+        return result;
+    }
+
+    std::vector<Material> readMaterials( const tinygltf::Model& model )
+    {
+        std::vector<Material> result;
+        result.reserve( model.materials.size() );
+        for ( auto& material : model.materials )
+        {
+            result.emplace_back();
+            auto& curMaterial = result.back();
+
+            auto colorIt = material.values.find( "baseColorFactor" );
+            if ( colorIt != material.values.end() )
+            {
+                const auto& comps = colorIt->second.number_array;
+                curMaterial.baseColor = Color( float( comps[0] ), float( comps[1] ), float( comps[2] ), float( comps[3] ) );
+            }
+            else
+            {
+                curMaterial.baseColor = Color::white();
+            }
+
+            curMaterial.textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+        }
+
+        return result;
+    }
+
+    tl::expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+    {
+        if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
+            return tl::make_unexpected( "This topology is not implemented" );
+
+        auto posAttrib = primitive.attributes.find( "POSITION" );
+        if ( posAttrib == primitive.attributes.end() )
+            return tl::make_unexpected( "No vertex data" );
+
+        auto accessor = model.accessors[posAttrib->second];
+        auto bufferView = model.bufferViews[accessor.bufferView];
+        auto buffer = model.buffers[bufferView.buffer];
+
+        if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
+            return tl::make_unexpected( "This vertex component type is not implemented" );
+
+        VertId start = VertId( vertexCoordinates.size() );
+        vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
+        memcpy( &vertexCoordinates[VertId( start )], &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector3f ) );
+
+        return int( accessor.count );
+    }
+
+    void fillVertsColorMap( Vector<Color, VertId>& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex )
+    {
+        const auto startPos = vertsColorMap.size();
+        vertsColorMap.resize( vertsColorMap.size() + vertexCount );
+        std::fill(  ( uint32_t* )( vertsColorMap.data() + startPos ), 
+                    ( uint32_t* )( vertsColorMap.data() + startPos + vertexCount ),
+                    materialIndex >= 0 ? materials[materialIndex].baseColor.getUInt32() : 0xFFFFFFFF );
+    }
+
+    std::string readUVCoords( Vector<UVCoord, VertId>& uvCoords, int vertexCount, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+    {
+        uvCoords.resize( uvCoords.size() + vertexCount );
+
+        auto posAttrib = primitive.attributes.find( "TEXCOORD_0" );
+        if ( posAttrib == primitive.attributes.end() )
+            return "";
+
+        const auto& accessor = model.accessors[posAttrib->second];
+        const auto& bufferView = model.bufferViews[accessor.bufferView];
+        const auto& buffer = model.buffers[bufferView.buffer];
+
+        if ( ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.componentType != TINYGLTF_COMPONENT_TYPE_DOUBLE ) || accessor.type != TINYGLTF_TYPE_VEC2 )
+            return "Not implemented texcoord component type";
+
+        if ( accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT )
+        {
+            memcpy( uvCoords.data() + uvCoords.size() - accessor.count, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector2f ) );
+        }
+        //TODO What if double
+        return "";
+    }
+
+    std::string readTriangulation( Triangulation& t, const tinygltf::Model& model, const tinygltf::Primitive& primitive, VertId oldVertexCount, int vertexCount )
+    {
+        if ( primitive.indices < 0 )
+        {
+            t.resize( t.size() + vertexCount / 3 );
+            for ( int j = 0; j < vertexCount / 3; ++j )
+                t.push_back( ThreeVertIds{ oldVertexCount + 3 * j,  oldVertexCount + 3 * j + 1, oldVertexCount + 3 * j + 2 } );
+
+            return "";
+        }
+
+        const auto accessor = model.accessors[primitive.indices];
+        const auto bufferView = model.bufferViews[accessor.bufferView];
+        const auto buffer = model.buffers[bufferView.buffer];
+
+        if ( accessor.componentType < TINYGLTF_COMPONENT_TYPE_BYTE || accessor.componentType > TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT || accessor.type != TINYGLTF_TYPE_SCALAR )
+            return "Not implemented triangulation component type";
+
+        const auto fillTriangles = [oldVertexCount]<typename ComponentType>( Triangulation & t, size_t triangleCount, ComponentType * pBuffer )
+        {
+            for ( size_t k = 0; k < triangleCount; ++k )
+            {
+                t.push_back( ThreeVertIds{ oldVertexCount + VertId( int( *pBuffer ) ), oldVertexCount + VertId( int( *( pBuffer + 1 ) ) ), oldVertexCount + VertId( int( *( pBuffer + 2 ) ) ) } );
+                pBuffer += 3;
+            }
+        };
+
+        auto pBuffer = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+        const size_t triangleCount = accessor.count / 3;
+
+        switch ( accessor.componentType )
+        {
+        case TINYGLTF_COMPONENT_TYPE_BYTE:
+            fillTriangles( t, triangleCount, ( int8_t* )pBuffer );
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+            fillTriangles( t, triangleCount, ( uint8_t* )pBuffer );
+            break;
+        case TINYGLTF_COMPONENT_TYPE_SHORT:
+            fillTriangles( t, triangleCount, ( int16_t* )pBuffer );
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+            fillTriangles( t, triangleCount, ( uint16_t* )pBuffer );
+            break;
+        case TINYGLTF_COMPONENT_TYPE_INT:
+            fillTriangles( t, triangleCount, ( int32_t* )pBuffer );
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+            fillTriangles( t, triangleCount, ( uint32_t* )pBuffer );
+            break;
+        default:
+            return "Not implemented triangulation component type";
+        };
+
+        return "";
+    }
+
+    tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& model, const std::vector<Material> materials, ProgressCallback callback )
+    {
+        std::vector<MeshData> result;
+        result.reserve( model.meshes.size() );
+
+        for ( size_t i = 0; i < model.meshes.size(); ++i )
+        {
+            if ( !callback( 0.8f * ( i + 1 ) / float( model.meshes.size() ) ) )
+                return tl::make_unexpected( "Operation was cancelled" );
+
+            result.emplace_back();
+            auto& meshData = result.back();
+
+            const auto mesh = model.meshes[i];
+            VertCoords vertexCoordinates;
+            Triangulation t;
+
+            for ( const auto& primitive : mesh.primitives )
+            {
+                VertId oldVertexCount = VertId( vertexCoordinates.size() );
+                auto vertexCount = readVertCoords( vertexCoordinates, model, primitive );
+                if ( !vertexCount.has_value() )
+                    return tl::make_unexpected( vertexCount.error() );
+
+                fillVertsColorMap( meshData.vertsColorMap, *vertexCount, materials, primitive.material );
+                
+                if ( auto error = readUVCoords( meshData.uvCoords, *vertexCount, model, primitive ); !error.empty() )
+                    return tl::make_unexpected( error );
+
+                if ( auto error = readTriangulation( t, model, primitive, oldVertexCount, *vertexCount ); !error.empty() )
+                    return tl::make_unexpected( error );
+
+                if ( meshData.materialIndex < 0 )
+                    meshData.materialIndex = primitive.material;
+            }
+
+            std::vector<MeshBuilder::VertDuplication> dups;
+            meshData.mesh = std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinates, t, &dups ) );
+            if ( dups.empty() )
+                continue;
+            
+            meshData.vertsColorMap.resize( meshData.vertsColorMap.size() + dups.size() );
+            meshData.uvCoords.resize( meshData.uvCoords.size() + dups.size() );
+            for ( const auto& dup : dups )
+            {
+                meshData.vertsColorMap[dup.dupVert] = meshData.vertsColorMap[dup.srcVert];
+                meshData.uvCoords[dup.dupVert] = meshData.uvCoords[dup.srcVert];
+            }
+        }
+
+        return result;
+    }
+
+    AffineXf3f readXf( const tinygltf::Node& node )
+    {
+        
+        if ( node.matrix.size() == 16 )
+        {
+            return AffineXf3f(
+                   Matrix3f { { float( node.matrix[0] ),  float( node.matrix[4] ),  float( node.matrix[8] ) },
+                              { float( node.matrix[1] ),  float( node.matrix[5] ),  float( node.matrix[9] ) },
+                              { float( node.matrix[2] ),  float( node.matrix[6] ),  float( node.matrix[10] ) } },
+                   Vector3f   { float( node.matrix[12] ), float( node.matrix[13] ), float( node.matrix[14] ) } );
+        }
+
+        AffineXf3f xf;
+        
+        if ( node.translation.size() == 3 )
+            xf = xf * AffineXf3f::translation( { float( node.translation[0] ), float( node.translation[1] ), float( node.translation[2] ) } );
+
+        if ( node.rotation.size() == 4 )
+            xf = xf * AffineXf3f( Matrix3f( Quaternion<float>( float( node.rotation[3] ), float( node.rotation[0] ), float( node.rotation[1] ), float( node.rotation[2] ) ) ), {} );
+
+        if ( node.scale.size() == 3 )
+            xf = xf * AffineXf3f( Matrix3f::scale( { float( node.scale[0] ), float( node.scale[1] ), float( node.scale[2] ) } ), {} );
+        
+        return xf;
+    }
 }
 
 namespace MR
@@ -409,193 +658,12 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
     if ( model.meshes.empty() )
         return tl::make_unexpected( "No mesh in file" );
 
-    std::vector<MeshTexture> meshTextures;
-    for ( auto& image : model.images )
-    {
-        meshTextures.emplace_back();
-        auto& meshTexture = meshTextures.back();
-        meshTexture.resolution = { image.width, image.height };
-        meshTexture.pixels.resize( image.width * image.height );
+    auto textures = readImages( model );
+    auto materials = readMaterials( model );
+    auto meshesData = readMeshes( model, materials, callback );
 
-        memcpy( meshTexture.pixels.data(), image.image.data(), image.width * image.height * sizeof( Color ) );
-    }
-
-    std::vector<Color> materialColors;
-    std::vector<MeshTexture*> materialTextures;
-
-    for ( auto& material : model.materials )
-    {
-        auto colorIt = material.values.find( "baseColorFactor" );
-        if ( colorIt != material.values.end() )
-        {
-            const auto& comps = colorIt->second.number_array;
-            materialColors.push_back( Color( float( comps[0] ), float( comps[1] ), float( comps[2] ), float ( comps[3]  ) ) );
-        }
-        else
-        {
-            materialColors.push_back( Color::white() );
-        }
-
-        const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-        if ( textureIndex >= 0 && model.textures[textureIndex].source >= 0 )
-        {
-            materialTextures.push_back( &meshTextures[model.textures[textureIndex].source] );
-        }
-        else
-        {
-            materialTextures.push_back( nullptr );
-        }
-    }
-
-    std::vector<std::shared_ptr<Mesh>> meshes;
-    std::vector< Vector<Color, VertId> > vertColorMaps;
-    std::vector< Vector<UVCoord, VertId> > uvCoordsVec;
-    std::vector<int> meshMaterialIndices( model.meshes.size(), -1 );
-
-    meshes.reserve( model.meshes.size() );
-    vertColorMaps.reserve( model.meshes.size() );
-
-    for ( size_t i = 0; i < model.meshes.size(); ++i )
-    {
-        const auto mesh = model.meshes[i];
-        VertCoords vertexCoordinates;
-        Triangulation t;
-        vertColorMaps.emplace_back();
-        uvCoordsVec.emplace_back();
-
-        auto& vertColorMap = vertColorMaps.back();
-        auto& uvCoords = uvCoordsVec.back();
-
-        for ( const auto& primitive : mesh.primitives )
-        {
-            if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
-                return tl::make_unexpected( "This topology is not implemented" );
-
-            auto posAttrib = primitive.attributes.find( "POSITION" );
-            if ( posAttrib == primitive.attributes.end() )
-                return tl::make_unexpected( "No vertex data" );
-
-            auto accessor = model.accessors[posAttrib->second];
-            auto bufferView = model.bufferViews[accessor.bufferView];
-            auto buffer = model.buffers[bufferView.buffer];
-
-            if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
-                return tl::make_unexpected( "This vertex component type is not implemented" );
-
-            VertId start = VertId( vertexCoordinates.size() );
-            vertexCoordinates.resize( vertexCoordinates.size() + accessor.count );
-            memcpy( &vertexCoordinates[VertId( start )], &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector3f ) );
-            
-            
-            if ( primitive.material < 0 )
-            {
-                vertColorMap.resize( vertColorMap.size() + accessor.count );
-                memset( vertColorMap.data() + vertColorMap.size() - accessor.count, 0xFF, accessor.count * sizeof( Color ) );
-            }
-            else
-            {
-                if ( meshMaterialIndices[i] < 0 )
-                    meshMaterialIndices[i] = primitive.material;
-
-                vertColorMap.reserve( vertColorMap.size() + accessor.count );
-
-                for ( int j = 0; j < accessor.count; ++j )
-                {
-                    vertColorMap.push_back( materialColors[primitive.material] );
-                }
-            }
-
-            if ( primitive.indices < 0 )
-            {
-                t.reserve( t.size() + accessor.count / 3 );
-                for ( int j = 0; j < accessor.count / 3; ++j )
-                    t.push_back( { start + 3 * j, start + 3 * j + 1, start + 3 * j + 2 } );
-
-                continue;
-            }
-
-            accessor = model.accessors[primitive.indices];
-            bufferView = model.bufferViews[accessor.bufferView];
-            buffer = model.buffers[bufferView.buffer];
-
-            if ( accessor.componentType < TINYGLTF_COMPONENT_TYPE_BYTE || accessor.componentType > TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT || accessor.type != TINYGLTF_TYPE_SCALAR )
-                return tl::make_unexpected( "Not implemented triangulation component type" );
-
-            const auto fillTriangles = [start]<typename ComponentType>( Triangulation & t, size_t triangleCount, ComponentType * pBuffer )
-            {
-                for ( size_t k = 0; k < triangleCount; ++k )
-                {
-                    t.push_back( ThreeVertIds{ start + VertId( int(*pBuffer) ), start + VertId( int (*( pBuffer + 1 ) ) ), start + VertId( int ( *( pBuffer + 2 ) ) ) } );
-                    pBuffer += 3;
-                }
-            };
-
-            auto pBuffer = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
-            const size_t triangleCount = accessor.count / 3;
-
-            switch ( accessor.componentType )
-            {
-            case TINYGLTF_COMPONENT_TYPE_BYTE:
-                fillTriangles( t, triangleCount, (int8_t*)pBuffer );
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                fillTriangles( t, triangleCount, ( uint8_t* )pBuffer );
-                break;
-            case TINYGLTF_COMPONENT_TYPE_SHORT:
-                fillTriangles( t, triangleCount, ( int16_t* )pBuffer );
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                fillTriangles( t, triangleCount, ( uint16_t* )pBuffer );
-                break;
-            case TINYGLTF_COMPONENT_TYPE_INT:
-                fillTriangles( t, triangleCount, ( int32_t* )pBuffer );
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                fillTriangles( t, triangleCount, ( uint32_t* )pBuffer );
-                break;
-            default:
-                return tl::make_unexpected( "Not implemented triangulation component type" );
-            };
-
-            uvCoords.resize( uvCoords.size() + vertexCoordinates.size() );
-
-            posAttrib = primitive.attributes.find( "TEXCOORD_0" );
-            if ( posAttrib == primitive.attributes.end() )
-            {
-                continue;
-            }
-
-            accessor = model.accessors[posAttrib->second];
-            bufferView = model.bufferViews[accessor.bufferView];
-            buffer = model.buffers[bufferView.buffer];
-
-            //assert( accessor.count == vertexCoordinates.size() );
-
-            if ( ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT && accessor.componentType != TINYGLTF_COMPONENT_TYPE_DOUBLE ) || accessor.type != TINYGLTF_TYPE_VEC2 )
-                return tl::make_unexpected( "Not implemented texcoord component type" );
-
-            if ( accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT )
-            {
-                memcpy( uvCoords.data() + uvCoords.size() - accessor.count, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof( Vector2f ) );
-            }
-        }
-
-        std::vector<MeshBuilder::VertDuplication> dups;
-        meshes.push_back( std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinates, t, &dups ) ) );
-        if ( !dups.empty() )
-        {
-            vertColorMap.resize( vertColorMap.size() + dups.size() );
-            uvCoords.resize( uvCoords.size() + dups.size() );
-            for ( const auto& dup : dups )
-            {
-                vertColorMap[dup.dupVert] = vertColorMap[dup.srcVert];
-                uvCoords[dup.dupVert] = uvCoords[dup.srcVert];
-            }
-        }
-
-        if ( !callback(0.8f * ( i + 1 ) / float( model.meshes.size() ) ) )
-            return tl::make_unexpected( "Operation was cancelled" );
-    }
+    if ( !meshesData.has_value() )
+        return tl::make_unexpected( meshesData.error() );
 
     std::vector<std::shared_ptr<Object>> scene;
     std::shared_ptr<Object> rootObject;
@@ -625,60 +693,33 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
             if ( !callback( 0.8f + 0.2f * ( ++counter ) / float( model.nodes.size() ) ) )
                 return tl::make_unexpected( "Operation was cancelled" );
 
-            int curNodeIndex = nodeStack.top();
-            const auto& node = model.nodes[curNodeIndex];
+            const auto& node = model.nodes[nodeStack.top()];
             nodeStack.pop();
             auto curObject = objectStack.top();
             objectStack.pop();
 
-            AffineXf3f xf;
-            if ( node.matrix.size() == 16 )
-            {
-                xf = AffineXf3f(
-                    Matrix3f{ { float( node.matrix[0] ), float( node.matrix[4] ), float( node.matrix[8] ) },
-                              { float( node.matrix[1] ), float( node.matrix[5] ), float( node.matrix[9] ) },
-                              { float( node.matrix[2] ), float( node.matrix[6] ), float( node.matrix[10] ) } },
-                     Vector3f{ float( node.matrix[12] ), float( node.matrix[13] ), float( node.matrix[14] ) } );
-            }
-            else if ( node.translation.size() != 0 || node.rotation.size() != 0 || node.scale.size() != 0 )
-            {
-                if ( node.translation.size() == 3 )
-                {
-                   xf = xf * AffineXf3f::translation( { float( node.translation[0] ), float( node.translation[1] ), float( node.translation[2] ) } );
-                }
-
-                if ( node.rotation.size() == 4 )
-                {
-                    const Quaternion<float> q( float( node.rotation[3] ), float( node.rotation[0] ), float( node.rotation[1] ), float( node.rotation[2] ) );
-                    xf = xf * AffineXf3f( Matrix3f( q ), {} );
-                }
-
-                if ( node.scale.size() == 3 )
-                {
-                    xf = xf * AffineXf3f( Matrix3f::scale( { float( node.scale[0] ), float( node.scale[1] ), float( node.scale[2] ) } ), {} );
-                }
-            }
-
-            curObject->setXf( xf );
+            curObject->setXf( readXf( node ) );
             curObject->setName( node.name );
+
             if ( node.mesh >= 0 )
             {
-                auto objectMesh = std::static_pointer_cast< ObjectMesh >( curObject );
-                objectMesh->setMesh( meshes[node.mesh] );               
+                const auto& meshData = ( *meshesData )[node.mesh];
 
-                if ( materialTextures[meshMaterialIndices[node.mesh]] )
+                auto objectMesh = std::static_pointer_cast< ObjectMesh >( curObject );
+                objectMesh->setMesh( meshData.mesh );
+
+                if ( auto textureIndex = materials[meshData.materialIndex].textureIndex; textureIndex >= 0 )
                 {
-                    objectMesh->setUVCoords( uvCoordsVec[node.mesh] );
-                    objectMesh->setTexture( *materialTextures[meshMaterialIndices[node.mesh]] );                    
+                    objectMesh->setUVCoords( meshData.uvCoords );
+                    objectMesh->setTexture( textures[textureIndex] );
                     objectMesh->setVisualizeProperty( true, VisualizeMaskType::Texture, ViewportMask::all() );
                 }
                 else
                 {
                     objectMesh->setColoringType( ColoringType::VertsColorMap );
-                    objectMesh->setVertsColorMap( vertColorMaps[node.mesh] );
-                    
+                    objectMesh->setVertsColorMap( meshData.vertsColorMap );                    
                 }
-                //objectMesh->setTexture( model.meshes[node.mesh])
+
                 if ( node.name.empty() )
                     curObject->setName( model.meshes[node.mesh].name );
             }
@@ -689,8 +730,8 @@ tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFil
 
             if ( curObject->name().empty() )
             {
-                curObject->setName ( node.mesh >= 0 ? std::string( "Mesh " ) + std::to_string( meshCounter++ ) :
-                    std::string( "Group " ) + std::to_string( groupCounter++ ) );
+                curObject->setName ( node.mesh >= 0 ? std::string( "Mesh_" ) + std::to_string( meshCounter++ ) :
+                    std::string( "Group_" ) + std::to_string( groupCounter++ ) );
             }
 
             for ( auto& childNode : node.children )

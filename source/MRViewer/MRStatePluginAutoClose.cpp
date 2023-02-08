@@ -2,6 +2,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectMesh.h"
 
 namespace MR
 {
@@ -24,6 +25,28 @@ bool PluginCloseOnSelectedObjectRemove::shouldClose_() const
             return true;
     }
     return false;
+}
+
+void PluginCloseOnChangeMesh::onPluginEnable_()
+{
+    auto meshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    meshChangedConnections_.reserve( meshes.size() );
+    changed_ = false;
+    for ( auto& mesh : meshes )
+        meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t )
+    {
+        changed_ = true;
+    } ) );
+}
+
+void PluginCloseOnChangeMesh::onPluginDisable_()
+{
+    meshChangedConnections_.clear();
+}
+
+bool PluginCloseOnChangeMesh::shouldClose_() const
+{
+    return changed_;
 }
 
 }

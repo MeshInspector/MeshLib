@@ -7,6 +7,7 @@
 #include "MRVolumeIndexer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include <deque>
 
 namespace MR
 {

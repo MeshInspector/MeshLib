@@ -97,57 +97,56 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
 }
 
-tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
-    MR_TIMER;
+    MR_TIMER
 
     auto offsetInVoxels = offset / params.voxelSize;
-
-    ProgressCallback meshToLSCb;
-    if ( params.callBack )
-        meshToLSCb = [&] ( float p )
-    {
-        return params.callBack( p * 0.3f );
-    };
-
+    auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
         Vector3f::diagonal( params.voxelSize ),
         std::abs( offsetInVoxels ) + 2, meshToLSCb );
-
     if ( !voxelRes )
         return tl::make_unexpected( "Operation was canceled." );
 
     VdbVolume volume = floatGridToVdbVolume( voxelRes );
 
-
     VdbVolumeToMeshParams vmParams;
     vmParams.basis.A = Matrix3f::scale( params.voxelSize );
     vmParams.iso = offsetInVoxels;
     vmParams.lessInside = true;
-    if ( params.callBack )
-        vmParams.cb = [&] ( float p )
-    {
-        return params.callBack( 0.3f + 0.4f * p );
-    };
-    Vector<VoxelId, FaceId> map;
-    vmParams.outVoxelPerFaceMap = &map;
+    vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
+    vmParams.outVoxelPerFaceMap = outMap;
     auto meshRes = vdbVolumeToMesh( volume, vmParams );
     if ( !meshRes )
         return tl::make_unexpected( "Operation was canceled." );
 
+    return std::move( *meshRes );
+}
+
+tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )
+{
+    MR_TIMER
+    BaseOffsetParameters mcParams = params;
+    mcParams.callBack = subprogress( params.callBack, 0.0f, 0.7f );
+    Vector<VoxelId, FaceId> map;
+    auto res = mcOffsetMesh( mesh, offset, mcParams, &map );
+    if ( !res.has_value() )
+        return res;
+
     SharpenMarchingCubesMeshSettings sharpenParams;
-    sharpenParams.minNewVertDev = params.voxelSize / 25;
-    sharpenParams.maxNewRank2VertDev = 5 * params.voxelSize;
-    sharpenParams.maxNewRank3VertDev = 2 * params.voxelSize;
-    sharpenParams.maxOldVertPosCorrection = params.voxelSize / 2;
+    sharpenParams.minNewVertDev = params.voxelSize * params.minNewVertDev;
+    sharpenParams.maxNewRank2VertDev = params.voxelSize * params.maxNewRank2VertDev;
+    sharpenParams.maxNewRank3VertDev = params.voxelSize * params.maxNewRank3VertDev;
+    sharpenParams.maxOldVertPosCorrection = params.voxelSize * params.maxOldVertPosCorrection;
     sharpenParams.offset = offset;
     sharpenParams.outSharpEdges = params.outSharpEdges;
 
-    sharpenMarchingCubesMesh( mesh, *meshRes, map, sharpenParams );
-    if ( params.callBack && !params.callBack( 0.99f ) )
+    sharpenMarchingCubesMesh( mesh, res.value(), map, sharpenParams );
+    if ( !reportProgress( params.callBack, 0.99f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
-    return *meshRes;
+    return res;
 }
 
 tl::expected<Mesh, std::string> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )

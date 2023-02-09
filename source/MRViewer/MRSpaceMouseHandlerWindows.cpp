@@ -35,7 +35,7 @@ const DeviceInfo connexionDevices[] = {
     { connexionId, 0xC652, "Universal Receiver" },
 //     { connexionId, 0xC654, "CadMouse Pro Wireless" },
 //     { connexionId, 0xC657, "CadMouse Pro Wireless Left" }
-}
+};
 
 constexpr int mapButtonsCompact[2] = {
     SMB_CUSTOM_1, SMB_CUSTOM_2

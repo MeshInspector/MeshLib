@@ -969,6 +969,7 @@ PaletteChanges Palette(
             changes = int( PaletteChanges::All );
             CloseCurrentPopup();
         }
+        ImGui::PopStyleVar();
         ImGui::SetTooltipIfHovered( "Load one of custom presets", menuScaling );
     }
 

@@ -10,9 +10,12 @@ struct SharpenMarchingCubesMeshSettings
     /// minimal surface deviation to introduce new vertex in a voxel;
     /// recommended set equal to ( voxel size / 25 )
     float minNewVertDev = 0;
-    /// maximal surface deviation to introduce new vertex in a voxel;
+    /// maximal surface deviation to introduce new rank 2 vertex (on intersection of 2 planes);
+    /// recommended set equal to ( 5 * voxel size )
+    float maxNewRank2VertDev = 0;
+    /// maximal surface deviation to introduce new rank 3 vertex (on intersection of 3 planes);
     /// recommended set equal to ( 2 * voxel size )
-    float maxNewVertDev = 0;
+    float maxNewRank3VertDev = 0;
     /// relative to reference mesh
     float offset = 0;
     /// correct positions of the input vertices using reference mesh by not more than this distance;

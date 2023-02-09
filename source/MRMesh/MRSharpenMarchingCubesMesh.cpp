@@ -13,7 +13,8 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
     const SharpenMarchingCubesMeshSettings & settings )
 {
     MR_TIMER
-    assert( settings.minNewVertDev < settings.maxNewVertDev );
+    assert( settings.minNewVertDev < settings.maxNewRank2VertDev );
+    assert( settings.minNewVertDev < settings.maxNewRank3VertDev );
     Vector<Vector3f, VertId> normals( vox.topology.vertSize() );
     // find normals and correct points
     tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, normals.endId() ), [&] ( const tbb::blocked_range<VertId>& range )
@@ -112,7 +113,9 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
         const auto distSq = ( avgPt - sharpPt ).lengthSq();
         if ( distSq < sqr( settings.minNewVertDev ) )
             continue; //too little deviation of new point to introduce a vertex in mesh
-        if ( distSq > sqr( settings.maxNewVertDev ) )
+        if ( rank == 2 && distSq > sqr( settings.maxNewRank2VertDev ) )
+            continue; //new point is too from existing mesh triangles
+        if ( rank == 3 && distSq > sqr( settings.maxNewRank3VertDev ) )
             continue; //new point is too from existing mesh triangles
 
         auto v = vox.splitFace( f );

@@ -12,10 +12,17 @@
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STBI_MSC_SECURE_CRT
+
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <tiny_gltf.h>
 
-#pragma warning( pop)
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic pop
+#endif
 
 
 #include <boost/algorithm/string/trim.hpp>

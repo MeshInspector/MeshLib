@@ -100,6 +100,8 @@ std::optional<MeshEdgePoint> SurfacePathBuilder::findPrevPoint( VertId v ) const
         const auto pd = mesh_.points[d] - pv;
         const auto pdSq = pd.lengthSq();
         const auto vd = field_[d] - vv;
+        if ( vd == FLT_MAX )
+            continue;
         if ( vd < 0 )
         {
             if ( pdSq == 0 && maxGradSq == 0 && !res ) // degenerate edge

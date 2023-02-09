@@ -119,6 +119,8 @@ set(GLAD_INSTALL ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
 add_subdirectory(./pybind11)
+set(TINYGLTF_INSTALL ON)
+add_subdirectory(./tinygltf)
 
 file(GLOB IMGUI_HEADERS "imgui/*.h")
 install(FILES ${IMGUI_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)

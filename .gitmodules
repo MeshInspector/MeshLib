@@ -43,3 +43,6 @@
 [submodule "thirdparty/openvdb/v10/openvdb"]
 	path = thirdparty/openvdb/v10/openvdb
 	url = https://github.com/AcademySoftwareFoundation/openvdb
+[submodule "thirdparty/tinygltf"]
+	path = thirdparty/tinygltf
+	url = https://github.com/syoyo/tinygltf

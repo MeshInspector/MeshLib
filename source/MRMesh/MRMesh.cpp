@@ -454,6 +454,18 @@ float Mesh::discreteMeanCurvature( VertId v ) const
     return ( sumArea > 0 ) ? 0.75f * sumAngLen / sumArea : 0;
 }
 
+float Mesh::discreteMeanCurvature( UndirectedEdgeId ue ) const
+{
+    EdgeId e = ue;
+    if ( topology.isBdEdge( e ) )
+        return 0;
+    float sumArea = area( topology.left( e ) ) + area( topology.right( e ) );
+    float sumAngLen = dihedralAngle( e ) * edgeLength( e );
+    // sumAngLen / 2 because of mean curvature definition,
+    // sumArea / 3 because each triangle has 3 edges
+    return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
+}
+
 class CreaseEdgesCalc 
 {
 public:

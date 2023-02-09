@@ -176,7 +176,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &MR::Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
-        def( "discreteMeanCurvature", &MR::Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
+        def( "discreteMeanCurvature", ( float( MR::Mesh::* )( VertId ) const ) &MR::Mesh::discreteMeanCurvature, pybind11::arg( "v" ),
             "computes discrete mean curvature in given vertex measures in length^-1;\n"
             "0 for planar regions, positive for convex surface, negative for concave surface" ).
         def_readwrite( "topology", &MR::Mesh::topology ).

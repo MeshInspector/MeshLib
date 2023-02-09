@@ -19,6 +19,22 @@ EdgeMetric edgeLengthMetric( const Mesh & mesh )
     };
 }
 
+EdgeMetric discreteAbsMeanCurvatureMetric( const Mesh & mesh )
+{
+    return [&mesh]( EdgeId e )
+    {
+        return std::abs( mesh.discreteMeanCurvature( e.undirected() ) );
+    };
+}
+
+EdgeMetric discreteMinusAbsMeanCurvatureMetric( const Mesh & mesh )
+{
+    return [&mesh]( EdgeId e )
+    {
+        return -std::abs( mesh.discreteMeanCurvature( e.undirected() ) );
+    };
+}
+
 EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleSinForBoundary )
 {
     const float bdFactor = exp( angleSinFactor * angleSinForBoundary );

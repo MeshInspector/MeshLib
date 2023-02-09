@@ -137,7 +137,8 @@ tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float off
 
     SharpenMarchingCubesMeshSettings sharpenParams;
     sharpenParams.minNewVertDev = params.voxelSize / 25;
-    sharpenParams.maxNewVertDev = 2 * params.voxelSize;
+    sharpenParams.maxNewRank2VertDev = 5 * params.voxelSize;
+    sharpenParams.maxNewRank3VertDev = 2 * params.voxelSize;
     sharpenParams.maxOldVertPosCorrection = params.voxelSize / 2;
     sharpenParams.offset = offset;
     sharpenParams.outSharpEdges = params.outSharpEdges;

@@ -2,7 +2,7 @@ var append_disclamer = function () {
   if (is_ios() || window.location.href.indexOf("RMISingle") < 0)
     return;
 
-  var popup = createPopup('single_thread_disclamer_dialog', '', 400, 60);
+  var popup = createPopup('single_thread_disclamer_dialog', '', 400, 60, false);
   popup.setAttribute('id', 'single_thread_disclamer_dialog');
 
   var logo = document.createElement('img');

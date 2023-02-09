@@ -61,13 +61,17 @@ find_package(PkgConfig REQUIRED)
 SET(MR_UBUNTU FALSE) # any Ubuntu version
 SET(MR_UBUNTU22 FALSE) # Ubuntu 22.*
 SET(MR_FEDORA FALSE)
-# Python
-IF(NOT MR_EMSCRIPTEN)
+SET(MR_PLATFORM "UNKNOWN")
+
+IF(MR_EMSCRIPTEN)
+ SET(MR_PLATFORM "WASM")
+ELSE()
 IF(APPLE)
  include_directories(${HOMEBREW_PREFIX}/include)
   # need to hardcode some path to fix wheel (no option to pass path)
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${THIRDPARTY_LIB_DIR};${CMAKE_BINARY_DIR}/bin")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  SET(MR_PLATFORM "APPLE_${CMAKE_HOST_SYSTEM_PROCESSOR}")
 ELSE()
  # set platform dependent flags
  file(STRINGS /etc/os-release distro REGEX "^NAME=")
@@ -79,6 +83,7 @@ ELSE()
  string(FIND ${version_id} "." dot-pos)
  string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
  message("using ${distro} ${version_id}")
+ SET(MR_PLATFORM "${distro}_${version_id}")
 
  IF( ${distro} STREQUAL "Ubuntu")
   SET(MR_UBUNTU TRUE)
@@ -91,6 +96,8 @@ ELSE()
   SET(MR_FEDORA TRUE)
  ENDIF() # Fedora
 ENDIF() # APPLE
+add_definitions( -DMR_PLATFORM="${MR_PLATFORM}" )
+message("platform: ${MR_PLATFORM}")
 
 IF(${MR_UBUNTU22} OR APPLE)
  SET(MR_PYTHON_VERSION 3.10)

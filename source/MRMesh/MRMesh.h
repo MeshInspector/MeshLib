@@ -144,9 +144,12 @@ struct [[nodiscard]] Mesh
     // please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
     [[nodiscard]] MRMESH_API float dihedralAngle( EdgeId e ) const;
 
-    // computes discrete mean curvature in given vertex measures in length^-1;
+    // computes discrete mean curvature in given vertex, measures in length^-1;
     // 0 for planar regions, positive for convex surface, negative for concave surface
     [[nodiscard]] MRMESH_API float discreteMeanCurvature( VertId v ) const;
+    // computes discrete mean curvature in given edge, measures in length^-1;
+    // 0 for planar regions, positive for convex surface, negative for concave surface
+    [[nodiscard]] MRMESH_API float discreteMeanCurvature( UndirectedEdgeId e ) const;
     // computes discrete Gaussian curvature (or angle defect) at given vertex,
     // which 0 in inner vertices on planar mesh parts and reaches 2*pi on needle's tip, see http://math.uchicago.edu/~may/REU2015/REUPapers/Upadhyay.pdf
     // optionally returns whether the vertex is on boundary

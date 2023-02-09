@@ -33,7 +33,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         }
     } );
 #ifndef __EMSCRIPTEN__
-    CommandLoop::appendCommandAfterWindowAppear( [] ()
+    CommandLoop::appendCommand( [] ()
     {
         auto& viewer = getViewerInstance();
         int samples = 0;
@@ -49,7 +49,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
                     menu->showErrorModal( "GPU multisampling settings override application value." );
             }
         }
-    } );
+    }, CommandLoop::StartPosition::AfterWindowAppear );
 #endif
 }
 

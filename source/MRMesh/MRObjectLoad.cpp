@@ -111,7 +111,7 @@ tl::expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( cons
 }
 
 #if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
 
@@ -123,17 +123,33 @@ tl::expected<MR::ObjectVoxels, std::string> makeObjectVoxelsFromFile( const std:
     {
         return tl::make_unexpected( loadRes.error() );
     }
-    auto& vdbVolume = *loadRes;
-    ObjectVoxels objVoxels;
-    objVoxels.setName( utf8string( file.stem() ) );
-    if ( cb )
-        cb = [callback] ( float v ) { return callback( ( 1.f + v ) / 3.f ); };
-    objVoxels.construct( vdbVolume, cb );
-    if ( cb )
-        cb = [callback] ( float v ) { return callback( ( 2.f + v ) / 3.f ); };
-    objVoxels.setIsoValue( ( vdbVolume.min + vdbVolume.max ) / 2.f, cb );
+    auto& loadResRef = *loadRes;
+    std::vector<std::shared_ptr<ObjectVoxels>> res;
+    int size = int( loadResRef.size() );
+    for ( int i = 0; i < size; ++i )
+    {
+        std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+        obj->setName( utf8string( file.stem() ) + " " + std::to_string( i ) );
+        int step = 0;
+        bool callbackRes = true;
+        if ( cb )
+            cb = [callback, i, step, size, &callbackRes] ( float v )
+        {
+            callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
+            return callbackRes;
+        };
 
-    return objVoxels;
+        obj->construct( loadResRef[i], cb );
+        if ( cb && !callbackRes )
+            return tl::make_unexpected( getCancelMessage( file ) );
+        step = 1;
+        obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
+        if ( cb && !callbackRes )
+            return tl::make_unexpected( getCancelMessage( file ) );
+        res.emplace_back( obj );
+    }
+    
+    return res;
 }
 #endif
 
@@ -240,15 +256,20 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                         result = tl::make_unexpected( objectDistanceMap.error() );
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-                        auto objVoxels = makeObjectVoxelsFromFile( filename, callback );
-                        if ( objVoxels.has_value() )
+                        auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
+                        std::vector<std::shared_ptr<Object>> resObjs;
+                        if ( objsVoxels.has_value() )
                         {
-                            objVoxels->select( true );
-                            auto obj = std::make_shared<ObjectVoxels>( std::move( objVoxels.value() ) );
-                            result = { obj };
+                            auto& objsVoxelsRef = *objsVoxels;
+                            for ( auto& objPtr : objsVoxelsRef )
+                            {
+                                objPtr->select( true );
+                                resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
+                            }
+                            result = resObjs;
                         }
                         else
-                            result = tl::make_unexpected( objVoxels.error() );
+                            result = tl::make_unexpected( objsVoxels.error() );
 #endif
 
                     }

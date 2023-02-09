@@ -109,46 +109,37 @@ std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
     return std::abs( dot( line.p, plane.n ) - plane.d );
 }
 
-/// finds distance between parallel or skew lines ( a line1 and a line2 )
-/// \return nullopt if they intersect
+/// finds the closest points between two lines in 3D;
+/// for parallel lines the selection is arbitrary;
+/// \return two equal points if the lines intersect
 template<typename T>
-std::optional<T> distance( const Line3<T>& line1, const Line3<T>& line2,
-    T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
+LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
 {
-    const auto crossDir = cross( line1.d, line2.d );
-    if ( crossDir.lengthSq() < errorLimit * errorLimit )
-        return (line1.project( line2.p ) - line2.p ).length();
-    
-    const auto p1 = dot( crossDir, line1.p );
-    const auto p2 = dot( crossDir, line2.p );
-    if ( std::abs( p1 - p2 ) < errorLimit )
-        return {};
+    const auto d11 = line1.d.lengthSq();
+    const auto d12 = dot( line1.d, line2.d );
+    const auto d22 = line2.d.lengthSq();
+    const auto det = d12 * d12 - d11 * d22;
+    if ( det == 0 )
+    {
+        // lines are parallel
+        return { line1.p, line2.project( line1.p ) };
+    }
 
-    return std::abs( p1 - p2 );
+    const auto dp = line2.p - line1.p;
+    const auto x = dot( dp, line1.d ) / det;
+    const auto y = dot( dp, line2.d ) / det;
+    const auto a = d12 * y - d22 * x;
+    const auto b = d11 * y - d12 * x;
+    return { line1( a ), line2( b ) };
 }
 
-/// finds closest point between skew lines ( a line1 and a line2 )
-/// \return nullopt if they intersect or parallel
+/// finds distance between parallel or skew lines ( a line1 and a line2 )
+/// \return zero if they intersect
 template<typename T>
-std::optional<LineSegm3<T>> closestPoints( const Line3<T>& line1, const Line3<T>& line2,
-    T errorLimit = std::numeric_limits<T>::epsilon() * T( 20 ) )
+T distance( const Line3<T>& line1, const Line3<T>& line2 )
 {
-    const auto crossDir = cross( line1.d, line2.d );
-    if ( crossDir.lengthSq() < errorLimit * errorLimit )
-        return {};
-
-    const auto p1 = dot( crossDir, line1.p );
-    const auto p2 = dot( crossDir, line2.p );
-    if ( std::abs( p1 - p2 ) < errorLimit )
-        return {};
-
-    const auto n2 = cross( line2.d, crossDir );
-    const T den = dot( line1.d, n2 );
-    if ( den == 0 ) /// check for calculation
-        return {};
-    const auto closest1 = line1.p + dot( ( line2.p - line1.p ), n2 ) / den * line1.d;
-    const auto closest2 = closest1 + ( p2 - p1 ) * crossDir;
-    return LineSegm3<T>( closest1, closest2 );
+    const auto cl = closestPoints( line1, line2 );
+    return ( cl.a - cl.b ).length();
 }
 
 /// \}

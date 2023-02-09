@@ -969,6 +969,7 @@ PaletteChanges Palette(
             changes = int( PaletteChanges::All );
             CloseCurrentPopup();
         }
+        ImGui::PopStyleVar();
         ImGui::SetTooltipIfHovered( "Load one of custom presets", menuScaling );
     }
 
@@ -1131,7 +1132,7 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
     if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
-        PopStyleVar( 4 );
+        PopStyleVar( 3 );
         return PaletteChanges( changes );
     }
 
@@ -1207,7 +1208,7 @@ PaletteChanges Palette(
     ImGui::PopStyleVar();
 
     ImGui::EndPopup();
-    PopStyleVar( 4 );
+    PopStyleVar( 3 );
 
     return PaletteChanges( changes );
 }

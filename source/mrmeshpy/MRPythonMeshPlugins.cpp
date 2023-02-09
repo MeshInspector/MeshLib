@@ -82,11 +82,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
-    m.def( "detectTunnelFaces", &MR::detectTunnelFaces, pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
+    m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, maxTunnelLength ); },
+        pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
         "returns tunnels as a number of faces;\n"
         "if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere" );
 
-    m.def( "detectBasisTunnels", &MR::detectBasisTunnels, pybind11::arg( "mp" ), "detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh" );
+    m.def( "detectBasisTunnels", []( const MeshPart & mp ) { return MR::detectBasisTunnels( mp ); },
+        pybind11::arg( "mp" ), "detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh" );
 
     m.def( "findDegenerateFaces", &MR::findDegenerateFaces, 
         pybind11::arg( "mp" ), pybind11::arg( "criticalAspectRatio" ) = FLT_MAX,

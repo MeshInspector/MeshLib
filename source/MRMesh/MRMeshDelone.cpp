@@ -61,16 +61,7 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
         }
     }
 
-    bool flipEdgeWillBeMultiple = false;
-    for ( auto e : orgRing( mesh.topology, mesh.topology.next( edge ).sym()  ) )
-    {
-        assert( mesh.topology.org( e ) == d );
-        if ( mesh.topology.dest( e ) == b )
-        {
-            flipEdgeWillBeMultiple = true;
-            break;
-        }
-    }
+    bool flipEdgeWillBeMultiple = mesh.topology.findEdge( b, d ).valid();
 
     if ( edgeIsMultiple && !flipEdgeWillBeMultiple )
         return false;
@@ -152,7 +143,7 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 void makeDeloneOriginRing( Mesh & mesh, EdgeId e, const DeloneSettings& settings )
 {
     MR_WRITER( mesh );
-    mesh.topology.flipEdgesAround( e, [&]( EdgeId testEdge )
+    mesh.topology.flipEdgesIn( e, [&]( EdgeId testEdge )
     {
         return !checkDeloneQuadrangleInMesh( mesh, testEdge, settings );
     } );

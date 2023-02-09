@@ -133,9 +133,18 @@ void PlaneAccumulator::addPlane( const Plane3d & pl )
     rhs_ += pl.d * pl.n;
 }
 
-Vector3d PlaneAccumulator::findBestCrossPoint( const Vector3d & p0, double tol ) const
+Vector3d PlaneAccumulator::findBestCrossPoint( const Vector3d & p0, double tol, int * rank, Vector3d * space ) const
 {
-    return p0 + mat_.solve( rhs_ - mat_ * p0, tol );
+    return p0 + mat_.solve( rhs_ - mat_ * p0, tol, rank, space );
+}
+
+Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, int * rank, Vector3f * space ) const
+{
+    Vector3d mySpace;
+    Vector3f res{ findBestCrossPoint( Vector3d{ p0 }, tol, rank, space ? &mySpace : nullptr ) };
+    if ( space )
+        *space = Vector3f( mySpace );
+    return res;
 }
 
 } //namespace MR

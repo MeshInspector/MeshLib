@@ -12,15 +12,17 @@ namespace MR
 struct EdgeCurvature
 {
     UndirectedEdgeId edge;
-    float curvature = 0;
+    float metric = 0;
 
-    std::pair<float, int> asSortablePair() const { return { -curvature, (int)edge }; }
+    std::pair<float, int> asSortablePair() const { return { metric, (int)edge }; }
     bool operator < ( const EdgeCurvature & b ) const { return asSortablePair() < b.asSortablePair(); }
 };
 
-std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp )
+std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric )
 {
     MR_TIMER
+    if ( !metric )
+        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
     
     // collect all mesh inner edges
     std::vector<EdgeCurvature> innerEdges;
@@ -36,7 +38,7 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            innerEdges[i].curvature = std::abs( mp.mesh.dihedralAngleSin( innerEdges[i].edge ) );
+            innerEdges[i].metric = metric( innerEdges[i].edge );
         }
     });
 
@@ -122,7 +124,7 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp )
 }
 
 
-FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength )
+FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const EdgeMetric & metric )
 {
     MR_TIMER;
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
@@ -132,7 +134,7 @@ FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength )
 
     for ( ;; )
     {
-        auto basisTunnels = detectBasisTunnels( activeMeshPart );
+        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric );
         const auto numBasisTunnels = basisTunnels.size();
 
         sortPathsByLength( basisTunnels, mp.mesh );

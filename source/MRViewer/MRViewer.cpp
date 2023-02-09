@@ -419,6 +419,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( res != EXIT_SUCCESS )
         return res;
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterSplash );
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
@@ -427,7 +428,7 @@ int Viewer::launch( const LaunchParams& params )
 
     parseCommandLine_( params.argc, params.argv );
 
-    CommandLoop::setWindowAppeared();
+    CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
     if ( params.startEventLoop )
     {
@@ -625,6 +626,9 @@ int Viewer::launchInit_( const LaunchParams& params )
     // give it name of app to store in right place
     recentFilesStore = RecentFilesStore( params.name );
 
+    CommandLoop::setState( CommandLoop::StartPosition::AfterPluginInit );
+    CommandLoop::processCommands();
+
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
         splashMinTimer.get();
@@ -682,7 +686,8 @@ void Viewer::launchShut()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
-    glfwHideWindow( window );
+    if ( window )
+        glfwHideWindow( window );
 
     if ( settingsMng_ )
     {

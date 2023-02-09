@@ -72,27 +72,32 @@ TEST( MRMesh, IntersectLineLine )
 
 
     auto dist0 = distance( line1, line2 );
-    ASSERT_FALSE( dist0.has_value() );
+    ASSERT_NEAR( dist0, 0, 1e-15 );
 
     auto dist1 = distance( line1, line3 );
-    ASSERT_TRUE( dist1.has_value() );
-    ASSERT_NEAR( *dist1, 1., 1e-15 );
+    ASSERT_NEAR( dist1, 1., 1e-15 );
 
     auto dist2 = distance( line1, line4 );
-    ASSERT_TRUE( dist2.has_value() );
-    ASSERT_NEAR( *dist2, 1., 1e-15 );
+    ASSERT_NEAR( dist2, 1., 1e-15 );
 
+    const Line3d line5( Vector3d( 0, 0, 1 ), Vector3d( 1, 1, 0 ).normalized() );
+    auto dist15 = distance( line1, line5 );
+    ASSERT_NEAR( dist15, 1, 1e-15 );
 
     auto cl0 = closestPoints( line1, line2 );
-    ASSERT_FALSE( cl0.has_value() );
+    ASSERT_NEAR( ( cl0.a - Vector3d( 1, 1, 0 ) ).length(), 0, 1e-15 );
+    ASSERT_NEAR( ( cl0.b - Vector3d( 1, 1, 0 ) ).length(), 0, 1e-15 );
 
     auto cl1 = closestPoints( line1, line3 );
-    ASSERT_TRUE( cl1.has_value() );
-    ASSERT_NEAR( ( cl1->a - Vector3d( 1, 0, 0 ) ).length(), 0., 1e-15 );
-    ASSERT_NEAR( ( cl1->b - Vector3d( 0, 0, 0 ) ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( cl1.a - Vector3d( 1, 0, 0 ) ).length(), 0., 1e-15 );
+    ASSERT_NEAR( ( cl1.b - Vector3d( 0, 0, 0 ) ).length(), 0., 1e-15 );
 
     auto cl2 = closestPoints( line1, line4 );
-    ASSERT_FALSE( cl2.has_value() );
+    ASSERT_NEAR( ( cl2.a - cl2.b - Vector3d( 1, 0, 0 ) ).length(), 0., 1e-15 );
+
+    auto cl15 = closestPoints( line1, line5 );
+    ASSERT_NEAR( ( cl15.a - Vector3d( 1, 1, 0 ) ).length(), 0, 1e-15 );
+    ASSERT_NEAR( ( cl15.b - Vector3d( 1, 1, 1 ) ).length(), 0, 1e-15 );
 }
 
 } //namespace MR

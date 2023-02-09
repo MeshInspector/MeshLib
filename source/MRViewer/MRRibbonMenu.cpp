@@ -1404,17 +1404,21 @@ void RibbonMenu::drawRibbonViewportsLabels_()
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold ) );
     for ( const auto& vp : viewer->viewport_list )
     {
-        std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
-        auto pos = viewer->viewportToScreen( Vector3f( 0.0f, height( vp.getViewportRect() ) - 50.0f * scaling, 0.0f ), vp.id );
-        ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
         constexpr std::array<const char*, 2> cProjModeString = { "Orthographic" , "Perspective" };
+        std::string windowName = "##ProjectionMode" + std::to_string( vp.id.value() );
+        std::string text;
+        if ( viewer->viewport_list.size() > 1 )
+            text = fmt::format( "Viewport Id: {}, {}", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
+        else
+            text = fmt::format( "{}", cProjModeString[int( !vp.getParameters().orthographic )] );
+        auto textSize = ImGui::CalcTextSize( text.c_str() );
+        auto pos = viewer->viewportToScreen( Vector3f( width( vp.getViewportRect() ) - textSize.x - 25.0f * scaling,
+            height( vp.getViewportRect() ) - textSize.y - 25.0f * scaling, 0.0f ), vp.id );
+        ImGui::SetNextWindowPos( ImVec2( pos.x, pos.y ) );
         ImGui::Begin( windowName.c_str(), nullptr,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize |
                       ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoBringToFrontOnFocus );
-        if ( viewer->viewport_list.size() > 1 )
-            ImGui::Text( "Viewport Id: %d, %s", vp.id.value(), cProjModeString[int( !vp.getParameters().orthographic )] );
-        else
-            ImGui::Text( "%s", cProjModeString[int( !vp.getParameters().orthographic )] );
+        ImGui::Text( "%s", text.c_str() );
         ImGui::End();
     }
     ImGui::PopFont();

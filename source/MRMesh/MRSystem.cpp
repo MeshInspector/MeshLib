@@ -377,7 +377,7 @@ void OpenLink( const std::string& url )
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM( window.open( UTF8ToString( $0 ) ), url.c_str() );
+    EM_ASM( open_link( UTF8ToString( $0 ) ), url.c_str() );
 #pragma clang diagnostic pop
 #else
 #ifdef __APPLE__
@@ -444,6 +444,22 @@ std::string GetCpuId()
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif
+}
+
+std::string getOSNoSpaces()
+{
+    #ifdef _WIN32
+    return "Windows";
+    #else
+    #ifdef __EMSCRIPTEN__
+    return "Wasm";
+    #else
+    // get platform from cmake variables
+    std::string platform = MR_PLATFORM;
+    std::replace(platform.begin(), platform.end(), ' ', '_');
+    return platform;
+    #endif
+    #endif
 }
 
 } //namespace MR

@@ -24,6 +24,7 @@
 #pragma clang diagnostic pop
 #endif
 
+#pragma warning( pop)
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>

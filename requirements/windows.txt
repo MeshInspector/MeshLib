@@ -21,6 +21,7 @@ podofo
 python3
 spdlog
 tiff
+tinygltf
 tl-expected
 glad
 glfw3

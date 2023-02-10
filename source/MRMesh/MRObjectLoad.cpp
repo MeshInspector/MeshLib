@@ -168,8 +168,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
 
     if ( ext == u8".obj" )
     {
-        auto res =  MeshLoad::fromSceneObjFile( filename, false, callback );
-
+        auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
         if ( res.has_value() )
         {
             std::vector<std::shared_ptr<Object>> objects( res.value().size() );

@@ -3,15 +3,10 @@
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
-#include "MRMatrix3.h"
 #include "MRPch/MRTBB.h"
-
-#include "MRObjectMesh.h"
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
-
-#include <stack>
 
 namespace
 {
@@ -70,9 +65,6 @@ namespace
             return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
         return {};
     }
-
-
-   
 }
 
 namespace MR
@@ -387,7 +379,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     finishObject();
     return res;
 }
-
 
 } //namespace MeshLoad
 

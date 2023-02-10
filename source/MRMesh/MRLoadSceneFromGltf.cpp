@@ -7,12 +7,10 @@
 #include "MRQuaternion.h"
 #include "MRStringConvert.h"
 
-#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
+#if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
-
-#include <zip.h>
 
 #pragma warning( push )
 #pragma warning( disable : 4062 4866 )
@@ -23,7 +21,7 @@
 
 #pragma warning( pop)
 
-#if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
+#if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic pop
 #endif
 

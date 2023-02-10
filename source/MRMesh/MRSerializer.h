@@ -146,8 +146,6 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTriPoint& mtp, const MeshTopology& topology );
 MRMESH_API void deserializeFromJson( const Json::Value& root, PointOnFace& pf );
 
-
-
 /// \}
 
 } // namespace MR

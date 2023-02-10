@@ -32,9 +32,6 @@ MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( s
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );
 
-MRMESH_API tl::expected<std::vector<std::shared_ptr<Object>>, std::string> fromSceneGltfFile( const std::filesystem::path& file, bool combineAllObjects,
-    ProgressCallback callback = {} );
-
 /// \}
 
 } // namespace MeshLoad

@@ -190,20 +190,28 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         else
             result = tl::make_unexpected( res.error() );
     }
-    else if ( ext == u8".gltf" )
+    else if ( !SceneFileFilters.empty() && ( filename.extension() == SceneFileFilters.front().extension.substr( 1 ) ||
+                                             filename.extension() == SceneFileFilters.back().extension.substr( 1 ) ) )
     {
-        return MeshLoad::fromSceneGltfFile( filename, false, callback );
-    }
-    else if ( !SceneFileFilters.empty() && filename.extension() == SceneFileFilters.front().extension.substr( 1 ) )
-    {
-        auto res = deserializeObjectTree( filename, {}, callback );
-        if ( res.has_value() )
+        auto objTree = deserializeObjectTree( filename, {}, callback );
+        if ( objTree.has_value() )
         {
-            result = std::vector( { *res } );
+            result = std::vector( { *objTree } );
             ( *result )[0]->setName( utf8string( filename.stem() ) );
         }
         else
-            result = tl::make_unexpected( res.error() );
+        {            
+            objTree = deserializeObjectTreeFromGltf( filename, callback );            
+            if ( objTree.has_value() )
+            {
+                result = std::vector( { *objTree } );
+                ( *result )[0]->setName( utf8string( filename.stem() ) );
+            }
+            else
+            {
+                return tl::make_unexpected( result.error() );
+            }
+        }
     }
     else
     {

@@ -162,7 +162,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
 
     tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
 
-    auto ext = "*" + utf8string( filename.extension().u8string() );
+    auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );   
     
@@ -465,7 +465,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
 
 tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
 {
-    auto ext = "*" + utf8string( path.extension().u8string() );
+    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 

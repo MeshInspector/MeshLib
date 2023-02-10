@@ -16,6 +16,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
 #include "MRSerializer.h"
+#include "MRLoadSceneFromGltf.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -189,8 +190,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         else
             result = tl::make_unexpected( res.error() );
     }
-    else if ( !SceneFileFilters.empty() && ( filename.extension() == SceneFileFilters.front().extension.substr( 1 ) ||
-                                             filename.extension() == SceneFileFilters.back().extension.substr( 1 ) ) )
+    else if ( ext == u8".mru" )
     {
         auto objTree = deserializeObjectTree( filename, {}, callback );
         if ( objTree.has_value() )
@@ -199,17 +199,21 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
             ( *result )[0]->setName( utf8string( filename.stem() ) );
         }
         else
-        {            
-            objTree = deserializeObjectTreeFromGltf( filename, callback );            
-            if ( objTree.has_value() )
-            {
-                result = std::vector( { *objTree } );
-                ( *result )[0]->setName( utf8string( filename.stem() ) );
-            }
-            else
-            {
-                return tl::make_unexpected( result.error() );
-            }
+        {
+            return tl::make_unexpected( result.error() );            
+        }
+    }
+    else if ( ext == u8".gltf" )
+    {
+        auto objTree = deserializeObjectTreeFromGltf( filename, callback );
+        if ( objTree.has_value() )
+        {
+            result = std::vector( { *objTree } );
+            ( *result )[0]->setName( utf8string( filename.stem() ) );
+        }
+        else
+        {
+            return tl::make_unexpected( result.error() );
         }
     }
     else

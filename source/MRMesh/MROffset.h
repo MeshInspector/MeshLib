@@ -38,6 +38,15 @@ struct SharpOffsetParameters : BaseOffsetParameters
 {
     /// if non-null then created sharp edges will be saved here
     UndirectedEdgeBitSet* outSharpEdges = nullptr;
+    /// minimal surface deviation to introduce new vertex in a voxel, measured in voxelSize
+    float minNewVertDev = 1.0f / 25;
+    /// maximal surface deviation to introduce new rank 2 vertex (on intersection of 2 planes), measured in voxelSize
+    float maxNewRank2VertDev = 5;
+    /// maximal surface deviation to introduce new rank 3 vertex (on intersection of 3 planes), measured in voxelSize
+    float maxNewRank3VertDev = 2;
+    /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
+    /// big correction can be wrong and result from self-intersections in the reference mesh
+    float maxOldVertPosCorrection = 0.5f;
 };
 
 // Offsets mesh by converting it to voxels and back
@@ -49,6 +58,9 @@ struct SharpOffsetParameters : BaseOffsetParameters
 // only closed meshes allowed (only Offset mode)
 // typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
+
+// Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId> * outMap = nullptr );
 
 // Offsets mesh by converting it to voxels and back
 // post process result using reference mesh to sharpen features

@@ -80,6 +80,7 @@
     <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />
     <ClInclude Include="MRLineSegm3.h" />
+    <ClInclude Include="MRLoadSceneFromGltf.h" />
     <ClInclude Include="MRLog.h" />
     <ClInclude Include="MRMakeRigidXf.h" />
     <ClInclude Include="MRMatrix.h" />
@@ -347,6 +348,7 @@
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />
+    <ClCompile Include="MRLoadSceneFromGltf.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />

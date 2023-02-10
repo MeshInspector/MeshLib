@@ -42,6 +42,9 @@ MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder
 /// loads meshes from given folder in new container object
 MRMESH_API tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, ProgressCallback callback = {} );
 
+//tries to load scene from every format listed in SceneFormatFilters
+MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback = {} );
+
 /// \}
 
 } // namespace MR

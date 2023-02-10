@@ -162,12 +162,11 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
 
     tl::expected<std::vector<std::shared_ptr<Object>>, std::string> result;
 
-    auto ext = filename.extension().u8string();
+    auto ext = "*" + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
-        c = ( char )tolower( c );
-
-
-    if ( ext == u8".obj" )
+        c = ( char )tolower( c );   
+    
+    if ( ext == "*.obj" )
     {
         auto res = MeshLoad::fromSceneObjFile( filename, false, callback );
         if ( res.has_value() )
@@ -190,31 +189,14 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
         else
             result = tl::make_unexpected( res.error() );
     }
-    else if ( ext == u8".mru" )
+    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extension == ext;     } ) != SceneFileFilters.end() )
     {
-        auto objTree = deserializeObjectTree( filename, {}, callback );
-        if ( objTree.has_value() )
-        {
-            result = std::vector( { *objTree } );
-            ( *result )[0]->setName( utf8string( filename.stem() ) );
-        }
-        else
-        {
-            return tl::make_unexpected( result.error() );            
-        }
-    }
-    else if ( ext == u8".gltf" )
-    {
-        auto objTree = deserializeObjectTreeFromGltf( filename, callback );
-        if ( objTree.has_value() )
-        {
-            result = std::vector( { *objTree } );
-            ( *result )[0]->setName( utf8string( filename.stem() ) );
-        }
-        else
-        {
-            return tl::make_unexpected( result.error() );
-        }
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
+        if ( !objTree.has_value() )
+            return tl::make_unexpected( objTree.error() );
+        
+        result = std::vector( { *objTree } );
+        ( *result )[0]->setName( utf8string( filename.stem() ) );
     }
     else
     {
@@ -479,6 +461,33 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
         return tl::make_unexpected( allErrors );
 
     return result;
+}
+
+tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
+{
+    auto ext = "*" + utf8string( path.extension().u8string() );
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+
+    auto res = tl::make_unexpected( std::string( "unsupported file extension" ) );
+
+    auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
+    {
+        return filter.extension == ext;
+    } );
+    if ( itF == SceneFileFilters.end() )
+        return res;
+
+    if ( itF->extension == "*.mru" )
+    {
+        return deserializeObjectTree( path, {}, callback );
+    }
+    else if ( itF->extension == "*.gltf" )
+    {
+        return deserializeObjectTreeFromGltf( path, callback );
+    }
+
+    return res;
 }
 
 } //namespace MR

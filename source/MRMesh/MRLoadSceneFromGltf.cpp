@@ -211,7 +211,7 @@ tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Mod
 
     for ( size_t meshId = 0; meshId < model.meshes.size(); ++meshId )
     {
-        if ( !callback( 0.8f * ( meshId + 1 ) / float( model.meshes.size() ) ) )
+        if ( callback && !callback( 0.8f * ( meshId + 1 ) / float( model.meshes.size() ) ) )
             return tl::make_unexpected( "Operation was cancelled" );
 
         result.emplace_back();
@@ -348,7 +348,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
 
         while ( !nodeStack.empty() )
         {
-            if ( !callback( 0.8f + 0.2f * ( ++counter ) / float( model.nodes.size() ) ) )
+            if ( callback && !callback( 0.8f + 0.2f * ( ++counter ) / float( model.nodes.size() ) ) )
                 return tl::make_unexpected( "Operation was cancelled" );
 
             const auto& node = model.nodes[nodeStack.top()];

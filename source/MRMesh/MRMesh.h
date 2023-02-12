@@ -44,7 +44,7 @@ struct [[nodiscard]] Mesh
     // returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] Vector3f edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
     [[nodiscard]] Vector3f edgePoint( const MeshEdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
-    [[nodiscard]] Vector3f edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
+    [[nodiscard]] Vector3f edgeCenter( UndirectedEdgeId e ) const { return edgePoint( e, 0.5f ); }
     // returns three points of left face of e
     MRMESH_API void getLeftTriPoints( EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 ) const;
     void getLeftTriPoints( EdgeId e, Vector3f (&v)[3] ) const { getLeftTriPoints( e, v[0], v[1], v[2] ); }
@@ -74,9 +74,9 @@ struct [[nodiscard]] Mesh
     // returns vector equal to edge destination point minus edge origin point
     [[nodiscard]] Vector3f edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
     // returns Euclidean length of the edge
-    [[nodiscard]] float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
+    [[nodiscard]] float edgeLength( UndirectedEdgeId e ) const { return edgeVector( e ).length(); }
     // returns squared Euclidean length of the edge (faster to compute than length)
-    [[nodiscard]] float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
+    [[nodiscard]] float edgeLengthSq( UndirectedEdgeId e ) const { return edgeVector( e ).lengthSq(); }
 
     // computes directed double area for a triangular face from its vertices
     [[nodiscard]] MRMESH_API Vector3f leftDirDblArea( EdgeId e ) const;
@@ -110,7 +110,7 @@ struct [[nodiscard]] Mesh
     // at vertex, only region faces will be considered
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
     // at edge (middle of two face normals)
-    [[nodiscard]] MRMESH_API Vector3f pseudonormal( EdgeId e, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
     // returns pseudonormal in corresponding face/edge/vertex;
     // unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
@@ -131,18 +131,18 @@ struct [[nodiscard]] Mesh
     // 0 if both faces are in the same plane,
     // positive if the faces form convex surface,
     // negative if the faces form concave surface
-    [[nodiscard]] MRMESH_API float dihedralAngleSin( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngleSin( UndirectedEdgeId e ) const;
     // given an edge between two triangular faces, computes cosine of dihedral angle between them:
     // 1 if both faces are in the same plane,
     // 0 if the surface makes right angle turn at the edge,
     // -1 if the faces overlap one another
-    [[nodiscard]] MRMESH_API float dihedralAngleCos( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngleCos( UndirectedEdgeId e ) const;
     // given an edge between two triangular faces, computes the dihedral angle between them:
     // 0 if both faces are in the same plane,
     // positive if the faces form convex surface,
     // negative if the faces form concave surface;
     // please consider the usage of faster dihedralAngleSin(e) and dihedralAngleCos(e)
-    [[nodiscard]] MRMESH_API float dihedralAngle( EdgeId e ) const;
+    [[nodiscard]] MRMESH_API float dihedralAngle( UndirectedEdgeId e ) const;
 
     // computes discrete mean curvature in given vertex, measures in length^-1;
     // 0 for planar regions, positive for convex surface, negative for concave surface
@@ -161,7 +161,7 @@ struct [[nodiscard]] Mesh
     // computes cotangent of the angle in the left( e ) triangle opposite to e,
     // and returns 0 if left face does not exist
     [[nodiscard]] MRMESH_API float leftCotan( EdgeId e ) const;
-    [[nodiscard]] float cotan( EdgeId e ) const { return leftCotan( e ) + leftCotan( e.sym() ); }
+    [[nodiscard]] float cotan( UndirectedEdgeId ue ) const { EdgeId e{ ue }; return leftCotan( e ) + leftCotan( e.sym() ); }
 
     // computes quadratic form in the vertex as the sum of squared distances from
     // 1) planes of adjacent triangles

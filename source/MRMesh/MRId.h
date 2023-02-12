@@ -68,6 +68,7 @@ public:
     bool odd() const { assert( valid() ); return (id_ & 1) == 1; }
     // returns unique identifier of the edge ignoring its direction
     UndirectedEdgeId undirected() const { assert( valid() ); return UndirectedEdgeId( id_ >> 1 ); }
+    operator UndirectedEdgeId() const { return undirected(); }
 
     bool operator == (Id b) const { return id_ == b.id_; }
     bool operator != (Id b) const { return id_ != b.id_; }

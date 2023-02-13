@@ -12,16 +12,13 @@
 namespace MR
 {
 
-bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
     // check input
     assert( !holeRepresentativeEdges.empty() );
     if ( holeRepresentativeEdges.empty() )
-    {
-        spdlog::warn( "fillContours2D: No hole edges are given" );
-        return false;
-    }
+        return tl::make_unexpected( "No hole edges are given" );
 
     // reorder to make edges ring with hole on left side
     bool badEdge = false;
@@ -36,10 +33,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     }
     assert( !badEdge );
     if ( badEdge )
-    {
-        spdlog::warn( "fillContours2D: Some hole edges have left face" );
-        return false;
-    }
+        return tl::make_unexpected( "Some hole edges have left face" );
 
     // make border rings
     const auto paths = meshTopology.getLeftRings( holeRepresentativeEdges );
@@ -74,10 +68,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     // make patch surface
     auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, false );
     if ( !fillResult )
-    {
-        spdlog::warn( "fillContours2D: Cant triangulate contours" );
-        return false;
-    }
+        return tl::make_unexpected( "Cannot triangulate contours" );
     Mesh& patchMesh = *fillResult;
     const auto holes = patchMesh.topology.findHoleRepresentiveEdges();
 
@@ -93,17 +84,11 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
 
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
-    {
-        spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
-        return false;
-    }
+        return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
-        {
-            spdlog::warn( "fillContours2D: Patch surface borders size different from original mesh borders size" );
-            return false;
-        }
+            return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
     }
 
     // reorder to make edges ring with hole on right side
@@ -131,7 +116,7 @@ bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEd
     
     // add patch surface to original mesh
     mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
-    return true;
+    return {};
 }
 
 }

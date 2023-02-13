@@ -15,7 +15,8 @@ public:
     /// this remains valid only if tree is valid
     [[nodiscard]] MRMESH_API FastWindingNumber( const Mesh & mesh );
     /// compute approximate winding number at \param q;
-    /// \param beta determines the precision of the approximation: the more the better
+    /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;
+    /// if distance from q to the center of some triangle group is more than beta times the distance from the center to most distance triangle in the group then we use approximate formula
     [[nodiscard]] float calc( const Vector3f & q, float beta ) const;
 
 private:

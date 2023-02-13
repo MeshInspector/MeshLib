@@ -1,5 +1,8 @@
 #pragma once
+
 #include "MRMeshFwd.h"
+#include <tl/expected.hpp>
+#include <string>
 
 namespace MR
 {
@@ -10,8 +13,8 @@ namespace MR
  * @param holeRepresentativeEdges - each edge here represents a hole borders that should be filled
  * should be not empty
  * edges should have invalid left face (FaceId == -1)
- * @return true if holes filled, otherwise - false
+ * @return tl::expected with has_value()=true if holes filled, otherwise - string error
  */
-MRMESH_API bool fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+MRMESH_API tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
 }

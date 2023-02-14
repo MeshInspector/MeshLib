@@ -189,7 +189,7 @@ UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
     {
         if ( !mp.mesh.topology.isInnerOrBdEdge( ue, mp.region ) )
             return;
-        if ( mp.mesh.edgeLength( ue ) <= criticalLengthSq )
+        if ( mp.mesh.edgeLengthSq( ue ) <= criticalLengthSq )
             res.set( ue );
     } );
     return res;

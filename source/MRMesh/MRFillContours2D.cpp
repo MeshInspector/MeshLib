@@ -53,20 +53,25 @@ tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<Ed
 
     // make contours2D (on plane) from border rings (in world)
     Contours2f contours2f;
+    contours2f.reserve( paths.size() );
     for ( const auto& path : paths )
     {
-        Contour2f contour;
+        contours2f.emplace_back();
+        auto& contour = contours2f.back();
+        contour.reserve( path.size() + 1 );
         for ( const auto& edge : path )
         {
             const auto localPoint = planeXfInv( mesh.orgPnt( edge ) );
-            contour.push_back( Vector2f( localPoint.x, localPoint.y ) );
+            contour.emplace_back( Vector2f( localPoint.x, localPoint.y ) );
         }
-        contour.push_back( contour[0] );
-        contours2f.push_back( contour );
+        contour.emplace_back( contour.front() );
     }
 
+    auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
+        PlanarTriangulation::findHoleVertIdsByHoleEdges( mesh.topology, paths ) );
     // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, false );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
+    holeVertIds.reset();
     if ( !fillResult )
         return tl::make_unexpected( "Cannot triangulate contours" );
     Mesh& patchMesh = *fillResult;

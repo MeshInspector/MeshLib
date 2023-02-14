@@ -92,11 +92,15 @@ MR_ADD_PYTHON_POLYLINE(3)
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlanarTriangulation, [] ( pybind11::module_& m )
 {
-    m.def( "triangulateContours", ( MR::Mesh( * )( const MR::Contours2f&, bool ) )& MR::PlanarTriangulation::triangulateContours,
-        pybind11::arg( "contours" ), pybind11::arg( "mergeClosePoints" ) = true,
+    m.def("findHoleVertIdsByHoleEdges",&MR::PlanarTriangulation::findHoleVertIdsByHoleEdges,
+        pybind11::arg( "tp" ), pybind11::arg( "holePaths" ),
+        "return vertices of holes that correspond internal contours representation of PlanarTriangulation" );
+
+    m.def( "triangulateContours", ( MR::Mesh( * )( const MR::Contours2f&, const MR::PlanarTriangulation::HolesVertIds* ) )& MR::PlanarTriangulation::triangulateContours,
+        pybind11::arg( "contours" ), pybind11::arg( "holeVertsIds" ) = nullptr,
         "Triangulate 2d contours.\n"
         "Only closed contours are allowed (first point of each contour should be the same as last point of the contour).\n"
-        "mergeClosePoints - merge close points in contours\n"
+        "holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates\n"
         "Return created mesh" );
 } )
 

@@ -25,13 +25,13 @@ class PlanarTriangulator
 {
 public:
     // constructor makes initial mesh which simply contain input contours as edges
-    // (same vertices are merged and multiple edges are deleted)
-    PlanarTriangulator( const Contours2d& contours, bool mergeClosePoints = true, bool abortWhenIntersect = false );
+    // if holesVertId is null - merge all vertices with same coordinates
+    // otherwise only merge the ones with same initial vertId
+    PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId = nullptr, bool abortWhenIntersect = false );
     // process line sweep queue and triangulate inside area of mesh (based on winding rule)
     std::optional<Mesh> run();
 private:
     Mesh mesh_;
-    bool mergeClosePoints_ = true;
     bool abortWhenIntersect_ = false;
 
     struct EdgeWindingInfo
@@ -56,7 +56,7 @@ private:
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const Contours2d& contours );
     // merge same points on base mesh
-    void mergeSamePoints_();
+    void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
 
     // merging same vertices can make multiple edges, so clear it and update winding modifiers for merged edges
@@ -96,12 +96,11 @@ bool PlanarTriangulator::ComaparableVertId::operator>( const ComaparableVertId& 
     return l.x > r.x || ( l.x == r.x && l.y > r.y );
 }
 
-PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, bool mergeClosePoints /*= true*/, bool abortWhenIntersect /*= false*/ )
+PlanarTriangulator::PlanarTriangulator( const Contours2d& contours, const HolesVertIds* holesVertId /*= true*/, bool abortWhenIntersect /*= false*/ )
 {
     abortWhenIntersect_ = abortWhenIntersect;
-    mergeClosePoints_ = mergeClosePoints;
     initMeshByContours_( contours );
-    mergeSamePoints_();
+    mergeSamePoints_( holesVertId );
 }
 
 std::optional<Mesh> PlanarTriangulator::run()
@@ -177,15 +176,38 @@ void PlanarTriangulator::initMeshByContours_( const Contours2d& contours )
     }
 }
 
-void PlanarTriangulator::mergeSamePoints_()
+void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
 {
     MR_TIMER;
+
+    auto findRealVertId = [&] ( VertId patchId )
+    {
+        int holeId = 0;
+        while ( patchId + 1 >= ( *holesVertId )[holeId].size() )
+        {
+            patchId -= int( ( *holesVertId )[holeId].size() );
+            ++holeId;
+        }
+        return ( *holesVertId )[holeId][patchId];
+    };
     std::vector<ComaparableVertId> sortedPoints;
     sortedPoints.reserve( mesh_.points.size() );
     for ( int i = 0; i < mesh_.points.size(); ++i )
         sortedPoints.emplace_back( &mesh_, VertId( i ) );
-    std::sort( sortedPoints.begin(), sortedPoints.end() );
-
+    if ( !holesVertId )
+        std::sort( sortedPoints.begin(), sortedPoints.end() );
+    else
+    {
+        std::sort( sortedPoints.begin(), sortedPoints.end(), [&] ( const ComaparableVertId& l, const ComaparableVertId& r )
+        {
+            if ( l < r )
+                return true;
+            if ( l > r )
+                return false;
+            // find original vertId
+            return findRealVertId( l.id ) < findRealVertId( r.id );
+        } );
+    }
     int prevUnique = 0;
     for ( int i = 1; i < sortedPoints.size(); ++i )
     {
@@ -195,7 +217,7 @@ void PlanarTriangulator::mergeSamePoints_()
             continue;
         }
         // if same coords
-        if ( mergeClosePoints_ )
+        if ( !holesVertId || findRealVertId( sortedPoints[prevUnique].id ) == findRealVertId( sortedPoints[i].id ) )
             mergeSinglePare_( sortedPoints[prevUnique].id, sortedPoints[i].id );
     }
 
@@ -543,9 +565,26 @@ bool PlanarTriangulator::resolveIntersectios_()
     return true;
 }
 
-Mesh triangulateContours( const Contours2d& contours, bool mergeClosePoints /*= true*/ )
+HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vector<EdgePath>& holePaths )
 {
-    PlanarTriangulator triangulator( contours, mergeClosePoints, false );
+    HolesVertIds res;
+    res.reserve( holePaths.size() );
+    for ( const auto& path : holePaths )
+    {
+        if ( path.size() < 3 )
+            continue;
+        res.emplace_back();
+        auto& holeIds = res.back();
+        holeIds.reserve( path.size() );
+        for ( const auto& e : path )
+            holeIds.emplace_back( tp.org( e ) );
+    }
+    return res;
+}
+
+Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+{
+    PlanarTriangulator triangulator( contours, holeVertsIds, false );
     auto res = triangulator.run();
     assert( res );
     if ( res )
@@ -554,10 +593,10 @@ Mesh triangulateContours( const Contours2d& contours, bool mergeClosePoints /*= 
         return Mesh();
 }
 
-Mesh triangulateContours( const Contours2f& contours, bool mergeClosePoints /*= true*/ )
+Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, mergeClosePoints, false );
+    PlanarTriangulator triangulator( contsd, holeVertsIds, false );
     auto res = triangulator.run();
     assert( res );
     if ( res )
@@ -566,16 +605,16 @@ Mesh triangulateContours( const Contours2f& contours, bool mergeClosePoints /*= 
         return Mesh();
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, bool mergeClosePoints /*= true*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
-    PlanarTriangulator triangulator( contours, mergeClosePoints, true );
+    PlanarTriangulator triangulator( contours, holeVertsIds, true );
     return triangulator.run();
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, bool mergeClosePoints /*= true*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
 {
     const auto contsd = copyContours<Contours2d>( contours );
-    PlanarTriangulator triangulator( contsd, mergeClosePoints, true );
+    PlanarTriangulator triangulator( contsd, holeVertsIds, true );
     return triangulator.run();
 }
 

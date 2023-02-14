@@ -101,23 +101,37 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, co
 {
     MR_TIMER
 
-    auto offsetInVoxels = offset / params.voxelSize;
-    auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
-    auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
-        Vector3f::diagonal( params.voxelSize ),
-        std::abs( offsetInVoxels ) + 2, meshToLSCb );
-    if ( !voxelRes )
+        auto bb = mesh.computeBoundingBox();
+    MeshToSimpleVolumeParams msParams;
+    msParams.basis.b = bb.min - Vector3f::diagonal( offset + 5.0f * params.voxelSize );
+    msParams.basis.A = Matrix3f::scale( params.voxelSize );
+    msParams.signMode = MeshToSimpleVolumeParams::SignDetectionMode::WindingRule;
+    msParams.dimensions = Vector3i( ( bb.size() + 2.0f * Vector3f::diagonal( offset + 5.0f * params.voxelSize ) ) / params.voxelSize );
+    msParams.cb = subprogress( params.callBack, 0.0f, 0.4f );
+
+    auto volumeRes = meshToSimpleVolume( mesh, msParams );
+    if ( !volumeRes )
         return tl::make_unexpected( "Operation was canceled." );
 
-    VdbVolume volume = floatGridToVdbVolume( voxelRes );
+
+
+    //auto offsetInVoxels = offset / params.voxelSize;
+    //auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
+    //auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
+    //    Vector3f::diagonal( params.voxelSize ),
+    //    std::abs( offsetInVoxels ) + 2, meshToLSCb );
+    //if ( !voxelRes )
+    //    return tl::make_unexpected( "Operation was canceled." );
+
+    //VdbVolume volume = floatGridToVdbVolume( voxelRes );
 
     VdbVolumeToMeshParams vmParams;
-    vmParams.basis.A = Matrix3f::scale( params.voxelSize );
-    vmParams.iso = offsetInVoxels;
+    vmParams.basis = msParams.basis;// .A = Matrix3f::scale( params.voxelSize );
+    vmParams.iso = offset;
     vmParams.lessInside = true;
     vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
     vmParams.outVoxelPerFaceMap = outMap;
-    auto meshRes = vdbVolumeToMesh( volume, vmParams );
+    auto meshRes = simpleVolumeToMesh( *volumeRes, mesh, vmParams );
     if ( !meshRes )
         return tl::make_unexpected( "Operation was canceled." );
 

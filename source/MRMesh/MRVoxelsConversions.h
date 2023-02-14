@@ -42,5 +42,9 @@ MRMESH_API std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, con
 // returns nullopt if operation was canceled
 MRMESH_API std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToMeshParams& params = {} );
 
+// makes Mesh from SimpleVolume with given params
+// returns nullopt if operation was canceled
+MRMESH_API std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const Mesh& refMesh, const VdbVolumeToMeshParams& params = {} );
+
 }
 #endif

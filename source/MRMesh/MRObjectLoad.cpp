@@ -119,7 +119,10 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
     auto cb = callback;
     if ( cb )
         cb = [callback] ( float v ) { return callback( v / 3.f ); };
+
+    auto time1 = std::chrono::high_resolution_clock::now();
     auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
+    auto time2 = std::chrono::high_resolution_clock::now();
     if ( !loadRes.has_value() )
     {
         return tl::make_unexpected( loadRes.error() );
@@ -140,11 +143,18 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
             return callbackRes;
         };
 
+        auto time3 = std::chrono::high_resolution_clock::now();
         obj->construct( loadResRef[i], cb );
+        auto time4 = std::chrono::high_resolution_clock::now();
         if ( cb && !callbackRes )
             return tl::make_unexpected( getCancelMessage( file ) );
         step = 1;
+        auto time5 = std::chrono::high_resolution_clock::now();
         obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
+        auto time6 = std::chrono::high_resolution_clock::now();
+        spdlog::info( "d1 = {}", std::chrono::duration<double, std::milli>( time2 - time1 ).count() );
+        spdlog::info( "d2 = {}", std::chrono::duration<double, std::milli>( time4 - time3 ).count() );
+        spdlog::info( "d3 = {}", std::chrono::duration<double, std::milli>( time6 - time5 ).count() );
         if ( cb && !callbackRes )
             return tl::make_unexpected( getCancelMessage( file ) );
         res.emplace_back( obj );

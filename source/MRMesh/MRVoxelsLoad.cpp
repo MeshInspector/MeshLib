@@ -28,6 +28,7 @@
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF
 
+#include "MROpenVDBHelper.h"
 namespace
 {
     using namespace MR::VoxelsLoad;
@@ -746,28 +747,10 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
             if ( scaledCb && !scaledCb( 0.1f ) )
                 return tl::make_unexpected( getCancelMessage( path ) );
 
-            const auto gridBB = vdbVolume.data->evalActiveVoxelBoundingBox();
-            const Vector3i min{ gridBB.min().x(), gridBB.min().y(), gridBB.min().z() };
-            FloatGrid targetGrid = std::make_shared<OpenVdbFloatGrid>();
-            openvdb::tools::changeBackground( targetGrid->tree(), vdbVolume.data->background() );
-            targetGrid->setGridClass( vdbVolume.data->getGridClass() );
-            openvdb::FloatGrid::Accessor accessorSource = vdbVolume.data->getAccessor();
-            openvdb::FloatGrid::Accessor accessorTarget = targetGrid->getAccessor();
-            // TODO need parallelize
-            for ( int ix = 0; ix < dims.x(); ++ix )
-            {
-                for ( int iy = 0; iy < dims.y(); ++iy )
-                for ( int iz = 0; iz < dims.z(); ++iz )
-                {
-                    const float val = accessorSource.getValue( { ( ix + min.x ), ( iy + min.y ), ( iz + min.z ) } );
-                    accessorTarget.setValue( { ix, iy, iz }, val );
-                }
+            openvdb::math::Transform::Ptr transformPtr = std::make_shared<openvdb::math::Transform>();
+            vdbVolume.data->setTransform( transformPtr );
 
-                if ( scaledCb && !scaledCb( 0.1f + 0.9f * ix / dims.x() ) )
-                    return tl::make_unexpected( getCancelMessage( path ) );
-            }
-            vdbVolume.data = targetGrid;
-            // TODO END
+            translateToZero( *vdbVolume.data );
 
             if ( cb && !cb( (1.f + i ) / size ) )
                 return tl::make_unexpected( getCancelMessage( path ) );

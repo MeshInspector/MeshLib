@@ -233,7 +233,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             colorCpy = mainColor;
 
-    if ( useTexture )
+    if ( useTexture && !selected )
     {
       vec4 textColor = texture(tex, texcoordi);
       float destA = colorCpy.a;
@@ -372,7 +372,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             colorCpy = mainColor;
 
-    if ( useTexture )
+    if ( useTexture && !selected )
     {
       vec4 textColor = texture(tex, texcoordi);
       float destA = colorCpy.a;
@@ -522,7 +522,7 @@ void GLStaticHolder::createShader_( ShaderType type )
         else
             colorCpy = mainColor;
 
-    if ( useTexture )
+    if ( useTexture && !selected )
     {
       vec4 textColor = texture(tex, texcoordi);
       float destA = colorCpy.a;

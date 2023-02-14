@@ -1,9 +1,13 @@
 #pragma once
 
 #include "MRAABBTree.h"
+#include <array>
 
 namespace MR
 {
+
+/// three vector3-coordinates describing a triangle geometry
+using ThreePoints = std::array<Vector3f, 3>;
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
@@ -31,9 +35,13 @@ private:
         [[nodiscard]] bool goodApprox( const Vector3f & q, float beta ) const { return ( q - pos() ).lengthSq() > sqr( beta ) * rr; }
         /// contribution of this dipole to the winding number at point \param q
         [[nodiscard]] float w( const Vector3f & q ) const;
+        /// contribution of this dipole to the winding number at point \param q,
+        /// considering that it corresponds to a single triangle with given vertex coordinates, which is subdivided automatically to reach desired beta-precision
+        [[nodiscard]] float wSubdiv( const Vector3f & q, float beta, const ThreePoints & tri ) const;
     };
     static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
     using Dipoles = Vector<Dipole, NodeId>;
+    const Mesh & mesh_;
     const AABBTree & tree_;
     Dipoles dipoles_;
 };

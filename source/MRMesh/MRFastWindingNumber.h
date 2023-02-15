@@ -35,9 +35,6 @@ private:
         [[nodiscard]] bool goodApprox( const Vector3f & q, float beta ) const { return ( q - pos() ).lengthSq() > sqr( beta ) * rr; }
         /// contribution of this dipole to the winding number at point \param q
         [[nodiscard]] float w( const Vector3f & q ) const;
-        /// contribution of this dipole to the winding number at point \param q,
-        /// considering that it corresponds to a single triangle with given vertex coordinates, which is subdivided automatically to reach desired beta-precision
-        [[nodiscard]] float wSubdiv( const Vector3f & q, float beta, const ThreePoints & tri ) const;
     };
     static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
     using Dipoles = Vector<Dipole, NodeId>;

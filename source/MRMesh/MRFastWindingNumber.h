@@ -1,9 +1,13 @@
 #pragma once
 
 #include "MRAABBTree.h"
+#include <array>
 
 namespace MR
 {
+
+/// three vector3-coordinates describing a triangle geometry
+using ThreePoints = std::array<Vector3f, 3>;
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
@@ -34,6 +38,7 @@ private:
     };
     static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
     using Dipoles = Vector<Dipole, NodeId>;
+    const Mesh & mesh_;
     const AABBTree & tree_;
     Dipoles dipoles_;
 };

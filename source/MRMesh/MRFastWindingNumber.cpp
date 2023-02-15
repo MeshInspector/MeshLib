@@ -18,7 +18,7 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
     return res;
 }
 
-FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : tree_( mesh.getAABBTree() )
+FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : mesh_( mesh ), tree_( mesh.getAABBTree() )
 {
     MR_TIMER
     dipoles_.resize( tree_.nodes().size() );
@@ -74,11 +74,27 @@ FastWindingNumber::FastWindingNumber( const Mesh & mesh ) : tree_( mesh.getAABBT
     } );
 }
 
+constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+
 float FastWindingNumber::Dipole::w( const Vector3f & q ) const
 {
     const auto dp = pos() - q;
     const auto d = dp.length();
-    return d > 0 ? dot( dp, dirArea ) / ( 4 * PI_F * d * d * d ) : 0;
+    return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
+}
+
+/// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
+static float triangleSolidAngle( const Vector3f & p, const ThreePoints & tri )
+{
+    Matrix3f m;
+    m.x = tri[0] - p;
+    m.y = tri[1] - p;
+    m.z = tri[2] - p;
+    auto x = m.x.length();
+    auto y = m.y.length();
+    auto z = m.z.length();
+    auto den = x * y * z + dot( m.x, m.y ) * z + dot( m.y, m.z ) * x + dot( m.z, m.x ) * y;
+    return 2 * std::atan2( m.det(), den );
 }
 
 float FastWindingNumber::calc( const Vector3f & q, float beta ) const
@@ -100,14 +116,19 @@ float FastWindingNumber::calc( const Vector3f & q, float beta ) const
         const auto i = subtasks[--stackSize];
         const auto & node = tree_[i];
         const auto & d = dipoles_[i];
-        if ( !node.leaf() && !d.goodApprox( q, beta ) )
+        if ( d.goodApprox( q, beta ) )
+        {
+            res += d.w( q );
+            continue;
+        }
+        if ( !node.leaf() )
         {
             // recurse deeper
             subtasks[stackSize++] = node.r; // to look later
             subtasks[stackSize++] = node.l; // to look first
             continue;
         }
-        res += d.w( q );
+        res += INV_4PI * triangleSolidAngle( q, mesh_.getTriPoints( node.leafId() ) );
     }
     return res;
 }

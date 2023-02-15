@@ -16,7 +16,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
 #include "MRSerializer.h"
-#include "MRLoadSceneFromGltf.h"
+#include "MRGltfSerializer.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -482,7 +482,7 @@ tl::expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedForm
     {
         return deserializeObjectTree( path, {}, callback );
     }
-    else if ( itF->extension == "*.gltf" )
+    else if ( itF->extension == "*.gltf" || itF->extension == "*.glb" )
     {
         return deserializeObjectTreeFromGltf( path, callback );
     }

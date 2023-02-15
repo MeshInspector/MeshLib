@@ -4,6 +4,7 @@
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRGltfSerializer.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRStringConvert.h"
@@ -617,7 +618,8 @@ void SaveSceneAsMenuItem::saveScene_( const std::filesystem::path& savePath )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
     {
-        auto res = serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress );
+        auto res = savePath.extension() == u8".mru" ? serializeObjectTree( root, savePath, ProgressBar::callBackSetProgress ) :
+            serializeObjectTreeToGltf( root, savePath, ProgressBar::callBackSetProgress );
 
         return[savePath, res]()
         {

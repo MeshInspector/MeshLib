@@ -915,7 +915,7 @@
     <ClInclude Include="MREdgeMetric.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRLoadSceneFromGltf.h" />
+    <ClInclude Include="MRGltfSerializer.h" />
     <ClInclude Include="MRFastWindingNumber.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -1530,7 +1530,7 @@
     <ClCompile Include="MREdgeMetric.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRLoadSceneFromGltf.cpp" />
+    <ClCompile Include="MRGltfSerializer.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>

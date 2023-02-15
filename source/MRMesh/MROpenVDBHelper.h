@@ -78,13 +78,9 @@ public:
             }
             if ( !bbox.empty() )
             {
-                openvdb::math::Coord bboxMin = bbox.min();
-                openvdb::math::Coord bboxMax = bbox.max();
-                for ( int iz = bboxMin.z(); iz < bboxMax.z(); ++iz )
-                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
-                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
+                for ( auto it = bbox.begin(); it != bbox.end(); ++it )
                 {
-                    mXform( mInAcc, mOutAcc, { ix, iy, iz } );
+                    mXform( mInAcc, mOutAcc, *it );
                 }
             }
         }
@@ -114,14 +110,9 @@ public:
             }
             if ( !bbox.empty() )
             {
-                openvdb::math::Coord bboxMin = bbox.min();
-                openvdb::math::Coord bboxMax = bbox.max();
-
-                for ( int iz = bboxMin.z(); iz < bboxMax.z(); ++iz )
-                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
-                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
+                for ( auto it = bbox.begin(); it != bbox.end(); ++it )
                 {
-                    mXform( mInAcc, mOutAcc, { ix, iy, iz } );
+                    mXform( mInAcc, mOutAcc, *it );
                 }
             }
         }

@@ -641,7 +641,9 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
     tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
     writer.SetImageWriter( tinygltf::WriteImageData, &fsCallbacks );
 
-    if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ) ) )
+    const bool isBinary = file.extension() == u8".glb";
+
+    if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ), isBinary, isBinary, true, isBinary ) )
         return tl::make_unexpected( "File writing error" );
 
     return {};

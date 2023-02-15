@@ -895,6 +895,13 @@ size_t Mesh::heapBytes() const
         + AABBTreeOwner_.heapBytes();
 }
 
+void Mesh::shrinkToFit()
+{
+    MR_TIMER
+    topology.shrinkToFit();
+    points.vec_.shrink_to_fit();
+}
+
 Vector3f Mesh::findCenterFromPoints() const
 {
     Vector3f res;

@@ -272,6 +272,8 @@ struct [[nodiscard]] Mesh
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    /// requests the removal of unused capacity
+    MRMESH_API void shrinkToFit();
 
     /// reflects the mesh from a given plane
     MRMESH_API void mirror( const Plane3f& plane );

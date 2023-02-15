@@ -41,6 +41,8 @@ public:
     [[nodiscard]] bool hasEdge( EdgeId e ) const { assert( e.valid() ); return e < (int)edgeSize() && !isLoneEdge( e ); }
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
+    /// requests the removal of unused capacity
+    MRMESH_API void shrinkToFit();
 
     /// given two half edges do either of two:
     /// 1) if a and b were from distinct rings, puts them in one ring;

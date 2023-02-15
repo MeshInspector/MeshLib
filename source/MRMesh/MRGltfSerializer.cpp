@@ -474,9 +474,12 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
     std::stack<std::shared_ptr<const Object>> objectStack;
     std::stack<size_t> indexStack;
 
-    for ( auto rootChild : root.children() )
+    if ( callback && !callback( 0.1f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
+
+    for ( size_t childIndex = 0; childIndex < root.children().size(); ++ childIndex )
     {
-        objectStack.push( rootChild );
+        objectStack.push( root.children()[childIndex] );
         size_t lastIndex = model.nodes.size();
         indexStack.push( lastIndex );
         model.scenes[0].nodes.push_back( int( lastIndex ) );
@@ -601,6 +604,9 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
                 curNode.children.push_back( int( indexStack.top() ) );
             }
         }
+
+        if ( callback && !callback( 0.1f + 0.7f * childIndex / root.children().size() ) )
+            return tl::make_unexpected( "Operation was cancelled" );
     }
 
     model.materials.resize( materials.size() );
@@ -637,6 +643,9 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
         model.textures[textureIt.second].sampler = 0;
     }
 
+    if ( callback && !callback( 0.9f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     tinygltf::TinyGLTF writer;
     tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
     writer.SetImageWriter( tinygltf::WriteImageData, &fsCallbacks );
@@ -645,6 +654,9 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
 
     if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ), isBinary, isBinary, true, isBinary ) )
         return tl::make_unexpected( "File writing error" );
+
+    if ( callback && !callback( 1.0f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
 
     return {};
 }

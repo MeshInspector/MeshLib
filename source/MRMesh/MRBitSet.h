@@ -223,7 +223,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const BMap<IndexType, IndexType> & map ) const
 {
-    TaggedBitSet<T> res( map.tsize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( map.tsize );
     for ( auto b : *this )
         if ( auto mapped = map.b[b] )
             res.set( mapped );
@@ -243,7 +246,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const Vector<IndexType, IndexType> & map, size_t resSize ) const
 {
-    TaggedBitSet<T> res( resSize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( resSize );
     for ( auto b : *this )
         if ( auto mapped = map[b] )
             res.set( mapped );
@@ -253,7 +259,10 @@ template <typename T>
 template <typename T>
 [[nodiscard]] TaggedBitSet<T> TaggedBitSet<T>::getMapping( const HashMap<IndexType, IndexType> & map, size_t resSize ) const
 {
-    TaggedBitSet<T> res( resSize );
+    TaggedBitSet<T> res;
+    if ( !any() )
+        return res;
+    res.resize( resSize );
     for ( auto b : *this )
         if ( auto mapped = getAt( map, b ) )
             res.set( mapped );

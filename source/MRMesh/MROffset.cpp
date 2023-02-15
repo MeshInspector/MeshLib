@@ -13,6 +13,7 @@
 #include "MRSharpenMarchingCubesMesh.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
+#include <thread>
 
 namespace
 {

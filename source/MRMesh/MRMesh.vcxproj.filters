@@ -919,6 +919,9 @@
     <ClInclude Include="MRFastWindingNumber.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MROpenVDBHelper.h">
+      <Filter>Source Files\VDBConversions</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

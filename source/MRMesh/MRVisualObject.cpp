@@ -376,6 +376,14 @@ std::vector<std::string> VisualObject::getInfoLines() const
     auto res = Object::getInfoLines();
     if ( renderObj_ )
         res.push_back( "GL mem: " + bytesString( renderObj_->glBytes() ) );
+    if ( !texture_.pixels.empty() )
+        res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );
+    if ( !uvCoordinates_.empty() )
+    {
+        res.push_back( "uv-coords: " + std::to_string( uvCoordinates_.size() ) );
+        if ( uvCoordinates_.size() < uvCoordinates_.capacity() )
+            res.back() += " / " + std::to_string( uvCoordinates_.capacity() ) + " capacity";
+    }
     return res;
 }
 

@@ -6,7 +6,6 @@
 #include "MRMeshTexture.h"
 #include "MRQuaternion.h"
 #include "MRStringConvert.h"
-#include "MRSceneRoot.h"
 
 #if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
@@ -324,9 +323,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
         loader.LoadBinaryFromFile( &model, &err, &warn, asString( file.u8string() ) );
 
     if ( !err.empty() )
-    {        
         return tl::make_unexpected( err );
-    }
 
     if ( model.meshes.empty() )
         return tl::make_unexpected( "No mesh in file" );

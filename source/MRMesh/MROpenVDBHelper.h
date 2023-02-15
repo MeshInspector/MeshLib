@@ -1,5 +1,5 @@
 #pragma once
-#include "MRPch/MROpenvdb.h"
+#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"
 #include "openvdb/tree/ValueAccessor.h"
@@ -7,6 +7,12 @@
 namespace MR
 {
 
+/**
+ * @brief Class to use in tbb::parallel_reduce for openvdb::tree transformation
+ * @details similar to openvdb::RangeProcessor
+ * @tparam TreeT tree type
+ * @tparam Transformer functor to transform tree
+ */
 template <class TreeT, typename Transformer>
 class RangeProcessor
 {
@@ -74,9 +80,9 @@ public:
             {
                 openvdb::math::Coord bboxMin = bbox.min();
                 openvdb::math::Coord bboxMax = bbox.max();
-                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
-                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
                 for ( int iz = bboxMin.z(); iz < bboxMax.z(); ++iz )
+                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
+                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
                 {
                     mXform( mInAcc, mOutAcc, { ix, iy, iz } );
                 }
@@ -111,9 +117,9 @@ public:
                 openvdb::math::Coord bboxMin = bbox.min();
                 openvdb::math::Coord bboxMax = bbox.max();
 
-                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
-                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
                 for ( int iz = bboxMin.z(); iz < bboxMax.z(); ++iz )
+                for ( int iy = bboxMin.y(); iy < bboxMax.y(); ++iy )
+                for ( int ix = bboxMin.x(); ix < bboxMax.x(); ++ix )
                 {
                     mXform( mInAcc, mOutAcc, { ix, iy, iz } );
                 }
@@ -140,7 +146,7 @@ private:
     InterruptFunc mInterrupt;
 };
 
-
+/// functor for shifting voxels
 template <typename TreeT>
 class ShiftTransformer
 {
@@ -203,3 +209,5 @@ void translateToZero( GredT& grid)
 }
 
 }
+
+#endif

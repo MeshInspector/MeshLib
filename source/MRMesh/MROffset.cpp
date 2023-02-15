@@ -64,7 +64,16 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
         auto mainThreadId = std::this_thread::get_id();
 
         FastWindingNumber fwn( mp.mesh );
+
         auto activeBox = grid->evalActiveVoxelBoundingBox();
+        // make dense topology tree to copy its nodes topology to original grid
+        std::unique_ptr<openvdb::TopologyTree> topologyTree = std::make_unique<openvdb::TopologyTree>();
+        // make it dense
+        topologyTree->denseFill( activeBox, {} );
+        grid->tree().topologyUnion( *topologyTree ); // after this all voxels should be active and trivial parallelism is ok
+        // free topology tree
+        topologyTree.reset();
+
         auto minCoord = activeBox.min();
         auto dims = activeBox.dim();
         VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );

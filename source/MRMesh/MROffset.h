@@ -50,7 +50,6 @@ struct SharpOffsetParameters : BaseOffsetParameters
 };
 
 // Offsets mesh by converting it to voxels and back
-// use Shell type for non closed meshes
 // so result mesh is always closed
 [[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> offsetMesh( const MeshPart& mp, float offset, const OffsetParameters& params = {} );
 

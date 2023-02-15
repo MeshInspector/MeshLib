@@ -6,6 +6,7 @@
 #include "MRMeshTexture.h"
 #include "MRQuaternion.h"
 #include "MRStringConvert.h"
+#include "MRSceneRoot.h"
 
 #if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
@@ -45,6 +46,11 @@ struct Material
 {
     Color baseColor;
     int textureIndex = -1;
+
+    bool operator==( const Material& other ) const
+    {
+        return baseColor == other.baseColor && textureIndex == other.textureIndex;
+    }
 };
 
 std::vector<MeshTexture> readImages( const tinygltf::Model& model )
@@ -253,15 +259,21 @@ tl::expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Mod
             continue;
 
         if ( !areMaterialsSame )
-            meshData.vertsColorMap.resize( meshData.vertsColorMap.size() + dups.size() );
-
-        meshData.uvCoords.resize( meshData.uvCoords.size() + dups.size() );
-        for ( const auto& dup : dups )
         {
-            if ( !areMaterialsSame )
+            meshData.vertsColorMap.resize( meshData.vertsColorMap.size() + dups.size() );
+            for ( const auto& dup : dups )
+            {
                 meshData.vertsColorMap[dup.dupVert] = meshData.vertsColorMap[dup.srcVert];
+            }
+        }
 
-            meshData.uvCoords[dup.dupVert] = meshData.uvCoords[dup.srcVert];
+        if ( model.materials[meshData.materialIndex].pbrMetallicRoughness.baseColorTexture.index >= 0 )
+        {
+            meshData.uvCoords.resize( meshData.uvCoords.size() + dups.size() );
+            for ( const auto& dup : dups )
+            {
+                meshData.uvCoords[dup.dupVert] = meshData.uvCoords[dup.srcVert];
+            }
         }
     }
 
@@ -364,20 +376,24 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
                 auto objectMesh = std::static_pointer_cast< ObjectMesh >( curObject );
                 objectMesh->setMesh( meshData.mesh );
 
-                if ( auto textureIndex = materials[meshData.materialIndex].textureIndex; textureIndex >= 0 )
+                if ( meshData.materialIndex >= 0 )
                 {
-                    objectMesh->setUVCoords( meshData.uvCoords );
-                    objectMesh->setTexture( textures[textureIndex] );
-                    objectMesh->setVisualizeProperty( true, VisualizeMaskType::Texture, ViewportMask::all() );
-                }
-                else if ( !meshData.vertsColorMap.empty() )
-                {
-                    objectMesh->setColoringType( ColoringType::VertsColorMap );
-                    objectMesh->setVertsColorMap( meshData.vertsColorMap );
-                }
-                else
-                {
-                    objectMesh->setFrontColor( materials[meshData.materialIndex].baseColor, false );
+                    const auto textureIndex = materials[meshData.materialIndex].textureIndex;
+                    if ( textureIndex >=0 && model.textures[textureIndex].source >=0 )
+                    {
+                        objectMesh->setUVCoords( meshData.uvCoords );
+                        objectMesh->setTexture( textures[model.textures[textureIndex].source] );
+                        objectMesh->setVisualizeProperty( true, VisualizeMaskType::Texture, ViewportMask::all() );
+                    }
+                    else if ( !meshData.vertsColorMap.empty() )
+                    {
+                        objectMesh->setColoringType( ColoringType::VertsColorMap );
+                        objectMesh->setVertsColorMap( meshData.vertsColorMap );
+                    }
+                    else
+                    {
+                        objectMesh->setFrontColor( materials[meshData.materialIndex].baseColor, false );
+                    }
                 }
 
                 if ( node.name.empty() )
@@ -413,6 +429,215 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
     }
 
     return scene;
+}
+
+tl::expected<void, std::string> serializeObjectTreeToGltf( const std::filesystem::path& file, std::shared_ptr<Object> objectTree, ProgressCallback callback )
+{
+    tinygltf::Model model;
+    model.asset.generator = "MeshLib";
+    model.asset.version = "2.0";
+
+    model.buffers.emplace_back();
+    auto& buffer = model.buffers[0].data;
+
+   
+
+    std::stack<std::shared_ptr<Object>> objectStack;
+    std::stack<size_t> indexStack;   
+
+    const auto materialHash = [] ( const Material& material )
+    {
+        return std::hash<uint32_t>()( material.baseColor.getUInt32() ) ^ std::hash<int>()( material.textureIndex );
+    };
+
+    std::unordered_map<Material, int, decltype( materialHash )> materials( {}, materialHash );
+
+    const auto textureHash = [] ( const MeshTexture& meshTexture )
+    {
+        auto res = std::hash<int>()( meshTexture.resolution.x ) ^ std::hash<int>()( meshTexture.resolution.y );
+        for ( auto& pixel : meshTexture.pixels )
+            res ^= std::hash<uint32_t>()( pixel.getUInt32() );
+
+        return res;
+    };
+
+    const auto textureCompare = [] ( const MeshTexture& a, const MeshTexture& b )
+    {
+        return a.pixels == b.pixels && a.resolution == b.resolution;
+    };
+
+    std::unordered_map<MeshTexture, int, decltype(textureHash), decltype(textureCompare)> textures( {}, textureHash, textureCompare);
+
+    const auto root = objectTree;
+    objectStack.push( root );
+    indexStack.push( 0 );
+    size_t lastIndex = 0;
+    model.scenes.emplace_back();
+    model.scenes[0].nodes.push_back( 0 );
+
+    while ( !objectStack.empty() )
+    {
+        auto curObj = objectStack.top();
+        objectStack.pop();
+        size_t curIndex = indexStack.top();
+        indexStack.pop();
+
+        if ( model.nodes.size() < curIndex + 1 )
+            model.nodes.resize( curIndex + 1 );
+
+        auto& curNode = model.nodes[curIndex];
+        curNode.name = curObj->name();
+
+        const auto& A = curObj->xf().A;
+        const auto& b = curObj->xf().b;
+        curNode.matrix = { A[0][0], A[1][0], A[2][0], 0,
+                           A[0][1], A[1][1], A[2][1], 0,
+                           A[0][2], A[1][2], A[2][2], 0,
+                           b[0], b[1], b[2], 1 };
+
+        auto curObjectMesh = curObj->asType<ObjectMesh>();
+        if ( curObjectMesh && curObjectMesh->mesh() )
+        {
+            Material material;
+            material.baseColor = curObjectMesh->getFrontColor( false );
+            if ( const auto& vertsColorMap = curObjectMesh->getVertsColorMap(); !vertsColorMap.empty() )
+            {
+                material.baseColor = vertsColorMap.front();
+            }
+
+            const auto& texture = curObjectMesh->getTexture();
+
+            if ( texture.resolution.x > 0 && texture.resolution.y > 0 )
+            {
+                const auto textureIt = textures.find( texture );
+                material.textureIndex = int( textures.size() );
+                if ( textureIt == textures.end() )
+                {
+                    textures.insert_or_assign( texture, int( textures.size() ) );
+                }
+                else
+                {
+                    material.textureIndex = textureIt->second;
+                }
+            }
+
+            int materialIndex = int( materials.size() );
+            const auto materialIt = materials.find( material );
+            if ( materialIt == materials.end() )
+            {
+                materials.insert( { material, materialIndex } );
+            }
+            else
+            {
+                materialIndex = materialIt->second;
+            }
+
+            const auto mesh = curObjectMesh->mesh();
+            const auto points = mesh->points;
+            const auto triangles = mesh->topology.getAllTriVerts();
+
+            const size_t oldBufferEnd = buffer.size();
+            const size_t verticesDataSize = points.size() * sizeof( Vector3f );
+            const size_t trianglesDataSize = 3 * triangles.size() * sizeof( uint32_t );
+            const size_t uvCoordsDataSize = ( material.textureIndex >= 0 ) ? points.size() * sizeof( Vector2f ) : 0;
+
+            model.bufferViews.emplace_back();
+            model.bufferViews.back().buffer = 0;
+            model.bufferViews.back().byteOffset = oldBufferEnd;
+            model.bufferViews.back().byteLength = verticesDataSize + trianglesDataSize + uvCoordsDataSize;
+
+            buffer.resize( oldBufferEnd + model.bufferViews.back().byteLength );
+
+            curNode.mesh = int( model.meshes.size() );
+            model.meshes.emplace_back();
+            auto& gltfMesh = model.meshes.back();
+            gltfMesh.primitives.emplace_back();
+            auto& gltfPrimitive = gltfMesh.primitives.back();
+            gltfPrimitive.mode = TINYGLTF_MODE_TRIANGLES;
+            gltfPrimitive.material = materialIndex;
+
+            gltfPrimitive.attributes.insert( { "POSITION", int( model.accessors.size() ) } );
+            model.accessors.emplace_back();
+            model.accessors.back().bufferView = int( model.bufferViews.size() - 1 );
+            model.accessors.back().componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
+            model.accessors.back().type = TINYGLTF_TYPE_VEC3;
+            model.accessors.back().byteOffset = 0;
+            model.accessors.back().count = points.size();
+            std::copy( ( uint8_t* )points.data(), ( uint8_t* )( points.data() + points.size() ), &buffer[oldBufferEnd] );
+
+            gltfPrimitive.indices = int( model.accessors.size() );
+            model.accessors.emplace_back();
+            model.accessors.back().bufferView = int( model.bufferViews.size() - 1 );
+            model.accessors.back().componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
+            model.accessors.back().type = TINYGLTF_TYPE_SCALAR;
+            model.accessors.back().byteOffset = verticesDataSize;
+            model.accessors.back().count = 3 * triangles.size();
+            std::copy( ( uint8_t* )triangles.data(), ( uint8_t* )( triangles.data() + triangles.size() ), &buffer[oldBufferEnd + verticesDataSize] );
+
+            if ( material.textureIndex >= 0 )
+            {
+                gltfPrimitive.attributes.insert( { "TEXCOORD_0", int( model.accessors.size() ) } );
+                model.accessors.emplace_back();
+                model.accessors.back().bufferView = int( model.bufferViews.size() - 1 );
+                model.accessors.back().componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
+                model.accessors.back().type = TINYGLTF_TYPE_VEC2;
+                model.accessors.back().byteOffset = verticesDataSize + trianglesDataSize;
+                model.accessors.back().count = points.size();
+                const auto& uvCoords = curObjectMesh->getUVCoords();
+                std::copy( ( uint8_t* )uvCoords.data(), ( uint8_t* )( uvCoords.data() + uvCoords.size() ), &buffer[oldBufferEnd + verticesDataSize + trianglesDataSize] );
+            }
+        }
+
+        for ( auto child : curObj->children() )
+        {
+            objectStack.push( child );
+            indexStack.push( ++lastIndex );
+            curNode.children.push_back( int( indexStack.top() ) );
+        }
+    }
+
+    model.materials.resize( materials.size() );
+    for ( const auto& materialIt : materials )
+    {
+        tinygltf::TextureInfo textureInfo;
+        textureInfo.index = materialIt.first.textureIndex;
+        textureInfo.texCoord = 0;
+        auto& pbr = model.materials[materialIt.second].pbrMetallicRoughness;
+        pbr.baseColorTexture = textureInfo;
+        
+        const auto& color = materialIt.first.baseColor;
+        pbr.baseColorFactor = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f };
+    }
+
+    model.textures.resize( textures.size() );
+    model.images.resize( textures.size() );
+    model.samplers.resize( 1 );
+
+    for ( const auto& textureIt : textures )
+    {
+        auto& image = model.images[textureIt.second];
+        image.image.resize( textureIt.first.pixels.size() * sizeof( Color ) );
+        std::copy( ( uint8_t* )textureIt.first.pixels.data(), ( uint8_t* )( textureIt.first.pixels.data() + textureIt.first.pixels.size() ), image.image.data() );
+
+        image.bits = 8;
+        image.component = 4;
+        image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+        image.uri = std::string( "texture" ) + std::to_string( textureIt.second ) + std::string( ".png" );
+        image.width = textureIt.first.resolution.x;
+        image.height = textureIt.first.resolution.y;
+
+        model.textures[textureIt.second].source = textureIt.second;
+        model.textures[textureIt.second].sampler = 0;
+    }
+
+    tinygltf::TinyGLTF writer;
+    tinygltf::FsCallbacks fsCallbacks{ .FileExists = tinygltf::FileExists, .ExpandFilePath = tinygltf::ExpandFilePath, .ReadWholeFile = tinygltf::ReadWholeFile, .WriteWholeFile = tinygltf::WriteWholeFile };
+    writer.SetImageWriter( tinygltf::WriteImageData, &fsCallbacks );
+
+    if ( !writer.WriteGltfSceneToFile( &model, utf8string( file.u8string() ) ) )
+        return tl::make_unexpected( "File writing error" );
+
+    return {};
 }
 }
 

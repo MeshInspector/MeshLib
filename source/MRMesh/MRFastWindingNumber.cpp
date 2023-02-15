@@ -94,9 +94,7 @@ static float triangleSolidAngle( const Vector3f & p, const ThreePoints & tri )
     auto y = m.y.length();
     auto z = m.z.length();
     auto den = x * y * z + dot( m.x, m.y ) * z + dot( m.y, m.z ) * x + dot( m.z, m.x ) * y;
-    if ( den == 0 )
-        return 0;
-    return 2 * std::atan( m.det() / den );
+    return 2 * std::atan2( m.det(), den );
 }
 
 float FastWindingNumber::calc( const Vector3f & q, float beta ) const

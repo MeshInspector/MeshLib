@@ -2,6 +2,7 @@
 #include "MROffset.h"
 #include "MRMesh.h"
 #include "MRBox.h"
+#include "MRFloatGrid.h"
 #include "MRVDBConversions.h"
 #include "MRTimer.h"
 #include "MRPolyline.h"
@@ -10,6 +11,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRVoxelsConversions.h"
 #include "MRSharpenMarchingCubesMesh.h"
+#include "MRFastWindingNumber.h"
+#include "MRVolumeIndexer.h"
 
 namespace
 {
@@ -33,11 +36,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     }
 
     bool useShell = params.type == OffsetParameters::Type::Shell;
-    if ( !findRegionBoundary( mp.mesh.topology, mp.region ).empty() && !useShell )
-    {
-        spdlog::warn( "Cannot use offset for non-closed meshes, using shell instead." );
-        useShell = true;
-    }
+    bool signPostprocess = !findRegionBoundary( mp.mesh.topology, mp.region ).empty() && !useShell;
 
     if ( useShell )
         offset = std::abs( offset );
@@ -49,28 +48,60 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     auto grid = ( !useShell ) ?
         // Make level set grid if it is closed
         meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
-                        params.callBack ?
-                        [params]( float p )
-    {
-        return params.callBack( p * 0.5f );
-    } : ProgressCallback{} ) :
+            subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) ) :
         // Make distance field grid if it is not closed
         meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
-                        params.callBack ?
-                             [params]( float p )
-    {
-        return params.callBack( p * 0.5f );
-    } : ProgressCallback{} );
+                        subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) );
 
     if ( !grid )
         return tl::make_unexpected( "Operation was canceled." );
 
-    // Make offset mesh
-    auto newMesh = gridToMesh( std::move( grid ), voxelSizeVector, offsetInVoxels, params.adaptivity, params.callBack ?
-                             [params]( float p )
+    if ( signPostprocess )
     {
-        return params.callBack( 0.5f + p * 0.5f );
-    } : ProgressCallback{} );
+        auto sp = subprogress( params.callBack, 0.33f, 0.66f );
+        std::atomic<bool> keepGoing{ true };
+        auto mainThreadId = std::this_thread::get_id();
+
+        FastWindingNumber fwn( mp.mesh );
+        auto activeBox = grid->evalActiveVoxelBoundingBox();
+        auto minCoord = activeBox.min();
+        auto dims = activeBox.dim();
+        VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
+        tbb::parallel_for( tbb::blocked_range<int>( 0, int( activeBox.volume() ) ),
+            [&] ( const tbb::blocked_range<int>& range )
+        {
+            auto accessor = grid->getAccessor();
+            for ( auto i = range.begin(); i < range.end(); ++i )
+            {
+                if ( sp && !keepGoing.load( std::memory_order_relaxed ) )
+                    break;
+
+                auto pos = indexer.toPos( VoxelId(i) );
+                auto coord = minCoord;
+                for ( int j = 0; j < 3; ++j )
+                    coord[j] += pos[j];
+
+                auto coord3i = Vector3i( coord.x(), coord.y(), coord.z() );
+                auto pointInSpace = voxelSize * Vector3f( coord3i );
+                auto windVal = fwn.calc( pointInSpace, 2.0f );
+                windVal = std::clamp( 1.0f - 2.0f * windVal, -1.0f, 1.0f );
+                if ( windVal < 0.0f )
+                    windVal *= -windVal;
+                else
+                    windVal *= windVal;
+                accessor.modifyValue( coord, [windVal] ( float& val ) { val *= windVal; } );
+                if ( sp && mainThreadId == std::this_thread::get_id() && !sp( float( i ) / float( range.size() ) ) )
+                    keepGoing.store( false, std::memory_order_relaxed );
+            }
+        }, tbb::static_partitioner() );
+        if ( !keepGoing )
+            return tl::make_unexpected( "Operation was canceled." );
+        grid->pruneGrid( 0.0f );
+    }
+
+    // Make offset mesh
+    auto newMesh = gridToMesh( std::move( grid ), voxelSizeVector, offsetInVoxels, params.adaptivity, 
+        subprogress( params.callBack, signPostprocess ? 0.66f : 0.5f, 1.0f ) );
 
     if ( !newMesh.has_value() )
         return tl::make_unexpected( "Operation was canceled." );

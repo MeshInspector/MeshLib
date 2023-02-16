@@ -455,12 +455,12 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
     }
 
     std::string errorString;
-    for ( auto error : allErrors )
+    for ( const auto& error : allErrors )
     {
         errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
         if ( error.second > 1 )
         {
-            errorString += std::string( " ( " ) + std::to_string( error.second ) + std::string( " )" );
+            errorString += std::string( " (" ) + std::to_string( error.second ) + std::string( ")" );
         }
     }
 

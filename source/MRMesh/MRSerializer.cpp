@@ -577,7 +577,7 @@ void serializeToJson( const MeshTexture& texture, Json::Value& root )
 
 void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
 {
-    root["Size"] = uvCoords.size();
+    root["Size"] = int( uvCoords.size() );
     root["Data"] = encode64( ( const uint8_t* )uvCoords.data(), uvCoords.size() * sizeof( UVCoord ) );
 }
 

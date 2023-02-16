@@ -9,13 +9,14 @@
 namespace MR
 {
 
-FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old )
+FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float posEps )
 {
     MR_TIMER
-    VertBitSet positiveVerts( mesh.topology.lastValidVert() + 1 );
+    assert( posEps >= 0 );
+    VertBitSet positiveVerts( mesh.topology.vertSize() );
     VertBitSet negativeVerts( positiveVerts.size() );
 
-    BitSetParallelForAll( positiveVerts, [&]( VertId v )
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         const auto d = plane.distance( mesh.points[v] );
         if ( d > 0 )
@@ -59,15 +60,33 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     MR_WRITER( mesh );
     for ( EdgeId e : edgesToCut )
     {
-        const VertId vo = mesh.topology.org( e );
-        const VertId vd = mesh.topology.dest( e );
-        const auto po = mesh.points[vo];
-        const auto pd = mesh.points[vd];
-        const auto o = plane.distance( po );
-        const auto d = plane.distance( pd );
-        assert( o * d < 0 );
-        const auto p = ( o * pd - d * po ) / ( o - d );
-        mesh.splitEdge( e, p, nullptr, new2Old );
+        VertId vo = mesh.topology.org( e );
+        VertId vd = mesh.topology.dest( e );
+        auto po = mesh.points[vo];
+        auto pd = mesh.points[vd];
+        auto o = plane.distance( po );
+        auto d = plane.distance( pd );
+        if ( o * d >= 0 )
+            continue; // this may happen if origin or destination were projected on plane before
+        if ( d > 0 )
+        {
+            e = e.sym();
+            std::swap( vo, vd );
+            std::swap( po, pd );
+            std::swap(  o,  d );
+        }
+        assert( o > 0 && d < 0 );
+        if ( o > posEps )
+        {
+            // introduce new vertex if existing positive vertex is far from plane
+            const auto p = ( o * pd - d * po ) / ( o - d );
+            mesh.splitEdge( e, p, nullptr, new2Old );
+        }
+        else
+        {
+            // project existing positive vertex on plane if it was close
+            mesh.points[vo] = plane.project( mesh.points[vo] );
+        }
         for ( EdgeId ei : orgRing( mesh.topology, e ) )
         {
             const auto l = mesh.topology.left( ei );
@@ -80,10 +99,10 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float posEps )
 {
     MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old );
+    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, posEps );
     if ( outCutEdges )
         *outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
@@ -104,10 +123,10 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * ou
     }
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float posEps )
 {
     MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old );
+    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, posEps );
     if ( outCutContours )
     {
         *outCutContours = findRegionBoundaryInsideMesh( mesh.topology, posFaces );

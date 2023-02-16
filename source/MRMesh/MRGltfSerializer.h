@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef MRMESH_NO_GLTF
 #include "MRMeshFwd.h"
 #include "MRObject.h"
 
@@ -10,3 +12,4 @@ MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectT
 MRMESH_API tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback = {} );
 
 }
+#endif

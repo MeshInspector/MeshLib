@@ -847,7 +847,7 @@ void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
     {
         texture.pixels.resize( texture.resolution.x * texture.resolution.y );
         auto bin = decode64( root["Data"].asString() );
-        texture.pixels = std::move( *( std::vector<Color>* ) & bin );
+        std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + texture.pixels.size(), texture.pixels.data() );
     }
 }
 
@@ -857,7 +857,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoord
     {
         uvCoords.resize( root["Size"].asInt() );
         auto bin = decode64( root["Data"].asString() );
-        uvCoords = std::move( *( std::vector<UVCoord>* ) & bin );
+        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + uvCoords.size(), uvCoords.data() );
     }
 }
 

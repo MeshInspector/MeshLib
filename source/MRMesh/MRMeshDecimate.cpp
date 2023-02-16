@@ -385,12 +385,17 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
 {
     auto & topology = mesh_.topology;
-    // cannot collapse edge if its left and right faces share another edge
-    if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
-        return {};
-    if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
-        return {};
+    auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
+    auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
+    // cannot collapse internal edge if its left and right faces share another edge
+    if ( vl && vr )
+    {
+        if ( auto pe = topology.prev( edgeToCollapse ); pe != edgeToCollapse && pe == topology.next( edgeToCollapse ) )
+            return {};
+        if ( auto pe = topology.prev( edgeToCollapse.sym() ); pe != edgeToCollapse.sym() && pe == topology.next( edgeToCollapse.sym() ) )
+            return {};
+    }
     auto vo = topology.org( edgeToCollapse );
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
@@ -400,10 +405,9 @@ VertId MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collaps
         // reverse the edge to have its origin in remaining fixed vertex
         edgeToCollapse = edgeToCollapse.sym();
         std::swap( vo, vd );
+        std::swap( vl, vr );
         std::swap( po, pd );
     }
-    auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
-    auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;

@@ -420,7 +420,7 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
 
     // processing of results
     bool atLeastOneLoaded = false;
-    std::string allErrors;
+    std::unordered_map<std::string, int> allErrors;
     const float taskCount = float( loadTasks.size() );
     int finishedTaskCount = 0;
     std::chrono::system_clock::time_point afterSecond = std::chrono::system_clock::now();
@@ -446,19 +446,30 @@ tl::expected<Object, std::string> makeObjectTreeFromFolder( const std::filesyste
             }
             else
             {
-                allErrors += ( allErrors.empty() ? "" : "\n" ) + res.error();
+                ++allErrors[res.error()];
             }
             ++finishedTaskCount;
             if ( callback && !callback( finishedTaskCount / taskCount ) )
                 loadingCanceled = true;
         }
     }
-    if ( !allErrors.empty() )
-        spdlog::warn( "Load folder error:\n{}", allErrors );
+
+    std::string errorString;
+    for ( auto error : allErrors )
+    {
+        errorString += ( errorString.empty() ? "" : "\n" ) + error.first;
+        if ( error.second > 1 )
+        {
+            errorString += std::string( " ( " ) + std::to_string( error.second ) + std::string( " )" );
+        }
+    }
+
+    if ( !errorString.empty() )
+        spdlog::warn( "Load folder error:\n{}", errorString );
     if ( loadingCanceled )
         return tl::make_unexpected( getCancelMessage( folder ) );
     if ( !atLeastOneLoaded )
-        return tl::make_unexpected( allErrors );
+        return tl::make_unexpected( errorString );
 
     return result;
 }

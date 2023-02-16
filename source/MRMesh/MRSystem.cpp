@@ -455,9 +455,13 @@ std::string getOSNoSpaces()
     return "Wasm";
     #else
     // get platform from cmake variables
+    #ifdef MR_PLATFORM
     std::string platform = MR_PLATFORM;
     std::replace(platform.begin(), platform.end(), ' ', '_');
     return platform;
+    #else
+    return "UNKNOWN";
+    #endif
     #endif
     #endif
 }

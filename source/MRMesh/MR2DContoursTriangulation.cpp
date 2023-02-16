@@ -183,7 +183,7 @@ void PlanarTriangulator::mergeSamePoints_( const HolesVertIds* holesVertId )
     auto findRealVertId = [&] ( VertId patchId )
     {
         int holeId = 0;
-        while ( patchId + 1 >= ( *holesVertId )[holeId].size() )
+        while ( patchId >= ( *holesVertId )[holeId].size() )
         {
             patchId -= int( ( *holesVertId )[holeId].size() );
             ++holeId;

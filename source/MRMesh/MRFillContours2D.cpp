@@ -73,7 +73,7 @@ tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<Ed
     auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
     holeVertIds.reset();
     if ( !fillResult )
-        return tl::make_unexpected( "Cannot triangulate contours" );
+        return tl::make_unexpected( "Cannot triangulate contours with self-intersections" );
     Mesh& patchMesh = *fillResult;
     const auto holes = patchMesh.topology.findHoleRepresentiveEdges();
 

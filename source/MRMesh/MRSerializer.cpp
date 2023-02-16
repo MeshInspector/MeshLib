@@ -90,8 +90,10 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
 const IOFilters SceneFileFilters =
 {
     {"MeshInspector scene (.mru)","*.mru"},
+#ifndef MRMESH_NO_GLTF
     {"glTF JSON scene (.gltf)","*.gltf"},
     {"glTF binary scene (.glb)","*.glb"}
+#endif
 };
 
 tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )

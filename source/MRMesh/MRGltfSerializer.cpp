@@ -1,3 +1,4 @@
+#ifndef MRMESH_NO_GLTF
 #include "MRGltfSerializer.h"
 #include "MRVector.h"
 #include "MRMesh.h"
@@ -660,5 +661,4 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
     return {};
 }
 }
-
-
+#endif

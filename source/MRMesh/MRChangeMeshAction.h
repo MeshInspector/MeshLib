@@ -24,7 +24,6 @@ public:
     {
         if ( obj )
         {
-            uvCoords_ = obj->getUVCoords();
             if ( auto m = obj->mesh() )
                 cloneMesh_ = std::make_shared<Mesh>( *m );
         }
@@ -41,7 +40,6 @@ public:
             return;
 
         cloneMesh_ = objMesh_->updateMesh( cloneMesh_ );
-        uvCoords_ = objMesh_->updateUVCoords( uvCoords_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
@@ -52,14 +50,60 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + MR::heapBytes( cloneMesh_ ) + uvCoords_.heapBytes();
+        return name_.capacity() + MR::heapBytes( cloneMesh_ );
+    }
+
+private:
+    std::shared_ptr<ObjectMesh> objMesh_;
+    std::shared_ptr<Mesh> cloneMesh_;
+
+    std::string name_;
+};
+
+/// Undo action for ObjectMesh uvCoords change
+class ChangeMeshUVCoordsAction : public HistoryAction
+{
+public:
+    using Obj = ObjectMesh;
+
+    /// use this constructor to remember object's mesh before making any changes in it
+    ChangeMeshUVCoordsAction( std::string name, const std::shared_ptr<ObjectMesh>& obj ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            uvCoords_ = obj->getUVCoords();
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objMesh_ )
+            return;
+
+        uvCoords_ = objMesh_->updateUVCoords( uvCoords_ );
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_UV );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + uvCoords_.heapBytes();
     }
 
 private:
     Vector<UVCoord, VertId> uvCoords_;
     std::shared_ptr<ObjectMesh> objMesh_;
-    std::shared_ptr<Mesh> cloneMesh_;
-
     std::string name_;
 };
 

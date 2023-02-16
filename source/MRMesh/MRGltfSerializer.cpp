@@ -623,6 +623,8 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
     model.images.resize( textures.size() );
     model.samplers.resize( 1 );
 
+    const auto prefix = utf8string( file.stem().u8string() );
+
     for ( const auto& textureIt : textures )
     {
         auto& image = model.images[textureIt.second];
@@ -632,7 +634,7 @@ tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, c
         image.bits = 8;
         image.component = 4;
         image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
-        image.uri = std::string( "texture" ) + std::to_string( textureIt.second ) + std::string( ".png" );
+        image.uri = prefix + std::string( "_texture" ) + std::to_string( textureIt.second ) + std::string( ".png" );
         image.width = textureIt.first.resolution.x;
         image.height = textureIt.first.resolution.y;
 

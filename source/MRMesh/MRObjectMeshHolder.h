@@ -12,6 +12,7 @@ struct MeshVisualizePropertyType : VisualizeMaskType
     enum Type : unsigned
     {
         Faces = VisualizeMaskType::VisualizePropsCount,
+        Texture,
         Edges,
         SelectedFaces,
         SelectedEdges,
@@ -112,6 +113,12 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
+    const MeshTexture& getTexture() const { return texture_; }
+    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+
+    const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
+    virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    const Vector<UVCoord, VertId>& updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; return updated; }
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 
@@ -145,6 +152,10 @@ protected:
     UndirectedEdgeBitSet selectedEdges_;
     UndirectedEdgeBitSet creases_;
 
+    /// Texture options
+    MeshTexture texture_;
+    Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
+
     struct MeshStat
     {
         size_t numComponents = 0;
@@ -176,6 +187,7 @@ protected:
 
     MRMESH_API virtual void updateMeshStat_() const;
 
+    ViewportMask showTexture_;
     ViewportMask showFaces_ = ViewportMask::all();
     ViewportMask showEdges_;
     ViewportMask showSelectedEdges_ = ViewportMask::all();

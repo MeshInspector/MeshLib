@@ -145,11 +145,9 @@ size_t RenderLinesObject::heapBytes() const
 size_t RenderLinesObject::glBytes() const
 {
     return vertPosBuffer_.size()
-        + vertUVBuffer_.size()
         + vertNormalsBuffer_.size()
         + vertColorsBuffer_.size()
         + lineIndicesBuffer_.size()
-        + texture_.size()
         + pointsSelectionTex_.size()
         + lineColorsTex_.size();
 }
@@ -176,29 +174,11 @@ void RenderLinesObject::bindLines_()
     auto colors = loadVertColorsBuffer_();
     bindVertexAttribArray( shader, "K", vertColorsBuffer_, colors, 4, colors.dirty(), colors.glSize() != 0 );
 
-    auto uvs = loadVertUVBuffer_();
-    bindVertexAttribArray( shader, "texcoord", vertUVBuffer_, uvs, 2, uvs.dirty(), uvs.glSize() != 0 );
-
     auto lineIndices = loadLineIndicesBuffer_();
     lineIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, lineIndices.dirty(), lineIndices );
 
-    const auto& texture = objLines_->getTexture();
-    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
-        { 
-            .resolution = texture.resolution,
-            .internalFormat = GL_RGBA,
-            .format = GL_RGBA,
-            .type = GL_UNSIGNED_BYTE,
-            .wrap = texture.wrap,
-            .filter = texture.filter
-        },
-        texture.pixels );
-
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
-
     // Diffuse
-    GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( dirty_ & DIRTY_PRIMITIVE_COLORMAP )
     {
         int maxTexSize = 0;
@@ -215,7 +195,7 @@ void RenderLinesObject::bindLines_()
     }
     else
         lineColorsTex_.bind();
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "lineColors" ), 1 ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "lineColors" ), 0 ) );
 
     dirty_ &= ~DIRTY_MESH;
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
@@ -383,44 +363,6 @@ RenderBufferRef<Color> RenderLinesObject::loadVertColorsBuffer_()
                 continue;
             buffer[2 * ue] = vertsColorMap[o];
             buffer[2 * ue + 1] = vertsColorMap[d];
-        }
-    } );
-
-    return buffer;
-}
-
-RenderBufferRef<UVCoord> RenderLinesObject::loadVertUVBuffer_()
-{
-    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_UV ) || !objLines_->polyline() )
-        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_, false );
-
-    const auto& polyline = objLines_->polyline();
-    const auto& topology = polyline->topology;
-    auto numV = topology.lastValidVert() + 1;
-
-    const auto& uvCoords = objLines_->getUVCoords();
-    if ( objLines_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
-    {
-        assert( uvCoords.size() >= numV );
-    }
-    if ( uvCoords.size() < numV )
-        return glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 0 );
-
-    auto numL = topology.lastNotLoneEdge() + 1;
-    auto buffer = glBuffer.prepareBuffer<UVCoord>( vertUVSize_ = 2 * numL );
-
-    auto undirEdgesSize = numL >> 1;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, undirEdgesSize ), [&] ( const tbb::blocked_range<int>& range )
-    {
-        for ( int ue = range.begin(); ue < range.end(); ++ue )
-        {
-            auto o = topology.org( UndirectedEdgeId( ue ) );
-            auto d = topology.dest( UndirectedEdgeId( ue ) );
-            if ( !o || !d )
-                continue;
-            buffer[2 * ue] = uvCoords[o];
-            buffer[2 * ue + 1] = uvCoords[d];
         }
     } );
 

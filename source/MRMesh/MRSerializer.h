@@ -118,6 +118,8 @@ MRMESH_API void serializeToJson( const BitSet& bitset, Json::Value& root );
 MRMESH_API tl::expected<void, std::string> serializeToJson( const Mesh& mesh, Json::Value& root );
 MRMESH_API void serializeToJson( const Plane3f& plane, Json::Value& root );
 MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
+MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root );
+MRMESH_API void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root );
 /// this version takes topology to convert MeshTriPoint in its representation relative a face;
 /// also beware that de-serialization will work only if faces are not renumbered (so please pack mesh before saving)
 MRMESH_API void serializeToJson( const MeshTriPoint& mtp, const MeshTopology& topology, Json::Value& root );
@@ -141,6 +143,8 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, BitSet& bitset );
 MRMESH_API tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, Vector<Color, VertId>* colors = nullptr );
 MRMESH_API void deserializeFromJson( const Json::Value& root, Plane3f& plane );
 MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
+MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& texture );
+MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords );
 /// this version takes topology to construct MeshTriPoint from its representation relative a face;
 /// also beware that de-serialization will work only if faces are not renumbered (so please pack mesh before saving)
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTriPoint& mtp, const MeshTopology& topology );

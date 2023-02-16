@@ -30,7 +30,6 @@ struct VisualizeMaskType
     enum Type : unsigned
     {
         Visibility,
-        Texture,
         InvertedNormals,
         Name,
         Labels,
@@ -154,12 +153,6 @@ public:
     /// Set object pickability by gl
     MRMESH_API virtual void setPickable( bool on, ViewportMask viewportMask = ViewportMask::all() );
 
-    const MeshTexture& getTexture() const { return texture_; }
-    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-
-    const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
-    virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-
     const Vector<Color, VertId>& getVertsColorMap() const { return vertsColorMap_; }
 
     virtual void setVertsColorMap( Vector<Color, VertId> vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
@@ -223,7 +216,6 @@ protected:
     /// Visualization options
     /// Each option is a binary mask specifying on which viewport each option is set.
     /// When using a single viewport, standard boolean can still be used for simplicity.
-    ViewportMask showTexture_;
     ViewportMask clipByPlane_;
     ViewportMask showLabels_;
     ViewportMask showName_;
@@ -244,10 +236,6 @@ protected:
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
-
-    /// Texture options
-    MeshTexture texture_;
-    Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
 
     std::vector<PositionedText> labels_;
 

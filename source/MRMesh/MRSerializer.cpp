@@ -23,6 +23,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
+#include "MRMeshTexture.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -537,6 +538,49 @@ void serializeToJson( const BitSet& bitset, Json::Value& root )
     root["bits"] = encode64( (const std::uint8_t*) bitset.m_bits.data(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
 }
 
+void serializeToJson( const MeshTexture& texture, Json::Value& root )
+{
+    switch ( texture.filter )
+    {
+    case FilterType::Linear:
+        root["FilterType"] = "Linear";
+        break;
+    case FilterType::Discrete:
+        root["FilterType"] = "Discrete";
+        break;
+    default:
+        assert( false );
+        root["FilterType"] = "Unknown";
+        break;
+    }
+
+    switch ( texture.wrap )
+    {
+    case WrapType::Clamp:
+        root["WrapType"] = "Clamp";
+        break;
+    case WrapType::Mirror :
+        root["WrapType"] = "Mirror";
+        break;
+    case WrapType::Repeat:
+        root["WrapType"] = "Repeat";
+        break;
+    default:
+        assert( false );
+        root["WrapType"] = "Unknown";
+        break;
+    }
+
+    serializeToJson( texture.resolution, root["Resolution"] );
+    root["Data"] = encode64( ( const uint8_t* )texture.pixels.data(), texture.pixels.size() * sizeof( Color ) );
+}
+
+void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
+{
+    root["Size"] = uvCoords.size();
+    root["Data"] = encode64( ( const uint8_t* )uvCoords.data(), uvCoords.size() * sizeof( UVCoord ) );
+}
+
 void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
 {
     std::vector<VertId> verts;
@@ -775,6 +819,46 @@ tl::expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, Ve
     auto bin = decode64( root["ply"].asString() );
     std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
     return MeshLoad::fromPly( in, colors );
+}
+
+void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
+{
+    if ( root["FilterType"].isString() )
+    {
+        auto filterName = root["FilterType"].asString();
+        if ( filterName == "Linear" )
+            texture.filter = FilterType::Linear;
+        else if ( filterName == "Discrete" )
+            texture.filter = FilterType::Discrete;
+    }
+
+    if ( root["WrapType"].isString() )
+    {
+        auto wrapName = root["WrapType"].asString();
+        if ( wrapName == "Clamp" )
+            texture.wrap = WrapType::Clamp;
+        else if ( wrapName == "Mirror" )
+            texture.wrap = WrapType::Mirror;
+        else if ( wrapName == "Repeat" )
+            texture.wrap = WrapType::Repeat;
+    }
+    deserializeFromJson( root["Resolution"], texture.resolution );
+    if ( root["Data"].isString() )
+    {
+        texture.pixels.resize( texture.resolution.x * texture.resolution.y );
+        auto bin = decode64( root["Data"].asString() );
+        texture.pixels = std::move( *( std::vector<Color>* ) & bin );
+    }
+}
+
+void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords )
+{
+    if ( root["Data"].isString() && root["Size"].isInt() )
+    {
+        uvCoords.resize( root["Size"].asInt() );
+        auto bin = decode64( root["Data"].asString() );
+        uvCoords = std::move( *( std::vector<UVCoord>* ) & bin );
+    }
 }
 
 TEST( MRMesh, MeshToJson )

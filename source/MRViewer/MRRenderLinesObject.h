@@ -28,7 +28,6 @@ private:
     int vertPosSize_{ 0 };
     int vertNormalsSize_{ 0 };
     int vertColorsSize_{ 0 };
-    int vertUVSize_{ 0 };
     int lineIndicesSize_{ 0 };
 
     RenderBufferRef<Vector3f> loadVertPosBuffer_();

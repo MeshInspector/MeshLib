@@ -301,6 +301,8 @@ struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
+struct MeshTexture;
+struct UVCoord;
 template<typename T> class UniqueThreadSafeOwner;
 
 class PolylineTopology;

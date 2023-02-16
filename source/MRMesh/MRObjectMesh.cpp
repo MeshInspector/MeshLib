@@ -98,6 +98,15 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
         res.push_back( "area: " + std::to_string( totalArea() ) );
 
+        if ( !texture_.pixels.empty() )
+            res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );
+        if ( !uvCoordinates_.empty() )
+        {
+            res.push_back( "uv-coords: " + std::to_string( uvCoordinates_.size() ) );
+            if ( uvCoordinates_.size() < uvCoordinates_.capacity() )
+                res.back() += " / " + std::to_string( uvCoordinates_.capacity() ) + " capacity";
+        }
+
         boundingBoxToInfoLines_( res );
 
         if ( auto tree = mesh_->getAABBTreeNotCreate() )

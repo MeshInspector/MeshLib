@@ -24,6 +24,7 @@ public:
     {
         if ( obj )
         {
+            uvCoords_ = obj->getUVCoords();
             if ( auto m = obj->mesh() )
                 cloneMesh_ = std::make_shared<Mesh>( *m );
         }
@@ -40,6 +41,7 @@ public:
             return;
 
         cloneMesh_ = objMesh_->updateMesh( cloneMesh_ );
+        uvCoords_ = objMesh_->updateUVCoords( uvCoords_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
@@ -50,10 +52,11 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + MR::heapBytes( cloneMesh_ );
+        return name_.capacity() + MR::heapBytes( cloneMesh_ ) + uvCoords_.heapBytes();
     }
 
 private:
+    Vector<UVCoord, VertId> uvCoords_;
     std::shared_ptr<ObjectMesh> objMesh_;
     std::shared_ptr<Mesh> cloneMesh_;
 

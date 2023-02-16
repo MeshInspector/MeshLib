@@ -103,6 +103,14 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( el.lenSq != mesh.edgeLengthSq( e ) )
             continue; // outdated record in the queue
 
+        if ( settings.newUVCoords && settings.newUVCoords->size() == mesh.points.size() )
+        {
+            const auto org = mesh.topology.org( e );
+            const auto dest = mesh.topology.dest( e );
+            settings.newUVCoords->push_back( { ( ( *settings.newUVCoords )[org].u + ( *settings.newUVCoords )[dest].u ) * 0.5f,
+                                               ( ( *settings.newUVCoords )[org].v + ( *settings.newUVCoords )[dest].v ) * 0.5f } );
+        }
+
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
 

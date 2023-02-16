@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRConstants.h"
+#include "MRMeshTexture.h"
 #include <functional>
 
 namespace MR
@@ -28,6 +29,8 @@ struct SubdivideSettings
     const UndirectedEdgeBitSet* notFlippable = nullptr;
     /// New vertices appeared during subdivision will be added here
     VertBitSet * newVerts = nullptr;
+    /// New UV coordinates of new vertices
+    Vector<UVCoord, VertId>* newUVCoords = nullptr;
     /// If false do not touch border edges (cannot subdivide lone faces)\n
     /// use \ref MR::findRegionOuterFaces to find boundary faces
     bool subdivideBorder = true;

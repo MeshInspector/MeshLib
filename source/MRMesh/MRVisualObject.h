@@ -159,6 +159,7 @@ public:
 
     const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    const Vector<UVCoord, VertId>& updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; return updated; }
 
     const Vector<Color, VertId>& getVertsColorMap() const { return vertsColorMap_; }
 

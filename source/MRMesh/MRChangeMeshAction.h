@@ -87,7 +87,7 @@ public:
         if ( !objMesh_ )
             return;
 
-        uvCoords_ = objMesh_->updateUVCoords( uvCoords_ );
+        objMesh_->updateUVCoords( uvCoords_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )

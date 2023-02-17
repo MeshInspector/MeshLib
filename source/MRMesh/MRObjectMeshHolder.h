@@ -118,7 +118,7 @@ public:
 
     const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
-
+    void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 

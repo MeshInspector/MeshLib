@@ -1,5 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
+#include <stddef.h>
 
 namespace MR
 {

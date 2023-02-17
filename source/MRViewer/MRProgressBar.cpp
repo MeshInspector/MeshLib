@@ -87,6 +87,7 @@ void ProgressBar::setup( float scaling )
             {
                 instance.onFinish_();
                 instance.onFinish_ = {};
+                instance.isReady_ = true;
             }
             ImGui::CloseCurrentPopup();
         }
@@ -124,6 +125,8 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
 
     if ( instance.thread_.joinable() )
         return;
+
+    instance.isReady_ = false;
 
     instance.deferredProgressBar_ = [task, taskCount, nameStr = std::string(name)] ()
     {
@@ -178,6 +181,11 @@ bool ProgressBar::isCanceled()
 bool ProgressBar::isFinished()
 {
     return instance_().finished_;
+}
+
+bool ProgressBar::isReady()
+{
+    return instance_().isReady_;
 }
 
 float ProgressBar::getProgress()
@@ -261,7 +269,7 @@ ProgressBar& ProgressBar::ProgressBar::instance_()
 ProgressBar::ProgressBar() :
     progress_( 0.0f ), currentTask_( 0 ), taskCount_( 1 ),
     taskName_( "Current task" ), title_( "Sample Title" ),
-    canceled_{ false }, finished_{ false }
+    canceled_{ false }, finished_{ true }
 {}
 
 ProgressBar::~ProgressBar()

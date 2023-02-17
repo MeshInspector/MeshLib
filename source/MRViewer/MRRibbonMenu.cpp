@@ -1338,7 +1338,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
                 }
             }
 
-            if ( !statePlugin->dialogIsOpen() )
+            if ( !statePlugin->dialogIsOpen() && ProgressBar::isReady() )
             {
                 itemPressed_( itemPtr.item, true );
             }

@@ -27,6 +27,8 @@ public:
 
     MRVIEWER_API static bool isFinished();
 
+    MRVIEWER_API static bool isReady();
+
     MRVIEWER_API static float getProgress();
 
     // sets the current progress and returns false if the user has pressed Cancel button
@@ -76,6 +78,7 @@ private:
     std::atomic<bool> finished_;
     ImGuiID setupId_ = ImGuiID( -1 );
 
+    bool isReady_{ true };
     bool isInit_{ false };
 };
 

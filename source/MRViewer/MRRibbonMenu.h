@@ -71,6 +71,9 @@ public:
     /// set Scene List window size
     MRVIEWER_API void setSceneSize( const Vector2i& size );
 
+    /// returns true if any blocking plugin is now active
+    bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
+
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 

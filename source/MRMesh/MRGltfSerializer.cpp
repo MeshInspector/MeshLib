@@ -386,7 +386,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
                     {
                         objectMesh->setUVCoords( meshData.uvCoords );
                         objectMesh->setTexture( textures[model.textures[textureIndex].source] );
-                        objectMesh->setVisualizeProperty( true, VisualizeMaskType::Texture, ViewportMask::all() );
+                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                     }
                     else if ( !meshData.vertsColorMap.empty() )
                     {

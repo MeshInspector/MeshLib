@@ -110,7 +110,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
         // Texture
         GL_EXEC( auto useTexture = glGetUniformLocation( shader, "useTexture" ) );
-        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, renderParams.viewportId ) ) );
+        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) ) );
 
         if ( renderParams.forceZBuffer )
         {
@@ -594,7 +594,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     auto numV = topology.lastValidVert() + 1;
 
     const auto& uvCoords = objMesh_->getUVCoords();
-    if ( objMesh_->getVisualizeProperty( VisualizeMaskType::Texture, ViewportMask::any() ) )
+    if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );
     }

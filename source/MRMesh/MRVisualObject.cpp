@@ -25,7 +25,6 @@ VisualObject::VisualObject()
 VisualObject::VisualObject( const VisualObject& other ):
     Object( other )
 {
-    showTexture_ = other.showTexture_;
     clipByPlane_ = other.clipByPlane_;
     showLabels_ = other.showLabels_;
     showName_ = other.showName_;
@@ -43,8 +42,6 @@ VisualObject::VisualObject( const VisualObject& other ):
     unselectedColor_ = other.unselectedColor_;
     backFacesColor_ = other.backFacesColor_;
     depthTest_ = other.depthTest_;
-    texture_ = other.texture_;
-    uvCoordinates_ = other.uvCoordinates_;
     labels_ = other.labels_;
 }
 
@@ -281,8 +278,6 @@ const ViewportMask& VisualObject::getVisualizePropertyMask( unsigned type ) cons
     {
     case MR::VisualizeMaskType::Visibility:
         return visibilityMask_;
-    case MR::VisualizeMaskType::Texture:
-        return showTexture_;
     case MR::VisualizeMaskType::InvertedNormals:
         return invertNormals_;
     case MR::VisualizeMaskType::Labels:
@@ -365,8 +360,6 @@ size_t VisualObject::heapBytes() const
 {
     return Object::heapBytes()
         + vertsColorMap_.heapBytes()
-        + texture_.heapBytes()
-        + uvCoordinates_.heapBytes()
         + MR::heapBytes( labels_ )
         + MR::heapBytes( renderObj_ );
 }
@@ -376,14 +369,6 @@ std::vector<std::string> VisualObject::getInfoLines() const
     auto res = Object::getInfoLines();
     if ( renderObj_ )
         res.push_back( "GL mem: " + bytesString( renderObj_->glBytes() ) );
-    if ( !texture_.pixels.empty() )
-        res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );
-    if ( !uvCoordinates_.empty() )
-    {
-        res.push_back( "uv-coords: " + std::to_string( uvCoordinates_.size() ) );
-        if ( uvCoordinates_.size() < uvCoordinates_.capacity() )
-            res.back() += " / " + std::to_string( uvCoordinates_.capacity() ) + " capacity";
-    }
     return res;
 }
 

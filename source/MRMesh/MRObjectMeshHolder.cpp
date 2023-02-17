@@ -69,6 +69,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
+    root["ShowTexture"] = showTexture_.value();
     root["ShowFaces"] = showFaces_.value();
     root["ShowLines"] = showEdges_.value();
     root["ShowBordersHighlight"] = showBordersHighlight_.value();
@@ -78,6 +79,9 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["FaceBased"] = !flatShading_.empty();
     root["ColoringType"] = ( coloringType_ == ColoringType::VertsColorMap ) ? "PerVertex" : "Solid";
 
+    // texture
+    serializeToJson( texture_, root["Texture"] );
+    serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // borders
@@ -105,6 +109,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     VisualObject::deserializeFields_( root );
     const auto& selectionColor = root["Colors"]["Selection"];
 
+    if ( root["ShowTexture"].isUInt() )
+        showTexture_ = ViewportMask{ root["ShowTexture"].asUInt() };
     if ( root["ShowFaces"].isUInt() )
         showFaces_ = ViewportMask{ root["ShowFaces"].asUInt() };
     if ( root["ShowLines"].isUInt() )
@@ -129,6 +135,11 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
     faceSelectionColor_.set( Color( resVec ) );
+    // texture
+    if ( root["Texture"].isObject() )
+        deserializeFromJson( root["Texture"], texture_ );
+    if ( root["UVCoordinates"].isObject() )
+        deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
@@ -178,6 +189,8 @@ const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) 
     {
     case MR::MeshVisualizePropertyType::Faces:
         return showFaces_;
+    case MR::MeshVisualizePropertyType::Texture:
+        return showTexture_;
     case MR::MeshVisualizePropertyType::Edges:
         return showEdges_;
     case MR::MeshVisualizePropertyType::FlatShading:
@@ -225,6 +238,7 @@ void ObjectMeshHolder::setDefaultColors_()
 ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
     VisualObject( other )
 {
+    showTexture_ = other.showTexture_;
     selectedTriangles_ = other.selectedTriangles_;
     selectedEdges_ = other.selectedEdges_;
     creases_ = other.creases_;
@@ -244,6 +258,9 @@ ObjectMeshHolder::ObjectMeshHolder( const ObjectMeshHolder& other ) :
 
     facesColorMap_ = other.facesColorMap_;
     edgeWidth_ = other.edgeWidth_;
+
+    texture_ = other.texture_;
+    uvCoordinates_ = other.uvCoordinates_;
 }
 
 ObjectMeshHolder::ObjectMeshHolder()
@@ -403,6 +420,8 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
+        + texture_.heapBytes()
+        + uvCoordinates_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }

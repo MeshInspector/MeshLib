@@ -148,7 +148,7 @@ void Laplacian::updateSolver_()
         ++n;
     }
 
-    // equations for fixed neighbors of free vertices
+    // equations for free neighbors of fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];
@@ -194,7 +194,7 @@ void Laplacian::prepareRhs_( I && iniRhs, G && g, S && s )
         ++n;
     }
 
-    // equations for fixed neighbors of free vertices
+    // equations for free neighbors of fixed vertices
     for ( auto v : firstLayerFixedVerts_ )
     {
         int eqN = regionVert2id_[v];

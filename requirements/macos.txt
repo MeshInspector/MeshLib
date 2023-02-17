@@ -19,6 +19,7 @@ openblas
 openexr
 openssl@3
 openvdb
+pkgconfig
 podofo
 python@3.10
 spdlog

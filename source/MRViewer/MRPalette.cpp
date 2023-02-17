@@ -218,7 +218,7 @@ void Palette::setZeroCentredLabels_()
         // push intermediate values
         while ( value < max )
         {
-            const float pos = 1.f - getUVcoord( value ).v;
+            const float pos = 1.f - getUVcoord( value ).v();
             if ( pos >= posMin && pos <= posMax )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
@@ -528,7 +528,7 @@ void Palette::updateCustomLabels_()
     labels_ = customLabels_;
     for ( auto& label : labels_ )
     {
-        label.value = 1.f - getUVcoord( label.value ).v;
+        label.value = 1.f - getUVcoord( label.value ).v();
     }
     sortLabels_();
 }

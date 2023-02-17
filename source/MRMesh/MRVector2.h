@@ -69,9 +69,6 @@ struct Vector2
         else
             return *this *= ( 1 / b );
     }
-
-    T& u() { return x; }
-    T& v() { return y; }
 };
 
 /// \related Vector2

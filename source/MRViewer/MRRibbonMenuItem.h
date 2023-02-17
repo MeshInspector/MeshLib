@@ -74,6 +74,8 @@ public:
         lambda_( std::move( lambda ) )
     {}
 
+    virtual ~LambdaRibbonItem() = default;
+
     virtual bool action() override
     {
         lambda_();

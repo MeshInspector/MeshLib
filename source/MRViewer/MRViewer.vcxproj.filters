@@ -244,6 +244,9 @@
     <ClCompile Include="MRWebRequest.cpp">
       <Filter>Requests</Filter>
     </ClCompile>
+    <ClCompile Include="MRBlockingStateSession.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -457,6 +460,9 @@
     </ClInclude>
     <ClInclude Include="MRWebRequest.h">
       <Filter>Requests</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBlockingStateSession.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

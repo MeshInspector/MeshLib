@@ -15,8 +15,9 @@ void FilterHistoryByCondition( HistoryStackFilter condition, bool deepFiltering 
     store->filterStack( condition, deepFiltering );
 }
 
-ScopeHistory::ScopeHistory( const std::string& name ) :
-    name_{ name }
+ScopeHistory::ScopeHistory( const std::string& name, bool blocking ) :
+    name_{ name },
+    blocking_{ blocking }
 {
     auto viewer = Viewer::instance();
     if ( !viewer )
@@ -37,7 +38,12 @@ ScopeHistory::~ScopeHistory()
     auto scopeBlock = store_->getScopeBlock();
     store_->startScope( false );
     if ( !scopeBlock.empty() )
-        AppendHistory<CombinedHistoryAction>( name_, scopeBlock );
+    {
+        if ( blocking_ )
+            AppendBlockingHistory<CombinedHistoryAction>( name_, scopeBlock );
+        else
+            AppendHistory<CombinedHistoryAction>( name_, scopeBlock );
+    }
 }
 
 }

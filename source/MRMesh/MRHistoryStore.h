@@ -51,6 +51,8 @@ public:
     MRMESH_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type )const;
     /// Returns the name of last undo or redo action (or empty string if there is no such action)
     MRMESH_API std::string getLastActionName( HistoryAction::Type type ) const;
+    /// Returns the sessionId of last undo or redo action (0)
+    MRMESH_API size_t getLastActionSessionId( HistoryAction::Type type ) const;
 
     /// Signal is called after this store changed
     enum class ChangeType
@@ -64,7 +66,7 @@ public:
     using HistoryStoreChangedSignal = boost::signals2::signal<void( const HistoryStore& store, ChangeType )>;
     HistoryStoreChangedSignal changedSignal;
 
-private:
+protected:
     bool scoped_{ false };
     /// buffer for merging actions
     HistoryActionsVector scopedBlock_;

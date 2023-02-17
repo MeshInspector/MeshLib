@@ -19,6 +19,7 @@
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRBlockingStateSession.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 
@@ -1122,10 +1123,27 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
 
 void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
 {
-    if ( item->isActive() || available )
+    auto active = item->isActive();
+    if ( !active && !available )
+        return;
+    ImGui::CloseCurrentPopup();
+    
+    if ( !item->blocking() )
     {
-        ImGui::CloseCurrentPopup();
         item->action();
+        return;
+    }
+
+    if ( active )
+    {
+        if ( item->action() )
+            BlockingStateSession::stopCurrentSession();
+    }
+    else
+    {
+        BlockingStateSession::startNewSession();
+        if ( !item->action() )
+            BlockingStateSession::stopCurrentSession();
     }
 }
 
@@ -1322,7 +1340,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
             if ( !statePlugin->dialogIsOpen() )
             {
-                itemPtr.item->action();
+                itemPressed_( itemPtr.item, true );
             }
         }
     }

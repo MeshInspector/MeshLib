@@ -25,6 +25,9 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] virtual size_t heapBytes() const = 0;
+
+    /// id of blocking session, may be used to block history actions in UI
+    size_t sessionId{ 0 };
 };
 
 using HistoryStackFilter = std::function<bool( const std::shared_ptr<HistoryAction>& )>;

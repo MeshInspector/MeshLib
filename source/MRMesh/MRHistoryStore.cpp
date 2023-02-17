@@ -124,6 +124,19 @@ std::string HistoryStore::getLastActionName( HistoryAction::Type type ) const
     return res;
 }
 
+size_t HistoryStore::getLastActionSessionId( HistoryAction::Type type ) const
+{
+    size_t res = 0;
+    std::shared_ptr<HistoryAction> action;
+    if ( type == HistoryAction::Type::Undo && firstRedoIndex_ >= 1 && firstRedoIndex_ < stack_.size() + 1 )
+        action = stack_[firstRedoIndex_ - 1];
+    else if ( type == HistoryAction::Type::Redo && firstRedoIndex_ < stack_.size() )
+        action = stack_[firstRedoIndex_];
+    if ( action )
+        res = action->sessionId;
+    return res;
+}
+
 std::pair<bool, int> filterHistoryActionsVector( HistoryActionsVector& historyVector,
     HistoryStackFilter filteringCondition, size_t firstRedoIndex /*= 0*/, bool deepFiltering /*= true */ )
 {

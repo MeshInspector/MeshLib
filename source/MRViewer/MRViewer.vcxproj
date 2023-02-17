@@ -16,6 +16,7 @@
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
     <ClCompile Include="MRAsyncTimer.cpp" />
+    <ClCompile Include="MRBlockingStateSession.cpp" />
     <ClCompile Include="MRColorTheme.cpp" />
     <ClCompile Include="MRCommandLoop.cpp" />
     <ClCompile Include="MRCreateShader.cpp" />
@@ -79,6 +80,7 @@
     <ClInclude Include="ImGuiTraits.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
     <ClInclude Include="MRAsyncTimer.h" />
+    <ClInclude Include="MRBlockingStateSession.h" />
     <ClInclude Include="MRColorTheme.h" />
     <ClInclude Include="MRCommandLoop.h" />
     <ClInclude Include="MRCreateShader.h" />

@@ -302,7 +302,11 @@ class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
-struct UVCoord;
+
+/// Coordinates on texture 
+/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
+using UVCoord = Vector2f;
+
 template<typename T> class UniqueThreadSafeOwner;
 
 class PolylineTopology;

@@ -304,7 +304,7 @@ struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
 
 /// Coordinates on texture 
-/// \param u,v should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
+/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
 template<typename T> class UniqueThreadSafeOwner;

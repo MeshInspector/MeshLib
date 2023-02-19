@@ -156,32 +156,38 @@ FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet&
     return res;
 }
 
-static VertBitSet getIncidentVerts_( const MeshTopology & topology, const FaceBitSet & faces )
+VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces )
 {
     MR_TIMER
-    VertBitSet res( topology.vertSize() );
-    for ( auto f : faces )
+    VertBitSet res = topology.getValidVerts();
+    BitSetParallelFor( res, [&]( VertId v )
     {
-        for ( auto e : leftRing( topology, f ) )
+        bool incident = false;
+        for ( auto e : orgRing( topology, v ) )
         {
-            auto v = topology.org( e );
-            if ( v.valid() )
-                res.set( v );
+            auto f = topology.left( e );
+            if ( f.valid() && faces.test( f ) )
+            {
+                incident = true;
+                break;
+            }
         }
-    } 
+        if ( !incident )
+            res.reset( v );
+    } );
     return res;
 }
 
-static VertBitSet getInnerVerts_( const MeshTopology & topology, const FaceBitSet & faces )
+VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & faces )
 {
     MR_TIMER
-    VertBitSet res = getIncidentVerts_( topology, faces );
+    VertBitSet res = topology.getValidVerts();
     BitSetParallelFor( res, [&]( VertId v )
     {
         for ( auto e : orgRing( topology, v ) )
         {
             auto f = topology.left( e );
-            if ( f.valid() && !faces.test( f ) )
+            if ( !f.valid() || !faces.test( f ) )
             {
                 res.reset( v );
                 break;
@@ -189,16 +195,6 @@ static VertBitSet getInnerVerts_( const MeshTopology & topology, const FaceBitSe
         }
     } );
     return res;
-}
-
-VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces )
-{
-    MR_TIMER
-
-    if ( 3 * faces.count() <= 2 * topology.numValidFaces() )
-        return getIncidentVerts_( topology, faces );
-
-    return topology.getValidVerts() - getInnerVerts_( topology, topology.getValidFaces() - faces );
 }
 
 const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store )
@@ -210,16 +206,6 @@ const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBi
 
     store = getIncidentVerts( topology, *faces );
     return store;
-}
-
-VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet & faces )
-{
-    MR_TIMER
-
-    if ( 3 * faces.count() <= topology.numValidFaces() )
-        return getInnerVerts_( topology, faces );
-
-    return topology.getValidVerts() - getIncidentVerts_( topology, topology.getValidFaces() - faces );
 }
 
 VertBitSet getBoundaryVerts( const MeshTopology & topology, const FaceBitSet * region )

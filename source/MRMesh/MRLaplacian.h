@@ -32,7 +32,8 @@ public:
     {
         Unit = 0,  // all edges have same weight=1
         Cotan,     // edge weight depends on local geometry and uses cotangent values
-        CotanTimesLength // edge weight is equal to edge length times cotangent weight
+        CotanTimesLength, // [deprecated] edge weight is equal to edge length times cotangent weight
+        CotanWithAreaEqWeight // cotangent edge weights and equation weights inversely proportional to square root of local area
     };
 
     enum class RememberShape

@@ -224,7 +224,7 @@ double Mesh::area( const FaceBitSet & fs ) const
     [&] ( const auto & range, double curr )
     {
         for ( FaceId f = range.begin(); f < range.end(); ++f )
-            if ( fs.test( f ) )
+            if ( fs.test( f ) && topology.hasFace( f ) )
                 curr += dblArea( f );
         return curr;
     },

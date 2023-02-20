@@ -254,7 +254,7 @@ struct [[nodiscard]] Mesh
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
-    // rearrange vector values by map [old pos] -> [new pos]
+    // rearrange vector values by map (old.id -> new.id)
     template<typename T, typename I>
     [[nodiscard]] MRMESH_API static Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
     {

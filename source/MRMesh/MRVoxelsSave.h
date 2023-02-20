@@ -33,7 +33,7 @@ MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const std::file
 
 
 /// save the slice by the active plane through the sliceNumber to an image file
-MRMESH_API tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback = {} );
+MRMESH_API tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );
 
 // stores together all data for save voxel object as a group of images
 struct SavingSettings
@@ -42,16 +42,14 @@ struct SavingSettings
     std::filesystem::path path;
     // format for file names, you should specify a placeholder for number and extension, eg "slice_{0:0{1}}.tif"
     std::string format = "slice_{0:0{1}}.tif";
-    // voxel data
-    VdbVolume vdbVolume;
-    // Plain which the object is sliced by. XY, XZ, or YZ
-    SlicePlain slicePlain;
+    // Plane which the object is sliced by. XY, XZ, or YZ
+    SlicePlane slicePlane;
     // Callback reporting progress
     ProgressCallback cb = {};
 };
 
 /// save all slices by the active plane through all voxel planes along the active axis to an image file
-MRMESH_API tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& settings );
+MRMESH_API tl::expected<void, std::string> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
 
 /// \}
 

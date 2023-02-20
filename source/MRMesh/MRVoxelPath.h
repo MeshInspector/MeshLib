@@ -23,7 +23,7 @@ enum QuarterBit : char
 };
 
 /// Plane of slice in which to find path
-enum SlicePlain
+enum SlicePlane
 {
     YZ, ///< = 0 cause main axis is x - [0]
     ZX, ///< = 1 cause main axis is y - [1]
@@ -37,7 +37,7 @@ struct VoxelMetricParameters
     size_t start; ///< start voxel index
     size_t stop;  ///< stop voxel index 
     float maxDistRatio{1.5f}; ///< max distance ratio: if (dist^2(next,start) + dist^2(next,stop) > maxDistRatio^2*dist^2(start,stop)) - candidate is not processed 
-    SlicePlain plane{None}; ///< if not None - builds path in one slice of voxels (make sure start and stop has same main axis coordinate)
+    SlicePlane plane{None}; ///< if not None - builds path in one slice of voxels (make sure start and stop has same main axis coordinate)
     char quatersMask{QuarterBit::All}; ///< quarter of building path, if plane is selected, it should be (LeftLeft | LeftRigth) or (RigthLeft | RightRight) or All
 };
 

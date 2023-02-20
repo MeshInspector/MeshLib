@@ -152,7 +152,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::pat
 
 
 
-tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlain& slicePlain, int sliceNumber, ProgressCallback callback )
+tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {
     const auto& dims = vdbVolume.dims;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
@@ -162,26 +162,26 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     Vector3i activeVoxel;
     switch ( slicePlain )
     {
-    case SlicePlain::XY:
+    case SlicePlane::XY:
         if ( sliceNumber > dims.z )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, 0, sliceNumber };
         break;
-    case SlicePlain::YZ:
+    case SlicePlane::YZ:
         if ( sliceNumber > dims.x )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { sliceNumber, 0, 0 };
         break;
-    case SlicePlain::ZX:
+    case SlicePlane::ZX:
         if ( sliceNumber > dims.y )
-            return  tl::make_unexpected( "Slice number exceeds voxel object borders" );
+            return tl::make_unexpected( "Slice number exceeds voxel object borders" );
 
         activeVoxel = { 0, sliceNumber, 0 };
         break;
     default:
-        return  tl::make_unexpected( "Slice plain is invalid" );
+        return tl::make_unexpected( "Slice plain is invalid" );
     }
  
     const auto& grid = vdbVolume.data;
@@ -213,55 +213,33 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-
-tl::expected<void, std::string> saveAllSlicesToImage( const SavingSettings& settings )
+tl::expected<void, std::string> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
 {
-    switch ( settings.slicePlain )
+    int numSlices{ 0 };
+    switch ( settings.slicePlane )
     {
-    case SlicePlain::XY:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.z ).size();
-        for ( int z = 0; z < settings.vdbVolume.dims.z; ++z )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), z, maxNumChars ), settings.vdbVolume, settings.slicePlain, z );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( z ) / settings.vdbVolume.dims.z ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::XY:
+        numSlices = vdbVolume.dims.z;
         break;
-    }
-    case SlicePlain::YZ:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.x ).size();
-        for ( int x = 0; x < settings.vdbVolume.dims.x; ++x )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), x, maxNumChars ), settings.vdbVolume, settings.slicePlain, x );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( x ) / settings.vdbVolume.dims.x ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::YZ:
+        numSlices = vdbVolume.dims.x;
         break;
-    }
-    case SlicePlain::ZX:
-    {
-        const size_t maxNumChars = std::to_string( settings.vdbVolume.dims.y ).size();
-        for ( int y = 0; y < settings.vdbVolume.dims.y; ++y )
-        {
-            const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), y, maxNumChars ), settings.vdbVolume, settings.slicePlain, y );
-            if ( !res )
-                return res;
-
-            if ( settings.cb && !settings.cb( float( y ) / settings.vdbVolume.dims.y ) )
-                return tl::make_unexpected( "Operation was canceled" );
-        }
+    case SlicePlane::ZX:
+        numSlices = vdbVolume.dims.y;
         break;
-    }
     default:
-        return  tl::make_unexpected( "Slice plain is invalid" );
+        return tl::make_unexpected( "Slice plane is invalid" );
+    }
+
+    const size_t maxNumChars = std::to_string( numSlices ).size();
+    for ( int i = 0; i < numSlices; ++i )
+    {
+        const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        if ( !res )
+            return res;
+
+        if ( settings.cb && !settings.cb( float( i ) / numSlices ) )
+            return tl::make_unexpected( "Operation was canceled." );
     }
 
     if ( settings.cb )

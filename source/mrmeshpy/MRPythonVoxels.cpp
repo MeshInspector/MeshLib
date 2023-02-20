@@ -86,21 +86,29 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "adaptivity - [0.0;1.0] Ratio of combining small triangles into bigger ones.\n"
         "(Curvature can be lost on high values.)" );
 
-    pybind11::enum_<MR::SlicePlain>( m, "SlicePlain" ).
-        value( "XY", MR::SlicePlain::XY, "XY plain" ).
-        value( "YZ", MR::SlicePlain::YZ, "YZ plain" ).
-        value( "XZ", MR::SlicePlain::YZ, "XZ plain" ).
-        value( "None", MR::SlicePlain::None, "None" );
+    pybind11::enum_<MR::SlicePlane>( m, "SlicePlane" ).
+        value( "XY", MR::SlicePlane::XY, "XY plane" ).
+        value( "YZ", MR::SlicePlane::YZ, "YZ plane" ).
+        value( "ZX", MR::SlicePlane::ZX, "XZ plane" ).
+        value( "None", MR::SlicePlane::None, "None" );
 
     m.def( "saveSliceToImage",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlain&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage ),
-        pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlain" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlane&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage ),
+        pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlane" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 
+    pybind11::class_<MR::VoxelsSave::SavingSettings>( m, "VoxelsSaveSavingSettings",
+        "stores together all data for save voxel object as a group of images" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "path", &MR::VoxelsSave::SavingSettings::path, "path to directory where you want to save images" ).
+        def_readwrite( "format", &MR::VoxelsSave::SavingSettings::format,
+            "format for file names, you should specify a placeholder for number and extension, e.g. \"slice_{ 0:0{1} }.tif\"" ).
+        def_readwrite( "slicePlane", &MR::VoxelsSave::SavingSettings::slicePlane, "Plane which the object is sliced by. XY, XZ, or YZ" );
+
     m.def( "saveAllSlicesToImage",
-       MR::decorateExpected( ( tl::expected<void, std::string>( * )( const std::filesystem::path&, const std::string& extension, const MR::VdbVolume&, const MR::SlicePlain&, MR::ProgressCallback ) )& MR::VoxelsSave::saveAllSlicesToImage ),
-       pybind11::arg( "path" ), pybind11::arg( "extension"), pybind11::arg("vdbVolume"), pybind11::arg("slicePlain"), pybind11::arg("cb") = MR::ProgressCallback{},
-       "Save the slice by the active plane through the sliceNumber to an image file.\n" );
+       MR::decorateExpected( &MR::VoxelsSave::saveAllSlicesToImage ),
+       pybind11::arg( "vdbVolume" ), pybind11::arg( "settings"),
+       "save all slices by the active plane through all voxel planes along the active axis to an image file" );
 
     pybind11::enum_<MR::VoxelsLoad::GridType>( m, "GridType" ).
         value( "DenseGrid", MR::VoxelsLoad::GridType::DenseGrid, "Represents dense volume" ).

@@ -282,24 +282,6 @@ private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
 };
 
-
-// rearrange vector values by map (old.id -> new.id)
-template<typename T, typename I>
-[[nodiscard]] Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
-{
-    Vector<T, I> newVector;
-    newVector.resize(map.tsize);
-
-    const auto& mData = map.b.data();
-    for ( I i = I(0); i < oldVector.size(); ++i)
-    {
-        I newV = mData[i];
-        if ( newV.valid() )
-            newVector[newV] = oldVector[i];
-    }
-    return newVector;
-}
-
 // deprecated, please use MR_WRITER directly
 #define MR_MESH_WRITER( mesh ) MR_WRITER( mesh );
 

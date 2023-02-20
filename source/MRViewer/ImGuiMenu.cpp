@@ -1663,6 +1663,7 @@ float ImGuiMenu::drawTransform_()
             if ( uniformScale_ )
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
+                ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
                 inputChanged = ImGui::DragFloatValid( "##scaleX", &midScale, midScale * 0.01f, 1e-3f, 1e+6f, "%.3f" );
                 if ( inputChanged )
                     scale.x = scale.y = scale.z = midScale;

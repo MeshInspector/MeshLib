@@ -254,6 +254,23 @@ struct [[nodiscard]] Mesh
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
+    // rearrange vector values by map [old pos] -> [new pos]
+    template<typename T, typename I>
+    [[nodiscard]] MRMESH_API static Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
+    {
+        Vector<T, I> newVector;
+        newVector.resize(map.tsize);
+
+        const auto& mData = map.b.data();
+        for ( I i = I(0); i < oldVector.size(); ++i)
+        {
+            I newV = mData[i];
+            if ( newV.valid() )
+                newVector[newV] = oldVector[i];
+        }
+        return newVector;
+    }
+
 
     // finds closest point on this mesh (or its region) to given point;
     // xf is mesh-to-point transformation, if not specified then identity transformation is assumed

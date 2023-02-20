@@ -198,11 +198,11 @@ tl::expected<Json::Value, std::string> parseResponse( const Json::Value& respons
     if ( response["error"].isString() )
     {
         auto error = response["error"].asString();
-        if ( !error.empty() )
+        if ( !error.empty() && error != "OK" )
             return tl::make_unexpected( error );
     }
     std::string text;
-    if ( !response["error"].isString() )
+    if ( !response["text"].isString() )
         return tl::make_unexpected( "Unknown error." );
 
     text = response["text"].asString();

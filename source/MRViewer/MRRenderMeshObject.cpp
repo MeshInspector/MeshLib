@@ -309,7 +309,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
-    const auto& texture = objMesh_->getTexture();
+    const auto& texture = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryTexture() : objMesh_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
         { 
@@ -593,7 +593,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
     auto numF = topology.lastValidFace() + 1;
     auto numV = topology.lastValidVert() + 1;
 
-    const auto& uvCoords = objMesh_->getUVCoords();
+    const auto& uvCoords = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryUVCoords() : objMesh_->getUVCoords();
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) )
     {
         assert( uvCoords.size() >= numV );

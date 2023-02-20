@@ -119,6 +119,17 @@ public:
     const Vector<UVCoord, VertId>& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+
+    // ancillary texture can be used to have custom features visualization without affecting real one
+    const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
+    virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+
+    const Vector<UVCoord, VertId>& getAncillaryUVCoords() const { return ancillaryUVCoordinates_; }
+    virtual void setAncillaryUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
+    void updateAncillaryUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
+    
+    bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty(); }
+
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;
 
@@ -155,6 +166,9 @@ protected:
     /// Texture options
     MeshTexture texture_;
     Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
+
+    MeshTexture ancillaryTexture_;
+    Vector<UVCoord, VertId> ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
 
     struct MeshStat
     {

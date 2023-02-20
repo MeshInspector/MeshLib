@@ -14,7 +14,7 @@ def test_save_slice_to_image():
         assert False
 
     try:
-        mrmesh.saveSliceToImage("slice.png", vdbvolume, mrmesh.SlicePlain.XY, 26)
+        mrmesh.saveSliceToImage("slice.png", vdbvolume, mrmesh.SlicePlane.XY, 26)
     except ValueError as e:
         print(e)
         assert False

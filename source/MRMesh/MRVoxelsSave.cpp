@@ -125,7 +125,12 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
 tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
 {
     openvdb::io::File file( path.string() );
-    file.write( { vdbVolume.data } );
+    openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
+    gridPtr->setTree( vdbVolume.data->treePtr() );
+    openvdb::math::Transform::Ptr transform = std::make_shared<openvdb::math::Transform>();
+    transform->preScale( { vdbVolume.voxelSize.x, vdbVolume.voxelSize.y, vdbVolume.voxelSize.z } );
+    gridPtr->setTransform( transform );
+    file.write( { gridPtr } );
     file.close();
     return {};
 }

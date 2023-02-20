@@ -133,7 +133,8 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
     for ( int i = 0; i < size; ++i )
     {
         std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
-        obj->setName( utf8string( file.stem() ) + " " + std::to_string( i ) );
+        const std::string name = i > 1 ? fmt::format( "{} {}", utf8string(file.stem()), i) : utf8string(file.stem());
+        obj->setName( name );
         int step = 0;
         bool callbackRes = true;
         if ( cb )

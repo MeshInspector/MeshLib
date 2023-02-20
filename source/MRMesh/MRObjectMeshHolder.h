@@ -128,7 +128,8 @@ public:
     virtual void setAncillaryUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { ancillaryUVCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     void updateAncillaryUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( ancillaryUVCoordinates_, updated ); dirty_ |= DIRTY_UV; }
     
-    bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty(); }
+    bool hasAncillaryTexture() const { return !ancillaryUVCoordinates_.empty() || !ancillaryTexture_.pixels.empty(); }
+    void clearAncillaryTexture() { setAncillaryTexture( {} ); setAncillaryUVCoords( {} ); }
 
     /// returns dirty flag of currently using normal type if they are dirty in render representation
     MRMESH_API uint32_t getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const;

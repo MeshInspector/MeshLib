@@ -1,6 +1,7 @@
 #include "MRMeshTrimWithPlane.h"
 #include "MRMesh.h"
 #include "MRPlane3.h"
+#include "MRVector2.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
@@ -9,7 +10,7 @@
 namespace MR
 {
 
-FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps )
+FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps, Vector<UVCoord, VertId>* uvCoords )
 {
     MR_TIMER
     assert( eps >= 0 );
@@ -92,7 +93,15 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
         {
             // introduce new vertex if both existing vertices are far from plane
             const auto p = ( o * pd - d * po ) / ( o - d );
-            mesh.splitEdge( e, p, nullptr, new2Old );
+            const auto e1 = mesh.splitEdge( e, p, nullptr, new2Old );
+
+            if ( uvCoords )
+            {
+                const auto org = mesh.topology.org( e1 );
+                const auto dest = mesh.topology.dest( e );
+                if ( org < uvCoords->size() && dest < uvCoords->size() )
+                    uvCoords->push_back( ( ( *uvCoords )[org] + ( *uvCoords )[dest] ) * 0.5f );
+            }
         }
         for ( EdgeId ei : orgRing( mesh.topology, e ) )
         {
@@ -106,10 +115,10 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, Vector<UVCoord, VertId>* uvCoords )
 {
     MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps );
+    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, uvCoords );
     if ( outCutEdges )
         *outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );
     mesh.topology.deleteFaces( mesh.topology.getValidFaces() - posFaces );
@@ -130,10 +139,10 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * ou
     }
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, Vector<UVCoord, VertId>* uvCoords )
 {
     MR_TIMER
-    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps );
+    const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, uvCoords );
     if ( outCutContours )
     {
         *outCutContours = findRegionBoundaryInsideMesh( mesh.topology, posFaces );

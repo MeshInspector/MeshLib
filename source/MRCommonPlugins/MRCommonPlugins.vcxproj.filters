@@ -485,5 +485,89 @@
     <Image Include="resource\icons\X3\Viewer settings.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Remove selected objects.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Rename.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Select all.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Show only next.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Show only previous.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Sort by name.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Ribbon Scene Unselect all.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Remove selected objects.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Rename.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Select all.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Show only next.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Show only previous.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Sort by name.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Ribbon Scene Unselect all.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Remove selected objects.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Rename.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Select all.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Show only next.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Show only previous.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Sort by name.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Ribbon Scene Unselect all.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Remove selected objects.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Rename.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Select all.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Show only next.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Show only previous.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Sort by name.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Ribbon Scene Unselect all.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

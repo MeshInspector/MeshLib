@@ -14,6 +14,9 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
 {
     MR_TIMER
     assert( eps >= 0 );
+    if ( uvCoords && uvCoords->size() < mesh.points.size() )
+        uvCoords = nullptr;
+
     VertBitSet positiveVerts( mesh.topology.vertSize() );
     VertBitSet negativeVerts( positiveVerts.size() );
 
@@ -93,14 +96,12 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
         {
             // introduce new vertex if both existing vertices are far from plane
             const auto p = ( o * pd - d * po ) / ( o - d );
-            const auto e1 = mesh.splitEdge( e, p, nullptr, new2Old );
+            mesh.splitEdge( e, p, nullptr, new2Old );
 
             if ( uvCoords )
             {
-                const auto org = mesh.topology.org( e1 );
-                const auto dest = mesh.topology.dest( e );
-                if ( org < uvCoords->size() && dest < uvCoords->size() )
-                    uvCoords->push_back( ( ( *uvCoords )[org] + ( *uvCoords )[dest] ) * 0.5f );
+                const auto uvCoord = ( o * ( *uvCoords )[vd] - d * ( *uvCoords )[vo] ) / ( o - d );
+                uvCoords->push_back( uvCoord );
             }
         }
         for ( EdgeId ei : orgRing( mesh.topology, e ) )

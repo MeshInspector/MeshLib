@@ -256,7 +256,7 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     // rearrange vector values by map (old.id -> new.id)
     template<typename T, typename I>
-    [[nodiscard]] MRMESH_API static Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
+    [[nodiscard]] static Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
     {
         Vector<T, I> newVector;
         newVector.resize(map.tsize);

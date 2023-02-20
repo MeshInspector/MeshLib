@@ -421,7 +421,9 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
         + texture_.heapBytes()
+        + ancillaryTexture_.heapBytes()
         + uvCoordinates_.heapBytes()
+        + ancillaryUVCoordinates_.heapBytes()
         + facesColorMap_.heapBytes()
         + MR::heapBytes( mesh_ );
 }

@@ -201,7 +201,7 @@ bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
         topology.isLeftTri( e ) && topology.isLeftTri( e.sym() );
 }
 
-EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
+EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region )
 {
     const auto ex = topology.next( e.sym() );
     const EdgeId ep = topology.prev( e );
@@ -209,8 +209,18 @@ EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
     if ( ex != topology.prev( e.sym() ) || ep == en || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
         return {};
     // left( e ) and right( e ) are double triangles
-    topology.setLeft( e, {} );
-    topology.setLeft( e.sym(), {} );
+    if ( auto f = topology.left( e ) )
+    {
+        if ( region )
+            region->reset( f );
+        topology.setLeft( e, {} );
+    }
+    if ( auto f = topology.left( e.sym() ) )
+    {
+        if ( region )
+            region->reset( f );
+        topology.setLeft( e.sym(), {} );
+    }
     topology.setOrg( e.sym(), {} );
     topology.splice( e.sym(), ex );
     topology.splice( ep, e );
@@ -223,13 +233,13 @@ EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e )
     return ep;
 }
 
-void eliminateDoubleTrisAround( MeshTopology & topology, VertId v )
+void eliminateDoubleTrisAround( MeshTopology & topology, VertId v, FaceBitSet * region )
 {
     EdgeId e = topology.edgeWithOrg( v );
     EdgeId e0 = e;
     for (;;)
     {
-        if ( auto ep = eliminateDoubleTris( topology, e ) )
+        if ( auto ep = eliminateDoubleTris( topology, e, region ) )
             e0 = e = ep;
         else
         {
@@ -249,7 +259,7 @@ bool isDegree3Dest( const MeshTopology& topology, EdgeId e )
         topology.isLeftTri( e ) && topology.isLeftTri( e.sym() ) && topology.isLeftTri( ex );
 }
 
-EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e )
+EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e, FaceBitSet * region )
 {
     const EdgeId ex = topology.next( e.sym() );
     const EdgeId ey = topology.prev( e.sym() );
@@ -259,12 +269,12 @@ EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e )
         !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) || !topology.isLeftTri( ex ) )
         return {};
     topology.flipEdge( ex );
-    auto res = eliminateDoubleTris( topology, e );
+    auto res = eliminateDoubleTris( topology, e, region );
     assert( res == ex );
     return res;
 }
 
-int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region )
+int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceBitSet * fs )
 {
     MR_TIMER
     auto candidates = region;
@@ -283,7 +293,7 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region )
             for ( auto e : orgRing( topology, e0 ) )
                 if ( auto vn = topology.dest( e ); region.test( vn ) )
                     candidates.autoResizeSet( vn );
-            [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym() );
+            [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym(), fs );
             assert( ep );
         }
         if ( res == x )

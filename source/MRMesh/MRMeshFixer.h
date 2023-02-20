@@ -37,23 +37,27 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh );
 
 /// if the edge e has both left and right triangular faces and the degree of dest( e ) is 2,
 /// then eliminates left( e ), right( e ), e, e.sym(), next( e ), dest( e ), and returns prev( e );
+/// if region is provided then eliminated faces are excluded from it;
 /// otherwise returns invalid edge
-MRMESH_API EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e );
+MRMESH_API EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region = nullptr );
 
-///  eliminates all double triangles around given vertex preserving vertex valid
-MRMESH_API void eliminateDoubleTrisAround( MeshTopology & topology, VertId v );
+/// eliminates all double triangles around given vertex preserving vertex valid;
+/// if region is provided then eliminated triangles are excluded from it
+MRMESH_API void eliminateDoubleTrisAround( MeshTopology & topology, VertId v, FaceBitSet * region = nullptr );
 
 /// returns true if the destination of given edge has degree 3 and 3 incident triangles
 [[nodiscard]] MRMESH_API bool isDegree3Dest( const MeshTopology& topology, EdgeId e );
 
 /// if the destination of given edge has degree 3 and 3 incident triangles,
 /// then eliminates the destination vertex with all its edges and all but one faces, and returns valid remaining edge with same origin as e;
+/// if region is provided then eliminated triangles are excluded from it;
 /// otherwise returns invalid edge
-MRMESH_API EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e );
+MRMESH_API EdgeId eliminateDegree3Dest( MeshTopology& topology, EdgeId e, FaceBitSet * region = nullptr );
 
 /// eliminates from the mesh all vertices having degree 3 and 3 incident triangles from given region (which is updated);
+/// if \param fs is provided then eliminated triangles are excluded from it;
 /// \return the number of vertices eliminated
-MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region );
+MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceBitSet * fs = nullptr );
 
 /// \}
 

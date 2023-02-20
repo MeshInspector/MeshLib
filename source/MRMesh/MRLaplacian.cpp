@@ -58,7 +58,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
         {
             double w = 1;
             if ( weights == EdgeWeights::Cotan || weights == EdgeWeights::CotanWithAreaEqWeight ) 
-                w = mesh_.cotan( e );
+                w = std::clamp( mesh_.cotan( e ), -10.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
             else if ( weights == EdgeWeights::CotanTimesLength ) 
                 w = mesh_.edgeLength( e ) * mesh_.cotan( e );
             auto d = mesh_.topology.dest( e );

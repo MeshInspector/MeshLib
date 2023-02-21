@@ -39,7 +39,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{CEDE0AD3-D04F-4EE6-8818-3AAD1196C181}</ProjectGuid>
+    <ProjectGuid>{169A85E3-BE12-4B21-A5D3-9D3234645A0E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MRViewerApp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>

@@ -16,7 +16,7 @@ std::wstring utf8ToWide( const char* utf8 )
 }
 
 #ifdef _WIN32
-std::u8string Utf16ToUtf8( const std::wstring_view & utf16 )
+std::string Utf16ToUtf8( const std::wstring_view & utf16 )
 {
     std::string u8msg;
     u8msg.resize( 2 * utf16.size() + 1 );
@@ -27,16 +27,15 @@ std::u8string Utf16ToUtf8( const std::wstring_view & utf16 )
         return {};
     }
     u8msg.resize( res );
-    return asU8String( u8msg );
+    return u8msg;
 }
 #endif
 
-std::u8string systemToUtf8( const char* system )
+std::string systemToUtf8( const std::string & msg )
 {
-    if ( !system )
-        return {};
+    if ( msg.empty() )
+        return msg;
 #ifdef _WIN32
-    std::string msg = system;
     std::wstring wmsg;
     wmsg.resize( msg.size() + 1 );
     auto res = MultiByteToWideChar( CP_ACP, MB_PRECOMPOSED, msg.c_str(), -1, wmsg.data(), int( wmsg.size() ) );
@@ -47,7 +46,7 @@ std::u8string systemToUtf8( const char* system )
     }
     return Utf16ToUtf8( wmsg );
 #else
-    return asU8String( system );
+    return msg;
 #endif
 }
 

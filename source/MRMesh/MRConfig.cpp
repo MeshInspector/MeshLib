@@ -214,7 +214,7 @@ std::optional<std::vector<std::filesystem::path>> getPluginLibraryList()
         }
     }
     else
-        spdlog::warn( "Failed to open json config file " + utf8string( pluginLibraryList ) + " with " + ec.message() );
+        spdlog::warn( "Failed to open json config file " + utf8string( pluginLibraryList ) + " with " + systemToUtf8( ec.message() ) );
 
     if ( pluginLibraryListJson.isArray() )
     {

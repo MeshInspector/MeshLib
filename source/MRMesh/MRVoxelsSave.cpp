@@ -68,7 +68,7 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
         {
             std::stringstream ss;
             ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
-            ss << "Error: " << ec.value() << " Message: " << ec.message() << std::endl;
+            ss << "Error: " << ec.value() << " Message: " << systemToUtf8( ec.message() ) << std::endl;
             return tl::make_unexpected( ss.str() );
         }
     }

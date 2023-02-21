@@ -208,14 +208,14 @@ std::filesystem::path getUserConfigDir()
 #endif
     filepath /= std::string( Config::instance().getAppName() );
     std::error_code ec;
-    if ( !std::filesystem::is_directory( filepath, ec ) )
+    if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {
         if ( ec )
-            spdlog::warn( "{} {}", MR::asString( MR::systemToUtf8( ec.message().c_str() ) ), utf8string( filepath ) );
+            spdlog::warn( "is {} a directory failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
         std::filesystem::create_directories( filepath, ec );
+        if ( ec )
+            spdlog::error( "create directories {} failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
     }
-    if ( ec )
-        spdlog::error( "{} {}", MR::asString( MR::systemToUtf8( ec.message().c_str() ) ), utf8string( filepath ) );
     return filepath;
 }
 

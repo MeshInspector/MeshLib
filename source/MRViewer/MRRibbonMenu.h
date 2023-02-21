@@ -197,6 +197,8 @@ private:
 
     void fixViewportsSize_( int w, int h );
 
+    std::string transformClipboardText_;
+
     int currentTopPanelHeight_ = 111;
     int topPanelOpenedHeight_ = 111;
     int topPanelHiddenHeight_ = 33;

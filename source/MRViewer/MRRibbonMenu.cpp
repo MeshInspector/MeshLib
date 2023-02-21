@@ -1499,19 +1499,21 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     {
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
-        SetClipboardText( root.toStyledString() );
+        transformClipboardText_ = root.toStyledString();
+        SetClipboardText( transformClipboardText_ );
         ImGui::CloseCurrentPopup();
     }
 #endif
-    auto clipboardText = GetClipboardText();
+    if ( ImGui::IsWindowAppearing() )
+        transformClipboardText_ = GetClipboardText();
 
-    if ( !clipboardText.empty() )
+    if ( !transformClipboardText_.empty() )
     {
         Json::Value root;
         Json::CharReaderBuilder readerBuilder;
         std::unique_ptr<Json::CharReader> reader{ readerBuilder.newCharReader() };
         std::string error;
-        if ( reader->parse( clipboardText.data(), clipboardText.data() + clipboardText.size(), &root, &error ) )
+        if ( reader->parse( transformClipboardText_.data(), transformClipboardText_.data() + transformClipboardText_.size(), &root, &error ) )
         {
             if ( auto tr = deserializeTransform( root ))
             {

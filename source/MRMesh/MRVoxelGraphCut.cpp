@@ -104,7 +104,7 @@ VoxelGraphCut::VoxelGraphCut( const SimpleVolume & densityVolume, float k )
         return std::exp( k * delta );
     };
 
-    tbb::parallel_for( tbb::blocked_range<VoxelId>( VoxelId( 0 ), VoxelId( size_ ) ), [&]( const tbb::blocked_range<VoxelId> & range )
+    tbb::parallel_for( tbb::blocked_range<VoxelId>( VoxelId( size_t( 0 ) ), VoxelId( size_ ) ), [&] ( const tbb::blocked_range<VoxelId>& range )
     {
         for ( VoxelId vid = range.begin(); vid != range.end(); ++vid )
         {
@@ -112,17 +112,17 @@ VoxelGraphCut::VoxelGraphCut( const SimpleVolume & densityVolume, float k )
             auto density = densityVolume.data[vid];
             auto pos = toPos( vid );
             if ( pos.x > 0 )
-                cap.forOutEdge[ (int)OutEdge::MinusX ] = capacity( density, densityVolume.data[ vid - 1 ] );
+                cap.forOutEdge[( int )OutEdge::MinusX] = capacity( density, densityVolume.data[vid - size_t( 1 )] );
             if ( pos.x + 1 < dims_.x )
-                cap.forOutEdge[ (int)OutEdge::PlusX ] = capacity( density, densityVolume.data[ vid + 1 ] );
+                cap.forOutEdge[( int )OutEdge::PlusX] = capacity( density, densityVolume.data[vid + size_t( 1 )] );
             if ( pos.y > 0 )
-                cap.forOutEdge[ (int)OutEdge::MinusY ] = capacity( density, densityVolume.data[ vid - dims_.x ] );
+                cap.forOutEdge[( int )OutEdge::MinusY] = capacity( density, densityVolume.data[vid - size_t( dims_.x )] );
             if ( pos.y + 1 < dims_.y )
-                cap.forOutEdge[ (int)OutEdge::PlusY ] = capacity( density, densityVolume.data[ vid + dims_.x ] );
+                cap.forOutEdge[( int )OutEdge::PlusY] = capacity( density, densityVolume.data[vid + size_t( dims_.x )] );
             if ( pos.z > 0 )
-                cap.forOutEdge[ (int)OutEdge::MinusZ ] = capacity( density, densityVolume.data[ vid - (int)sizeXY_ ] );
+                cap.forOutEdge[ (int)OutEdge::MinusZ ] = capacity( density, densityVolume.data[ vid - sizeXY_ ] );
             if ( pos.z + 1 < dims_.z )
-                cap.forOutEdge[ (int)OutEdge::PlusZ ] = capacity( density, densityVolume.data[ vid + (int)sizeXY_ ] );
+                cap.forOutEdge[ (int)OutEdge::PlusZ ] = capacity( density, densityVolume.data[ vid + sizeXY_ ] );
         }
     } );
 }
@@ -237,7 +237,7 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const VoxelBitSet & 
         return tl::make_unexpected( "Operation was canceled" );
 
     VoxelBitSet res( size_ );
-    for ( VoxelId v{ 0 }; v < voxelData_.size(); ++v )
+    for ( VoxelId v{ size_t( 0 ) }; v < voxelData_.size(); ++v )
         if ( voxelData_[v].side() == Side::Source )
             res.set( v );
     std::stringstream ss;

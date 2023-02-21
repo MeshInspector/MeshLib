@@ -77,8 +77,8 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
         auto minCoord = activeBox.min();
         auto dims = activeBox.dim();
         VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( activeBox.volume() ) ),
-            [&] ( const tbb::blocked_range<int>& range )
+        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size_t( activeBox.volume() ) ),
+            [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto accessor = grid->getAccessor();
             for ( auto i = range.begin(); i < range.end(); ++i )
@@ -86,7 +86,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
                 if ( sp && !keepGoing.load( std::memory_order_relaxed ) )
                     break;
 
-                auto pos = indexer.toPos( VoxelId(i) );
+                auto pos = indexer.toPos( VoxelId( i ) );
                 auto coord = minCoord;
                 for ( int j = 0; j < 3; ++j )
                     coord[j] += pos[j];

@@ -148,7 +148,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     activeBox_ = activeBox;
     auto accessor = vdbVolume_.data->getAccessor();
 
-    int counter = 0;
+    size_t counter = 0;
     float volume = float( vdbVolume_.dims.x ) * vdbVolume_.dims.y * vdbVolume_.dims.z;
     float cbModifier = updateSurface ? 0.5f : 1.0f;
 
@@ -292,7 +292,7 @@ void ObjectVoxels::updateHistogram_( float min, float max )
     auto size = indexer_.sizeXY()* vdbVolume_.dims.z;
 
     HistogramCalc calc( *this, min, max );
-    parallel_reduce( tbb::blocked_range<VoxelId>( VoxelId( 0 ), VoxelId( size ) ), calc );
+    parallel_reduce( tbb::blocked_range<VoxelId>( VoxelId( size_t( 0 ) ), VoxelId( size ) ), calc );
     histogram_ = std::move( calc.hist );
 }
 

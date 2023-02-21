@@ -186,7 +186,7 @@ public:
 
 private:
     const T * bitset_ = nullptr;
-    IndexType index_ = IndexType(-1);
+    IndexType index_ = IndexType( ~size_t( 0 ) );
 };
 
 template <typename T>

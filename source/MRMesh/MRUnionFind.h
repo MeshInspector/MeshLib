@@ -22,7 +22,7 @@ public:
     {
         roots_.clear();
         roots_.reserve( size );
-        for ( I i{ 0 }; i < size; ++i )
+        for ( I i{ size_t( 0 ) }; i < size; ++i )
             roots_.push_back( i );
         sizes_.clear();
         sizes_.resize( size, 1 );
@@ -68,7 +68,7 @@ public:
     /// sets the root as the parent of each element, then returns the vector
     const Vector<I, I> & roots()
     {
-        for ( I i{ 0 }; i < roots_.size(); ++i )
+        for ( I i{ size_t( 0 ) }; i < roots_.size(); ++i )
             updateRoot_( i, findRootNoUpdate_( i ) );
         return roots_;
     }
@@ -118,7 +118,7 @@ private:
     /// roots for each element
     Vector<I, I> roots_;
     /// sizes of each set
-    Vector<int, I> sizes_;
+    Vector<size_t, I> sizes_;
 };
 
 }

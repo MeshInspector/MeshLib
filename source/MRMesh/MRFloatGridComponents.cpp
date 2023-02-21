@@ -48,11 +48,11 @@ std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue
     auto unionFindStruct = getUnionFindStructureVoxels( grid, indexer, { bbox.min().x(),bbox.min().y(),bbox.min().z() }, isoValue );
 
     const auto& allRoots = unionFindStruct.roots();
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-    int k = 0;
-    int curRoot;
-    for ( int voxId = 0; voxId < indexer.size(); ++voxId )
+    constexpr size_t InvalidRoot = ~size_t( 0 );
+    std::vector<size_t> uniqueRootsMap( allRoots.size(), InvalidRoot );
+    size_t k = 0;
+    size_t curRoot;
+    for ( size_t voxId = 0; voxId < indexer.size(); ++voxId )
     {
         curRoot = allRoots[VoxelId( voxId )];
         auto& uniqIndex = uniqueRootsMap[curRoot];
@@ -63,7 +63,7 @@ std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue
         }
     }
     std::vector<VoxelBitSet> res( k, VoxelBitSet( allRoots.size() ) );
-    for ( int voxId = 0; voxId < indexer.size(); ++voxId )
+    for ( size_t voxId = 0; voxId < indexer.size(); ++voxId )
     {
         curRoot = allRoots[VoxelId( voxId )];
         res[uniqueRootsMap[curRoot]].set( VoxelId( voxId ) );

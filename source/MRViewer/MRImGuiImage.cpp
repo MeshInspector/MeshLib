@@ -52,7 +52,7 @@ void MarkedVoxelSlice::forceUpdate()
         return;
 
     auto dimX = dims_.x;
-    auto dimXY = dimX * dims_.y;
+    auto dimXY = dimX * size_t( dims_.y );
 
     auto activeDims = params_.activeBox.size();
 

@@ -138,7 +138,7 @@ tl::expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObject
         int step = 0;
         bool callbackRes = true;
         if ( cb )
-            cb = [callback, i, step, size, &callbackRes] ( float v )
+            cb = [callback, &i, &step, size, &callbackRes] ( float v )
         {
             callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
             return callbackRes;

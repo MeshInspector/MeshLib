@@ -22,7 +22,7 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
         argv.reserve( argc );
         for ( int i = 0; i < argc; ++i )
         {
-            arguments.push_back( MR::asString( MR::Utf16ToUtf8( argvW[i] ) ) );
+            arguments.push_back( MR::Utf16ToUtf8( argvW[i] ) );
             argv.push_back( arguments.back().data() );
         }
     }

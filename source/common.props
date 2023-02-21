@@ -19,9 +19,6 @@
   </ItemDefinitionGroup>
   <Import Project="$(CustomPropertyDir)\CustomMRProps.props" Condition="'$(CustomPropertyDir)' != ''"/>
   <Import Project="$(SolutionDir)solution.props" Condition="Exists('$(SolutionDir)solution.props')"/>
-  <PropertyGroup Label="Configuration">
-    <PlatformToolset>v142</PlatformToolset>
-  </PropertyGroup>
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>

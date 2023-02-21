@@ -31,11 +31,11 @@ void PluginCloseOnChangeMesh::onPluginEnable_()
 {
     auto meshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     meshChangedConnections_.reserve( meshes.size() );
-    changed_ = false;
+    meshChanged_ = false;
     for ( auto& mesh : meshes )
         meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t )
     {
-        changed_ = true;
+        meshChanged_ = true;
     } ) );
 }
 
@@ -46,7 +46,7 @@ void PluginCloseOnChangeMesh::onPluginDisable_()
 
 bool PluginCloseOnChangeMesh::shouldClose_() const
 {
-    return changed_;
+    return meshChanged_;
 }
 
 }

@@ -41,9 +41,11 @@ protected:
     MRVIEWER_API virtual void onPluginEnable_() override;
     MRVIEWER_API virtual void onPluginDisable_() override;
     MRVIEWER_API virtual bool shouldClose_() const override;
+    // plugin can return the value to false after mesh change if it changed the mesh by itself and does not want to close
+    bool meshChanged_{ false };
+
 private:
     std::vector<boost::signals2::scoped_connection> meshChangedConnections_;
-    bool changed_{ false };
 };
 
 // checks that at least one of argument checks is true

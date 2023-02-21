@@ -267,7 +267,7 @@ std::string GetClipboardText()
     // Try opening the clipboard
     if ( !OpenClipboard( nullptr ) )
     {
-        spdlog::error( "Could not open clipboard" );
+        spdlog::warn( "Could not open clipboard" );
         return "";
     }
 
@@ -275,7 +275,7 @@ std::string GetClipboardText()
     HANDLE hData = GetClipboardData( CF_TEXT );
     if ( !hData )
     {
-        spdlog::error( "Could not open clipboard" );
+        // no text data
         CloseClipboard();
         return "";
     }
@@ -284,7 +284,6 @@ std::string GetClipboardText()
     char* pszText = static_cast< char* >( GlobalLock( hData ) );
     if ( !pszText )
     {
-        spdlog::error( "Could not open clipboard" );
         CloseClipboard();
         return "";
     }

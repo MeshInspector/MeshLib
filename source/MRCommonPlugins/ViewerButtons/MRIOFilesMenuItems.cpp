@@ -473,7 +473,7 @@ bool SaveObjectMenuItem::action()
                 spdlog::info( "copy file {} into {}", utf8string( savePath ), utf8string( copyPath.value() ) );
                 std::filesystem::copy_file( savePath, copyPath.value(), ec );
                 if ( ec )
-                    spdlog::error( "copy file {} into {} failed: {}", utf8string( savePath ), utf8string( copyPath.value() ), ec.message() );
+                    spdlog::error( "copy file {} into {} failed: {}", utf8string( savePath ), utf8string( copyPath.value() ), systemToUtf8( ec.message() ) );
             }
 
             auto obj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected )[0];
@@ -493,13 +493,13 @@ bool SaveObjectMenuItem::action()
                     spdlog::info( "remove file {}", utf8string( savePath ) );
                     std::filesystem::remove( savePath, ec );
                     if ( ec )
-                        spdlog::error( "remove file {} failed: {}", utf8string( savePath ), ec.message() );
+                        spdlog::error( "remove file {} failed: {}", utf8string( savePath ), systemToUtf8( ec.message() ) );
                     if ( copyPath.has_value() )
                     {
                         spdlog::info( "rename file {} into {}", utf8string( copyPath.value() ), utf8string( savePath ) );
                         std::filesystem::rename( copyPath.value(), savePath, ec );
                         if ( ec )
-                            spdlog::error( "rename file {} into {} failed: {}", utf8string( copyPath.value() ), utf8string( savePath ), ec.message() );
+                            spdlog::error( "rename file {} into {} failed: {}", utf8string( copyPath.value() ), utf8string( savePath ), systemToUtf8( ec.message() ) );
                     }
                     if ( auto menu = getViewerInstance().getMenuPlugin() )
                         menu->showErrorModal( error );
@@ -513,7 +513,7 @@ bool SaveObjectMenuItem::action()
                     spdlog::info( "remove file {}", utf8string( copyPathValue ) );
                     std::filesystem::remove( copyPathValue, ec );
                     if ( ec )
-                        spdlog::error( "remove file {} failed: {}", utf8string( copyPathValue ), ec.message() );
+                        spdlog::error( "remove file {} failed: {}", utf8string( copyPathValue ), systemToUtf8( ec.message() ) );
 
                     getViewerInstance().recentFilesStore.storeFile( savePath );
                 };

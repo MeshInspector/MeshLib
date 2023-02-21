@@ -50,7 +50,7 @@ UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDele
     const auto tmp = std::filesystem::temp_directory_path( ec );
     if ( ec )
     {
-        spdlog::error( "Cannot get temporary directory: {}", ec.message() );
+        spdlog::error( "Cannot get temporary directory: {}", systemToUtf8( ec.message() ) );
         return;
     }
 
@@ -83,7 +83,7 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
     std::error_code ec;
     if ( !std::filesystem::remove_all( folder_, ec ) )
     {
-        spdlog::error( "Failed to remove folder: {}", ec.message() );
+        spdlog::error( "Failed to remove folder: {}", systemToUtf8( ec.message() ) );
         return;
     }
 }

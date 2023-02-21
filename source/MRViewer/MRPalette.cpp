@@ -595,7 +595,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     {
         spdlog::warn( "PalettePresets: directory \"{}\" not found!", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return false;
     }
 
@@ -604,7 +604,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     {
         spdlog::error( "PalettePresets: file \"{}\" not found!", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return false;
     }
 
@@ -629,7 +629,7 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
     {
         spdlog::error( "PalettePresets: directory \"{}\" does not exist and cannot be created", utf8string( path ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return;
     }
 
@@ -669,7 +669,7 @@ void PalettePresets::update_()
     {
         spdlog::warn( "PalettePresets: directory \"{}\" not found", utf8string( userPalettesDir ) );
         if ( ec )
-            spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+            spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
         return;
     }
 
@@ -688,7 +688,7 @@ void PalettePresets::update_()
         }
     }
     if ( ec )
-        spdlog::warn( "PalettePresets: error: \"{}\"", ec.message() );
+        spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
 }
 
 PalettePresets& PalettePresets::instance_()

@@ -1710,10 +1710,10 @@ float ImGuiMenu::drawTransform_()
                 ImGui::EndTooltip();
             }
 
+            constexpr float cZenithEps = 0.01f;
             if ( resultRotation.valueChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
             {
                 // resolve singularity
-                constexpr float cZenithEps = 0.01f;
                 if ( std::fabs( euler.y ) > 90.f - cZenithEps )
                 {
                     euler.x = euler.x > 0.f ? euler.x - 180.f : euler.x + 180.f;
@@ -1726,7 +1726,7 @@ float ImGuiMenu::drawTransform_()
             {
                 invertedRotation_ = false;
             }
-
+            euler.y = std::clamp( euler.y, -90.0f + 2.0f * cZenithEps, 90.0f - 2.0f * cZenithEps );
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 

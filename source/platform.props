@@ -5,6 +5,7 @@
     <_PropertySheetDisplayName>Platform properties</_PropertySheetDisplayName>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
+    <!--Create file named CustomMRPlatform.props in any directory above to override PlatformToolset setting-->
     <CustomPlatfotmPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRPlatform.props))</CustomPlatfotmPropertyDir>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(CustomPlatfotmPropertyDir)' == ''">

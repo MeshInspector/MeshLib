@@ -4,7 +4,11 @@
     <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
     <_PropertySheetDisplayName>Platform properties</_PropertySheetDisplayName>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration">
+  <PropertyGroup Label="Globals">
+    <CustomPlatfotmPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRPlatform.props))</CustomPlatfotmPropertyDir>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(CustomPlatfotmPropertyDir)' == ''">
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
+  <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>
 </Project>

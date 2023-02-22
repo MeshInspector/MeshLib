@@ -5,6 +5,7 @@
     <_PropertySheetDisplayName>Common properties</_PropertySheetDisplayName>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
+    <!--Create file named CustomMRProps.props in any directory above to override _ITERATOR_DEBUG_LEVEL or/and VcpkgTriplet setting-->
     <CustomPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRProps.props))</CustomPropertyDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>

@@ -12,7 +12,7 @@
 namespace MR
 {
 
-tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, Vector<UVCoord, VertId>* uvCoords )
 {
     MR_TIMER
     // check input
@@ -119,8 +119,25 @@ tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<Ed
             patchMeshPoints[patchMeshTopology.org( newPath[j] )] = meshPoints[meshTopology.org( path[j] )];
     }
     
+    PartMapping pmap;
+    VertHashMap vertHashMap;
+    if ( uvCoords )
+        pmap.src2tgtVerts = &vertHashMap;
+
     // add patch surface to original mesh
-    mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
+    mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths, pmap );
+    if ( uvCoords )
+    {
+        Vector<UVCoord, VertId> newUVCoords( *uvCoords );
+
+        if ( mesh.points.size() > uvCoords->size() )
+            newUVCoords.resize( mesh.points.size() );
+
+        for ( const auto& [fromVert, thisVert] : vertHashMap )
+            newUVCoords[thisVert] = (*uvCoords)[fromVert];
+
+        *uvCoords = std::move( newUVCoords );
+    }
     return {};
 }
 

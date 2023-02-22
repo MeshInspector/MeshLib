@@ -15,6 +15,6 @@ namespace MR
  * edges should have invalid left face (FaceId == -1)
  * @return tl::expected with has_value()=true if holes filled, otherwise - string error
  */
-MRMESH_API tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+MRMESH_API tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, Vector<UVCoord, VertId>* uvCoords = nullptr );
 
 }

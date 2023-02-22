@@ -814,6 +814,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     decs.region = settings.region;
     decs.packMesh = settings.packMesh;
     decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 1.0f );
+    decs.preCollapse = settings.preCollapse;
     decimateMesh( mesh, decs );
 
     if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )

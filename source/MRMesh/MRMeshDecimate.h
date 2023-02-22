@@ -197,6 +197,13 @@ struct RemeshSettings
     bool packMesh = false;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone
     std::function<void(EdgeId e1, EdgeId e)> onEdgeSplit;
+    /**
+     * \brief The user can provide this optional callback that is invoked immediately before edge collapse;
+     * \details It receives the edge being collapsed: its destination vertex will disappear,
+     * and its origin vertex will get new position (provided as the second argument) after collapse;
+     * If the callback returns false, then the collapse is prohibited
+     */
+    std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> preCollapse;
     /// callback to report algorithm progress and cancel it by user request
     ProgressCallback progressCallback;
 };

@@ -18,13 +18,14 @@ struct BaseVolumeConversionParams
 struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
 {
     Vector3i dimensions{ 100,100,100 }; // num voxels along each axis
-    float maxDistSq{ FLT_MAX }; // maximum value in voxels squared, not used in TopologyOrientation mode
+    float minDistSq{ 0 };       // minimum value in voxels squared
+    float maxDistSq{ FLT_MAX }; // maximum value in voxels squared
     enum SignDetectionMode
     {
-        Unsigned, // unsigned voxels, useful for `Shell` offset
-        TopologyOrientation, // projection sign
-        WindingRule // ray intersection counter, useful to fix self-intersections
-    } signMode{ TopologyOrientation };
+        Unsigned,         // unsigned voxels, useful for `Shell` offset
+        ProjectionNormal, // the sign is determined based on pseudonormal in closest mesh point (unsafe in case of self-intersections)
+        WindingRule       // ray intersection counter, useful to fix self-intersections
+    } signMode{ ProjectionNormal };
 };
 
 struct VdbVolumeToMeshParams : BaseVolumeConversionParams

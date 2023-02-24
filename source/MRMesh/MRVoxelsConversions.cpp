@@ -10,6 +10,7 @@
 #include "MRPch/MROpenvdb.h"
 #include "MRMesh/MRFloatGrid.h"
 #include "MRTimer.h"
+#include <limits>
 #include <thread>
 
 namespace MR
@@ -42,30 +43,36 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
             auto voxelCenter = params.basis.b + params.basis.A * coord;
             float dist{ 0.0f };
-            if ( params.signMode != MeshToSimpleVolumeParams::SignDetectionMode::TopologyOrientation )
-                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq ).distSq );
+            if ( params.signMode != MeshToSimpleVolumeParams::SignDetectionMode::ProjectionNormal )
+                dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
             else
-                dist = findSignedDistance( voxelCenter, mesh )->dist;
-
-            bool changeSign = false;
-            if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::WindingRule )
             {
-                int numInters = 0;
-                rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
-                    [&numInters] ( const MeshIntersectionResult& ) mutable
-                {
-                    ++numInters;
-                    return true;
-                } );
-                changeSign = numInters % 2 == 1; // inside
+                auto s = findSignedDistance( voxelCenter, mesh, params.maxDistSq, params.minDistSq );
+                dist = s ? s->dist : std::numeric_limits<float>::quiet_NaN();
             }
-            if ( changeSign )
-                dist = -dist;
-            auto& localMinMax = minMax.local();
-            if ( dist < localMinMax.first )
-                localMinMax.first = dist;
-            if ( dist > localMinMax.second )
-                localMinMax.second = dist;
+
+            if ( !std::isnan( dist ) )
+            {
+                bool changeSign = false;
+                if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::WindingRule )
+                {
+                    int numInters = 0;
+                    rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
+                        [&numInters] ( const MeshIntersectionResult& ) mutable
+                    {
+                        ++numInters;
+                        return true;
+                    } );
+                    changeSign = numInters % 2 == 1; // inside
+                }
+                if ( changeSign )
+                    dist = -dist;
+                auto& localMinMax = minMax.local();
+                if ( dist < localMinMax.first )
+                    localMinMax.first = dist;
+                if ( dist > localMinMax.second )
+                    localMinMax.second = dist;
+            }
             res.data[i] = dist;
             if ( params.cb && std::this_thread::get_id() == mainThreadId )
             {

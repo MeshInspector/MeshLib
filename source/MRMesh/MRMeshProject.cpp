@@ -99,11 +99,11 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,
-    float upDistLimitSq )
+    float upDistLimitSq, float loDistLimitSq )
 {
-    auto projRes = findProjection( pt, mp, upDistLimitSq );
+    auto projRes = findProjection( pt, mp, upDistLimitSq, nullptr, loDistLimitSq );
     std::optional<SignedDistanceToMeshResult> res;
-    if ( !( projRes.distSq < upDistLimitSq ) )
+    if ( !( projRes.distSq < upDistLimitSq ) || projRes.distSq < loDistLimitSq )
     {
         return res;
     }

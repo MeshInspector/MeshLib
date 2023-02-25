@@ -17,14 +17,19 @@ struct BaseVolumeConversionParams
 
 struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
 {
-    Vector3i dimensions{ 100,100,100 }; // num voxels along each axis
-    float minDistSq{ 0 };       // minimum value in voxels squared
-    float maxDistSq{ FLT_MAX }; // maximum value in voxels squared
+    /// num voxels along each axis
+    Vector3i dimensions{ 100,100,100 };
+    /// minimum squared value in a voxel
+    float minDistSq{ 0 };
+    /// maximum squared value in a voxel
+    float maxDistSq{ FLT_MAX };
+    /// the method to compute distance sign
     enum SignDetectionMode
     {
         Unsigned,         // unsigned voxels, useful for `Shell` offset
         ProjectionNormal, // the sign is determined based on pseudonormal in closest mesh point (unsafe in case of self-intersections)
-        WindingRule       // ray intersection counter, useful to fix self-intersections
+        WindingRule,      // ray intersection counter, significantly slower than ProjectionNormal and does not support holes in mesh
+        HoleWindingRule   // computes winding number generalization with support of holes in mesh, slower than WindingRule
     } signMode{ ProjectionNormal };
 };
 

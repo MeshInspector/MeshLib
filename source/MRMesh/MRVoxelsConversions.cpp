@@ -6,11 +6,13 @@
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRMeshBuilder.h"
+#include "MRFloatGrid.h"
+#include "MRTimer.h"
+#include "MRFastWindingNumber.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MROpenvdb.h"
-#include "MRMesh/MRFloatGrid.h"
-#include "MRTimer.h"
 #include <limits>
+#include <optional>
 #include <thread>
 
 namespace MR
@@ -26,14 +28,18 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
     res.dims = params.dimensions;
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
+
     // used in Winding rule mode
     const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
+    std::optional<FastWindingNumber> fwn;
+    if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::HoleWindingRule )
+        fwn.emplace( mesh );
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
     tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+
+    auto core = [&] ( const tbb::blocked_range<size_t>& range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
@@ -65,6 +71,11 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     } );
                     changeSign = numInters % 2 == 1; // inside
                 }
+                else if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::HoleWindingRule )
+                {
+                    constexpr float beta = 2;
+                    changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside
+                }
                 if ( changeSign )
                     dist = -dist;
                 auto& localMinMax = minMax.local();
@@ -80,7 +91,14 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     keepGoing.store( false, std::memory_order_relaxed );
             }
         }
-    }, tbb::static_partitioner() );
+    };
+
+    if ( params.cb )
+        // static partitioner is slower but is necessary for smooth progress reporting
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core, tbb::static_partitioner() );
+    else
+        tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), core );
+
     if ( params.cb && !keepGoing )
         return {};
     for ( const auto& [min, max] : minMax )

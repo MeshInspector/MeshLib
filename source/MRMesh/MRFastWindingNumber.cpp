@@ -149,6 +149,12 @@ TEST(MRMesh, TriangleSolidAngle)
     EXPECT_NEAR( x, -2 * PI_F, 1e-3f );
     auto y = triangleSolidAngle( c - Vector3f( 0, 0, 1e-5f ), tri );
     EXPECT_NEAR( y,  2 * PI_F, 1e-3f );
+
+    // solid angle in triangle vertices is equal to zero exactly
+    for ( int i = 0; i < 3; ++i )
+    {
+        EXPECT_EQ( triangleSolidAngle( tri[i], tri ), 0 );
+    }
 }
 
 } // namespace MR

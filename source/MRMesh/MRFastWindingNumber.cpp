@@ -1,6 +1,7 @@
 #include "MRFastWindingNumber.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
+#include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -131,6 +132,29 @@ float FastWindingNumber::calc( const Vector3f & q, float beta ) const
         res += INV_4PI * triangleSolidAngle( q, mesh_.getTriPoints( node.leafId() ) );
     }
     return res;
+}
+
+TEST(MRMesh, TriangleSolidAngle) 
+{
+    const ThreePoints tri =
+    {
+        Vector3f{ 0.0f, 0.0f, 0.0f },
+        Vector3f{ 1.0f, 0.0f, 0.0f },
+        Vector3f{ 0.0f, 1.0f, 0.0f }
+    };
+    const auto c = ( tri[0] + tri[1] + tri[2] ) / 3.0f;
+
+    // solid angle near triangle center abruptly changes from -2pi to 2pi when the point crosses the triangle plane
+    const auto x = triangleSolidAngle( c + Vector3f( 0, 0, 1e-5f ), tri );
+    EXPECT_NEAR( x, -2 * PI_F, 1e-3f );
+    auto y = triangleSolidAngle( c - Vector3f( 0, 0, 1e-5f ), tri );
+    EXPECT_NEAR( y,  2 * PI_F, 1e-3f );
+
+    // solid angle in triangle vertices is equal to zero exactly
+    for ( int i = 0; i < 3; ++i )
+    {
+        EXPECT_EQ( triangleSolidAngle( tri[i], tri ), 0 );
+    }
 }
 
 } // namespace MR

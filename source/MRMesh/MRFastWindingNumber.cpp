@@ -98,7 +98,7 @@ static float triangleSolidAngle( const Vector3f & p, const ThreePoints & tri )
     return 2 * std::atan2( m.det(), den );
 }
 
-float FastWindingNumber::calc( const Vector3f & q, float beta ) const
+float FastWindingNumber::calc( const Vector3f & q, float beta, FaceId skipFace ) const
 {
     float res = 0;
     if ( dipoles_.empty() )
@@ -129,7 +129,8 @@ float FastWindingNumber::calc( const Vector3f & q, float beta ) const
             subtasks[stackSize++] = node.l; // to look first
             continue;
         }
-        res += INV_4PI * triangleSolidAngle( q, mesh_.getTriPoints( node.leafId() ) );
+        if ( node.leafId() != skipFace )
+            res += INV_4PI * triangleSolidAngle( q, mesh_.getTriPoints( node.leafId() ) );
     }
     return res;
 }
@@ -155,6 +156,11 @@ TEST(MRMesh, TriangleSolidAngle)
     {
         EXPECT_EQ( triangleSolidAngle( tri[i], tri ), 0 );
     }
+
+    // solid angle in the triangle plane outside of triangle is equal to zero exactly
+    EXPECT_EQ( triangleSolidAngle( tri[1] + tri[2], tri ), 0 );
+    EXPECT_EQ( triangleSolidAngle( -tri[1], tri ), 0 );
+    EXPECT_EQ( triangleSolidAngle( -tri[2], tri ), 0 );
 }
 
 } // namespace MR

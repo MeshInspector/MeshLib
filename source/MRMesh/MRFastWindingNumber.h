@@ -21,7 +21,7 @@ public:
     /// compute approximate winding number at \param q;
     /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;
     /// if distance from q to the center of some triangle group is more than beta times the distance from the center to most distance triangle in the group then we use approximate formula
-    [[nodiscard]] MRMESH_API float calc( const Vector3f & q, float beta ) const;
+    [[nodiscard]] MRMESH_API float calc( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
 
 private:
     struct Dipole

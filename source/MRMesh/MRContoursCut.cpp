@@ -234,6 +234,21 @@ TrianglesSortRes sortPropagateContour(
         }
     };
 
+    auto sortByFaces = [&]( FaceId fl, FaceId fr )->TrianglesSortRes
+    {
+        // try sort by faces
+        TrianglesSortRes res = sortTriangles( sortData, fl, fr );
+        if ( res != TrianglesSortRes::Undetermined )
+            return ( el == baseEdgeOr ) == ( res == TrianglesSortRes::Left ) ?
+            TrianglesSortRes::Left : TrianglesSortRes::Right;
+        // try sort by faces
+        res = sortTriangles( sortData, fr, fl );
+        if ( res != TrianglesSortRes::Undetermined )
+            return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ?
+            TrianglesSortRes::Left : TrianglesSortRes::Right;
+        return TrianglesSortRes::Undetermined;
+    };
+
     bool tryNext = true;
     bool tryPrev = true;
 
@@ -248,6 +263,9 @@ TrianglesSortRes sortPropagateContour(
     {
         auto& tryThis = next ? tryNext : tryPrev;
         assert( tryThis );
+
+        const auto startL = next ? lNext : lPrev;
+        const auto startR = next ? rNext : rPrev;
 
         auto& lOtherRef = next ? lNext : lPrev;
         auto& rOtherRef = next ? rNext : rPrev;
@@ -272,9 +290,26 @@ TrianglesSortRes sortPropagateContour(
         bool rReturned = otherER == lastCommonEdgeRef.undirected();
         if ( lReturned || rReturned )
         {
-            // if any of candidates return to base edge sort cannot be determined
+            // if one of candidates return - terminal, but still can be determined
             tryThis = false; // terminal
-            return TrianglesSortRes::Undetermined;
+            // if both of candidates return to base edge sort cannot be determined
+            if ( lReturned && rReturned )
+                return TrianglesSortRes::Undetermined;
+
+            FaceId fl;
+            FaceId fr;
+            if ( lReturned )
+            {
+                fl = lContour[lOtherRef].tri;
+                fr = rContour[startR].tri;
+            }
+            else
+            {
+                assert( rReturned );
+                fl = lContour[startL].tri;
+                fr = rContour[rOtherRef].tri;
+            }
+            return sortByFaces( fl, fr );
         }
 
         if ( otherEL != otherER )
@@ -305,19 +340,8 @@ TrianglesSortRes sortPropagateContour(
         
         FaceId fl = lContour[lOtherRef].tri;
         FaceId fr = rContour[rOtherRef].tri;
-        
-        // try sort by faces
-        TrianglesSortRes res = sortTriangles( sortData, fl, fr );
-        if ( res != TrianglesSortRes::Undetermined )
-            return ( el == baseEdgeOr ) == ( res == TrianglesSortRes::Left ) ? 
-            TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-        // try sort by faces
-        res = sortTriangles( sortData, fr, fl );
-        if ( res != TrianglesSortRes::Undetermined )
-            return ( er == baseEdgeOr ) == ( res == TrianglesSortRes::Right ) ? 
-            TrianglesSortRes::Left : TrianglesSortRes::Right; // terminal
-        // check next intersections in the contours
-        return TrianglesSortRes::Undetermined; // not terminal
+
+        return sortByFaces( fl, fr );
     };
     TrianglesSortRes res = TrianglesSortRes::Undetermined;
     for ( ; tryNext || tryPrev; )

@@ -1162,7 +1162,7 @@ void RibbonMenu::drawSceneListButtons_()
     const float size = ( cMiddleIconSize + 8.f ) * menuScaling;
     const ImVec2 smallItemSize = { size, size };
 
-    const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize };
+    const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;

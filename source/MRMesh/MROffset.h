@@ -59,7 +59,8 @@ struct SharpOffsetParameters : BaseOffsetParameters
 [[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
 // Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId> * outMap = nullptr );
+[[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+    const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr, bool useSimpleVolume = false );
 
 // Offsets mesh by converting it to voxels and back
 // post process result using reference mesh to sharpen features

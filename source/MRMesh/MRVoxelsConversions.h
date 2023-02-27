@@ -46,6 +46,7 @@ struct VolumeToMeshParams : BaseVolumeConversionParams
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
     // function to calculate position of result mesh points
+    // note: this function is called in parallel from different threads
     VoxelPointPositioner positioner = &voxelPositionerLinear;
     // exponent for finding neighbor voxel
     // 2^0 - 1 (each voxel)

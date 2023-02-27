@@ -42,6 +42,9 @@ struct FillHoleMetric
     FillCombineMetric combineMetric;
 };
 
+/// Computes combined metric after filling a hole
+MRMESH_API double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegion, const FillHoleMetric & metric );
+
 /// This metric minimizes the sum of circumcircle radii for all triangles in the triangulation.
 /// It is rather fast to calculate, and it results in typically good triangulations.
 MRMESH_API FillHoleMetric getCircumscribedMetric( const Mesh& mesh );

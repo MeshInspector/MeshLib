@@ -138,31 +138,63 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
     return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
 }
 
-tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
+tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
+    const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap, bool useSimpleVolume )
 {
-    MR_TIMER
-
-    auto offsetInVoxels = offset / params.voxelSize;
+    MR_TIMER;
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
-    auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
-        Vector3f::diagonal( params.voxelSize ),
-        std::abs( offsetInVoxels ) + 2, meshToLSCb );
-    if ( !voxelRes )
-        return tl::make_unexpected( "Operation was canceled." );
+    if ( !useSimpleVolume )
+    {
+        auto offsetInVoxels = offset / params.voxelSize;
+        auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
+            Vector3f::diagonal( params.voxelSize ),
+            std::abs( offsetInVoxels ) + 2, meshToLSCb );
+        if ( !voxelRes )
+            return tl::make_unexpected( "Operation was canceled." );
 
-    VdbVolume volume = floatGridToVdbVolume( voxelRes );
+        VdbVolume volume = floatGridToVdbVolume( voxelRes );
 
-    VolumeToMeshParams vmParams;
-    vmParams.basis.A = Matrix3f::scale( params.voxelSize );
-    vmParams.iso = offsetInVoxels;
-    vmParams.lessInside = true;
-    vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
-    vmParams.outVoxelPerFaceMap = outMap;
-    auto meshRes = vdbVolumeToMesh( volume, vmParams );
-    if ( !meshRes )
-        return tl::make_unexpected( "Operation was canceled." );
+        VolumeToMeshParams vmParams;
+        vmParams.basis.A = Matrix3f::scale( params.voxelSize );
+        vmParams.iso = offsetInVoxels;
+        vmParams.lessInside = true;
+        vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
+        vmParams.outVoxelPerFaceMap = outMap;
+        auto meshRes = vdbVolumeToMesh( volume, vmParams );
+        if ( !meshRes )
+            return tl::make_unexpected( "Operation was canceled." );
 
-    return std::move( *meshRes );
+        return std::move( *meshRes );
+    }
+    else
+    {
+        MeshToSimpleVolumeParams msParams;
+        msParams.cb = meshToLSCb;
+        auto box = mesh.getBoundingBox();
+        auto absOffset = std::abs( offset );
+        auto expansion = 3.0f * Vector3f::diagonal( params.voxelSize ) + 2.0f * Vector3f::diagonal( absOffset );
+        msParams.basis.b = box.min - expansion;
+        msParams.basis.A = Matrix3f::scale( params.voxelSize );
+        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.basis.b ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+        msParams.signMode = MeshToSimpleVolumeParams::SignDetectionMode::ProjectionNormal;
+        msParams.maxDistSq = sqr( absOffset + 2.0f * params.voxelSize );
+        msParams.minDistSq = sqr( std::max( absOffset - 2.0f * params.voxelSize, 0.0f ) );
+        
+        auto volume = meshToSimpleVolume( mesh, msParams );
+        if ( !volume )
+            return tl::make_unexpected( "Operation was canceled." );
+
+        VolumeToMeshParams vmParams;
+        vmParams.basis = msParams.basis;
+        vmParams.iso = offset;
+        vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
+        vmParams.lessInside = true;
+        vmParams.outVoxelPerFaceMap = outMap;
+        auto meshRes = simpleVolumeToMesh( std::move( *volume ), vmParams );
+        if ( !meshRes )
+            return tl::make_unexpected( "Operation was canceled." );
+        return std::move( *meshRes );
+    }
 }
 
 tl::expected<MR::Mesh, std::string> sharpOffsetMesh( const Mesh& mesh, float offset, const SharpOffsetParameters& params )

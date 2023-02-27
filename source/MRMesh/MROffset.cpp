@@ -152,7 +152,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, co
 
     VdbVolume volume = floatGridToVdbVolume( voxelRes );
 
-    VdbVolumeToMeshParams vmParams;
+    VolumeToMeshParams vmParams;
     vmParams.basis.A = Matrix3f::scale( params.voxelSize );
     vmParams.iso = offsetInVoxels;
     vmParams.lessInside = true;

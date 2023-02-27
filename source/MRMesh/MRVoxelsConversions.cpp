@@ -431,49 +431,91 @@ TriangulationPlan{}
 }
 
 using namespace MarchingCubesHelper;
+using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
+using VdbCoord = openvdb::Coord;
 
-std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToMeshParams& params /*= {} */ )
+Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
 {
-    if ( !volume.data || params.iso <= volume.min || params.iso >= volume.max ||
-        volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
+    auto ratio = std::clamp( std::abs( iso - v0 ) / std::abs( v1 - v0 ), 0.0f, 1.0f );
+    return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+}
+
+SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccessor& acc, const VdbCoord& minCoord,
+    const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
+{
+    auto basePos = indexer.toPos( base );
+    auto shift = ( 1 << params.neighborVoxExp );
+    if ( basePos[dir] + shift >= volume.dims[dir] )
         return {};
+    auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
+    const auto& valueB = acc.getValue( coord );// volume.data[base];
+    auto nextCoord = coord;
+    nextCoord[dir] += shift;
+    const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
+    bool bLower = valueB < params.iso;
+    bool dLower = valueD < params.iso;
+
+    if ( bLower == dLower )
+        return {};
+
+    SeparationPoint res;
+    res.low = bLower;
+    Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
+    Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
+    auto bPos = params.basis.b + params.basis.A * coordF;
+    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    res.vid = VertId{ 0 };
+    return res;
+}
+
+SeparationPoint findSeparationPoint( const SimpleVolume& volume,
+    const VolumeIndexer& indexer, VoxelId base, NeighborDir dir, const VolumeToMeshParams& params )
+{
+    auto basePos = indexer.toPos( base );
+    auto nextPos = basePos;
+    nextPos[dir] += ( 1 << params.neighborVoxExp );
+    if ( nextPos[dir] >= volume.dims[dir] )
+        return {};
+    const auto& valueB = volume.data[base];
+    const auto& valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
+    if ( std::isnan( valueB ) || std::isnan( valueD ) )
+        return {};
+    bool bLower = valueB < params.iso;
+    bool dLower = valueD < params.iso;
+
+    if ( bLower == dLower )
+        return {};
+
+    SeparationPoint res;
+    res.low = bLower;
+    Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
+    Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
+    auto bPos = params.basis.b + params.basis.A * coordF;
+    auto dPos = params.basis.b + params.basis.A * nextCoordF;
+    res.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    res.vid = VertId{ 0 };
+    return res;
+}
+
+template<typename V>
+std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& params /*= {} */ )
+{
+    if constexpr ( std::is_same_v<V, VdbVolume> )
+        if ( !volume.data )
+            return {};
+
+    if ( params.iso <= volume.min || params.iso >= volume.max ||
+        volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
+        return Mesh();
 
     MR_TIMER
 
-    auto minCoord = volume.data->evalActiveVoxelBoundingBox().min();
+    VdbCoord minCoord;
+    if constexpr ( std::is_same_v<V, VdbVolume> )
+        minCoord = volume.data->evalActiveVoxelBoundingBox().min();
+
     VolumeIndexer indexer( volume.dims );
-
-    using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
-
-    // function to find coordinate of new point on edge
-    auto setupSeparation = [&] ( const ConstAccessor& acc, size_t base, NeighborDir dir )->SeparationPoint
-    {
-        auto basePos = indexer.toPos( VoxelId( base ) );
-        if ( basePos[dir] + 1 >= volume.dims[dir] )
-            return {};
-        auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
-        const auto& valueB = acc.getValue( coord );// volume.data[base];
-        auto nextCoord = coord;
-        nextCoord[dir] += 1;
-        const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
-        bool bLower = valueB < params.iso;
-        bool dLower = valueD < params.iso;
-
-        if ( bLower == dLower )
-            return {};
-
-        const float ratio = std::clamp( std::abs( params.iso - valueB ) / std::abs( valueD - valueB ), 0.0f, 1.0f );
-
-        SeparationPoint res;
-        res.low = bLower;
-        Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
-        Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
-        auto bPos = params.basis.b + params.basis.A * coordF;
-        auto dPos = params.basis.b + params.basis.A * nextCoordF;
-        res.position = ( 1.0f - ratio ) * bPos + ratio * dPos;
-        res.vid = VertId{ 0 };
-        return res;
-    };
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
@@ -481,16 +523,25 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
 
     SeparationPointMap hmap;
     const auto subcnt = hmap.subcnt();
+    auto voxShift = ( 1 << params.neighborVoxExp );
     // find all separate points
     // fill map in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         assert( range.begin() + 1 == range.end() );
-        auto acc = volume.data->getConstAccessor();
+        std::optional<ConstAccessor> acc;
+        if constexpr ( std::is_same_v<V, VdbVolume> )
+            acc = volume.data->getConstAccessor();
         for ( size_t i = 0; i < indexer.size(); ++i )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
+
+            auto pos = indexer.toPos( VoxelId( i ) );
+            if ( ( pos.x % voxShift ) != 0 || 
+                ( pos.y % voxShift ) != 0 ||
+                ( pos.z % voxShift ) != 0 )
+                continue;
 
             auto hashval = hmap.hash( i );
             if ( hmap.subidx( hashval ) != range.begin() )
@@ -500,7 +551,12 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
             bool atLeastOneOk = false;
             for ( int n = NeighborDir::X; n < NeighborDir::Count; ++n )
             {
-                auto separation = setupSeparation( acc, i, NeighborDir( n ) );
+                SeparationPoint separation;
+                if constexpr ( std::is_same_v<V, VdbVolume> )
+                    separation = findSeparationPoint( volume, *acc, minCoord, indexer, VoxelId( i ), NeighborDir( n ), params );
+                else
+                    separation = findSeparationPoint( volume, indexer, VoxelId( i ), NeighborDir( n ), params );
+
                 if ( separation )
                 {
                     set[n] = std::move( separation );
@@ -561,7 +617,10 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
     {
         // remove empty
         perTrheadNum.erase( std::remove_if( perTrheadNum.begin(), perTrheadNum.end(),
-            [] ( const auto& obj ) { return obj.numVerts == 0; } ), perTrheadNum.end() );
+            [] ( const auto& obj )
+        {
+            return obj.numVerts == 0;
+        } ), perTrheadNum.end() );
         if ( perTrheadNum.empty() )
             continue;
         // accum not empty
@@ -675,7 +734,9 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
         auto& faceMap = thisTriData.faceMap;
 
         // cell data
-        auto acc = volume.data->getConstAccessor();
+        std::optional<ConstAccessor> acc;
+        if constexpr ( std::is_same_v<V, VdbVolume> )
+            acc = volume.data->getConstAccessor();
         std::array<SeparationPointMap::const_iterator, 7> iters;
         std::array<bool, 7> iterStatus;
         unsigned char voxelConfiguration;
@@ -684,18 +745,23 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
             Vector3i basePos = indexer.toPos( VoxelId( ind ) );
-            if ( basePos.x + 1 >= volume.dims.x || 
-                basePos.y + 1 >= volume.dims.y ||
-                basePos.z + 1 >= volume.dims.z )
+            if ( basePos.x + voxShift >= volume.dims.x ||
+                basePos.y + voxShift >= volume.dims.y ||
+                basePos.z + voxShift >= volume.dims.z )
                 continue;
 
-            bool anyIterValid = false;
+            if ( ( basePos.x % voxShift ) != 0 ||
+                ( basePos.y % voxShift ) != 0 ||
+                ( basePos.z % voxShift ) != 0 )
+                continue;
+
+            bool voxelValid = false;
             for ( int i = 0; i < iters.size(); ++i )
             {
-                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + cVoxelNeighbors[i] ) ) );
+                iters[i] = hmap.find( size_t( indexer.toVoxelId( basePos + voxShift * cVoxelNeighbors[i] ) ) );
                 iterStatus[i] = checkIter( iters[i], i );
-                if ( !anyIterValid && iterStatus[i] )
-                    anyIterValid = true;
+                if ( !voxelValid && iterStatus[i] )
+                    voxelValid = true;
             }
 
             if ( params.cb && std::this_thread::get_id() == mainThreadId )
@@ -704,16 +770,33 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
                     keepGoing.store( false, std::memory_order_relaxed );
             }
 
-            if ( !anyIterValid )
+            if ( !voxelValid )
                 continue;
             voxelConfiguration = 0;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
-                auto pos = basePos + cVoxelNeighbors[i];
-                if ( acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } ) >= params.iso )
+                auto pos = basePos + voxShift * cVoxelNeighbors[i];
+                float value{ 0.0f };
+                if constexpr ( std::is_same_v<V, VdbVolume> )
+                    value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
+                else
+                    value = volume.data[indexer.toVoxelId( pos ).get()];
+                if constexpr ( std::is_same_v<V, SimpleVolume> )
+                {
+                    if ( std::isnan( value ) )
+                    {
+                        voxelValid = false;
+                        break;
+                    }
+                }
+                if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
             }
+
+            if constexpr ( std::is_same_v<V, SimpleVolume> )
+                if ( !voxelValid )
+                    continue;
 
             const auto& plan = cTriangleTable[voxelConfiguration];
             for ( int i = 0; i < plan.size(); i += 3 )
@@ -752,7 +835,10 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
     {
         // remove empty
         threadTriData.erase( std::remove_if( threadTriData.begin(), threadTriData.end(),
-            [] ( const auto& obj ) { return obj.t.empty(); } ), threadTriData.end() );
+            [] ( const auto& obj )
+        {
+            return obj.t.empty();
+        } ), threadTriData.end() );
         if ( threadTriData.empty() )
             continue;
         // accum not empty
@@ -803,6 +889,15 @@ std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VdbVolumeToM
         return {};
 
     return result;
+}
+
+std::optional<Mesh> simpleVolumeToMesh( const SimpleVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+{
+    return volumeToMesh( volume, params );
+}
+std::optional<Mesh> vdbVolumeToMesh( const VdbVolume& volume, const VolumeToMeshParams& params /*= {} */ )
+{
+    return volumeToMesh( volume, params );
 }
 
 }

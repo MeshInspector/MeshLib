@@ -514,7 +514,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
                 topology.getTriVerts( f, v );
                 for ( int i = 0; i < 3; ++i )
                 {
-                    const auto &norm = vertNormals[v[i]];
+                    const auto &norm = getAt( vertNormals, v[i] );
                     buffer[ind + i] = norm;
                 }
             }
@@ -537,7 +537,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
                 if ( !mesh->topology.hasFace( f ) )
                     continue;
                 auto ind = 3 * f;
-                const auto& cornerN = cornerNormals[f];
+                const auto& cornerN = getAt( cornerNormals, f );
                 for ( int i = 0; i < 3; ++i )
                     buffer[ind + i] = cornerN[i];
             }
@@ -575,7 +575,7 @@ RenderBufferRef<Color> RenderMeshObject::loadVertColorsBuffer_()
             VertId v[3];
             topology.getTriVerts( f, v );
             for ( int i = 0; i < 3; ++i )
-                buffer[ind + i] = vertsColorMap[v[i]];
+                buffer[ind + i] = getAt( vertsColorMap, v[i] );
         }
     } );
 
@@ -612,7 +612,7 @@ RenderBufferRef<UVCoord> RenderMeshObject::loadVertUVBuffer_()
                 VertId v[3];
                 topology.getTriVerts( f, v );
                 for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = uvCoords[v[i]];
+                    buffer[ind + i] = getAt( uvCoords, v[i] );
             }
         } );
 

@@ -137,4 +137,11 @@ template <typename T, typename I>
 [[nodiscard]] inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
+/// given some Vector and a key, returns the value associated with the key, or default value if key is invalid or outside the Vector
+template <typename T, typename I>
+[[nodiscard]] inline T getAt( const Vector<T, I> & a, I id )
+{
+    return ( id && id < a.size() ) ? a[id] : T{};
+}
+
 } // namespace MR

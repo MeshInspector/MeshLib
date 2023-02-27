@@ -106,8 +106,10 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
 
-        if ( settings.smoothMode )
+        // in smooth mode remember all new inner vertices to reposition them at the end
+        if ( settings.smoothMode && mesh.topology.left( e ) && mesh.topology.right( e ) )
             newVerts.autoResizeSet( newVertId );
+
         if ( settings.newVerts )
             settings.newVerts->autoResizeSet( newVertId );
         if ( settings.onVertCreated )

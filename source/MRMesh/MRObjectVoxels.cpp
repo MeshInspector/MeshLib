@@ -16,6 +16,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
+#include "MROpenVDBHelper.h"
 
 namespace MR
 {
@@ -65,12 +66,20 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     float min{0.0f}, max{0.0f};
 
     evalGridMinMax( vdbVolume_.data, min, max );
-    updateHistogram_( min, max );
+
+    ProgressCallback newCb;
+    if ( mesh_ && cb )
+        newCb = [cb](float v) { return cb( v / 2.f ); };
+    else if ( cb )
+        newCb = [cb](float v) { return cb( v ); };
+    updateHistogram_( min, max, newCb );
 
     if ( mesh_ )
     {
         mesh_.reset();
-        setIsoValue( isoValue_, cb );
+        if ( cb )
+            newCb = [cb](float v) { return cb( 0.5f + v / 2.f ); };
+        setIsoValue( isoValue_, newCb );
     }
 }
 
@@ -254,134 +263,113 @@ void ObjectVoxels::swapSignals_( Object& other )
         assert( false );
 }
 
+/// @brief class to parallel reduce histogram calculation
+template<typename TreeT>
 class HistogramCalcProc
 {
 public:
-    using InterruptFunc = std::function<bool( void )>;
-
-    using TreeT = openvdb::FloatTree;
-
-    using ValueT = TreeT::ValueType;
-    
-    using LeafIterT = TreeT::LeafCIter;
-    using TileIterT = TreeT::ValueAllCIter;
-    using LeafRange = openvdb::tree::IteratorRange<LeafIterT>;
-    using TileRange = openvdb::tree::IteratorRange<TileIterT>;
-
+    using ValueT = typename TreeT::ValueType;
     using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
+    using LeafIterT = typename TreeT::LeafCIter;
+    using TileIterT = typename TreeT::ValueAllCIter;
 
-    HistogramCalcProc( const openvdb::math::CoordBBox& b, const TreeT& inT, float min, float max ) :
-        hist( Histogram( min, max, cVoxelsHistogramBinsNumber ) ), mBBox( b ), mInTree( inT ), mInAcc( mInTree )
+    HistogramCalcProc( float min, float max ) :
+        hist( min, max, cVoxelsHistogramBinsNumber )
     {}
 
-    /// Splitting constructor: don't copy the original processor's output tree
-    HistogramCalcProc( HistogramCalcProc& other, tbb::split ) :
-        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) ),
-        mBBox( other.mBBox ),
-        mInTree( other.mInTree ),
-        mInAcc( mInTree ),
-        mInterrupt( other.mInterrupt )
+    HistogramCalcProc( const HistogramCalcProc& other ) :
+        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
     {}
 
-    void setInterrupt( const InterruptFunc& f ) { mInterrupt = f; }
-
-    /// Transform each leaf node in the given range.
-    void operator()( const LeafRange& rCRef )
+    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
     {
-        LeafRange r = rCRef;
-        for ( ; r; ++r )
+        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
         {
-            if ( interrupt() ) break;
-
-            LeafIterT i = r.iterator();
-            openvdb::math::CoordBBox bbox( i->origin(), i->origin() + openvdb::math::Coord( i->dim() ) );
-            if ( !mBBox.empty() )
-            {
-                // Intersect the leaf node's bounding box with mBBox.
-                bbox = openvdb::math::CoordBBox(
-                    openvdb::math::Coord::maxComponent( bbox.min(), mBBox.min() ),
-                    openvdb::math::Coord::minComponent( bbox.max(), mBBox.max() ) );
-            }
-            if ( !bbox.empty() )
-            {
-                for ( auto it = bbox.begin(); it != bbox.end(); ++it )
-                {
-                    ValueT value = ValueT();
-                    if ( mInAcc.probeValue( *it, value ) )
-                        hist.addSample( value );
-                }
-            }
+            ValueT value = ValueT();
+            if ( treeAcc.probeValue( *it, value ) )
+                hist.addSample( value );
         }
     }
 
-    /// Transform each non-background tile in the given range.
-    void operator()( const TileRange& rCRef )
+    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
     {
-        auto r = rCRef;
-        for ( ; r; ++r )
-        {
-            if ( interrupt() ) break;
-
-            TileIterT i = r.iterator();
-            // Skip voxels and background tiles.
-            if ( !i.isTileValue() ) continue;
-            if ( !i.isValueOn() ) continue;
-
-            openvdb::math::CoordBBox bbox;
-            i.getBoundingBox( bbox );
-            if ( !mBBox.empty() )
-            {
-                // Intersect the leaf node's bounding box with mBBox.
-                bbox = openvdb::math::CoordBBox(
-                    openvdb::math::Coord::maxComponent( bbox.min(), mBBox.min() ),
-                    openvdb::math::Coord::minComponent( bbox.max(), mBBox.max() ) );
-            }
-            if ( !bbox.empty() )
-            {
-                for ( auto it = bbox.begin(); it != bbox.end(); ++it )
-                {
-                    ValueT value = ValueT();
-                    if ( mInAcc.probeValue( *it, value ) )
-                        hist.addSample( value );
-                }
-            }
-        }
+        ValueT value = iter.getValue();
+        const int count = bbox.dim().x() * bbox.dim().y() * bbox.dim().z();
+        hist.addSample( value, count );
     }
 
-    /// Merge another processor's output tree into this processor's tree.
-    void join( HistogramCalcProc& other )
+    void join( const HistogramCalcProc& other )
     {
-        if ( !interrupt() ) hist.addHistogram( other.hist );
+        hist.addHistogram( other.hist );
     }
 
     Histogram hist;
-private:
-    bool interrupt() const { return mInterrupt && mInterrupt(); }
-
-    openvdb::math::CoordBBox mBBox;
-    const TreeT& mInTree;
-    TreeAccessor mInAcc;
-    InterruptFunc mInterrupt;
 };
+
 
 void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
 
-    HistogramCalcProc calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), min, max );
-    std::function<bool( void )> interapter = []{ return false; };
-    if ( cb )
-        interapter = [cb] { return !cb( 0.f ); };
-    calc.setInterrupt( interapter );
+    RangeSize size = calculateRangeSize( *vdbVolume_.data );
+    
+    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
+    HistogramCalcProcFT histCalcProc( min, max );
+    using HistRangeProcessorOne = RangeProcessorOne<openvdb::FloatTree, HistogramCalcProcFT>;
+    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
+    
 
-    typename HistogramCalcProc::TileIterT tileIter = vdbVolume_.data->tree().cbeginValueAll();
-    tileIter.setMaxDepth( tileIter.getLeafDepth() - 1 ); // skip leaf nodes
-    typename HistogramCalcProc::TileRange tileRange( tileIter );
-    tbb::parallel_reduce( tileRange, calc );
-    typename HistogramCalcProc::LeafRange leafRange( vdbVolume_.data->tree().cbeginLeaf() );
-    tbb::parallel_reduce( leafRange, calc );
+    std::function<bool( size_t, size_t )> progressFn;
+    if ( size.tile )
+    {
+        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
+        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
+        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
 
-    histogram_ = std::move( calc.hist );
+        std::atomic<size_t> tileDone = 0;
+        if ( cb )
+        {
+            if ( !size.leaf )
+                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
+                {
+                    tileDone += t;
+                    return !cb( float( tileDone ) / tileSize );
+                };
+            else
+                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
+                {
+                    tileDone += t;
+                    return !cb( float( tileDone ) / tileSize / 2.f );
+                };
+            calc.setProgressFn( progressFn );
+        }
+        tbb::parallel_reduce( tileRangeMain, calc );
+    }
+
+    if ( size.leaf )
+    {
+        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
+        std::atomic<size_t> leafDone = 0;
+        if ( cb )
+        {
+            if ( !size.tile )
+                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
+                {
+                    leafDone += l;
+                    return !cb( float( leafDone ) / leafSize );
+                };
+            else
+                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
+                {
+                    leafDone += l;
+                    return !cb( float( leafDone ) / leafSize / 2.f + 0.5f );
+                };
+            calc.setProgressFn( progressFn );
+        }
+        tbb::parallel_reduce( leafRangeMain, calc );
+    }
+
+    histogram_ = std::move( calc.mProc.hist );
 }
 
 void ObjectVoxels::setDefaultColors_()

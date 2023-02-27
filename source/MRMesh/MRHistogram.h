@@ -15,7 +15,7 @@ public:
     MRMESH_API Histogram( float min, float max, size_t size );
 
     /// Adds sample to corresponding bin
-    MRMESH_API void addSample( float sample );
+    MRMESH_API void addSample( float sample, int count = 1 );
     /// Adds bins of input hist to this
     MRMESH_API void addHistogram( const Histogram& hist );
 

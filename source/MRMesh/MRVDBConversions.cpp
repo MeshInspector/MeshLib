@@ -308,7 +308,9 @@ tl::expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3
     if ( cb && !cb( 0.2f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
+    ProgressCallback scaledCb;
+    if ( cb ) scaledCb = [cb]( float v ) { return cb( 0.2f + 0.8f * v ); };
+    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, scaledCb );
     cb && !cb( 1.0f );
     return res;
 }

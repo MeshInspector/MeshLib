@@ -199,7 +199,7 @@ void translateToZero( GredT& grid)
     grid.setTree( outTreePtr );
 }
 
-template <class TreeT, typename Proc>
+template <typename TreeT, typename Proc>
 class RangeProcessorOne
 {
 public:
@@ -242,10 +242,12 @@ public:
         {
             if ( interrupt() ) break;
             if ( !( leafCount & 0x400 ) )
+            {
                 if ( setProgress( leafCount - leafCountLast, tileCount ) )
                     break;
                 else
                     leafCountLast = leafCount;
+            }
 
             LeafIterT i = r.iterator();
             openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
@@ -271,10 +273,12 @@ public:
         {
             if ( interrupt() ) break;
             if ( !( tileCount & 0x400 ) )
+            {
                 if ( setProgress( leafCount, tileCount - tileCountLast ) )
                     break;
                 else
                     tileCountLast = tileCount;
+            }
 
             TileIterT i = r.iterator();
             // Skip voxels and background tiles.
@@ -365,9 +369,10 @@ public:
 template <typename GridT>
 RangeSize calculateRangeSize( const GridT& grid )
 {
-    using ProcessC = RangeCounter<GridT::TreeType>;
+    using TreeT = typename GridT::TreeType;
+    using ProcessC = RangeCounter<TreeT>;
     ProcessC proc;
-    using RangeProcessC = RangeProcessorOne<GridT::TreeType, ProcessC>;
+    using RangeProcessC = RangeProcessorOne<TreeT, ProcessC>;
     RangeProcessC calcCount( grid.evalActiveVoxelBoundingBox(), grid.tree(), proc );
 
     typename RangeProcessC::TileIterT tileIter = grid.tree().cbeginValueAll();

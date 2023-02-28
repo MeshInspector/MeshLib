@@ -156,6 +156,7 @@ public:
     const Vector<Color, VertId>& getVertsColorMap() const { return vertsColorMap_; }
 
     virtual void setVertsColorMap( Vector<Color, VertId> vertsColorMap ) { vertsColorMap_ = std::move( vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
+    virtual void updateVertsColorMap( Vector<Color, VertId>& vertsColorMap ) { std::swap( vertsColorMap_, vertsColorMap ); dirty_ |= DIRTY_VERTS_COLORMAP; }
 
     ColoringType getColoringType() const { return coloringType_; }
     MRMESH_API virtual void setColoringType( ColoringType coloringType );

@@ -67,19 +67,15 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 
     evalGridMinMax( vdbVolume_.data, min, max );
 
-    ProgressCallback subprogress;
-    if ( mesh_ && cb )
-        subprogress = [cb](float v) { return cb( v / 2.f ); };
-    else if ( cb )
-        subprogress = [cb](float v) { return cb( v ); };
-    updateHistogram_( min, max, subprogress );
+    const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
+    updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
 
     if ( mesh_ )
     {
         mesh_.reset();
-        if ( cb )
-            subprogress = [cb](float v) { return cb( 0.5f + v / 2.f ); };
-        setIsoValue( isoValue_, subprogress );
+
+        const float progressFrom = cb ? 0.5f : 0.f;
+        setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
     }
 }
 

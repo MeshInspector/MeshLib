@@ -49,12 +49,12 @@ std::vector<EdgeId> sMakeDisclosedEdgeLoop( Mesh& mesh, const std::vector<Vector
 
 Mesh Mesh::fromTriangles(
     VertCoords vertexCoordinates,
-    const Triangulation & t, const MeshBuilder::BuildSettings & settings )
+    const Triangulation& t, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER
     Mesh res;
     res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromTriangles( t, settings );
+    res.topology = MeshBuilder::fromTriangles( t, settings, cb );
     return res;
 }
 

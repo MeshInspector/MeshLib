@@ -16,6 +16,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include <filesystem>
+#include "MROpenVDBHelper.h"
 
 namespace MR
 {
@@ -65,12 +66,16 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     float min{0.0f}, max{0.0f};
 
     evalGridMinMax( vdbVolume_.data, min, max );
-    updateHistogram_( min, max );
+
+    const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
+    updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
 
     if ( mesh_ )
     {
         mesh_.reset();
-        setIsoValue( isoValue_, cb );
+
+        const float progressFrom = cb ? 0.5f : 0.f;
+        setIsoValue( isoValue_, subprogress( cb, progressFrom, 1.f ) );
     }
 }
 
@@ -254,46 +259,113 @@ void ObjectVoxels::swapSignals_( Object& other )
         assert( false );
 }
 
-class HistogramCalc
+/// @brief class to parallel reduce histogram calculation
+template<typename TreeT>
+class HistogramCalcProc
 {
 public:
-    HistogramCalc( const ObjectVoxels& obj, float min, float max ) :
-        hist{Histogram( min,max,cVoxelsHistogramBinsNumber )}, grid_{obj.grid()}, indexer_{obj.getVolumeIndexer()}
-    {
-    }
-    HistogramCalc( HistogramCalc& x, tbb::split ) : 
-        hist{Histogram( x.hist.getMin(),x.hist.getMax(),cVoxelsHistogramBinsNumber )}, grid_{x.grid_}, indexer_{x.indexer_}
-    {
-    }
-    void join( const HistogramCalc& y )
-    {
-        hist.addHistogram( y.hist );
-    }
+    using ValueT = typename TreeT::ValueType;
+    using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
+    using LeafIterT = typename TreeT::LeafCIter;
+    using TileIterT = typename TreeT::ValueAllCIter;
 
-    void operator()( const tbb::blocked_range<VoxelId>& r )
+    HistogramCalcProc( float min, float max ) :
+        hist( min, max, cVoxelsHistogramBinsNumber )
+    {}
+
+    HistogramCalcProc( const HistogramCalcProc& other ) :
+        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
+    {}
+
+    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
     {
-        auto accessor = grid_->getConstAccessor();
-        for ( VoxelId v = r.begin(); v < r.end(); ++v )
+        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
         {
-            auto pos = indexer_.toPos( v );
-            hist.addSample( accessor.getValue( {pos.x,pos.y,pos.z} ) );
+            ValueT value = ValueT();
+            if ( treeAcc.probeValue( *it, value ) )
+                hist.addSample( value );
         }
     }
 
+    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
+    {
+        ValueT value = iter.getValue();
+        const size_t count = size_t( bbox.volume() );
+        hist.addSample( value, count );
+    }
+
+    void join( const HistogramCalcProc& other )
+    {
+        hist.addHistogram( other.hist );
+    }
+
     Histogram hist;
-private:
-    const FloatGrid& grid_;
-    const VolumeIndexer& indexer_;
 };
 
-void ObjectVoxels::updateHistogram_( float min, float max )
+
+void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
-    auto size = indexer_.sizeXY()* vdbVolume_.dims.z;
 
-    HistogramCalc calc( *this, min, max );
-    parallel_reduce( tbb::blocked_range<VoxelId>( VoxelId( size_t( 0 ) ), VoxelId( size ) ), calc );
-    histogram_ = std::move( calc.hist );
+    RangeSize size = calculateRangeSize( *vdbVolume_.data );
+    
+    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
+    HistogramCalcProcFT histCalcProc( min, max );
+    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
+    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
+    
+
+    std::function<bool( size_t, size_t )> progressFn;
+    if ( size.tile )
+    {
+        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
+        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
+        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
+
+        std::atomic<size_t> tileDone = 0;
+        if ( cb )
+        {
+            if ( !size.leaf )
+                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
+                {
+                    tileDone += t;
+                    return !cb( float( tileDone ) / tileSize );
+                };
+            else
+                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
+                {
+                    tileDone += t;
+                    return !cb( float( tileDone ) / tileSize / 2.f );
+                };
+            calc.setProgressFn( progressFn );
+        }
+        tbb::parallel_reduce( tileRangeMain, calc );
+    }
+
+    if ( size.leaf )
+    {
+        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
+        std::atomic<size_t> leafDone = 0;
+        if ( cb )
+        {
+            if ( !size.tile )
+                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
+                {
+                    leafDone += l;
+                    return !cb( float( leafDone ) / leafSize );
+                };
+            else
+                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
+                {
+                    leafDone += l;
+                    return !cb( float( leafDone ) / leafSize / 2.f + 0.5f );
+                };
+            calc.setProgressFn( progressFn );
+        }
+        tbb::parallel_reduce( leafRangeMain, calc );
+    }
+
+    histogram_ = std::move( calc.mProc.hist );
 }
 
 void ObjectVoxels::setDefaultColors_()

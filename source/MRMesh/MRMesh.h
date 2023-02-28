@@ -7,6 +7,7 @@
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRWriter.h"
 #include "MRConstants.h"
+#include "MRProgressCallback.h"
 #include <cfloat>
 
 namespace MR
@@ -25,7 +26,7 @@ struct [[nodiscard]] Mesh
     /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
     [[nodiscard]] MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
-        const Triangulation & t, const MeshBuilder::BuildSettings & settings = {} );
+        const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
     [[nodiscard]] MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices(

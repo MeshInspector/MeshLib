@@ -127,7 +127,7 @@ private:
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );
     Vector3f reverseVoxelSize_;
 
-    void updateHistogram_( float min, float max );
+    void updateHistogram_( float min, float max, ProgressCallback cb = {} );
 
 
     /// this is private function to set default colors of this type (ObjectVoxels) in constructor only

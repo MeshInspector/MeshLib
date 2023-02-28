@@ -418,7 +418,7 @@ void RenderMeshObject::initBuffers_()
     GL_EXEC( glGetIntegerv( GL_MAX_TEXTURE_SIZE, &maxTexSize_ ) );
     assert( maxTexSize_ > 0 );
 
-    dirty_ = DIRTY_ALL;
+    dirty_ = DIRTY_ALL - DIRTY_CORNERS_RENDER_NORMAL - DIRTY_VERTS_RENDER_NORMAL;
 }
 
 void RenderMeshObject::freeBuffers_()
@@ -496,7 +496,31 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
     const auto& topology = mesh->topology;
     auto numF = topology.lastValidFace() + 1;
 
-    if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
+    if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
+    {
+        MR_NAMED_TIMER( "dirty_corners_normals" )
+
+        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
+
+        const auto& creases = objMesh_->creases();
+
+        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
+        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
+        {
+            for ( FaceId f = range.begin(); f < range.end(); ++f )
+            {
+                if ( !mesh->topology.hasFace( f ) )
+                    continue;
+                auto ind = 3 * f;
+                const auto& cornerN = getAt( cornerNormals, f );
+                for ( int i = 0; i < 3; ++i )
+                    buffer[ind + i] = cornerN[i];
+            }
+        } );
+
+        return buffer;
+    }
+    else if ( dirty_ & DIRTY_VERTS_RENDER_NORMAL )
     {
         MR_NAMED_TIMER( "dirty_vertices_normals" )
 
@@ -517,29 +541,6 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadVertNormalsBuffer_()
                     const auto &norm = getAt( vertNormals, v[i] );
                     buffer[ind + i] = norm;
                 }
-            }
-        } );
-
-        return buffer;
-    }
-    else if ( dirty_ & DIRTY_CORNERS_RENDER_NORMAL )
-    {
-        MR_NAMED_TIMER( "dirty_corners_normals" )
-
-        auto buffer = glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_ = 3 * numF );
-
-        const auto& creases = objMesh_->creases();
-        const auto cornerNormals = computePerCornerNormals( *mesh, creases.any() ? &creases : nullptr );
-        tbb::parallel_for( tbb::blocked_range<FaceId>( 0_f, FaceId{ numF } ), [&] ( const tbb::blocked_range<FaceId>& range )
-        {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-            {
-                if ( !mesh->topology.hasFace( f ) )
-                    continue;
-                auto ind = 3 * f;
-                const auto& cornerN = getAt( cornerNormals, f );
-                for ( int i = 0; i < 3; ++i )
-                    buffer[ind + i] = cornerN[i];
             }
         } );
 

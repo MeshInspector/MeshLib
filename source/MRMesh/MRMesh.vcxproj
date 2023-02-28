@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRChangeVertsColorMapAction.h" />
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRBuffer.h" />
     <ClInclude Include="MRChangePointCloudNormalsAction.h" />

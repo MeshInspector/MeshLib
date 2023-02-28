@@ -6,7 +6,7 @@
 namespace MR
 {
 
-/// History action for xf change
+/// History action for vertsColorMap change
 /// \ingroup HistoryGroup
 class ChangeVertsColorMapAction : public HistoryAction
 {

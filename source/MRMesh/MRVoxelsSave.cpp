@@ -127,6 +127,7 @@ tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const 
     openvdb::io::File file( path.string() );
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
     gridPtr->setTree( vdbVolume.data->treePtr() );
+    gridPtr->setGridClass( vdbVolume.data->getGridClass() );
     openvdb::math::Transform::Ptr transform = std::make_shared<openvdb::math::Transform>();
     transform->preScale( { vdbVolume.voxelSize.x, vdbVolume.voxelSize.y, vdbVolume.voxelSize.z } );
     gridPtr->setTransform( transform );

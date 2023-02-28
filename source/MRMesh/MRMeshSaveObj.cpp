@@ -8,7 +8,7 @@ namespace MR
 namespace MeshSave
 {
 
-tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file )
+VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file )
 {
     std::ofstream out( file );
     if ( !out )
@@ -17,7 +17,7 @@ tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & obj
     return sceneToObj( objects, out );
 }
 
-tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out )
+VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out )
 {
     out << "# MeshInspector.com\n";
     int firstVertId = 1;

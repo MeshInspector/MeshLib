@@ -125,7 +125,7 @@ tl::expected<Json::Value, std::string> deserializeJsonValue( const std::filesyst
 }
 
 // path of item in filesystem, base - base path of scene root (%temp%/MeshInspectorScene)
-tl::expected<void, std::string> compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
+VoidOrErrStr compressOneItem( zip_t* archive, const std::filesystem::path& path, const std::filesystem::path& base,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     std::error_code ec;
@@ -207,7 +207,7 @@ private:
     zip_t * handle_ = nullptr;
 };
 
-tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
+VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password )
 {
     MR_TIMER
@@ -231,7 +231,7 @@ tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFil
     return res;
 }
 
-tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
+VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection /*= nullptr */ )
 {
     ObjectMesh obj;
     obj.setMesh( std::make_shared<Mesh>( mesh ) );
@@ -241,7 +241,7 @@ tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::file
     return serializeObjectTree( obj, path );
 }
 
-tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
+VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( targetFolder, ec ) )
@@ -304,7 +304,7 @@ tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipF
     return {};
 }
 
-tl::expected<void, std::string> serializeObjectTree( const Object& object, const std::filesystem::path& path, 
+VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path, 
     ProgressCallback progressCb, FolderCallback preCompress )
 {
     MR_TIMER;
@@ -626,7 +626,7 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
     }
 }
 
-tl::expected<void, std::string> serializeToJson( const Mesh& mesh, Json::Value& root )
+VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
 {
     std::ostringstream out;
     auto res = MeshSave::toPly( mesh, out );

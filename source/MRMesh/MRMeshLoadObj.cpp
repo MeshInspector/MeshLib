@@ -12,7 +12,7 @@ namespace
 {
     using namespace MR;
 
-    tl::expected<void, std::string> parseObjVertex( const std::string_view& str, Vector3f& v )
+    VoidOrErrStr parseObjVertex( const std::string_view& str, Vector3f& v )
     {
         using namespace boost::spirit::x3;
 
@@ -38,7 +38,7 @@ namespace
         std::vector<int> normals;
     };
 
-    tl::expected<void, std::string> parseObjFace( const std::string_view& str, ObjFace& f )
+    VoidOrErrStr parseObjFace( const std::string_view& str, ObjFace& f )
     {
         using namespace boost::spirit::x3;
 

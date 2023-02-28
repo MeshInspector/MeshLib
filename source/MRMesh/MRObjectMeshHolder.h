@@ -194,7 +194,7 @@ protected:
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRMESH_API tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 

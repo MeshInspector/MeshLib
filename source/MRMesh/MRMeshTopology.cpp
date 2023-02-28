@@ -1864,7 +1864,7 @@ void MeshTopology::write( std::ostream & s ) const
     s.write( (const char*)edgePerFace_.data(), edgePerFace_.size() * sizeof(EdgeId) );
 }
 
-tl::expected<void, std::string> MeshTopology::read( std::istream & s, ProgressCallback callback )
+VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
 {
     updateValids_ = false;
 

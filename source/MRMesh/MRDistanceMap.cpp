@@ -209,7 +209,7 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& to
     } );
 }
 
-tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold, 0.f, 1.f );
     auto size = dm.numPoints();

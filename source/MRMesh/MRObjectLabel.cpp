@@ -97,7 +97,7 @@ tl::expected<std::future<void>, std::string> ObjectLabel::serializeModel_( const
     return std::async( getAsyncLaunchType(), save );
 }
 
-tl::expected<void, std::string> ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectLabel::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
 #ifndef MRMESH_NO_OPENCTM
     auto res = MeshLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );

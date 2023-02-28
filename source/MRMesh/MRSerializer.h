@@ -64,7 +64,7 @@ MRMESH_API tl::expected<Json::Value, std::string> deserializeJsonValue( const st
  * if preCompress is set, it is called before compression
  * saving is controlled with Object::serializeModel_ and Object::serializeFields_
  */
-MRMESH_API tl::expected<void, std::string> serializeObjectTree( const Object& object, 
+MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, 
     const std::filesystem::path& path, ProgressCallback progress = {}, FolderCallback preCompress = {} );
 /**
  * \brief loads objects tree from given scene file (zip/mru)
@@ -93,17 +93,17 @@ MRMESH_API tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectT
  * \brief decompresses given zip-file into given folder
  * \param password if password is given then it will be used to decipher encrypted archive
  */
-MRMESH_API tl::expected<void, std::string> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder,
+MRMESH_API VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder,
     const char * password = nullptr );
 /**
  * \brief compresses given folder in given zip-file
  * \param excludeFiles files that should not be included to result zip 
  * \param password if password is given then the archive will be encrypted
  */
-MRMESH_API tl::expected<void, std::string> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, 
+MRMESH_API VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder, 
     const std::vector<std::filesystem::path>& excludeFiles = {}, const char * password = nullptr );
 /// saves mesh with optional selection to mru format
-MRMESH_API tl::expected<void, std::string> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr );
+MRMESH_API VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr );
 
 /// saves an object into json value
 MRMESH_API void serializeToJson( const Vector2i& vec, Json::Value& root );
@@ -115,7 +115,7 @@ MRMESH_API void serializeToJson( const Color& col, Json::Value& root );
 MRMESH_API void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const AffineXf3f& xf, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const BitSet& bitset, Json::Value& root );
-MRMESH_API tl::expected<void, std::string> serializeToJson( const Mesh& mesh, Json::Value& root );
+MRMESH_API VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root );
 MRMESH_API void serializeToJson( const Plane3f& plane, Json::Value& root );
 MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
 MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root );

@@ -925,6 +925,9 @@
     <ClInclude Include="MRChangeVertsColorMapAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
+    <ClInclude Include="MRExpected.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

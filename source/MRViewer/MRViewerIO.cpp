@@ -26,12 +26,12 @@
 namespace MR
 {
 
-tl::expected<void, std::string> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
+VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return tl::make_unexpected( std::string( "Saving canceled" ) );
 
-    tl::expected<void, std::string> result;
+    VoidOrErrStr result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {

@@ -24,8 +24,8 @@ struct NamedXfMesh
     AffineXf3f toWorld;
     std::shared_ptr<const Mesh> mesh;
 };
-MRMESH_API tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file );
-MRMESH_API tl::expected<void, std::string> sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out );
+MRMESH_API VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file );
+MRMESH_API VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out );
 
 /// \}
 

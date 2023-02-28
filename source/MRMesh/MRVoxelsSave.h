@@ -1,13 +1,11 @@
 #pragma once
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-#include "MRMeshFwd.h"
 #include "MRIOFilters.h"
-#include <tl/expected.hpp>
-#include <filesystem>
+#include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRVoxelPath.h"
 #include "MRSimpleVolume.h"
-#include <fmt/format.h>
+#include <filesystem>
 
 namespace MR
 {
@@ -21,19 +19,19 @@ namespace VoxelsSave
 MRMESH_API extern const IOFilters Filters;
 
 /// Save raw voxels file, writing parameters in name
-MRMESH_API tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+MRMESH_API VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                     ProgressCallback callback = {} );
 
 /// Save vdb voxels file, using openVdb methods
-MRMESH_API tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+MRMESH_API VoidOrErrStr toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                     ProgressCallback callback = {} );
 
-MRMESH_API tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                                  ProgressCallback callback = {} );
 
 
 /// save the slice by the active plane through the sliceNumber to an image file
-MRMESH_API tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );
 
 // stores together all data for save voxel object as a group of images
 struct SavingSettings
@@ -49,7 +47,7 @@ struct SavingSettings
 };
 
 /// save all slices by the active plane through all voxel planes along the active axis to an image file
-MRMESH_API tl::expected<void, std::string> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
+MRMESH_API VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
 
 /// \}
 

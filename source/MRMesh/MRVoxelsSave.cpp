@@ -8,6 +8,7 @@
 #include "MRColor.h"
 #include "MRMeshTexture.h"
 #include "MRPch/MROpenvdb.h"
+#include <fmt/format.h>
 #include <fstream>
 #include <filesystem>
 #include "openvdb/io/File.h"
@@ -35,7 +36,7 @@ const IOFilters Filters =
     {"OpenVDB (.vdb)","*.vdb"}
 };
 
-tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
+VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
 {
     if ( path.empty() )
     {
@@ -122,7 +123,7 @@ tl::expected<void, std::string> saveRaw( const std::filesystem::path& path, cons
     return {};
 }
  
-tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
+VoidOrErrStr toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
 {
     openvdb::io::File file( path.string() );
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
@@ -136,7 +137,7 @@ tl::expected<void, std::string> toVdb( const std::filesystem::path& path, const 
     return {};
 }
 
-tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
+VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
                                                       ProgressCallback callback /*= {} */ )
 {
     auto ext = utf8string( path.extension() );
@@ -153,7 +154,7 @@ tl::expected<void, std::string> toAnySupportedFormat( const std::filesystem::pat
 
 
 
-tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
+VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {
     const auto& dims = vdbVolume.dims;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
@@ -214,7 +215,7 @@ tl::expected<void, std::string> saveSliceToImage( const std::filesystem::path& p
     return {};
 }
 
-tl::expected<void, std::string> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
+VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
 {
     int numSlices{ 0 };
     switch ( settings.slicePlane )

@@ -6,8 +6,8 @@
 #include "MRPartMapping.h"
 #include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
+#include "MRExpected.h"
 #include <fstream>
-#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -315,7 +315,7 @@ public:
     MRMESH_API void write( std::ostream & s ) const;
     /// loads from binary stream
     /// \return text of error if any
-    MRMESH_API tl::expected<void, std::string> read( std::istream& s, ProgressCallback callback = {} );
+    MRMESH_API VoidOrErrStr read( std::istream& s, ProgressCallback callback = {} );
 
     /// compare that two topologies are exactly the same
     [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;

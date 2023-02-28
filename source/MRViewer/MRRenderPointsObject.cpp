@@ -77,6 +77,7 @@ void RenderPointsObject::render( const RenderParams& renderParams )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objPoints_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objPoints_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objPoints_->getAmbientStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objPoints_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
     const auto& backColor = Vector4f( objPoints_->getBackColor( renderParams.viewportId ) );

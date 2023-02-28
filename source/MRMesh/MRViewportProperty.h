@@ -16,6 +16,8 @@ template<typename T>
 class ViewportProperty
 {
 public:
+    ViewportProperty() = default;
+    ViewportProperty( const T& def ) :def_{ def } {}
     /// sets default property value
     void set( T def ) { def_ = std::move( def ); }
     /// gets default property value

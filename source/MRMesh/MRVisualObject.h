@@ -122,6 +122,13 @@ public:
 
     MRMESH_API const Color& getBackColor( ViewportId viewportId = {} ) const;
     MRMESH_API virtual void setBackColor( const Color& color, ViewportId viewportId = {} );
+
+    MRMESH_API const uint8_t& getGlobalAlpha( ViewportId viewportId = {} ) const;
+    MRMESH_API virtual void setGlobalAlpha( uint8_t alpha, ViewportId viewportId = {} );
+
+    MRMESH_API const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const;
+    MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
+
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
@@ -237,6 +244,7 @@ protected:
     ViewportProperty<Color> selectedColor_;
     ViewportProperty<Color> unselectedColor_;
     ViewportProperty<Color> backFacesColor_;
+    ViewportProperty<uint8_t> globalAlpha_{ 255 };
 
     std::vector<PositionedText> labels_;
 

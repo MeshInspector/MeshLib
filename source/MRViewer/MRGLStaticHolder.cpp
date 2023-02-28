@@ -170,6 +170,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -266,7 +267,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 specular = specular_factor * specularStrength * ligthColor;
     
     vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a);
+    outColor = vec4(res,colorCpy.a * globalAlpha);
 
     if (outColor.a == 0.0)
       discard;
@@ -305,6 +306,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -402,7 +404,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 specular = specular_factor * specularStrength * ligthColor;
     
     vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a);
+    outColor = vec4(res,colorCpy.a * globalAlpha);
 
     if (outColor.a == 0.0)
       discard;
@@ -460,6 +462,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -552,7 +555,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 specular = specular_factor * specularStrength * ligthColor;
     
     vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a);
+    outColor = vec4(res,colorCpy.a * globalAlpha);
 
     if (outColor.a == 0.0)
       discard;
@@ -699,6 +702,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -774,7 +778,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 specular = specular_factor * specularStrength * ligthColor;
     
     vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a);
+    outColor = vec4(res,colorCpy.a * globalAlpha);
     if (outColor.a == 0.0)
       discard;
   }
@@ -810,6 +814,7 @@ void GLStaticHolder::createShader_( ShaderType type )
                                      
   uniform float ambientStrength;    // (in from base) non-directional lighting
   uniform float specularStrength;   // (in from base) reflection intensity
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   in vec3 position_eye;              // (in from vertex shader) vert position transformed by model and view (not proj)
   in vec3 normal_eye;                // (in from vertex shader) vert normal transformed by model and view (not proj)
@@ -869,7 +874,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     vec3 specular = specular_factor * specularStrength * ligthColor;
     
     vec3 res = ( ambient + diffuse + specular ) * color;
-    outColor = vec4(res,colorCpy.a);
+    outColor = vec4(res,colorCpy.a * globalAlpha);
     if (outColor.a == 0.0)
       discard;
   }
@@ -906,6 +911,7 @@ void GLStaticHolder::createShader_( ShaderType type )
             precision highp int;
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
 
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
   in vec4 color_frag;
@@ -915,6 +921,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
       discard;
     outColor = color_frag;
+    outColor.a = outColor.a * globalAlpha;
     if (outColor.a == 0.0)
       discard;
   }
@@ -943,6 +950,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
 
   in vec3 world_pos;                 // (in from vertex shader) vert transformed position
   in vec4 color_frag;
@@ -952,6 +960,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     if (useClippingPlane && dot(world_pos,vec3(clippingPlane))>clippingPlane.w)
       discard;
     outColor = color_frag;
+    outColor.a = outColor.a * globalAlpha;
 
     uint nodeIndex = atomicCounterIncrement ( numNodes );
     
@@ -996,13 +1005,14 @@ void GLStaticHolder::createShader_( ShaderType type )
             precision highp int;
 
   uniform vec4 mainColor;            // (in from base) main color
+  uniform float globalAlpha;        // (in from base) global transparency multiplier
                                      
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
   {
     outColor = mainColor;
-
+    outColor.a = outColor.a * globalAlpha;
     if (outColor.a == 0.0)
       discard;
   }

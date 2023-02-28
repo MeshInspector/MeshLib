@@ -6,6 +6,7 @@
 #include "MRPlane3.h"
 #include "MRBestFit.h"
 #include "MRConstants.h"
+#include "MRTimer.h"
 
 namespace 
 {
@@ -17,6 +18,40 @@ namespace MR
 {
 
 const double BadTriangulationMetric = 1e10;
+
+double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegion, const FillHoleMetric & metric )
+{
+    MR_TIMER
+    auto cm = metric.combineMetric;
+    if ( !cm )
+        cm = [] ( double a, double b ) { return a + b; };
+
+    double res = 0;
+    for ( auto t : filledRegion )
+    {
+        VertId vs[3];
+        mesh.topology.getTriVerts( t, vs );
+        res = cm( res, metric.triangleMetric( vs[0], vs[1], vs[2] ) );
+        if ( !metric.edgeMetric )
+            continue;
+        EdgeId es[3];
+        mesh.topology.getTriEdges( t, es );
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto e = es[i];
+            assert( t == mesh.topology.left( e ) );
+            const auto rt = mesh.topology.right( e );
+            if ( !rt || ( rt > t && filledRegion.test( rt ) ) )
+                continue; // do not examine edge twice
+            const auto a = mesh.topology.org( e );
+            const auto b = mesh.topology.dest( e );
+            const auto l = mesh.topology.dest( mesh.topology.next( e ) );
+            const auto r = mesh.topology.dest( mesh.topology.prev( e ) );
+            res = cm( res, metric.edgeMetric( a, b, l, r ) );
+        }
+    }
+    return res;
+}
 
 FillHoleMetric getCircumscribedMetric( const Mesh& mesh )
 {

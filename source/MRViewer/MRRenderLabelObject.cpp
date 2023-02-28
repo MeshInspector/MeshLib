@@ -128,6 +128,7 @@ void RenderLabelObject::render( const RenderParams& renderParams )
 
 	const auto mainColor = Vector4f( objLabel_->getFrontColor( objLabel_->isSelected() ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLabel_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
 
@@ -156,6 +157,7 @@ void RenderLabelObject::renderSourcePoint_( const RenderParams& renderParams )
     const auto& mainColor = Vector4f( objLabel_->getSourcePointColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLabel_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "primBucketSize" ), 1 ) );
 
@@ -206,6 +208,7 @@ void RenderLabelObject::renderBackground_( const RenderParams& renderParams )
 
     const auto mainColor = Vector4f( objLabel_->getBackColor() );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLabel_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
     auto box = meshBox_;
     applyPadding( box, objLabel_->getBackgroundPadding() * ( box.max.y - box.min.y ) / height );
@@ -309,6 +312,8 @@ void RenderLabelObject::renderLeaderLine_( const RenderParams& renderParams )
 
     const auto mainColor = Vector4f( objLabel_->getLeaderLineColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLabel_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
+
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, llineEdgesIndicesSize );
 

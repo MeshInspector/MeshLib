@@ -140,6 +140,26 @@ void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
     dirty_ |= DIRTY_BACK_FACES;
 }
 
+const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) const
+{
+    return globalAlpha_.get( viewportId );
+}
+
+void VisualObject::setGlobalAlpha( uint8_t alpha, ViewportId viewportId /*= {} */ )
+{
+    globalAlpha_.set( alpha, viewportId );
+}
+
+const ViewportProperty<uint8_t>& VisualObject::getGlobalAlphaForAllViewports() const
+{
+    return globalAlpha_;
+}
+
+void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val )
+{
+    globalAlpha_ = std::move( val );
+}
+
 const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
 {
     return labelsColor_.get( viewportId );
@@ -314,6 +334,8 @@ MR_SUPPRESS_WARNING_POP
     writeColors( "UnselectedMode", unselectedColor_.get() );
     writeColors( "BackFaces", backFacesColor_.get() );
 
+    root["Colors"]["GlobalAlpha"] = globalAlpha_.get();
+
     // labels
     serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
 
@@ -342,6 +364,9 @@ MR_SUPPRESS_WARNING_POP
     readColors( "SelectedMode", selectedColor_.get() );
     readColors( "UnselectedMode", unselectedColor_.get() );
     readColors( "BackFaces", backFacesColor_.get() );
+
+    if ( root["Colors"]["GlobalAlpha"].isUInt() )
+        globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
 
     Vector4f resVec;
     // labels

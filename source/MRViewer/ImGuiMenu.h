@@ -241,6 +241,10 @@ public:
     std::function<float( const VisualObject* )> getter,
     std::function<void( VisualObject*, const float& )> setter);
 
+  void make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
+    std::function<uint8_t( const VisualObject* )> getter,
+    std::function<void( VisualObject*, uint8_t )> setter );
+
   MRVIEWER_API void draw_custom_plugins();
 
   void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };

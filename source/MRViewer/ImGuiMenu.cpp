@@ -1618,6 +1618,17 @@ MR_SUPPRESS_WARNING_POP
         } );
     }
 
+    if ( !selectedVisualObjs.empty() )
+    {
+        make_uint8_slider( selectedVisualObjs, "Alpha", [&] ( const VisualObject* data )
+        {
+            return data->getGlobalAlpha( selectedViewport_ );
+        }, [&] ( VisualObject* data, uint8_t alpha )
+        {
+            data->setGlobalAlpha( alpha, selectedViewport_ );
+        } );
+    }
+
     return someChanges;
 }
 
@@ -1908,6 +1919,41 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data.get(), value );
+}
+
+
+void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
+    std::function<uint8_t( const VisualObject* )> getter, std::function<void( VisualObject*, uint8_t )> setter )
+{
+    if ( selectedVisualObjs.empty() )
+        return;
+
+    auto obj = selectedVisualObjs[0];
+    auto value = int( getter( obj.get() ) );
+    bool isAllTheSame = true;
+    for ( int i = 1; i < selectedVisualObjs.size(); ++i )
+        if ( getter( selectedVisualObjs[i].get() ) != value )
+        {
+            isAllTheSame = false;
+            break;
+        }
+
+    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
+    if ( !isAllTheSame )
+    {
+        value = 255;
+        ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
+    }
+    const auto valueConstForComparation = value;
+
+    ImGui::PushItemWidth( 100 * menu_scaling() );
+    ImGui::SliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
+
+    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
+    ImGui::PopItemWidth();
+    if ( value != valueConstForComparation )
+        for ( const auto& data : selectedVisualObjs )
+            setter( data.get(), uint8_t( value ) );
 }
 
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 

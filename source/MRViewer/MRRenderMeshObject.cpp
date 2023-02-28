@@ -91,6 +91,7 @@ void RenderMeshObject::render( const RenderParams& renderParams )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objMesh_->getAmbientStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
@@ -240,6 +241,8 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "uniformColor" ),
         color[0], color[1], color[2], color[3] ) );
 
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
+
     // positions
     bindVertexAttribArray( shader, "position", vbo, buffer, 3, buffer.dirty(), true );
 
@@ -273,6 +276,8 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     auto color = Vector4f( objMesh_->getEdgesColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "uniformColor" ),
         color[0], color[1], color[2], color[3] ) );
+
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
 
     // positions
     auto positions = loadVertPosBuffer_();

@@ -40,8 +40,8 @@ double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegio
         {
             const auto e = es[i];
             assert( t == mesh.topology.left( e ) );
-            auto rt = mesh.topology.right( e );
-            if ( rt > t && filledRegion.test( rt ) )
+            const auto rt = mesh.topology.right( e );
+            if ( !rt || ( rt > t && filledRegion.test( rt ) ) )
                 continue; // do not examine edge twice
             const auto a = mesh.topology.org( e );
             const auto b = mesh.topology.dest( e );

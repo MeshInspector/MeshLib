@@ -149,7 +149,7 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
 #ifndef MRMESH_NO_DICOM
-    MRMESH_API tl::expected<void, std::string> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 #endif
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;

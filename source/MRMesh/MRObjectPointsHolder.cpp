@@ -197,7 +197,7 @@ tl::expected<std::future<void>, std::string> ObjectPointsHolder::serializeModel_
 #endif
 }
 
-tl::expected<void, std::string> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
 #ifndef MRMESH_NO_OPENCTM
     auto res = PointsLoad::fromCtm( utf8string( path ) + ".ctm", &vertsColorMap_, progressCb );

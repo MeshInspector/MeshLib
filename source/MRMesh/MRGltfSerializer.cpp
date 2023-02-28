@@ -434,7 +434,7 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
     return scene;
 }
 
-tl::expected<void, std::string> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
+VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
 {
     tinygltf::Model model;
     model.asset.generator = "MeshLib";

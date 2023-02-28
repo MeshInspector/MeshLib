@@ -162,7 +162,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     construct_();
 }
 
-tl::expected<void, std::string> ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto res = DistanceMapLoad::fromRaw( utf8string( path ) + ".raw" );
     if ( !res.has_value() )

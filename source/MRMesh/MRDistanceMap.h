@@ -7,7 +7,7 @@
 #include "MRPolyline.h"
 #include "MRHeapBytes.h"
 #include "MRImage.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <filesystem>
 #include <vector>
 
@@ -268,7 +268,7 @@ struct [[nodiscard]] ContoursDistanceMapOptions
 /// minimum (close): 1.0 (white)
 /// maximum (far): threshold
 /// invalid (infinity): 0.0 (black)
-MRMESH_API tl::expected<void, std::string> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
+MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image in scales of gray:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid

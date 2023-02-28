@@ -18,6 +18,7 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRLog.h"
+#include "MRMesh/MRExpected.h"
 
 using namespace MR;
 
@@ -146,7 +147,7 @@ tl::expected<MR::Mesh, std::string> pythonLoadMeshFromAnyFormat( pybind11::objec
     return MR::MeshLoad::fromAnySupportedFormat( ifs, extension );
 }
 
-tl::expected<void, std::string> pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& extension, pybind11::object fileHandle )
+VoidOrErrStr pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
@@ -155,7 +156,7 @@ tl::expected<void, std::string> pythonSaveMeshToAnyFormat( const Mesh& mesh, con
     return MR::MeshSave::toAnySupportedFormat( mesh, outfs, extension );
 }
 
-tl::expected<void, std::string> pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
+VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
@@ -173,7 +174,7 @@ tl::expected<Polyline3, std::string> pythonLoadLinesFromAnyFormat( pybind11::obj
     return MR::LinesLoad::fromAnySupportedFormat( ifs, extension );
 }
 
-tl::expected<void, std::string> pythonSavePointCloudToAnyFormat( const PointCloud& points, const std::string& extension, pybind11::object fileHandle )
+VoidOrErrStr pythonSavePointCloudToAnyFormat( const PointCloud& points, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return tl::make_unexpected( "Argument is not file handle" );
@@ -194,11 +195,11 @@ tl::expected<PointCloud, std::string> pythonLoadPointCloudFromAnyFormat( pybind1
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
 {
     m.def( "saveMesh",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::Mesh&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::MeshSave::toAnySupportedFormat ),
         pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{}, 
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat ),
         pybind11::arg( "mesh" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves mesh in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
@@ -214,11 +215,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
 {
     m.def( "saveLines",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::Polyline3&, const std::filesystem::path&, ProgressCallback ) )& MR::LinesSave::toAnySupportedFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::filesystem::path&, ProgressCallback ) )& MR::LinesSave::toAnySupportedFormat ),
         pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{}, 
         "detects the format from file extension and saves polyline in it" );
     m.def( "saveLines",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),
         pybind11::arg( "polyline" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves lines in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
@@ -235,11 +236,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
 {
     m.def( "savePoints",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::PointCloud&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::filesystem::path&, const Vector<Color, VertId>*, ProgressCallback ) )& MR::PointsSave::toAnySupportedFormat ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save points to it" );
     m.def( "savePoints",
-        MR::decorateExpected( ( tl::expected<void, std::string>( * )( const MR::PointCloud&, const std::string&, pybind11::object ) )& pythonSavePointCloudToAnyFormat ),
+        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::string&, pybind11::object ) )& pythonSavePointCloudToAnyFormat ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves point cloud in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )

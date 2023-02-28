@@ -451,7 +451,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 }
 
 #ifndef MRMESH_NO_DICOM
-tl::expected<void, std::string> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto res = VoxelsLoad::loadRaw( utf8string( path ) + ".raw", progressCb );
     if ( !res.has_value() )

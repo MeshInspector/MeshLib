@@ -161,7 +161,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 }
 
-tl::expected<void, std::string> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
 #ifndef MRMESH_NO_OPENCTM

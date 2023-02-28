@@ -12,7 +12,7 @@
 namespace MR
 {
 
-tl::expected<void, std::string> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
     // check input

@@ -14,7 +14,7 @@ Histogram::Histogram( float min, float max, size_t size ) :
     binSize_ = ( max_ - min_ ) / size;
 }
 
-void Histogram::addSample( float sample, int count /*= 1*/ )
+void Histogram::addSample( float sample, size_t count /*= 1*/ )
 {
     sample = std::clamp( sample, min_, max_ );
     bins_[getBinId( sample )] += count;

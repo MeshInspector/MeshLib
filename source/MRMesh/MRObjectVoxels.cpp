@@ -67,19 +67,19 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 
     evalGridMinMax( vdbVolume_.data, min, max );
 
-    ProgressCallback newCb;
+    ProgressCallback subprogress;
     if ( mesh_ && cb )
-        newCb = [cb](float v) { return cb( v / 2.f ); };
+        subprogress = [cb](float v) { return cb( v / 2.f ); };
     else if ( cb )
-        newCb = [cb](float v) { return cb( v ); };
-    updateHistogram_( min, max, newCb );
+        subprogress = [cb](float v) { return cb( v ); };
+    updateHistogram_( min, max, subprogress );
 
     if ( mesh_ )
     {
         mesh_.reset();
         if ( cb )
-            newCb = [cb](float v) { return cb( 0.5f + v / 2.f ); };
-        setIsoValue( isoValue_, newCb );
+            subprogress = [cb](float v) { return cb( 0.5f + v / 2.f ); };
+        setIsoValue( isoValue_, subprogress );
     }
 }
 
@@ -294,7 +294,7 @@ public:
     void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
     {
         ValueT value = iter.getValue();
-        const int count = bbox.dim().x() * bbox.dim().y() * bbox.dim().z();
+        const size_t count = size_t( bbox.volume() );
         hist.addSample( value, count );
     }
 
@@ -315,7 +315,7 @@ void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /
     
     using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
     HistogramCalcProcFT histCalcProc( min, max );
-    using HistRangeProcessorOne = RangeProcessorOne<openvdb::FloatTree, HistogramCalcProcFT>;
+    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
     HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
     
 

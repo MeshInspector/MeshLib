@@ -68,14 +68,10 @@ public:
             if ( interrupt() ) break;
 
             LeafIterT i = r.iterator();
-            openvdb::math::CoordBBox bbox( i->origin(), i->origin() + openvdb::math::Coord( i->dim() ) );
+            openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
             if ( !mBBox.empty() )
-            {
-                // Intersect the leaf node's bounding box with mBBox.
-                bbox = openvdb::math::CoordBBox(
-                    openvdb::math::Coord::maxComponent( bbox.min(), mBBox.min() ),
-                    openvdb::math::Coord::minComponent( bbox.max(), mBBox.max() ) );
-            }
+                bbox.intersect( mBBox );
+            
             if ( !bbox.empty() )
             {
                 for ( auto it = bbox.begin(); it != bbox.end(); ++it )
@@ -199,8 +195,13 @@ void translateToZero( GredT& grid)
     grid.setTree( outTreePtr );
 }
 
+/**
+ * @brief Class to use in tbb::parallel_reduce for tree operations that do not require an output tree
+ * @tparam TreeT tree type
+ * @tparam Proc functor for operations on a tree
+ */
 template <typename TreeT, typename Proc>
-class RangeProcessorOne
+class RangeProcessorSingle
 {
 public:
     using InterruptFunc = std::function<bool( void )>;
@@ -215,12 +216,12 @@ public:
 
     using TreeAccessor = typename openvdb::tree::ValueAccessor<const TreeT>;
 
-    RangeProcessorOne( const openvdb::math::CoordBBox& b, const TreeT& inT, const Proc& proc ) :
+    RangeProcessorSingle( const openvdb::math::CoordBBox& b, const TreeT& inT, const Proc& proc ) :
         mProc( proc ), mBBox( b ), mInTree( inT ), mInAcc( mInTree )
     {}
 
     /// Splitting constructor: don't copy the original processor's output tree
-    RangeProcessorOne( RangeProcessorOne& other, tbb::split ) :
+    RangeProcessorSingle( RangeProcessorSingle& other, tbb::split ) :
         mProc( other.mProc ),
         mBBox( other.mBBox ),
         mInTree( other.mInTree ),
@@ -300,17 +301,14 @@ public:
     }
 
     /// Merge another processor's output tree into this processor's tree.
-    void join( RangeProcessorOne& other )
+    void join( RangeProcessorSingle& other )
     {
-        tmp += " " + fmt::format( "l={}", leafCount ) + other.tmp;
         if ( interrupt() )
             return;
         mProc.join( other.mProc );
     }
 
     Proc mProc;
-
-    std::string tmp;
 private:
     bool interrupt() const { return mInterrupt && mInterrupt(); }
     bool setProgress(size_t l, size_t t) const { return mProgress && mProgress( l, t ); }
@@ -332,6 +330,9 @@ struct RangeSize
     size_t tile = 0;
 };
 
+/// @brief functor to calculate tile and leaf valid nodes count
+/// @details valid node - the node where the action is performed.
+/// it is necessary to calculate the progress in real action
 template<typename TreeT>
 class RangeCounter
 {
@@ -372,7 +373,7 @@ RangeSize calculateRangeSize( const GridT& grid )
     using TreeT = typename GridT::TreeType;
     using ProcessC = RangeCounter<TreeT>;
     ProcessC proc;
-    using RangeProcessC = RangeProcessorOne<TreeT, ProcessC>;
+    using RangeProcessC = RangeProcessorSingle<TreeT, ProcessC>;
     RangeProcessC calcCount( grid.evalActiveVoxelBoundingBox(), grid.tree(), proc );
 
     typename RangeProcessC::TileIterT tileIter = grid.tree().cbeginValueAll();

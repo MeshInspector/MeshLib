@@ -25,8 +25,9 @@ namespace MR
 struct WeightedConn
 {
     WeightedConn() = default;
-    WeightedConn( int _a, int _b, double _weight ) :
-        a{_a}, b{_b}, weight{_weight}    {}
+    WeightedConn( int _a, int _b, double _weight, int _prevB = -1 ) :
+        a{ _a }, b{ _b }, weight{ _weight }, prevB{ _prevB }{}
+
     int a{-1};
     int b{-1};
     double weight{DBL_MAX};
@@ -561,7 +562,7 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         a = mesh.topology.prev( a.sym() );
     }
 
-    NewEdgesMap newEdgesMap( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, {-1,-1,0.0} ) );
+    NewEdgesMap newEdgesMap( loopEdgesCounter, std::vector<WeightedConn>( loopEdgesCounter, { -1,-1,0.0,0 } ) );
 
     FillHoleMetric metrics = params.metric;
     if ( !metrics.edgeMetric && !metrics.triangleMetric )
@@ -584,7 +585,7 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
                 EdgeId aCur = edgeMap[i];
                 EdgeId cCur = edgeMap[cIndex];
                 WeightedConn& current = newEdgesMap[i][cIndex];
-                current = {int( i ),int( cIndex ), DBL_MAX};
+                current = { int( i ),int( cIndex ), DBL_MAX,0 };
                 if ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::None &&
                     sameEdgeExists( mesh.topology, aCur, cCur ) )
                     continue;

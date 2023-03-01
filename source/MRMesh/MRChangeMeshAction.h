@@ -189,14 +189,14 @@ public:
         if ( auto m = objMesh_->varMesh() )
         {
             std::swap( m->topology, cloneTopology_ );
-            objMesh_->setDirtyFlags( DIRTY_FACE | DIRTY_UV);
+            objMesh_->setDirtyFlags( DIRTY_FACE );
         }
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMesh>& obj )
     {
         if ( obj )
-            obj->setDirtyFlags( DIRTY_FACE | DIRTY_UV );
+            obj->setDirtyFlags( DIRTY_FACE );
     }
 
     [[nodiscard]] virtual size_t heapBytes() const override

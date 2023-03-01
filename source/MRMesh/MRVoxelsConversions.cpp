@@ -833,6 +833,8 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                         const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                         const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                         const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
+                        // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
                         voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
                         voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
                         voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );

@@ -794,6 +794,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                         0b111
                     };
                     int neighIndex = 0;
+                    // iterates over nan neighbors to find consistent value
                     while ( std::isnan( value ) && neighIndex < 7 )
                     {
                         auto neighPos = pos;

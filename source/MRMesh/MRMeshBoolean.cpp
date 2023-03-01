@@ -15,6 +15,7 @@
 #include "MRRegionBoundary.h"
 #include "MRMeshComponents.h"
 #include "MRMeshCollide.h"
+#include "MRRingIterator.h"
 
 namespace
 {
@@ -347,15 +348,19 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     result.intersectionPoints.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
 
     FaceBitSet collFacesA, collFacesB;
+    UndirectedEdgeBitSet collEdgesA, collEdgesB;
     VertBitSet collOuterVertsA, collOuterVertsB;
     collFacesA.resize( meshA.topology.lastValidFace() + 1 );
     collFacesB.resize( meshB.topology.lastValidFace() + 1 );
+    collEdgesA.resize( meshA.topology.lastNotLoneEdge().undirected() + 1 );
+    collEdgesB.resize( meshB.topology.lastNotLoneEdge().undirected() + 1 );
     collOuterVertsA.resize( meshA.topology.lastValidVert() + 1 );
     collOuterVertsB.resize( meshB.topology.lastValidVert() + 1 );
     for ( const auto& et : intersections.edgesAtrisB )
     {
         gatherEdgeInfo( meshA.topology, et.edge, collFacesA, collOuterVertsA );
         collFacesB.set( et.tri );
+        collEdgesA.set( et.edge );
 
         const auto isect = findEdgeTriIntersectionPoint( meshA, et.edge, meshB, et.tri, converters, rigidB2A, EdgeTriComponent::Tri );
         result.intersectionPoints.emplace_back( isect );
@@ -364,6 +369,7 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     {
         gatherEdgeInfo( meshB.topology, et.edge, collFacesB, collOuterVertsB );
         collFacesA.set( et.tri );
+        collEdgesB.set( et.edge );
 
         const auto isect = findEdgeTriIntersectionPoint( meshB, et.edge, meshA, et.tri, converters, rigidB2A, EdgeTriComponent::Edge );
         result.intersectionPoints.emplace_back( isect );
@@ -384,6 +390,25 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
 
         collFacesA = fillContourLeft( meshA.topology, collBordersA );
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
+
+        std::function<void ( EdgeId )> removeDeadEndsA;
+        removeDeadEndsA = [&] ( EdgeId e0 )
+        {
+            for ( const auto e1 : orgRing0( meshA.topology, e0 ) )
+            {
+                if ( collEdgesA.test( e1 ) )
+                    continue;
+                const auto v1 = meshA.topology.dest( e1 );
+                if ( result.meshAVerts.test( v1 ) )
+                {
+                    result.meshAVerts.set( v1, false );
+                    removeDeadEndsA( e1.sym() );
+                }
+            }
+        };
+        for ( const auto& border : collBordersA )
+            for ( const auto e0 : border )
+                removeDeadEndsA( e0 );
 
         const auto aComponents = MeshComponents::getAllComponents(meshA);
 
@@ -409,7 +434,26 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
 
         collFacesB = fillContourLeft(meshB.topology, collBordersB);
         result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
-        
+
+        std::function<void ( EdgeId )> removeDeadEndsB;
+        removeDeadEndsB = [&] ( EdgeId e0 )
+        {
+            for ( const auto e1 : orgRing0( meshB.topology, e0 ) )
+            {
+                if ( collEdgesB.test( e1 ) )
+                    continue;
+                const auto v1 = meshB.topology.dest( e1 );
+                if ( result.meshBVerts.test( v1 ) )
+                {
+                    result.meshBVerts.set( v1, false );
+                    removeDeadEndsB( e1.sym() );
+                }
+            }
+        };
+        for ( const auto& border : collBordersB )
+            for ( const auto e0 : border )
+                removeDeadEndsB( e0 );
+
         const auto bComponents = MeshComponents::getAllComponents(meshB);
         std::unique_ptr<AffineXf3f> rigidA2B;
         if ( rigidB2A )

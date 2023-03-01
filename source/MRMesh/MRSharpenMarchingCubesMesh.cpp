@@ -183,38 +183,26 @@ void sharpenMarchingCubesMesh( const Mesh & ref, Mesh & vox, Vector<VoxelId, Fac
             auto b = vox.topology.dest( vox.topology.prev( e ) );
             if ( b >= firstNewVert )
             {
-                auto ap = vox.points[ vox.topology.org( e ) ];
-                auto bp = vox.points[ b ];
-                auto cp = vox.points[ vox.topology.dest( e ) ];
-                auto dp = vox.points[ v ];
-                auto nABD = normal( ap, bp, dp );
-                auto nBCD = normal( bp, cp, dp );
-                // allow creation of very sharp edges (like in default prism or in cone with 6 facets),
-                // which isUnfoldQuadrangleConvex here did not allow;
-                // but disallow making extremely sharp edges, where two triangle almost coincide with opposite normals
-                if ( dot( nABD, nBCD ) >= settings.minNormalDot )
+                if ( vIsCorner )
+                    sharpEdges.set( e.undirected() );
+                else
                 {
-                    if ( vIsCorner )
-                        sharpEdges.set( e.undirected() );
-                    else
+                    const auto bDir = dirs[ b - firstNewVert ];
+                    const bool bIsCorner = bDir.lengthSq() < 0.1f; // unit length for edges
+                    const auto bvDir = ( vox.points[b] - vox.points[v] ).normalized();
+                    // dot( vDir, bDir ) worked bad for cone vertex
+                    const auto metric = bIsCorner ? 10.0f : std::abs( dot( vDir, bvDir ) );
+                    if ( metric > 0.5f ) // avoid connection with vertex not along v-line
                     {
-                        const auto bDir = dirs[ b - firstNewVert ];
-                        const bool bIsCorner = bDir.lengthSq() < 0.1f; // unit length for edges
-                        const auto bvDir = ( vox.points[b] - vox.points[v] ).normalized();
-                        // dot( vDir, bDir ) worked bad for cone vertex
-                        const auto metric = bIsCorner ? 10.0f : std::abs( dot( vDir, bvDir ) );
-                        if ( metric > 0.5f ) // avoid connection with vertex not along v-line
+                        CanditeEdge c{ .metric = metric, .edge = e.undirected() };
+                        if ( c.metric > best.metric )
                         {
-                            CanditeEdge c{ .metric = metric, .edge = e.undirected() };
-                            if ( c.metric > best.metric )
-                            {
-                                secondBest = best;
-                                best = c;
-                            }
-                            else if ( c.metric > secondBest.metric )
-                            {
-                                secondBest = c;
-                            }
+                            secondBest = best;
+                            best = c;
+                        }
+                        else if ( c.metric > secondBest.metric )
+                        {
+                            secondBest = c;
                         }
                     }
                 }

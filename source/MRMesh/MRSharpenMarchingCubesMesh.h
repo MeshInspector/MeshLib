@@ -22,8 +22,6 @@ struct SharpenMarchingCubesMeshSettings
     /// big correction can be wrong and result from self-intersections in the reference mesh
     /// recommended set equal to ( voxel size / 2 )
     float maxOldVertPosCorrection = 0;
-    /// minimum dot product of two normals of neighbor triangles created during sharpening
-    float minNormalDot = -0.9f;
     /// the number of iterations to best select positions for new vertices,
     /// the probability of self-intersections and spikes are higher if posSelIters = 0
     int posSelIters = 3;

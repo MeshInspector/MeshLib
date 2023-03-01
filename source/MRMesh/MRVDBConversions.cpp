@@ -7,6 +7,10 @@
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
 #include "MRBox.h"
+#include "MRFastWindingNumber.h"
+#include "MRVolumeIndexer.h"
+#include "MRRegionBoundary.h"
+#include <thread>
 
 namespace MR
 {
@@ -372,6 +376,63 @@ tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
     return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, isoValue, adaptivity, cb );
 }
 
+VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, ProgressCallback cb /*= {} */ )
+{
+    MR_TIMER
+
+    std::atomic<bool> keepGoing{ true };
+    auto mainThreadId = std::this_thread::get_id();
+
+    FastWindingNumber fwn( refMesh );
+
+    auto activeBox = grid->evalActiveVoxelBoundingBox();
+    // make dense topology tree to copy its nodes topology to original grid
+    std::unique_ptr<openvdb::TopologyTree> topologyTree = std::make_unique<openvdb::TopologyTree>();
+    // make it dense
+    topologyTree->denseFill( activeBox, {} );
+    grid->tree().topologyUnion( *topologyTree ); // after this all voxels should be active and trivial parallelism is ok
+    // free topology tree
+    topologyTree.reset();
+
+    auto minCoord = activeBox.min();
+    auto dims = activeBox.dim();
+    VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size_t( activeBox.volume() ) ),
+        [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto accessor = grid->getAccessor();
+        for ( auto i = range.begin(); i < range.end(); ++i )
+        {
+            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
+            auto pos = indexer.toPos( VoxelId( i ) );
+            auto coord = minCoord;
+            for ( int j = 0; j < 3; ++j )
+                coord[j] += pos[j];
+
+            auto coord3i = Vector3i( coord.x(), coord.y(), coord.z() );
+            auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
+            auto windVal = fwn.calc( pointInSpace, 2.0f );
+            windVal = std::clamp( 1.0f - 2.0f * windVal, -1.0f, 1.0f );
+            if ( windVal < 0.0f )
+                windVal *= -windVal;
+            else
+                windVal *= windVal;
+            accessor.modifyValue( coord, [windVal] ( float& val )
+            {
+                val *= windVal;
+            } );
+            if ( cb && mainThreadId == std::this_thread::get_id() && !cb( float( i ) / float( range.size() ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    }, tbb::static_partitioner() );
+    if ( !keepGoing )
+        return tl::make_unexpected( "Operation was canceled." );
+    grid->pruneGrid( 0.0f );
+    return {};
+}
+
 tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
     float offsetA, float offsetB, float adaptivity, ProgressCallback cb /*= {} */ )
 {
@@ -389,37 +450,39 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     std::vector<openvdb::Vec4I> quads;
     convertToVDMMesh( mp, xf, Vector3f::diagonal( voxelSize ), points, tris );
 
-    ProgressCallback passCb;
-    if ( cb )
-    {
-        if ( !cb( 0.1f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-        passCb = [cb] ( float p )
-        {
-            return cb( 0.1f + 0.2f * p );
-        };
-    }
+    if (cb && !cb( 0.1f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+
+    bool needSignUpdate = !findRegionBoundary( mp.mesh.topology, mp.region ).empty();
+
+    auto sp = subprogress( cb, 0.1f, needSignUpdate ? 0.2f : 0.3f );
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    Interrupter interrupter1( passCb );
-    auto grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
+    Interrupter interrupter1( sp );
+    auto grid = MakeFloatGrid( 
+        needSignUpdate ?
+        openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, Interrupter>
+        ( interrupter1, *xform, points, tris, {}, std::abs( offsetInVoxelsA ) + 1 ) :
+        openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
 
     if ( interrupter1.getWasInterrupted() )
         return tl::make_unexpected( "Operation was canceled." );
 
-    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
-
-    if ( cb )
+    if ( needSignUpdate )
     {
-        if ( !cb( 0.5f ) )
-            return tl::make_unexpected( "Operation was canceled." );
-        passCb = [cb] ( float p )
-        {
-            return cb( 0.5f + 0.2f * p );
-        };
+        sp = subprogress( cb, 0.2f, 0.3f );
+        auto signRes = makeSignedWithFastWinding( grid,Vector3f::diagonal(voxelSize),mp.mesh,sp );
+        if ( !signRes.has_value() )
+            return tl::make_unexpected( signRes.error() );
     }
 
-    Interrupter interrupter2( passCb );
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
+
+    if ( cb && !cb( 0.5f ) )
+        return tl::make_unexpected( "Operation was canceled." );
+    sp = subprogress( cb, 0.5f, 0.7f );
+
+    Interrupter interrupter2( sp );
     grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, Interrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 

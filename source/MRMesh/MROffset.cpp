@@ -60,53 +60,9 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     if ( signPostprocess )
     {
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        std::atomic<bool> keepGoing{ true };
-        auto mainThreadId = std::this_thread::get_id();
-
-        FastWindingNumber fwn( mp.mesh );
-
-        auto activeBox = grid->evalActiveVoxelBoundingBox();
-        // make dense topology tree to copy its nodes topology to original grid
-        std::unique_ptr<openvdb::TopologyTree> topologyTree = std::make_unique<openvdb::TopologyTree>();
-        // make it dense
-        topologyTree->denseFill( activeBox, {} );
-        grid->tree().topologyUnion( *topologyTree ); // after this all voxels should be active and trivial parallelism is ok
-        // free topology tree
-        topologyTree.reset();
-
-        auto minCoord = activeBox.min();
-        auto dims = activeBox.dim();
-        VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
-        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size_t( activeBox.volume() ) ),
-            [&] ( const tbb::blocked_range<size_t>& range )
-        {
-            auto accessor = grid->getAccessor();
-            for ( auto i = range.begin(); i < range.end(); ++i )
-            {
-                if ( sp && !keepGoing.load( std::memory_order_relaxed ) )
-                    break;
-
-                auto pos = indexer.toPos( VoxelId( i ) );
-                auto coord = minCoord;
-                for ( int j = 0; j < 3; ++j )
-                    coord[j] += pos[j];
-
-                auto coord3i = Vector3i( coord.x(), coord.y(), coord.z() );
-                auto pointInSpace = voxelSize * Vector3f( coord3i );
-                auto windVal = fwn.calc( pointInSpace, 2.0f );
-                windVal = std::clamp( 1.0f - 2.0f * windVal, -1.0f, 1.0f );
-                if ( windVal < 0.0f )
-                    windVal *= -windVal;
-                else
-                    windVal *= windVal;
-                accessor.modifyValue( coord, [windVal] ( float& val ) { val *= windVal; } );
-                if ( sp && mainThreadId == std::this_thread::get_id() && !sp( float( i ) / float( range.size() ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
-        }, tbb::static_partitioner() );
-        if ( !keepGoing )
-            return tl::make_unexpected( "Operation was canceled." );
-        grid->pruneGrid( 0.0f );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, sp );
+        if ( !signRes.has_value() )
+            return tl::make_unexpected( signRes.error() );
     }
 
     // Make offset mesh
@@ -126,11 +82,6 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
 tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
-    if ( !findRegionBoundary( mp.mesh.topology, mp.region ).empty() )
-    {
-        spdlog::error( "Only closed meshes allowed for double offset." );
-        return tl::make_unexpected( "Only closed meshes allowed for double offset." );
-    }
     if ( params.type == OffsetParameters::Type::Shell )
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );

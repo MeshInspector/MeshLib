@@ -5,7 +5,7 @@
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
-#include <tl/expected.hpp>
+#include "MRExpected.h"
 #include <string>
 
 namespace MR
@@ -83,6 +83,9 @@ MRMESH_API tl::expected<Mesh, std::string> gridToMesh( const VdbVolume& vdbVolum
     float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
 MRMESH_API tl::expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
     float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
+
+// set signs for unsigned distance field grid using refMesh FastWindingNumber
+MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, ProgressCallback cb = {} );
 
 // performs convention from mesh to levelSet and back with offsetA, and than same with offsetB
 // allowed only for closed meshes

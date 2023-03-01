@@ -783,6 +783,31 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                     value = volume.data[indexer.toVoxelId( pos ).get()];
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
                 {
+                    // find non nan neighbor
+                    constexpr std::array<uint8_t, 7> cNeighborsOrder{
+                        0b001,
+                        0b010,
+                        0b100,
+                        0b011,
+                        0b101,
+                        0b110,
+                        0b111
+                    };
+                    int neighIndex = 0;
+                    while ( std::isnan( value ) && neighIndex < 7 )
+                    {
+                        auto neighPos = pos;
+                        for ( int posCoord = 0; posCoord < 3; ++posCoord )
+                        {
+                            int sign = 1;
+                            if ( cVoxelNeighbors[i][posCoord] == 1 )
+                                sign = -1;
+                            neighPos[posCoord] += ( sign * voxShift *
+                                ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
+                        }
+                        value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                        ++neighIndex;
+                    }
                     if ( std::isnan( value ) )
                     {
                         voxelValid = false;

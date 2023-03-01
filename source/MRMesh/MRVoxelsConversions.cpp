@@ -773,6 +773,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             if ( !voxelValid )
                 continue;
             voxelConfiguration = 0;
+            [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
                 auto pos = basePos + voxShift * cVoxelNeighbors[i];
@@ -780,9 +781,8 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
                 else
-                    value = volume.data[indexer.toVoxelId( pos ).get()];
-                if constexpr ( std::is_same_v<V, SimpleVolume> )
                 {
+                    value = volume.data[indexer.toVoxelId( pos ).get()];
                     // find non nan neighbor
                     constexpr std::array<uint8_t, 7> cNeighborsOrder{
                         0b001,
@@ -813,10 +813,30 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                         voxelValid = false;
                         break;
                     }
+                    if ( !atLeastOneNan && neighIndex > 0 )
+                        atLeastOneNan = true;
                 }
                 if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
+            }
+
+            if constexpr ( std::is_same_v<V, SimpleVolume> )
+            {
+                // ensure consistent nan voxel
+                if ( atLeastOneNan && voxelValid )
+                {
+                    const auto& plan = cTriangleTable[voxelConfiguration];
+                    for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
+                    {
+                        const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                        const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                        const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );
+                    }
+                }
             }
 
             if constexpr ( std::is_same_v<V, SimpleVolume> )

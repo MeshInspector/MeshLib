@@ -10,6 +10,7 @@
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
+#include <thread>
 
 namespace MR
 {

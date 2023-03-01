@@ -377,6 +377,8 @@ tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
 
 VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, ProgressCallback cb /*= {} */ )
 {
+    MR_TIMER
+
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
 

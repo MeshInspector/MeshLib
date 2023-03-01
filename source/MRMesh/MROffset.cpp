@@ -128,8 +128,8 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.basis.A = Matrix3f::scale( params.voxelSize );
         msParams.dimensions = Vector3i( ( box.max + expansion - msParams.basis.b ) / params.voxelSize ) + Vector3i::diagonal( 1 );
         msParams.signMode = MeshToSimpleVolumeParams::SignDetectionMode::ProjectionNormal;
-        msParams.maxDistSq = sqr( absOffset + 2.0f * params.voxelSize );
-        msParams.minDistSq = sqr( std::max( absOffset - 2.0f * params.voxelSize, 0.0f ) );
+        msParams.maxDistSq = sqr( absOffset + params.voxelSize );
+        msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         
         auto volume = meshToSimpleVolume( mesh, msParams );
         if ( !volume )

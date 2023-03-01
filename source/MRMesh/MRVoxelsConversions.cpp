@@ -773,6 +773,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
             if ( !voxelValid )
                 continue;
             voxelConfiguration = 0;
+            [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
                 auto pos = basePos + voxShift * cVoxelNeighbors[i];
@@ -780,18 +781,65 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                 if constexpr ( std::is_same_v<V, VdbVolume> )
                     value = acc->getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
                 else
-                    value = volume.data[indexer.toVoxelId( pos ).get()];
-                if constexpr ( std::is_same_v<V, SimpleVolume> )
                 {
+                    value = volume.data[indexer.toVoxelId( pos ).get()];
+                    // find non nan neighbor
+                    constexpr std::array<uint8_t, 7> cNeighborsOrder{
+                        0b001,
+                        0b010,
+                        0b100,
+                        0b011,
+                        0b101,
+                        0b110,
+                        0b111
+                    };
+                    int neighIndex = 0;
+                    // iterates over nan neighbors to find consistent value
+                    while ( std::isnan( value ) && neighIndex < 7 )
+                    {
+                        auto neighPos = pos;
+                        for ( int posCoord = 0; posCoord < 3; ++posCoord )
+                        {
+                            int sign = 1;
+                            if ( cVoxelNeighbors[i][posCoord] == 1 )
+                                sign = -1;
+                            neighPos[posCoord] += ( sign * voxShift *
+                                ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
+                        }
+                        value = volume.data[indexer.toVoxelId( neighPos ).get()];
+                        ++neighIndex;
+                    }
                     if ( std::isnan( value ) )
                     {
                         voxelValid = false;
                         break;
                     }
+                    if ( !atLeastOneNan && neighIndex > 0 )
+                        atLeastOneNan = true;
                 }
                 if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= ( 1 << cMapNeighborsShift[i] );
+            }
+
+            if constexpr ( std::is_same_v<V, SimpleVolume> )
+            {
+                // ensure consistent nan voxel
+                if ( atLeastOneNan && voxelValid )
+                {
+                    const auto& plan = cTriangleTable[voxelConfiguration];
+                    for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
+                    {
+                        const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                        const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                        const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
+                        // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
+                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );
+                    }
+                }
             }
 
             if constexpr ( std::is_same_v<V, SimpleVolume> )

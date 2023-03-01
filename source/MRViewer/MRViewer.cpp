@@ -1400,7 +1400,7 @@ void Viewer::postResize( int w, int h )
 
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( window_width, window_height );
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );

@@ -10,7 +10,7 @@
 namespace MR
 {
 
-FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps, std::function<void( VertId, VertId, float )> onEdgeSplitCallback )
+FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     MR_TIMER
     assert( eps >= 0 );
@@ -94,10 +94,10 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
         {
             // introduce new vertex if both existing vertices are far from plane
             const auto p = ( o * pd - d * po ) / ( o - d );
-            mesh.splitEdge( e, p, nullptr, new2Old );
+            auto eNew = mesh.splitEdge( e, p, nullptr, new2Old );
 
             if ( onEdgeSplitCallback )
-                onEdgeSplitCallback( vo, vd, o / ( o - d ) );
+                onEdgeSplitCallback( e, eNew, o / ( o - d ) );
         }
         for ( EdgeId ei : orgRing( mesh.topology, e ) )
         {
@@ -111,7 +111,7 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
     return positiveFaces;
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( VertId, VertId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * outCutEdges, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
@@ -135,7 +135,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, UndirectedEdgeBitSet * ou
     }
 }
 
-void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( VertId, VertId, float )> onEdgeSplitCallback )
+void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old, float eps, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback )
 {
     MR_TIMER
     const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );

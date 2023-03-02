@@ -1448,19 +1448,32 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Faces", MeshVisualizePropertyType::Faces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Only Odd Fragments", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
+        bool allHaveTexture = true;
+        for ( const auto& visObj : selectedVisualObjs )
+        {
+            auto meshObj = visObj->asType<ObjectMeshHolder>();
+            assert( meshObj );
+            allHaveTexture = allHaveTexture && 
+                ( ( !meshObj->getTexture().pixels.empty() && !meshObj->getUVCoords().empty() ) ||
+                    ( meshObj->hasAncillaryTexture() ) );
+            if ( !allHaveTexture )
+                break;
+        }
+        if ( allHaveTexture )
+            someChanges |= make_visualize_checkbox( selectedVisualObjs, "Texture", MeshVisualizePropertyType::Texture, viewportid );
     }
     if ( allIsObjLines )
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", LinesVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Smooth corners", LinesVisualizePropertyType::Smooth, viewportid );
-        make_width( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder>( selectedVisualObjs, "Line width", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getLineWidth();
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
         }, true );
-        make_width( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
+        make_width<ObjectLinesHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
         }, [&] ( ObjectLinesHolder* objLines, float value )
@@ -1471,6 +1484,13 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( allIsObjPoints )
     {
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Points", PointsVisualizePropertyType::SelectedVertices, viewportid );
+        make_width<ObjectPointsHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectPointsHolder* objPoints )
+        {
+            return objPoints->getPointSize();
+        }, [&] ( ObjectPointsHolder* objPoints, float value )
+        {
+            objPoints->setPointSize( value );
+        } );
     }
     if ( allIsObjLabels )
     {
@@ -1956,16 +1976,17 @@ void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> se
             setter( data.get(), uint8_t( value ) );
 }
 
+template<typename ObjType>
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, 
-    std::function<float( const ObjectLinesHolder* )> getter, 
-    std::function<void( ObjectLinesHolder*, const float& )> setter,
+    std::function<float( const ObjType* )> getter,
+    std::function<void( ObjType*, const float& )> setter,
     bool lineWidth )
 {
-    auto objLines = selectedVisualObjs[0]->asType<ObjectLinesHolder>();
+    auto objLines = selectedVisualObjs[0]->asType<ObjType>();
     auto value = getter( objLines );
     bool isAllTheSame = true;
     for ( int i = 1; i < selectedVisualObjs.size(); ++i )
-        if ( getter( selectedVisualObjs[i]->asType<ObjectLinesHolder>() ) != value )
+        if ( getter( selectedVisualObjs[i]->asType<ObjType>() ) != value )
         {
             isAllTheSame = false;
             break;
@@ -1987,7 +2008,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
-            setter( data->asType<ObjectLinesHolder>(), value );
+            setter( data->asType<ObjType>(), value );
 }
 
 void ImGuiMenu::reorderSceneIfNeeded_()

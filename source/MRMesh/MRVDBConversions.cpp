@@ -32,7 +32,7 @@ struct Interrupter
     {
         wasInterrupted_ = false;
         if ( cb_ )
-            wasInterrupted_ = !cb_( float( percent ) / 100.0f );
+            wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
         return wasInterrupted_;
     }
     bool getWasInterrupted() const
@@ -441,9 +441,8 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     auto offsetInVoxelsA = offsetA / voxelSize;
     auto offsetInVoxelsB = offsetB / voxelSize;
 
-    if ( cb )
-        if ( !cb( 0.0f ) )
-            return tl::make_unexpected( "Operation was canceled." );
+    if ( cb && !cb( 0.0f ) )
+        return tl::make_unexpected( "Operation was canceled." );
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;

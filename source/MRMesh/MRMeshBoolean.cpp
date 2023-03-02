@@ -385,6 +385,9 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
         collFacesA = fillContourLeft( meshA.topology, collBordersA );
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
 
+        for ( const auto& et : intersections.edgesAtrisB )
+            result.meshAVerts.reset( needInsidePartA ? meshA.topology.dest( et.edge ) : meshA.topology.org( et.edge ) );
+
         const auto aComponents = MeshComponents::getAllComponents(meshA);
 
         for ( const auto& aComponent : aComponents )
@@ -409,7 +412,10 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
 
         collFacesB = fillContourLeft(meshB.topology, collBordersB);
         result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
-        
+
+        for ( const auto& et : intersections.edgesBtrisA )
+            result.meshBVerts.reset( needInsidePartB ? meshB.topology.dest( et.edge ) : meshB.topology.org( et.edge ) );
+
         const auto bComponents = MeshComponents::getAllComponents(meshB);
         std::unique_ptr<AffineXf3f> rigidA2B;
         if ( rigidB2A )

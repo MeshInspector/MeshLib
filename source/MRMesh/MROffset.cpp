@@ -90,11 +90,11 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
 }
 
 tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
-    const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap, bool useSimpleVolume )
+    const BaseOffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
 {
     MR_TIMER;
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
-    if ( !useSimpleVolume )
+    if ( !params.simpleVolumeSignMode )
     {
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mesh, AffineXf3f(),
@@ -127,7 +127,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.basis.b = box.min - expansion;
         msParams.basis.A = Matrix3f::scale( params.voxelSize );
         msParams.dimensions = Vector3i( ( box.max + expansion - msParams.basis.b ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.signMode = MeshToSimpleVolumeParams::SignDetectionMode::ProjectionNormal;
+        msParams.signMode = *params.simpleVolumeSignMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         

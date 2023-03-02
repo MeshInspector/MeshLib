@@ -4,6 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRSimpleVolume.h"
 #include "MRProgressCallback.h"
+#include "MRSignDetectionMode.h"
 #include <optional>
 
 namespace MR
@@ -24,13 +25,7 @@ struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
     /// maximum squared value in a voxel
     float maxDistSq{ FLT_MAX };
     /// the method to compute distance sign
-    enum SignDetectionMode
-    {
-        Unsigned,         // unsigned voxels, useful for `Shell` offset
-        ProjectionNormal, // the sign is determined based on pseudonormal in closest mesh point (unsafe in case of self-intersections)
-        WindingRule,      // ray intersection counter, significantly slower than ProjectionNormal and does not support holes in mesh
-        HoleWindingRule   // computes winding number generalization with support of holes in mesh, slower than WindingRule
-    } signMode{ ProjectionNormal };
+    SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
 };
 
 // Callback type for positioning marching cubes vertices

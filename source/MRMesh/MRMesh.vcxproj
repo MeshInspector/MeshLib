@@ -134,6 +134,7 @@
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
     <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
+    <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRSphereObject.h" />
     <ClInclude Include="MRString.h" />

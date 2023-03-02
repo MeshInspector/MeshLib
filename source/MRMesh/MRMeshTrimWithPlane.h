@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
+#include <functional>
 namespace MR
 {
 
@@ -9,7 +9,8 @@ namespace MR
 /// \return all triangles on the positive side of the plane
 /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
 /// \param eps if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
-MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old = nullptr, float eps = 0, Vector<UVCoord, VertId>* uvCoords = nullptr );
+/// \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
+MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void(EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 /** \brief trim mesh by plane
   * 
@@ -19,9 +20,10 @@ MRMESH_API FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, Fa
   * \param outCutEdges optionally return newly appeared hole boundary edges
   * \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
   * \param eps if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
+  * \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
   */
 MRMESH_API void trimWithPlane( Mesh& mesh, const Plane3f & plane,
-    UndirectedEdgeBitSet * outCutEdges = nullptr, FaceHashMap * new2Old = nullptr, float eps = 0, Vector<UVCoord, VertId>* uvCoords = nullptr );
+    UndirectedEdgeBitSet * outCutEdges = nullptr, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 /** \brief trim mesh by plane
   * 
@@ -31,8 +33,9 @@ MRMESH_API void trimWithPlane( Mesh& mesh, const Plane3f & plane,
   * \param outCutContours optionally return newly appeared hole contours where each edge does not have right face
   * \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
   * \param eps if existing vertex is within eps distance from the plane, then move the vertex not introducing new ones
+  * \param onEdgeSplitCallback is invoked each time when an edge is split. Receives edge ID before split, edge ID after split, and weight of the origin vertex
   */
 MRMESH_API void trimWithPlane( Mesh& mesh, const Plane3f & plane,
-    std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old = nullptr, float eps = 0, Vector<UVCoord, VertId>* uvCoords = nullptr );
+    std::vector<EdgeLoop> * outCutContours, FaceHashMap * new2Old = nullptr, float eps = 0, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback = nullptr );
 
 } //namespace MR

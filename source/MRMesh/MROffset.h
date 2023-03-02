@@ -1,9 +1,10 @@
 #pragma once
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
-#include "MRMeshFwd.h"
 #include "MRMeshPart.h"
+#include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"
 #include <tl/expected.hpp>
+#include <optional>
 #include <string>
 
 namespace MR
@@ -14,6 +15,10 @@ struct BaseOffsetParameters
     // Size of voxel in grid conversions
     // if value is negative, it is calculated automatically (mesh bounding box are divided to 5e6 voxels)
     float voxelSize{ -1.0f };
+
+    /// if not nullopt then SimpleVolume will be used for offsetting,
+    /// and this value will determine the method to compute distance sign
+    std::optional<SignDetectionMode> simpleVolumeSignMode;
 
     // Progress callback 
     ProgressCallback callBack{};
@@ -60,7 +65,7 @@ struct SharpOffsetParameters : BaseOffsetParameters
 
 // Offsets mesh by converting it to voxels and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
 [[nodiscard]] MRMESH_API tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
-    const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr, bool useSimpleVolume = false );
+    const BaseOffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 
 // Offsets mesh by converting it to voxels and back
 // post process result using reference mesh to sharpen features

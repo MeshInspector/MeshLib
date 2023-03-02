@@ -32,7 +32,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
     // used in Winding rule mode
     const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
     std::optional<FastWindingNumber> fwn;
-    if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::HoleWindingRule )
+    if ( params.signMode == SignDetectionMode::HoleWindingRule )
         fwn.emplace( mesh );
 
     std::atomic<bool> keepGoing{ true };
@@ -49,7 +49,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
             auto voxelCenter = params.basis.b + params.basis.A * coord;
             float dist{ 0.0f };
-            if ( params.signMode != MeshToSimpleVolumeParams::SignDetectionMode::ProjectionNormal )
+            if ( params.signMode != SignDetectionMode::ProjectionNormal )
                 dist = std::sqrt( findProjection( voxelCenter, mesh, params.maxDistSq, nullptr, params.minDistSq ).distSq );
             else
             {
@@ -60,7 +60,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             if ( !std::isnan( dist ) )
             {
                 bool changeSign = false;
-                if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::WindingRule )
+                if ( params.signMode == SignDetectionMode::WindingRule )
                 {
                     int numInters = 0;
                     rayMeshIntersectAll( mesh, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
@@ -71,7 +71,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     } );
                     changeSign = numInters % 2 == 1; // inside
                 }
-                else if ( params.signMode == MeshToSimpleVolumeParams::SignDetectionMode::HoleWindingRule )
+                else if ( params.signMode == SignDetectionMode::HoleWindingRule )
                 {
                     constexpr float beta = 2;
                     changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside

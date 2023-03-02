@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
+#include <functional>
 namespace MR
 {
 

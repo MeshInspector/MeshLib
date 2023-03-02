@@ -189,7 +189,7 @@ tl::expected<Mesh, std::string> fromBinaryStl( std::istream& in, Vector<Color, V
     in.seekg( 0, std::ios_base::end );
     auto posEnd = in.tellg();
     in.seekg( posCur );
-    if ( posEnd - posCur < 50 * numTris )
+    if ( posEnd - posCur < 50 * std::istream::pos_type( numTris ) )
         return tl::make_unexpected( std::string( "Binary STL-file is too short" ) );
 
     MeshBuilder::VertexIdentifier vi;

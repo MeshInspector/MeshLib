@@ -68,8 +68,8 @@ namespace CustomCombo
 
 constexpr Vector2f framePadding{ 13, 8 };
 
-}; // CustomCombo
+} // CustomCombo
 
-}; // MRStyle
+} // MRStyle
 
 }

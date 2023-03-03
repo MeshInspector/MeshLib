@@ -1,4 +1,6 @@
 #pragma once
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -56,20 +58,15 @@ constexpr float cModalWindowPaddingX = 28.0f;
 constexpr float cModalWindowPaddingY = 20.0f;
 constexpr float cModalButtonWidth = 104.0f;
 
-struct ImGuiVec2
-{
-    float x{ 0 }, y{ 0 };
-};
-
-namespace MRStyle
+namespace StyleConsts
 {
 
-constexpr ImGuiVec2 pluginItemSpacing{ 8, 10 };
+constexpr Vector2f pluginItemSpacing{ 8, 10 };
 
 namespace CustomCombo
 {
 
-constexpr ImGuiVec2 framePadding{ 13, 8 };
+constexpr Vector2f framePadding{ 13, 8 };
 
 }; // CustomCombo
 

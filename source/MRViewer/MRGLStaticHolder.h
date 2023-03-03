@@ -33,6 +33,8 @@ public:
         TransparencyOverlayQuad,
         ShadowOverlayQuad,
         SimpleOverlayQuad,
+
+        Volume,
         Count
     };
 

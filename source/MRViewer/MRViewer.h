@@ -634,6 +634,9 @@ private:
     {
         Opaque,
         Transparent,
+#ifndef __EMSCRIPTEN__
+        VolumeRendering,
+#endif
         NoDepthTest
     };
 

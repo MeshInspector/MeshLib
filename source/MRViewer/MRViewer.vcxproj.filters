@@ -244,6 +244,12 @@
     <ClCompile Include="MRWebRequest.cpp">
       <Filter>Requests</Filter>
     </ClCompile>
+    <ClCompile Include="MRVolumeShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderVolumeObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -457,6 +463,12 @@
     </ClInclude>
     <ClInclude Include="MRWebRequest.h">
       <Filter>Requests</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVolumeShader.h">
+      <Filter>Render\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderVolumeObject.h">
+      <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

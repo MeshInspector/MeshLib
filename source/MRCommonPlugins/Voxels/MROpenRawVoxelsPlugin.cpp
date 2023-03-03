@@ -12,7 +12,7 @@
 
 namespace
 {
-constexpr std::array<const char*, size_t( MR::VoxelsLoad::RawParameters::ScalarType::Count )> cScalarTypeNames =
+const std::vector<std::string> cScalarTypeNames =
 {
     "UInt8",
     "Int8",
@@ -58,7 +58,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
-        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, MenuItemsList( std::begin( cScalarTypeNames ), std::end( cScalarTypeNames ) ) );
+        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
     if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
     {

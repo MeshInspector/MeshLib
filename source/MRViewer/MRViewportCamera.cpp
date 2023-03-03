@@ -8,6 +8,7 @@
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRPch/MRTBB.h"
@@ -508,10 +509,39 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             if ( space != Space::World )
                 xf = xfV * xf;
             VertId lastValidVert;
-            const VertCoords* coords = nullptr;
+            VertCoords tempVertCoords;
+            VertBitSet tempSelected;
+            const VertCoords* coords = &tempVertCoords;
             const VertBitSet* selectedVerts = nullptr;
+            auto objVox = obj->asType<ObjectVoxels>(); 
             auto objMesh = obj->asType<ObjectMeshHolder>();
-            if ( objMesh )
+            if ( objVox && objVox->isVolumeRenderingEnabled() )
+            {
+                if ( !objVox->grid() )
+                    continue;
+                const auto& vdbVolume = objVox->vdbVolume();
+                Box3f voxBox;
+                voxBox.include( Vector3f() );
+                voxBox.include( mult( Vector3f( vdbVolume.dims ), vdbVolume.voxelSize ) );
+
+                tempVertCoords.resize( 8 );
+                for ( int i = 0; i < 8; ++i )
+                {
+                    Vector3i maxCoord;
+                    maxCoord.x = int( bool( i & 1 ) );
+                    maxCoord.y = int( bool( i & 2 ) );
+                    maxCoord.z = int( bool( i & 4 ) );
+                    Vector3i minCoord = Vector3i::diagonal( 1 ) - maxCoord;
+                    tempVertCoords[VertId( i )] = 
+                        mult( Vector3f( minCoord ), voxBox.min ) + 
+                        mult( Vector3f( maxCoord ), voxBox.max );
+                }
+                lastValidVert = 7_v;
+                tempSelected.resize( 8 );
+                tempSelected.flip();
+                selectedVerts = &tempSelected;
+            }
+            else if ( objMesh )
             {
                 if ( !objMesh->mesh() )
                     continue;

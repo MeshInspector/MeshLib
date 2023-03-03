@@ -35,6 +35,8 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
     updateHistogram_( volume.min, volume.max );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
@@ -51,6 +53,8 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     updateHistogramAndSurface( cb );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
@@ -69,7 +73,8 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 
     const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
     updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
-
+    vdbVolume_.min = min;
+    vdbVolume_.max = max;
     if ( mesh_ )
     {
         mesh_.reset();
@@ -94,6 +99,8 @@ tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCa
             return tl::make_unexpected( recRes.error() );
         updateIsoSurface( *recRes );
     }
+    if ( volumeRendering_ )
+        dirty_ |= DIRTY_TEXTURE;
     return updateSurface;
 }
 
@@ -194,6 +201,22 @@ VoxelId ObjectVoxels::getVoxelIdByPoint( const Vector3f& point ) const
 Vector3i ObjectVoxels::getCoordinateByVoxelId( VoxelId id ) const
 {
     return indexer_.toPos( id );
+}
+
+void ObjectVoxels::enableVolumeRendering( bool on )
+{
+    if ( volumeRendering_ == on )
+        return;
+    volumeRendering_ = on;
+    if ( volumeRendering_ )
+    {
+        renderObj_ = createRenderObject<ObjectVoxels>( *this );
+    }
+    else
+    {
+        renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
+    }
+    setDirtyFlags( DIRTY_ALL );
 }
 
 void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )

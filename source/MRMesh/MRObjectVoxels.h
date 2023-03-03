@@ -98,6 +98,9 @@ public:
     /// Returns indexer with more options
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
+    bool isVolumeRenderingEnabled() const { return volumeRendering_; }
+    MRMESH_API void enableVolumeRendering( bool on );
+
     MRMESH_API void setMaxSurfaceTriangles( int maxFaces );
     int getMaxSurfaceTriangles() const { return maxSurfaceTriangles_; }
 
@@ -137,6 +140,7 @@ protected:
     VoxelBitSet selectedVoxels_;
 
     MRMESH_API ObjectVoxels( const ObjectVoxels& other );
+    bool volumeRendering_{ false };
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

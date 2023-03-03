@@ -130,6 +130,72 @@ void GlTexture2::loadDataOpt( bool refresh, const Settings & settings, const cha
         bind();
 }
 
+void GlTexture3::gen()
+{
+    del();
+    GL_EXEC( glGenTextures( 1, &textureID_ ) );
+    assert( valid() );
+}
+
+void GlTexture3::del()
+{
+    if ( !valid() )
+        return;
+    if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
+    {
+        GL_EXEC( glDeleteTextures( 1, &textureID_ ) );
+    }
+    textureID_ = NO_TEX;
+    size_ = 0;
+}
+
+void GlTexture3::bind()
+{ 
+    assert( valid() );
+    GL_EXEC( glBindTexture( GL_TEXTURE_3D, textureID_ ) );
+}
+
+void GlTexture3::loadData( const Settings & settings, const char * arr )
+{
+    if ( !valid() )
+        gen();
+    bind();
+
+    GLint wrap = GL_MIRRORED_REPEAT;
+    switch ( settings.wrap )
+    {
+    default:
+    case WrapType::Clamp:
+        wrap = GL_CLAMP_TO_EDGE;
+        break;
+    case WrapType::Repeat:
+        wrap = GL_REPEAT;
+        break;
+    case WrapType::Mirror:
+        wrap = GL_MIRRORED_REPEAT;
+        break;
+    }
+    GLint filter = settings.filter == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
+
+    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter ) );
+    GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filter ) );
+    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+    GL_EXEC( glTexImage3D( GL_TEXTURE_3D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
+
+    size_ = settings.size();
+}
+
+void GlTexture3::loadDataOpt( bool refresh, const Settings & settings, const char * arr )
+{
+    if ( refresh )
+        loadData( settings, arr );
+    else
+        bind();
+}
+
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
 {
     GL_EXEC( GLint id = glGetAttribLocation( settings.program_shader, settings.name ) );

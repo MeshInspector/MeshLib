@@ -11,6 +11,11 @@
 namespace MR
 {
 
+ImVec2 toImVec2( const ImGuiVec2& in )
+{
+    return ImVec2( in.x, in.y );
+}
+
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
 {
     drawList->PathLineTo( startPoint );
@@ -402,9 +407,37 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
+/// copy from imgui_widgets.cpp
+void MRColorEditRestoreHS( const float* col, float* H, float* S, float* V )
+{
+    using namespace ImGui;
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    if ( g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
+        return;
+
+    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditLastHue == 1 ) )
+        *H = g.ColorEditLastHue;
+
+    if ( *V == 0.0f )
+        *S = g.ColorEditLastSat;
+}
+
+bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None */ )
+{
+    //auto& style = ImGui::GetStyle();
+    ImVec2 framePadding( 8.f, 4.f );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+
+    const bool changed = ImGui::ColorEdit4( label, &color.x, flags | ImGuiColorEditFlags_NoSmallPreview );
+    ImGui::PopStyleVar();
+    return changed;
+}
+
 bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips, const std::string& defaultText )
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, toImVec2(MRStyle::CustomCombo::framePadding) );
 
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;
@@ -437,6 +470,8 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     const ImVec2 endPoint{ arrowPos.x + 3 * arrowWidth, arrowPos.y + halfHeight };
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+
+    ImGui::PopStyleVar();
 
     if ( !res )
         return false;

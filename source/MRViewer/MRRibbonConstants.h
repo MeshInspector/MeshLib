@@ -56,4 +56,23 @@ constexpr float cModalWindowPaddingX = 28.0f;
 constexpr float cModalWindowPaddingY = 20.0f;
 constexpr float cModalButtonWidth = 104.0f;
 
+struct ImGuiVec2
+{
+    float x{ 0 }, y{ 0 };
+};
+
+namespace MRStyle
+{
+
+constexpr ImGuiVec2 pluginItemSpacing{ 8, 10 };
+
+namespace CustomCombo
+{
+
+constexpr ImGuiVec2 framePadding{ 13, 8 };
+
+}; // CustomCombo
+
+}; // MRStyle
+
 }

@@ -22,6 +22,108 @@
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRViewer/MRAppendHistory.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRBuffer.h"
+#include "MRMesh/MRImageLoad.h"
+
+namespace
+{
+
+using namespace MR;
+
+tl::expected<MeshLoad::MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& filepath )
+{
+    if ( !std::filesystem::exists( filepath ) )
+        return tl::make_unexpected( "File does not exist" );
+
+    std::ifstream in( filepath );
+    if ( !in )
+        return tl::make_unexpected( "Failed to open file" );
+
+    Buffer<char> buffer( std::filesystem::file_size( filepath ) );
+    if ( !in.read( buffer.data(), (ptrdiff_t)buffer.size() ) )
+        return tl::make_unexpected( "Failed to read file" );
+
+    return MeshLoad::loadMtlLibrary( buffer.data(), buffer.size() );
+}
+
+std::string fixSeparator( std::string str )
+{
+    std::replace( str.begin(), str.end(), '\\', '/' );
+    return str;
+}
+
+void applyMaterialLibrary( ObjectMesh& objectMesh, const std::filesystem::path& filename, const MeshLoad::NamedMesh& namedMesh, const MeshLoad::MtlLibrary& materialLibrary )
+{
+    // TODO: build a single texture
+    std::set<std::string> textures;
+    for ( const auto& materialVertMap : namedMesh.materialVertMaps )
+    {
+        auto it = materialLibrary.find( materialVertMap.materialName );
+        if ( it == materialLibrary.end() )
+            continue;
+
+        auto& material = it->second;
+        if ( !material.diffuseTextureFile.empty() )
+            textures.insert( material.diffuseTextureFile );
+        else if ( material.diffuseColor.lengthSq() != 0 )
+            textures.insert( "" );
+    }
+    if ( textures.size() == 1 && !textures.begin()->empty() )
+    {
+        const auto textureFile = filename.parent_path() / fixSeparator( *textures.begin() );
+        auto image = ImageLoad::fromAnySupportedFormat( textureFile );
+        if ( !image.has_value() )
+            return;
+
+        MeshTexture texture{ std::move( *image ) };
+        objectMesh.setTexture( std::move( texture ) );
+        objectMesh.setUVCoords( namedMesh.uvCoords );
+        objectMesh.setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+        return;
+    }
+
+    Vector<Color, VertId> colorMap( namedMesh.uvCoords.size(), Color::white() );
+    for ( const auto& materialVertMap : namedMesh.materialVertMaps )
+    {
+        auto it = materialLibrary.find( materialVertMap.materialName );
+        if ( it == materialLibrary.end() )
+        {
+            spdlog::warn( "OBJ-file requires material \"{}\", but related MTL-file lacks it", materialVertMap.materialName );
+            continue;
+        }
+
+        auto& material = it->second;
+        if ( !material.diffuseTextureFile.empty() )
+        {
+            const auto textureFile = filename.parent_path() / fixSeparator( material.diffuseTextureFile );
+            auto image = ImageLoad::fromAnySupportedFormat( textureFile );
+            if ( !image.has_value() )
+                continue;
+
+            BitSetParallelFor( materialVertMap.vertices, [&] ( VertId v )
+            {
+                auto uv = namedMesh.uvCoords[v];
+                uv.x = std::fmod( uv.x, 1.f ) + float( uv.x < 0.f );
+                uv.y = std::fmod( uv.y, 1.f ) + float( uv.y < 0.f );
+                int x = uv.x * ( image->resolution.x - 1 );
+                int y = uv.y * ( image->resolution.y - 1 );
+                colorMap[v] = image->pixels[x + y * image->resolution.x];
+            } );
+        }
+        else
+        {
+            BitSetParallelFor( materialVertMap.vertices, [&] ( VertId v )
+            {
+                colorMap[v] = Color( material.diffuseColor );
+            } );
+        }
+    }
+    objectMesh.setVertsColorMap( std::move( colorMap ) );
+    objectMesh.setColoringType( ColoringType::VertsColorMap );
+}
+
+}
 
 namespace MR
 {

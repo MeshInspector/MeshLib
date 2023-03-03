@@ -1,8 +1,9 @@
 #include "MRMeshLoadObj.h"
-#include "MRStringConvert.h"
-#include "MRMeshBuilder.h"
-#include "MRTimer.h"
+#include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
+#include "MRMeshBuilder.h"
+#include "MRStringConvert.h"
+#include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -11,6 +12,220 @@
 namespace
 {
     using namespace MR;
+
+    std::vector<size_t> splitByLines( const char* data, size_t size )
+    {
+        constexpr size_t blockSize = 4096;
+        const auto blockCount = (size_t)std::ceil( (float)size / blockSize );
+
+        constexpr size_t maxGroupCount = 256;
+        const auto blocksPerGroup = (size_t)std::ceil( (float)blockCount / maxGroupCount );
+        const auto groupSize = blockSize * blocksPerGroup;
+        const auto groupCount = (size_t)std::ceil( (float)size / groupSize );
+        assert( groupCount <= maxGroupCount );
+        assert( groupSize * groupCount >= size );
+        assert( groupSize * ( groupCount - 1 ) < size );
+
+        std::vector<std::vector<size_t>> groups( groupCount );
+        tbb::task_group taskGroup;
+        for ( size_t gi = 0; gi < groupCount; gi++ )
+        {
+            taskGroup.run( [&, i = gi]
+            {
+                std::vector<size_t> group;
+                const auto begin = i * groupSize;
+                const auto end = std::min( ( i + 1 ) * groupSize, size );
+                for ( auto ci = begin; ci < end; ci++ )
+                    if ( data[ci] == '\n' )
+                        group.emplace_back( ci + 1 );
+                groups[i] = std::move( group );
+            } );
+        }
+        taskGroup.wait();
+
+        std::vector<size_t> newlines{ 0 };
+        auto sum = newlines.size();
+        std::vector<size_t> groupOffsets;
+        for ( const auto& group : groups )
+        {
+            groupOffsets.emplace_back( sum );
+            sum += group.size();
+        }
+        newlines.resize( sum );
+
+        for ( size_t gi = 0; gi < groupCount; gi++ )
+        {
+            taskGroup.run( [&, i = gi]
+            {
+                const auto& group = groups[i];
+                const auto offset = groupOffsets[i];
+                for ( auto li = 0; li < group.size(); li++ )
+                    newlines[offset + li] = group[li];
+            } );
+        }
+        taskGroup.wait();
+
+        // add finish line
+        if ( newlines.back() != size )
+            newlines.emplace_back( size );
+
+        return newlines;
+    }
+
+    enum class ObjElement
+    {
+        Unknown,
+        Vertex,
+        Face,
+        Object,
+        TextureVertex,
+        MaterialLibrary,
+        MaterialName,
+    };
+
+    enum class MtlElement
+    {
+        Unknown,
+        MaterialName,
+        AmbientColor,
+        DiffuseColor,
+        SpecularColor,
+        SpecularExponent,
+        Dissolve,
+        IlluminationModel,
+        AmbientTexture,
+        DiffuseTexture,
+        SpecularTexture,
+        SpecularExponentTexture,
+        DissolveTexture,
+    };
+
+    template <typename T>
+    T parseToken( std::string_view line );
+
+    template <>
+    ObjElement parseToken<ObjElement>( std::string_view line )
+    {
+        while ( !line.empty() && line[0] == ' ' )
+            line.remove_prefix( 1 );
+
+        assert( !line.empty() );
+        switch ( line[0] )
+        {
+        case 'v':
+            assert( line.size() >= 2 );
+            switch ( line[1] )
+            {
+            case ' ':
+                return ObjElement::Vertex;
+            case 't':
+                return ObjElement::TextureVertex;
+            default:
+                return ObjElement::Unknown;
+            }
+        case 'f':
+            return ObjElement::Face;
+        case 'o':
+            return ObjElement::Object;
+        case 'u':
+            if ( line.starts_with( "usemtl" ) )
+                return ObjElement::MaterialName;
+            return ObjElement::Unknown;
+        case 'm':
+            if ( line.starts_with( "mtllib" ) )
+                return ObjElement::MaterialLibrary;
+            return ObjElement::Unknown;
+        default:
+            return ObjElement::Unknown;
+        }
+    }
+
+    template <>
+    MtlElement parseToken<MtlElement>( std::string_view line )
+    {
+        while ( !line.empty() && line[0] == ' ' )
+            line.remove_prefix( 1 );
+
+        assert( !line.empty() );
+        switch ( line[0] )
+        {
+        case 'n':
+            if ( line.starts_with( "newmtl" ) )
+                return MtlElement::MaterialName;
+            else
+                return MtlElement::Unknown;
+        case 'K':
+            assert( line.size() >= 2 );
+            switch ( line[1] )
+            {
+            case 'a':
+                return MtlElement::AmbientColor;
+            case 'd':
+                return MtlElement::DiffuseColor;
+            case 's':
+                return MtlElement::SpecularColor;
+            default:
+                return MtlElement::Unknown;
+            }
+        case 'm':
+            if ( line.starts_with( "map_" ) )
+            {
+                assert( line.size() >= 5 );
+                switch ( line[4] )
+                {
+                case 'K':
+                    assert( line.size() >= 6 );
+                    switch ( line[5] )
+                    {
+                    case 'a':
+                        return MtlElement::AmbientTexture;
+                    case 'd':
+                        return MtlElement::DiffuseTexture;
+                    case 's':
+                        return MtlElement::SpecularTexture;
+                    default:
+                        return MtlElement::Unknown;
+                    }
+                default:
+                    return MtlElement::Unknown;
+                }
+            }
+            else
+            {
+                return MtlElement::Unknown;
+            }
+        default:
+            return MtlElement::Unknown;
+        }
+    }
+
+    template <typename Element>
+    struct ElementGroup
+    {
+        Element element{ Element() };
+        size_t begin{ 0 };
+        size_t end{ 0 };
+    };
+
+    template <typename Element>
+    std::vector<ElementGroup<Element>> groupLines( const char* data, size_t size, const std::vector<size_t>& newlines )
+    {
+        const auto lineCount = newlines.size() - 1;
+
+        std::vector<ElementGroup<Element>> groups{ { Element(), 0, 0 } }; // emplace stub initial group
+        for ( size_t li = 0; li < lineCount; li++ )
+        {
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            const auto element = parseToken<Element>( line );
+            if ( element != groups.back().element )
+            {
+                groups.back().end = li;
+                groups.push_back( { element, li, 0 } );
+            }
+        }
+        groups.back().end = lineCount;
+        return groups;
+    }
 
     VoidOrErrStr parseObjVertex( const std::string_view& str, Vector3f& v )
     {
@@ -28,6 +243,27 @@ namespace
         if ( !r )
             return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
 
+        return {};
+    }
+
+    VoidOrErrStr parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
+    {
+        using namespace boost::spirit::x3;
+
+        std::array<float, 3> coords{ 0.f, 0.f, 0.f };
+        int i = 0;
+        auto coord = [&] ( auto& ctx ) { coords[i++] = _attr( ctx ); };
+
+        bool r = phrase_parse(
+                str.begin(),
+                str.end(),
+                ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
+                ascii::space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse vertex in OBJ-file" );
+
+        vt = { coords[0], coords[1] };
         return {};
     }
 
@@ -63,6 +299,67 @@ namespace
             return tl::make_unexpected( "Invalid face texture count in OBJ-file" );
         if ( !f.normals.empty() && f.normals.size() != f.vertices.size() )
             return tl::make_unexpected( "Invalid face normal count in OBJ-file" );
+        return {};
+    }
+
+    VoidOrErrStr parseMtlColor( const std::string_view& str, Vector3f& color )
+    {
+        using namespace boost::spirit::x3;
+
+        auto r = [&] ( auto& ctx ) { color.x = _attr( ctx ); };
+        auto g = [&] ( auto& ctx ) { color.y = _attr( ctx ); };
+        auto b = [&] ( auto& ctx ) { color.z = _attr( ctx ); };
+
+        bool res = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                char_( 'K' ) >> ( char_( 'a' ) | char_( 'd' ) | char_( 's' ) )
+                >> (
+                        ( float_[r] >> float_[g] >> float_[b] ) |
+                        ( lit( "spectral" ) >> no_skip[+char_] ) |
+                        ( lit( "xyz" ) >> float_ >> float_ >> float_ )
+                    )
+            ),
+            space
+        );
+        if ( !res )
+            return tl::make_unexpected( "Failed to parse color in MTL-file" );
+
+        return {};
+    }
+
+    VoidOrErrStr parseMtlTexture( const std::string_view& str, std::string& textureFile )
+    {
+        using namespace boost::spirit::x3;
+
+        auto file = [&] ( auto& ctx ) { textureFile = _attr( ctx ); };
+
+        bool r = phrase_parse(
+            str.begin(),
+            str.end(),
+            (
+                lit( "map_") >> ( lit( "Ka" ) | lit( "Kd" ) | lit( "Ks" ) | lit( "Ns" ) | lit( "d" ) )
+                >> *(
+                        ( lit( "-blendu" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-blendv" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-cc" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-clamp" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
+                        ( lit( "-imfchan" ) >> ( char_( 'r' ) | char_( 'b' ) | char_( 'g' ) | char_( 'm' ) | char_( 'l' ) | char_( 'z' ) ) ) |
+                        ( lit( "-mm" ) >> float_ >> float_ ) |
+                        ( lit( "-o" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-s" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-t" ) >> float_ >> float_ >> float_ ) |
+                        ( lit( "-texres" ) >> float_ )
+                    )
+                >> no_skip[+char_][file]
+            ),
+            space
+        );
+        if ( !r )
+            return tl::make_unexpected( "Failed to parse texture in MTL-file" );
+
+        boost::trim( textureFile );
         return {};
     }
 }
@@ -115,15 +412,21 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     std::vector<NamedMesh> res;
     std::string currentObjName;
     std::vector<Vector3f> points;
+    std::vector<UVCoord> textureVertices;
     Triangulation t;
+    Vector<UVCoord, VertId> uvCoords;
+    std::string materialLibrary;
+    std::string currentMaterialName;
+    VertBitSet currentMaterialVertices;
+    std::vector<NamedMesh::MaterialVertMap> materialVertMaps;
 
     auto finishObject = [&]() 
     {
         MR_NAMED_TIMER( "finish object" )
         if ( !t.empty() )
         {
-            res.emplace_back();
-            res.back().name = std::move( currentObjName );
+            auto& result = res.emplace_back();
+            result.name = std::move( currentObjName );
 
             // copy only minimal span of vertices for this object
             VertId minV(INT_MAX), maxV(-1);
@@ -138,113 +441,60 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     vs[i] -= minV;
             }
 
-            res.back().mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t );
+            std::vector<MeshBuilder::VertDuplication> dups;
+            result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups );
             t.clear();
+
+            assert( uvCoords.size() >= maxV );
+            result.uvCoords = { begin( uvCoords ) + minV, begin( uvCoords ) + maxV + 1 };
+            result.uvCoords.resize( result.mesh.points.size() );
+            for ( const auto& dup : dups )
+                result.uvCoords[dup.dupVert] = result.uvCoords[dup.srcVert];
+
+            VertHashMap dst2Src;
+            dst2Src.reserve( dups.size() );
+            for ( const auto& dup : dups )
+                dst2Src.emplace( dup.dupVert, dup.srcVert );
+
+            result.materialLibrary = materialLibrary;
+
+            materialVertMaps.push_back( { currentMaterialName, currentMaterialVertices } );
+            currentMaterialVertices.reset();
+
+            result.materialVertMaps.reserve( materialVertMaps.size() );
+            for ( auto&& materialVertMap : materialVertMaps )
+            {
+                if ( materialVertMap.vertices.empty() )
+                    continue;
+                VertBitSet vertices;
+                vertices.resize( maxV + 1 - minV );
+                BitSetParallelForAll( vertices, [&] ( VertId dst )
+                {
+                    VertId src;
+                    const auto it = dst2Src.find( dst );
+                    if ( it != dst2Src.end() )
+                        src = it->second + minV;
+                    else
+                        src = dst + minV;
+                    vertices.set( dst, materialVertMap.vertices.test( src ) );
+                } );
+                result.materialVertMaps.push_back( { std::move( materialVertMap.materialName ), std::move( vertices ) } );
+            }
+            materialVertMaps.clear();
         }
         currentObjName.clear();
     };
 
     Timer timer( "split by lines" );
-    std::vector<size_t> newlines{ 0 };
-    {
-        constexpr size_t blockSize = 4096;
-        const auto blockCount = (size_t)std::ceil( (float)size / blockSize );
-        constexpr size_t maxGroupCount = 256;
-        const auto blocksPerGroup = (size_t)std::ceil( (float)blockCount / maxGroupCount );
-        const auto groupSize = blockSize * blocksPerGroup;
-        const auto groupCount = (size_t)std::ceil( (float)size / groupSize );
-        assert( groupCount <= maxGroupCount );
-        assert( groupSize * groupCount >= size );
-        assert( groupSize * ( groupCount - 1 ) < size );
-
-        std::vector<std::vector<size_t>> groups( groupCount );
-        tbb::task_group taskGroup;
-        for ( size_t gi = 0; gi < groupCount; gi++ )
-        {
-            taskGroup.run( [&, i = gi]
-            {
-                std::vector<size_t> group;
-                const auto begin = i * groupSize;
-                const auto end = std::min( ( i + 1 ) * groupSize, size );
-                for ( auto ci = begin; ci < end; ci++ )
-                    if ( data[ci] == '\n' )
-                        group.emplace_back( ci + 1 );
-                groups[i] = std::move( group );
-            } );
-        }
-        taskGroup.wait();
-
-        size_t sum = newlines.size();
-        std::vector<size_t> groupOffsets;
-        for ( const auto& group : groups )
-        {
-            groupOffsets.emplace_back( sum );
-            sum += group.size();
-        }
-        newlines.resize( sum );
-
-        for ( size_t gi = 0; gi < groupCount; gi++ )
-        {
-            taskGroup.run( [&, i = gi]
-            {
-                const auto& group = groups[i];
-                const auto offset = groupOffsets[i];
-                for ( auto li = 0; li < group.size(); li++ )
-                    newlines[offset + li] = group[li];
-            } );
-        }
-        taskGroup.wait();
-    }
-    // add finish line
-    if ( newlines.back() != size )
-        newlines.emplace_back( size );
+    const auto newlines = splitByLines( data, size );
     const auto lineCount = newlines.size() - 1;
 
     if ( callback && !callback( 0.40f ) )
         return tl::make_unexpected( "Loading canceled" );
 
     timer.restart( "group element lines" );
-    enum class Element
-    {
-        Unknown,
-        Vertex,
-        Face,
-        Object,
-    };
-    struct ElementGroup
-    {
-        Element element{ Element::Unknown };
-        size_t begin{ 0 };
-        size_t end{ 0 };
-    };
-    std::vector<ElementGroup> groups{ { Element::Unknown, 0, 0 } }; // emplace stub initial group
-    for ( size_t li = 0; li < lineCount; ++li )
-    {
-        auto* line = data + newlines[li];
-
-        Element element = Element::Unknown;
-        if ( line[0] == 'v' && line[1] != 'n' /*normals*/ && line[1] != 't' /*texture coordinates*/ )
-        {
-            element = Element::Vertex;
-        }
-        else if ( line[0] == 'f' )
-        {
-            element = Element::Face;
-        }
-        else if ( line[0] == 'o' )
-        {
-            element = Element::Object;
-        }
-        // TODO: multi-line elements
-
-        if ( element != groups.back().element )
-        {
-            groups.back().end = li;
-            groups.push_back( { element, li, 0 } );
-        }
-    }
-    groups.back().end = lineCount;
+    const auto groups = groupLines<ObjElement>( data, size, newlines );
 
     if ( callback && !callback( 0.50f ) )
         return tl::make_unexpected( "Loading canceled" );
@@ -253,6 +503,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     {
         const auto offset = points.size();
         points.resize( points.size() + ( end - begin ) );
+        uvCoords.resize( points.size() );
+        currentMaterialVertices.resize( points.size() );
 
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -269,6 +521,30 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     return;
                 }
                 points[offset + ( li - begin )] = v;
+            }
+        }, ctx );
+    };
+
+    auto parseTextureVertices = [&] ( size_t begin, size_t end, std::string& parseError )
+    {
+        const auto offset = textureVertices.size();
+        textureVertices.resize( textureVertices.size() + ( end - begin ) );
+
+        tbb::task_group_context ctx;
+        tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            UVCoord vt;
+            for ( auto li = range.begin(); li < range.end(); li++ )
+            {
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+                auto res = parseObjTextureVertex( line, vt );
+                if ( !res.has_value() )
+                {
+                    if ( ctx.cancel_group_execution() )
+                        parseError = std::move( res.error() );
+                    return;
+                }
+                textureVertices[offset + ( li - begin )] = vt;
             }
         }, ctx );
     };
@@ -323,6 +599,30 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 // TODO: make smarter triangulation based on point coordinates
                 for ( int j = 1; j + 1 < vs.size(); ++j )
                     tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+
+                auto& vts = f.textures;
+                if ( !vts.empty() )
+                {
+                    for ( auto& vt : vts )
+                    {
+                        if ( vt < 0 )
+                            vt += (int)textureVertices.size() + 1;
+
+                        if ( vt <= 0 )
+                        {
+                            if ( ctx.cancel_group_execution() )
+                                parseError = "Too negative texture vertex ID in OBJ-file";
+                            return;
+                        }
+                    }
+
+                    assert( vts.size() == vs.size() );
+                    for ( int j = 0; j < vs.size(); ++j )
+                        uvCoords[VertId{ vs[j] - 1 }] = textureVertices[ vts[j] - 1 ];
+                }
+
+                for ( auto v : vs )
+                    currentMaterialVertices.set( VertId{ v - 1 } );
             }
         }, ctx );
 
@@ -347,8 +647,28 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
         const auto li = end - 1;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        currentObjName = line.substr( 1, std::string_view::npos );
+        currentObjName = line.substr( strlen( "o" ), std::string_view::npos );
         boost::trim( currentObjName );
+    };
+
+    auto parseMaterialLibrary = [&] ( size_t, size_t end, std::string& )
+    {
+        const auto li = end - 1;
+        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+        // TODO: support multiple files
+        materialLibrary = line.substr( strlen( "mtllib" ), std::string_view::npos );
+        boost::trim( materialLibrary );
+    };
+
+    auto parseMaterialName = [&] ( size_t, size_t end, std::string& )
+    {
+        materialVertMaps.push_back( { currentMaterialName, currentMaterialVertices } );
+        currentMaterialVertices.reset();
+
+        const auto li = end - 1;
+        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+        currentMaterialName = line.substr( strlen( "usemtl" ), std::string_view::npos );
+        boost::trim( currentMaterialName );
     };
 
     timer.restart( "parse groups" );
@@ -357,16 +677,25 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         std::string parseError;
         switch ( group.element )
         {
-        case Element::Unknown:
+        case ObjElement::Unknown:
             break;
-        case Element::Vertex:
+        case ObjElement::Vertex:
             parseVertices( group.begin, group.end, parseError );
             break;
-        case Element::Face:
+        case ObjElement::Face:
             parseFaces( group.begin, group.end, parseError );
             break;
-        case Element::Object:
+        case ObjElement::Object:
             parseObject( group.begin, group.end, parseError );
+            break;
+        case ObjElement::TextureVertex:
+            parseTextureVertices( group.begin, group.end, parseError );
+            break;
+        case ObjElement::MaterialLibrary:
+            parseMaterialLibrary( group.begin, group.end, parseError );
+            break;
+        case ObjElement::MaterialName:
+            parseMaterialName( group.begin, group.end, parseError );
             break;
         }
         if ( !parseError.empty() )
@@ -378,6 +707,69 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     finishObject();
     return res;
+}
+
+tl::expected<MtlLibrary, std::string> loadMtlLibrary( const char* data, size_t size, ProgressCallback )
+{
+    const auto newlines = splitByLines( data, size );
+
+    const auto groups = groupLines<MtlElement>( data, size, newlines );
+
+    MtlLibrary result;
+    std::string currentMaterialName;
+    MtlMaterial currentMaterial;
+
+    for ( const auto& group : groups )
+    {
+        std::string parseError;
+        switch ( group.element )
+        {
+        case MtlElement::Unknown:
+            break;
+        case MtlElement::MaterialName:
+        {
+            const auto li = group.end - 1;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+            if ( !currentMaterialName.empty() )
+            {
+                result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
+                currentMaterial = {};
+            }
+            currentMaterialName = line.substr( 6, std::string_view::npos );
+            boost::trim( currentMaterialName );
+        }
+            break;
+        case MtlElement::DiffuseColor:
+        {
+            const auto li = group.end - 1;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+            auto res = parseMtlColor( line, currentMaterial.diffuseColor );
+            if ( !res.has_value() )
+                parseError = std::move( res.error() );
+        }
+            break;
+        case MtlElement::DiffuseTexture:
+        {
+            const auto li = group.end - 1;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+            auto res = parseMtlTexture( line, currentMaterial.diffuseTextureFile );
+            if ( !res.has_value() )
+                parseError = std::move( res.error() );
+        }
+            break;
+        default:
+            break;
+        }
+        if ( !parseError.empty() )
+            return tl::make_unexpected( parseError );
+    }
+
+    if ( !currentMaterialName.empty() )
+        result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
+    return result;
 }
 
 } //namespace MeshLoad

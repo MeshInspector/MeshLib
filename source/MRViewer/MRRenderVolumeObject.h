@@ -1,5 +1,5 @@
 #pragma once
-
+#ifndef __EMSCRIPTEN__
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"
@@ -20,7 +20,7 @@ public:
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;
 private:
-    const ObjectVoxels* objVoxels_;
+    const ObjectVoxels* objVoxels_{ nullptr };
 
     typedef unsigned int GLuint;
     GLuint volumeArrayObjId_{ 0 };
@@ -44,3 +44,4 @@ private:
 };
 
 }
+#endif

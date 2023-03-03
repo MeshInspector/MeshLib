@@ -4,12 +4,6 @@
 #include "MRGladGlfw.h"
 #include "MRVolumeShader.h"
 
-#ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 150)"
-#else
-#define MR_GLSL_VERSION_LINE R"(#version 300 es)"
-#endif
-
 namespace
 {
 std::string getShaderName( MR::GLStaticHolder::ShaderType type )
@@ -95,7 +89,7 @@ void GLStaticHolder::createShader_( ShaderType type )
     std::string fragmentShader;
     if ( type == Volume )
     {
-        vertexShader = getVolumeVertexQuadShader();
+        vertexShader = getTrivialVertexShader();
         fragmentShader = getVolumeFragmentShader();
     }
     else if ( type == DrawMesh || type == TransparentMesh )

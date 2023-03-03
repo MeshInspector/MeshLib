@@ -1,3 +1,4 @@
+#ifndef __EMSCRIPTEN__
 #include "MRRenderVolumeObject.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRViewer.h"
@@ -6,9 +7,11 @@
 #include "MRGLStaticHolder.h"
 #include "MRMesh/MRFloatGrid.h"
 
+namespace MR
+{
+
 namespace
 {
-using namespace MR;
 using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
 
 SimpleVolumeU8 vdbVolumeToNormedSimpleVolume( const VdbVolume& vdbVolume )
@@ -36,9 +39,6 @@ SimpleVolumeU8 vdbVolumeToNormedSimpleVolume( const VdbVolume& vdbVolume )
     return res;
 }
 }
-
-namespace MR
-{
 
 RenderVolumeObject::RenderVolumeObject( const VisualObject& visObj )
 {
@@ -214,3 +214,4 @@ void RenderVolumeObject::update_()
 MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderVolumeObject )
 
 }
+#endif

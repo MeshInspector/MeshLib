@@ -1,17 +1,10 @@
 #include "MRVolumeShader.h"
-
-#ifndef MR_GLSL_VERSION_LINE
-#ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 150)"
-#else
-#define MR_GLSL_VERSION_LINE R"(#version 300 es)"
-#endif
-#endif
+#include "MRGladGlfw.h"
 
 namespace MR
 {
 
-std::string getVolumeVertexQuadShader()
+std::string getTrivialVertexShader()
 {
     return MR_GLSL_VERSION_LINE R"(
   precision highp float;
@@ -67,83 +60,51 @@ std::string getVolumeFragmentShader()
     vec3 maxPoint = vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
 
     // find planes intersection with ray
-    vec3 minXInter = rayStart + ( ( minPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
-    vec3 maxXInter = rayStart + ( ( maxPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
-
-    vec3 minYInter = rayStart + ( ( minPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
-    vec3 maxYInter = rayStart + ( ( maxPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
-
-    vec3 minZInter = rayStart + ( ( minPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
-    vec3 maxZInter = rayStart + ( ( maxPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
+    vec3[6] intersections;
+    intersections[0] = rayStart + ( ( minPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
+    intersections[1] = rayStart + ( ( maxPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
+    intersections[2] = rayStart + ( ( minPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
+    intersections[3] = rayStart + ( ( maxPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
+    intersections[4] = rayStart + ( ( minPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
+    intersections[5] = rayStart + ( ( maxPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
 
     // find min inter
-    bool hasValidInter = false;
     float minValidInterDistSq = 0.0;
-    vec3 minInter = vec3(0.0,0.0,0.0);
-
-    if ( minXInter.y >= minPoint.y && minXInter.y <= maxPoint.y && minXInter.z >= minPoint.z && minXInter.z <= maxPoint.z )
+    int minInterIndex = -1;
+    for ( int i = 0; i < 6; ++i )
     {
-        hasValidInter = true;
-        minValidInterDistSq = dot( minXInter - rayStart, minXInter - rayStart );
-        minInter = minXInter;
-    }
-
-    if ( maxXInter.y >= minPoint.y && maxXInter.y <= maxPoint.y && maxXInter.z >= minPoint.z && maxXInter.z <= maxPoint.z )
-    {
-        float curDistSq = dot( maxXInter - rayStart, maxXInter - rayStart );
-        if ( !hasValidInter || curDistSq < minValidInterDistSq )
+        vec2 comp;
+        vec2 minComp;
+        vec2 maxComp;
+        if ( i < 2 )
+        {
+            comp = intersections[i].yz;
+            minComp = minPoint.yz;
+            maxComp = maxPoint.yz;
+        }
+        else if ( i < 4 )
+        {
+            comp = intersections[i].xz;
+            minComp = minPoint.xz;
+            maxComp = maxPoint.xz;
+        }
+        else
+        {
+            comp = intersections[i].xy;
+            minComp = minPoint.xy;
+            maxComp = maxPoint.xy;
+        }
+        if ( any( lessThan( comp, minComp ) ) || any( greaterThan( comp, maxComp ) ) )
+            continue;
+        float curDistSq = dot( intersections[i] - rayStart, intersections[i] - rayStart );
+        if ( minInterIndex == -1 || curDistSq < minValidInterDistSq )
         {
             minValidInterDistSq = curDistSq;
-            minInter = maxXInter;
-            hasValidInter = true;
+            minInterIndex = i;
         }
     }
 
-    if ( minYInter.x >= minPoint.x && minYInter.x <= maxPoint.x && minYInter.z >= minPoint.z && minYInter.z <= maxPoint.z )
-    {
-        float curDistSq = dot( minYInter - rayStart, minYInter - rayStart );
-        if ( !hasValidInter || curDistSq < minValidInterDistSq )
-        {
-            minValidInterDistSq = curDistSq;
-            minInter = minYInter;
-            hasValidInter = true;
-        }
-    }
-
-    if ( maxYInter.x >= minPoint.x && maxYInter.x <= maxPoint.x && maxYInter.z >= minPoint.z && maxYInter.z <= maxPoint.z )
-    {
-        float curDistSq = dot( maxYInter - rayStart, maxYInter - rayStart );
-        if ( !hasValidInter || curDistSq < minValidInterDistSq )
-        {
-            minValidInterDistSq = curDistSq;
-            minInter = maxYInter;
-            hasValidInter = true;
-        }
-    }
-
-    if ( minZInter.x >= minPoint.x && minZInter.x <= maxPoint.x && minZInter.y >= minPoint.y && minZInter.y <= maxPoint.y )
-    {
-        float curDistSq = dot( minZInter - rayStart, minZInter - rayStart );
-        if ( !hasValidInter || curDistSq < minValidInterDistSq )
-        {
-            minValidInterDistSq = curDistSq;
-            minInter = minZInter;
-            hasValidInter = true;
-        }
-    }
-
-    if ( maxZInter.x >= minPoint.x && maxZInter.x <= maxPoint.x && maxZInter.y >= minPoint.y && maxZInter.y <= maxPoint.y )
-    {
-        float curDistSq = dot( maxZInter - rayStart, maxZInter - rayStart );
-        if ( !hasValidInter || curDistSq < minValidInterDistSq )
-        {
-            minValidInterDistSq = curDistSq;
-            minInter = maxZInter;
-            hasValidInter = true;
-        }
-    }
-
-    if ( !hasValidInter )
+    if ( minInterIndex == -1 )
         discard;
 
     // find ray step
@@ -161,7 +122,8 @@ std::string getVolumeFragmentShader()
     bool firstFound = false;
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
-    rayStart = minInter - rayStep * 0.5;
+    rayStart = intersections[minInterIndex] - rayStep * 0.5;
+    vec3 diagonal = maxPoint - minPoint;
     while ( outColor.a < 1.0 )
     {
         rayStart = rayStart + rayStep;
@@ -169,16 +131,8 @@ std::string getVolumeFragmentShader()
             continue;
 
         vec3 textCoord = vec3(0.0,0.0,0.0);
-        textCoord.x = (rayStart.x - minPoint.x) / (maxPoint.x - minPoint.x);
-        if ( textCoord.x < 0.0 || textCoord.x > 1.0 )
-            break;
-
-        textCoord.y = (rayStart.y - minPoint.y) / (maxPoint.y - minPoint.y);
-        if ( textCoord.y < 0.0 || textCoord.y > 1.0 )
-            break;
-
-        textCoord.z = (rayStart.z - minPoint.z) / (maxPoint.z - minPoint.z);
-        if ( textCoord.z < 0.0 || textCoord.z > 1.0 )
+        textCoord = ( rayStart - minPoint ) / diagonal;
+        if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
             break;
         
         float density = texture( volume, textCoord ).r;        

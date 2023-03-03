@@ -1217,7 +1217,13 @@ MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject
 
     if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
         return VisualObjectRenderType::NoDepthTest;
-
+#ifndef __EMSCRIPTEN__
+    if ( auto voxObj = obj->asType<ObjectVoxels>() )
+    {
+        if ( voxObj->isVolumeRenderingEnabled() )
+            return  VisualObjectRenderType::VolumeRendering;
+    }
+#endif
     if ( obj->getGlobalAlpha( viewportId ) < 255 ||
         obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 ||
         obj->getBackColor( viewportId ).a < 255 )
@@ -1321,6 +1327,9 @@ void Viewer::drawScene() const
     for ( const auto& viewport : viewport_list )
     {
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Opaque );
+#ifndef __EMSCRIPTEN__
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::VolumeRendering );
+#endif
         recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Transparent, &numTransparent );
     }
 

@@ -150,7 +150,7 @@ public:
     struct Settings
     {
         Vector3i resolution;
-        size_t size() const { return size_t( resolution.x ) * resolution.y; }
+        size_t size() const { return size_t( resolution.x ) * resolution.y * resolution.z; }
 
         GLint internalFormat = GL_RGBA;
         GLint format = GL_RGBA;

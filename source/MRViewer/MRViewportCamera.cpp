@@ -509,12 +509,13 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             if ( space != Space::World )
                 xf = xfV * xf;
             VertId lastValidVert;
+            const VertCoords* coords = nullptr;
+            const VertBitSet* selectedVerts = nullptr;
+            auto objMesh = obj->asType<ObjectMeshHolder>();
+#ifndef __EMSCRIPTEN__
             VertCoords tempVertCoords;
             VertBitSet tempSelected;
-            const VertCoords* coords = &tempVertCoords;
-            const VertBitSet* selectedVerts = nullptr;
-            auto objVox = obj->asType<ObjectVoxels>(); 
-            auto objMesh = obj->asType<ObjectMeshHolder>();
+            auto objVox = obj->asType<ObjectVoxels>();
             if ( objVox && objVox->isVolumeRenderingEnabled() )
             {
                 if ( !objVox->grid() )
@@ -539,9 +540,12 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 lastValidVert = 7_v;
                 tempSelected.resize( 8 );
                 tempSelected.flip();
+                coords = &tempVertCoords;
                 selectedVerts = &tempSelected;
             }
-            else if ( objMesh )
+            else 
+#endif
+                if ( objMesh )
             {
                 if ( !objMesh->mesh() )
                     continue;

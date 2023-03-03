@@ -4,7 +4,7 @@
 namespace MR
 {
 // simple quad vertex shader
-std::string getVolumeVertexQuadShader();
+std::string getTrivialVertexShader();
 
 // shader with raytracing over volume
 std::string getVolumeFragmentShader();

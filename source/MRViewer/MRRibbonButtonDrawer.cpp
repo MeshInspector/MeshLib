@@ -407,28 +407,12 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
-/// copy from imgui_widgets.cpp
-void MRColorEditRestoreHS( const float* col, float* H, float* S, float* V )
-{
-    using namespace ImGui;
-    ImGuiContext& g = *ImGui::GetCurrentContext();
-    if ( g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
-        return;
-
-    if ( *S == 0.0f || ( *H == 0.0f && g.ColorEditLastHue == 1 ) )
-        *H = g.ColorEditLastHue;
-
-    if ( *V == 0.0f )
-        *S = g.ColorEditLastSat;
-}
-
 bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None */ )
 {
-    //auto& style = ImGui::GetStyle();
-    ImVec2 framePadding( 8.f, 4.f );
+    ImVec2 framePadding( 8.f, 3.f );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
 
-    const bool changed = ImGui::ColorEdit4( label, &color.x, flags | ImGuiColorEditFlags_NoSmallPreview );
+    const bool changed = ImGui::ColorEdit4( label, &color.x, flags );
     ImGui::PopStyleVar();
     return changed;
 }

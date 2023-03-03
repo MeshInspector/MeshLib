@@ -195,7 +195,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 item->second.item->isAvailable(
                     getAllObjectsInTree<const Object>( &SceneRoot::get(),
                         ObjectSelectivityType::Selected ) ).empty(),
-                ImVec2( -1, ImGui::GetFrameHeight() ) ) )
+                ImVec2( -1, 0 ) ) )
             {
                 item->second.item->action();
             }
@@ -275,7 +275,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 } );
             }
             ImGui::SameLine( menuWidth * 0.25f );
-            ImGui::ColorEdit4( "Shadow Color", &shadowGl_->shadowColor.x,
+            RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             
             const char* tooltipsShift[2] = {

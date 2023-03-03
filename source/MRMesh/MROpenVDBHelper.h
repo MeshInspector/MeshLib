@@ -159,7 +159,9 @@ void translateToZero( GredT& grid)
     using TreeT = typename GredT::TreeType;
     typename TreeT::Ptr outTreePtr = std::make_shared<TreeT>();
     TreeT& inTree = grid.tree();
-    openvdb::tools::changeLevelSetBackground( *outTreePtr, inTree.background() );
+    const auto gridClass = grid.getGridClass();
+    if (gridClass == openvdb::GRID_LEVEL_SET)
+        openvdb::tools::changeLevelSetBackground( *outTreePtr, inTree.background() );
 
     openvdb::math::CoordBBox bbox = grid.evalActiveVoxelBoundingBox();
     if ( bbox.empty() || bbox.min() == openvdb::math::Coord() )
@@ -171,7 +173,6 @@ void translateToZero( GredT& grid)
     xform.setShift( -bbox.min() );
     RangeProc proc( bbox, inTree, *outTreePtr, xform );
 
-    const auto gridClass = grid.getGridClass();
     if ( gridClass != openvdb::GRID_LEVEL_SET )
     {
         // Independently transform the tiles of the input grid.

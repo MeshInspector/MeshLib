@@ -164,6 +164,10 @@ Some third parties are taken from vcpkg, while others (missing in vcpkg) are con
     ```
 3. Open solution file MeshInspector/source/MeshLib.sln in Visual Studio 2019. Build it and run.
 
+## Build with VS2022 on Windows
+
+The steps are the same as for VS2019 above. The only exception is that you need to change `PlatformToolset` from `v142` to `v143` in `MeshLib/source/platform.props` after cloning MeshLib.
+
 ## Build with CMake on Linux
 This installation was checked on Ubuntu 20.04.4.
 

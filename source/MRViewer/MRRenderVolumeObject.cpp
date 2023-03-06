@@ -160,7 +160,7 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
         1.0f,1.0f,1.0f,
         1.0f,0.0f,1.0f
     };
-    constexpr std::array<unsigned, 24> cubeTriangles[36] =
+    constexpr std::array<unsigned, 36> cubeTriangles =
     {
         0,1,2,
         2,3,0,
@@ -178,7 +178,8 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
 
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
     bindVertexAttribArray( shader, "position", volumeVertsBuffer_, cubePoints, 3, !volumeVertsBuffer_.valid() );
-    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(), cubeTriangles, 36 );
+    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(), 
+        cubeTriangles.data(), cubeTriangles.size() );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
     GL_EXEC( glEnable( GL_CULL_FACE ) );

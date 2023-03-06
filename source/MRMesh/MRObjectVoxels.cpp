@@ -314,9 +314,9 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask )
 size_t ObjectVoxels::heapBytes() const
 {
     return ObjectMeshHolder::heapBytes()
-        + ( vdbVolume_.data ? sizeof( *vdbVolume_.data ) + vdbVolume_.data->memUsage() : 0 )
+        + vdbVolume_.heapBytes()
         + histogram_.heapBytes()
-        + ( volumeRenderingData_ ? volumeRenderingData_->data.size() : 0 );
+        + MR::heapBytes( volumeRenderingData_ );
 }
 
 void ObjectVoxels::swapBase_( Object& other )

@@ -171,7 +171,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
         auto volume = objVoxels_->getVolumeRenderingData();
         if ( !volume )
         {
-            objVoxels_->hasVisualRepresentation();
+            objVoxels_->prepareDataForVolumeRendering();
             volume = objVoxels_->getVolumeRenderingData();
         }
         assert( volume );

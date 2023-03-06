@@ -18,11 +18,6 @@
 namespace MR
 {
 
-ImVec2 toImVec2( const Vector2f& in )
-{
-    return ImVec2( in.x, in.y );
-}
-
 ViewerSettingsPlugin::ViewerSettingsPlugin() :
     StatePlugin( "Viewer settings" )
 {
@@ -65,7 +60,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         return;
 
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, toImVec2( MR::StyleConsts::pluginItemSpacing ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImGui::toImVec2( MR::StyleConsts::pluginItemSpacing ) );
 
     auto& style = ImGui::GetStyle();
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;

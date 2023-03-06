@@ -11,6 +11,8 @@
 namespace MR
 {
 
+std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
+
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
 {
     drawList->PathLineTo( startPoint );
@@ -26,10 +28,18 @@ void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVe
 
 void RibbonButtonDrawer::InitGradientTexture()
 {
-    auto& textureG = GetGradientTexture();
+    auto& textureM = GetTexture( TextureType::Mono );
+    if ( !textureM )
+        textureM = std::make_unique<ImGuiImage>();
+    MeshTexture data;
+    data.resolution = Vector2i( 1, 1 );
+    data.pixels = { Color::white() };
+    data.filter = FilterType::Linear;
+    textureM->update( data );
+
+    auto& textureG = GetTexture( TextureType::Gradient );
     if ( !textureG )
         textureG = std::make_unique<ImGuiImage>();
-    MeshTexture data;
     data.resolution = Vector2i( 1, 2 );
     data.pixels = {
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradientStart ),
@@ -39,7 +49,7 @@ void RibbonButtonDrawer::InitGradientTexture()
     textureG->update( data );
 
 
-    auto& textureR = GetRainbowTexture_();
+    auto& textureR = GetTexture( TextureType::RainbowRect );
     if ( !textureR )
         textureR = std::make_unique<ImGuiImage>();
     const int resX = 4;
@@ -63,15 +73,16 @@ void RibbonButtonDrawer::InitGradientTexture()
 
 }
 
-std::unique_ptr<ImGuiImage>& RibbonButtonDrawer::GetGradientTexture()
+std::unique_ptr<MR::ImGuiImage>& RibbonButtonDrawer::GetTexture( TextureType type )
 {
-    static std::unique_ptr<ImGuiImage> texture;
-    return texture;
+    const int typeInt = int( type );
+    assert( typeInt < textures_.size() && typeInt >= 0 );
+    return textures_[int( type )];
 }
 
 bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */, ImGuiKey key )
 {
-    auto& texture = GetGradientTexture();
+    auto& texture = GetTexture( TextureType::Gradient );
     auto checkKey = [] ( ImGuiKey passedKey )
     {
         if ( passedKey == ImGuiKey_None )
@@ -135,7 +146,7 @@ bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVe
 
 bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )
 {
-    auto& texture = GetGradientTexture();
+    auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
         return ImGui::ButtonValid( label, valid, size );
 
@@ -177,7 +188,7 @@ bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, con
 
 bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
-    auto& texture = GetGradientTexture();
+    auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
         return  ImGui::Checkbox( label, value );
 
@@ -333,7 +344,7 @@ bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, 
 
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )
 {
-    auto& texture = GetGradientTexture();
+    auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
         return ImGui::RadioButton( label, value, v_button );
 
@@ -427,7 +438,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
 }
 
 /// copy of internal ImGui method
-static void MRColorEditRestoreHS( const float* col, float* H, float* S, float* V )
+void ColorEditRestoreHS( const float* col, float* H, float* S, float* V )
 {
     ImGuiContext& g = *ImGui::GetCurrentContext();
     if ( g.ColorEditLastColor != ImGui::ColorConvertFloat4ToU32( ImVec4( col[0], col[1], col[2], 0 ) ) )
@@ -445,6 +456,7 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
     ImVec2 framePadding( 8.f, 3.f );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
 
+    /// Copy of ImGui code. Required to implement own code
     using namespace ImGui;
     float* col = &color.x;
 
@@ -456,7 +468,7 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
     const ImGuiStyle& style = g.Style;
     const float square_sz = GetFrameHeight();
     const float w_full = CalcItemWidth();
-    const float w_button = ( flags & ImGuiColorEditFlags_NoSmallPreview ) ? 0.0f : ( square_sz * 2 + style.ItemInnerSpacing.x );
+    const float w_button = ( flags & ImGuiColorEditFlags_NoSmallPreview ) ? 0.0f : ( square_sz * 1.5f + style.ItemInnerSpacing.x );
     const float w_inputs = w_full - w_button;
     const char* label_display_end = FindRenderedTextEnd( label );
     g.NextItemData.ClearFlags();
@@ -498,7 +510,7 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
     {
         // Hue is lost when converting from greyscale rgb (saturation=0). Restore it.
         ColorConvertRGBtoHSV( f[0], f[1], f[2], f[0], f[1], f[2] );
-        MRColorEditRestoreHS( col, &f[0], &f[1], &f[2] );
+        ColorEditRestoreHS( col, &f[0], &f[1], &f[2] );
     }
     int i[4] = { IM_F32_TO_INT8_UNBOUND( f[0] ), IM_F32_TO_INT8_UNBOUND( f[1] ), IM_F32_TO_INT8_UNBOUND( f[2] ), IM_F32_TO_INT8_UNBOUND( f[3] ) };
 
@@ -589,16 +601,16 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
 
         const float frameH = GetFrameHeight();
         float off = 0.f;
-        ImRect bb( window->DC.CursorPos, ImVec2( window->DC.CursorPos.x + frameH * 2.f, window->DC.CursorPos.y + frameH ) );
+        ImRect bb( window->DC.CursorPos, ImVec2( window->DC.CursorPos.x + frameH * 1.5f, window->DC.CursorPos.y + frameH ) );
+        Vector3f hsv;
         if ( !( flags & ImGuiColorEditFlags_NoBorder ) )
         {
             off = 2.f;
-            auto& texture = GetRainbowTexture_();
-            ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-                texture->getImTextureId(),
-                bb.Min, bb.Max,
-                ImVec2( 0.f, 0.f ), ImVec2( 1.f, 1.f ),
-                Color::white().getUInt32(), style.FrameRounding );
+            const bool isRainbow = std::max( col[0], std::max( col[1], col[2] ) ) < 0.5f;
+            const Color imageColor = isRainbow ? Color::white() : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders );
+            auto& texture = GetTexture( isRainbow ? TextureType::RainbowRect : TextureType::Mono );
+            ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded( texture->getImTextureId(),
+                bb.Min, bb.Max, ImVec2( 0.f, 0.f ), ImVec2( 1.f, 1.f ), imageColor.getUInt32(), style.FrameRounding );
             bb.Expand( -off );
         }
 
@@ -1331,12 +1343,6 @@ int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, Draw
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabClicked ).getUInt32() );
     }
     return 4;
-}
-
-std::unique_ptr<MR::ImGuiImage>& RibbonButtonDrawer::GetRainbowTexture_()
-{
-    static std::unique_ptr<ImGuiImage> texture;
-    return texture;
 }
 
 }

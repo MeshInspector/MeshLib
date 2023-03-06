@@ -108,7 +108,7 @@ public:
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRMESH_API void enableVolumeRendering( bool on );
     // move volume rendering data to caller: basically used in RenderVolumeObject 
-    std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+    [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 

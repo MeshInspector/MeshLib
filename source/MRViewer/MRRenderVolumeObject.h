@@ -24,12 +24,14 @@ private:
 
     typedef unsigned int GLuint;
     GLuint volumeArrayObjId_{ 0 };
-    GLuint volumeBufferObjId_{ 0 };
+    GlBuffer volumeVertsBuffer_;
+    GlBuffer volumeIndicesBuffer_;
 
     GlTexture3 volume_;
     GlTexture2 denseMap_;
 
-    void bindVolume_();
+    void render_( const BaseRenderParams& params, unsigned geomId );
+    void bindVolume_( bool picker );
 
     // Create a new set of OpenGL buffer objects
     void initBuffers_();

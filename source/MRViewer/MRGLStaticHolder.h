@@ -35,6 +35,7 @@ public:
         SimpleOverlayQuad,
 
         Volume,
+        VolumePicker,
         Count
     };
 

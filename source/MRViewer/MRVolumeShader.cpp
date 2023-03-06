@@ -9,11 +9,17 @@ std::string getTrivialVertexShader()
     return MR_GLSL_VERSION_LINE R"(
   precision highp float;
   precision highp int;
+  uniform mat4 model;
+  uniform mat4 view;
+  uniform mat4 proj;
+  uniform sampler3D volume;
+  uniform vec3 voxelSize;
   in vec3 position;
 
   void main()
   {
-    gl_Position = vec4 (position, 1.0);
+    vec3 dims = vec3( textureSize( volume, 0 ) );
+    gl_Position = proj * view * model * vec4( voxelSize * dims * position, 1.0 );
   }
 )";
 }
@@ -44,7 +50,9 @@ std::string getVolumeFragmentShader()
     mat4 fullM = proj * view * model;
     mat4 inverseFullM = inverse( fullM );
 
-    vec3 clipNear = vec3( 2.0 * (gl_FragCoord.x - viewport.x ) / viewport.z - 1.0, 2.0 * (gl_FragCoord.y - viewport.y) / viewport.w - 1.0, -1.0 );
+    vec3 clipNear = vec3(0.0,0.0,0.0);
+    clipNear.xy =  (2.0 * (gl_FragCoord.xy - viewport.xy)) / (viewport.zw) - vec2(1.0,1.0);
+    clipNear.z = (2.0 * gl_FragCoord.z - gl_DepthRange.near - gl_DepthRange.far) / gl_DepthRange.diff;
     vec3 clipFar = clipNear;
     clipFar.z = 1.0;
 
@@ -58,83 +66,25 @@ std::string getVolumeFragmentShader()
     vec3 dims = vec3( textureSize( volume, 0 ) );
     vec3 minPoint = vec3( 0.0, 0.0, 0.0 );
     vec3 maxPoint = vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
-
-    // find planes intersection with ray
-    vec3[6] intersections;
-    intersections[0] = rayStart + ( ( minPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
-    intersections[1] = rayStart + ( ( maxPoint.x - rayStart.x ) / normRayDir.x ) * normRayDir;
-    intersections[2] = rayStart + ( ( minPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
-    intersections[3] = rayStart + ( ( maxPoint.y - rayStart.y ) / normRayDir.y ) * normRayDir;
-    intersections[4] = rayStart + ( ( minPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
-    intersections[5] = rayStart + ( ( maxPoint.z - rayStart.z ) / normRayDir.z ) * normRayDir;
-
-    // find min inter
-    float minValidInterDistSq = 0.0;
-    int minInterIndex = -1;
-    for ( int i = 0; i < 6; ++i )
-    {
-        vec2 comp;
-        vec2 minComp;
-        vec2 maxComp;
-        if ( i < 2 )
-        {
-            comp = intersections[i].yz;
-            minComp = minPoint.yz;
-            maxComp = maxPoint.yz;
-        }
-        else if ( i < 4 )
-        {
-            comp = intersections[i].xz;
-            minComp = minPoint.xz;
-            maxComp = maxPoint.xz;
-        }
-        else
-        {
-            comp = intersections[i].xy;
-            minComp = minPoint.xy;
-            maxComp = maxPoint.xy;
-        }
-        if ( any( lessThan( comp, minComp ) ) || any( greaterThan( comp, maxComp ) ) )
-            continue;
-        float curDistSq = dot( intersections[i] - rayStart, intersections[i] - rayStart );
-        if ( minInterIndex == -1 || curDistSq < minValidInterDistSq )
-        {
-            minValidInterDistSq = curDistSq;
-            minInterIndex = i;
-        }
-    }
-
-    if ( minInterIndex == -1 )
-        discard;
-
-    // find ray step
-    vec3 rayStep = vec3(0.0,0.0,0.0);
-    if ( abs(normRayDir.x) >= abs(normRayDir.y) && abs(normRayDir.x) >= abs(normRayDir.z) )
-        rayStep = ( voxelSize.x / abs(normRayDir.x) ) * normRayDir;
-    else
-    {
-        if ( abs(normRayDir.y) >= abs(normRayDir.x) && abs(normRayDir.y) >= abs(normRayDir.z) )
-            rayStep = ( voxelSize.y / abs(normRayDir.y) ) * normRayDir;
-        else
-            rayStep = ( voxelSize.z / abs(normRayDir.z) ) * normRayDir;
-    }
     
     bool firstFound = false;
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
+    vec3 textCoord = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
-    rayStart = intersections[minInterIndex] - rayStep * 0.5;
+    vec3 rayStep = 0.5 * length( voxelSize ) * normRayDir;
+    rayStart = rayStart - rayStep * 0.5;
     vec3 diagonal = maxPoint - minPoint;
     while ( outColor.a < 1.0 )
     {
         rayStart = rayStart + rayStep;
-        if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)
-            continue;
 
-        vec3 textCoord = vec3(0.0,0.0,0.0);
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
             break;
         
+        if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)
+            continue;
+
         float density = texture( volume, textCoord ).r;        
         vec4 color = texture( denseMap, vec2( density, 0.5 ) );
         float alpha = outColor.a + color.a * ( 1.0 - outColor.a );
@@ -156,6 +106,86 @@ std::string getVolumeFragmentShader()
         discard;
     vec4 projCoord = fullM * vec4( firstOpaque, 1.0 );
     gl_FragDepth = projCoord.z / projCoord.w * 0.5 + 0.5;
+  }
+)";
+}
+
+std::string getVolumePickerFragmentShader()
+{
+    return MR_GLSL_VERSION_LINE R"(
+  precision highp float;
+  precision highp int;
+
+  uniform mat4 model;
+  uniform mat4 view;
+  uniform mat4 proj;
+
+  uniform vec4 viewport;
+  uniform vec3 voxelSize;
+
+  uniform sampler3D volume;
+  uniform sampler2D denseMap;
+
+  uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
+  uniform vec4 clippingPlane;        // (in from base) clipping plane
+
+  uniform uint uniGeomId;
+  out highp uvec4 outColor;
+
+  void main()
+  {
+    mat4 fullM = proj * view * model;
+    mat4 inverseFullM = inverse( fullM );
+
+    vec3 clipNear = vec3(0.0,0.0,0.0);
+    clipNear.xy =  (2.0 * (gl_FragCoord.xy - viewport.xy)) / (viewport.zw) - vec2(1.0,1.0);
+    clipNear.z = (2.0 * gl_FragCoord.z - gl_DepthRange.near - gl_DepthRange.far) / gl_DepthRange.diff;
+    vec3 clipFar = clipNear;
+    clipFar.z = 1.0;
+
+    vec4 rayStartW = inverseFullM * vec4( clipNear, 1.0 );
+    vec4 rayEndW = inverseFullM * vec4( clipFar, 1.0 );
+
+    vec3 rayStart = vec3( rayStartW.xyz ) / rayStartW.w;
+    vec3 rayEnd = vec3( rayEndW.xyz ) / rayEndW.w;;
+    vec3 normRayDir = normalize( rayEnd - rayStart );
+
+    vec3 dims = vec3( textureSize( volume, 0 ) );
+    vec3 minPoint = vec3( 0.0, 0.0, 0.0 );
+    vec3 maxPoint = vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
+    
+    bool firstFound = false;
+    vec3 textCoord = vec3(0.0,0.0,0.0);
+    vec3 rayStep = 0.5 * length( voxelSize ) * normRayDir;
+    rayStart = rayStart - rayStep * 0.5;
+    vec3 diagonal = maxPoint - minPoint;
+    while ( !firstFound )
+    {
+        rayStart = rayStart + rayStep;
+
+        textCoord = ( rayStart - minPoint ) / diagonal;
+        if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
+            break;
+        
+        if (useClippingPlane && dot( vec3( model*vec4(rayStart,1.0)),vec3(clippingPlane))>clippingPlane.w)
+            continue;
+
+        float density = texture( volume, textCoord ).r;
+        if ( texture( denseMap, vec2( density, 0.5 ) ).a == 0.0 )
+            continue;
+        firstFound = true;
+    }
+
+    if ( !firstFound )
+        discard;
+    vec4 projCoord = fullM * vec4( rayStart, 1.0 );
+    float depth = projCoord.z / projCoord.w * 0.5 + 0.5;
+    gl_FragDepth = depth;
+
+    outColor.r = uint(0); // find VoxelId by world pos
+    outColor.g = uniGeomId;
+
+    outColor.a = uint(depth * 4294967295.0);
   }
 )";
 }

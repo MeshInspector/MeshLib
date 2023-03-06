@@ -9,4 +9,7 @@ std::string getTrivialVertexShader();
 // shader with raytracing over volume
 std::string getVolumeFragmentShader();
 
+// shader with raytracing over volume
+std::string getVolumePickerFragmentShader();
+
 }

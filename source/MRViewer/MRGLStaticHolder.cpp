@@ -26,7 +26,8 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
-        "Volume shader"
+        "Volume shader",
+        "Volume picker shader"
     };
     return names[type];
 }
@@ -87,10 +88,13 @@ void GLStaticHolder::createShader_( ShaderType type )
 {
     std::string vertexShader;
     std::string fragmentShader;
-    if ( type == Volume )
+    if ( type == Volume || type == VolumePicker )
     {
         vertexShader = getTrivialVertexShader();
-        fragmentShader = getVolumeFragmentShader();
+        if ( type == Volume )
+            fragmentShader = getVolumeFragmentShader();
+        else
+            fragmentShader = getVolumePickerFragmentShader();
     }
     else if ( type == DrawMesh || type == TransparentMesh )
     {

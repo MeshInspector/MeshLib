@@ -105,6 +105,8 @@ private:
     // returns num of pushed colors
     int pushRibbonButtonColors_( bool enabled, bool active, DrawButtonParams::RootType rootType ) const;
 
+    static std::unique_ptr<ImGuiImage>& GetRainbowTexture_();
+
     std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, bool ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;

@@ -10,36 +10,6 @@
 namespace MR
 {
 
-namespace
-{
-using SimpleVolumeU8 = VoxelsVolume<std::vector<uint8_t>>;
-
-SimpleVolumeU8 vdbVolumeToNormedSimpleVolume( const VdbVolume& vdbVolume )
-{
-    if ( !vdbVolume.data )
-        return {};
-    SimpleVolumeU8 res;
-    res.max = vdbVolume.max;
-    res.min = vdbVolume.min;
-    res.voxelSize = vdbVolume.voxelSize;
-    auto activeBox = vdbVolume.data->evalActiveVoxelBoundingBox();
-    res.dims = Vector3i( activeBox.dim().x(), activeBox.dim().y(), activeBox.dim().z() );
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        auto accessor = vdbVolume.data->getConstAccessor();
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto coord = indexer.toPos( VoxelId( i ) );
-            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min().x(), coord.y + activeBox.min().y(), coord.z + activeBox.min().z() );
-            res.data[i] = uint8_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 255.0f );
-        }
-    } );
-    return res;
-}
-}
-
 RenderVolumeObject::RenderVolumeObject( const VisualObject& visObj )
 {
     objVoxels_ = dynamic_cast< const ObjectVoxels* >( &visObj );
@@ -198,10 +168,16 @@ void RenderVolumeObject::bindVolume_( bool picker )
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( dirty_ & DIRTY_PRIMITIVES )
     {
-        auto volume = vdbVolumeToNormedSimpleVolume( objVoxels_->vdbVolume() );
+        auto volume = objVoxels_->getVolumeRenderingData();
+        if ( !volume )
+        {
+            objVoxels_->prepareDataForVolumeRendering();
+            volume = objVoxels_->getVolumeRenderingData();
+        }
+        assert( volume );
         volume_.loadData(
-            { .resolution = volume.dims, .internalFormat = GL_R8, .format = GL_RED, .type = GL_UNSIGNED_BYTE },
-            volume.data );
+            { .resolution = volume->dims, .internalFormat = GL_R8, .format = GL_RED, .type = GL_UNSIGNED_BYTE },
+            volume->data );
     }
     else
         volume_.bind();

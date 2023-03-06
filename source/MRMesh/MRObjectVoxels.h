@@ -98,8 +98,19 @@ public:
     /// Returns indexer with more options
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
+    // prepare data for volume rendering
+    // returns false if canceled
+    MRMESH_API bool prepareDataForVolumeRendering( ProgressCallback cb = {} ) const;
+
     bool isVolumeRenderingEnabled() const { return volumeRendering_; }
+    // this function should only be called from GUI thread because it changes rendering object,
+    // it can take some time to prepare data, so you can prepare data with progress callback
+    // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRMESH_API void enableVolumeRendering( bool on );
+    // move volume rendering data to caller: basically used in RenderVolumeObject 
+    [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+
+    MRMESH_API virtual bool hasVisualRepresentation() const override;
 
     MRMESH_API void setMaxSurfaceTriangles( int maxFaces );
     int getMaxSurfaceTriangles() const { return maxSurfaceTriangles_; }
@@ -120,6 +131,7 @@ public:
     IsoChangedSignal isoSurfaceChangedSignal;
 
 private:
+    mutable std::unique_ptr<SimpleVolumeU8> volumeRenderingData_;
     int maxSurfaceTriangles_{ 10000000 };
     VdbVolume vdbVolume_;
     float isoValue_{0.0f};

@@ -55,76 +55,12 @@ RenderVolumeObject::~RenderVolumeObject()
 
 void RenderVolumeObject::render( const RenderParams& renderParams )
 {
-    if ( !getViewerInstance().isGLInitialized() )
-    {
-        objVoxels_->resetDirty();
-        return;
-    }
-    update_();
-
-    // Initialize uniform
-    GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
-        ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
-
-    if ( objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
-    {
-        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    }
-    else
-    {
-        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    }
-
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-
-    bindVolume_();
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Volume );
-
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
-
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), 
-        objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
-        renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
-        renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
-
-    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "viewport" ), 
-        float( renderParams.viewport.x ), float( renderParams.viewport.y ), 
-        float( renderParams.viewport.z ), float( renderParams.viewport.w ) ) );
-
-    const auto& voxelSize = objVoxels_->vdbVolume().voxelSize;
-    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
-
-    constexpr GLfloat textureQuad[18] =
-    {
-        -1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        1.0f,  1.0f, 0.0f
-    };
-    GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
-
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, volumeBufferObjId_ ) );
-    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( GLfloat ) * 18, textureQuad, GL_STATIC_DRAW ) );
-
-    GL_EXEC( glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( 0 ) );
-
-    GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
-
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
-
-    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, static_cast < GLsizei > ( 6 ) ) );
+    render_( renderParams, unsigned( ~0 ) );
 }
 
-void RenderVolumeObject::renderPicker( const BaseRenderParams&, unsigned )
+void RenderVolumeObject::renderPicker( const BaseRenderParams& renderParams, unsigned geomId )
 {
-    // TODO: picker for volume
+    render_( renderParams, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -141,12 +77,121 @@ size_t RenderVolumeObject::glBytes() const
 void RenderVolumeObject::forceBindAll()
 {
     update_();
-    bindVolume_();
+    bindVolume_( true );
 }
 
-void RenderVolumeObject::bindVolume_()
+void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned geomId )
 {
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Volume );
+    if ( !getViewerInstance().isGLInitialized() )
+    {
+        objVoxels_->resetDirty();
+        return;
+    }
+    update_();
+
+    bool picker = geomId != unsigned( ~0 );
+    // Initialize uniform
+    if ( picker )
+    {
+        GL_EXEC( glViewport( ( GLsizei )0, ( GLsizei )0,
+            ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
+    }
+    else
+    {
+        GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
+            ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
+    }
+
+    if ( objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) )
+    {
+        GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    }
+    else
+    {
+        GL_EXEC( glDisable( GL_DEPTH_TEST ) );
+    }
+
+    GL_EXEC( glEnable( GL_BLEND ) );
+    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
+
+    bindVolume_( picker );
+    auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
+        GLStaticHolder::getShaderId( GLStaticHolder::Volume );
+
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrixPtr ) );
+
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),
+        objVoxels_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
+    GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
+        renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
+        renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
+
+    if ( geomId != unsigned( ~0 ) )
+    {
+        GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
+    }
+
+    if ( picker )
+    {
+        GL_EXEC( glUniform4f( glGetUniformLocation( shader, "viewport" ),
+            float( 0 ), float( 0 ),
+            float( renderParams.viewport.z ), float( renderParams.viewport.w ) ) );
+    }
+    else
+    {
+        GL_EXEC( glUniform4f( glGetUniformLocation( shader, "viewport" ),
+            float( renderParams.viewport.x ), float( renderParams.viewport.y ),
+            float( renderParams.viewport.z ), float( renderParams.viewport.w ) ) );
+    }
+
+    const auto& voxelSize = objVoxels_->vdbVolume().voxelSize;
+    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
+
+    constexpr std::array<float, 24> cubePoints =
+    {
+        0.0f,0.0f,0.0f,
+        0.0f,1.0f,0.0f,
+        1.0f,1.0f,0.0f,
+        1.0f,0.0f,0.0f,
+        0.0f,0.0f,1.0f,
+        0.0f,1.0f,1.0f,
+        1.0f,1.0f,1.0f,
+        1.0f,0.0f,1.0f
+    };
+    constexpr std::array<unsigned, 36> cubeTriangles =
+    {
+        0,1,2,
+        2,3,0,
+        0,4,5,
+        5,1,0,
+        0,3,7,
+        7,4,0,
+        6,5,4,
+        4,7,6,
+        1,5,6,
+        6,2,1,
+        6,7,3,
+        3,2,6
+    };
+
+    GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
+    bindVertexAttribArray( shader, "position", volumeVertsBuffer_, cubePoints, 3, !volumeVertsBuffer_.valid() );
+    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(), 
+        cubeTriangles.data(), cubeTriangles.size() );
+
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
+    GL_EXEC( glEnable( GL_CULL_FACE ) );
+    GL_EXEC( glCullFace( GL_BACK ) );
+    GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
+    GL_EXEC( glDisable( GL_CULL_FACE ) );
+}
+
+void RenderVolumeObject::bindVolume_( bool picker )
+{
+    auto shader = picker ? GLStaticHolder::getShaderId( GLStaticHolder::VolumePicker ) :
+        GLStaticHolder::getShaderId( GLStaticHolder::Volume );
 
     GL_EXEC( glUseProgram( shader ) );
 
@@ -192,7 +237,6 @@ void RenderVolumeObject::initBuffers_()
 {
     GL_EXEC( glGenVertexArrays( 1, &volumeArrayObjId_ ) );
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
-    GL_EXEC( glGenBuffers( 1, &volumeBufferObjId_ ) );
 
     dirty_ = DIRTY_PRIMITIVES | DIRTY_TEXTURE;
 }
@@ -202,7 +246,6 @@ void RenderVolumeObject::freeBuffers_()
     if ( !getViewerInstance().isGLInitialized() || !loadGL() )
         return;
     GL_EXEC( glDeleteVertexArrays( 1, &volumeArrayObjId_ ) );
-    GL_EXEC( glDeleteBuffers( 1, &volumeBufferObjId_ ) );
 }
 
 void RenderVolumeObject::update_()

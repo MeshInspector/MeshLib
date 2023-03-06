@@ -8,6 +8,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
 #include "exports.h"
 #include "ImGuiTraits.h"
 #include "MRMesh/MRColor.h"
@@ -276,5 +277,10 @@ MRVIEWER_API void Spinner( float radius, float scaling );
 
 /// draw big title with close cross (i.e. for settings modal popup )
 MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
+
+inline ImVec2 toImVec2( const MR::Vector2f& in )
+{
+    return ImVec2( in.x, in.y );
+}
 
 } // namespace ImGui

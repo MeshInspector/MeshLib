@@ -402,10 +402,6 @@ tl::expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf
                 if ( node.name.empty() )
                     curObject->setName( model.meshes[node.mesh].name );
             }
-            else
-            {
-                curObject->setAncillary( true );
-            }
 
             if ( curObject->name().empty() )
             {

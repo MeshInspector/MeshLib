@@ -480,13 +480,14 @@ inline EdgeId mapEdge( const WholeEdgeHashMap & map, EdgeId src )
 
 // rearrange vector values by map (old.id -> new.id)
 template<typename T, typename I>
-[[nodiscard]] Vector<T, I> rearrangeVectorByMap(const Vector<T, I>& oldVector, const BMap<I, I>& map)
+[[nodiscard]] Vector<T, I> rearrangeVectorByMap( const Vector<T, I>& oldVector, const BMap<I, I>& map )
 {
     Vector<T, I> newVector;
-    newVector.resize(map.tsize);
+    newVector.resize( map.tsize );
 
     const auto& mData = map.b.data();
-    for ( I i = I(0); i < oldVector.size(); ++i)
+    const auto sz = std::min( oldVector.size(), map.b.size() );
+    for ( I i = I(0); i < sz; ++i)
     {
         I newV = mData[i];
         if ( newV.valid() )
@@ -494,7 +495,6 @@ template<typename T, typename I>
     }
     return newVector;
 }
-
 
 MRMESH_API void loadMeshDll();
 

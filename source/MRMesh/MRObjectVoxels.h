@@ -110,6 +110,14 @@ public:
     // move volume rendering data to caller: basically used in RenderVolumeObject 
     [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
+    enum class VolumeRenderingType
+    {
+        GrayShades,
+        Rainbow
+    };
+    VolumeRenderingType getVolumeRenderingType() const { return volumeRenderingType_; }
+    MRMESH_API void setVolumeRenderingType( VolumeRenderingType type );
+
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
     MRMESH_API void setMaxSurfaceTriangles( int maxFaces );
@@ -131,6 +139,7 @@ public:
     IsoChangedSignal isoSurfaceChangedSignal;
 
 private:
+    VolumeRenderingType volumeRenderingType_{ VolumeRenderingType::Rainbow };
     mutable std::unique_ptr<SimpleVolumeU8> volumeRenderingData_;
     int maxSurfaceTriangles_{ 10000000 };
     VdbVolume vdbVolume_;

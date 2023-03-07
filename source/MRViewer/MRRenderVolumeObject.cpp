@@ -192,13 +192,41 @@ void RenderVolumeObject::bindVolume_( bool picker )
         auto isoValue = ( objVoxels_->getIsoValue() - volume.min ) / ( volume.max - volume.min );
         bool dense = volume.data->getGridClass() != openvdb::GRID_LEVEL_SET;
         std::vector<Color> denseMap( 256 );
-        for ( int i = 0; i < denseMap.size(); ++i )
-            denseMap[255 - i] = Color( i, i, i, 10 );
         int passOver = int( isoValue * denseMap.size() );
-        for ( int i = 0; i < denseMap.size(); ++i )
+        if ( objVoxels_->getVolumeRenderingType() == ObjectVoxels::VolumeRenderingType::GrayShades )
         {
-            if ( dense == ( i < passOver ) )
-                denseMap[i].a = 0;
+            for ( int i = 0; i < denseMap.size(); ++i )
+                denseMap[i] = Color( 255 - i, 255 - i, 255 - i, ( dense == ( i < passOver ) ) ? 0 : 10 );
+        }
+        else
+        {
+            int startIndex = dense ? passOver : 0;
+            int stopIndex = dense ? 255 : passOver;
+            constexpr std::array<Color, 7> rainbow{
+                Color::red(),
+                Color( 255,127,0 ),
+                Color::yellow(),
+                Color::green(),
+                Color::blue(),
+                Color( 75,0,130 ),
+                Color( 148,0,211 )
+            };
+            for ( int i = 0; i < denseMap.size(); ++i )
+            {
+                auto diff = stopIndex - startIndex;
+                if ( i < startIndex || i > stopIndex || diff == 0 )
+                {
+                    denseMap[i] = Color( 0, 0, 0, 0 );
+                    continue;
+                }
+                float ratio = float( i - startIndex ) / float( diff ) * float( rainbow.size() );
+                const auto& startColor = rainbow[int( std::floor( ratio ) )];
+                const auto& stopColor = rainbow[int( std::ceil( ratio ) )];
+                ratio = ratio - std::floor( ratio );
+
+                denseMap[i] = startColor * ( 1.0f - ratio ) + stopColor * ratio;
+                denseMap[i].a = 10;
+            }
         }
         denseMap_.loadData(
             { .resolution = Vector2i( denseMap.size(),1 ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },

@@ -22,9 +22,6 @@
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRViewer/MRAppendHistory.h"
-#include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRBuffer.h"
-#include "MRMesh/MRImageLoad.h"
 
 namespace MR
 {

@@ -3,9 +3,7 @@
 #include "MRMesh.h"
 #include "MRMeshTexture.h"
 #include "MRProgressCallback.h"
-
 #include <tl/expected.hpp>
-
 #include <filesystem>
 #include <istream>
 #include <string>

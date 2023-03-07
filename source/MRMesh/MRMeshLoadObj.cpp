@@ -779,8 +779,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     return res;
 }
 
-
-
 } //namespace MeshLoad
 
 } //namespace MR

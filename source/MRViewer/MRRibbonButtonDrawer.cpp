@@ -402,9 +402,21 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
     return res;
 }
 
+bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None */ )
+{
+    ImVec2 framePadding( 8.f, 3.f );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+    // TODO rework according design
+    const bool changed = ImGui::ColorEdit4( label, &color.x, flags );
+    ImGui::PopStyleVar();
+    return changed;
+}
+
 bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview, const std::vector<std::string>& tooltips, const std::string& defaultText )
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
+
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImGui::toImVec2(MR::StyleConsts::CustomCombo::framePadding) );
 
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;
@@ -437,6 +449,8 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     const ImVec2 endPoint{ arrowPos.x + 3 * arrowWidth, arrowPos.y + halfHeight };
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+
+    ImGui::PopStyleVar();
 
     if ( !res )
         return false;

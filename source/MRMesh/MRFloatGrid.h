@@ -19,6 +19,7 @@ struct OpenVdbFloatGrid : openvdb::FloatGrid
 {
     OpenVdbFloatGrid() noexcept = default;
     OpenVdbFloatGrid( openvdb::FloatGrid && in ) : openvdb::FloatGrid( std::move( in ) ) {}
+    [[nodiscard]] size_t heapBytes() const { return memUsage(); }
 };
 
 inline openvdb::FloatGrid & ovdb( OpenVdbFloatGrid & v ) { return v; }

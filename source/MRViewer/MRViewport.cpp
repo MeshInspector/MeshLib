@@ -16,6 +16,7 @@
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRObjectVoxels.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 namespace
@@ -153,6 +154,16 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
 
         PointOnFace res;
         res.face = FaceId( int( pickRes.primId ) );
+#ifndef __EMSCRIPTEN__
+        auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
+        if ( voxObj && voxObj->isVolumeRenderingEnabled() )
+        {
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( 
+                unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+            // TODO: support VoxelId (PointOnFace is old class that requires rework)
+        }
+        else
+#endif
         if ( auto pointObj = renderVector[pickRes.geomId]->asType<ObjectPointsHolder>() )
         {
             if ( auto pc = pointObj->pointCloud() )

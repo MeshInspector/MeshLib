@@ -2,12 +2,7 @@
 #include "MRCreateShader.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
-
-#ifndef __EMSCRIPTEN__
-#define MR_GLSL_VERSION_LINE R"(#version 150)"
-#else
-#define MR_GLSL_VERSION_LINE R"(#version 300 es)"
-#endif
+#include "MRVolumeShader.h"
 
 namespace
 {
@@ -30,7 +25,9 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Viewport border shader",
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
-        "Simple overlay shader"
+        "Simple overlay shader",
+        "Volume shader",
+        "Volume picker shader"
     };
     return names[type];
 }
@@ -91,7 +88,15 @@ void GLStaticHolder::createShader_( ShaderType type )
 {
     std::string vertexShader;
     std::string fragmentShader;
-    if ( type == DrawMesh || type == TransparentMesh )
+    if ( type == Volume || type == VolumePicker )
+    {
+        vertexShader = getTrivialVertexShader();
+        if ( type == Volume )
+            fragmentShader = getVolumeFragmentShader();
+        else
+            fragmentShader = getVolumePickerFragmentShader();
+    }
+    else if ( type == DrawMesh || type == TransparentMesh )
     {
         vertexShader =
             MR_GLSL_VERSION_LINE R"(

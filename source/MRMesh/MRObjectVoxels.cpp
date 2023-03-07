@@ -15,8 +15,9 @@
 #include "MRStringConvert.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
 #include "MROpenVDBHelper.h"
+#include <filesystem>
+#include <thread>
 
 namespace MR
 {
@@ -35,6 +36,8 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
     activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
     updateHistogram_( volume.min, volume.max );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
@@ -51,6 +54,8 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     updateHistogramAndSurface( cb );
+    if ( volumeRendering_ )
+        dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE );
 }
 
 void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
@@ -69,7 +74,8 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
 
     const float progressTo = ( mesh_ && cb ) ? 0.5f : 1.f;
     updateHistogram_( min, max, subprogress( cb, 0.f, progressTo ) );
-
+    vdbVolume_.min = min;
+    vdbVolume_.max = max;
     if ( mesh_ )
     {
         mesh_.reset();
@@ -94,6 +100,8 @@ tl::expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCa
             return tl::make_unexpected( recRes.error() );
         updateIsoSurface( *recRes );
     }
+    if ( volumeRendering_ )
+        dirty_ |= DIRTY_TEXTURE;
     return updateSurface;
 }
 
@@ -196,6 +204,83 @@ Vector3i ObjectVoxels::getCoordinateByVoxelId( VoxelId id ) const
     return indexer_.toPos( id );
 }
 
+bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ ) const
+{
+    if ( !vdbVolume_.data )
+        return false;
+    volumeRenderingData_ = std::make_unique<SimpleVolumeU8>();
+    auto& res = *volumeRenderingData_;
+    res.max = vdbVolume_.max;
+    res.min = vdbVolume_.min;
+    res.voxelSize = vdbVolume_.voxelSize;
+    auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
+    res.dims = Vector3i( activeBox.dim().x(), activeBox.dim().y(), activeBox.dim().z() );
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    const auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> cancelled{ false };
+    std::atomic<size_t> finishedVoxels{ 0 };
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, indexer.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto accessor = vdbVolume_.data->getConstAccessor();
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( cb && cancelled.load( std::memory_order_relaxed ) )
+                return;
+            auto coord = indexer.toPos( VoxelId( i ) );
+            auto vdbCoord = openvdb::Coord( coord.x + activeBox.min().x(), coord.y + activeBox.min().y(), coord.z + activeBox.min().z() );
+            res.data[i] = uint8_t( std::clamp( ( accessor.getValue( vdbCoord ) - res.min ) / ( res.max - res.min ), 0.0f, 1.0f ) * 255.0f );
+        }
+        if ( cb )
+        {
+            finishedVoxels.fetch_add( range.size(), std::memory_order_relaxed );
+            if ( std::this_thread::get_id() == mainThreadId &&
+                !cb( float( finishedVoxels.load( std::memory_order_relaxed ) / float( indexer.size() ) ) ) )
+                cancelled.store( true, std::memory_order_relaxed );
+        }
+    } );
+    if ( !cancelled )
+        return true;
+    volumeRenderingData_.reset();
+    return false;
+}
+
+void ObjectVoxels::enableVolumeRendering( bool on )
+{
+    if ( volumeRendering_ == on )
+        return;
+    volumeRendering_ = on;
+    if ( volumeRendering_ )
+    {
+        if ( !volumeRenderingData_ )
+            prepareDataForVolumeRendering();
+        renderObj_ = createRenderObject<ObjectVoxels>( *this );
+    }
+    else
+    {
+        renderObj_ = createRenderObject<ObjectMeshHolder>( *this );
+    }
+    setDirtyFlags( DIRTY_ALL );
+}
+
+void ObjectVoxels::setVolumeRenderingType( VolumeRenderingType type )
+{
+    if ( type == volumeRenderingType_ )
+        return;
+    volumeRenderingType_ = type;
+    if ( isVolumeRenderingEnabled() )
+        dirty_ |= DIRTY_TEXTURE;
+}
+
+bool ObjectVoxels::hasVisualRepresentation() const
+{
+    if ( isVolumeRenderingEnabled() )
+        return false;
+    return ObjectMeshHolder::hasVisualRepresentation();
+}
+
 void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
 {
     if ( maxFaces == maxSurfaceTriangles_ )
@@ -238,8 +323,9 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask )
 size_t ObjectVoxels::heapBytes() const
 {
     return ObjectMeshHolder::heapBytes()
-        + ( vdbVolume_.data ? sizeof( *vdbVolume_.data ) + vdbVolume_.data->memUsage() : 0 )
-        + histogram_.heapBytes();
+        + vdbVolume_.heapBytes()
+        + histogram_.heapBytes()
+        + MR::heapBytes( volumeRenderingData_ );
 }
 
 void ObjectVoxels::swapBase_( Object& other )

@@ -4,12 +4,12 @@
 #include "MRMeshBuilder.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRphmap.h"
 #include "MRPch/MRTBB.h"
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
 
-#include <unordered_map>
 
 namespace
 {
@@ -372,7 +372,7 @@ namespace
         std::string diffuseTextureFile;
     };
 
-    using MtlLibrary = std::unordered_map<std::string, MtlMaterial>;
+    using MtlLibrary = HashMap<std::string, MtlMaterial>;
 
     tl::expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
     {

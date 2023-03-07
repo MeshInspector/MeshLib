@@ -186,12 +186,12 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 else
                     objectMesh->setName( std::move( resValue[i].name ) );
                 objectMesh->select( true );
-                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
-                objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
+                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );                
                 
                 auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
                 if ( image.has_value() )
                 {
+                    objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
                     objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }

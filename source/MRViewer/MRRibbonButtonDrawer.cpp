@@ -77,7 +77,7 @@ std::unique_ptr<MR::ImGuiImage>& RibbonButtonDrawer::GetTexture( TextureType typ
 {
     const int typeInt = int( type );
     assert( typeInt < textures_.size() && typeInt >= 0 );
-    return textures_[int( type )];
+    return textures_[typeInt];
 }
 
 bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */, ImGuiKey key )
@@ -602,7 +602,6 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
         const float frameH = GetFrameHeight();
         float off = 0.f;
         ImRect bb( window->DC.CursorPos, ImVec2( window->DC.CursorPos.x + frameH * 1.5f, window->DC.CursorPos.y + frameH ) );
-        Vector3f hsv;
         if ( !( flags & ImGuiColorEditFlags_NoBorder ) )
         {
             off = 2.f;

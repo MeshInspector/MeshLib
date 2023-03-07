@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRDistanceMapLoad.h"
+#include "MRImageLoad.h"
 #include "MRPointsLoad.h"
 #include "MRVoxelsLoad.h"
 #include "MRObjectVoxels.h"
@@ -185,7 +186,16 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 else
                     objectMesh->setName( std::move( resValue[i].name ) );
                 objectMesh->select( true );
-                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
+                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );                
+                
+                auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
+                if ( image.has_value() )
+                {
+                    objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
+                    objectMesh->setTexture( { image.value(), FilterType::Linear } );
+                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                }
+
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
             }
             result = objects;

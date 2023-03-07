@@ -192,7 +192,7 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                 auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
                 if ( image.has_value() )
                 {
-                    objectMesh->setTexture( MeshTexture( std::move( *image ) ) );
+                    objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
 

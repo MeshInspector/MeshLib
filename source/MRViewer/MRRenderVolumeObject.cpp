@@ -152,10 +152,12 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
         cubeTriangles.data(), cubeTriangles.size() );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
+    GL_EXEC( glDisable( GL_MULTISAMPLE ) );
     GL_EXEC( glEnable( GL_CULL_FACE ) );
     GL_EXEC( glCullFace( GL_BACK ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
     GL_EXEC( glDisable( GL_CULL_FACE ) );
+    GL_EXEC( glEnable( GL_MULTISAMPLE ) );
 }
 
 void RenderVolumeObject::bindVolume_( bool picker )

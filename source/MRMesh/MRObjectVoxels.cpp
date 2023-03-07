@@ -265,6 +265,15 @@ void ObjectVoxels::enableVolumeRendering( bool on )
     setDirtyFlags( DIRTY_ALL );
 }
 
+void ObjectVoxels::setVolumeRenderingType( VolumeRenderingType type )
+{
+    if ( type == volumeRenderingType_ )
+        return;
+    volumeRenderingType_ = type;
+    if ( isVolumeRenderingEnabled() )
+        dirty_ |= DIRTY_TEXTURE;
+}
+
 bool ObjectVoxels::hasVisualRepresentation() const
 {
     if ( isVolumeRenderingEnabled() )

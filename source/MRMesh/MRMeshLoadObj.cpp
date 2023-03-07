@@ -208,7 +208,7 @@ namespace
     };
 
     template <typename Element>
-    std::vector<ElementGroup<Element>> groupLines( const char* data, size_t size, const std::vector<size_t>& newlines )
+    std::vector<ElementGroup<Element>> groupLines( const char* data, size_t, const std::vector<size_t>& newlines )
     {
         const auto lineCount = newlines.size() - 1;
 
@@ -347,6 +347,7 @@ namespace
                         ( lit( "-clamp" ) >> ( lit( "on" ) | lit( "off" ) ) ) |
                         ( lit( "-imfchan" ) >> ( char_( 'r' ) | char_( 'b' ) | char_( 'g' ) | char_( 'm' ) | char_( 'l' ) | char_( 'z' ) ) ) |
                         ( lit( "-mm" ) >> float_ >> float_ ) |
+                        ( lit( "-bm" ) >> float_ ) |
                         ( lit( "-o" ) >> float_ >> float_ >> float_ ) |
                         ( lit( "-s" ) >> float_ >> float_ >> float_ ) |
                         ( lit( "-t" ) >> float_ >> float_ >> float_ ) |
@@ -361,6 +362,90 @@ namespace
 
         boost::trim( textureFile );
         return {};
+    }
+
+    struct MtlMaterial
+    {
+        Vector3f diffuseColor;
+        std::string diffuseTextureFile;
+    };
+
+    using MtlLibrary = std::unordered_map<std::string, MtlMaterial>;
+
+    tl::expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
+    {
+        std::ifstream mtlIn( path, std::ios::binary );
+        if ( !mtlIn.is_open() )
+            return tl::make_unexpected( "unable to open MTL file" );
+
+        const auto posStart = mtlIn.tellg();
+        mtlIn.seekg( 0, std::ios_base::end );
+        const auto posEnd = mtlIn.tellg();
+        mtlIn.seekg( posStart );
+        const auto mtlSize = posEnd - posStart;
+        std::string mtlContent( mtlSize, '\0' );
+        const auto data = mtlContent.data();
+        mtlIn.read( data, mtlSize );
+
+        const auto newlines = splitByLines( data, mtlSize );
+
+        const auto groups = groupLines<MtlElement>( data, mtlSize, newlines );
+
+        MtlLibrary result;
+        std::string currentMaterialName;
+        MtlMaterial currentMaterial;
+
+        for ( const auto& group : groups )
+        {
+            std::string parseError;
+            switch ( group.element )
+            {
+            case MtlElement::Unknown:
+                break;
+            case MtlElement::MaterialName:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                if ( !currentMaterialName.empty() )
+                {
+                    result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
+                    currentMaterial = {};
+                }
+                currentMaterialName = line.substr( 6, std::string_view::npos );
+                boost::trim( currentMaterialName );
+            }
+            break;
+            case MtlElement::DiffuseColor:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                auto res = parseMtlColor( line, currentMaterial.diffuseColor );
+                if ( !res.has_value() )
+                    parseError = std::move( res.error() );
+            }
+            break;
+            case MtlElement::DiffuseTexture:
+            {
+                const auto li = group.end - 1;
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+
+                auto res = parseMtlTexture( line, currentMaterial.diffuseTextureFile );
+                if ( !res.has_value() )
+                    parseError = std::move( res.error() );
+            }
+            break;
+            default:
+                break;
+            }
+            if ( !parseError.empty() )
+                return tl::make_unexpected( parseError );
+        }
+
+        if ( !currentMaterialName.empty() )
+            result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
+        return result;
     }
 }
 
@@ -377,10 +462,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::f
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, callback ), file );
+    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), callback ), file );
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects,
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
                                                                     ProgressCallback callback )
 {
     MR_TIMER
@@ -401,10 +486,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream
         return tl::make_unexpected( "Loading canceled" );
     // TODO: redefine callback
 
-    return fromSceneObjFile( data.data(), data.size(), combineAllObjects, callback );
+    return fromSceneObjFile( data.data(), data.size(), combineAllObjects, dir, callback );
 }
 
-tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects,
+tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
                                                                     ProgressCallback callback )
 {
     MR_TIMER
@@ -415,11 +500,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     std::vector<UVCoord> textureVertices;
     Triangulation t;
     Vector<UVCoord, VertId> uvCoords;
-    std::string materialLibrary;
+    tl::expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
-    VertBitSet currentMaterialVertices;
-    std::vector<NamedMesh::MaterialVertMap> materialVertMaps;
-
     auto finishObject = [&]() 
     {
         MR_NAMED_TIMER( "finish object" )
@@ -457,31 +539,25 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             for ( const auto& dup : dups )
                 dst2Src.emplace( dup.dupVert, dup.srcVert );
 
-            result.materialLibrary = materialLibrary;
-
-            materialVertMaps.push_back( { currentMaterialName, currentMaterialVertices } );
-            currentMaterialVertices.reset();
-
-            result.materialVertMaps.reserve( materialVertMaps.size() );
-            for ( auto&& materialVertMap : materialVertMaps )
+            if ( mtl.has_value() && ! mtl->empty() )
             {
-                if ( materialVertMap.vertices.empty() )
-                    continue;
-                VertBitSet vertices;
-                vertices.resize( maxV + 1 - minV );
-                BitSetParallelForAll( vertices, [&] ( VertId dst )
+                auto materialIt = mtl->find( currentMaterialName );
+                const auto mtlCopy = *mtl;
+
+                if ( materialIt == mtl->end() )
                 {
-                    VertId src;
-                    const auto it = dst2Src.find( dst );
-                    if ( it != dst2Src.end() )
-                        src = it->second + minV;
-                    else
-                        src = dst + minV;
-                    vertices.set( dst, materialVertMap.vertices.test( src ) );
-                } );
-                result.materialVertMaps.push_back( { std::move( materialVertMap.materialName ), std::move( vertices ) } );
+                    materialIt = mtl->find( "default" );
+                }
+                if ( materialIt == mtl->end() )
+                {
+                    materialIt = mtl->begin();
+                }
+               
+                if ( !materialIt->second.diffuseTextureFile.empty() )
+                {
+                    result.pathToTexture = dir / materialIt->second.diffuseTextureFile;
+                }
             }
-            materialVertMaps.clear();
         }
         currentObjName.clear();
     };
@@ -504,7 +580,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         const auto offset = points.size();
         points.resize( points.size() + ( end - begin ) );
         uvCoords.resize( points.size() );
-        currentMaterialVertices.resize( points.size() );
 
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -620,9 +695,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     for ( int j = 0; j < vs.size(); ++j )
                         uvCoords[VertId{ vs[j] - 1 }] = textureVertices[ vts[j] - 1 ];
                 }
-
-                for ( auto v : vs )
-                    currentMaterialVertices.set( VertId{ v - 1 } );
             }
         }, ctx );
 
@@ -656,15 +728,13 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         const auto li = end - 1;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
         // TODO: support multiple files
-        materialLibrary = line.substr( strlen( "mtllib" ), std::string_view::npos );
-        boost::trim( materialLibrary );
+        std::string filename ( line.substr( strlen( "mtllib" ), std::string_view::npos ) );
+        boost::trim( filename );
+        mtl = loadMtlLibrary( dir / filename );
     };
 
     auto parseMaterialName = [&] ( size_t, size_t end, std::string& )
     {
-        materialVertMaps.push_back( { currentMaterialName, currentMaterialVertices } );
-        currentMaterialVertices.reset();
-
         const auto li = end - 1;
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
         currentMaterialName = line.substr( strlen( "usemtl" ), std::string_view::npos );
@@ -709,68 +779,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     return res;
 }
 
-tl::expected<MtlLibrary, std::string> loadMtlLibrary( const char* data, size_t size, ProgressCallback )
-{
-    const auto newlines = splitByLines( data, size );
 
-    const auto groups = groupLines<MtlElement>( data, size, newlines );
-
-    MtlLibrary result;
-    std::string currentMaterialName;
-    MtlMaterial currentMaterial;
-
-    for ( const auto& group : groups )
-    {
-        std::string parseError;
-        switch ( group.element )
-        {
-        case MtlElement::Unknown:
-            break;
-        case MtlElement::MaterialName:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-
-            if ( !currentMaterialName.empty() )
-            {
-                result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
-                currentMaterial = {};
-            }
-            currentMaterialName = line.substr( 6, std::string_view::npos );
-            boost::trim( currentMaterialName );
-        }
-            break;
-        case MtlElement::DiffuseColor:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-
-            auto res = parseMtlColor( line, currentMaterial.diffuseColor );
-            if ( !res.has_value() )
-                parseError = std::move( res.error() );
-        }
-            break;
-        case MtlElement::DiffuseTexture:
-        {
-            const auto li = group.end - 1;
-            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-
-            auto res = parseMtlTexture( line, currentMaterial.diffuseTextureFile );
-            if ( !res.has_value() )
-                parseError = std::move( res.error() );
-        }
-            break;
-        default:
-            break;
-        }
-        if ( !parseError.empty() )
-            return tl::make_unexpected( parseError );
-    }
-
-    if ( !currentMaterialName.empty() )
-        result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
-    return result;
-}
 
 } //namespace MeshLoad
 

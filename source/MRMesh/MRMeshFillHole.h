@@ -95,8 +95,8 @@ struct StitchHolesParams
   * \image html fill/stitch_smooth.png "Stitch with smooth" width = 250cm
   * 
   * \param mesh mesh with hole
-  * \param a EdgeId which represents 1st hole
-  * \param b EdgeId which represents 2nd hole
+  * \param a EdgeId which represents 1st hole (should not have valid left FaceId)
+  * \param b EdgeId which represents 2nd hole (should not have valid left FaceId)
   * \param params parameters of holes stitching
   *
   * \sa \ref fillHole
@@ -123,7 +123,7 @@ MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesPara
   * \image html fill/fill_smooth.png "Fill with smooth" width = 250cm
   * 
   * \param mesh mesh with hole
-  * \param a EdgeId which represents hole
+  * \param a EdgeId which represents hole (should not have valid left FaceId)
   * \param params parameters of hole filling
   * 
   * \sa \ref buildCylinderBetweenTwoHoles

@@ -346,7 +346,8 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
             params.outNewFaces->autoResizeSet( res );
         return res;
     };
-
+    assert( !mesh.topology.left( a0 ) );
+    assert( !mesh.topology.left( b0 ) );
     // stitch direction should be independent of input order
     if ( a0 < b0 )
         std::swap( a0, b0 );

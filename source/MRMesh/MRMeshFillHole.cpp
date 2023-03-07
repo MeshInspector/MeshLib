@@ -9,6 +9,7 @@
 #include "MRMeshDelone.h"
 #include "MRHash.h"
 #include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRGTest.h"
 #include <parallel_hashmap/phmap.h>
 #include <queue>
@@ -346,7 +347,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
             params.outNewFaces->autoResizeSet( res );
         return res;
     };
-
+    if ( mesh.topology.left( a0 ) || mesh.topology.left( b0 ) )
+    {
+        assert( false );
+        spdlog::error( "buildCylinderBetweenTwoHoles: edges do not represent holes" );
+        return;
+    }
     // stitch direction should be independent of input order
     if ( a0 < b0 )
         std::swap( a0, b0 );
@@ -534,9 +540,12 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         assert( false );
         return res;
     }
-    assert( !mesh.topology.left( a0 ) );
     if ( mesh.topology.left( a0 ) )
+    {
+        assert( false );
+        spdlog::error( "getFillHolePlan: edge does not represent a hole" );
         return res;
+    }
 
     unsigned loopEdgesCounter = 0;
     EdgeId a = a0;

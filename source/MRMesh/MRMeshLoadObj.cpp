@@ -9,6 +9,8 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
 
+#include <unordered_map>
+
 namespace
 {
     using namespace MR;

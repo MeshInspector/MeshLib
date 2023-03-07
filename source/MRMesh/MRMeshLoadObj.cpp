@@ -544,7 +544,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             if ( mtl.has_value() && ! mtl->empty() )
             {
                 auto materialIt = mtl->find( currentMaterialName );
-                const auto mtlCopy = *mtl;
 
                 if ( materialIt == mtl->end() )
                 {

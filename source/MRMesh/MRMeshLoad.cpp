@@ -132,7 +132,7 @@ tl::expected<Mesh, std::string> fromObj( std::istream& in, Vector<Color, VertId>
 {
     MR_TIMER
 
-    auto objs = fromSceneObjFile( in, true, "", callback);
+    auto objs = fromSceneObjFile( in, true, {}, callback );
     if ( !objs.has_value() )
         return tl::make_unexpected( objs.error() );
     if ( objs->size() != 1 )

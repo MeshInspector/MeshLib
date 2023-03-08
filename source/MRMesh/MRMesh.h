@@ -181,9 +181,11 @@ struct [[nodiscard]] Mesh
     // computes average length of an edge in this mesh
     [[nodiscard]] MRMESH_API float averageEdgeLength() const;
 
-    // find center location of the mesh by different means
+    // computes average position of all valid mesh vertices
     [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
+    // computes center of mass considering that density of all triangles is the same
     [[nodiscard]] MRMESH_API Vector3f findCenterFromFaces() const;
+    // computes bounding box and returns its center
     [[nodiscard]] MRMESH_API Vector3f findCenterFromBBox() const;
 
     // for all points not in topology.getValidVerts() sets coordinates to (0,0,0)

@@ -137,6 +137,27 @@ Box<V> Polyline<V>::getBoundingBox() const
 }
 
 template<typename V>
+V Polyline<V>::findCenterFromPoints() const
+{
+    MR_TIMER
+    if ( topology.numValidVerts() <= 0 )
+    {
+        assert( false );
+        return {};
+    }
+    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), V{},
+    [&] ( const auto & range, V curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( topology.hasVert( v ) )
+                curr += points[v];
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    return sumPos / (float)topology.numValidVerts();
+}
+
+template<typename V>
 Box<V> Polyline<V>::computeBoundingBox( const AffineXf<V> * toWorld ) const
 {
     return MR::computeBoundingBox( points, topology.getValidVerts(), toWorld );

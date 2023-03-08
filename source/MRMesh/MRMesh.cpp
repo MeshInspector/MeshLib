@@ -904,41 +904,59 @@ void Mesh::shrinkToFit()
 
 Vector3f Mesh::findCenterFromPoints() const
 {
-    Vector3f res;
-    int count = 0;
-    const auto & validPoints = topology.edgePerVertex();
-    for (auto edge : validPoints)
+    MR_TIMER
+    if ( topology.numValidVerts() <= 0 )
     {
-        if(edge.valid())
-        {
-            res += points[topology.org(edge)];
-            count++;
-        }
+        assert( false );
+        return {};
     }
-    assert(count > 0);
-    return res / float(count);
+    auto sumPos = parallel_deterministic_reduce( tbb::blocked_range( 0_v, VertId{ topology.vertSize() }, 1024 ), Vector3d{},
+    [&] ( const auto & range, Vector3d curr )
+    {
+        for ( VertId v = range.begin(); v < range.end(); ++v )
+            if ( topology.hasVert( v ) )
+                curr += Vector3d{ points[v] };
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    return Vector3f{ sumPos / (double)topology.numValidVerts() };
 }
 
 Vector3f Mesh::findCenterFromFaces() const
 {
-    Vector3f acc(0., 0., 0.);
-    auto &edgePerFaces = topology.edgePerFace();
-    float triAreaAcc = 0;
-    for (auto edge : edgePerFaces)
+    MR_TIMER
+    struct Acc
     {
-        if (edge.valid())
+        Vector3d areaPos;
+        double area = 0;
+        Acc operator +( const Acc & b ) const
         {
-            VertId v0, v1, v2;
-            topology.getLeftTriVerts(edge, v0, v1, v2);
-            //area of triangle corresponds to the weight of each point
-            float triArea = leftDirDblArea(edge).length();
-            Vector3f center = points[v0] + points[v1] + points[v2];
-            acc += center * triArea;
-            triAreaAcc += triArea;
+            return {
+                .areaPos = areaPos + b.areaPos,
+                .area = area + b.area
+            };
         }
+    };
+    auto acc = parallel_deterministic_reduce( tbb::blocked_range( 0_f, FaceId{ topology.faceSize() }, 1024 ), Acc{},
+    [&] ( const auto & range, Acc curr )
+    {
+        for ( FaceId f = range.begin(); f < range.end(); ++f )
+            if ( topology.hasFace( f ) )
+            {
+                double triArea = area( f );
+                Vector3d center( triCenter( f ) );
+                curr.area += triArea;
+                curr.areaPos += center * triArea;
+            }
+        return curr;
+    },
+    [] ( auto a, auto b ) { return a + b; } );
+    if ( acc.area <= 0 )
+    {
+        assert( false );
+        return {};
     }
-    assert(triAreaAcc > 0.f);
-    return acc / triAreaAcc / 3.f;
+    return Vector3f{ acc.areaPos / acc.area };
 }
 
 Vector3f Mesh::findCenterFromBBox() const

@@ -188,20 +188,25 @@ void RenderVolumeObject::bindVolume_( bool picker )
     GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
     if ( dirty_ & DIRTY_TEXTURE )
     {
-        auto volume = objVoxels_->vdbVolume();
-        auto isoValue = ( objVoxels_->getIsoValue() - volume.min ) / ( volume.max - volume.min );
-        bool dense = volume.data->getGridClass() != openvdb::GRID_LEVEL_SET;
+        const auto& volume = objVoxels_->vdbVolume();
+        const auto& params = objVoxels_->getVolumeRenderingParams();
         std::vector<Color> denseMap( 256 );
-        int passOver = int( isoValue * denseMap.size() );
-        if ( objVoxels_->getVolumeRenderingType() == ObjectVoxels::VolumeRenderingType::GrayShades )
+        Vector2f realMinMax;
+        realMinMax[0] = volume.min;
+        realMinMax[1] = volume.max;
+        auto size = realMinMax[1] - realMinMax[0];
+        int minIndex = int( ( params.min - realMinMax[0] ) / size * denseMap.size() );
+        int maxIndex = int( ( params.max - realMinMax[0] ) / size * denseMap.size() );
+        if ( params.type == ObjectVoxels::VolumeRenderingParams::Type::GrayShades )
         {
             for ( int i = 0; i < denseMap.size(); ++i )
-                denseMap[i] = Color( 255 - i, 255 - i, 255 - i, ( dense == ( i < passOver ) ) ? 0 : 10 );
+            {
+                bool zeroAlpha = i < minIndex || i > maxIndex;
+                denseMap[i] = Color( 255 - i, 255 - i, 255 - i, zeroAlpha ? 0 : params.alpha );
+            }
         }
         else
         {
-            int startIndex = dense ? passOver : 0;
-            int stopIndex = dense ? 255 : passOver;
             constexpr std::array<Color, 7> rainbow{
                 Color::red(),
                 Color( 255,127,0 ),
@@ -213,19 +218,20 @@ void RenderVolumeObject::bindVolume_( bool picker )
             };
             for ( int i = 0; i < denseMap.size(); ++i )
             {
-                auto diff = stopIndex - startIndex;
-                if ( i < startIndex || i > stopIndex || diff == 0 )
+                auto diff = maxIndex - minIndex;
+                bool zeroAlpha = i < minIndex || i > maxIndex || diff <= 0;
+                if ( zeroAlpha )
                 {
                     denseMap[i] = Color( 0, 0, 0, 0 );
                     continue;
                 }
-                float ratio = float( i - startIndex ) / float( diff ) * float( rainbow.size() );
+                float ratio = float( i - minIndex ) / float( diff ) * float( rainbow.size() );
                 const auto& startColor = rainbow[int( std::floor( ratio ) )];
                 const auto& stopColor = rainbow[int( std::ceil( ratio ) )];
                 ratio = ratio - std::floor( ratio );
 
                 denseMap[i] = startColor * ( 1.0f - ratio ) + stopColor * ratio;
-                denseMap[i].a = 10;
+                denseMap[i].a = params.alpha;
             }
         }
         denseMap_.loadData(

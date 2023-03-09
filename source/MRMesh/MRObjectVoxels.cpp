@@ -265,11 +265,11 @@ void ObjectVoxels::enableVolumeRendering( bool on )
     setDirtyFlags( DIRTY_ALL );
 }
 
-void ObjectVoxels::setVolumeRenderingType( VolumeRenderingType type )
+void ObjectVoxels::setVolumeRenderingParams( const VolumeRenderingParams& params )
 {
-    if ( type == volumeRenderingType_ )
+    if ( params == volumeRenderingParams_ )
         return;
-    volumeRenderingType_ = type;
+    volumeRenderingParams_ = params;
     if ( isVolumeRenderingEnabled() )
         dirty_ |= DIRTY_TEXTURE;
 }

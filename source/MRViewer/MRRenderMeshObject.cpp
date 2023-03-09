@@ -752,7 +752,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
-    auto boundary = findRightRegionBoundary( topology );
+    auto boundary = findRightBoundary( topology );
     borderHighlightPointsSize_ = 0;
     for ( const auto& b : boundary )
         borderHighlightPointsSize_ += 2 * (int)b.size();

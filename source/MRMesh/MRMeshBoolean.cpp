@@ -369,8 +369,8 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
         result.intersectionPoints.emplace_back( isect );
     }
 
-    auto collBordersA = findLeftRegionBoundary( meshA.topology, collFacesA );
-    auto collBordersB = findLeftRegionBoundary( meshB.topology, collFacesB );
+    auto collBordersA = findLeftBoundary( meshA.topology, collFacesA );
+    auto collBordersB = findLeftBoundary( meshB.topology, collFacesB );
 
     const bool needInsidePartA = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideA || operation == BooleanOperation::DifferenceBA );
     const bool needInsidePartB = ( operation == BooleanOperation::Intersection || operation == BooleanOperation::InsideB || operation == BooleanOperation::DifferenceAB );

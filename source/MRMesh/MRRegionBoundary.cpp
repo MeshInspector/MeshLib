@@ -16,10 +16,10 @@ namespace MR
 
 EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region )
 {
-    return trackLeftRegionBoundaryLoop( topology, e0, region );
+    return trackLeftBoundaryLoop( topology, e0, region );
 }
 
-EdgeLoop trackRegionBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
+EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
     MR_TIMER
     std::function<bool( EdgeId )> isLeftBdEdge;
@@ -54,19 +54,19 @@ EdgeLoop trackRegionBoundaryLoop( const MeshTopology& topology, EdgeId e0, const
     return res;
 }
 
-EdgeLoop trackLeftRegionBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
 {
-    return trackRegionBoundaryLoop( topology, e0, region, true );
+    return trackBoundaryLoop( topology, e0, region, true );
 }
 
-EdgeLoop trackRightRegionBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
+EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
 {
-    return trackRegionBoundaryLoop( topology, e0, region, false );
+    return trackBoundaryLoop( topology, e0, region, false );
 }
 
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region )
 {
-    return findLeftRegionBoundary( topology, region );
+    return findLeftBoundary( topology, region );
 }
 
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
@@ -76,27 +76,24 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
     std::vector<EdgeLoop> res;
     phmap::flat_hash_set<EdgeId> reportedBdEdges;
 
-    std::function<bool( EdgeId )> isLeftBdEdge;
     std::function<bool( EdgeId )> insert;
     std::function<EdgeLoop( EdgeId )> track;
     if ( left )
     {
-        isLeftBdEdge = [&]( EdgeId e ) { return topology.isLeftBdEdge( e, region ); };
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e ).second; };
-        track = [&] ( EdgeId e ) { return trackLeftRegionBoundaryLoop( topology, e, region ); };
+        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region ); };
     }
     else
     {
-        isLeftBdEdge = [&]( EdgeId e ) { return topology.isLeftBdEdge( e.sym(), region ); };
         insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e.sym() ).second; };
-        track = [&] ( EdgeId e ) { return trackRightRegionBoundaryLoop( topology, e, region ); };
+        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
     }
 
     for ( auto f : topology.getFaceIds( region ) )
     {
         for ( auto e : leftRing( topology, f ) )
         {
-            if ( !isLeftBdEdge( e ) )
+            if ( !topology.isLeftBdEdge( e, region ) )
                 continue;
             if ( !insert( e ) )
                 continue;
@@ -114,17 +111,17 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
 
 }
 
-std::vector<EdgeLoop> findLeftRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
 {
     return findRegionBoundary( topology, region, true );
 }
 
-std::vector<EdgeLoop> findRightRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
+std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
 {
     return findRegionBoundary( topology, region, false );
 }
 
-std::vector<EdgeLoop> findLeftRegionBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )
+std::vector<EdgeLoop> findLeftBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region )
 {
     MR_TIMER
 
@@ -139,7 +136,7 @@ std::vector<EdgeLoop> findLeftRegionBoundaryInsideMesh( const MeshTopology & top
                 continue;
             if ( reportedBdEdges.count( e ) )
                 continue;
-            auto loop = trackLeftRegionBoundaryLoop( topology, e, &region );
+            auto loop = trackLeftBoundaryLoop( topology, e, &region );
             int holeEdgeIdx = -1;
             for ( int i = 0; i < loop.size(); ++i )
             {
@@ -203,7 +200,7 @@ FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet&
 {
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
-    auto borders = findLeftRegionBoundary( topology, region );
+    auto borders = findLeftBoundary( topology, region );
     for ( const auto& loop : borders )
     {
         for ( auto e : loop )
@@ -476,12 +473,12 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBit
     return getInnerVerts_( topology, edges );
 }
 
-TEST(MRMesh, findLeftRegionBoundary) 
+TEST(MRMesh, findLeftBoundary) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     FaceBitSet faces;
     faces.autoResizeSet( 0_f );
-    auto paths = findLeftRegionBoundary( sphere.topology, faces );
+    auto paths = findLeftBoundary( sphere.topology, faces );
     EXPECT_EQ( paths.size(), 1 );
     for ( const auto & path : paths )
     {

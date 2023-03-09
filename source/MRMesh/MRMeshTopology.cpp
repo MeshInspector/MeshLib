@@ -407,17 +407,17 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
 
 EdgeLoop MeshTopology::trackBoundaryLoop( EdgeId e0, const FaceBitSet * region ) const
 {
-    return trackRightRegionBoundaryLoop( *this, e0, region );
+    return trackRightBoundaryLoop( *this, e0, region );
 }
 
 std::vector<EdgeLoop> MeshTopology::findBoundary( const FaceBitSet * region ) const
 {
-    return findRightRegionBoundary( *this, region );
+    return findRightBoundary( *this, region );
 }
 
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 {
-    auto bds = findRightRegionBoundary( *this );
+    auto bds = findRightBoundary( *this );
 
     std::vector<EdgeId> res;
     res.reserve( bds.size() );

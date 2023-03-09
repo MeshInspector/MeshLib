@@ -71,7 +71,7 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric
     UnionFind<FaceId> cotreeConnectedFace( mp.mesh.topology.lastValidFace() + 1 );
 
     // consider faces around each hole pre-united
-    std::vector<EdgePath> bounds = findLeftRegionBoundary( mp.mesh.topology, mp.region );
+    std::vector<EdgePath> bounds = findLeftBoundary( mp.mesh.topology, mp.region );
     for ( const auto & loop : bounds )
     {
         if ( loop.empty() )

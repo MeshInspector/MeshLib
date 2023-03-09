@@ -201,12 +201,12 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
 {
-    m.def( "findLeftRegionBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findLeftRegionBoundary,
+    m.def( "findLeftBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findLeftBoundary,
         pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
         "returns all region boundary loops;\n"
         "every loop has region faces on the left, and not-region faces or holes on the right" );
 
-    m.def( "findRightRegionBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findRightRegionBoundary,
+    m.def( "findRightBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findRightBoundary,
         pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
         "returns all region boundary loops;\n"
         "every loop has region faces on the right, and not-region faces or holes on the left" );

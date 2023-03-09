@@ -141,7 +141,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
     const auto posFaces = subdivideWithPlane( mesh, plane, new2Old, eps, onEdgeSplitCallback );
     if ( outCutContours )
     {
-        *outCutContours = findLeftRegionBoundaryInsideMesh( mesh.topology, posFaces );
+        *outCutContours = findLeftBoundaryInsideMesh( mesh.topology, posFaces );
 #ifndef NDEBUG
         for ( const auto & c : *outCutContours )
             for ( [[maybe_unused]] EdgeId e : c )

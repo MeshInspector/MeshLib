@@ -121,7 +121,7 @@ public:
         } type{ Type::Rainbow };
         // minimum colored value (voxels with lower values are transparent)
         float min{ 0.0f };
-        // maximum colored value (voxels with highrt values are transparent)
+        // maximum colored value (voxels with higher values are transparent)
         float max{ 0.0f };
         // opacity of texture
         uint8_t alpha{ 10 };

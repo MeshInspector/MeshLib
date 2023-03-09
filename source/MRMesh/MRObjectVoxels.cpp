@@ -278,7 +278,7 @@ bool ObjectVoxels::hasVisualRepresentation() const
 {
     if ( isVolumeRenderingEnabled() )
         return false;
-    return ObjectMeshHolder::hasVisualRepresentation();
+    return bool( mesh_ );
 }
 
 void ObjectVoxels::setMaxSurfaceTriangles( int maxFaces )
@@ -314,7 +314,7 @@ std::shared_ptr<Object> ObjectVoxels::shallowClone() const
 
 void ObjectVoxels::setDirtyFlags( uint32_t mask )
 {
-    VisualObject::setDirtyFlags( mask );
+    ObjectMeshHolder::setDirtyFlags( mask );
 
     if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && mesh_ )
         mesh_->invalidateCaches();

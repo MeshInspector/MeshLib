@@ -249,6 +249,7 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objLines_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objLines_->getSpecularStrength() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objLines_->getAmbientStrength() ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objLines_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
     const auto& backColor = Vector4f( objLines_->getBackColor( renderParams.viewportId ) );

@@ -110,13 +110,25 @@ public:
     // move volume rendering data to caller: basically used in RenderVolumeObject 
     [[nodiscard]] std::unique_ptr<SimpleVolumeU8> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
-    enum class VolumeRenderingType
+    // struct to control volume rendering texture
+    struct VolumeRenderingParams
     {
-        GrayShades,
-        Rainbow
+        // coloring type
+        enum class Type
+        {
+            GrayShades,
+            Rainbow
+        } type{ Type::Rainbow };
+        // minimum colored value (voxels with lower values are transparent)
+        float min{ 0.0f };
+        // maximum colored value (voxels with highrt values are transparent)
+        float max{ 0.0f };
+        // opacity of texture
+        uint8_t alpha{ 10 };
+        bool operator==( const VolumeRenderingParams& )const = default;
     };
-    VolumeRenderingType getVolumeRenderingType() const { return volumeRenderingType_; }
-    MRMESH_API void setVolumeRenderingType( VolumeRenderingType type );
+    const VolumeRenderingParams& getVolumeRenderingParams() const { return volumeRenderingParams_; }
+    MRMESH_API void setVolumeRenderingParams( const VolumeRenderingParams& params );
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
@@ -139,8 +151,9 @@ public:
     IsoChangedSignal isoSurfaceChangedSignal;
 
 private:
-    VolumeRenderingType volumeRenderingType_{ VolumeRenderingType::Rainbow };
+    VolumeRenderingParams volumeRenderingParams_;
     mutable std::unique_ptr<SimpleVolumeU8> volumeRenderingData_;
+
     int maxSurfaceTriangles_{ 10000000 };
     VdbVolume vdbVolume_;
     float isoValue_{0.0f};

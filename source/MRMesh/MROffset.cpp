@@ -37,7 +37,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     }
 
     bool useShell = params.type == OffsetParameters::Type::Shell;
-    bool signPostprocess = !findRegionBoundary( mp.mesh.topology, mp.region ).empty() && !useShell;
+    bool signPostprocess = !findLeftBoundary( mp.mesh.topology, mp.region ).empty() && !useShell;
 
     if ( useShell )
         offset = std::abs( offset );

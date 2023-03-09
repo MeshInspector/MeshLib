@@ -6,21 +6,33 @@
 namespace MR
 {
 
-// returns closed loop of region boundary starting from given region boundary edge;
+// returns closed loop of region boundary starting from given region boundary edge (region faces on the left, and not-region faces or holes on the right);
 // if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to right
-[[nodiscard]] MRMESH_API EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
-    { return trackRegionBoundaryLoop( topology, e0, &region ); }
+[[nodiscard]] MRMESH_API EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
+[[nodiscard]] inline EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
+    { return trackLeftBoundaryLoop( topology, e0, &region ); }
+
+// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);
+// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
+[[nodiscard]] MRMESH_API EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
+[[nodiscard]] inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
+    { return trackRightBoundaryLoop( topology, e0, &region ); }
 
 // returns all region boundary loops;
 // every loop has region faces on the left, and not-region faces or holes on the right
-[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
-[[nodiscard]] inline std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet & region )
-    { return findRegionBoundary( topology, &region ); }
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
+[[nodiscard]] inline std::vector<EdgeLoop> findLeftBoundary( const MeshTopology & topology, const FaceBitSet & region )
+    { return findLeftBoundary( topology, &region ); }
+
+// returns all region boundary loops;
+// every loop has region faces on the right, and not-region faces or holes on the left
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
+[[nodiscard]] inline std::vector<EdgeLoop> findRightBoundary( const MeshTopology & topology, const FaceBitSet & region )
+    { return findRightBoundary( topology, &region ); }
 
 // returns all region boundary paths;
 // every path has region faces on the left, and valid not-region faces on the right
-[[nodiscard]] MRMESH_API std::vector<EdgePath> findRegionBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region );
+[[nodiscard]] MRMESH_API std::vector<EdgePath> findLeftBoundaryInsideMesh( const MeshTopology & topology, const FaceBitSet & region );
 
 // returns all region boundary edges, where each edge has a region face on one side, and a valid not-region face on another side
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopology & topology, const FaceBitSet & region );
@@ -60,5 +72,23 @@ namespace MR
 [[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store );
 // composes the set of all vertices with all their edges in given set
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
+
+
+
+// returns closed loop of region boundary starting from given region boundary edge;
+// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to right
+[[deprecated( "use trackLeftRegionBoundaryLoop(...) instead" )]]
+[[nodiscard]] MRMESH_API EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
+[[deprecated( "use trackLeftRegionBoundaryLoop(...) instead" )]]
+[[nodiscard]] inline EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
+    { return trackLeftBoundaryLoop( topology, e0, &region ); }
+
+// returns all region boundary loops;
+// every loop has region faces on the left, and not-region faces or holes on the right
+[[deprecated( "use findLeftBoundary(...) instead" )]]
+[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
+[[deprecated( "use findLeftBoundary(...) instead" )]]
+[[nodiscard]] inline std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet & region )
+    { return findLeftBoundary( topology, &region ); }
 
 } //namespace MR

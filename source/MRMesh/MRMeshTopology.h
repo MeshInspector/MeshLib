@@ -205,9 +205,11 @@ public:
     /// returns closed loop of boundary edges starting from given boundary edge, 
     /// which has region face to the right and does not have valid or in-region left face;
     /// unlike MR::trackRegionBoundaryLoop this method returns loops in opposite orientation
+    [[deprecated( "use trackRightBoundaryLoop(...) instead" )]]
     [[nodiscard]] MRMESH_API EdgeLoop trackBoundaryLoop( EdgeId e0, const FaceBitSet * region = nullptr ) const;
     /// returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;
     /// unlike MR::findRegionBoundary this method returns loops in opposite orientation
+    [[deprecated( "use findRightBoundary(...) instead" )]]
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;

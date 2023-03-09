@@ -64,9 +64,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& m )
         def( "findBoundaryEdges", &MR::MeshTopology::findBoundaryEdges, "returns all boundary edges, where each edge does not have valid left face" ).
         def( "findBoundaryVerts", &MR::MeshTopology::findBoundaryVerts, "returns all boundary vertices, incident to at least one boundary edge" ).
         def( "deleteFaces", &MR::MeshTopology::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
-        def( "findBoundary", &MR::MeshTopology::findBoundary, pybind11::arg( "region" ) = nullptr,
-            "returns all boundary loops, where each edge has region face to the right and does not have valid or in-region left face;\n"
-            "unlike findRegionBoundary this method returns loops in opposite orientation" ).
         def( "findHoleRepresentiveEdges", &MR::MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
         def( "getTriVerts", ( void( MR::MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MR::MeshTopology::getTriVerts,
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
@@ -204,6 +201,16 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
 {
+    m.def( "findLeftBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findLeftBoundary,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
+        "returns all region boundary loops;\n"
+        "every loop has region faces on the left, and not-region faces or holes on the right" );
+
+    m.def( "findRightBoundary", ( std::vector<MR::EdgeLoop>( * )( const MR::MeshTopology&, const MR::FaceBitSet* ) )& MR::findRightBoundary,
+        pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
+        "returns all region boundary loops;\n"
+        "every loop has region faces on the right, and not-region faces or holes on the left" );
+
     m.def( "getIncidentVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getIncidentVerts,
         pybind11::arg( "topology" ), pybind11::arg( "faces" ), "composes the set of all vertices incident to given faces" );
     m.def( "getInnerVerts", ( MR::VertBitSet( * )( const MR::MeshTopology&, const MR::FaceBitSet& ) )& MR::getInnerVerts,

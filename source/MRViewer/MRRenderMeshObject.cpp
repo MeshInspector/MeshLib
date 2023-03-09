@@ -11,6 +11,7 @@
 #include "MRMeshViewer.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
+#include "MRMesh/MRRegionBoundary.h"
 
 namespace MR
 {
@@ -751,7 +752,7 @@ RenderBufferRef<Vector3f> RenderMeshObject::loadBorderHighlightPointsBuffer_()
 
     const auto& mesh = objMesh_->mesh();
     const auto& topology = mesh->topology;
-    auto boundary = topology.findBoundary();
+    auto boundary = findRightBoundary( topology );
     borderHighlightPointsSize_ = 0;
     for ( const auto& b : boundary )
         borderHighlightPointsSize_ += 2 * (int)b.size();

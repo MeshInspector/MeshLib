@@ -452,7 +452,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     if (cb && !cb( 0.1f ) )
         return tl::make_unexpected( "Operation was canceled." );
 
-    bool needSignUpdate = !findRegionBoundary( mp.mesh.topology, mp.region ).empty();
+    bool needSignUpdate = !findLeftRegionBoundary( mp.mesh.topology, mp.region ).empty();
 
     auto sp = subprogress( cb, 0.1f, needSignUpdate ? 0.2f : 0.3f );
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();

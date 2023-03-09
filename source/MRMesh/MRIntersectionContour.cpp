@@ -30,7 +30,7 @@ bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour&
         if ( auto l = topology.left( eid ) )
             fbs.set( l );
     }
-    auto boundary = findRegionBoundary( topology, fbs );
+    auto boundary = findLeftRegionBoundary( topology, fbs );
     if ( boundary.empty() )
         return false;
     auto fillRes = fillContourLeft( topology, boundary.front() );

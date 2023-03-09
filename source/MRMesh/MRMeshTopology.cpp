@@ -407,50 +407,17 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
 
 EdgeLoop MeshTopology::trackBoundaryLoop( EdgeId e0, const FaceBitSet * region ) const
 {
-    auto res = MR::trackRegionBoundaryLoop( *this, e0.sym(), region );
-    if ( res.empty() )
-    {
-        assert( false );
-        return res;
-    }
-    MR::reverse( res );
-    std::rotate( res.begin(), res.end() - 1, res.end() ); // put e0 in res.front()
-    assert( res.front() == e0 );
-    return res;
+    return trackRightRegionBoundaryLoop( *this, e0, region );
 }
 
 std::vector<EdgeLoop> MeshTopology::findBoundary( const FaceBitSet * region ) const
 {
-    MR_TIMER
-
-    std::vector<EdgeLoop> res;
-    phmap::flat_hash_set<EdgeId> reportedBdEdges;
-
-    for ( EdgeId e(0); e < edges_.size(); ++e )
-    {
-        if ( !isLeftBdEdge( e.sym(), region ) )
-            continue;
-        if ( !edges_[e].org.valid() )
-            continue; // skip edges without valid vertices
-        if ( !reportedBdEdges.insert( e ).second )
-            continue;
-
-        auto loop = trackBoundaryLoop( e, region );
-        assert( loop.front() == e );
-        for ( int i = 1; i < loop.size(); ++i )
-        {
-            [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
-            assert( inserted );
-        }
-        res.push_back( std::move( loop ) );
-    }
-
-    return res;
+    return findRightRegionBoundary( *this, region );
 }
 
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 {
-    auto bds = findBoundary();
+    auto bds = findRightRegionBoundary( *this );
 
     std::vector<EdgeId> res;
     res.reserve( bds.size() );

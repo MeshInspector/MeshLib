@@ -36,7 +36,14 @@ class MRVIEWER_CLASS RibbonButtonDrawer
 public:
     // Creates GL texture for gradient UI (called on theme apply)
     MRVIEWER_API static void InitGradientTexture();
-    MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetGradientTexture();
+    enum class TextureType
+    {
+        Mono,
+        Gradient,
+        RainbowRect,
+        Count
+    };
+    MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetTexture( TextureType type );
 
     /// draw gradient button
     /// returns true if button is clicked in this frame, or key is pressed (optional)
@@ -110,6 +117,8 @@ private:
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
     float scaling_ = 1.f;
+
+    static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;
 };
 
 }

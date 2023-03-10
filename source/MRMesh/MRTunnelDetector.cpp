@@ -18,20 +18,27 @@ struct EdgeCurvature
     bool operator < ( const EdgeCurvature & b ) const { return asSortablePair() < b.asSortablePair(); }
 };
 
-std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric )
+tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb, float ip, float tp )
 {
     MR_TIMER
     if ( !metric )
         metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
     
+    const float step = ( tp - ip ) / 3.0f;
     // collect all mesh inner edges
     std::vector<EdgeCurvature> innerEdges;
     for ( EdgeId e{ 0 }; e < mp.mesh.topology.edgeSize(); e += 2 )
     {
+        if ( e % 100 && cb && !cb( ip + e * step / 3.0f / innerEdges.size() ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
         if ( mp.mesh.topology.isLoneEdge( e ) || !mp.mesh.topology.isInnerEdge( e, mp.region ) )
             continue;
         innerEdges.push_back( { e.undirected(), 0.0f } );
     }
+
+    if ( cb && !cb( ip + 2 * step / 3.0f ) )
+        return tl::make_unexpected( "Operation was canceled" );
 
     // compute curvature for every collected edge
     tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges.size() ), [&](const tbb::blocked_range<size_t> & range)
@@ -43,15 +50,22 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric
     });
 
     // sort edges from most curved to least curved
-    std::sort( innerEdges.begin(), innerEdges.end() );
+    std::sort( innerEdges.begin(), innerEdges.end() );    
+
+    if ( cb && !cb( ip + step ) )
+        return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal tree from the primary mesh edges
     UndirectedEdgeBitSet primaryTree( mp.mesh.topology.undirectedEdgeSize() );
     UnionFind<VertId> treeConnectedVertices( mp.mesh.topology.lastValidVert() + 1 );
     // here all edges that do not belong to the tree will be added (in the order from most curved to least curved)
     std::vector<EdgeCurvature> notTreeEdges;
-    for ( const auto & ec : innerEdges )
+    for ( size_t i = 0; i < innerEdges.size(); ++i)
     {
+        if ( i % 100 && cb && !cb( ip + step + i * step / innerEdges.size() ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
+        const auto& ec = innerEdges[i];
         const auto o = mp.mesh.topology.org( ec.edge );
         const auto d = mp.mesh.topology.dest( ec.edge );
         assert( o != d );
@@ -66,14 +80,20 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric
         primaryTree.set( ec.edge );
     }
 
+    if ( cb && !cb( ip + 2 * step ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     std::vector<EdgeLoop> res;
     // construct maximal co-tree from the dual mesh edges
     UnionFind<FaceId> cotreeConnectedFace( mp.mesh.topology.lastValidFace() + 1 );
 
     // consider faces around each hole pre-united
     std::vector<EdgePath> bounds = findLeftBoundary( mp.mesh.topology, mp.region );
-    for ( const auto & loop : bounds )
+    for ( size_t i = 0; i < bounds.size(); ++i )
     {
+        const auto& loop = bounds[i];
+        if ( i % 100 && cb && !cb( ip + 2 * step + i * step / innerEdges.size() ) )
+            return tl::make_unexpected( "Operation was canceled" );
         if ( loop.empty() )
             continue;
         FaceId first;
@@ -89,9 +109,11 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric
         }
     }
 
-    // go in the order from least curved to most curved
     for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
     {
+        if ( i % 100 && cb && !cb( ip + 2 * step + ( notTreeEdges.size() - i ) * step / innerEdges.size() ) )
+            return tl::make_unexpected( "Operation was canceled" );
+
         const auto & ec = notTreeEdges[i];
         const auto l = mp.mesh.topology.left( ec.edge );
         const auto r = mp.mesh.topology.right( ec.edge );
@@ -120,11 +142,14 @@ std::vector<EdgeLoop> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric
         cotreeConnectedFace.unite( l, r );
     }
 
+    if ( cb && !cb( tp ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     return res;
 }
 
 
-FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const EdgeMetric & metric )
+tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const EdgeMetric & metric, ProgressCallback progressCallback )
 {
     MR_TIMER;
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
@@ -132,26 +157,32 @@ FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const 
     FaceBitSet tunnelFaces;
     VertBitSet tunnelVerts( mp.mesh.topology.lastValidVert() + 1 );
 
+    float initialProgress = 0.0f;
+    float targetProgress = 0.49f;
+
     for ( ;; )
     {
-        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric );
-        const auto numBasisTunnels = basisTunnels.size();
+        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric, progressCallback, initialProgress, targetProgress );
+        if ( !basisTunnels.has_value() )
+            return tl::make_unexpected( basisTunnels.error() );
 
-        sortPathsByLength( basisTunnels, mp.mesh );
-        for ( int i = 0; i < basisTunnels.size(); ++i )
+        const auto numBasisTunnels = basisTunnels->size();
+
+        sortPathsByLength( *basisTunnels, mp.mesh );
+        for ( int i = 0; i < basisTunnels->size(); ++i )
         {
-            if ( calcPathLength( basisTunnels[i], mp.mesh ) > maxTunnelLength )
+            if ( calcPathLength( (*basisTunnels)[i], mp.mesh ) > maxTunnelLength )
             {
-                basisTunnels.erase( basisTunnels.begin() + i, basisTunnels.end() );
+                basisTunnels->erase( basisTunnels->begin() + i, basisTunnels->end() );
                 break;
             }
         }
-        if ( basisTunnels.empty() )
+        if ( basisTunnels->empty() )
             break;
 
         tunnelVerts.set( 0_v, tunnelVerts.size(), false );
         int numSelectedTunnels = 0;
-        for ( const auto & t : basisTunnels )
+        for ( const auto & t : *basisTunnels )
         {
             bool touchAlreadySelectedTunnel = false;
             for ( EdgeId e : t )
@@ -174,9 +205,19 @@ FaceBitSet detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const 
         }
         activeRegion -= tunnelFaces;
         assert( numSelectedTunnels > 0 );
+        if ( progressCallback && !progressCallback( targetProgress + 0.01f ) )
+            return tl::make_unexpected( "Operation was cancelled" );
+
+        initialProgress = targetProgress + 0.01f;
+        targetProgress = ( ( initialProgress  + 1.0f ) * 0.5f ) - 0.01f;
+
         if ( numSelectedTunnels >= numBasisTunnels )
             break; // maximal not-intersection set of tunnels has been used
     }
+
+    if ( progressCallback && !progressCallback( 1.0f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     return tunnelFaces;
 }
 

@@ -91,7 +91,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     if ( paths.size() != newPaths.size() )
         return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
 
-    // rotate paths to start with min edge
+    // need to rotate to min edge to be consistent with original paths (for addPartByMask)
     for ( auto& newPath : newPaths )
         std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
 

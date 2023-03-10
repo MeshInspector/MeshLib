@@ -18,18 +18,18 @@ struct EdgeCurvature
     bool operator < ( const EdgeCurvature & b ) const { return asSortablePair() < b.asSortablePair(); }
 };
 
-tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb, float ip, float tp )
+tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
 {
     MR_TIMER
     if ( !metric )
         metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
     
-    const float step = ( tp - ip ) / 3.0f;
+    const float step = 1.0f / 3.0f;
     // collect all mesh inner edges
     std::vector<EdgeCurvature> innerEdges;
     for ( EdgeId e{ 0 }; e < mp.mesh.topology.edgeSize(); e += 2 )
     {
-        if ( e % 100 && cb && !cb( ip + e * step / 3.0f / innerEdges.size() ) )
+        if ( e % 100 && cb && !cb( e * step / 3.0f / innerEdges.size() ) )
             return tl::make_unexpected( "Operation was canceled" );
 
         if ( mp.mesh.topology.isLoneEdge( e ) || !mp.mesh.topology.isInnerEdge( e, mp.region ) )
@@ -37,7 +37,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         innerEdges.push_back( { e.undirected(), 0.0f } );
     }
 
-    if ( cb && !cb( ip + 2 * step / 3.0f ) )
+    if ( cb && !cb( 2 * step / 3.0f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // compute curvature for every collected edge
@@ -52,7 +52,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     // sort edges from most curved to least curved
     std::sort( innerEdges.begin(), innerEdges.end() );    
 
-    if ( cb && !cb( ip + step ) )
+    if ( cb && !cb( step ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal tree from the primary mesh edges
@@ -62,7 +62,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     std::vector<EdgeCurvature> notTreeEdges;
     for ( size_t i = 0; i < innerEdges.size(); ++i)
     {
-        if ( i % 100 && cb && !cb( ip + step + i * step / innerEdges.size() ) )
+        if ( i % 100 && cb && !cb( step + i * step / innerEdges.size() ) )
             return tl::make_unexpected( "Operation was canceled" );
 
         const auto& ec = innerEdges[i];
@@ -80,7 +80,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         primaryTree.set( ec.edge );
     }
 
-    if ( cb && !cb( ip + 2 * step ) )
+    if ( cb && !cb( 2 * step ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     std::vector<EdgeLoop> res;
@@ -92,7 +92,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     for ( size_t i = 0; i < bounds.size(); ++i )
     {
         const auto& loop = bounds[i];
-        if ( i % 100 && cb && !cb( ip + 2 * step + i * step / innerEdges.size() ) )
+        if ( i % 100 && cb && !cb( 2 * step + i * step / innerEdges.size() ) )
             return tl::make_unexpected( "Operation was canceled" );
         if ( loop.empty() )
             continue;
@@ -111,7 +111,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
 
     for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
     {
-        if ( i % 100 && cb && !cb( ip + 2 * step + ( notTreeEdges.size() - i ) * step / innerEdges.size() ) )
+        if ( i % 100 && cb && !cb( 2 * step + ( notTreeEdges.size() - i ) * step / innerEdges.size() ) )
             return tl::make_unexpected( "Operation was canceled" );
 
         const auto & ec = notTreeEdges[i];
@@ -142,7 +142,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         cotreeConnectedFace.unite( l, r );
     }
 
-    if ( cb && !cb( tp ) )
+    if ( cb && !cb( 1.0f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     return res;
@@ -162,7 +162,7 @@ tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, fl
 
     for ( ;; )
     {
-        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric, progressCallback, initialProgress, targetProgress );
+        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric, MR::subprogress(progressCallback, initialProgress, targetProgress) );
         if ( !basisTunnels.has_value() )
             return tl::make_unexpected( basisTunnels.error() );
 

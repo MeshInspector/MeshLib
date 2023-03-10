@@ -605,7 +605,11 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
         if ( !( flags & ImGuiColorEditFlags_NoBorder ) )
         {
             off = 2.f;
-            const bool isRainbow = std::max( col[0], std::max( col[1], col[2] ) ) < 0.5f;
+            Vector3f hsv, hsvBg;
+            ImGui::ColorConvertRGBtoHSV( col[0], col[1], col[2], hsv[0], hsv[1], hsv[2] );
+            const Vector4f bgColor = Vector4f( ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+            ImGui::ColorConvertRGBtoHSV( bgColor[0], bgColor[1], bgColor[2], hsvBg[0], hsvBg[1], hsvBg[2] );
+            const bool isRainbow = std::fabs( hsv[2] - hsvBg[2] ) < 0.5 && ( hsv[1] < 0.5f || hsv[2] < 0.5f );
             const Color imageColor = isRainbow ? Color::white() : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders );
             auto& texture = GetTexture( isRainbow ? TextureType::RainbowRect : TextureType::Mono );
             ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded( texture->getImTextureId(),

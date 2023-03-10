@@ -1,5 +1,4 @@
 #include "MRFillContours2D.h"
-#include <limits>
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MR2DContoursTriangulation.h"
@@ -8,6 +7,8 @@
 #include "MRAffineXf3.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRTimer.h"
+#include "MRRegionBoundary.h"
+#include <limits>
 
 namespace MR
 {
@@ -36,7 +37,9 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
         return tl::make_unexpected( "Some hole edges have left face" );
 
     // make border rings
-    const auto paths = meshTopology.getLeftRings( holeRepresentativeEdges );
+    std::vector<EdgeLoop> paths( holeRepresentativeEdges.size() );
+    for ( int i = 0; i < paths.size(); ++i )
+        paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
 
     // calculate plane normal
     Vector3f planeNormal;
@@ -75,7 +78,6 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     if ( !fillResult )
         return tl::make_unexpected( "Cannot triangulate contours with self-intersections" );
     Mesh& patchMesh = *fillResult;
-    const auto holes = patchMesh.topology.findHoleRepresentiveEdges();
 
     // transform patch surface from plane to world space
     auto& patchMeshPoints = patchMesh.points;
@@ -83,29 +85,20 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
         point = planeXf( point );
 
     // make 
-    std::vector<EdgePath> newPaths( holes.size() );
-    for ( int i = 0; i < newPaths.size(); ++i )
-        newPaths[i] = patchMesh.topology.getLeftRing( holes[i] );
+    auto newPaths = findLeftBoundary( patchMesh.topology );
 
     // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
         return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
+
+    // rotate paths to start with min edge
+    for ( auto& newPath : newPaths )
+        std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
+
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
             return tl::make_unexpected( "Patch surface borders size different from original mesh borders size" );
-    }
-
-    // reorder to make edges ring with hole on right side
-    for ( int i = 0; i < newPaths.size(); ++i )
-    {
-        auto& newPath = newPaths[i];
-        if ( !patchMesh.topology.right( newPath[0] ) )
-            continue;
-        
-        newPath.push_back( newPath[0] );
-        reverse( newPath );
-        newPath.pop_back();
     }
 
     // move patch surface border points to original position (according original mesh)

@@ -27,6 +27,15 @@ public:
         MoveY = 0x10,
         MoveZ = 0x20
     };
+    struct Params
+    {
+        float radius{ -1.0f };
+        float width{ -1.0f };
+        /// the product of this factor and width gives cone radius of the arrows
+        float coneRadiusFactor{ 1.35f };
+        /// the product of this factor and width gives cone size of the arrows
+        float coneSizeFactor{ 2.2f };
+    };
     // Creates transform widget around given box and applies given xf
     // subscribes to viewer events
     MRVIEWER_API void create( const Box3f& box, const AffineXf3f& xf );
@@ -36,15 +45,19 @@ public:
 
     // get current width of widget controls
     // negative value means that controls are not setup
-    float getWidth() const { return width_; }
+    float getWidth() const { return params_.width; }
     // get current radius of widget controls
     // negative value means that controls are not setup
-    float getRadius() const { return radius_; }
+    float getRadius() const { return params_.radius; }
+    // gets current parameters of this widget
+    const Params & getParams() const { return params_; }
 
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
     // set radius for this widget
     MRVIEWER_API void setRadius( float radius );
+    // set current parameters of this widget
+    MRVIEWER_API void setParams( const Params & );
 
     // Returns current transform mode mask
     uint8_t getTransformModeMask() const { return transformModeMask_; }
@@ -179,8 +192,7 @@ private:
 
     void makeControls_();
 
-    float radius_{ -1.0f };
-    float width_{ -1.0f };
+    Params params_;
 
     // main object that holds all other controls
     std::shared_ptr<Object> controlsRoot_;

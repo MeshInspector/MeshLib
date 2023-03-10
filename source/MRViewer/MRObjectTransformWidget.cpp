@@ -106,10 +106,10 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
 
     center_ = box.center();
     boxDiagonal_ = box.size();
-    if ( radius_ < 0.0f )
-        radius_ = boxDiagonal_.length() * 0.5f;
-    if ( width_ < 0.0f )
-        width_ = radius_ / 40.0f;
+    if ( params_.radius < 0.0f )
+        params_.radius = boxDiagonal_.length() * 0.5f;
+    if ( params_.width < 0.0f )
+        params_.width = params_.radius / 40.0f;
     // make x - arrow
     controlsRoot_ = std::make_shared<Object>();
     controlsRoot_->setAncillary( true );
@@ -204,8 +204,8 @@ void ObjectTransformWidget::reset()
 
     visibilityParent_.reset();
 
-    width_ = -1.0f;
-    radius_ = -1.0f;
+    params_.width = -1.0f;
+    params_.radius = -1.0f;
 
     axisTransformMode_ = AxisTranslation;
 
@@ -214,20 +214,24 @@ void ObjectTransformWidget::reset()
 
 void ObjectTransformWidget::setWidth( float width )
 {
-    if ( width_ == width )
+    if ( params_.width == width )
         return;
-    width_ = width;
-    if ( radius_ > 0.0f )
-        makeControls_();
+    params_.width = width;
+    makeControls_();
 }
 
 void ObjectTransformWidget::setRadius( float radius )
 {
-    if ( radius == radius_ )
+    if ( radius == params_.radius )
         return;
-    radius_ = radius;
-    if ( width_ > 0.0f )
-        makeControls_();
+    params_.radius = radius;
+    makeControls_();
+}
+
+void ObjectTransformWidget::setParams( const Params & params )
+{
+    params_ = params;
+    makeControls_();
 }
 
 void ObjectTransformWidget::setTransformMode( uint8_t mask )
@@ -406,6 +410,9 @@ void ObjectTransformWidget::makeControls_()
     if ( !controlsRoot_ )
         return;
 
+    if ( params_.radius <= 0 || params_.width <= 0 )
+        return;
+
     for ( int i = Axis::X; i < Axis::Count; ++i )
     {
         if ( !translateControls_[i] )
@@ -425,12 +432,12 @@ void ObjectTransformWidget::makeControls_()
             translateControls_[i]->addChild( translateLines_[i] );
         }
         auto transPolyline = std::make_shared<Polyline3>();
-        std::vector<Vector3f> translationPoints = { center_ - radius_ * 1.15f * baseAxis[i],center_ + radius_ * 1.3f * baseAxis[i] };
+        std::vector<Vector3f> translationPoints = { center_ - params_.radius * 1.15f * baseAxis[i],center_ + params_.radius * 1.3f * baseAxis[i] };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
-            makeArrow( translationPoints[0], translationPoints[1], width_, 1.35f * width_, 2.2f * width_ ) ) );
+            makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
 
         auto xf = AffineXf3f::translation( center_ ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
@@ -453,7 +460,7 @@ void ObjectTransformWidget::makeControls_()
         }
         auto rotPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> rotatePoints;
-        auto rotMesh = makeTorus( radius_, width_, 128, 32, &rotatePoints );
+        auto rotMesh = makeTorus( params_.radius, params_.width, 128, 32, &rotatePoints );
         for ( auto& p : rotatePoints )
             p = xf( p );
         rotPolyline->addFromPoints( rotatePoints.data(), rotatePoints.size(), true );

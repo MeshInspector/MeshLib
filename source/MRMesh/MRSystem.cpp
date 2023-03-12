@@ -444,9 +444,9 @@ std::string GetCpuId()
         else if ( i == 0x80000004 )
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
-#endif
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
+#endif
 }
 
 std::string getOSNoSpaces()

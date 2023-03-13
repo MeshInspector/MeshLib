@@ -137,7 +137,7 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
             ptrs[result.resolution.y - i - 1] = ( unsigned char* )( rawPixels.data() + result.resolution.x * i );
         
         png_read_image( png.pngPtr, ptrs.data() );
-        for (int i = 0; i < result.resolution.y; ++i )
+        for ( int i = 0; i < result.resolution.y; ++i )
         for ( int j = 0; j < result.resolution.x; ++j )
         {
             result.pixels[i * result.resolution.x + j] = palette[rawPixels[i * result.resolution.x + j]];

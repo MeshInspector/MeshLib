@@ -31,7 +31,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     std::vector<EdgeCurvature> innerEdges;
     for ( EdgeId e{ 0 }; e < mp.mesh.topology.edgeSize(); e += 2 )
     {
-        if ( (e % 100 == 0 ) && !reportProgress( sb, float( e ) / mp.mesh.topology.edgeSize() ) )
+        if ( !reportProgress( sb, float( e ) / mp.mesh.topology.edgeSize(), e, 128 ) ) 
             return tl::make_unexpected( "Operation was canceled" );
 
         if ( mp.mesh.topology.isLoneEdge( e ) || !mp.mesh.topology.isInnerEdge( e, mp.region ) )
@@ -65,7 +65,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     sb = subprogress( cb, step, 2 * step );
     for ( size_t i = 0; i < innerEdges.size(); ++i)
     {
-        if ( ( i % 100 == 0 ) && !reportProgress( sb, float( i ) / innerEdges.size() ) )
+        if ( !reportProgress( sb, float( i ) / innerEdges.size(), i, 128 ) ) 
             return tl::make_unexpected( "Operation was canceled" );
 
         const auto& ec = innerEdges[i];
@@ -97,7 +97,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     for ( size_t i = 0; i < bounds.size(); ++i )
     {
         const auto& loop = bounds[i];
-        if ( ( i % 100 == 0 ) && !reportProgress( sb, float( i ) / bounds.size() ) )
+        if ( !reportProgress( sb, float( i ) / bounds.size(), i, 128 ) )
             return tl::make_unexpected( "Operation was canceled" );
         if ( loop.empty() )
             continue;
@@ -117,7 +117,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     sb = subprogress( cb, 3.0f * step, 1.0f );
     for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
     {
-        if ( ( i % 100 == 0 ) && !reportProgress(sb,  float( notTreeEdges.size() - i ) / notTreeEdges.size() ) )
+        if ( !reportProgress( sb, float( notTreeEdges.size() - i ) / int( notTreeEdges.size() ), i, 128 ) )
             return tl::make_unexpected( "Operation was canceled" );
 
         const auto & ec = notTreeEdges[i];

@@ -19,7 +19,9 @@ namespace MR
 {
 class SpaceMouseHandlerHidapi : public SpaceMouseHandler
 {
-     typedef std::array<unsigned char, 13> DataPacketRaw;
+    typedef std::array<unsigned char, 13> DataPacketRaw;
+    typedef short unsigned int VendorId;
+    typedef short unsigned int ProductId;
 public:
     SpaceMouseHandlerHidapi();
     ~SpaceMouseHandlerHidapi();
@@ -30,21 +32,13 @@ public:
 private:
     void startUpdateThread_();
 
-    float convertCoord( int coord_byte_low, int coord_byte_high );
-    void convertInput( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
+    float convertCoord_( int coord_byte_low, int coord_byte_high );
+    void convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
 
-    struct HidDevice;
-    bool findDevice( struct hid_device_info *cur_dev, HidDevice& attachDevice );
-    void printDevices( struct hid_device_info *cur_dev );
+    bool findAndAttachDevice_();
+    void printDevices_( struct hid_device_info *cur_dev );
 
 private:
-    struct HidDevice {
-        HidDevice() = default;
-        HidDevice( short unsigned int vendor_id, short unsigned int product_id )
-            : vendor_id_(vendor_id), product_id_(product_id) {}
-        short unsigned int vendor_id_;
-        short unsigned int product_id_;
-    };
     hid_device *device_;
     std::thread updateThread_;
     bool updateThreadActive_;
@@ -54,28 +48,28 @@ private:
     Vector3f translate_;
     Vector3f rotate_;
 
-    const std::vector<HidDevice> supportedDevices_ =
-    {
-            {0x046d, 0xc603},	// spacemouse plus XT
-            {0x046d, 0xc605},	// cadman
-            {0x046d, 0xc606},	// spacemouse classic
-            {0x046d, 0xc621},	// spaceball 5000
-            {0x046d, 0xc623},	// space traveller
-            {0x046d, 0xc625},	// space pilot
-            {0x046d, 0xc626},	// space navigator
-            {0x046d, 0xc627},	// space explorer
-            {0x046d, 0xc628},	// space navigator for notebooks
-            {0x046d, 0xc629},	// space pilot pro
-            {0x046d, 0xc62b},	// space mouse pro
-            {0x046d, 0xc640},	// nulooq
-            {0x256f, 0xc62e},	// spacemouse wireless (USB cable)
-            {0x256f, 0xc652},	// spacemouse wireless receiver
-            {0x256f, 0xc631},	// spacemouse pro wireless
-            {0x256f, 0xc632},	// spacemouse pro wireless receiver
-            {0x256f, 0xc633},	// spacemouse enterprise
-            {0x256f, 0xc635},	// spacemouse compact
-            {0x256f, 0xc636},	// spacemouse module
-            {0x256f, 0xc652}	    // 3Dconnexion universal receiver
+    const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
+            { 0x046d, { 0xc603,    // spacemouse plus XT
+                              0xc605,    // cadman
+                              0xc606,    // spacemouse classic
+                              0xc621,    // spaceball 5000
+                              0xc623,    // space traveller
+                              0xc625,    // space pilot
+                              0xc626,    // space navigator
+                              0xc627,    // space explorer
+                              0xc628,    // space navigator for notebooks
+                              0xc629,    // space pilot pro
+                              0xc62b,    // space mouse pro
+                              0xc640     // nulooq
+                            }},
+            { 0x256f, { 0xc62e,    // spacemouse wireless (USB cable)
+                              0xc62f,    // spacemouse wireless receiver
+                              0xc631,    // spacemouse pro wireless
+                              0xc632,    // spacemouse pro wireless receiver
+                              0xc633,    // spacemouse enterprise
+                              0xc635,    // spacemouse compact
+                              0xc652     // 3Dconnexion universal receiver
+                            }}
     };
 };
 

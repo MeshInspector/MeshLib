@@ -67,6 +67,8 @@ struct ReadPng
     png_infop infoPtr{ nullptr };
     png_colorp palette{ nullptr };
     int paletteSize{ 0 };
+    png_bytep alphaPalette{ nullptr };
+    int alphaPaletteSize{ 0 };
     FILE* fp{ nullptr };
 };
 
@@ -128,9 +130,15 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
     else if ( colorType == PNG_COLOR_TYPE_PALETTE )
     {
         png_get_PLTE( png.pngPtr, png.infoPtr, &png.palette, &png.paletteSize );
+        png_get_tRNS( png.pngPtr, png.infoPtr, &png.alphaPalette, &png.alphaPaletteSize, nullptr );
+
         std::vector<Color> palette( png.paletteSize );
         for ( int i = 0; i < png.paletteSize; ++i )
+        {
             palette[i] = Color( png.palette[i].red, png.palette[i].green, png.palette[i].blue );
+            if ( png.alphaPalette )
+                palette[i].a = ( i < png.alphaPaletteSize ) ? png.alphaPalette[i] : 255;
+        }
 
         std::vector<unsigned char> rawPixels( result.resolution.x * result.resolution.y );
         for ( int i = 0; i < result.resolution.y; ++i )

@@ -12,6 +12,7 @@ libgdcm-dev
 libglfw3-dev
 libgtest-dev
 libgtkmm-3.0-dev
+libhidapi-dev
 libilmbase-dev
 libjsoncpp-dev
 libpodofo-dev

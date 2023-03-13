@@ -41,13 +41,14 @@ private:
 private:
     hid_device *device_;
     std::thread updateThread_;
-    bool updateThreadActive_;
+    std::atomic_bool updateThreadActive_;
     bool hasMousePackets_;
-    std::mutex mtx_;
+    std::mutex dataMutex_; // SpaceMouse data and status
     std::condition_variable cv_;
     Vector3f translate_;
     Vector3f rotate_;
 
+    // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
             { 0x046d, { 0xc603,    // spacemouse plus XT
                               0xc605,    // cadman

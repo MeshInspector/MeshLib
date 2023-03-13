@@ -30,6 +30,9 @@ else
  printf "\r${PYTHON_VERSION} was not found!                  \n"
 fi
 
+printf "Updating udevadm control rules\n"
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
 printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"
 echo "/usr/local/lib/MeshLib" | sudo tee /etc/ld.so.conf.d/meshlib_libs.conf
 echo "/usr/local/lib/MeshLib/lib" | sudo tee -a /etc/ld.so.conf.d/meshlib_libs.conf

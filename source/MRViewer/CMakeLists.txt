@@ -53,6 +53,7 @@ IF(APPLE)
 			glad
 			glfw
 			gtkmm-3.0
+			hidapi
 			)
 ELSE() # APPLE
 	target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -61,6 +62,7 @@ ELSE() # APPLE
 			glad
 			glfw
 			gtkmm-3.0
+			hidapi-hidraw
 			)
 ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

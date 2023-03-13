@@ -65,6 +65,8 @@ struct ReadPng
 
     png_structp pngPtr{ nullptr };
     png_infop infoPtr{ nullptr };
+    png_colorp palette{ nullptr };
+    int paletteSize{ 0 };
     FILE* fp{ nullptr };
 };
 
@@ -122,6 +124,24 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
         png_read_image( png.pngPtr, ptrs.data() );
         for ( size_t i = 0; i < result.pixels.size(); ++i )
             result.pixels[i] = Color( rawPixels[i] );
+    }
+    else if ( colorType == PNG_COLOR_TYPE_PALETTE )
+    {
+        png_get_PLTE( png.pngPtr, png.infoPtr, &png.palette, &png.paletteSize );
+        std::vector<Color> palette( png.paletteSize );
+        for ( int i = 0; i < png.paletteSize; ++i )
+            palette[i] = Color( png.palette[i].red, png.palette[i].green, png.palette[i].blue );
+
+        std::vector<unsigned char> rawPixels( result.resolution.x * result.resolution.y );
+        for ( int i = 0; i < result.resolution.y; ++i )
+            ptrs[result.resolution.y - i - 1] = ( unsigned char* )( rawPixels.data() + result.resolution.x * i );
+        
+        png_read_image( png.pngPtr, ptrs.data() );
+        for (int i = 0; i < result.resolution.y; ++i )
+        for ( int j = 0; j < result.resolution.x; ++j )
+        {
+            result.pixels[i * result.resolution.x + j] = palette[rawPixels[i * result.resolution.x + j]];
+        }
     }
     else
         return tl::make_unexpected( "Unsupported png color type" );

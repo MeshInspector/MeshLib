@@ -119,7 +119,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     activeLine_ = std::make_shared<ObjectLines>();
     activeLine_->setVisible( false );
     activeLine_->setAncillary( true );
-    activeLine_->setFrontColor( Color::white(), false );
+    activeLine_->setFrontColor( params_.activeLineColor, false );
     activeLine_->setLineWidth( 3.0f );
     activeLine_->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
 
@@ -419,7 +419,7 @@ void ObjectTransformWidget::makeControls_()
         {
             translateControls_[i] = std::make_shared<ObjectMesh>();
             translateControls_[i]->setAncillary( true );
-            translateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            translateControls_[i]->setFrontColor( params_.translationColors[i], false );
             translateControls_[i]->setFlatShading( true );
             controlsRoot_->addChild( translateControls_[i] );
         }
@@ -427,7 +427,7 @@ void ObjectTransformWidget::makeControls_()
         {
             translateLines_[i] = std::make_shared<ObjectLines>();
             translateLines_[i]->setAncillary( true );
-            translateLines_[i]->setFrontColor( Color::black(), false );
+            translateLines_[i]->setFrontColor( params_.helperLineColor, false );
             translateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             translateControls_[i]->addChild( translateLines_[i] );
         }
@@ -450,7 +450,7 @@ void ObjectTransformWidget::makeControls_()
         {
             rotateControls_[i] = std::make_shared<ObjectMesh>();
             rotateControls_[i]->setAncillary( true );
-            rotateControls_[i]->setFrontColor( Color( baseAxis[i] ), false );
+            rotateControls_[i]->setFrontColor( params_.rotationColors[i], false );
             rotateControls_[i]->setFlatShading( true );
             controlsRoot_->addChild( rotateControls_[i] );
         }
@@ -458,7 +458,7 @@ void ObjectTransformWidget::makeControls_()
         {
             rotateLines_[i] = std::make_shared<ObjectLines>();
             rotateLines_[i]->setAncillary( true );
-            rotateLines_[i]->setFrontColor( Color::black(), false );
+            rotateLines_[i]->setFrontColor( params_.helperLineColor, false );
             rotateLines_[i]->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
             rotateControls_[i]->addChild( rotateLines_[i] );
         }
@@ -489,7 +489,7 @@ void ObjectTransformWidget::passiveMove_()
             auto color = currentObj_->getFrontColor( true );
             currentObj_->setFrontColor( color, false );
             assert( currentIndex >= 0 );
-            linesArray[currentIndex]->setFrontColor( Color::black(), false );
+            linesArray[currentIndex]->setFrontColor( params_.helperLineColor, false );
             linesArray[currentIndex]->setLineWidth( 1.0f );
         }
         currentObj_.reset();
@@ -788,11 +788,13 @@ void ObjectTransformWidget::setActiveLineFromPoints_( const std::vector<Vector3f
     activeLine_->setVisible( true, getViewerInstance().viewport().id );
     auto disableBlackLinesIfNeeded = [&] ( auto& obj )
     {
-        if ( !pickThrough_ || obj->getFrontColor( false ) == Color::black() )
+        if ( !pickThrough_ || obj->getFrontColor( false ) == params_.helperLineColor )
             obj->setVisible( false );
         else
         {
-            obj->setFrontColor( Color::gray(), false );
+            auto color = 0.5f * params_.helperLineColor + 0.5f * params_.activeLineColor;
+            color.a = 255;
+            obj->setFrontColor( color, false );
             obj->setLineWidth( 1.0f );
         }
     };

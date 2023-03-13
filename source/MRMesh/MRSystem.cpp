@@ -15,7 +15,7 @@
 #include <windows.h>
 #endif
 
-#else
+#else //not Windows
 
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
@@ -25,10 +25,12 @@
 #else
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
-#include <cpuid.h>
-#ifndef MRMESH_NO_CLIPBOARD
-#include <clip/clip.h>
-#endif
+  #ifndef __ARM_CPU__
+    #include <cpuid.h>
+  #endif
+  #ifndef MRMESH_NO_CLIPBOARD
+    #include <clip/clip.h>
+  #endif
 #endif
 #endif
 #include <pthread.h>
@@ -406,15 +408,18 @@ std::string GetCpuId()
 {
 #ifdef __EMSCRIPTEN__
     return "Web Browser";
-#else
+#elif defined(__APPLE__)
     char CPUBrandString[0x40] = {};
-#if defined(__APPLE__)
     size_t size = sizeof(CPUBrandString);
     if (sysctlbyname("machdep.cpu.brand_string", &CPUBrandString, &size, NULL, 0) < 0)
         spdlog::error("Apple sysctlbyname failed!");
     return CPUBrandString;
+#elif defined(__ARM_CPU__)
+    // TODO: https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8
+    return "ARM CPU";
 #else
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
+    char CPUBrandString[0x40] = {};
     int CPUInfo[4] = {-1};
     unsigned   nExIds, i = 0;
     // Get the information associated with each extended ID.
@@ -439,7 +444,6 @@ std::string GetCpuId()
         else if ( i == 0x80000004 )
             std::memcpy( CPUBrandString + 32, CPUInfo, sizeof( CPUInfo ) );
     }
-#endif
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif

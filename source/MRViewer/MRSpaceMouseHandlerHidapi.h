@@ -1,5 +1,6 @@
 #pragma once
 #ifndef _WIN32
+#ifndef __EMSCRIPTEN__
 #include "MRSpaceMouseHandler.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRVector.h"
@@ -33,13 +34,13 @@ private:
     void convertInput( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
 
     struct HidDevice;
-    void findDevice( struct hid_device_info *cur_dev, HidDevice& attachDevice );
+    bool findDevice( struct hid_device_info *cur_dev, HidDevice& attachDevice );
     void printDevices( struct hid_device_info *cur_dev );
 
 private:
     struct HidDevice {
         HidDevice() = default;
-        HidDevice( short unsigned int vendor_id, short unsigned int product_id)
+        HidDevice( short unsigned int vendor_id, short unsigned int product_id )
             : vendor_id_(vendor_id), product_id_(product_id) {}
         short unsigned int vendor_id_;
         short unsigned int product_id_;
@@ -79,4 +80,5 @@ private:
 };
 
 }
+#endif
 #endif

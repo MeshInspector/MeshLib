@@ -39,6 +39,11 @@ public:
         float negativeLineExtension{ 1.15f };
         /// extension of the translation line in the positive direction relative to the radius
         float positiveLineExtension{ 1.3f };
+        /// colors of widget
+        std::array<Color, 3> rotationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, 3> translationColors{ Color::red(),Color::green(),Color::blue() };
+        Color helperLineColor{ Color::black() };
+        Color activeLineColor{ Color::white() };
     };
     // Creates transform widget around given box and applies given xf
     // subscribes to viewer events

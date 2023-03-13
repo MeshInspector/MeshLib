@@ -136,8 +136,8 @@ tl::expected<Image, std::string> fromPng( const std::filesystem::path& file )
         for ( int i = 0; i < png.paletteSize; ++i )
         {
             palette[i] = Color( png.palette[i].red, png.palette[i].green, png.palette[i].blue );
-            if ( png.alphaPalette )
-                palette[i].a = ( i < png.alphaPaletteSize ) ? png.alphaPalette[i] : 255;
+            if ( png.alphaPalette && i < png.alphaPaletteSize )
+                palette[i].a = png.alphaPalette[i];
         }
 
         std::vector<unsigned char> rawPixels( result.resolution.x * result.resolution.y );

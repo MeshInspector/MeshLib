@@ -432,7 +432,11 @@ void ObjectTransformWidget::makeControls_()
             translateControls_[i]->addChild( translateLines_[i] );
         }
         auto transPolyline = std::make_shared<Polyline3>();
-        std::vector<Vector3f> translationPoints = { center_ - params_.radius * 1.15f * baseAxis[i],center_ + params_.radius * 1.3f * baseAxis[i] };
+        std::vector<Vector3f> translationPoints = 
+        { 
+            center_ - params_.radius * params_.negativeLineExtension * baseAxis[i],
+            center_ + params_.radius * params_.positiveLineExtension * baseAxis[i]
+        };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
 

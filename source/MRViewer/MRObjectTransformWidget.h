@@ -35,6 +35,10 @@ public:
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
         float coneSizeFactor{ 2.2f };
+        /// extension of the translation line in the negative direction relative to the radius
+        float negativeLineExtension{ 1.15f };
+        /// extension of the translation line in the positive direction relative to the radius
+        float positiveLineExtension{ 1.3f };
     };
     // Creates transform widget around given box and applies given xf
     // subscribes to viewer events

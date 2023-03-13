@@ -60,7 +60,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     if ( signPostprocess )
     {
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, sp );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, sp );
         if ( !signRes.has_value() )
             return tl::make_unexpected( signRes.error() );
     }

@@ -505,8 +505,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     Vector<UVCoord, VertId> uvCoords;
     tl::expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
-    std::map<int, int> additions;
-    additions.insert_or_assign( 0, 0 );
+    int addition = 0;
 
     auto finishObject = [&]() 
     {
@@ -632,13 +631,12 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
     {
         const int oldPointsSize = int( points.size() );
-        //Triangulation tris;
+
         tbb::task_group_context ctx;
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
         std::vector<int> texCoords( points.size(), -1 );
 
         std::mutex mutex;
-        std::mutex mapMutex;
 
         int newPoints = 0;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -677,12 +675,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                         return;
                     }
 
-                    const std::lock_guard<std::mutex> lock( mapMutex );
-                    auto it = additions.lower_bound(v);
-                    if ( it == additions.end() )
-                        v += additions.rbegin()->second;
-                    else
-                        v += it->second;
+                    v += addition;
                 }
                 if ( vs.size() < 3 )
                 {
@@ -731,16 +724,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     tris.push_back( { VertId( vs[0] ), VertId( vs[j] ), VertId( vs[j+1] ) } );
             }
         }, ctx );
-
-
-        {
-            const std::lock_guard<std::mutex> lock( mapMutex );
-            int lastValue = 0;
-            if ( !additions.empty() )
-                lastValue = additions.rbegin()->second;
-
-            additions.insert_or_assign( int( points.size() ) - lastValue - newPoints, lastValue + newPoints );
-        }
+       
+        addition += newPoints;     
 
         if ( !texCoords.empty() )
         {

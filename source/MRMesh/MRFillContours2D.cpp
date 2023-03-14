@@ -94,6 +94,7 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     // need to rotate to min edge to be consistent with original paths (for addPartByMask)
     for ( auto& newPath : newPaths )
         std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
+    std::sort( newPaths.begin(), newPaths.end(), [] ( const EdgeLoop& l, const EdgeLoop& r ) { return l[0] < r[0]; } );
 
     for ( int i = 0; i < paths.size(); ++i )
     {

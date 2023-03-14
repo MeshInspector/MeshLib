@@ -59,10 +59,11 @@ Vector3f findEdgeTriIntersectionPoint( const Mesh& edgeMesh, EdgeId edge, const 
     return findTriangleSegmentIntersectionPrecise( fv0, fv1, fv2, ev0, ev1, converters );
 }
 
-void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, VertBitSet& dests )
+void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, VertBitSet& orgs, VertBitSet& dests )
 {
     faces.set( topology.left( e ) );
     faces.set( topology.right( e ) );
+    orgs.set( topology.org( e ) );
     dests.set( topology.dest( e ) );
 }
 
@@ -334,7 +335,8 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
     return result;
 }
 
-BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const AffineXf3f* rigidB2A )
+tl::expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
+    BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER
 
@@ -347,14 +349,16 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     result.intersectionPoints.reserve( intersections.edgesAtrisB.size() + intersections.edgesBtrisA.size() );
 
     FaceBitSet collFacesA, collFacesB;
-    VertBitSet collOuterVertsA, collOuterVertsB;
+    VertBitSet destVertsA, destVertsB, orgVertsA, orgVertsB;
     collFacesA.resize( meshA.topology.lastValidFace() + 1 );
     collFacesB.resize( meshB.topology.lastValidFace() + 1 );
-    collOuterVertsA.resize( meshA.topology.lastValidVert() + 1 );
-    collOuterVertsB.resize( meshB.topology.lastValidVert() + 1 );
+    orgVertsA.resize( meshA.topology.lastValidVert() + 1 );
+    orgVertsB.resize( meshB.topology.lastValidVert() + 1 );
+    destVertsA.resize( meshA.topology.lastValidVert() + 1 );
+    destVertsB.resize( meshB.topology.lastValidVert() + 1 );
     for ( const auto& et : intersections.edgesAtrisB )
     {
-        gatherEdgeInfo( meshA.topology, et.edge, collFacesA, collOuterVertsA );
+        gatherEdgeInfo( meshA.topology, et.edge, collFacesA, orgVertsA, destVertsA );
         collFacesB.set( et.tri );
 
         const auto isect = findEdgeTriIntersectionPoint( meshA, et.edge, meshB, et.tri, converters, rigidB2A, EdgeTriComponent::Tri );
@@ -362,11 +366,34 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     }
     for ( const auto& et : intersections.edgesBtrisA )
     {
-        gatherEdgeInfo( meshB.topology, et.edge, collFacesB, collOuterVertsB );
+        gatherEdgeInfo( meshB.topology, et.edge, collFacesB, orgVertsB, destVertsB );
         collFacesA.set( et.tri );
 
         const auto isect = findEdgeTriIntersectionPoint( meshB, et.edge, meshA, et.tri, converters, rigidB2A, EdgeTriComponent::Edge );
         result.intersectionPoints.emplace_back( isect );
+    }
+
+    if ( ( orgVertsA & destVertsA ).any() || ( orgVertsB & destVertsB ).any() )
+    {
+        // in this case we are not able to detect inside outside correctly
+        BooleanResultMapper mapper;
+        auto boolRes = MR::boolean( meshA, meshB, operation, rigidB2A, &mapper );
+        if ( !boolRes.valid() )
+            return tl::make_unexpected( boolRes.errorString );
+
+        for ( auto v : meshA.topology.getValidVerts() )
+        {
+            auto vn = mapper.maps[int( BooleanResultMapper::MapObject::A )].old2newVerts[v];
+            if ( vn.valid() )
+                result.meshAVerts.set( v );
+        }
+        for ( auto v : meshB.topology.getValidVerts() )
+        {
+            auto vn = mapper.maps[int( BooleanResultMapper::MapObject::B )].old2newVerts[v];
+            if ( vn.valid() )
+                result.meshBVerts.set( v );
+        }
+        return result;
     }
 
     auto collBordersA = findLeftBoundary( meshA.topology, collFacesA );
@@ -379,14 +406,18 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     {
         std::erase_if( collBordersA, [&] ( const EdgeLoop& edgeLoop )
         {
-            return needInsidePartA != collOuterVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
+            return needInsidePartA != destVertsA.test( meshA.topology.dest( edgeLoop.front() ) );
         } );
 
         collFacesA = fillContourLeft( meshA.topology, collBordersA );
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
 
+        // reset outer
         for ( const auto& et : intersections.edgesAtrisB )
             result.meshAVerts.reset( needInsidePartA ? meshA.topology.dest( et.edge ) : meshA.topology.org( et.edge ) );
+        // set inner (it could have been reset if same edge intersects twice)
+        for ( const auto& et : intersections.edgesAtrisB )
+            result.meshAVerts.set( needInsidePartA ? meshA.topology.org( et.edge ) : meshA.topology.dest( et.edge ) );
 
         const auto aComponents = MeshComponents::getAllComponents(meshA);
 
@@ -407,14 +438,18 @@ BooleanResultPoints getBooleanPoints( const Mesh& meshA, const Mesh& meshB, Bool
     {
         std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
         {
-            return needInsidePartB != collOuterVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
+            return needInsidePartB != destVertsA.test( meshB.topology.dest( edgeLoop.front() ) );
         } );
 
         collFacesB = fillContourLeft(meshB.topology, collBordersB);
         result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
 
+        // reset outer
         for ( const auto& et : intersections.edgesBtrisA )
             result.meshBVerts.reset( needInsidePartB ? meshB.topology.dest( et.edge ) : meshB.topology.org( et.edge ) );
+        // set inner (it could have been reset if same edge intersects twice)
+        for ( const auto& et : intersections.edgesBtrisA )
+            result.meshBVerts.set( needInsidePartB ? meshB.topology.org( et.edge ) : meshB.topology.dest( et.edge ) );
 
         const auto bComponents = MeshComponents::getAllComponents(meshB);
         std::unique_ptr<AffineXf3f> rigidA2B;

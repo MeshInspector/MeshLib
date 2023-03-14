@@ -498,7 +498,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     std::vector<NamedMesh> res;
     std::string currentObjName;
-    std::vector<Vector3f> points;
+    std::vector<std::pair<Vector3f, int>> points;
     std::vector<UVCoord> textureVertices;
     Triangulation t;
     Vector<UVCoord, VertId> uvCoords;
@@ -526,8 +526,16 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             }
 
             std::vector<MeshBuilder::VertDuplication> dups;
+            VertCoords vertCoords( points.size() );
+            tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&points, &vertCoords] ( const auto& range )
+            {
+                for ( size_t i = range.begin(); i < range.end(); ++i )
+                {
+                    vertCoords[VertId(i)] = points[i].first;
+                }
+            } );
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups );
+                vertCoords, t, &dups );
             t.clear();
 
             assert( uvCoords.size() >= maxV );
@@ -596,7 +604,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                         parseError = std::move( res.error() );
                     return;
                 }
-                points[offset + ( li - begin )] = v;
+                points[offset + ( li - begin )] = { v, -1 };
             }
         }, ctx );
     };
@@ -627,18 +635,26 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
     {
-        tbb::task_group_context ctx;
-        tbb::enumerable_thread_specific<Triangulation> trisPerThread;
-        tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
-        {
-            auto& tris = trisPerThread.local();
+        const int oldPointsSize = int( points.size() );
+        //Triangulation tris;
+       // tbb::task_group_context ctx;
+        //tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+        //tbb::concurrent_vector<int> texCoords( points.size(), -1 );
+
+        //std::mutex mutex;
+
+       // tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
+        //{
+           // auto& tris = trisPerThread.local();
 
             ObjFace f;
             // usually a face has 3 or 4 vertices
             for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
-                elements->reserve( 4 );
+               elements->reserve( 4 );
 
-            for ( auto li = range.begin(); li < range.end(); li++ )
+          //  for ( auto li = range.begin(); li < range.end(); li++ )
+           // {
+            for (auto li = begin; li < end; li++ )
             {
                 for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
                     elements->clear();
@@ -647,7 +663,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 auto res = parseObjFace( line, f );
                 if ( !res.has_value() )
                 {
-                    if ( ctx.cancel_group_execution() )
+                   // if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
@@ -656,58 +672,84 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 for ( auto& v : vs )
                 {
                     if ( v < 0 )
-                        v += (int)points.size() + 1;
+                        v += oldPointsSize + 1;
 
                     if ( v <= 0 )
                     {
-                        if ( ctx.cancel_group_execution() )
+                       // if ( ctx.cancel_group_execution() )
                             parseError = "Too negative vertex ID in OBJ-file";
                         return;
                     }
                 }
                 if ( vs.size() < 3 )
                 {
-                    if ( ctx.cancel_group_execution() )
+                   // if ( ctx.cancel_group_execution() )
                         parseError = "Face with less than 3 vertices in OBJ-file";
                     return;
                 }
-
-                // TODO: make smarter triangulation based on point coordinates
-                for ( int j = 1; j + 1 < vs.size(); ++j )
-                    tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
-
+                
+               // mutex.lock();
                 auto& vts = f.textures;
                 if ( !vts.empty() )
                 {
                     for ( auto& vt : vts )
                     {
                         if ( vt < 0 )
-                            vt += (int)textureVertices.size() + 1;
+                            vt += int( textureVertices.size() ) + 1;
 
                         if ( vt <= 0 )
                         {
-                            if ( ctx.cancel_group_execution() )
+                           // if ( ctx.cancel_group_execution() )
                                 parseError = "Too negative texture vertex ID in OBJ-file";
                             return;
                         }
                     }
 
+                    
                     assert( vts.size() == vs.size() );
                     for ( int j = 0; j < vs.size(); ++j )
-                        uvCoords[VertId{ vs[j] - 1 }] = textureVertices[ vts[j] - 1 ];
+                    {
+                        if ( points[vs[j] - 1].second < 0 || points[vs[j] - 1].second == vts[j] - 1 )
+                        {
+                            points[vs[j] - 1].second = vts[j] - 1;
+                            continue;
+                        }
+                        points.push_back( { points[vs[j] - 1].first, vts[j] - 1 } );
+                        vs[j] = int( points.size() );
+
+                        
+                    }
+
                 }
+
+                // TODO: make smarter triangulation based on point coordinates
+                for ( int j = 1; j + 1 < vs.size(); ++j )
+                    t.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+
+               // mutex.unlock();
+
+               
             }
-        }, ctx );
+        //}, ctx );
+
+        uvCoords.resize( points.size() );
+        tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
+        {
+            for ( VertId i = range.begin(); i < range.end(); ++i )
+            {
+                uvCoords[i] = textureVertices[points[i].second];
+            }
+        } );
 
         if ( !parseError.empty() )
             return;
 
-        size_t trisSize = 0;
-        for ( auto& tris : trisPerThread )
-            trisSize += tris.size();
-        t.reserve( t.size() + trisSize );
-        for ( auto& tris : trisPerThread )
-            t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
+     //   size_t trisSize = 0;
+        //for ( auto& tris : trisPerThread )
+       //     trisSize += tris.size();
+      //  t.reserve( t.size() + trisSize );
+       // for ( auto& tris : trisPerThread )
+        //    t.vec_.insert( t.vec_.end(), tris.vec_.begin(), tris.vec_.end() );
     };
 
     auto parseObject = [&] ( size_t, size_t end, std::string& )

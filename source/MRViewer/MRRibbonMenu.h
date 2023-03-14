@@ -142,6 +142,7 @@ protected:
 
     MRVIEWER_API virtual void drawToolbarWindow_();
     MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
+    MRVIEWER_API virtual void drawToolbarCustomizeTabsList_();
     MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
 
     // return icon (now it is symbol in icons font) based on typename
@@ -231,6 +232,8 @@ private:
     MenuItemsList toolbarListCustomize_; // toolbar preview items list for Toolbar Customize window
     bool toolbarDragDrop_ = false; // active drag&drop in Toolbar Customize window
     bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
+    int toolbarCustomizeTabNum_ = 0;
+    std::string toolbarSearch_;
 };
 
 template<typename T>

@@ -10,6 +10,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
 
+#include <map>
 
 namespace
 {
@@ -504,6 +505,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     Vector<UVCoord, VertId> uvCoords;
     tl::expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
+    std::map<int, int> additions;
+    additions.insert_or_assign( 0, 0 );
+
     auto finishObject = [&]() 
     {
         MR_NAMED_TIMER( "finish object" )
@@ -634,7 +638,9 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         std::vector<int> texCoords( points.size(), -1 );
 
         std::mutex mutex;
+        std::mutex mapMutex;
 
+        int newPoints = 0;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
@@ -664,12 +670,19 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     if ( v < 0 )
                         v += oldPointsSize + 1;
 
-                    if ( v <= 0 )
+                    if ( --v < 0 )
                     {
                         if ( ctx.cancel_group_execution() )
                             parseError = "Too negative vertex ID in OBJ-file";
                         return;
                     }
+
+                    const std::lock_guard<std::mutex> lock( mapMutex );
+                    auto it = additions.lower_bound(v);
+                    if ( it == additions.end() )
+                        v += additions.rbegin()->second;
+                    else
+                        v += it->second;
                 }
                 if ( vs.size() < 3 )
                 {
@@ -686,7 +699,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                         if ( vt < 0 )
                             vt += int( textureVertices.size() ) + 1;
 
-                        if ( vt <= 0 )
+                        if ( --vt < 0 )
                         {
                             if ( ctx.cancel_group_execution() )
                                 parseError = "Too negative texture vertex ID in OBJ-file";
@@ -698,25 +711,36 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     const std::lock_guard<std::mutex> lock( mutex );
                     for ( int j = 0; j < vs.size(); ++j )
                     {
-                        if ( texCoords[vs[j] - 1] == vts[j] - 1 )
+                        if ( texCoords[vs[j]] == vts[j] )
                             continue;
 
-                        if ( texCoords[vs[j] - 1] < 0 )
+                        if ( texCoords[vs[j]] < 0 )
                         {
-                            texCoords[vs[j] - 1] = vts[j] - 1;
+                            texCoords[vs[j]] = vts[j];
                             continue;
                         }
-                        points.push_back( points[vs[j] - 1] );
-                        texCoords.push_back( vts[j] - 1 );
-                        vs[j] = int( points.size() );
+                        points.push_back( points[vs[j]] );
+                        texCoords.push_back( vts[j] );
+                        vs[j] = int( points.size() ) - 1;
+                        ++newPoints;
                     }
                 }
 
                 // TODO: make smarter triangulation based on point coordinates
                 for ( int j = 1; j + 1 < vs.size(); ++j )
-                    tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
+                    tris.push_back( { VertId( vs[0] ), VertId( vs[j] ), VertId( vs[j+1] ) } );
             }
         }, ctx );
+
+
+        {
+            const std::lock_guard<std::mutex> lock( mapMutex );
+            int lastValue = 0;
+            if ( !additions.empty() )
+                lastValue = additions.rbegin()->second;
+
+            additions.insert_or_assign( int( points.size() ) - lastValue - newPoints, lastValue + newPoints );
+        }
 
         if ( !texCoords.empty() )
         {

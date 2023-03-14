@@ -113,7 +113,7 @@ static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, in
 
 static void glfw_error_callback( int /*error*/, const char* description )
 {
-    spdlog::error( description );
+    spdlog::error( "glfw_error_callback: {}", description );
 }
 
 static void glfw_char_mods_callback( GLFWwindow* /*window*/, unsigned int codepoint )
@@ -492,8 +492,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwSetErrorCallback( glfw_error_callback );
     if ( !glfwInit() )
     {
+        spdlog::error( "glfwInit failed" );
         return EXIT_FAILURE;
     }
+    spdlog::info( "glfwInit succeeded" );
 #if defined(__APPLE__)
     //Setting window properties
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);

@@ -46,19 +46,28 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
 
     auto voxelSizeVector = Vector3f::diagonal( voxelSize );
     // Make grid
-    auto grid = ( !useShell ) ?
-        // Make level set grid if it is closed
-        meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
-            subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) ) :
-        // Make distance field grid if it is not closed
-        meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
+    FloatGrid grid;
+    if ( !useShell && !signPostprocess ) 
+    {
+        // Compute signed distance grid
+        grid = meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
+            subprogress( params.callBack, 0.0f, 0.5f ) );
+    }
+    else
+    {
+        // Compute unsigned distance grid
+        grid = meshToDistanceField( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
                         subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) );
+        if ( grid ) // to flip mesh normals
+            grid->setGridClass( openvdb::GRID_LEVEL_SET );
+    }
 
     if ( !grid )
         return tl::make_unexpected( "Operation was canceled." );
 
     if ( signPostprocess )
     {
+        // Compute signs for initially unsigned distance field
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
         auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, sp );
         if ( !signRes.has_value() )
@@ -71,10 +80,6 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
 
     if ( !newMesh.has_value() )
         return tl::make_unexpected( "Operation was canceled." );
-
-    // For not closed meshes orientation is flipped on back conversion
-    if ( useShell )
-        newMesh->topology.flipOrientation();
 
     return newMesh;
 }

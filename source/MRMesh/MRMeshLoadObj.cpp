@@ -697,9 +697,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     assert( vts.size() == vs.size() );
                     for ( int j = 0; j < vs.size(); ++j )
                     {
-                        const std::lock_guard<std::mutex> lock( mutex );
                         if ( texCoords[vs[j] - 1] == vts[j] - 1 )
                             continue;
+
+                        const std::lock_guard<std::mutex> lock( mutex );
 
                         if ( texCoords[vs[j] - 1] < 0 )
                         {
@@ -718,15 +719,18 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             }
         }, ctx );
 
-        uvCoords.resize( points.size() );
-        tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
+        if ( !texCoords.empty() )
         {
-            for ( VertId i = range.begin(); i < range.end(); ++i )
+            uvCoords.resize( points.size() );
+            tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
             {
-                uvCoords[i] = textureVertices[texCoords[i]];
-            }
-        } );
-
+                for ( VertId i = range.begin(); i < range.end(); ++i )
+                {
+                    if ( texCoords[i] < uvCoords.size() )
+                        uvCoords[i] = textureVertices[texCoords[i]];
+                }
+            } );
+        }
         if ( !parseError.empty() )
             return;
 

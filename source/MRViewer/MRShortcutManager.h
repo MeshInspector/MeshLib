@@ -70,6 +70,10 @@ public:
         KeyDown,  // the user just pressed the keys
         KeyRepeat // the user holds the keys for a long time
     };
+    
+    // processShortcut does nothing if not enabled
+    bool isEnabled() const { return enabled_; }
+    void enable( bool on ) { enabled_ = on; }
 
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
@@ -83,7 +87,6 @@ public:
 
     // if action with given name is present in shortcut list - returns it
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;
-
 protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key );
@@ -92,6 +95,8 @@ protected:
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
     using ShourtcutsBackMap = HashMap<std::string, int>;
+
+    bool enabled_{ true };
 
     ShourtcutsMap map_;
     ShourtcutsBackMap backMap_;

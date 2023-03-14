@@ -627,8 +627,14 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
     {
+        const int oldPointsSize = int( points.size() );
+        //Triangulation tris;
         tbb::task_group_context ctx;
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
+        std::vector<int> texCoords( points.size(), -1 );
+
+        std::mutex mutex;
+
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
@@ -636,7 +642,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             ObjFace f;
             // usually a face has 3 or 4 vertices
             for ( auto* elements : { &f.vertices, &f.textures, &f.normals } )
-                elements->reserve( 4 );
+               elements->reserve( 4 );
 
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
@@ -656,7 +662,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 for ( auto& v : vs )
                 {
                     if ( v < 0 )
-                        v += (int)points.size() + 1;
+                        v += oldPointsSize + 1;
 
                     if ( v <= 0 )
                     {
@@ -671,18 +677,14 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                         parseError = "Face with less than 3 vertices in OBJ-file";
                     return;
                 }
-
-                // TODO: make smarter triangulation based on point coordinates
-                for ( int j = 1; j + 1 < vs.size(); ++j )
-                    tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
-
+                
                 auto& vts = f.textures;
                 if ( !vts.empty() )
                 {
                     for ( auto& vt : vts )
                     {
                         if ( vt < 0 )
-                            vt += (int)textureVertices.size() + 1;
+                            vt += int( textureVertices.size() ) + 1;
 
                         if ( vt <= 0 )
                         {
@@ -693,12 +695,41 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     }
 
                     assert( vts.size() == vs.size() );
+                    const std::lock_guard<std::mutex> lock( mutex );
                     for ( int j = 0; j < vs.size(); ++j )
-                        uvCoords[VertId{ vs[j] - 1 }] = textureVertices[ vts[j] - 1 ];
+                    {
+                        if ( texCoords[vs[j] - 1] == vts[j] - 1 )
+                            continue;
+
+                        if ( texCoords[vs[j] - 1] < 0 )
+                        {
+                            texCoords[vs[j] - 1] = vts[j] - 1;
+                            continue;
+                        }
+                        points.push_back( points[vs[j] - 1] );
+                        texCoords.push_back( vts[j] - 1 );
+                        vs[j] = int( points.size() );
+                    }
                 }
+
+                // TODO: make smarter triangulation based on point coordinates
+                for ( int j = 1; j + 1 < vs.size(); ++j )
+                    tris.push_back( { VertId( vs[0]-1 ), VertId( vs[j]-1 ), VertId( vs[j+1]-1 ) } );
             }
         }, ctx );
 
+        if ( !texCoords.empty() )
+        {
+            uvCoords.resize( points.size() );
+            tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
+            {
+                for ( VertId i = range.begin(); i < range.end(); ++i )
+                {
+                    if ( texCoords[i] < uvCoords.size() )
+                        uvCoords[i] = textureVertices[texCoords[i]];
+                }
+            } );
+        }
         if ( !parseError.empty() )
             return;
 

@@ -105,12 +105,8 @@ void SpaceMouseHandlerHidapi::handle()
     do {
         DataPacketRaw packet = {0};
         packetLen = hid_read( device_, packet.data(), packet.size() );
-
-        if ( packetLen == 13 || packetLen == 7 ) {
-            Vector3f translate, rotate;
-            convertInput_( packet, packetLen, translate, rotate );
-            viewer.spaceMouseMove( translate, rotate );
-        }
+        convertInput_( packet, packetLen, translate, rotate );
+        viewer.spaceMouseMove( translate, rotate );
     } while ( packetLen > 0 );
 
     syncThreadLock.unlock();
@@ -154,7 +150,7 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
                 cv_.wait( syncThreadLock );
             }
             // nothing to do with packet_length == 0
-        } while ( terminateListenerThread_ );
+        } while ( !terminateListenerThread_ );
     });
 }
 

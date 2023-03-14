@@ -633,7 +633,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
         std::vector<int> texCoords( points.size(), -1 );
 
-        std::shared_mutex mutex;
+        std::mutex mutex;
 
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
@@ -695,12 +695,11 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     }
 
                     assert( vts.size() == vs.size() );
+                    const std::lock_guard<std::mutex> lock( mutex );
                     for ( int j = 0; j < vs.size(); ++j )
                     {
                         if ( texCoords[vs[j] - 1] == vts[j] - 1 )
                             continue;
-
-                        const std::lock_guard<std::shared_mutex> lock( mutex );
 
                         if ( texCoords[vs[j] - 1] < 0 )
                         {

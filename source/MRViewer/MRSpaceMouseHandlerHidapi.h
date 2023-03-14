@@ -30,7 +30,7 @@ public:
     virtual void handle() override;
 
 private:
-    void startUpdateThread_();
+    void initListenerThread_();
 
     float convertCoord_( int coord_byte_low, int coord_byte_high );
     void convertInput_( const DataPacketRaw& packet, int packet_length, Vector3f& translate, Vector3f& rotate );
@@ -40,13 +40,12 @@ private:
 
 private:
     hid_device *device_;
-    std::thread updateThread_;
-    std::atomic_bool updateThreadActive_;
-    bool hasMousePackets_;
-    std::mutex dataMutex_; // SpaceMouse data and status
-    std::condition_variable cv_;
-    Vector3f translate_;
-    Vector3f rotate_;
+    std::thread listenerThread_;
+    std::atomic_bool terminateListenerThread_;
+    std::mutex syncThreadMutex_; // which thread reads and handles SpaceMouse data
+    std::condition_variable cv_; // notify on thread change
+    DataPacketRaw dataPacket_;    // packet from listener thread
+    int packetLength_;
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {

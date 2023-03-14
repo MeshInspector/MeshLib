@@ -10,23 +10,18 @@ namespace MR
 {
 SpaceMouseHandlerHidapi::SpaceMouseHandlerHidapi()
         : device_(nullptr)
-        , updateThreadActive_(false)
-        , hasMousePackets_(false)
-        , translate_(0.0f, 0.0f, 0.0f)
-        , rotate_(0.0f, 0.0f, 0.0f)
+        , terminateListenerThread_(false)
+        , dataPacket_({0})
+        , packetLength_(0)
 {}
 
 SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
 {
-    updateThreadActive_ = false;
-
-    std::unique_lock<std::mutex> dataLock( dataMutex_ );
-    hasMousePackets_ = false;
-    dataLock.unlock();
+    terminateListenerThread_ = true;
     cv_.notify_one();
 
-    if ( updateThread_.joinable() )
-        updateThread_.join();
+    if ( listenerThread_.joinable() )
+        listenerThread_.join();
 
     if ( device_ != nullptr )
         hid_close( device_ );
@@ -48,8 +43,8 @@ void SpaceMouseHandlerHidapi::initialize()
     hid_device_info* devs_ = hid_enumerate( 0x0, 0x0 );
     printDevices_( devs_ );
 #endif
-    updateThreadActive_ = true;
-    startUpdateThread_();
+    terminateListenerThread_ = false;
+    initListenerThread_();
 }
 
 bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
@@ -86,81 +81,80 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_() {
 
 void SpaceMouseHandlerHidapi::handle()
 {
-
-    std::unique_lock<std::mutex> dataLock( dataMutex_, std::defer_lock );
-    if ( !dataLock.try_lock() )
+    // works in pair with SpaceMouseHandlerHidapi::startListenerThread_()
+    std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_, std::defer_lock );
+    if ( !syncThreadLock.try_lock() )
         return;
+
+    if ( packetLength_ <= 0 )
+        return;
+
+    auto &viewer = getViewerInstance();
+    // process saved data packet
+    Vector3f translate, rotate;
+    convertInput_( dataPacket_, packetLength_, translate, rotate );
+    viewer.spaceMouseMove( translate, rotate );
+    packetLength_ = 0;
 
     if ( !device_ )
         return;
 
-    if ( !hasMousePackets_ )
-        return;
-
-    auto &viewer = getViewerInstance();
-    // process saved data
-    viewer.spaceMouseMove( translate_, rotate_ );
-    int packet_length = 0;
+    int packetLen = 0;
     // set the device handle to be non-blocking
     hid_set_nonblocking( device_, 1 );
     do {
         DataPacketRaw packet = {0};
-        packet_length = hid_read( device_, packet.data(), packet.size() );
+        packetLen = hid_read( device_, packet.data(), packet.size() );
 
-        if ( packet_length == 13 || packet_length == 7 ) {
+        if ( packetLen == 13 || packetLen == 7 ) {
             Vector3f translate, rotate;
-            convertInput_( packet, packet_length, translate, rotate );
+            convertInput_( packet, packetLen, translate, rotate );
             viewer.spaceMouseMove( translate, rotate );
         }
-    } while ( packet_length > 0 );
+    } while ( packetLen > 0 );
 
-    hasMousePackets_ = false;
-    dataLock.unlock();
+    syncThreadLock.unlock();
     cv_.notify_one();
 }
 
-void SpaceMouseHandlerHidapi::startUpdateThread_()
+void SpaceMouseHandlerHidapi::initListenerThread_()
 {
-    updateThread_ = std::thread( [&]() {
+    // works in pair with SpaceMouseHandlerHidapi::handle()
+    // waits for updates on SpaceMouse and notifies main thread
+    listenerThread_ = std::thread( [&]() {
         do {
-            std::unique_lock<std::mutex> dataLock( dataMutex_ );
+            std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_ );
+            // stay in loop until SpaceMouse is found
             while ( !device_ )
             {
-                if ( !updateThreadActive_ )
+                if ( terminateListenerThread_ )
                     return;
                 if ( findAndAttachDevice_() )
                     break;
-                dataLock.unlock();
+                syncThreadLock.unlock();
                 std::this_thread::sleep_for( std::chrono::milliseconds(1000) );
-                dataLock.lock();
+                syncThreadLock.lock();
             }
-
-            int packet_length = 0;
-            DataPacketRaw packet = {0};
 
             // set the device handle to be blocking
             hid_set_nonblocking( device_, 0 );
             // hid_read_timeout() waits until there is data to read before returning or 1000ms passed (to help with thread shutdown)
-            packet_length = hid_read_timeout( device_, packet.data(), packet.size(), 1000 );
+            packetLength_ = hid_read_timeout( device_, dataPacket_.data(), dataPacket_.size(), 1000 );
             // device connection lost
-            if ( packet_length < 0)
+            if ( packetLength_ < 0)
             {
-                hasMousePackets_ = false;
                 hid_close( device_ );
                 device_ = nullptr;
                 spdlog::error( "HID API: device lost" );
             }
-            else if ( packet_length > 0)
+            else if ( packetLength_ > 0)
             {
-                hasMousePackets_ = true;
-                // save data and trigger main rendering loop
-                convertInput_( packet, packet_length, translate_, rotate_ );
+                // trigger main rendering loop and wait for main thread to read and process all SpaceMouse packets
                 glfwPostEmptyEvent();
-                // wait for main thread to read and process all SpaceMouse packets
-                cv_.wait( dataLock, [&]{return !hasMousePackets_;} );
+                cv_.wait( syncThreadLock );
             }
             // nothing to do with packet_length == 0
-        } while ( updateThreadActive_ );
+        } while ( terminateListenerThread_ );
     });
 }
 

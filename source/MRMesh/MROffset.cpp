@@ -51,7 +51,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     {
         // Compute signed distance grid
         grid = meshToLevelSet( mp, AffineXf3f(), voxelSizeVector, std::abs( offsetInVoxels ) + 2,
-            subprogress( params.callBack, 0.0f, signPostprocess ? 0.33f : 0.5f ) );
+            subprogress( params.callBack, 0.0f, 0.5f ) );
     }
     else
     {

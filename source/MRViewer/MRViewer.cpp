@@ -58,6 +58,8 @@
 #include <emscripten/html5.h>
 #define GLFW_INCLUDE_ES3
 
+#include <stdlib.h>
+
 namespace
 {
     double sEmsPixelRatio = 1.0f;
@@ -497,6 +499,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     }
     spdlog::info( "glfwInit succeeded" );
 #if defined(__APPLE__)
+    setenv(XDG_DATA_DIRS, "/Applications/MeshInspector.app/Contents/share");
     //Setting window properties
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

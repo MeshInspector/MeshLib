@@ -1,16 +1,16 @@
-#include "MRSceneStateChange.h"
+#include "MRSceneSelectionChange.h"
 #include "MRStatePlugin.h"
 
 namespace MR
 {
 
-void SceneStateChangeClose::updateSelection( const std::vector<std::shared_ptr<const Object>>& )
+void SceneSelectionChangeClose::updateSelection( const std::vector<std::shared_ptr<const Object>>& )
 {
     auto thisPlugin = dynamic_cast< StateBasePlugin* >( this );
     thisPlugin->enable( false );
 }
 
-void SceneStateChangeRestart::updateSelection( const std::vector<std::shared_ptr<const Object>>& objects )
+void SceneSelectionChangeRestart::updateSelection( const std::vector<std::shared_ptr<const Object>>& objects )
 {
     auto thisPlugin = dynamic_cast< StateBasePlugin* >( this );
     if ( !thisPlugin->enable( false ) )

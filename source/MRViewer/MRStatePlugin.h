@@ -3,7 +3,7 @@
 #include "MRViewerPlugin.h"
 #include "MRSceneStateCheck.h"
 #include "MRStatePluginAutoClose.h"
-#include "MRSceneStateChange.h"
+#include "MRSceneSelectionChange.h"
 #include "MRViewerEventsListener.h"
 #include "MRRibbonMenuItem.h"
 #include <filesystem>
@@ -73,7 +73,7 @@ class MRVIEWER_CLASS StateBasePlugin :
     public ViewerPlugin, 
     public RibbonMenuItem, 
     public virtual IPluginCloseCheck,
-    public virtual ISceneStateChange
+    public virtual ISceneSelectionChange
 {
 public:
     MRVIEWER_API StateBasePlugin( std::string name, StatePluginTabs tab = StatePluginTabs::Other );

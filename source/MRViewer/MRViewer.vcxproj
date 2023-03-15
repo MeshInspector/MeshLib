@@ -22,7 +22,7 @@
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
     <ClCompile Include="MRMouseController.cpp" />
     <ClCompile Include="MRRenderVolumeObject.cpp" />
-    <ClCompile Include="MRSceneStateChange.cpp" />
+    <ClCompile Include="MRSceneSelectionChange.cpp" />
     <ClCompile Include="MRTouchesHandler.cpp" />
     <ClCompile Include="MRTouchesController.cpp" />
     <ClCompile Include="MRObjectMeshHistory.cpp" />
@@ -90,7 +90,7 @@
     <ClInclude Include="MRMouse.h" />
     <ClInclude Include="MRMouseController.h" />
     <ClInclude Include="MRRenderVolumeObject.h" />
-    <ClInclude Include="MRSceneStateChange.h" />
+    <ClInclude Include="MRSceneSelectionChange.h" />
     <ClInclude Include="MRTouchesController.h" />
     <ClInclude Include="MRObjectMeshHistory.h" />
     <ClInclude Include="MRObjectTransformWidget.h" />

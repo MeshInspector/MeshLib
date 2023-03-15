@@ -250,7 +250,7 @@
     <ClCompile Include="MRRenderVolumeObject.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
-    <ClCompile Include="MRSceneStateChange.cpp">
+    <ClCompile Include="MRSceneSelectionChange.cpp">
       <Filter>StatePlugins</Filter>
     </ClCompile>
   </ItemGroup>
@@ -473,7 +473,7 @@
     <ClInclude Include="MRRenderVolumeObject.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
-    <ClInclude Include="MRSceneStateChange.h">
+    <ClInclude Include="MRSceneSelectionChange.h">
       <Filter>StatePlugins</Filter>
     </ClInclude>
   </ItemGroup>

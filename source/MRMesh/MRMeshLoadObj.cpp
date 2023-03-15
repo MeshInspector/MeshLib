@@ -369,7 +369,7 @@ namespace
 
     struct MtlMaterial
     {
-        Vector3f diffuseColor;
+        Vector3f diffuseColor = Vector3f::diagonal( -1.0f );
         std::string diffuseTextureFile;
     };
 
@@ -505,7 +505,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     Vector<UVCoord, VertId> uvCoords;
     tl::expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
-    int addition = 0;
+
+    std::map<int, int> additions;
+    additions[0] = 0;
+    int originalPointCount = 0;
 
     auto finishObject = [&]() 
     {
@@ -562,7 +565,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     result.pathToTexture = dir / materialIt->second.diffuseTextureFile;
                 }
 
-                result.diffuseColor = Color( materialIt->second.diffuseColor );
+                if ( materialIt->second.diffuseColor != Vector3f::diagonal(-1) )
+                    result.diffuseColor = Color( materialIt->second.diffuseColor );
             }
         }
         currentObjName.clear();
@@ -584,6 +588,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
         const auto offset = points.size();
+        originalPointCount += int( end - begin );
         points.resize( points.size() + ( end - begin ) );
         uvCoords.resize( points.size() );
 
@@ -632,8 +637,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
     auto parseFaces = [&] ( size_t begin, size_t end, std::string& parseError )
     {
-        const int oldPointsSize = int( points.size() );
-
         tbb::task_group_context ctx;
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
         std::vector<int> texCoords( points.size(), -1 );
@@ -641,6 +644,10 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         std::mutex mutex;
 
         int newPoints = 0;
+        int lastAddition = 0;
+        if ( !additions.empty() )
+            lastAddition = additions.rbegin()->second;
+
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
             auto& tris = trisPerThread.local();
@@ -667,17 +674,24 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 auto& vs = f.vertices;
                 for ( auto& v : vs )
                 {
-                    if ( v < 0 )
-                        v += oldPointsSize + 1;
-
                     if ( --v < 0 )
                     {
-                        if ( ctx.cancel_group_execution() )
-                            parseError = "Too negative vertex ID in OBJ-file";
-                        return;
-                    }
+                        v += originalPointCount + 1;
 
-                    v += addition;
+                        if ( v < 0 )
+                        {
+                            if ( ctx.cancel_group_execution() )
+                                parseError = "Too negative vertex ID in OBJ-file";
+                            return;
+                        }
+                    }
+                   
+                    auto it = additions.lower_bound( v + 1 );
+                    if ( it == additions.end() )
+                        v += additions.rbegin()->second;
+                    else if ( it != additions.begin() )
+                        v += (--it)->second;
+                   
                 }
                 if ( vs.size() < 3 )
                 {
@@ -726,8 +740,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                     tris.push_back( { VertId( vs[0] ), VertId( vs[j] ), VertId( vs[j+1] ) } );
             }
         }, ctx );
-       
-        addition += newPoints;     
+
+        additions.insert_or_assign( int( points.size() ) - lastAddition - newPoints, lastAddition + newPoints );
 
         if ( !texCoords.empty() )
         {

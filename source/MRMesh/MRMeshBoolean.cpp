@@ -413,11 +413,7 @@ tl::expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& mes
         result.meshAVerts = getInnerVerts( meshA.topology, collFacesA );
 
         // reset outer
-        for ( const auto& et : intersections.edgesAtrisB )
-            result.meshAVerts.reset( needInsidePartA ? meshA.topology.dest( et.edge ) : meshA.topology.org( et.edge ) );
-        // set inner (it could have been reset if same edge intersects twice)
-        for ( const auto& et : intersections.edgesAtrisB )
-            result.meshAVerts.set( needInsidePartA ? meshA.topology.org( et.edge ) : meshA.topology.dest( et.edge ) );
+        result.meshAVerts -= ( needInsidePartA ? destVertsA : orgVertsA );
 
         const auto aComponents = MeshComponents::getAllComponents(meshA);
 
@@ -438,18 +434,14 @@ tl::expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& mes
     {
         std::erase_if( collBordersB, [&] ( const EdgeLoop& edgeLoop )
         {
-            return needInsidePartB != destVertsA.test( meshB.topology.dest( edgeLoop.front() ) );
+            return needInsidePartB != destVertsB.test( meshB.topology.dest( edgeLoop.front() ) );
         } );
 
         collFacesB = fillContourLeft(meshB.topology, collBordersB);
         result.meshBVerts = getInnerVerts( meshB.topology, collFacesB );
 
         // reset outer
-        for ( const auto& et : intersections.edgesBtrisA )
-            result.meshBVerts.reset( needInsidePartB ? meshB.topology.dest( et.edge ) : meshB.topology.org( et.edge ) );
-        // set inner (it could have been reset if same edge intersects twice)
-        for ( const auto& et : intersections.edgesBtrisA )
-            result.meshBVerts.set( needInsidePartB ? meshB.topology.org( et.edge ) : meshB.topology.dest( et.edge ) );
+        result.meshBVerts -= ( needInsidePartB ? destVertsB : orgVertsB );
 
         const auto bComponents = MeshComponents::getAllComponents(meshB);
         std::unique_ptr<AffineXf3f> rigidA2B;

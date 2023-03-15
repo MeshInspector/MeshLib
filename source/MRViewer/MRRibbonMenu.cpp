@@ -134,7 +134,9 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
+        prevFrameObjectsCache_ = selectedObjectsCache_;
         selectedObjectsCache_ = getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+
         drawTopPanel_();
 
         drawActiveBlockingDialog_();
@@ -1321,9 +1323,9 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
             }
 
             if ( !statePlugin->dialogIsOpen() )
-            {
                 itemPtr.item->action();
-            }
+            else if ( prevFrameObjectsCache_ != selectedObjectsCache_ )
+                statePlugin->updateSelection( selectedObjectsCache_ );
         }
     }
 }

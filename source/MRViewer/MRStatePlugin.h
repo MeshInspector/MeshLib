@@ -3,6 +3,7 @@
 #include "MRViewerPlugin.h"
 #include "MRSceneStateCheck.h"
 #include "MRStatePluginAutoClose.h"
+#include "MRSceneSelectionChange.h"
 #include "MRViewerEventsListener.h"
 #include "MRRibbonMenuItem.h"
 #include <filesystem>
@@ -68,7 +69,11 @@ enum class StatePluginTabs
 
 class Object;
 
-class MRVIEWER_CLASS StateBasePlugin :public ViewerPlugin, public RibbonMenuItem, public virtual IPluginCloseCheck
+class MRVIEWER_CLASS StateBasePlugin : 
+    public ViewerPlugin, 
+    public RibbonMenuItem, 
+    public virtual IPluginCloseCheck,
+    public virtual ISceneSelectionChange
 {
 public:
     MRVIEWER_API StateBasePlugin( std::string name, StatePluginTabs tab = StatePluginTabs::Other );

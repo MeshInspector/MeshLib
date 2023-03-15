@@ -31,6 +31,7 @@ private:
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };
     bool needReset_{ false };
+    bool gpuOverridesMSAA_{ false };
 
     Vector4f backgroundColor_;
 

@@ -33,7 +33,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         }
     } );
 #ifndef __EMSCRIPTEN__
-    CommandLoop::appendCommand( [] ()
+    CommandLoop::appendCommand( [&] ()
     {
         auto& viewer = getViewerInstance();
         int samples = 0;
@@ -43,11 +43,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
         {
             int realSamples;
             GL_EXEC( glGetIntegerv( GL_SAMPLES, &realSamples ) );
-            if ( realSamples != samples )
-            {
-                if ( auto menu = getViewerInstance().getMenuPlugin() )
-                    menu->showErrorModal( "GPU multisampling settings override application value." );
-            }
+            gpuOverridesMSAA_ = ( realSamples != samples );
         }
     }, CommandLoop::StartPosition::AfterWindowAppear );
 #endif
@@ -254,6 +250,8 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     
                     needReset_ = storedSamples_ != curSamples_;
                 }
+                if ( gpuOverridesMSAA_ )
+                    ImGui::TransparentTextWrapped( "GPU multisampling settings override application value." );
                 if ( needReset_ )
                     ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
             }

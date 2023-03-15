@@ -187,7 +187,8 @@ tl::expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFr
                     objectMesh->setName( std::move( resValue[i].name ) );
                 objectMesh->select( true );
                 objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );                
-                
+                objectMesh->setFrontColor( resValue[i].diffuseColor, false );
+
                 auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
                 if ( image.has_value() )
                 {

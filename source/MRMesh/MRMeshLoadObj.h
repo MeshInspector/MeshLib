@@ -25,6 +25,7 @@ struct NamedMesh
     Mesh mesh;
     Vector<UVCoord, VertId> uvCoords;
     std::filesystem::path pathToTexture;
+    Color diffuseColor;
 };
 MRMESH_API tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                                ProgressCallback callback = {} );

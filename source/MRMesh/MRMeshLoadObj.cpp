@@ -561,6 +561,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 {
                     result.pathToTexture = dir / materialIt->second.diffuseTextureFile;
                 }
+
+                result.diffuseColor = Color( materialIt->second.diffuseColor );
             }
         }
         currentObjName.clear();

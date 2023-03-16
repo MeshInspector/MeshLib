@@ -501,6 +501,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     std::string currentObjName;
     std::vector<Vector3f> points;
     std::vector<UVCoord> textureVertices;
+    std::vector<int> texCoords( points.size(), -1 );
     Triangulation t;
     Vector<UVCoord, VertId> uvCoords;
     tl::expected<MtlLibrary, std::string> mtl;
@@ -536,11 +537,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups );
             t.clear();
 
-            assert( uvCoords.size() >= maxV );
-            result.uvCoords = { begin( uvCoords ) + minV, begin( uvCoords ) + maxV + 1 };
-            result.uvCoords.resize( result.mesh.points.size() );
-            for ( const auto& dup : dups )
-                result.uvCoords[dup.dupVert] = result.uvCoords[dup.srcVert];
 
             VertHashMap dst2Src;
             dst2Src.reserve( dups.size() );
@@ -567,6 +563,25 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
 
                 if ( materialIt->second.diffuseColor != Vector3f::diagonal(-1) )
                     result.diffuseColor = Color( materialIt->second.diffuseColor );
+
+                if ( !texCoords.empty() )
+                {
+                    uvCoords.resize( points.size() );
+                    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
+                    {
+                        for ( VertId i = range.begin(); i < range.end(); ++i )
+                        {
+                            if ( texCoords[i] < uvCoords.size() )
+                                uvCoords[i] = textureVertices[texCoords[i]];
+                        }
+                    } );
+
+                    assert( uvCoords.size() >= maxV );
+                    result.uvCoords = { begin( uvCoords ) + minV, begin( uvCoords ) + maxV + 1 };
+                    result.uvCoords.resize( result.mesh.points.size() );
+                    for ( const auto& dup : dups )
+                        result.uvCoords[dup.dupVert] = result.uvCoords[dup.srcVert];
+                }
             }
         }
         currentObjName.clear();
@@ -589,8 +604,11 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     {
         const auto offset = points.size();
         originalPointCount += int( end - begin );
-        points.resize( points.size() + ( end - begin ) );
-        uvCoords.resize( points.size() );
+        const size_t newSize = points.size() + ( end - begin );
+        texCoords.resize( newSize, -1 );
+
+        points.resize( newSize );        
+        uvCoords.resize( newSize );
 
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -639,7 +657,6 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
     {
         tbb::task_group_context ctx;
         tbb::enumerable_thread_specific<Triangulation> trisPerThread;
-        std::vector<int> texCoords( points.size(), -1 );
 
         std::mutex mutex;
 
@@ -686,11 +703,15 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
                         }
                     }
                    
-                    auto it = additions.lower_bound( v + 1 );
+                    auto it = additions.upper_bound( v );
+                    int toAdd = 0;
                     if ( it == additions.end() )
-                        v += additions.rbegin()->second;
+                        toAdd = additions.rbegin()->second;
                     else if ( it != additions.begin() )
-                        v += (--it)->second;
+                        toAdd = (--it)->second;
+
+                    if ( toAdd > 0 )
+                        v += toAdd;
                    
                 }
                 if ( vs.size() < 3 )
@@ -741,20 +762,8 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
             }
         }, ctx );
 
-        additions.insert_or_assign( int( points.size() ) - lastAddition - newPoints, lastAddition + newPoints );
+        additions.insert_or_assign( originalPointCount, lastAddition + newPoints );
 
-        if ( !texCoords.empty() )
-        {
-            uvCoords.resize( points.size() );
-            tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( points.size() ) ), [&] ( const tbb::blocked_range<VertId>& range )
-            {
-                for ( VertId i = range.begin(); i < range.end(); ++i )
-                {
-                    if ( texCoords[i] < uvCoords.size() )
-                        uvCoords[i] = textureVertices[texCoords[i]];
-                }
-            } );
-        }
         if ( !parseError.empty() )
             return;
 

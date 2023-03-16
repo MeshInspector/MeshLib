@@ -270,6 +270,9 @@ MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, con
 /// draw tooltip only if current item is hovered
 MRVIEWER_API void SetTooltipIfHovered( const std::string& text, float scaling );
 ///add text with separator line 
+/// if issueCount is greater than zero, this number will be displayed in red color after the text. 
+/// If it equals zero - in green color
+/// Otherwise it will not be displayed
 MRVIEWER_API void Separator( float scaling, const std::string& text = "", int issueCount = -1 );
 
 /// draw spinner in given place, radius with respect to scaling

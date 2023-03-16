@@ -657,6 +657,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( titleFont )
     {
         ImGui::PushFont( titleFont );
+        // "+ 5 * params.menuScaling" eliminates shift of the font
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 5 * params.menuScaling } );
     }
     else
@@ -765,9 +766,10 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 
     float menuScaling = 1.0f;
     if ( auto menu = MR::getViewerInstance().getMenuPlugin() )
-        menuScaling *= menu->menu_scaling();
+        menuScaling = menu->menu_scaling();
 
     ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
+    // " 4.0f * params.menuScaling" eliminates shift of the font
     ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 4.0f * menuScaling } );
     ImGui::TextUnformatted( label, strstr( label, "##" ) );
 

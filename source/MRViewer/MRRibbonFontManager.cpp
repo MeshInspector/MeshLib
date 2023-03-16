@@ -134,6 +134,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         auto fontPath = getMenuLatinSemiBoldFontPath_();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+        // "- 3 * scaling" eliminates shift of the font in order to render this font in text fields properly
         config.GlyphOffset = ImVec2( 0, - 3 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,

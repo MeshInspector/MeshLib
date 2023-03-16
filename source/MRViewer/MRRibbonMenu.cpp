@@ -676,6 +676,7 @@ void RibbonMenu::drawHeaderPannel_()
             ImGui::TabItemBackground( window->DrawList, tabRect, 0, tabRectColor.getUInt32() );
         }
         ImGui::SetCursorPosX( basePos.x + ( tabWidth - textSizes[i] ) * 0.5f );
+        // "4.0f * scaling" eliminates shift of the font
         ImGui::SetCursorPosY( 2 * cTabYOffset * menuScaling + 4.0f * menuScaling );
 
         if ( activeTabIndex_ == i )

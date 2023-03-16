@@ -25,6 +25,7 @@ file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp" "./imgui/misc/
 file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h" "./imgui/misc/freetype/*.h" "./imgui/backends/imgui_impl_opengl3.h" "./imgui/backends/imgui_impl_glfw.h" "./imgui/backends/imgui_impl_opengl3_loader.h")
 include_directories("../source/")
 include_directories("../thirdparty/imgui/")
+include_directories("../thirdparty/parallel-hashmap/")
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 add_compile_definitions(IMGUI_ENABLE_FREETYPE)
 add_library(imgui SHARED ${IMGUI_SOURCES} ${IMGUI_HEADERS})

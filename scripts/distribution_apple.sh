@@ -19,6 +19,9 @@ cp ./LICENSE ./macos/Resources
 mkdir "${MR_PREFIX}"/requirements/
 cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
 
+mkdir "${MR_PREFIX}"/share/
+cp -r "$(brew --prefix)"/share/glib-2.0 "${MR_PREFIX}"/share
+
 ln -s "/Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "./Library/Frameworks/MeshLib.framework/Versions/Current"
 ln -s "/Library/Frameworks/MeshLib.framework/Resources" "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}/Resources"
 

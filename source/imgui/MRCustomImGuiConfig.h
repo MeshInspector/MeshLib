@@ -1,4 +1,7 @@
 #pragma once
+
+#include <MRMesh/MRVector2.h>
+
 #ifdef _WIN32
 #   ifdef MRIMGUI_EXPORT
 #       define IMGUI_API __declspec(dllexport)
@@ -13,3 +16,7 @@ struct ImGuiContext;
 
 IMGUI_API ImGuiContext*& MyImGuiTLS();
 #define GImGui MyImGuiTLS()
+
+#define IM_VEC2_CLASS_EXTRA \
+    constexpr ImVec2( const MR::Vector2f & v ) noexcept : x( v.x ), y( v.y ) {} \
+    constexpr operator MR::Vector2f() const noexcept { return { x, y }; }

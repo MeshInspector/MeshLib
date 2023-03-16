@@ -4,8 +4,6 @@
 #include <cmath>
 #include <algorithm>
 
-struct ImVec2;
-
 namespace MR
 {
 
@@ -28,10 +26,6 @@ struct Vector2
     explicit constexpr Vector2( NoInit ) noexcept { }
     constexpr Vector2( T x, T y ) noexcept : x( x ), y( y ) { }
     explicit constexpr Vector2( const Vector3<T> & v ) noexcept : x( v.x ), y( v.y ) { }
-
-    // implemented in MRImGui.h
-    constexpr Vector2( ImVec2 ) noexcept;
-    constexpr operator ImVec2() const noexcept;
 
     static constexpr Vector2 diagonal( T a ) noexcept { return Vector2( a, a ); }
     static constexpr Vector2 plusX() noexcept { return Vector2( 1, 0 ); }
@@ -103,7 +97,7 @@ inline T angle( const Vector2<T> & a, const Vector2<T> & b )
     //return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
 }
 
-template <typename T>
+template <typename T> 
 inline Vector2<T> Vector2<T>::furthestBasisVector() const
 {
     if ( fabs( x ) < fabs( y ) )

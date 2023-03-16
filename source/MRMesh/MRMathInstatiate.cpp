@@ -11,7 +11,6 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
-#include "MRImGui.h"
 #include <cmath>
 #include <cassert>
 

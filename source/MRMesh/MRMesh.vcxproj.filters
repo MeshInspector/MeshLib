@@ -931,9 +931,6 @@
     <ClInclude Include="MRSignDetectionMode.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
-    <ClInclude Include="MRImGui.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRId.cpp">

@@ -145,23 +145,23 @@ jobs:
 
       - name: Rename Distributives
         run: |
-          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip
-          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb
-          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb
-          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm
-          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg
-          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
+          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip
+          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb
+          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb
+          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm
+          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
+          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
       - name: Upload Distributives
         run: |
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.version}} \
-                            MeshLibDist_${{needs.versioning-and-release-url.outputs.version_tag}}.zip \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu20-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}-dev.rpm \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_x64.pkg \
-                            meshlib_${{needs.versioning-and-release-url.outputs.version_tag}}_arm.pkg
+                            MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
   update-artifacts:
     timeout-minutes: 15

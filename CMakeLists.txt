@@ -32,6 +32,7 @@ ENDIF() # NOT MR_EMSCRIPTEN
 project (MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 add_compile_definitions(MR_FRAMEWORK)
+add_compile_definitions(IMGUI_USER_CONFIG=imgui/MRCustomImGuiConfig.h)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

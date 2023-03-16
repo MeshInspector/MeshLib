@@ -638,7 +638,7 @@ VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette&
     std::ofstream ofs( path );
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || !writer->write( root, &ofs ) != 0 )
+    if ( !ofs || writer->write( root, &ofs ) != 0 )
         return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
     ofs.close();
 

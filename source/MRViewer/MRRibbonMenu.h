@@ -177,7 +177,7 @@ private:
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
     };
     // does look up in ribbon schema for `searchLine_`
-    std::vector<SearchResult> search_();
+    std::vector<SearchResult> search_( const std::string& searchStr );
     std::string searchLine_;
     std::vector<SearchResult> searchResult_;
     void drawSearchButton_();
@@ -234,6 +234,7 @@ private:
     bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
     int toolbarCustomizeTabNum_ = 0;
     std::string toolbarSearch_;
+    std::vector<std::vector<std::string>> toolbarSearchRes_;
 };
 
 template<typename T>

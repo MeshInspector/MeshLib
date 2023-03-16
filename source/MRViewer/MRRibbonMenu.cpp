@@ -182,6 +182,8 @@ void RibbonMenu::openToolbarCustomize()
     openToolbarCustomizeFlag_ = true;
     toolbarListCustomize_ = toolbarItemsList_;
     toolbarCustomizeTabNum_ = 0;
+    toolbarSearchRes_.clear();
+    toolbarSearchRes_.resize( RibbonSchemaHolder::schema().tabsMap.size() );
 }
 
 // we use design preset font size
@@ -356,7 +358,7 @@ void RibbonMenu::drawSearchButton_()
         float minSearchSize = 300.0f * scaling;
         ImGui::SetNextItemWidth( minSearchSize );
         if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
-            searchResult_ = search_();
+            searchResult_ = search_( searchLine_ );
 
         ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
         auto ySize = ( cSmallIconSize + 2 * cRibbonButtonWindowPaddingY ) * scaling;
@@ -1190,10 +1192,10 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f );
 }
 
-std::vector<RibbonMenu::SearchResult> RibbonMenu::search_()
+std::vector<RibbonMenu::SearchResult> RibbonMenu::search_( const std::string& searchStr )
 {
     std::vector<SearchResult> res;
-    if ( searchLine_.empty() )
+    if ( searchStr.empty() )
         return res;
     std::vector<std::pair<float, SearchResult>> resultListForSort;
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
@@ -1201,8 +1203,8 @@ std::vector<RibbonMenu::SearchResult> RibbonMenu::search_()
         const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
         const auto& tooltip = item.tooltip;
         float res = 0.0f;
-        auto captionRes = findSubstringCaseInsensitive( caption, searchLine_ );
-        auto tooltipRes = findSubstringCaseInsensitive( tooltip, searchLine_ );
+        auto captionRes = findSubstringCaseInsensitive( caption, searchStr );
+        auto tooltipRes = findSubstringCaseInsensitive( tooltip, searchStr );
         if ( captionRes == std::string::npos && tooltipRes == std::string::npos )
             return;
         if ( captionRes != std::string::npos )
@@ -1734,6 +1736,7 @@ void RibbonMenu::drawToolbarWindow_()
     if ( openToolbarCustomizeFlag_ )
     {
         openToolbarCustomizeFlag_ = false;
+        searchResult_.clear();
         ImGui::OpenPopup( "Toolbar Customize" );
     }
     drawToolbarCustomizeWindow_();
@@ -1766,8 +1769,11 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
     }
 
     if ( ImGui::ModalBigTitle( "Toolbar Customize", scaling ) )
-
+    {
         ImGui::CloseCurrentPopup();
+        searchResult_.clear();
+        toolbarSearch_.clear();
+    }
 
     ImGui::Text( "%s", "Select icons to show in Toolbar" );
 
@@ -1859,11 +1865,9 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 ) );
     ImGui::EndChild();
     ImGui::PopStyleVar();
-    
+
     ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( 130, -1 ) );
-
     drawToolbarCustomizeTabsList_();
-
     ImGui::EndChild();
 
     ImGui::SameLine();
@@ -1875,7 +1879,18 @@ void RibbonMenu::drawToolbarCustomizeWindow_()
     const float buttonWidth = cGradientButtonFramePadding * scaling + ImGui::CalcTextSize( "Reset to default" ).x;
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
     ImGui::SetNextItemWidth( searchWidth );
-    ImGui::InputText( "##QuickAccessSearch", toolbarSearch_ );
+    if ( ImGui::InputText( "##QuickAccessSearch", toolbarSearch_ ) )
+    {
+        toolbarSearchRes_.clear();
+        toolbarSearchRes_.resize( RibbonSchemaHolder::schema().tabsMap.size() );
+        searchResult_ = search_( toolbarSearch_ );
+        for ( const auto& sr : searchResult_ )
+        {
+            if ( sr.tabIndex < 0 )
+                continue;
+            toolbarSearchRes_[sr.tabIndex].push_back( sr.item->item->name() );
+        }
+    }
     ImGui::SameLine();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 ) );
     if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( buttonWidth, buttonHeight ) ) )
@@ -1923,7 +1938,7 @@ void RibbonMenu::drawToolbarCustomizeTabsList_()
             continue;
 
         bool anySelected = false;
-        bool anyFounded = toolbarSearch_.empty();
+        bool anyFounded = toolbarSearch_.empty() || ( !toolbarSearch_.empty() && !toolbarSearchRes_[i].empty() );
         auto& tab = tabIt->second;
         for ( auto& group : tab )
         {
@@ -1940,12 +1955,8 @@ void RibbonMenu::drawToolbarCustomizeTabsList_()
                 if ( itemIt != toolbarListCustomize_.end() )
                     anySelected = true;
 
-                if ( item.find( toolbarSearch_ ) != std::string::npos )
-                    anyFounded = true;
             }
         }
-
-
 
         int changedColor = 0;
         if ( !anyFounded )
@@ -1999,9 +2010,73 @@ void RibbonMenu::drawToolbarCustomizeItemsList_()
     float width = ImGui::GetWindowContentRegionMax().x;
     int countInColumn = 11;
     float heightStep = ImGui::GetWindowContentRegionMax().y / countInColumn;
-    int itemCounter = 0;
     auto posShift = ImGui::GetCursorPos();
     posShift.y = heightStep / 2 - ImGui::GetTextLineHeight() / 2.f;
+
+    auto drawItemCheckbox = [&, searchMode = !toolbarSearch_.empty()] (const std::string& item, bool founded )
+    {
+        auto itemIt = std::find( toolbarListCustomize_.begin(), toolbarListCustomize_.end(), item );
+        bool itemInQA = itemIt != toolbarListCustomize_.end();
+
+        bool disabled = !canAdd && !itemInQA;
+        int colorChanged = 0;
+        if ( disabled )
+        {
+            ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
+            ImGui::PushStyleColor( ImGuiCol_FrameBgActive, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
+            ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
+            colorChanged += 3;
+        }
+        else if ( searchMode && !founded )
+        {
+            ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
+            ++colorChanged;
+        }
+
+        bool checkboxChanged = false;
+        auto schemaItem = RibbonSchemaHolder::schema().items.find( item );
+        if ( schemaItem != RibbonSchemaHolder::schema().items.end() )
+            checkboxChanged = buttonDrawer_.GradientCheckboxItem( schemaItem->second, &itemInQA );
+        else
+            checkboxChanged = RibbonButtonDrawer::GradientCheckbox( item.c_str(), &itemInQA );
+
+        if ( checkboxChanged )
+        {
+            if ( itemInQA )
+            {
+                if ( canAdd )
+                {
+                    toolbarListCustomize_.emplace_back( item );
+                    toolbarItemsList_ = toolbarListCustomize_;
+                }
+                else
+                    itemInQA = false;
+            }
+            else
+            {
+                toolbarListCustomize_.erase( itemIt );
+                toolbarItemsList_ = toolbarListCustomize_;
+            }
+        }
+
+        if ( colorChanged )
+            ImGui::PopStyleColor( colorChanged );
+    };
+
+
+    int itemCounter = 0;
+    const auto& toolbarSearchTabItems = toolbarSearchRes_[toolbarCustomizeTabNum_];
+    for ( const auto& item : toolbarSearchTabItems )
+    {
+        if ( item == "Quick Access Settings" )
+            continue;
+
+        ImGui::SetCursorPos( ImVec2( itemCounter / countInColumn * width / 2 + posShift.x, itemCounter % countInColumn * heightStep + posShift.y ) );
+        ++itemCounter;
+
+        drawItemCheckbox( item, true );
+    }
+    bool skipFounded = !toolbarSearch_.empty() && !toolbarSearchTabItems.empty();
     for ( auto& group : tab )
     {
         auto itemsIt = groupsMap.find( tabName + group );
@@ -2013,55 +2088,13 @@ void RibbonMenu::drawToolbarCustomizeItemsList_()
             if ( item == "Quick Access Settings" )
                 continue;
 
-            int colorChanged = 0;
-            if ( item.find( toolbarSearch_ ) == std::string::npos )
-            {
-                ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
-                ++colorChanged;
-            }
-            
+            if ( skipFounded && std::find( toolbarSearchTabItems.begin(), toolbarSearchTabItems.end(), item ) != toolbarSearchTabItems.end() )
+                continue;
+
             ImGui::SetCursorPos( ImVec2( itemCounter / countInColumn * width / 2 + posShift.x, itemCounter % countInColumn * heightStep + posShift.y ) );
             ++itemCounter;
-            auto itemIt = std::find( toolbarListCustomize_.begin(), toolbarListCustomize_.end(), item );
-            bool itemInQA = itemIt != toolbarListCustomize_.end();
 
-            bool disabled = !canAdd && !itemInQA;
-            if ( disabled )
-            {
-                ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
-                ImGui::PushStyleColor( ImGuiCol_FrameBgActive, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
-                ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, ImGui::GetColorU32( ImGuiCol_FrameBg ) );
-                colorChanged += 3;
-            }
-
-            bool checkboxChanged = false;
-            auto schemaItem = RibbonSchemaHolder::schema().items.find( item );
-            if ( schemaItem != RibbonSchemaHolder::schema().items.end() )
-                checkboxChanged = buttonDrawer_.GradientCheckboxItem( schemaItem->second, &itemInQA );
-            else
-                checkboxChanged = RibbonButtonDrawer::GradientCheckbox( item.c_str(), &itemInQA );
-
-            if ( checkboxChanged )
-            {
-                if ( itemInQA )
-                {
-                    if ( canAdd )
-                    {
-                        toolbarListCustomize_.emplace_back( item );
-                        toolbarItemsList_ = toolbarListCustomize_;
-                    }
-                    else
-                        itemInQA = false;
-                }
-                else
-                {
-                    toolbarListCustomize_.erase( itemIt );
-                    toolbarItemsList_ = toolbarListCustomize_;
-                }
-            }
-
-            if ( colorChanged )
-                ImGui::PopStyleColor( colorChanged );
+            drawItemCheckbox( item, false );
         }
     }
 }

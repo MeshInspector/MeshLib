@@ -72,6 +72,7 @@
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRImGui.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
     <ClInclude Include="MRIntersectionPrecomputes.h" />

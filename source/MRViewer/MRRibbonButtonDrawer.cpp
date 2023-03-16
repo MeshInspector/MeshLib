@@ -728,7 +728,7 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImGui::toImVec2(MR::StyleConsts::CustomCombo::framePadding) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, MR::StyleConsts::CustomCombo::framePadding );
 
     auto context = ImGui::GetCurrentContext();
     ImGuiWindow* window = context->CurrentWindow;

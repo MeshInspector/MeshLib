@@ -278,6 +278,7 @@ MRVIEWER_API void Spinner( float radius, float scaling );
 /// draw big title with close cross (i.e. for settings modal popup )
 MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
 
+[[deprecated( "use implicit cast instead" )]]
 inline ImVec2 toImVec2( const MR::Vector2f& in )
 {
     return ImVec2( in.x, in.y );

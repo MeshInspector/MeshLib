@@ -142,6 +142,7 @@ protected:
 
     MRVIEWER_API virtual void drawToolbarWindow_();
     MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
+    MRVIEWER_API virtual void drawToolbarCustomizeTabsList_();
     MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
 
     // return icon (now it is symbol in icons font) based on typename
@@ -177,7 +178,7 @@ private:
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
     };
     // does look up in ribbon schema for `searchLine_`
-    std::vector<SearchResult> search_();
+    std::vector<SearchResult> search_( const std::string& searchStr );
     std::string searchLine_;
     std::vector<SearchResult> searchResult_;
     void drawSearchButton_();
@@ -232,6 +233,9 @@ private:
     MenuItemsList toolbarListCustomize_; // toolbar preview items list for Toolbar Customize window
     bool toolbarDragDrop_ = false; // active drag&drop in Toolbar Customize window
     bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
+    int toolbarCustomizeTabNum_ = 0;
+    std::string toolbarSearch_;
+    std::vector<std::vector<std::string>> toolbarSearchRes_;
 };
 
 template<typename T>

@@ -490,4 +490,21 @@ TEST(MRMesh, findLeftBoundary)
     }
 }
 
+TEST( MRMesh, findRightBoundary )
+{
+    Mesh sphere = makeUVSphere( 1, 8, 8 );
+    FaceBitSet faces;
+    faces.autoResizeSet( 0_f );
+    auto paths = findRightBoundary( sphere.topology, faces );
+    EXPECT_EQ( paths.size(), 1 );
+    for ( const auto& path : paths )
+    {
+        for ( auto e : path )
+        {
+            EXPECT_EQ( sphere.topology.right( e ), 0_f );
+            EXPECT_NE( sphere.topology.left( e ), 0_f );
+        }
+    }
+}
+
 } //namespace MR

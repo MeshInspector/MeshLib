@@ -57,6 +57,8 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
     VertId v[3];
     for ( FaceId f : topology.getFaceIds( mp.region ) )
     {
+        if ( mp.region && !topology.hasFace( f ) )
+            continue; // f is in given region but not in mesh topology
         topology.getTriVerts( f, v );
         tris[i++] = openvdb::Vec3I{ ( uint32_t )v[0], ( uint32_t )v[1], ( uint32_t )v[2] };
     }

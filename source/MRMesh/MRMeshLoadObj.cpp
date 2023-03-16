@@ -605,8 +605,7 @@ tl::expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* 
         const auto offset = points.size();
         originalPointCount += int( end - begin );
         const size_t newSize = points.size() + ( end - begin );
-        texCoords.resize( newSize );
-        std::fill( texCoords.begin() + points.size(), texCoords.end(), -1 );
+        texCoords.resize( newSize, -1 );
 
         points.resize( newSize );        
         uvCoords.resize( newSize );

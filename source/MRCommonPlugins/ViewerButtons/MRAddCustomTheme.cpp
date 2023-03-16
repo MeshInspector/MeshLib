@@ -59,7 +59,8 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     RibbonButtonDrawer::GradientCheckbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
-    if ( RibbonButtonDrawer::GradientButton( "Apply & Save", ImVec2( -1, 0 ) ) )
+    bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
+    if ( RibbonButtonDrawer::GradientButtonValid( "Apply & Save", valid, ImVec2( -1, 0 ) ) )
     {
         std::error_code ec;
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
@@ -70,8 +71,17 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         }
         else
         {
-            save_();
+            auto error = save_();
+            if ( !error.empty() )
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( error );
         }
+    }
+    if ( !valid )
+    {
+        ImGui::SetTooltipIfHovered( themeName_.empty() ?
+            "Cannot save theme with empty name" :
+            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
     }
 
     const ImVec2 windowSize{ MR::cModalWindowWidth * menuScaling, -1 };
@@ -94,7 +104,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::PopFont();
 
         std::string text = "Theme with name " + themeName_ + " already exists, override it?";
-        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x * menuScaling;
+        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
 
         if ( textWidth < windowSize.x )
         {
@@ -114,8 +124,14 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
         {
-            save_();
-            ImGui::CloseCurrentPopup();
+            auto error = save_();
+            if ( error.empty() )
+                ImGui::CloseCurrentPopup();
+            else
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( error );
+            }
         }
         ImGui::SameLine( 0, p );
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
@@ -191,7 +207,7 @@ void AddCustomThemePlugin::update_()
         ribbonColors_[i] = Vector4f( ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType( i ) ) );
 }
 
-void AddCustomThemePlugin::save_()
+std::string AddCustomThemePlugin::save_()
 {
     {
         std::error_code ec;
@@ -205,7 +221,7 @@ void AddCustomThemePlugin::save_()
         if ( !ofs || writer->write( json, &ofs ) != 0 )
         {
             spdlog::error( "Color theme serialization failed: cannot write file {}", utf8string( saveDir ) );
-            return;
+            return "Cannot save theme with name: \"" + themeName_ + "\"";
         }
     }
 
@@ -255,6 +271,7 @@ MR_SUPPRESS_WARNING_POP
             }
         }
     }
+    return {};
 }
 
 MR_REGISTER_RIBBON_ITEM( AddCustomThemePlugin )

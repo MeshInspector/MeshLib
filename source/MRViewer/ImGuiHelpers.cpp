@@ -14,6 +14,7 @@
 #include "MRViewer/MRPlaneWidget.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRStringConvert.h"
 
 namespace ImGui
 {
@@ -1159,7 +1160,8 @@ PaletteChanges Palette(
     const float btnWidth = cModalButtonWidth * menuScaling;
     
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    if ( RibbonButtonDrawer::GradientButtonValid( "Save", !currentPaletteName.empty(), ImVec2( btnWidth, 0 ) ) )
+    bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
+    if ( RibbonButtonDrawer::GradientButtonValid( "Save", valid, ImVec2( btnWidth, 0 ) ) )
     {
         std::error_code ec;
         if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
@@ -1168,12 +1170,26 @@ PaletteChanges Palette(
         }
         else
         {
-            PalettePresets::savePreset( currentPaletteName, palette );
-            presetName = currentPaletteName;
-            ImGui::CloseCurrentPopup();
+            auto res = PalettePresets::savePreset( currentPaletteName, palette );
+            if ( res.has_value() )
+            {
+                presetName = currentPaletteName;
+                ImGui::CloseCurrentPopup();
+            }
+            else
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( res.error() );
+            }
         }
     }
     ImGui::PopStyleVar();
+    if ( !valid )
+    {
+        SetTooltipIfHovered( currentPaletteName.empty() ?
+            "Cannot save palette with empty name" :
+            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+    }
 
     bool closeTopPopup = false;
     if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
@@ -1184,10 +1200,18 @@ PaletteChanges Palette(
         auto p = GetStyle().FramePadding.x;
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
-            PalettePresets::savePreset( currentPaletteName, palette );
-            presetName = currentPaletteName;
-            closeTopPopup = true;
-            ImGui::CloseCurrentPopup();
+            auto res = PalettePresets::savePreset( currentPaletteName, palette );
+            if ( res.has_value() )
+            {
+                presetName = currentPaletteName;
+                closeTopPopup = true;
+                ImGui::CloseCurrentPopup();
+            }
+            else
+            {
+                if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( res.error() );
+            }
         }
         ImGui::SameLine( 0, p );
         if ( RibbonButtonDrawer::GradientButtonCommonSize( "No", ImVec2( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )

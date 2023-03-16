@@ -12,6 +12,7 @@
 #include "MRRenderLinesObject.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRPlaneWidget.h"
+#include "MRViewer/MRViewer.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
@@ -656,7 +657,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( titleFont )
     {
         ImGui::PushFont( titleFont );
-        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + params.menuScaling } );
+        // "+ 5 * params.menuScaling" eliminates shift of the font
+        ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 5 * params.menuScaling } );
     }
     else
         ImGui::SetCursorScreenPos( { cursorScreenPos.x, window->Rect().Min.y + 0.5f * ( titleBarHeight - ImGui::GetFontSize() ) } );
@@ -762,8 +764,13 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
 
     const auto backupPos = ImGui::GetCursorPos();
 
+    float menuScaling = 1.0f;
+    if ( auto menu = MR::getViewerInstance().getMenuPlugin() )
+        menuScaling = menu->menu_scaling();
+
     ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
-    ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 0 } );
+    // " 4.0f * params.menuScaling" eliminates shift of the font
+    ImGui::SetCursorPos( { ImGui::GetStyle().WindowPadding.x, 4.0f * menuScaling } );
     ImGui::TextUnformatted( label, strstr( label, "##" ) );
 
     ImGui::SetCursorPos( backupPos );
@@ -1383,11 +1390,12 @@ void SetTooltipIfHovered( const std::string& text, float scaling )
     ImGui::PopStyleVar( 2 );
 }
 
-void Separator( float scaling, const std::string& text )
+void Separator( float scaling, const std::string& text, int issueCount )
 {
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    const auto& style = ImGui::GetStyle();
+    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
     {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
     }
     
     if ( text.empty() )
@@ -1397,7 +1405,20 @@ void Separator( float scaling, const std::string& text )
     else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
     {
         ImGui::TableNextColumn();
+        ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
         ImGui::Text( "%s", text.c_str());
+        ImGui::SameLine();
+        if ( issueCount >= 0 )
+        {
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f} : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f } );            
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
+            const std::string issue = std::to_string( issueCount );
+            const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
+            ImGui::InputTextCenteredReadOnly( "##IssueCount", issue.data(), width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
+            ImGui::PopStyleColor();
+        }
+        ImGui::PopFont();
+
         ImGui::TableNextColumn();
         auto width = ImGui::GetWindowWidth();
         ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );

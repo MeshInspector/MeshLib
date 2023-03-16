@@ -785,17 +785,26 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
     return true;
 }
 
-bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags )
+bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
     pos.y += style.FramePadding.y;
 
-    auto res = ImGui::CollapsingHeader( label, flags );    
-    
+    auto context = ImGui::GetCurrentContext();
+    auto window = context->CurrentWindow;
+    auto drawList = window->DrawList;
+
     const float height = ImGui::GetTextLineHeight();
     const float width = ImGui::GetTextLineHeight();
+    const float textWidth = ImGui::CalcTextSize( label ).x;
+
+    auto res = ImGui::CollapsingHeader( label, flags );
+    for ( int i = 0; i < issueCount; ++i )
+    {
+        drawList->AddCircleFilled( { pos.x + textWidth + 3.0f * width + i * width, pos.y + height / 2.0f }, height / 3.0f, Color( 0.886f, 0.267f, 0.267f, 1.0f ).getUInt32() );
+    }
 
     const auto isActive = ImGui::IsItemActive();
     const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
@@ -812,9 +821,6 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         1.0f
     };
     
-    auto context = ImGui::GetCurrentContext();
-    auto window = context->CurrentWindow;
-    auto drawList = window->DrawList;
 
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 

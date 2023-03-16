@@ -618,7 +618,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     return palette.loadFromJson( res.value() );
 }
 
-void PalettePresets::savePreset( const std::string& name, const Palette& palette )
+VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette& palette )
 {
     Json::Value root;
     palette.saveCurrentToJson( root );
@@ -630,7 +630,7 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
         spdlog::error( "PalettePresets: directory \"{}\" does not exist and cannot be created", utf8string( path ) );
         if ( ec )
             spdlog::warn( "PalettePresets: error: \"{}\"", systemToUtf8( ec.message() ) );
-        return;
+        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
     }
 
     path /= asU8String( name ) + u8".json";
@@ -639,12 +639,11 @@ void PalettePresets::savePreset( const std::string& name, const Palette& palette
     Json::StreamWriterBuilder builder;
     std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     if ( !ofs || writer->write( root, &ofs ) != 0 )
-    {
-        spdlog::error( "PalettePresets: can't write file {}", utf8string( path ) );
-    }
+        return tl::make_unexpected( "Cannot save preset with name: \"" + name + "\"" );
     ofs.close();
 
     instance_().update_();
+    return {};
 }
 
 

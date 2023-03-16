@@ -61,6 +61,23 @@ std::string bytesString( size_t size )
     return fmt::format( "{:.2f} Gb", size / float(1024*1024*1024) );
 }
 
+bool hasProhibitedChars( const std::string& line )
+{
+    for ( const auto& c : line )
+        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+            return true;
+    return false;
+}
+
+std::string replaceProhibitedChars( const std::string& line, char replacement /*= '_' */ )
+{
+    auto res = line;
+    for ( auto& c : res )
+        if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
+            c = replacement;
+    return res;
+}
+
 char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision )
 {
     assert( precision > 0 );

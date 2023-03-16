@@ -454,16 +454,6 @@ tl::expected<std::vector<std::future<void>>, std::string> Object::serializeRecur
 
     std::vector<std::future<void>> res;
 
-    // replace the characters that cannot occur in a file name
-    auto replaceProhibitedChars = []( const std::string & s )
-    {
-        auto res = s;
-        for ( auto & c : res )
-            if ( c == '?' || c == '*' || c == '/' || c == '\\' || c == '"' || c == '<' || c == '>' )
-                c = '_';
-        return res;
-    };
-
     // the key must be unique among all children of same parent
     std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
 

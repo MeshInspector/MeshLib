@@ -19,6 +19,9 @@ on:
       version_tag:
         description: "Version tag (without namespace)"
         value: ${{ jobs.versioning-and-release-url.outputs.version_tag }}
+      short_version:
+        description: "Version tag with only three digits"
+        value: ${{ jobs.versioning-and-release-url.outputs.short_version }}
       upload_url:
         description: "URL to draft release"
         value: ${{ jobs.versioning-and-release-url.outputs.upload_url }}

@@ -7,6 +7,7 @@ gdcm
 glfw
 googletest
 gtkmm3
+hidapi
 ilmbase
 jpeg-turbo
 jsoncpp

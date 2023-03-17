@@ -1558,7 +1558,7 @@ void Viewer::initSpaceMouseHandler_()
 #ifdef _WIN32
     spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerWindows>();
 #else
-    #ifdef __EMSCRIPTEN__
+    #if defined(__APPLE__) || defined(__EMSCRIPTEN__)
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
     #else
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();

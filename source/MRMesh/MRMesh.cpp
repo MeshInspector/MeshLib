@@ -403,17 +403,21 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
     return sum;
 }
 
-VertBitSet Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region ) const
+tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
 {
     const VertBitSet & testVerts = topology.getVertIds( region );
     VertBitSet res( testVerts.size() );
-    BitSetParallelFor( testVerts, [&]( VertId v )
+    auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
     {
         bool boundaryVert = false;
         auto a = sumAngles( v, &boundaryVert );
         if ( !boundaryVert && a < minSumAngle )
             res.set( v );
-    } );
+    }, cb );
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     return res;
 }
 

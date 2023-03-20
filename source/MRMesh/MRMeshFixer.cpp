@@ -68,17 +68,26 @@ int duplicateMultiHoleVertices( Mesh & mesh )
     return duplicates;
 }
 
-std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
+tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )
 {
     MR_TIMER
     tbb::enumerable_thread_specific<std::vector<MultipleEdge>> threadData;
     const VertId lastValidVert = topology.lastValidVert();
-    tbb::parallel_for( tbb::blocked_range<VertId>( VertId{0}, lastValidVert + 1 ), [&]( const tbb::blocked_range<VertId> & range )
+    
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t{ 0 },  size_t( lastValidVert ) + 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
+        const auto minId = range.begin();
+        const auto maxId = minId + range.size();
+
         auto & tls = threadData.local();
         std::vector<VertId> neis;
-        for ( VertId v = range.begin(); v < range.end(); ++v )
+        for ( VertId v = VertId( range.begin() ); v < VertId( range.end() ); ++v )
         {
+            if ( cb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
             if ( !topology.hasVert( v ) )
                 continue;
             neis.clear();
@@ -104,8 +113,17 @@ std::vector<MultipleEdge> findMultipleEdges( const MeshTopology & topology )
                 if ( it == neis.end() )
                     break;
             }
+
+            if ( cb && std::this_thread::get_id() == mainThreadId )
+            {
+                if ( cb && !cb( float( int(v) - int(minId) ) / float( int(maxId) - int(minId) ) ) )
+                    keepGoing.store( false, std::memory_order_relaxed );
+            }
         }
-    } );
+    }, tbb::static_partitioner() );
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
+        return tl::make_unexpected( "Operation was cancelled" );
 
     std::vector<MultipleEdge> res;
     for ( const auto & ns : threadData )
@@ -163,35 +181,43 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
 
 void fixMultipleEdges( Mesh & mesh )
 {
-    fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ) );
+    fixMultipleEdges( mesh, findMultipleEdges( mesh.topology ).value() );
 }
 
-FaceBitSet findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio /*= FLT_MAX */ )
+tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio, ProgressCallback cb )
 {
     MR_TIMER
     FaceBitSet res( mp.mesh.topology.faceSize() );
-    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
+    auto completed = BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&] ( FaceId f )
     {
         if ( !mp.mesh.topology.hasFace( f ) )
             return;
         if ( mp.mesh.triangleAspectRatio( f ) >= criticalAspectRatio )
             res.set( f );
-    } );
+    }, cb );
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     return res;
 }
 
-UndirectedEdgeBitSet findShortEdges( const MeshPart& mp, float criticalLength )
+tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
     MR_TIMER
-    const auto criticalLengthSq = sqr( criticalLength );
+        const auto criticalLengthSq = sqr( criticalLength );
     UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
-    BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
+    auto completed = BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
     {
         if ( !mp.mesh.topology.isInnerOrBdEdge( ue, mp.region ) )
             return;
         if ( mp.mesh.edgeLengthSq( ue ) <= criticalLengthSq )
             res.set( ue );
-    } );
+    }, cb );    
+
+    if ( !completed )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     return res;
 }
 

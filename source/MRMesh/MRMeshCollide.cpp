@@ -218,13 +218,15 @@ static void processSelfSubtasks( const AABBTree & tree,
         }
 }
 
-std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp )
+tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart & mp, ProgressCallback cb )
 {
     MR_TIMER
     std::vector<FaceFace> res;
     const AABBTree & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return res;
+
+    auto sb = subprogress( cb, 0, 0.08f );
 
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
@@ -235,17 +237,31 @@ std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp )
         processSelfSubtasks( tree, subtasks, nextSubtasks,
             [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); } );
         subtasks.swap( nextSubtasks );
+
+        if ( !reportProgress( sb, i / 16.0f ) )
+            return tl::make_unexpected( "Operation was cancelled" );
     }
     subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
+    sb = subprogress( cb, 0.08f, 0.92f );
+
     std::vector<std::vector<FaceFace>> subtaskRes( subtasks.size() );
+
+    auto mainThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
     // checks subtasks in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
+        const auto minId = range.begin();
+        const auto maxId = minId + range.size();
+
         std::vector<NodeNode> mySubtasks;
         for ( auto is = range.begin(); is < range.end(); ++is )
         {
+            if ( sb && !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+
             mySubtasks.push_back( subtasks[is] );
             std::vector<FaceFace> myRes;
             processSelfSubtasks( tree, mySubtasks, mySubtasks,
@@ -289,9 +305,19 @@ std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp )
 
                 }
             );
+            
+            if ( sb && std::this_thread::get_id() == mainThreadId )
+            {
+                if ( !reportProgress( sb, float( is - minId ) / float( maxId - minId ) ) )
+                    keepGoing.store( false, std::memory_order_relaxed );
+            }
+
             subtaskRes[is] = std::move( myRes );
         }
-    } );
+    }, tbb::static_partitioner() );
+
+    if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( sb, 1.0f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
 
     // unite results from sub-trees into final vector
     size_t cols = 0;
@@ -301,19 +327,27 @@ std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp )
     for ( const auto & s : subtaskRes )
         res.insert( res.end(), s.begin(), s.end() );
 
+    if ( !reportProgress( cb, 1.0f ) )
+        return tl::make_unexpected( "Operation was cancelled" );
+
     return res;
 }
 
-FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp )
+tl::expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb )
 {
     MR_TIMER
-    auto ffs = findSelfCollidingTriangles( mp );
+    
+    auto ffs = findSelfCollidingTriangles( mp, cb );
+    if ( !ffs.has_value() )
+        return tl::make_unexpected( ffs.error() );
+
     FaceBitSet res;
-    for ( const auto & ff : ffs )
+    for ( const auto & ff : ffs.value() )
     {
         res.autoResizeSet( ff.aFace );
         res.autoResizeSet( ff.bFace );
     }
+
     return res;
 }
 

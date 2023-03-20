@@ -1,0 +1,87 @@
+name: Build and test Ubuntu22
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      UPLOAD_ARTIFACTS:
+        required: true
+        type: boolean
+
+jobs:
+  ubuntu22-build-test:
+    timeout-minutes: 40
+    runs-on: linux-arm64
+    container:
+      image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
+    strategy:
+      matrix:
+        config: [ Release ]
+        compiler: [ Clang 14 ]
+        include:
+          - compiler: Clang 14
+            cxx-compiler: /usr/bin/clang++-14
+            c-compiler: /usr/bin/clang-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          MR_VERSION: ${{ inputs.version }}
+
+      - name: Collect Timings
+        run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"
+
+      #Save timing in artifact
+      - name: Upload Timings
+        uses: actions/upload-artifact@v3
+        with:
+          name: Timing_Logs
+          path: time_log/
+
+      - name: Run Tests
+        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+
+      - name: Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTest
+
+      - name: Python Tests
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py
+
+      - name: Create Deb
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
+        env:
+          MESHLIB_BUILD_RELEASE: ON
+          MESHLIB_BUILD_DEBUG: OFF
+        run: |
+          ./scripts/distribution.sh ${{inputs.version}}
+          mv ./distr/meshlib-dev.deb meshlib-ubuntu22-arm64-dev.deb
+
+      - name: Upload Ubuntu Developer Distribution
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
+        uses: actions/upload-artifact@v3
+        with:
+          name: Distributives
+          path: meshlib-ubuntu22-arm64-dev.deb
+          retention-days: 1

@@ -4,6 +4,7 @@
 #include "MRProgressCallback.h"
 #include <cfloat>
 #include <tl/expected.hpp>
+#include <string>
 
 namespace MR
 {

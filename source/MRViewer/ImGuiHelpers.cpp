@@ -968,8 +968,10 @@ PaletteChanges Palette(
         {
             if ( presetIndex != currentIndex )
             {
-                PalettePresets::loadPreset( presets[presetIndex], palette );
-                presetName = presets[presetIndex];
+                if ( PalettePresets::loadPreset( presets[presetIndex], palette ) )
+                    presetName = presets[presetIndex];
+                else if ( auto menu = getViewerInstance().getMenuPlugin() )
+                    menu->showErrorModal( "Cannot load preset with name: \"" + presets[presetIndex] + "\"" );
             }
 
             if ( fixZero )

@@ -6,6 +6,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <atomic>
+#include <thread>
 
 namespace MR
 {

@@ -1321,7 +1321,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
                 // viewer->window_width here because ImGui use screen space
                 if ( window )
                 {
-                    ImVec2 pos = ImVec2( viewer->window_width - window->Size.x, float( topPanelOpenedHeight_ ) * menu_scaling() );
+                    ImVec2 pos = ImVec2( viewer->window_width - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
                     ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
                 }
             }
@@ -1344,7 +1344,7 @@ void RibbonMenu::drawRibbonSceneList_()
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
     sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.window_width - 100 * scaling ) );
-    sceneSize_.y = std::round( viewerRef.window_height + 2.0f - float( currentTopPanelHeight_ ) * scaling );
+    sceneSize_.y = std::round( viewerRef.window_height - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.window_width / 2.f, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );

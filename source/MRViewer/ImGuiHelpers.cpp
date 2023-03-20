@@ -515,7 +515,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         if ( params.isDown )
             yPos = GetIO().DisplaySize.y - height;
         else if ( menu )
-            yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
+            yPos = ( menu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - params.width, yPos ), ImGuiCond_FirstUseEver );
     }
 

@@ -16,7 +16,7 @@ on:
 jobs:
   ubuntu22-build-test:
     timeout-minutes: 40
-    runs-on: linux-arm64
+    runs-on: [self-hosted, linux-arm64]
     container:
       image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
     strategy:

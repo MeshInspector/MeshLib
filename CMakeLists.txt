@@ -64,8 +64,8 @@ SET(MR_UBUNTU22 FALSE) # Ubuntu 22.*
 SET(MR_FEDORA FALSE)
 SET(MR_PLATFORM "UNKNOWN")
 
-IF(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
-    define(__ARM_CPU__)
+IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    add_compile_definitions(__ARM_CPU__)
     message("ARM cpu detected")
 ENDIF()
 

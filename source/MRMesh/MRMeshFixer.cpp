@@ -205,7 +205,7 @@ tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, f
 tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb )
 {
     MR_TIMER
-        const auto criticalLengthSq = sqr( criticalLength );
+    const auto criticalLengthSq = sqr( criticalLength );
     UndirectedEdgeBitSet res( mp.mesh.topology.undirectedEdgeSize() );
     auto completed = BitSetParallelForAll( res, [&] ( UndirectedEdgeId ue )
     {

@@ -91,7 +91,7 @@ bool Config::getBool( const std::string& key, bool defaultValue ) const
         return config_[key].asBool();
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value \"{}\" returned", key, defaultValue );
     return defaultValue;
 }
 void Config::setBool( const std::string& key, bool keyValue )
@@ -115,7 +115,8 @@ Color Config::getColor( const std::string& key, const Color& defaultValue ) cons
         return res;
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value \"r:{} g:{} b:{} a:{}\" returned", key, 
+            defaultValue.r, defaultValue.g, defaultValue.b, defaultValue.a );
     return defaultValue;
 }
 void Config::setColor( const std::string& key, const Color& keyValue )
@@ -140,7 +141,7 @@ FileNamesStack Config::getFileStack( const std::string& key, const FileNamesStac
         return res;
     }
     if ( loggerHandle_ )
-        loggerHandle_->warn( "Key does not exist. False returned" );
+        loggerHandle_->warn( "Key {} does not exist, default value returned", key );
     return defaultValue;
 }
 void Config::setFileStack( const std::string& key, const FileNamesStack& keyValue )

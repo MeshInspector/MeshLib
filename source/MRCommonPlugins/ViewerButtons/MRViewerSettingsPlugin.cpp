@@ -296,8 +296,22 @@ bool ViewerSettingsPlugin::onEnable_()
     backgroundColor_.w = -1.0f;
 
     ribbonMenu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
+    updateThemes();
 
+    return true;
+}
+
+bool ViewerSettingsPlugin::onDisable_()
+{
+    userThemesPresets_.clear();
+    ribbonMenu_ = nullptr;
+    return true;
+}
+
+void ViewerSettingsPlugin::updateThemes()
+{
     selectedUserPreset_ = -1;
+    userThemesPresets_.clear();
     userThemesPresets_.push_back( "Dark" );
     userThemesPresets_.push_back( "Light" );
     auto colorThemeType = ColorTheme::getThemeType();
@@ -321,7 +335,7 @@ bool ViewerSettingsPlugin::onEnable_()
             {
                 auto ext = entry.path().extension().u8string();
                 for ( auto& c : ext )
-                    c = ( char ) tolower( c );
+                    c = ( char )tolower( c );
 
                 if ( ext != u8".json" )
                     break;
@@ -333,17 +347,7 @@ bool ViewerSettingsPlugin::onEnable_()
             }
         }
     }
-
-    return true;
 }
-
-bool ViewerSettingsPlugin::onDisable_()
-{
-    userThemesPresets_.clear();
-    ribbonMenu_ = nullptr;
-    return true;
-}
-
 
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {

@@ -278,7 +278,7 @@ void PlanarTriangulator::removeMultipleAfterMerge_()
 {
     MR_TIMER;
     windingInfo_.resize( mesh_.topology.undirectedEdgeSize() );
-    auto multiples = findMultipleEdges( mesh_.topology );
+    auto multiples = findMultipleEdges( mesh_.topology ).value();
     for ( const auto& multiple : multiples )
     {
         std::vector<EdgeId> multiplesFromThis;

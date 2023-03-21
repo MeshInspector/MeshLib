@@ -192,11 +192,7 @@ TEST( MRMesh, DistanceMapWatertight )
         }
     }
     // Number of distance map pixels with big differ between dm1 and dm2
-#if defined(__ARM_CPU__)
-    const int numberOfMisses = 30;
-#else
     const int numberOfMisses = 25;
-#endif
     EXPECT_EQ( count, numberOfMisses ); //for watertight
 
     //debug line

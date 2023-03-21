@@ -112,7 +112,8 @@ void RenderMeshObject::render( const RenderParams& renderParams )
 
         // Texture
         GL_EXEC( auto useTexture = glGetUniformLocation( shader, "useTexture" ) );
-        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) ) );
+        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || 
+            objMesh_->hasAncillaryTexture() ) );
 
         if ( renderParams.forceZBuffer )
         {

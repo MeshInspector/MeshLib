@@ -30,8 +30,6 @@ public:
 
     MRVIEWER_API virtual void shutdown() override;
 
-//     // get access to quick access menu items list
-//     MenuItemsList& getQuickAccessList() { return toolbarItemsList_; }
     /// open Toolbar Customize modal popup
     MRVIEWER_API void openToolbarCustomize();
 
@@ -135,11 +133,6 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
-//     MRVIEWER_API virtual void drawToolbarWindow_();
-//     MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
-//     MRVIEWER_API virtual void drawToolbarCustomizeTabsList_();
-//     MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
-
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
@@ -157,9 +150,6 @@ protected:
     std::vector<std::shared_ptr<const Object>> selectedObjectsCache_;
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
-
-
-    //MRVIEWER_API std::vector<SearchResult> search( const std::string& searchStr );
 
 private:
     void changeTab_( int newTab );
@@ -221,8 +211,6 @@ private:
 
     AsyncTimer asyncTimer_;
     std::thread timerThread_;
-
-    MenuItemsList toolbarItemsList_; // toolbar items list
 };
 
 template<typename T>

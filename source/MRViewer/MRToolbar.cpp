@@ -311,7 +311,6 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::BeginChild( "##QuickAccessCustomizeAndSearch", ImVec2( -1, -1 ) );
     ImGui::PopStyleVar();
-    //const float buttonHeight = 8 * 2 * scaling_ + ImGui::CalcTextSize( "Reset to default" ).y;
     const float buttonWidth = cGradientButtonFramePadding * 2 * scaling_ + ImGui::CalcTextSize( "Reset to default" ).x;
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
     
@@ -551,7 +550,6 @@ void Toolbar::dashedLine_( const Vector2f& org, const Vector2f& dest, float peri
     int periodCointI = int( std::floor( periodCointF ) );
 
     Vector2f dir = ( dest - org ) / periodCointF;
-//     Vector2f curPos = imVecToVec( ImGui::GetCursorScreenPos() );
     for ( int i = 0; i < periodCointI; ++i )
     {
         const ImVec2 begin = vecToImVec( org + dir * float( i ) );

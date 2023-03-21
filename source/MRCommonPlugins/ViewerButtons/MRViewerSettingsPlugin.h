@@ -17,6 +17,7 @@ public:
 
     virtual bool blocking() const override { return false; }
 
+    void updateThemes();
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;

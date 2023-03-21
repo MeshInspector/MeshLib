@@ -12,6 +12,7 @@
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
+#include "MRViewerSettingsPlugin.h"
 
 namespace MR
 {
@@ -29,7 +30,13 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGui::BeginCustomStatePlugin( plugin_name.c_str(), &dialogIsOpen_, { .collapsed = &dialogIsCollapsed_, .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling } ) )
         return;
 
+    int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushItemWidth( 220.0f * menuScaling );
+    RibbonButtonDrawer::CustomCombo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    if ( selectedUserPreset_ != selectedUserIdxBackup )
+        update_();
+    ImGui::Separator();
+
     ImGui::Text( "Scene colors:" );
     for ( int i = 0; i < sceneColors_.size(); ++i )
         ImGui::ColorEdit4( SceneColors::getName( SceneColors::Type( i ) ), &sceneColors_[i].x );
@@ -157,7 +164,7 @@ std::string AddCustomThemePlugin::isAvailable( const std::vector<std::shared_ptr
 
 bool AddCustomThemePlugin::onEnable_()
 {
-    update_();
+    updateThemeNames_();
     themeName_ = "CustomTheme1";
     return true;
 }
@@ -168,6 +175,58 @@ bool AddCustomThemePlugin::onDisable_()
     sceneColors_.clear();
     ribbonColors_.clear();
     return true;
+}
+
+void AddCustomThemePlugin::updateThemeNames_()
+{
+    selectedUserPreset_ = -1;
+    userThemesPresets_.clear();
+    userThemesPresets_.push_back( "Dark" );
+    userThemesPresets_.push_back( "Light" );
+    auto colorThemeType = ColorTheme::getThemeType();
+    auto colorThemeName = ColorTheme::getThemeName();
+    if ( colorThemeType == ColorTheme::Type::Default )
+    {
+        if ( colorThemeName == ColorTheme::getPresetName( ColorTheme::Preset::Light ) )
+            selectedUserPreset_ = 1;
+        else
+            selectedUserPreset_ = 0;
+    }
+
+    auto userThemesDir = ColorTheme::getUserThemesDirectory();
+    int i = int( userThemesPresets_.size() );
+    std::error_code ec;
+    if ( std::filesystem::is_directory( userThemesDir, ec ) )
+    {
+        for ( const auto& entry : std::filesystem::directory_iterator( userThemesDir, ec ) )
+        {
+            if ( entry.is_regular_file( ec ) )
+            {
+                auto ext = entry.path().extension().u8string();
+                for ( auto& c : ext )
+                    c = ( char )tolower( c );
+
+                if ( ext != u8".json" )
+                    break;
+                std::string themeName = utf8string( entry.path().stem() );
+                userThemesPresets_.push_back( themeName );
+                if ( selectedUserPreset_ == -1 && themeName == ColorTheme::getThemeName() )
+                    selectedUserPreset_ = i;
+                ++i;
+            }
+        }
+    }
+
+    auto itemId = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+    if ( itemId != RibbonSchemaHolder::schema().items.end() )
+    {
+        if ( auto viewerSettingsPlugin = std::dynamic_pointer_cast< ViewerSettingsPlugin >( itemId->second.item ) )
+        {
+            if ( viewerSettingsPlugin->isActive() )
+                viewerSettingsPlugin->updateThemes();
+        }
+    }
+    update_();
 }
 
 Json::Value AddCustomThemePlugin::makeJson_()
@@ -192,6 +251,16 @@ Json::Value AddCustomThemePlugin::makeJson_()
 
 void AddCustomThemePlugin::update_()
 {
+    Json::Value backupTheme;
+    ColorTheme::serializeCurrentToJson( backupTheme );
+
+    if ( selectedUserPreset_ == 0 )
+        ColorTheme::setupDefaultDark();
+    else if ( selectedUserPreset_ == 1 )
+        ColorTheme::setupDefaultLight();
+    else
+        ColorTheme::setupUserTheme( userThemesPresets_[selectedUserPreset_] );
+
     sceneColors_.resize( SceneColors::Count );
     for ( int i = 0; i < SceneColors::Count; ++i )
         sceneColors_[i] = Vector4f( SceneColors::get( SceneColors::Type( i ) ) );
@@ -205,6 +274,8 @@ void AddCustomThemePlugin::update_()
     ribbonColors_.resize( int( ColorTheme::RibbonColorsType::Count ) );
     for ( int i = 0; i<int( ColorTheme::RibbonColorsType::Count ); ++i )
         ribbonColors_[i] = Vector4f( ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType( i ) ) );
+
+    ColorTheme::setupFromJson( backupTheme );
 }
 
 std::string AddCustomThemePlugin::save_()
@@ -271,6 +342,7 @@ MR_SUPPRESS_WARNING_POP
             }
         }
     }
+    updateThemeNames_();
     return {};
 }
 

@@ -763,12 +763,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         }
     } );
 
-    if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.85f ) ) )
-        return res;
-
+    // restore valids computation before return even if the operation was canceled
     mesh.topology.computeValidsFromEdges();
 
-    if ( settings.progressCallback && !settings.progressCallback( 0.9f ) )
+    if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.9f ) ) )
         return res;
 
     DecimateSettings seqSettings = settings;

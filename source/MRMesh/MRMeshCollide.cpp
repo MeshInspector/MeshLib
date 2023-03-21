@@ -308,7 +308,8 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
             subtaskRes[is] = std::move( myRes );
         }
 
-        numDone += range.size();
+        if ( cb )
+            numDone += range.size();
 
         if ( sb && std::this_thread::get_id() == mainThreadId )
         {

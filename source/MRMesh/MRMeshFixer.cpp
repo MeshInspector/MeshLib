@@ -116,7 +116,9 @@ tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const Me
             }
         }
 
-        numDone += range.size();
+        if ( cb )
+            numDone += range.size();
+
         if ( cb && std::this_thread::get_id() == mainThreadId )
         {
             if ( !cb( float( numDone ) / float( lastValidVert + 1 ) ) )

@@ -436,9 +436,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         def_readwrite( "aFace", &MR::FaceFace::aFace ).
         def_readwrite( "bFace", &MR::FaceFace::bFace );
 
-    m.def( "findSelfCollidingTriangles", []( const MeshPart& mp ) { return MR::findSelfCollidingTriangles( mp ).value(); }, pybind11::arg( "mp" ), "finds all pairs of colliding triangles from one mesh or a region" );
+    m.def( "findSelfCollidingTriangles", MR::decorateExpected( &MR::findSelfCollidingTriangles ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds all pairs of colliding triangles from one mesh or a region" );
 
-    m.def( "findSelfCollidingTrianglesBS", []( const MeshPart& mp ) { return MR::findSelfCollidingTrianglesBS( mp ).value(); }, pybind11::arg( "mp" ), "finds union of all self-intersecting faces" );
+    m.def( "findSelfCollidingTrianglesBS", MR::decorateExpected( &MR::findSelfCollidingTrianglesBS ), pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds union of all self-intersecting faces" );
 
     m.def( "findCollidingTriangles", &MR::findCollidingTriangles, 
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false, 

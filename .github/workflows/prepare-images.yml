@@ -98,25 +98,26 @@ jobs:
           if [ "${{ steps.changes.outputs.src }}" == "true" ] && [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
             MATRIX=" \
             {\"include\":[ \
-            {\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"windows\", \"os\":\"windows-2019\"} \
+            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
+            {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",   \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"windowsDockerfile\",    \"image\":\"windows\",      \"os\":\"windows-2019\"} \
             ]}"
           elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
             MATRIX=" \
             {\"include\":[ \
-            {\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"ubuntu22-arm\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"}, \
-            {\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
+            {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",   \"os\":\"ubuntu-latest\"}, \
             ]}"
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
             MATRIX=" \
             {\"include\":[ \
-            {\"distribution\":\"windows\", \"os\":\"windows-2019\"} \
+            {\"dockerfile\":\"windowsDockerfile\",    \"image\":\"windows\",      \"os\":\"windows-2019\"} \
             ]}"
           fi
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
@@ -126,7 +127,7 @@ jobs:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
     timeout-minutes: 220
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.image-select.outputs.matrix)}}
@@ -149,23 +150,23 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        if: ${{ matrix.distribution != 'windows' }}
-        run: docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
+        if: ${{ matrix.image != 'windows' }}
+        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
 
       - name: Build Windows image
-        if: ${{ matrix.distribution == 'windows' }}
+        if: ${{ matrix.image == 'windows' }}
         run: |
           scripts/runner_instal_vcpkg.bat
-          docker build -f ./docker/${{matrix.distribution}}Dockerfile -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}} -m 16GB .
+          docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.windows_image_tag}} -m 16GB .
 
       - name: Push Linux image
-        if: ${{ matrix.distribution != 'windows' }}
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.image_tag}}
+        if: ${{ matrix.image != 'windows' }}
+        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}}
 
       - name: Push Windows image
-        if: ${{ matrix.distribution == 'windows' }}
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.distribution}}:${{needs.image-select.outputs.windows_image_tag}}
+        if: ${{ matrix.image == 'windows' }}
+        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.windows_image_tag}}
 
       - name: Remove unused Docker data
-        if: ${{ matrix.distribution != 'windows' }}
+        if: ${{ matrix.image != 'windows' }}
         run: docker system prune --force --all --volumes

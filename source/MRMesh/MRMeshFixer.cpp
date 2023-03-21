@@ -79,9 +79,6 @@ tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const Me
     std::atomic<size_t> numDone{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( size_t{ 0 },  size_t( lastValidVert ) + 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        const auto minId = range.begin();
-        const auto maxId = minId + range.size();
-
         auto & tls = threadData.local();
         std::vector<VertId> neis;
         for ( VertId v = VertId( range.begin() ); v < VertId( range.end() ); ++v )

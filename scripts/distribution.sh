@@ -79,6 +79,9 @@ chmod +x ./distr/meshlib-dev/DEBIAN/preinst
 cp "./scripts/postinstall.sh" ./distr/meshlib-dev/DEBIAN/postinst
 chmod +x ./distr/meshlib-dev/DEBIAN/postinst
 
+mkdir -p ./distr/meshlib-dev/etc/udev/rules.d/
+cp "./scripts/70-space-mouse-meshlib.rules" ./distr/meshlib-dev/etc/udev/rules.d/
+
 #copy lib dir
 CURRENT_DIR="`pwd`"
 cp -rL ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/"

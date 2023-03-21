@@ -68,6 +68,12 @@ inline std::string utf8string( const std::filesystem::path & path )
 /// ...
 MRMESH_API std::string bytesString( size_t size );
 
+/// returns true if line contains any of OS prohibited chars ('?', '*', '/', '\', '"', '<', '>')
+MRMESH_API bool hasProhibitedChars( const std::string& line );
+
+/// replace OS prohibited chars ('?', '*', '/', '\', '"', '<', '>') with `replacement` char
+MRMESH_API std::string replaceProhibitedChars( const std::string& line, char replacement = '_' );
+
 /// if (v) contains an error, then appends given file name to that error
 template<typename T>
 inline tl::expected<T, std::string> addFileNameInError( tl::expected<T, std::string> v, const std::filesystem::path & file )

@@ -8,6 +8,10 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRTimer.h"
 #include "MRRegionBoundary.h"
+#include "MRUVSphere.h"
+#include "MRMeshTrimWithPlane.h"
+#include "MRPlane3.h"
+#include "MRGTest.h"
 #include <limits>
 
 namespace MR
@@ -116,6 +120,25 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     // add patch surface to original mesh
     mesh.addPartByMask( patchMesh, patchMesh.topology.getValidFaces(), false, paths, newPaths );
     return {};
+}
+
+TEST( MRMesh, fillContours2D )
+{
+    Mesh sphereBig = makeUVSphere( 1.0f, 32, 32 );
+    Mesh sphereSmall = makeUVSphere( 0.7f, 16, 16 );
+
+    sphereSmall.topology.flipOrientation();
+    sphereBig.addPart( std::move( sphereSmall ) );
+
+    trimWithPlane( sphereBig, Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) );
+    sphereBig.pack();
+
+    auto firstNewFace = sphereBig.topology.lastValidFace() + 1;
+    fillContours2D( sphereBig, sphereBig.topology.findHoleRepresentiveEdges() );
+    for ( FaceId f = firstNewFace; f <= sphereBig.topology.lastValidFace(); ++f )
+    {   
+        EXPECT_TRUE( std::abs( dot( sphereBig.dirDblArea( f ).normalized(), Vector3f::minusZ() ) - 1.0f ) < std::numeric_limits<float>::epsilon() );
+    }
 }
 
 }

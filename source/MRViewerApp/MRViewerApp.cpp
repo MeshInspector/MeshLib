@@ -57,6 +57,10 @@ int main( int argc, char** argv )
 
     MR::Viewer::parseLaunchParams( launchParams );
 
+    #if defined(__APPLE__)
+    setenv("XDG_DATA_DIRS", "/Library/Frameworks/MeshLib.framework/Versions/Current/share", 1);
+    #endif
+
     return MR::launchDefaultViewer( launchParams, MR::ViewerSetup() );
 }
 

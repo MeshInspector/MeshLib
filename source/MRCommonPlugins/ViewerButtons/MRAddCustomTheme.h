@@ -23,7 +23,7 @@ private:
     Json::Value makeJson_();
 
     void update_();
-    void save_();
+    std::string save_();
 
     bool applyToNewObjectsOnly_{ true };
     std::vector<Vector4f> sceneColors_;

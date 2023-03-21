@@ -740,13 +740,22 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             subSeqSettings.bdVerts = &parts[i].bdVerts;
             FaceBitSet myRegion = parts[i].faces;
             if ( settings.region )
+            {
                 myRegion &= *settings.region;
+                for ( auto f : myRegion )
+                    settings.region->reset( f );
+            }
             subSeqSettings.region = &myRegion;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
             parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
+            if ( settings.region )
+            {
+                for ( auto f : myRegion )
+                    settings.region->set( f );
+            }
 
             if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
                 break;

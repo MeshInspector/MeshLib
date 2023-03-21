@@ -40,7 +40,6 @@ jobs:
         with:
           filters: |
             src:
-              - '.github/workflows/docker-images.yml'
               - 'docker/ubuntu**'
               - 'docker/fedora**'
               - 'docker/emscripten**'
@@ -95,13 +94,39 @@ jobs:
         id: matrix-set
         run: |
           echo ${{github.repository}}
+          MATRIX=""
           if [ "${{ steps.changes.outputs.src }}" == "true" ] && [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "matrix={\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}" >> $GITHUB_OUTPUT                   
+            MATRIX=$(cat << EOF
+            {\"include\":[
+            {\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"windows\", \"os\":\"windows-2019\"}
+            ]}
+            EOF
+            )
           elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
-            echo "matrix={\"include\":[{\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"},{\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"}]}" >> $GITHUB_OUTPUT
+            MATRIX=$(cat << EOF
+            {\"include\":[
+            {\"distribution\":\"ubuntu\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"ubuntu22\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"ubuntu22-arm\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"fedora37\", \"os\":\"ubuntu-latest\"},
+            {\"distribution\":\"emscripten\", \"os\":\"ubuntu-latest\"},
+            ]}
+            EOF
+            )
           elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            echo "matrix={\"include\":[{\"distribution\":\"windows\", \"os\":\"windows-2019\"}]}" >> $GITHUB_OUTPUT    
+            MATRIX=$(cat << EOF
+            {\"include\":[
+            {\"distribution\":\"windows\", \"os\":\"windows-2019\"}
+            ]}
+            EOF
+            )
           fi
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "$MATRIX"
 
   image-build-upload:
     needs: [image-select]

@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: meshlib/meshlib-ubuntu22:${{inputs.image_tag}}
-      options: --user root
     strategy:
       matrix:
         config: [ Debug, Release ]

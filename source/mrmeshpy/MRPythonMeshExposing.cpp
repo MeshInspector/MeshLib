@@ -19,6 +19,7 @@
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRSphere.h"
 #include "MRMesh/MRUVSphere.h"
+#include "MRMesh/MRProgressCallback.h"
 
 using namespace MR;
 

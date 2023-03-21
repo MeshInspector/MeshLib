@@ -255,9 +255,6 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
     {
-        const auto minId = range.begin();
-        const auto maxId = minId + range.size();
-
         std::vector<NodeNode> mySubtasks;
         for ( auto is = range.begin(); is < range.end(); ++is )
         {

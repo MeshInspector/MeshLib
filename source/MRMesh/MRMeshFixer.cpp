@@ -76,6 +76,7 @@ tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const Me
     
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone{ 0 };
     tbb::parallel_for( tbb::blocked_range<size_t>( size_t{ 0 },  size_t( lastValidVert ) + 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
         const auto minId = range.begin();
@@ -113,17 +114,18 @@ tl::expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const Me
                 if ( it == neis.end() )
                     break;
             }
-
-            if ( cb && std::this_thread::get_id() == mainThreadId )
-            {
-                if ( cb && !cb( float( int(v) - int(minId) ) / float( int(maxId) - int(minId) ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
         }
-    }, tbb::static_partitioner() );
+
+        numDone += range.size();
+        if ( cb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !cb( float( numDone ) / float( lastValidVert + 1 ) ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    } );
 
     if ( !keepGoing.load( std::memory_order_relaxed ) || ( cb && !cb( 1.0f ) ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     std::vector<MultipleEdge> res;
     for ( const auto & ns : threadData )
@@ -197,7 +199,7 @@ tl::expected<FaceBitSet, std::string> findDegenerateFaces( const MeshPart& mp, f
     }, cb );
 
     if ( !completed )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     return res;
 }
@@ -216,7 +218,7 @@ tl::expected<UndirectedEdgeBitSet, std::string> findShortEdges( const MeshPart& 
     }, cb );    
 
     if ( !completed )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     return res;
 }

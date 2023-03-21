@@ -240,7 +240,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
-            return tl::make_unexpected( "Operation was cancelled" );
+            return tl::make_unexpected( "Operation was canceled" );
     }
     subtasks.insert( subtasks.end(), leafTasks.begin(), leafTasks.end() );
 
@@ -250,6 +250,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
 
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
+    std::atomic<size_t> numDone;
     // checks subtasks in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subtasks.size() ),
         [&]( const tbb::blocked_range<size_t>& range )
@@ -306,19 +307,21 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
 
                 }
             );
-            
-            if ( sb && std::this_thread::get_id() == mainThreadId )
-            {
-                if ( !reportProgress( sb, float( is - minId ) / float( maxId - minId ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-            }
 
             subtaskRes[is] = std::move( myRes );
         }
-    }, tbb::static_partitioner() );
+
+        numDone += range.size();
+
+        if ( sb && std::this_thread::get_id() == mainThreadId )
+        {
+            if ( !reportProgress( sb, float( numDone ) / subtasks.size() ) )
+                keepGoing.store( false, std::memory_order_relaxed );
+        }
+    } );
 
     if ( !keepGoing.load( std::memory_order_relaxed ) || !reportProgress( sb, 1.0f ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     // unite results from sub-trees into final vector
     size_t cols = 0;
@@ -329,7 +332,7 @@ tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( co
         res.insert( res.end(), s.begin(), s.end() );
 
     if ( !reportProgress( cb, 1.0f ) )
-        return tl::make_unexpected( "Operation was cancelled" );
+        return tl::make_unexpected( "Operation was canceled" );
 
     return res;
 }

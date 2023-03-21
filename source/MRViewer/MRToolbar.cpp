@@ -311,7 +311,7 @@ void Toolbar::drawCustomizeModal_()
         dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
 
-        ImGui::SameLine( 0, childWindowPadding.x + 3 );
+        ImGui::SameLine( 0, childWindowPadding.x );
     }
 
     ImGui::PopStyleVar();

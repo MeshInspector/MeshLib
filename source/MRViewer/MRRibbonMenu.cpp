@@ -791,7 +791,7 @@ void RibbonMenu::drawActiveListButton_( const ImVec2& basePos, float btnSize, fl
     ImGui::PopFont();
     const char* text = "Active";
     ImGui::SetCursorPosX( xPos + ( btnSize - textSize ) * 0.5f );
-    ImGui::SetCursorPosY( 2 * cTabYOffset * scaling );
+    ImGui::SetCursorPosY( 2 * cTabYOffset * scaling + 4.0f * menu_scaling() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ).getUInt32() );
     ImGui::RenderText( ImGui::GetCursorPos(), text, text + 6, false );
     ImGui::PopStyleVar( 2 );

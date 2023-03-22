@@ -118,7 +118,7 @@ private:
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
 
-    static float scaling_;
+    float scaling_ = 1.f;
     static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;
 };
 

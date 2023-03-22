@@ -1,7 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRColor.h"
-#include "json/value.h"
+#include "MRPch/MRJson.h"
 
 namespace MR
 {
@@ -33,6 +33,8 @@ public:
     void resetItemsList();
     /// get acces to items
     const MenuItemsList& getItemsList() const { return itemsList_; }
+
+    void setScaling( float scale ) { scaling_ = scale; }
 private:
     /// draw toolbar customize modal
     void drawCustomizeModal_();

@@ -1204,6 +1204,7 @@ void RibbonMenu::postRescale_( float x, float y )
 {
     ImGuiMenu::postRescale_( x, y );
     buttonDrawer_.setScaling( menu_scaling() );
+    toolbar_.setScaling( menu_scaling() );
     fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
 
     RibbonSchemaLoader loader;

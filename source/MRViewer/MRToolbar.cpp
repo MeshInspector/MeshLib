@@ -12,8 +12,8 @@
 
 namespace MR
 {
-ImVec2 vecToImVec( const Vector2f& vec ) { return ImVec2( vec.x, vec.y ); };
-Vector2f imVecToVec( const ImVec2& vec ) { return Vector2f( vec.x, vec.y ); };
+ImVec2 vecToImVec( const Vector2f& vec ) { return ImVec2( vec.x, vec.y ); }
+Vector2f imVecToVec( const ImVec2& vec ) { return Vector2f( vec.x, vec.y ); }
 
 const int cToolbarMaxItemCount = 14;
 
@@ -290,11 +290,11 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetCursorPos( cursorPos );
 
         auto screenPos = imVecToVec( ImGui::GetCursorScreenPos() );
-        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 ), 10.f, 0.5f,
+        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * scaling_ ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
         buttonDrawer.drawButtonIcon( iterItemPreview->second, params );
 
-        ImGui::SameLine( 0, childWindowPadding.x + 3 );
+        ImGui::SameLine( 0, childWindowPadding.x + 3 * scaling_ );
     }
 
     for ( int i = int( itemsListCustomize_.size() ); i < cToolbarMaxItemCount; ++i )
@@ -308,7 +308,7 @@ void Toolbar::drawCustomizeModal_()
         ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
         ImGui::PopStyleVar();
         ImGui::PopStyleColor( 4 );
-        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 ), 10.f, 0.5f,
+        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * scaling_ ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
 
         ImGui::SameLine( 0, childWindowPadding.x );

@@ -30,7 +30,7 @@ struct TextMeshAlignParams : SymbolMeshParams
     float textMaximumMovement{2.5f};
 };
 
-// Creates symbol mesh and alligns it to given mesh
+// Creates symbol mesh and aligns it to given surface
 MRMESH_API tl::expected<Mesh, std::string> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 }
 #endif

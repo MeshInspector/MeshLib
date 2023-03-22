@@ -26,8 +26,8 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
     const auto norm = params.textNormal != nullptr ? *params.textNormal : mesh.pseudonormal( params.startPoint );
     const auto vecy = cross( vecx, -norm ).normalized();
 
-    const Vector3f pivotCoord{ bbox.min.x + (bbox.max.x - bbox.min.x) * params.pivotPoint.x,
-                               bbox.min.y + (bbox.max.y - bbox.min.y) * params.pivotPoint.y,
+    const Vector3f pivotCoord{ bbox.min.x + diagonal.x * params.pivotPoint.x,
+                               bbox.min.y + diagonal.y * params.pivotPoint.y,
                                0.0f };
 
     AffineXf3f rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusX(), vecx ) );

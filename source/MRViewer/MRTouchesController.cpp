@@ -52,7 +52,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
     }
     else if ( multiInfo_.getNumPressed() == 2 && ( touchModeMask_ & ModeBit::Any ) )
     {
-        eventCall = [info = multiInfo_, prevInfoPtr = &multiPrevInfo_, viewer, modeMask = touchModeMask_]() mutable
+        eventCall = [info = multiInfo_, prevInfoPtr = &multiPrevInfo_, viewer, modeMask = touchModeMask_,transformModifierCb = transformModifierCb_]() mutable
         {
             auto& prevInfoRef = *prevInfoPtr;
             if ( !prevInfoRef.getIdByFinger( MultiInfo::Finger::First ) || 
@@ -110,6 +110,9 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
                 vp.setCameraViewAngle( std::clamp( vp.getParameters().cameraViewAngle * mult, minAngle, maxAngle ) );
                 aggregateXf = AffineXf3f::translation( ( newWorldCenter - vpCenter ) * ( mult - 1.0f ) ) * aggregateXf;
             }
+
+            if ( transformModifierCb )
+                transformModifierCb( aggregateXf );
 
             vp.transformView( aggregateXf );
             prevInfoRef = info;

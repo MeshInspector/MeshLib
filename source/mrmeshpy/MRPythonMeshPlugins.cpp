@@ -129,19 +129,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "\nif voxelSize == 0.0f it will be counted automaticly" );
 } )
 
-
-Mesh createTextOnMesh( Mesh& mesh, const AffineXf3f& xf, TextMeshAlignParams params )
-{
-    if ( params.pathToFontFile.empty() )
-        params.pathToFontFile = GetFontsDirectory().append( "Karla-Regular.ttf" );
-    auto res = alignTextToMesh( mesh, xf, params );
-    if ( res )
-        return res.value();
-    else
-        // failed to align
-        return {};
-}
-
 // Text Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m )
 {
@@ -166,7 +153,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
         def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
 
-    m.def( "alignTextToMesh", &createTextOnMesh, pybind11::arg( "mesh" ), pybind11::arg( "xf" ), pybind11::arg( "params" ),
+    m.def( "alignTextToMesh", &alignTextToMesh, pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "create text on mesh" );
 } )
 

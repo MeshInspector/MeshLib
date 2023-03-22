@@ -12,8 +12,6 @@
 
 namespace MR
 {
-ImVec2 vecToImVec( const Vector2f& vec ) { return ImVec2( vec.x, vec.y ); }
-Vector2f imVecToVec( const ImVec2& vec ) { return Vector2f( vec.x, vec.y ); }
 
 const int cToolbarMaxItemCount = 14;
 
@@ -289,7 +287,7 @@ void Toolbar::drawCustomizeModal_()
         }
         ImGui::SetCursorPos( cursorPos );
 
-        auto screenPos = imVecToVec( ImGui::GetCursorScreenPos() );
+        auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
         dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * scaling_ ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
         buttonDrawer.drawButtonIcon( iterItemPreview->second, params );
@@ -299,7 +297,7 @@ void Toolbar::drawCustomizeModal_()
 
     for ( int i = int( itemsListCustomize_.size() ); i < cToolbarMaxItemCount; ++i )
     {
-        auto screenPos = imVecToVec( ImGui::GetCursorScreenPos() );
+        auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
         ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
@@ -569,13 +567,13 @@ void Toolbar::dashedLine_( const Vector2f& org, const Vector2f& dest, float peri
     Vector2f dir = ( dest - org ) / periodCointF;
     for ( int i = 0; i < periodCointI; ++i )
     {
-        const ImVec2 begin = vecToImVec( org + dir * float( i ) );
-        const ImVec2 end = vecToImVec( org + dir * ( i + fillRatio ) );
+        const ImVec2 begin = ImVec2( org + dir * float( i ) );
+        const ImVec2 end = ImVec2( org + dir * ( i + fillRatio ) );
         ImGui::GetForegroundDrawList()->AddLine( begin, end, color.getUInt32() );
     }
 
-    const ImVec2 begin = vecToImVec( org + dir * float( periodCointI ) );
-    const ImVec2 end = vecToImVec( org + dir * std::min( periodCointI + fillRatio, periodCointF ) );
+    const ImVec2 begin = ImVec2( org + dir * float( periodCointI ) );
+    const ImVec2 end = ImVec2( org + dir * std::min( periodCointI + fillRatio, periodCointF ) );
     ImGui::GetForegroundDrawList()->AddLine( begin, end, color.getUInt32() );
 }
 

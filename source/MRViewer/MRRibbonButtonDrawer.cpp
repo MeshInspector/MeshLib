@@ -6,6 +6,7 @@
 #include "MRShortcutManager.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
+#include "MRViewerInstance.h"
 #include "imgui_internal.h"
 
 namespace MR
@@ -423,7 +424,9 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
             }
         }
 
-        ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );
+        const float textHeight = ImGui::GetTextLineHeight();
+        const float textCenterToY = textHeight - std::ceil( textHeight / 2.f );
+        ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, ( check_bb.Min.y + check_bb.Max.y ) / 2.f - textCenterToY );
         ImGui::RenderText( label_pos, label );
 
         IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
@@ -791,6 +794,10 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
 
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
+    const auto menu = getViewerInstance().getMenuPlugin();
+    const float scaling = menu ? menu->menu_scaling() : 1.0f;
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 8 * scaling, 8 * scaling ) );
+
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
@@ -853,6 +860,8 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 
         DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
     }
+
+    ImGui::PopStyleVar();
 
     return res;
 }

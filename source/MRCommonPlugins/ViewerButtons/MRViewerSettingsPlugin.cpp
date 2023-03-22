@@ -186,7 +186,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 item->second.item->isAvailable(
                     getAllObjectsInTree<const Object>( &SceneRoot::get(),
                         ObjectSelectivityType::Selected ) ).empty(),
-                ImVec2( -1, 0 ) ) )
+                ImVec2( menuWidth * 0.20f, 0 ) ) )
             {
                 item->second.item->action();
             }
@@ -267,7 +267,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     shadowGl->enable( isEnableShadows );
                 } );
             }
-            ImGui::SameLine( menuWidth * 0.25f );
+            ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
             RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             

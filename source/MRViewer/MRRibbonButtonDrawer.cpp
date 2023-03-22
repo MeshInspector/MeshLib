@@ -311,7 +311,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     return res;
 }
 
-bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* value )
+bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const
 {
     bool res = GradientCheckbox( ( "##" + item.item->name() ).c_str(), value );
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
@@ -453,8 +453,13 @@ void ColorEditRestoreHS( const float* col, float* H, float* S, float* V )
 
 bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None */ )
 {
+    const auto& style = ImGui::GetStyle();
     ImVec2 framePadding( 8.f, 3.f );
+    float colorEditFrameRounding( 2.f );
+    ImVec2 itemInnerSpacing( 12, style.ItemInnerSpacing.y );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, colorEditFrameRounding );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, itemInnerSpacing );
 
     /// Copy of ImGui code. Required to implement own code
     using namespace ImGui;
@@ -465,7 +470,6 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
     if ( window->SkipItems )
         return false;
 
-    const ImGuiStyle& style = g.Style;
     const float square_sz = GetFrameHeight();
     const float w_full = CalcItemWidth();
     const float w_button = ( flags & ImGuiColorEditFlags_NoSmallPreview ) ? 0.0f : ( square_sz * 1.5f + style.ItemInnerSpacing.x );
@@ -720,7 +724,7 @@ bool RibbonButtonDrawer::GradientColorEdit4( const char* label, Vector4f& color,
     if ( value_changed && g.LastItemData.ID != 0 ) // In case of ID collision, the second EndGroup() won't catch g.ActiveId
         MarkItemEdited( g.LastItemData.ID );
 
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar( 3 );
     return value_changed;
 }
 

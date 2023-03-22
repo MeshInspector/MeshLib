@@ -253,6 +253,9 @@
     <ClCompile Include="MRSceneSelectionChange.cpp">
       <Filter>StatePlugins</Filter>
     </ClCompile>
+    <ClCompile Include="MRToolbar.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -475,6 +478,9 @@
     </ClInclude>
     <ClInclude Include="MRSceneSelectionChange.h">
       <Filter>StatePlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRToolbar.h">
+      <Filter>RibbonMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

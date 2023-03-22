@@ -56,7 +56,7 @@ public:
     /// draw gradient checkbox
     MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
     /// draw gradient checkbox with icon (for menu item)
-    MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value );
+    MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
     /// draw gradient checkbox with mixed state
     MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
     /// draw gradient checkbox

@@ -267,7 +267,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     shadowGl->enable( isEnableShadows );
                 } );
             }
-            ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 );
+            ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
             RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             

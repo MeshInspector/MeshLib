@@ -117,8 +117,8 @@ private:
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
-    float scaling_ = 1.f;
 
+    static float scaling_;
     static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;
 };
 

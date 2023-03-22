@@ -11,6 +11,7 @@
 namespace MR
 {
 
+float RibbonButtonDrawer::scaling_ = 1.f;
 std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
 
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
@@ -789,7 +790,7 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
 
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 8, 8 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 8 * scaling_, 8 * scaling_ ) );
 
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();

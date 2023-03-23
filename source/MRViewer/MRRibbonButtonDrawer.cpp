@@ -796,7 +796,6 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 {
     const auto menu = getViewerInstance().getMenuPlugin();
     const float scaling = menu ? menu->menu_scaling() : 1.0f;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 8 * scaling, 8 * scaling ) );
 
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
@@ -860,8 +859,6 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
 
         DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
     }
-
-    ImGui::PopStyleVar();
 
     return res;
 }

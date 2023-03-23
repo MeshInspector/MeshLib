@@ -172,5 +172,3 @@ jobs:
       - name: Remove unused Docker data
         if: ${{ matrix.image != 'windows' }}
         run: docker system prune --force --all --volumes
-prepare-images:
-  yml:

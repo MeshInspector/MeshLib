@@ -795,7 +795,6 @@ bool RibbonButtonDrawer::CustomCombo( const char* label, int* v, const std::vect
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
     const auto menu = getViewerInstance().getMenuPlugin();
-    const float scaling = menu ? menu->menu_scaling() : 1.0f;
 
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();

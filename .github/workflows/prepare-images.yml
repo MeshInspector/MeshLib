@@ -99,6 +99,7 @@ jobs:
             MATRIX=" \
             {\"include\":[ \
             {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
             {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
             {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
             {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
@@ -109,6 +110,7 @@ jobs:
             MATRIX=" \
             {\"include\":[ \
             {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
+            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
             {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
             {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
             {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
@@ -170,3 +172,5 @@ jobs:
       - name: Remove unused Docker data
         if: ${{ matrix.image != 'windows' }}
         run: docker system prune --force --all --volumes
+prepare-images:
+  yml:

@@ -28,6 +28,8 @@ void Toolbar::openCustomize()
 void Toolbar::setRibbonMenu( RibbonMenu* ribbonMenu )
 {
     ribbonMenu_ = ribbonMenu;
+    if ( ribbonMenu_ )
+        setScaling( ribbonMenu_->menu_scaling() );
 }
 
 void Toolbar::drawToolbar()

@@ -5,6 +5,7 @@
 #include "MRAffineXf3.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
+#include "MRQuaternion.h"
 
 namespace MR
 {
@@ -30,14 +31,25 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
                                bbox.min.y + diagonal.y * params.pivotPoint.y,
                                0.0f };
 
-    AffineXf3f rot1 = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusX(), vecx ) );
-    AffineXf3f rot2 = AffineXf3f::linear( Matrix3f::rotation( rot1( Vector3f::plusY() ), vecy ) );
+    auto rot1Q = Quaternionf( Vector3f::plusX(), vecx );
+    // handle degenerated case
+    auto newY = rot1Q( Vector3f::plusY() );
+    auto dotY = dot( newY, vecy );
+    if ( std::abs( std::abs( dotY ) - 1.0f ) < 10.0f * std::numeric_limits<float>::epsilon() )
+    {
+        if ( dotY < 0.0f )
+            newY = -vecy;
+        else
+            newY = vecy;
+    }
+    auto rotQ = Quaternionf( newY, vecy ) * rot1Q;
+    AffineXf3f rot = AffineXf3f::linear( rotQ );
     float scale = params.fontHeight / diagonal.y;
     auto translation = mesh.triPoint( params.startPoint );
 
     transform = 
-        AffineXf3f::translation( translation ) * rot2 * rot1 
-        * AffineXf3f::linear( Matrix3f::scale( scale ) )
+        AffineXf3f::translation( translation ) *
+        AffineXf3f::linear( Matrix3f::scale( scale ) ) * rot
         * AffineXf3f::translation( -pivotCoord );
 
     auto& textMeshPoints = textMesh.points;

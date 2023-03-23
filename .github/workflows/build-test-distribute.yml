@@ -46,17 +46,17 @@ jobs:
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
-  ubuntu22-build-test:
+  ubuntu20-arm64-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: ./.github/workflows/build-test-ubuntu22.yml
+    uses: ./.github/workflows/build-test-ubuntu20-arm64.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
-  ubuntu22-arm64-build-test:
+  ubuntu22-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: ./.github/workflows/build-test-ubuntu22-arm64.yml
+    uses: ./.github/workflows/build-test-ubuntu22.yml
     with:
       image_tag: ${{needs.prepare-image.outputs.image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
@@ -123,7 +123,7 @@ jobs:
     needs:
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - ubuntu22-arm64-build-test
+      - ubuntu20-arm64-build-test
       - fedora37-build-test
       - macos-build-test
     uses: ./.github/workflows/test-distribution.yml
@@ -136,7 +136,7 @@ jobs:
       - update-win-version
       - ubuntu20-build-test
       - ubuntu22-build-test
-      - ubuntu22-arm64-build-test
+      - ubuntu20-arm64-build-test
       - fedora37-build-test
       - emscripten-build-test
       - macos-build-test
@@ -158,7 +158,7 @@ jobs:
           mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip
           mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb
           mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb
-          mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb
+          mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm
           mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
           mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
@@ -170,7 +170,7 @@ jobs:
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.short_version}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg

@@ -5,11 +5,11 @@
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
+
+#include <tbb/parallel_sort.h>
+
 #include <algorithm>
 #include <span>
-#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-#include <execution>
-#endif
 
 namespace MR
 {
@@ -185,11 +185,7 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     } );
 
     t.restart( "sort" );
-#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-    std::sort( std::execution::par, ord.data(), ord.data() + ord.size() );
-#else
-    std::sort( ord.data(), ord.data() + ord.size() );
-#endif
+    tbb::parallel_sort( ord.data(), ord.data() + ord.size() );
 
     VertBMap res;
     res.b.resize( topology.vertSize() );
@@ -245,11 +241,7 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
     } );
 
     t.restart( "sort" );
-#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
-    std::sort( std::execution::par, ord.data(), ord.data() + ord.size() );
-#else
-    std::sort( ord.data(), ord.data() + ord.size() );
-#endif
+    tbb::parallel_sort( ord.data(), ord.data() + ord.size() );
 
     UndirectedEdgeBMap res;
     res.b.resize( topology.undirectedEdgeSize() );

@@ -369,8 +369,6 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
-    while ( viewer.forceRedrawFramesWithoutSwap_ > 0 )
-        viewer.draw( true );
     viewer.draw( true );
     viewer.eventQueue.execute();
     CommandLoop::processCommands();
@@ -1261,7 +1259,8 @@ void Viewer::emsDraw( bool force )
 
 void Viewer::draw( bool force )
 {
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
+#ifdef __EMSCRIPTEN__
+#ifdef MR_EMSCRIPTEN_ASYNCIFY
     if ( forceRedrawFramesWithoutSwap_ == 0 )
     {
         emscripten_request_animation_frame( emsStaticDraw, force ? ( void* ) 1 : nullptr ); // call with swap
@@ -1269,6 +1268,11 @@ void Viewer::draw( bool force )
     }
     else
         draw_( true );
+#else
+    while ( forceRedrawFramesWithoutSwap_ > 0 )
+        draw_( true );
+    draw_( true );
+#endif
 #else
     draw_( force );
 #endif

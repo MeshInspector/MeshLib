@@ -124,7 +124,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto backgroundColor = backgroundColor_;
 
         ImGui::SameLine( menuWidth * 0.5f );
-        if ( RibbonButtonDrawer::GradientColorEdit4( "Background", backgroundColor,
+        if ( RibbonButtonDrawer::GradientColorEdit4( "Background Color", backgroundColor,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
             backgroundColor_ = backgroundColor;
         else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
@@ -186,7 +186,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 item->second.item->isAvailable(
                     getAllObjectsInTree<const Object>( &SceneRoot::get(),
                         ObjectSelectivityType::Selected ) ).empty(),
-                ImVec2( -1, 0 ) ) )
+                ImVec2( menuWidth * 0.20f, 0 ) ) )
             {
                 item->second.item->action();
             }
@@ -267,7 +267,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     shadowGl->enable( isEnableShadows );
                 } );
             }
-            ImGui::SameLine( menuWidth * 0.25f );
+            ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
             RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             
@@ -296,8 +296,22 @@ bool ViewerSettingsPlugin::onEnable_()
     backgroundColor_.w = -1.0f;
 
     ribbonMenu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
+    updateThemes();
 
+    return true;
+}
+
+bool ViewerSettingsPlugin::onDisable_()
+{
+    userThemesPresets_.clear();
+    ribbonMenu_ = nullptr;
+    return true;
+}
+
+void ViewerSettingsPlugin::updateThemes()
+{
     selectedUserPreset_ = -1;
+    userThemesPresets_.clear();
     userThemesPresets_.push_back( "Dark" );
     userThemesPresets_.push_back( "Light" );
     auto colorThemeType = ColorTheme::getThemeType();
@@ -321,7 +335,7 @@ bool ViewerSettingsPlugin::onEnable_()
             {
                 auto ext = entry.path().extension().u8string();
                 for ( auto& c : ext )
-                    c = ( char ) tolower( c );
+                    c = ( char )tolower( c );
 
                 if ( ext != u8".json" )
                     break;
@@ -333,17 +347,7 @@ bool ViewerSettingsPlugin::onEnable_()
             }
         }
     }
-
-    return true;
 }
-
-bool ViewerSettingsPlugin::onDisable_()
-{
-    userThemesPresets_.clear();
-    ribbonMenu_ = nullptr;
-    return true;
-}
-
 
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
 {

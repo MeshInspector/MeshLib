@@ -6,6 +6,7 @@
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
 #include "MRShortcutManager.h"
+#include "MRToolbar.h"
 #include <boost/signals2/signal.hpp>
 #include <type_traits>
 #include <array>
@@ -29,19 +30,10 @@ public:
 
     MRVIEWER_API virtual void shutdown() override;
 
-    // get access to quick access menu items list
-    MenuItemsList& getQuickAccessList() { return toolbarItemsList_; };
-    /// get maximum items in quick access menu
-    MRVIEWER_API int getToolbarMaxItemCount() const;
     /// open Toolbar Customize modal popup
     MRVIEWER_API void openToolbarCustomize();
 
     MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
-
-    int getTopPanelHeight() const
-    {
-        return currentTopPanelHeight_;
-    };
 
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const override;
 
@@ -85,6 +77,7 @@ public:
     TabChangedSignal tabChangedSignal;
 
     const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+    Toolbar& getToolbar() { return toolbar_; }
 
 protected:
 
@@ -140,11 +133,6 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
-    MRVIEWER_API virtual void drawToolbarWindow_();
-    MRVIEWER_API virtual void drawToolbarCustomizeWindow_();
-    MRVIEWER_API virtual void drawToolbarCustomizeTabsList_();
-    MRVIEWER_API virtual void drawToolbarCustomizeItemsList_();
-
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
@@ -171,16 +159,9 @@ private:
     // draw scene list buttons
     void drawSceneListButtons_();
 
-    // struct to hold information for search result presentation
-    struct SearchResult
-    {
-        int tabIndex{ -1 }; // -1 is default value if item has no tab
-        const MenuItemInfo* item{ nullptr }; // item info to show correct caption
-    };
     // does look up in ribbon schema for `searchLine_`
-    std::vector<SearchResult> search_( const std::string& searchStr );
     std::string searchLine_;
-    std::vector<SearchResult> searchResult_;
+    std::vector<RibbonSchemaHolder::SearchResult> searchResult_;
     void drawSearchButton_();
     void drawCollapseButton_();
 
@@ -226,16 +207,10 @@ private:
     RibbonFontManager fontManager_;
     RibbonButtonDrawer buttonDrawer_;
 
+    Toolbar toolbar_;
+
     AsyncTimer asyncTimer_;
     std::thread timerThread_;
-
-    MenuItemsList toolbarItemsList_; // toolbar items list
-    MenuItemsList toolbarListCustomize_; // toolbar preview items list for Toolbar Customize window
-    bool toolbarDragDrop_ = false; // active drag&drop in Toolbar Customize window
-    bool openToolbarCustomizeFlag_ = false; // flag to open Toolbar Customize window
-    int toolbarCustomizeTabNum_ = 0;
-    std::string toolbarSearch_;
-    std::vector<std::vector<std::string>> toolbarSearchRes_;
 };
 
 template<typename T>

@@ -2,6 +2,8 @@
 
 #include "MRFaceFace.h"
 #include "MRMeshPart.h"
+#include "MRProgressCallback.h"
+#include <tl/expected.hpp>
 
 namespace MR
 {
@@ -22,9 +24,9 @@ MRMESH_API std::pair<FaceBitSet, FaceBitSet> findCollidingTriangleBitsets( const
     const AffineXf3f* rigidB2A = nullptr );
 
 /// finds all pairs of colliding triangles from one mesh or a region
-MRMESH_API std::vector<FaceFace> findSelfCollidingTriangles( const MeshPart & mp );
+MRMESH_API tl::expected< std::vector<FaceFace>, std::string> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb = {} );
 /// the same \ref findSelfCollidingTriangles but returns the union of all self-intersecting faces
-MRMESH_API FaceBitSet findSelfCollidingTrianglesBS( const MeshPart & mp );
+MRMESH_API tl::expected<FaceBitSet, std::string> findSelfCollidingTrianglesBS( const MeshPart & mp, ProgressCallback cb = {} );
  
 /**
  * \brief checks that arbitrary mesh part A is inside of closed mesh part B

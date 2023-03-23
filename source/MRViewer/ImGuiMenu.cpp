@@ -1454,8 +1454,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
             auto meshObj = visObj->asType<ObjectMeshHolder>();
             assert( meshObj );
             allHaveTexture = allHaveTexture && 
-                ( ( !meshObj->getTexture().pixels.empty() && !meshObj->getUVCoords().empty() ) ||
-                    ( meshObj->hasAncillaryTexture() ) );
+                ( !meshObj->getTexture().pixels.empty() && !meshObj->getUVCoords().empty() );
             if ( !allHaveTexture )
                 break;
         }

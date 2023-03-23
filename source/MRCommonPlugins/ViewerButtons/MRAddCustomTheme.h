@@ -20,6 +20,8 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
+    void updateThemeNames_();
+
     Json::Value makeJson_();
 
     void update_();
@@ -29,6 +31,10 @@ private:
     std::vector<Vector4f> sceneColors_;
     std::vector<Vector4f> ribbonColors_;
     std::vector<Vector4f> viewportColors_;
+    // whole color theme preset
+    int selectedUserPreset_{ 0 };
+    std::vector<std::string> userThemesPresets_;
+    // ImGui preset
     ColorTheme::Preset preset_;
     std::string themeName_;
 };

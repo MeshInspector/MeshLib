@@ -124,7 +124,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto backgroundColor = backgroundColor_;
 
         ImGui::SameLine( menuWidth * 0.5f );
-        if ( RibbonButtonDrawer::GradientColorEdit4( "Background", backgroundColor,
+        if ( RibbonButtonDrawer::GradientColorEdit4( "Background Color", backgroundColor,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
             backgroundColor_ = backgroundColor;
         else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )

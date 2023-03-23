@@ -67,3 +67,9 @@ RUN curl https://github.com/NixOS/patchelf/releases/download/0.15.0/patchelf-0.1
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig
+
+# Add a new user "actions-runner" with user id 8877
+RUN useradd -u 8877 -m user
+
+# Change to non-root privilege
+USER user

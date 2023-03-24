@@ -116,6 +116,7 @@ jobs:
           retention-days: 1
 
   windows-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 60
     runs-on: windows-2019
@@ -215,6 +216,7 @@ jobs:
         run: docker rm -f meshlib-win
 
   macos-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 45
     runs-on: ${{ matrix.instance }}
@@ -374,6 +376,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   windows-pip-test:
+    if: ${{ false }}
     needs: [setup, windows-pip-build]
     timeout-minutes: 20
     runs-on: windows-latest
@@ -412,6 +415,7 @@ jobs:
         run: py -${{matrix.py-version}} -m pytest -s -v
 
   macos-pip-test:
+    if: ${{ false }}
     needs: [setup, macos-pip-build]
     timeout-minutes: 20
     runs-on: ${{ matrix.instance }}

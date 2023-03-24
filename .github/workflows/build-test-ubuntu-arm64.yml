@@ -29,8 +29,8 @@ jobs:
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
           - os: ubuntu22
-            cxx-compiler: /usr/bin/clang++-15
-            c-compiler: /usr/bin/clang-15
+            cxx-compiler: /usr/bin/clang++-14
+            c-compiler: /usr/bin/clang-14
 
     steps:
       - name: Checkout

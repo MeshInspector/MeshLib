@@ -188,14 +188,17 @@ std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA,
     const T Cx = oriC[prec.idxX] - Sx * oriC[prec.maxDimIdxZ];
     const T Cy = oriC[prec.idxY] - Sy * oriC[prec.maxDimIdxZ];
 
+    // due to fused multiply-add (FMA): (A*B-A*B) can be different from zero, so we need epsilon
+    const T eps = std::numeric_limits<T>::epsilon() * std::max( { Ax, Bx, Cx, Ay, By, Cy } );
     T U = Cx * By - Cy * Bx;
     T V = Ax * Cy - Ay * Cx;
     T W = Bx * Ay - By * Ax;
 
-    if( U < T( 0 ) || V < T( 0 ) || W < T( 0 ) )
+    if( U < eps || V < eps || W < eps )
     {
-        if( U > T( 0 ) || V > T( 0 ) || W > T( 0 ) )
+        if( U > eps || V > eps || W > eps )
         {
+            // U,V,W have clearly different signs, so the ray misses the triangle
             return std::nullopt;
         }
     }

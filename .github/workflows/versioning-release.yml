@@ -96,9 +96,21 @@ jobs:
                   </td>
                 </tr>
                 <tr>
+                  <td align="center">Ubuntu 20 LTS arm64</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version-tag.outputs.short_version}}_ubuntu20-arm64-dev.deb">deb</a>
+                  </td>
+                </tr>
+                <tr>
                   <td align="center">Ubuntu 22 LTS x64</td>
                   <td align="center">
                     <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version-tag.outputs.short_version}}_ubuntu22-dev.deb">deb</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">Ubuntu 22 LTS arm64</td>
+                  <td align="center">
+                    <a href="${{env.RELEASE_PATH}}/meshlib_${{steps.version-tag.outputs.short_version}}_ubuntu22-arm64-dev.deb">deb</a>
                   </td>
                 </tr>
                 <tr>

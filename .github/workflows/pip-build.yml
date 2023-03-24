@@ -37,7 +37,7 @@ jobs:
             runner: ubuntu-latest
           - platform: "aarch64"
             docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
-            container-options: " "
+            container-options: "--user root"
             runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"
             py-tag: "cp38"
@@ -61,8 +61,8 @@ jobs:
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}
         run: |
-          sudo apt -y update && sudo apt -y upgrade && sudo apt -y install software-properties-common
-          sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
+          apt -y update && apt -y upgrade && apt -y install software-properties-common
+          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
 
       - name: Pip setup
         run: |
@@ -333,7 +333,7 @@ jobs:
             container-prefix: " "
           - platform: "aarch64"
             runner: [ 'self-hosted', 'linux-arm64' ]
-            container-options: " "
+            container-options: "--user root"
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"

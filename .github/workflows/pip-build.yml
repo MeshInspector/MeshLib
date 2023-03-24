@@ -37,7 +37,7 @@ jobs:
             runner: ubuntu-latest
           - platform: "aarch64"
             docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
-            container-options: ""
+            container-options: " "
             runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"
             py-tag: "cp38"
@@ -332,7 +332,7 @@ jobs:
             container-options: "--user root"
           - platform: "aarch64"
             runner: [ 'self-hosted', 'linux-arm64' ]
-            container-options: ""
+            container-options: " "
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"

@@ -35,7 +35,7 @@ jobs:
             container-options: "--user root"
           - platform: "aarch64"
             runner: [ 'self-hosted', 'linux-arm64' ]
-            container-options: ""
+            container-options: " "
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"

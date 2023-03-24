@@ -22,6 +22,8 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu, ubuntu22 ]
+        config: [ Release ]
+        compiler: [ clang ]
         include:
           - os: ubuntu
             cxx-compiler: /usr/bin/clang++-11

@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 25
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-ubuntu:latest
+      image: ${{ matrix.docker-image }}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
@@ -319,7 +319,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ matrix.os }}
+      image: ${{matrix.container-prefix}}${{matrix.os}}
       options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
@@ -330,9 +330,11 @@ jobs:
           - platform: "x86_64"
             runner: ubuntu-latest
             container-options: "--user root"
+            container-prefix: " "
           - platform: "aarch64"
             runner: [ 'self-hosted', 'linux-arm64' ]
             container-options: " "
+            container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"

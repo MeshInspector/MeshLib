@@ -1,4 +1,4 @@
-name: Build and test Ubuntu22
+name: Build and test on arm64 ubuntu20 and ubuntu22
 
 on:
   workflow_call:
@@ -18,17 +18,19 @@ jobs:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:
-      image: meshlib/meshlib-${{matrix.os}}-arm64:${{inputs.image_tag}}
+      image: ${{ matrix.docker-image }}
     strategy:
       matrix:
-        os: [ ubuntu, ubuntu22 ]
+        os: [ ubuntu20, ubuntu22 ]
         config: [ Release ]
         compiler: [ clang ]
         include:
-          - os: ubuntu
+          - os: ubuntu20
+            docker-image: meshlib/meshlib-ubuntu-arm64:${{inputs.image_tag}}
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
           - os: ubuntu22
+            docker-image: meshlib/meshlib-ubuntu22-arm64:${{inputs.image_tag}}
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
 
@@ -54,7 +56,7 @@ jobs:
           MR_VERSION: ${{ inputs.version }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings

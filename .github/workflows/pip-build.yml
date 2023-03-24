@@ -62,7 +62,7 @@ jobs:
         if: ${{ matrix.py-version != '3.8' }}
         run: |
           sudo apt -y update && sudo apt -y upgrade && sudo apt -y install software-properties-common
-          sudp add-apt-repository -y ppa:deadsnakes/ppa && sudo apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
+          sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
 
       - name: Pip setup
         run: |

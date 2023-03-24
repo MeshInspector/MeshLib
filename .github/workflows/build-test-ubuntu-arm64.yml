@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:
-      image: meshlib/meshlib-${{matrix.os}}-arm:${{inputs.image_tag}}
+      image: meshlib/meshlib-${{matrix.os}}-arm64:${{inputs.image_tag}}
     strategy:
       matrix:
         os: [ ubuntu, ubuntu22 ]

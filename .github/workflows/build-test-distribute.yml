@@ -172,6 +172,7 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb \
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg

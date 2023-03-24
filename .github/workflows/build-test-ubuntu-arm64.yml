@@ -14,19 +14,21 @@ on:
         type: boolean
 
 jobs:
-  ubuntu22-build-test:
+  ubuntu-arm-build-test:
     timeout-minutes: 40
     runs-on: [self-hosted, linux-arm64]
     container:
-      image: meshlib/meshlib-ubuntu-arm:${{inputs.image_tag}}
+      image: meshlib/meshlib-${{matrix.os}}-arm:${{inputs.image_tag}}
     strategy:
       matrix:
-        config: [ Release ]
-        compiler: [Clang 11]
+        os: [ ubuntu, ubuntu22 ]
         include:
-          - compiler: Clang 11
+          - os: ubuntu
             cxx-compiler: /usr/bin/clang++-11
             c-compiler: /usr/bin/clang-11
+          - os: ubuntu22
+            cxx-compiler: /usr/bin/clang++-15
+            c-compiler: /usr/bin/clang-15
 
     steps:
       - name: Checkout
@@ -70,18 +72,18 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create Deb
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
         run: |
           ./scripts/distribution.sh ${{inputs.version}}
-          mv ./distr/meshlib-dev.deb meshlib-ubuntu20-arm64-dev.deb
+          mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-arm64-dev.deb
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 11' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives
-          path: meshlib-ubuntu20-arm64-dev.deb
+          path: meshlib-${{matrix.os}}-arm64-dev.deb
           retention-days: 1

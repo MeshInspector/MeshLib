@@ -19,6 +19,10 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
     if ( !bbox.valid() )
         return tl::make_unexpected( "Symbols mesh is empty" );
 
+    int numLines = 1;
+    for ( auto c : params.text )
+        if ( c == '\n' )
+            ++numLines;
     auto diagonal = bbox.size();
     const auto diagonalLength = diagonal.length();
     AffineXf3f transform;
@@ -31,20 +35,19 @@ tl::expected<Mesh, std::string>  alignTextToMesh(
                                bbox.min.y + diagonal.y * params.pivotPoint.y,
                                0.0f };
 
-    auto rot1Q = Quaternionf( Vector3f::plusX(), vecx );
+    auto rotQ = Quaternionf( Vector3f::plusX(), vecx );
     // handle degenerated case
-    auto newY = rot1Q( Vector3f::plusY() );
+    auto newY = rotQ( Vector3f::plusY() );
     auto dotY = dot( newY, vecy );
     if ( std::abs( std::abs( dotY ) - 1.0f ) < 10.0f * std::numeric_limits<float>::epsilon() )
     {
         if ( dotY < 0.0f )
-            newY = -vecy;
-        else
-            newY = vecy;
+            rotQ = Quaternionf( vecx, PI_F ) * rotQ;
     }
-    auto rotQ = Quaternionf( newY, vecy ) * rot1Q;
+    else
+        rotQ = Quaternionf( newY, vecy ) * rotQ;
     AffineXf3f rot = AffineXf3f::linear( rotQ );
-    float scale = params.fontHeight / diagonal.y;
+    float scale = ( params.fontHeight * numLines * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) ) / diagonal.y;
     auto translation = mesh.triPoint( params.startPoint );
 
     transform = 

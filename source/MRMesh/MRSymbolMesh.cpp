@@ -129,7 +129,8 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     std::vector<std::pair<size_t, double>> contourId2width;
     double maxLineWidth = -1;
     size_t contoursPrevSize = 0;
-
+    int currentLineLength = 0;
+    Vector2i numSymbols{ 0,1 };
     auto updateContourSizeAndWidth = [&]() {
         bool isInitialized = false;
         double minX = 0.0f;
@@ -165,6 +166,9 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             updateContourSizeAndWidth();
             xOffset = 0;
             yOffset -= offsetY;
+            numSymbols.x = std::max( numSymbols.x, currentLineLength );
+            currentLineLength = 0;
+            ++numSymbols.y;
             continue;
         }
 
@@ -183,10 +187,11 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         decomposer.decompose( &face->glyph->outline,
                               { double( xOffset ), ( i % 2 == 0 ) ? yOffset + 0.0 : yOffset + 0.5 } );
 
-
+        ++currentLineLength;
         xOffset += ( face->glyph->advance.x + addOffsetX );
         previous = index;
     }
+    numSymbols.x = std::max( numSymbols.x, currentLineLength );
     updateContourSizeAndWidth();
     decomposer.clearLast();
 
@@ -247,8 +252,8 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         ContourToDistanceMapParams dmParams;
         dmParams.pixelSize = Vector2f::diagonal( float( height ) / 72.0f );
         dmParams.orgPoint = Vector2f( box.min );
-        dmParams.resolution.x = 72 * int( params.text.length() );
-        dmParams.resolution.y = 72;
+        dmParams.resolution.x = 72 * int( numSymbols.x * ( 1.0f + params.symbolsDistanceAdditionalOffset.x ) + 1.0f );
+        dmParams.resolution.y = 72 * int( numSymbols.y * ( 1.0f + params.symbolsDistanceAdditionalOffset.y ) + 1.0f );
         dmParams.withSign = true;
         if ( absOffset > 0.0f )
         {

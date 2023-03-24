@@ -220,6 +220,8 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarCustomizeBg ).getUInt32() );
     ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
     ImGui::PopStyleColor();
+
+    ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 6 * scaling_ ) + Vector2f( params.itemSize ) );
     for ( int i = 0; i < itemsListCustomize_.size(); ++i )
     {
         const auto& itemPreview = itemsListCustomize_[i];
@@ -243,12 +245,16 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetItemAllowOverlap();
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
-        ImGui::SetNextWindowSize( params.itemSize );
+        ImGui::SetNextWindowSize( tooltipSize );
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
+            RibbonButtonDrawer::GradientButton( "##ToolbarDragDropBtnHighlight", tooltipSize );
+            ImGui::SetCursorPos( ImVec2( 3 * scaling_, 3 * scaling_ ) );
+            ImGui::Button( "##ToolbarDragDropBtn", params.itemSize);
+            ImGui::SetCursorPos( ImVec2( 3 * scaling_, 3 * scaling_ ) );
             if ( iterItem != RibbonSchemaHolder::schema().items.end() )
                 buttonDrawer.drawButtonIcon( iterItem->second, params );
             ImGui::EndDragDropSource();

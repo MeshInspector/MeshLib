@@ -194,7 +194,7 @@ std::optional<TriIntersectResult> rayTriangleIntersect_( const Vector3<T>& oriA,
     T V = Ax * Cy - Ay * Cx;
     T W = Bx * Ay - By * Ax;
 
-    if( U < eps || V < eps || W < eps )
+    if( U < -eps || V < -eps || W < -eps )
     {
         if( U > eps || V > eps || W > eps )
         {

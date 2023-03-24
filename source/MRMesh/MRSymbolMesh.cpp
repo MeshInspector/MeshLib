@@ -129,7 +129,7 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
     std::vector<std::pair<size_t, double>> contourId2width;
     double maxLineWidth = -1;
     size_t contoursPrevSize = 0;
-    int curentLineLength = 0;
+    int currentLineLength = 0;
     Vector2i numSymbols{ 0,1 };
     auto updateContourSizeAndWidth = [&]() {
         bool isInitialized = false;
@@ -166,8 +166,8 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
             updateContourSizeAndWidth();
             xOffset = 0;
             yOffset -= offsetY;
-            numSymbols.x = std::max( numSymbols.x, curentLineLength );
-            curentLineLength = 0;
+            numSymbols.x = std::max( numSymbols.x, currentLineLength );
+            currentLineLength = 0;
             ++numSymbols.y;
             continue;
         }
@@ -187,11 +187,11 @@ Contours2d createSymbolContours( const SymbolMeshParams& params )
         decomposer.decompose( &face->glyph->outline,
                               { double( xOffset ), ( i % 2 == 0 ) ? yOffset + 0.0 : yOffset + 0.5 } );
 
-        ++curentLineLength;
+        ++currentLineLength;
         xOffset += ( face->glyph->advance.x + addOffsetX );
         previous = index;
     }
-    numSymbols.x = std::max( numSymbols.x, curentLineLength );
+    numSymbols.x = std::max( numSymbols.x, currentLineLength );
     updateContourSizeAndWidth();
     decomposer.clearLast();
 

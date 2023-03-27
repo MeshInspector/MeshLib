@@ -1104,25 +1104,13 @@ bool MeshTopology::operator ==( const MeshTopology & b ) const
     return edges_ == b.edges_;
 }
 
-template<class V>
-void resizeNoInit( V & v, size_t targetSize )
-{
-    // allocate enough memory
-    v.reserve( targetSize );
-    // resize without memory access
-    while ( v.size() < targetSize )
-        v.emplace_back( noInit );
-    // in case initial size was larger
-    v.resize( targetSize );
-}
-
 void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, size_t faceSize )
 {
     MR_TIMER
 
     updateValids_ = false;
 
-    resizeNoInit( edges_, edgeSize );
+    edges_.resizeNoInit( edgeSize );
 
     edgePerVertex_.resize( vertSize );
     validVerts_.resize( vertSize );
@@ -1656,7 +1644,7 @@ void MeshTopology::pack( const PackMapping & map )
     edges_.resize( 2 * map.e.tsize );
 
     Vector<EdgeId, FaceId> newEdgePerFace;
-    resizeNoInit( newEdgePerFace, map.f.tsize );
+    newEdgePerFace.resizeNoInit( map.f.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_f, FaceId( faceSize() ) ),
         [&]( const tbb::blocked_range<FaceId> & range )
     {
@@ -1674,7 +1662,7 @@ void MeshTopology::pack( const PackMapping & map )
     validFaces_.resize( edgePerFace_.size(), true );
 
     Vector<EdgeId, VertId> newEdgePerVertex;
-    resizeNoInit( newEdgePerVertex, map.v.tsize );
+    newEdgePerVertex.resizeNoInit( map.v.tsize );
     tbb::parallel_for( tbb::blocked_range( 0_v, VertId( vertSize() ) ),
         [&]( const tbb::blocked_range<VertId> & range )
     {

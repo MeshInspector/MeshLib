@@ -1497,7 +1497,7 @@ bool ModalExitButton( float scaling )
     const auto pos = ImGui::GetCursorScreenPos();
     const float buttonSize = 24.0f * scaling;
 
-    if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) )
+    if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
     {
         ImGui::CloseCurrentPopup();
         ImGui::PopStyleColor( 2 );

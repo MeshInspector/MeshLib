@@ -355,7 +355,9 @@ public:
         {
             Horizontal,  // (x,y) - (x+1,y)
             Vertical,    // (x,y) - (x,y+1)
-            Diagonal     // (x,y) - (x+1,y+1)
+            DiagonalA,   // (x,y) - (x+1,y+1)
+            DiagonalB    // (x+1,y) - (x,y+1)
+            // both DiagonalA and DiagonalB cannot return valid edges
         };
         /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex;
         /// both vertices of valid edge must be valid as well;
@@ -363,8 +365,8 @@ public:
         std::function<EdgeId(Vector2i, EdgeType)> getEdgeId;
         enum class TriType
         {
-            Lower, // (x,y), (x+1,y), (x+1,y+1)
-            Upper, // (x,y), (x+1,y+1), (x,y+1)
+            Lower, // (x,y), (x+1,y), (x+1,y+1) if DiagonalA or (x,y), (x+1,y), (x,y+1) if DiagonalB
+            Upper  // (x,y), (x+1,y+1), (x,y+1) if DiagonalA or (x+1,y), (x+1,y+1), (x,y+1) if DiagonalB
         };
         /// grid coordinates of lower-left vertex and triangle-type to faceId;
         /// all 3 vertices and all 3 edges of valid face must be valid as well

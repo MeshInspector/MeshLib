@@ -41,6 +41,18 @@ public:
     void resize( size_t newSize ) { vec_.resize( newSize ); }
     void resize( size_t newSize, const T & t ) { vec_.resize( newSize, t ); }
 
+    // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
+    void resizeNoInit( size_t targetSize )
+    {
+        // allocate enough memory
+        reserve( targetSize );
+        // resize without memory access
+        while ( size() < targetSize )
+            emplace_back( noInit );
+        // in case initial size was larger
+        resize( targetSize );
+    }
+
     [[nodiscard]] auto capacity() const { return vec_.capacity(); }
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
 

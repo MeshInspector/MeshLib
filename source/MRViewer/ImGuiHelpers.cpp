@@ -1486,4 +1486,29 @@ bool ModalBigTitle( const char* title, float scaling )
     return shoudClose;
 }
 
+bool ModalExitButton( float scaling )
+{
+    ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y - ImGui::GetTextLineHeight() * 0.5f + 4.5f * scaling );
+    const uint32_t crossColor = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::TabClicked ).getUInt32();
+    ImGui::PushStyleColor( ImGuiCol_Button, 0 );
+    ImGui::PushStyleColor( ImGuiCol_Border, 0 );
+
+    auto drawList = ImGui::GetWindowDrawList();
+    const auto pos = ImGui::GetCursorScreenPos();
+    const float buttonSize = 24.0f * scaling;
+
+    if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) )
+    {
+        ImGui::CloseCurrentPopup();
+        ImGui::PopStyleColor( 2 );
+        return true;
+    }
+
+    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.3f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.7f * buttonSize }, crossColor, 2.0f * scaling );
+    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.7f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.3f * buttonSize }, crossColor, 2.0f * scaling );
+
+    ImGui::PopStyleColor( 2 );
+    return false;
+}
+
 } // namespace ImGui

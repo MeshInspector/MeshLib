@@ -2,6 +2,7 @@
 #include "MRMeshBuilder.h"
 #include "MRTriMath.h"
 #include "MRVector2.h"
+#include "MRMeshDelone.h"
 
 namespace MR
 {
@@ -13,16 +14,6 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 {
     Mesh res;
     res.points.resize( width * height );
-    auto isInside = [&] ( VertId v, VertId v0, VertId v1, VertId v2 )
-    {
-        const Vector2f p( res.points[v] ),
-                       p0( res.points[v0] ),
-                       p1( res.points[v1] ),
-                       p2( res.points[v2] );
-        const auto triArea = area( p0, p1, p2 );
-        const auto sumArea = area( p, p0, p1 ) + area( p, p1, p2 ) + area( p, p0, p2 );
-        return std::abs( triArea - sumArea ) <= FLT_EPSILON;
-    };
 
     Triangulation faces;
     auto addFace = [&] ( VertId v0, VertId v1, VertId v2 )
@@ -66,7 +57,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
             {
             case 4:
                 // two possible triangles
-                if ( !isInside( v01, v11, v00, v10 ) && !isInside( v10, v11, v01, v00 ) )
+                if ( checkDeloneQuadrangle( res.points[v00], res.points[v01], res.points[v11], res.points[v10] ) )
                 {
                     addFace( v11, v00, v10 );
                     addFace( v11, v01, v00 );

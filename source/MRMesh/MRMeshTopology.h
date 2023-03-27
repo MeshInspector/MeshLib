@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include "MRVector.h"
+#include "MRVector2.h"
 #include "MRBitSet.h"
 #include "MRPartMapping.h"
 #include "MRMeshTriPoint.h"
@@ -343,6 +344,31 @@ public:
     /// for incident vertices and faces of given edges, remember one of them as edgeWithOrg and edgeWithLeft;
     /// this is important in parallel algorithms where other edges may change but stable ones will survive
     MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
+
+    struct GridSettings
+    {
+        /// the number of cells in X and Y dimensions
+        Vector2i dim;
+        /// grid coordinates to vertex Id
+        std::function<VertId(Vector2i)> getVertId;
+        enum class EdgeType
+        {
+            Horizontal,  // (x,y) - (x+1,y)
+            Vertical,    // (x,y) - (x,y+1)
+            Diagonal     // (x,y) - (x+1,y+1)
+        };
+        /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex
+        std::function<EdgeId(Vector2i, EdgeType)> getEdgeId;
+        enum class TriType
+        {
+            Lower, // (x,y), (x+1,y), (x+1,y+1)
+            Upper, // (x,y), (x+1,y+1), (x,y+1)
+        };
+        /// grid coordinates of lower-left vertex and triangle-type to faceId
+        std::function<FaceId(Vector2i, TriType)> getFaceId;
+    };
+    // constructs triangular grid mesh topology in parallel
+    MRMESH_API void buildGridMesh( const GridSettings & settings );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;

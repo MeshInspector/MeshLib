@@ -1205,6 +1205,72 @@ void MeshTopology::preferEdges( const UndirectedEdgeBitSet & stableEdges )
     } );
 }
 
+void MeshTopology::buildGridMesh( const GridSettings & settings )
+{
+    MR_TIMER
+
+    stopUpdatingValids();
+
+    edgePerVertex_.resizeNoInit( size_t( settings.dim.x + 1 ) * ( settings.dim.y + 1 ) );
+    edgePerFace_.resizeNoInit( size_t( settings.dim.x ) * settings.dim.y );
+    struct EdgeFace
+    {
+        EdgeId e;
+        FaceId f; //to the left of e
+    };
+    tbb::enumerable_thread_specific<std::vector<EdgeFace>> edgeRingPerThread;
+    tbb::parallel_for( tbb::blocked_range( 0, settings.dim.y + 1 ), [&]( const tbb::blocked_range<int> & range )
+    {
+        auto & edgeRing = edgeRingPerThread.local();
+        Vector2i pos;
+        for ( pos.y = range.begin(); pos.y < range.end(); ++pos.y )
+            for ( pos.x = 0; pos.x <= settings.dim.x; ++pos.x )
+            {
+                const auto v = settings.getVertId( pos );
+                edgePerVertex_[v] = ( pos.x < settings.dim.x ) ?
+                    settings.getEdgeId( pos, GridSettings::EdgeType::Horizontal ) :
+                    settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::Horizontal ).sym();
+                if ( pos.x < settings.dim.x && pos.y < settings.dim.y )
+                {
+                    const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower );
+                    edgePerFace_[fl] = settings.getEdgeId( pos, GridSettings::EdgeType::Horizontal );
+                    const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper );
+                    edgePerFace_[fu] = settings.getEdgeId( pos, GridSettings::EdgeType::Diagonal );
+                }
+                edgeRing.clear();
+                if ( pos.x < settings.dim.x )
+                    edgeRing.push_back( { settings.getEdgeId( pos, GridSettings::EdgeType::Horizontal ),
+                        pos.y < settings.dim.y ? settings.getFaceId( pos, GridSettings::TriType::Lower ) : FaceId{} } );
+                if ( pos.x < settings.dim.x && pos.y < settings.dim.y )
+                    edgeRing.push_back( {settings.getEdgeId( pos, GridSettings::EdgeType::Diagonal ),
+                        settings.getFaceId( pos, GridSettings::TriType::Upper ) } );
+                if ( pos.y < settings.dim.y )
+                    edgeRing.push_back( { settings.getEdgeId( pos, GridSettings::EdgeType::Vertical ),
+                        pos.x > 0 ? settings.getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Lower ) : FaceId{} } );
+                if ( pos.x > 0 )
+                    edgeRing.push_back( { settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::Horizontal ).sym(),
+                        pos.y > 0 ? settings.getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Upper ) : FaceId{} } );
+                if ( pos.x > 0 && pos.y > 0 )
+                    edgeRing.push_back( { settings.getEdgeId( pos - Vector2i(1, 1), GridSettings::EdgeType::Diagonal ).sym(),
+                        settings.getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Lower ) } );
+                if ( pos.y > 0 )
+                    edgeRing.push_back( { settings.getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::Vertical ).sym(),
+                        pos.x < settings.dim.x ? settings.getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Upper ) : FaceId{} } );
+                for ( int i = 0; i < edgeRing.size(); ++i )
+                {
+                    HalfEdgeRecord he( noInit );
+                    he.next = i + 1 < edgeRing.size() ? edgeRing[i + 1].e : edgeRing[0].e;
+                    he.prev = i > 0 ? edgeRing[i - 1].e : edgeRing.back().e;
+                    he.org = v;
+                    he.left = edgeRing[i].f;
+                    edges_[edgeRing[i].e] = he;
+                }
+            }
+    } );
+
+    computeValidsFromEdges();
+}
+
 void MeshTopology::computeValidsFromEdges()
 {
     MR_TIMER

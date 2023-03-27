@@ -507,6 +507,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
+
     ImGuiWindow* window = FindWindowByName( label );
     if ( !window )
     {
@@ -736,6 +738,7 @@ void EndCustomStatePlugin()
     auto context = ImGui::GetCurrentContext();
     auto window = context->CurrentWindow;
     window->DrawList->PopClipRect();
+    ImGui::PopStyleVar();
     End();
 }
 

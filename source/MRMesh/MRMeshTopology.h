@@ -349,7 +349,7 @@ public:
     {
         /// the number of cells in X and Y dimensions
         Vector2i dim;
-        /// grid coordinates to vertex Id
+        /// grid coordinates to vertex Id; invalid vertex Id means that this vertex is missing in grid
         std::function<VertId(Vector2i)> getVertId;
         enum class EdgeType
         {
@@ -357,14 +357,17 @@ public:
             Vertical,    // (x,y) - (x,y+1)
             Diagonal     // (x,y) - (x+1,y+1)
         };
-        /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex
+        /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex;
+        /// both vertices of valid edge must be valid as well;
+        /// oppositly directed edges must be related by .sym() operation or both must be invalid
         std::function<EdgeId(Vector2i, EdgeType)> getEdgeId;
         enum class TriType
         {
             Lower, // (x,y), (x+1,y), (x+1,y+1)
             Upper, // (x,y), (x+1,y+1), (x,y+1)
         };
-        /// grid coordinates of lower-left vertex and triangle-type to faceId
+        /// grid coordinates of lower-left vertex and triangle-type to faceId;
+        /// all 3 vertices and all 3 edges of valid face must be valid as well
         std::function<FaceId(Vector2i, TriType)> getFaceId;
     };
     // constructs triangular grid mesh topology in parallel

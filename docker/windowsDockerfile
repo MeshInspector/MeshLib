@@ -26,6 +26,8 @@ RUN powershell -ExecutionPolicy unrestricted -Command \
     iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
 RUN choco install cuda --version=11.4.2.47141 --confirm
+RUN copy "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.4\\extras\\visual_studio_integration\\MSBuildExtensions\\*.*" "C:\\Temp\\vcbuildtools\\MSBuild\\Microsoft\\VC\\v160\\BuildCustomizations"
+
 RUN choco install python --version=3.10.0 --confirm
 
 # Copy python requirements

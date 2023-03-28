@@ -185,7 +185,7 @@ void Toolbar::drawCustomizeModal_()
         + smallItemSize.x * cToolbarMaxItemCount
         + itemSpacing.x * ( cToolbarMaxItemCount - 1 );
 
-    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 520 * scaling_ );
+    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 530 * scaling_ );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
@@ -210,7 +210,9 @@ void Toolbar::drawCustomizeModal_()
     auto& style = ImGui::GetStyle();
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * scaling_ ) );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), cToolbarMaxItemCount );
+    ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );

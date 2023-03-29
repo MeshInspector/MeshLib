@@ -35,8 +35,7 @@ jobs:
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
           C:\vcpkg\vcpkg.exe integrate install
-          
-          # choco install cuda --version=11.4.2.47141 --confirm
+          choco install cuda --version=11.4.2.47141 --confirm
 
       - name: Checkout
         uses: actions/checkout@v3

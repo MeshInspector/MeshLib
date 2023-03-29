@@ -1214,9 +1214,15 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
     // resize and resizeNoInit since some vertices/faces/edges might be missed
     edgePerVertex_.resize( size_t( settings.dim.x + 1 ) * ( settings.dim.y + 1 ) );
     edgePerFace_.resize( 2 * size_t( settings.dim.x ) * settings.dim.y );
-    edges_.resize( edgePerFace_.size() / 2 // diagonal edges
-        + edgePerVertex_.size() * 2        // each internal vertex has 4 horizontal/vertical edges, each of which is shared by 2 vertices
+
+    const auto es = 2 * (
+          edgePerFace_.size() / 2   // diagonal edges
+        + edgePerVertex_.size() * 2 // each internal vertex has 4 horizontal/vertical edges, each of which is shared by 2 vertices
         - ( settings.dim.x + 1 ) - ( settings.dim.y + 1 ) ); // less edges in boundary vertices
+    edges_.reserve( es );
+    while ( edges_.size() < es )
+        (void)makeEdge();
+
     struct EdgeFace
     {
         EdgeId e;
@@ -1230,26 +1236,23 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
         for ( pos.y = range.begin(); pos.y < range.end(); ++pos.y )
             for ( pos.x = 0; pos.x <= settings.dim.x; ++pos.x )
             {
+                if ( auto da = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
+                {
+                    if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
+                        edgePerFace_[fl] = da.sym();
+                    if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
+                        edgePerFace_[fu] = da;
+                }
+                else if ( auto db = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalB ) )
+                {
+                    if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
+                        edgePerFace_[fl] = db;
+                    if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
+                        edgePerFace_[fu] = db.sym();
+                }
                 const auto v = settings.getVertId( pos );
                 if ( !v )
                     continue;
-                if ( pos.x < settings.dim.x && pos.y < settings.dim.y )
-                {
-                    if ( auto da = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
-                    {
-                        if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
-                            edgePerFace_[fl] = da.sym();
-                        if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
-                            edgePerFace_[fu] = da;
-                    }
-                    else if ( auto db = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalB ) )
-                    {
-                        if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
-                            edgePerFace_[fl] = db;
-                        if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
-                            edgePerFace_[fu] = db.sym();
-                    }
-                }
                 edgeRing.clear();
 
                 // edge (+1, 0)

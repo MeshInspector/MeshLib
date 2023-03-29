@@ -21,6 +21,13 @@ jobs:
       matrix:
         config: [Debug, Release]
     steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
       - name: Install dependenices
         working-directory: C:\vcpkg
         run: |
@@ -36,11 +43,10 @@ jobs:
           submodules: recursive
 
       - name: Setup python
-        working-directory: C:\vcpkg
         run: |
           py -3.10 -m ensurepip --upgrade
           py -3.10 -m pip install --upgrade pip
-          py -3.10 -m pip install -r requirements\python.txt
+          py -3.10 -m pip install -r .\requirements\python.txt
 
       - name: Build
         run: |

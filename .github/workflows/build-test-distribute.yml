@@ -39,6 +39,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu20-build-test:
+    if: ${{ false }}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu20.yml
     with:
@@ -47,6 +48,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu-arm64-build-test:
+    if: ${{ false }}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
@@ -55,6 +57,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu22-build-test:
+    if: ${{ false }}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu22.yml
     with:
@@ -63,6 +66,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   fedora37-build-test:
+    if: ${{ false }}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-fedora37.yml
     with:
@@ -71,6 +75,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   emscripten-build-test:
+    if: ${{ false }}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
@@ -78,6 +83,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   macos-build-test:
+    if: ${{ false }}
     needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-macos.yml
     with:

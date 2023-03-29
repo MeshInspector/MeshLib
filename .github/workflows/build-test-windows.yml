@@ -22,7 +22,7 @@ jobs:
         config: [Debug, Release]
     steps:
       - name: Install dependenices
-        working-directory: "C:\vcpkg"
+        working-directory: C:\vcpkg
         run: |
           dotnet nuget add source "https://meshlib-259351611210.d.codeartifact.us-east-1.amazonaws.com/nuget/meshlib-vcpkg/v3/index.json" -n "meshlib/meshlib-vcpkg"
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
@@ -37,7 +37,7 @@ jobs:
           submodules: recursive
 
       - name: Setup python
-        working-directory: "C:\vcpkg"
+        working-directory: C:\vcpkg
         run: |
           py -3.10 -m ensurepip --upgrade
           py -3.10 -m pip install --upgrade pip

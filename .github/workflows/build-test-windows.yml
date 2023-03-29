@@ -32,11 +32,11 @@ jobs:
         working-directory: C:\vcpkg
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          dotnet nuget add source "https://meshlib-259351611210.d.codeartifact.us-east-1.amazonaws.com/nuget/meshlib-vcpkg/v3/index.json" -n "meshlib/meshlib-vcpkg"
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
           Xcopy "C:\Program Files\PackageManagement\NuGet\Packages\vcpkg-export-20230329-153927.1.0.0" C:\vcpkg /E/H/C/I
           C:\vcpkg\vcpkg.exe integrate install
-          choco install cuda --version=11.4.2.47141 --confirm
+          
+          # choco install cuda --version=11.4.2.47141 --confirm
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,8 +50,7 @@ jobs:
           py -3.10 -m pip install -r .\requirements\python.txt
 
       - name: Build
-        run: |
-          MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+        run: msbuild source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Run Test
         working-directory: source\x64\${{ matrix.config }}

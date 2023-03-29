@@ -25,10 +25,12 @@ RUN C:\\Temp\\vs_buildtools.exe --quiet --wait --norestart --nocache \
 RUN powershell -ExecutionPolicy unrestricted -Command \
     iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-RUN choco install cuda --version=11.4.2.47141 --confirm
-RUN copy "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.4\\extras\\visual_studio_integration\\MSBuildExtensions\\*.*" "C:\\Temp\\vcbuildtools\\MSBuild\\Microsoft\\VC\\v160\\BuildCustomizations"
-
-RUN choco install python --version=3.10.0 --confirm
+RUN choco install python --version=3.10.0 --confirm && \
+    choco install cuda --version=11.4.2.47141 --confirm && \
+    copy "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.4\\extras\\visual_studio_integration\\MSBuildExtensions\\*.*" "C:\\Temp\\vcbuildtools\\MSBuild\\Microsoft\\VC\\v160\\BuildCustomizations" && \
+    rmdir "C:\\Program Files\\NVIDIA Corporation" /s /q && \
+    rmdir "C:\\Program Files (x86)\\NVIDIA Corporation" /s /q && \
+    rmdir "C:\\Users\\ContainerAdministrator\\AppData\\Local\\Temp" /s /q
 
 # Copy python requirements
 WORKDIR "C:\\workspace"

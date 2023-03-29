@@ -26,7 +26,6 @@ jobs:
         run: |
           dotnet nuget add source "https://meshlib-259351611210.d.codeartifact.us-east-1.amazonaws.com/nuget/meshlib-vcpkg/v3/index.json" -n "meshlib/meshlib-vcpkg"
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
-          Install-Package vcpkg-export-20230329-153927 -Source "C:\vcpkg\"
           Xcopy "C:\Program Files\PackageManagement\NuGet\Packages\vcpkg-export-20230329-153927.1.0.0" C:\vcpkg /E/H/C/I
           C:\vcpkg\vcpkg.exe integrate install
           choco install cuda --version=11.4.2.47141 --confirm

@@ -142,8 +142,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Login to DockerHub
         uses: docker/login-action@v2

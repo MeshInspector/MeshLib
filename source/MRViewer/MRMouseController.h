@@ -59,6 +59,12 @@ public:
 
     // Activate / diactivate mouse scroll in scene
     MRVIEWER_API void setMouseScroll( bool active );
+
+    // set callback to modify view transform before it is applied to viewport
+    void setTrasformModifierCb( std::function<void( AffineXf3f& )> cb ) { transformModifierCb_ = cb; }
+    
+    // set callback to modify new field of view before it is applied to viewport
+    void setFOVModifierCb( std::function<void( float& )> cb ) { fovModifierCb_ = cb; }
 private:
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
@@ -88,6 +94,9 @@ private:
     MouseModeBackMap backMap_;
 
     bool scrollActive_{ true };
+
+    std::function<void( AffineXf3f& )> transformModifierCb_;
+    std::function<void( float& )> fovModifierCb_;
 };
 
 }

@@ -21,31 +21,42 @@ jobs:
       matrix:
         config: [Debug, Release]
     steps:
-      - name: Clear workspace
-        run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+      - name: Install dependenices
+        working-directory: "C:\vcpkg"
+        run: |
+          dotnet nuget add source "https://meshlib-259351611210.d.codeartifact.us-east-1.amazonaws.com/nuget/meshlib-vcpkg/v3/index.json" -n "meshlib/meshlib-vcpkg"
+          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
+          Install-Package vcpkg-export-20230329-153927 -Source "C:\vcpkg\"
+          Xcopy "C:\Program Files\PackageManagement\NuGet\Packages\vcpkg-export-20230329-153927.1.0.0" C:\vcpkg /E/H/C/I
+          C:\vcpkg\vcpkg.exe integrate install
+          choco install cuda --version=11.4.2.47141 --confirm
 
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Start container
-        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshlib/meshlib-windows:${{inputs.image_tag}} ping -t localhost
+      - name: Setup python
+        working-directory: "C:\vcpkg"
+        run: |
+          py -3.10 -m ensurepip --upgrade
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip install -r requirements\python.txt
 
       - name: Build
         run: |
-          docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+          MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Run Test
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
-        run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Tests
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
+        working-directory: source\x64\${{ matrix.config }}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -58,7 +69,3 @@ jobs:
           name: WindowsArchive
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
-          
-      - name: Remove container
-        if: always()
-        run: docker rm -f meshlib-win

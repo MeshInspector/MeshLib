@@ -75,9 +75,9 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
                 {
                     diagonalA.set( hfidx );
                     if ( canCreateFace( p11, p01, p00 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
-                    if ( canCreateFace( p11, p00, p10 ) )
                         validLoUpTris.set( 2 * hfidx + 1 ); //upper
+                    if ( canCreateFace( p11, p00, p10 ) )
+                        validLoUpTris.set( 2 * hfidx ); //lower
                 }
                 else
                 {
@@ -98,13 +98,13 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
                 {
                     diagonalA.set( hfidx );
                     if ( canCreateFace( p11, p00, p10 ) )
-                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
+                        validLoUpTris.set( 2 * hfidx ); //lower
                 }
                 else if ( !v10 )
                 {
                     diagonalA.set( hfidx );
                     if ( canCreateFace( p11, p01, p00 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
+                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
                 }
                 else if ( !v11 )
                 {

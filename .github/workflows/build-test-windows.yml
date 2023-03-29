@@ -35,7 +35,7 @@ jobs:
       - name: Build
         run: |
           docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Run Test
         working-directory: source\x64\${{ matrix.config }}

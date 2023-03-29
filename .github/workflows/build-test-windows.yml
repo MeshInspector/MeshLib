@@ -33,7 +33,7 @@ jobs:
         run: |
           aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
-          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I
+          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
           C:\vcpkg\vcpkg.exe integrate install
           
           # choco install cuda --version=11.4.2.47141 --confirm
@@ -48,6 +48,9 @@ jobs:
           py -3.10 -m ensurepip --upgrade
           py -3.10 -m pip install --upgrade pip
           py -3.10 -m pip install -r .\requirements\python.txt
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
 
       - name: Build
         run: msbuild source\MeshLib.sln -p:Configuration=${{ matrix.config }}

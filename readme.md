@@ -144,6 +144,9 @@ cd ..
 ### Preparing Third Parties
 Some third parties are taken from vcpkg, while others (missing in vcpkg) are configured as git submodules.
 
+### Cuda
+Please install CUDA v11.4 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
+
 ### Vcpkg
 1. Please install vcpkg, and integrate it into Visual Studio (note that vcpkg requires English language pack in Visual Studio, and vcpkg cannot be installed on FAT volumes, only on NTFS):
     ```sh

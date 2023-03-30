@@ -31,12 +31,12 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   ubuntu20-build-test:
     needs: [ prepare-image, versioning-and-release-url ]

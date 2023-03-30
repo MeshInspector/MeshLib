@@ -37,6 +37,7 @@ jobs:
       - name: Restore HomeBrew x64 libs
         if: ${{ matrix.os == 'x64' }}
         uses: actions/cache@v3
+        id: brew-cache
         with:
           key: macos-brew-cache
           path: |
@@ -47,7 +48,7 @@ jobs:
             /usr/local/opt
 
       - name: Fix HomeBrew links
-        if: ${{ matrix.os == 'x64' && steps.vcpkg-cache.outputs.cache-hit == 'true' }}
+        if: ${{ matrix.os == 'x64' && steps.brew-cache.outputs.cache-hit == 'true' }}
         run: brew doctor
 
       - name: Install thirdparty libs

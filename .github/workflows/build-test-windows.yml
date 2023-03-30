@@ -19,7 +19,7 @@ env:
 
 jobs:
   windows-build-test:
-    timeout-minutes: 60
+    timeout-minutes: 50
     runs-on: windows-2019
     strategy:
       matrix:

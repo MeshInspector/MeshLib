@@ -12,6 +12,15 @@
 namespace MR
 {
 
+const float cRadioInnerSpacingX = 12.f;
+float getScaling()
+{
+    const auto menu = getViewerInstance().getMenuPlugin();
+    if ( menu )
+        return menu->menu_scaling();
+    return 1.f;
+}
+
 std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
 
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
@@ -189,9 +198,16 @@ bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, con
 
 bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float scaling = getScaling();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * getScaling(), style.ItemInnerSpacing.y * getScaling() ) );
     auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
-        return  ImGui::Checkbox( label, value );
+    {
+        const bool res = ImGui::Checkbox( label, value );
+        ImGui::PopStyleVar();
+        return res;
+    }
 
     const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
@@ -199,12 +215,9 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
 
-    const auto menu = getViewerInstance().getMenuPlugin();
-    const float scaling = menu ? menu->menu_scaling() : 1.0f;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImGuiStyle& style = ImGui::GetStyle();
     const float clickSize = ImGui::GetFrameHeight();
 
     ImVec2 pos = window->DC.CursorPos;
@@ -309,6 +322,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleVar();
     return res;
 }
 
@@ -345,9 +359,15 @@ bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, 
 
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )
 {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * getScaling(), style.ItemInnerSpacing.y * getScaling() ) );
     auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
-        return ImGui::RadioButton( label, value, v_button );
+    {
+        const bool res = ImGui::RadioButton( label, value, v_button );
+        ImGui::PopStyleVar();
+        return res;
+    }
 
     const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
@@ -372,7 +392,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
             Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = [bgColor, scaling, clickSize]( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [bgColor, scaling, clickSize, &style]( const char* label, int* v, int v_button )
     {     
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -382,7 +402,6 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         if ( !window || window->SkipItems )
             return false;
 
-        const ImGuiStyle& style = ImGui::GetStyle();
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
@@ -437,6 +456,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
 
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleVar();
     return res;
 }
 

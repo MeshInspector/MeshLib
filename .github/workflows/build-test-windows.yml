@@ -3,9 +3,6 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
-      image_tag:
-        required: true
-        type: string
       version:
         required: true
         type: string
@@ -13,39 +10,97 @@ on:
         required: true
         type: boolean
 
+env:
+  VCPKG-VERSION: '2022.11.14'
+  CUDA-VERSION: '11.4.2.47141'
+  CUDA-MAJOR: '11'
+  CUDA-MINOR: '4'
+
 jobs:
   windows-build-test:
-    timeout-minutes: 60
+    timeout-minutes: 50
     runs-on: windows-2019
     strategy:
       matrix:
         config: [Debug, Release]
     steps:
-      - name: Clear workspace
-        run: Remove-Item -Path "${{ github.workspace }}\*" -Recurse -Force
+      - name: Restore Vcpkg Cache
+        uses: actions/cache@v3
+        id: vcpkg-cache
+        with:
+          key: vcpkg-${{env.VCPKG-VERSION}}
+          path: |
+            C:\vcpkg\build\*
+            C:\vcpkg\installed\*
+            C:\vcpkg\scripts\*
+
+      - name: Configure AWS Credentials
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install dependenices
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        working-directory: C:\vcpkg
+        run: |
+          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
+          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
+          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
+
+      - name: Vcpkg integrate install
+        working-directory: C:\vcpkg
+        run: C:\vcpkg\vcpkg.exe integrate install
+
+      - name: Restore CUDA Cache
+        uses: actions/cache@v3
+        id: cuda-cache
+        with:
+          key: cuda-${{env.CUDA-VERSION}}
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
+
+      - name: Install CUDA
+        if: steps.cuda-cache.outputs.cache-hit != 'true'
+        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+
+      - name: Setup CUDA
+        shell: bash
+        run: |
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+          cp -R "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\extras\\visual_studio_integration\\MSBuildExtensions\\." "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\v160\BuildCustomizations"
 
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Start container
-        run: docker run -d --name meshlib-win --workdir C:\workspace\MeshLib\MeshLib -v ${{ github.workspace }}\..\..:C:\workspace meshlib/meshlib-windows:${{inputs.image_tag}} ping -t localhost
+      - name: Setup python
+        run: |
+          py -3.10 -m ensurepip --upgrade
+          py -3.10 -m pip install --upgrade pip
+          py -3.10 -m pip install -r .\requirements\python.txt
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
 
       - name: Build
-        run: |
-          docker exec meshlib-win C:\vcpkg\vcpkg.exe integrate install
-          docker exec meshlib-win C:\Temp\vcbuildtools\\MSBuild\Current\Bin\MSBuild.exe source\MeshLib.sln -p:Configuration=${{ matrix.config }}
+        run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
       - name: Run Test
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
-        run: docker exec meshlib-win py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
+        run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
       - name: Python Tests
-        run: docker exec -w C:\workspace\MeshLib\MeshLib\source\x64\${{ matrix.config }} meshlib-win py -3 ..\..\..\scripts\run_python_test_script.py
+        working-directory: source\x64\${{ matrix.config }}
+        run: py -3 ..\..\..\scripts\run_python_test_script.py
 
       - name: Archive files # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -58,7 +113,3 @@ jobs:
           name: WindowsArchive
           path: MREDist_${{ matrix.config }}.zip
           retention-days: 1
-          
-      - name: Remove container
-        if: always()
-        run: docker rm -f meshlib-win

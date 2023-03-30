@@ -507,6 +507,8 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
+
     ImGuiWindow* window = FindWindowByName( label );
     if ( !window )
     {
@@ -557,7 +559,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar( 2 );
         if ( params.collapsed && *params.collapsed )
             ImGui::PopStyleVar();
         return false;
@@ -637,7 +639,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         if ( ImGui::Button( *params.collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
             *params.collapsed = !*params.collapsed;
-            ImGui::PopStyleVar( 3 );
+            ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor( 2 );
 
             if (iconsFont )
@@ -682,7 +684,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             ImGui::PopFont();
 
         ImGui::PopStyleColor( 2 );
-        ImGui::PopStyleVar( 3 );
+        ImGui::PopStyleVar( 4 );
         window->DrawList->PopClipRect();
         ImGui::End();
         return false;
@@ -698,6 +700,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.collapsed && *params.collapsed )
     {
+        ImGui::PopStyleVar();
         ImGui::PopStyleColor( 2 );
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
 
@@ -717,7 +720,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::SetCursorPosY( titleBarHeight + style.WindowPadding.y - borderSize );
     if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
     {
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar( 2 );
         ImGui::End();
         return false;
     }
@@ -736,6 +739,7 @@ void EndCustomStatePlugin()
     auto context = ImGui::GetCurrentContext();
     auto window = context->CurrentWindow;
     window->DrawList->PopClipRect();
+    ImGui::PopStyleVar();
     End();
 }
 
@@ -1484,6 +1488,31 @@ bool ModalBigTitle( const char* title, float scaling )
     ImGui::NewLine();
 
     return shoudClose;
+}
+
+bool ModalExitButton( float scaling )
+{
+    ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y - ImGui::GetTextLineHeight() * 0.5f + 4.5f * scaling );
+    const uint32_t crossColor = MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::TabClicked ).getUInt32();
+    ImGui::PushStyleColor( ImGuiCol_Button, 0 );
+    ImGui::PushStyleColor( ImGuiCol_Border, 0 );
+
+    auto drawList = ImGui::GetWindowDrawList();
+    const auto pos = ImGui::GetCursorScreenPos();
+    const float buttonSize = 24.0f * scaling;
+
+    if ( ImGui::Button( "##ExitButton", ImVec2( buttonSize, buttonSize ) ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+    {
+        ImGui::CloseCurrentPopup();
+        ImGui::PopStyleColor( 2 );
+        return true;
+    }
+
+    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.3f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.7f * buttonSize }, crossColor, 2.0f * scaling );
+    drawList->AddLine( { pos.x + 0.3f * buttonSize, pos.y + 0.7f * buttonSize }, { pos.x + 0.7f * buttonSize, pos.y + 0.3f * buttonSize }, crossColor, 2.0f * scaling );
+
+    ImGui::PopStyleColor( 2 );
+    return false;
 }
 
 } // namespace ImGui

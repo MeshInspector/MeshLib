@@ -185,7 +185,7 @@ void Toolbar::drawCustomizeModal_()
         + smallItemSize.x * cToolbarMaxItemCount
         + itemSpacing.x * ( cToolbarMaxItemCount - 1 );
 
-    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 520 * scaling_ );
+    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 530 * scaling_ );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
@@ -210,7 +210,9 @@ void Toolbar::drawCustomizeModal_()
     auto& style = ImGui::GetStyle();
     float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * scaling_ ) );
     ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), cToolbarMaxItemCount );
+    ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
@@ -221,7 +223,8 @@ void Toolbar::drawCustomizeModal_()
     ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
     ImGui::PopStyleColor();
 
-    ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 6 * scaling_ ) + Vector2f( params.itemSize ) );
+    ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * scaling_ ) + Vector2f( params.itemSize ) );
+    ImVec2 tooltipContourSize = ImVec2( Vector2f::diagonal( 2 * scaling_ ) + Vector2f( params.itemSize ) );
     for ( int i = 0; i < itemsListCustomize_.size(); ++i )
     {
         const auto& itemPreview = itemsListCustomize_[i];
@@ -246,22 +249,26 @@ void Toolbar::drawCustomizeModal_()
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
         ImGui::SetNextWindowSize( tooltipSize );
+
+        ImGui::PushStyleColor( ImGuiCol_Border, 0 );
+        ImGui::PushStyleColor( ImGuiCol_WindowBg, 0 );
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
-            RibbonButtonDrawer::GradientButton( "##ToolbarDragDropBtnHighlight", tooltipSize );
-            ImGui::SetCursorPos( ImVec2( 3 * scaling_, 3 * scaling_ ) );
+            ImGui::SetCursorPos( ImVec2( 1 * scaling_, 1 * scaling_ ) );
+            RibbonButtonDrawer::GradientButton( "##ToolbarDragDropBtnHighlight", tooltipContourSize );
+            ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
             ImGui::Button( "##ToolbarDragDropBtn", params.itemSize);
-            ImGui::SetCursorPos( ImVec2( 3 * scaling_, 3 * scaling_ ) );
+            ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
             if ( iterItem != RibbonSchemaHolder::schema().items.end() )
                 buttonDrawer.drawButtonIcon( iterItem->second, params );
             ImGui::EndDragDropSource();
             dragDrop_ = true;
         }
         ImGui::PopStyleVar();
-        ImGui::PopStyleColor( 4 );
+        ImGui::PopStyleColor( 6 );
 
         const ImGuiPayload* peekPayload = ImGui::GetDragDropPayload();
         if ( dragDrop_ && ( !peekPayload || !peekPayload->IsDataType( "ToolbarItemNumber" ) ) )

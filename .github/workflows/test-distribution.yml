@@ -6,14 +6,19 @@ on:
 jobs:
   linux-test:
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        platform: [ 'x86-64', 'arm64']
         os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:37"]
         include:
+          - platform: 'x86-64'
+            runner: ubuntu-latest
+          - platform: 'arm64'
+            runner: [ self-hosted, linux-arm64 ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
             cxx-compiler: /usr/bin/clang++-11
@@ -23,6 +28,10 @@ jobs:
           - os: "fedora:37"
             name: "fedora37"
             cxx-compiler: /usr/bin/clang++-15
+        exclude:
+          - os: "fedora:37"
+            platform: 'arm64'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -34,12 +43,21 @@ jobs:
         with:
           name: Distributives
 
-      - name: Install Ubuntu Release
-        if: ${{ matrix.os != 'fedora:37' }}
+      - name: Install Ubuntu x86-64 Release
+        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
-            apt-get -y install ./*${{matrix.name}}*.deb
+            apt-get -y install ./*${{matrix.name}}-dev.deb
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade -r ./requirements/python.txt
+
+      - name: Install Ubuntu arm64 Release
+        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
+            apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
+            apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade -r ./requirements/python.txt
 

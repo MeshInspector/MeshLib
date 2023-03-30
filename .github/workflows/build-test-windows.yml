@@ -52,6 +52,10 @@ jobs:
           nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
 
+      - name: Vcpkg integrate install
+        working-directory: C:\vcpkg
+        run: C:\vcpkg\vcpkg.exe integrate install
+
       - name: Restore CUDA Cache
         uses: actions/cache@v3
         id: cuda-cache

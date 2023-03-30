@@ -23,10 +23,11 @@ jobs:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.select-tag.outputs.image_tag}}
-      windows_image_tag: ${{ steps.select-tag.outputs.windows_image_tag}}
-      image_path: ${{ steps.set-path.outputs.image_path}}
-      need_rebuild: ${{ steps.need-rebuild.outputs.need_rebuild}}
+      image_tag: ${{ steps.select-tag.outputs.image_tag }}
+      windows_image_tag: ${{ steps.select-tag.outputs.windows_image_tag }}
+      image_path: ${{ steps.set-path.outputs.image_path }}
+      need_linux_rebuild: ${{ steps.need-rebuild.outputs.need_linux_rebuild }}
+      need_windows_rebuild: ${{ steps.need-rebuild.outputs.need_windows_rebuild }}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
       - name: Checkout
@@ -36,7 +37,7 @@ jobs:
 
       - name: Filter Linux paths
         uses: dorny/paths-filter@v2
-        id: changes
+        id: linux-changes
         with:
           filters: |
             src:
@@ -55,14 +56,12 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/windowsDockerfile'
               - 'requirements/windows.txt'
-              - 'requirements/python.txt'
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
       - name: Get branch names
-        if: ${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
+        if: ${{steps.linux-changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}
         id: branch-name
         uses: tj-actions/branch-names@v6.4
 
@@ -72,9 +71,7 @@ jobs:
       - name: Select image tag
         id: select-tag
         run: |
-          echo "image_tag=$([ ${{steps.changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
-          echo "latest")" >> $GITHUB_OUTPUT
-          echo "windows_image_tag=$([ ${{steps.windows-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
+          echo "image_tag=$([ ${{steps.linux-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
           echo "latest")" >> $GITHUB_OUTPUT
 
       - name: Set image tag base path
@@ -85,50 +82,34 @@ jobs:
 
       - name: Checking whether to start image rebuild
         id: need-rebuild
-        run: echo "need_rebuild=${{steps.changes.outputs.src == 'true' || steps.windows-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
+        run: |
+          echo "need_linux_rebuild=${{steps.linux-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
+          echo "need_windows_rebuild=${{steps.windows-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
 
         #                    [os,     runner-label ]
         # for MeshLib:       [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [windows, windows-2019]
         # for MeshInspector: [ubuntu, ubuntu-latest], [fedora, ubuntu-latest], [emscripten, ubuntu-latest]
       - name: Select matrix
         id: matrix-set
+        if: ${{ steps.linux-changes.outputs.src == 'true' }}
         run: |
           echo ${{github.repository}}
-          MATRIX=""
-          if [ "${{ steps.changes.outputs.src }}" == "true" ] && [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            MATRIX=" \
-            {\"include\":[ \
-            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-            {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",   \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"windowsDockerfile\",    \"image\":\"windows\",      \"os\":\"windows-2019\"} \
-            ]}"
-          elif [ "${{ steps.changes.outputs.src }}" == "true" ]; then
-            MATRIX=" \
-            {\"include\":[ \
-            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",       \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",     \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
-            {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",     \"os\":\"ubuntu-latest\"}, \
-            {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",   \"os\":\"ubuntu-latest\"}, \
-            ]}"
-          elif [ "${{ steps.windows-changes.outputs.src }}" == "true" ]; then
-            MATRIX=" \
-            {\"include\":[ \
-            {\"dockerfile\":\"windowsDockerfile\",    \"image\":\"windows\",      \"os\":\"windows-2019\"} \
-            ]}"
-          fi
+          MATRIX=" \
+          {\"include\":[ \
+          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",         \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
+          {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
+          {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",       \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":\"ubuntu-latest\"}, \
+          ]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
           echo "$MATRIX"
 
-  image-build-upload:
+  linux-image-build-upload:
     needs: [image-select]
-    if: ${{ needs.image-select.outputs.need_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 220
+    if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    timeout-minutes: 60
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
@@ -150,23 +131,37 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        if: ${{ matrix.image != 'windows' }}
         run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
 
-      - name: Build Windows image
-        if: ${{ matrix.image == 'windows' }}
-        run: |
-          scripts/runner_instal_vcpkg.bat
-          docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.windows_image_tag}} -m 16GB .
-
       - name: Push Linux image
-        if: ${{ matrix.image != 'windows' }}
         run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}}
-
-      - name: Push Windows image
-        if: ${{ matrix.image == 'windows' }}
-        run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.windows_image_tag}}
 
       - name: Remove unused Docker data
         if: ${{ matrix.image != 'windows' }}
         run: docker system prune --force --all --volumes
+
+  windows-vcpkg-build-upload:
+    needs: [image-select]
+    if: ${{ false }} # @todo implement
+    #if: ${{ needs.image-select.outputs.need_windows_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
+    timeout-minutes: 100
+    runs-on: windows-2019
+    steps:
+      - name: Setup vcpkg
+        working-directory: C:\vcpkg
+        run: |
+          git checkout 2022.11.14
+          call bootstrap-vcpkg.bat
+          sudo vcpkg integrate install
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build vcpkg
+        run: thirdparty\install.bat
+
+      - name: Pack vcpkg
+        run: py -3 scripts/devops/vcpkg-package-export.py
+
+      #- name: Upload vcpkg
+       # run:

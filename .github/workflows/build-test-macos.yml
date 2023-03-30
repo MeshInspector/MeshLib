@@ -34,6 +34,18 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Restore HomeBrew x64 libs
+        if: ${{ matrix.os == 'x64' }}
+        uses: actions/cache@v3
+        with:
+          key: macos-brew-cache
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 

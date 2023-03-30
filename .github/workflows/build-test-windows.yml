@@ -13,6 +13,7 @@ on:
         required: true
         type: boolean
 env:
+  VCPKG-VERSION: '2022.11.14'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -25,6 +26,32 @@ jobs:
       matrix:
         config: [Debug, Release]
     steps:
+      - name: Restore Vcpkg Cache
+        uses: actions/cache@v3
+        id: vcpkg-cache
+        with:
+          key: vcpkg-${{env.VCPKG-VERSION}}
+          path: |
+            C:\vcpkg\build\*
+            C:\vcpkg\installed\*
+            C:\vcpkg\scripts\*
+
+      - name: Configure AWS Credentials
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install dependenices
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        working-directory: C:\vcpkg
+        run: |
+          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
+          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
+          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
+
       - name: Restore CUDA Cache
         uses: actions/cache@v3
         id: cuda-cache
@@ -44,21 +71,6 @@ jobs:
           echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
           cp -R "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\extras\\visual_studio_integration\\MSBuildExtensions\\." "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\v160\BuildCustomizations"
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Install dependenices
-        working-directory: C:\vcpkg
-        run: |
-          aws codeartifact login --tool dotnet --repository meshlib-vcpkg --domain meshlib --domain-owner 259351611210 --region us-east-1
-          nuget install vcpkg-export-20230329-153927 -Source "meshlib/meshlib-vcpkg"
-          Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
-          C:\vcpkg\vcpkg.exe integrate install
 
       - name: Checkout
         uses: actions/checkout@v3

@@ -12,6 +12,10 @@ on:
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
+env:
+  CUDA-VERSION: '11.4.2.47141'
+  CUDA-MAJOR: '11'
+  CUDA-MINOR: '4'
 
 jobs:
   windows-build-test:
@@ -36,14 +40,25 @@ jobs:
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
           C:\vcpkg\vcpkg.exe integrate install
 
-      - uses: Jimver/cuda-toolkit@v0.2.10
-        id: cuda-toolkit
+      - name: Restore CUDA Cache
+        uses: actions/cache@v3
+        id: cuda-cache
         with:
-          cuda: '11.4.2'
+          key: cuda-${{env.CUDA-VERSION}}
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
 
-      - name: Install CUDA MSBuildExtensions
+      - name: Install CUDA
+        if: steps.cuda-cache.outputs.cache-hit == 'false'
+        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+
+      - name: Setup CUDA
+        shell: bash
         run: |
-          copy "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.4\\extras\\visual_studio_integration\\MSBuildExtensions\\*.*" "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\MSBuild\\Microsoft\\VC\\v160\\BuildCustomizations"
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+          cp -R "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\extras\\visual_studio_integration\\MSBuildExtensions\\." "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\v160\BuildCustomizations"
 
       - name: Checkout
         uses: actions/checkout@v3

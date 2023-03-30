@@ -97,6 +97,7 @@ jobs:
           MATRIX=" \
           {\"include\":[ \
           {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",         \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu20-pip\",   \"os\":\"ubuntu-latest\"}, \"build-arg\":\"--build-arg MR_BUILD_STATIC_THIRDPARTY="ON"\",  \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
@@ -131,7 +132,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Linux image
-        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain
+        run: docker build -f ./docker/${{matrix.dockerfile}} -t ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}} . --progress=plain ${{matrix.build-arg}}
 
       - name: Push Linux image
         run: docker push ${{env.DOCKERHUB_BASE_PATH}}-${{matrix.image}}:${{needs.image-select.outputs.image_tag}}

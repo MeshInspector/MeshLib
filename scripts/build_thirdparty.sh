@@ -63,6 +63,9 @@ MR_THIRDPARTY_DIR="thirdparty/"
 MR_THIRDPARTY_BUILD_DIR="thirdparty_build"
 MR_THIRDPARTY_LIB_DIR="lib/"
 MR_THIRDPARTY_INCLUDE_DIR="include/"
+# using env value of "OFF" as default
+MR_BUILD_STATIC_THIRDPARTY=${MR_BUILD_STATIC_THIRDPARTY_ENV:-"OFF"}
+echo "MR_BUILD_STATIC_THIRDPARTY = ${MR_BUILD_STATIC_THIRDPARTY}"
 
 #build Third party
 rm -rf "${MR_THIRDPARTY_BUILD_DIR}"
@@ -85,7 +88,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   EMCC_DEBUG=0 emmake make  extra_inc=big_iron.inc VERBOSE=1  tbb
   cd ..
 else
-  cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../
+  cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../ -DMR_BUILD_STATIC_THIRDPARTY=${MR_BUILD_STATIC_THIRDPARTY}
   cmake --build . -j `nproc`  #VERBOSE=1
   cmake --install .
 fi

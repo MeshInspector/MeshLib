@@ -1,5 +1,8 @@
 FROM ubuntu:20.04 AS build
 
+ARG MR_BUILD_STATIC_THIRDPARTY="OFF"
+ENV MR_BUILD_STATIC_THIRDPARTY_ENV=${BUILD_STATIC}
+
 # update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
@@ -69,7 +72,7 @@ RUN ./scripts/install_thirdparty.sh && \
     sudo ldconfig
 
 # Add a new user "actions-runner" with user id 8877
-RUN useradd -u 8877 -m user
+RUN useradd -u 8877 -m user && echo "user:user" | chpasswd && adduser user sudo
 
 # Change to non-root privilege
 USER user

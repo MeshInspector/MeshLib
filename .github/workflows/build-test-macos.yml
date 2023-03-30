@@ -47,7 +47,9 @@ jobs:
             /usr/local/opt
 
       - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
+        run: |
+          brew doctor
+          ./scripts/build_thirdparty.sh
 
       - name: Build
         run: ./scripts/build_source.sh

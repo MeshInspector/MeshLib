@@ -12,6 +12,7 @@ on:
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
+
 env:
   VCPKG-VERSION: '2022.11.14'
   CUDA-VERSION: '11.4.2.47141'

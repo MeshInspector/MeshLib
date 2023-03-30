@@ -3,9 +3,6 @@ name: Build and test Windows
 on:
   workflow_call:
     inputs:
-      image_tag:
-        required: true
-        type: string
       version:
         required: true
         type: string

@@ -559,7 +559,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     if ( !Begin( label, open, flags | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         *open = false;
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar( 2 );
         if ( params.collapsed && *params.collapsed )
             ImGui::PopStyleVar();
         return false;
@@ -639,7 +639,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         if ( ImGui::Button( *params.collapsed ? "\xef\x84\x85" : "\xef\x84\x87", { buttonSize, buttonSize } ) )// minimize/maximize button
         {
             *params.collapsed = !*params.collapsed;
-            ImGui::PopStyleVar( 3 );
+            ImGui::PopStyleVar( 4 );
             ImGui::PopStyleColor( 2 );
 
             if (iconsFont )
@@ -684,7 +684,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             ImGui::PopFont();
 
         ImGui::PopStyleColor( 2 );
-        ImGui::PopStyleVar( 3 );
+        ImGui::PopStyleVar( 4 );
         window->DrawList->PopClipRect();
         ImGui::End();
         return false;
@@ -700,6 +700,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     if ( params.collapsed && *params.collapsed )
     {
+        ImGui::PopStyleVar();
         ImGui::PopStyleColor( 2 );
         const auto borderColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_Border ) );
 
@@ -719,7 +720,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::SetCursorPosY( titleBarHeight + style.WindowPadding.y - borderSize );
     if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
     {
-        ImGui::PopStyleVar();
+        ImGui::PopStyleVar( 2 );
         ImGui::End();
         return false;
     }

@@ -9,6 +9,7 @@
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRVector2.h"
 #include "imgui/imgui_internal.h"
+#include "MRUIStyle.h"
 
 namespace MR
 {
@@ -224,7 +225,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleColor();
 
     ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * scaling_ ) + Vector2f( params.itemSize ) );
-    ImVec2 tooltipContourSize = ImVec2( Vector2f::diagonal( 2 * scaling_ ) + Vector2f( params.itemSize ) );
+    Vector2f tooltipContourSize = Vector2f::diagonal( 2 * scaling_ ) + Vector2f( params.itemSize );
     for ( int i = 0; i < itemsListCustomize_.size(); ++i )
     {
         const auto& itemPreview = itemsListCustomize_[i];
@@ -258,7 +259,7 @@ void Toolbar::drawCustomizeModal_()
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
             ImGui::SetCursorPos( ImVec2( 1 * scaling_, 1 * scaling_ ) );
-            RibbonButtonDrawer::GradientButton( "##ToolbarDragDropBtnHighlight", tooltipContourSize );
+            UI::button( "##ToolbarDragDropBtnHighlight", tooltipContourSize );
             ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
             ImGui::Button( "##ToolbarDragDropBtn", params.itemSize);
             ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
@@ -361,7 +362,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
     ImGui::SameLine();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 ) );
-    if ( RibbonButtonDrawer::GradientButton( "Reset to default", ImVec2( buttonWidth, 0 ) ) )
+    if ( UI::button( "Reset to default", Vector2f( buttonWidth, 0 ) ) )
     {
         resetItemsList();
         itemsListCustomize_ = itemsList_;

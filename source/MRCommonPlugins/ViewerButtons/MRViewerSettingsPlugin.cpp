@@ -14,6 +14,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRViewer/MRSpaceMouseHandlerWindows.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -61,19 +62,19 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto& style = ImGui::GetStyle();
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
 
-    if ( RibbonButtonDrawer::GradientButton( "Toolbar Customize", ImVec2( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
+    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->openToolbarCustomize();
 
     ImGui::SameLine();
-    if ( RibbonButtonDrawer::GradientButton( "Scene Mouse Controls", ImVec2( btnHalfSizeX, 0 ) ) )
+    if ( UI::button( "Scene Mouse Controls", Vector2f( btnHalfSizeX, 0 ) ) )
         ImGui::OpenPopup( "Scene Mouse Controls" );
     drawMouseSceneControlsSettings_( menuScaling );
 
-    if ( RibbonButtonDrawer::GradientButton( "Show Hotkeys", ImVec2( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
+    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->setShowShortcuts( true );
 
     ImGui::SameLine();
-    if ( RibbonButtonDrawer::GradientButton( "Spacemouse Settings", ImVec2( btnHalfSizeX, 0 ) ) )
+    if ( UI::button( "Spacemouse Settings", Vector2f( btnHalfSizeX, 0 ) ) )
     {
         auto& viewerRef = getViewerInstance();
         spaceMouseParams_ = viewerRef.spaceMouseController.getParams();
@@ -182,11 +183,9 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( item != RibbonSchemaHolder::schema().items.end() )
         {
             ImGui::SameLine( menuWidth * 0.75f );
-            if ( RibbonButtonDrawer::GradientButtonValid( "Add",
-                item->second.item->isAvailable(
-                    getAllObjectsInTree<const Object>( &SceneRoot::get(),
-                        ObjectSelectivityType::Selected ) ).empty(),
-                ImVec2( menuWidth * 0.20f, 0 ) ) )
+            if ( UI::button( "Add",
+                item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
+                Vector2f( menuWidth * 0.20f, 0 ) ) )
             {
                 item->second.item->action();
             }
@@ -393,7 +392,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SetCursorPosX( windowSize.x - 150.0f );
 
 		ImGui::SetCursorPosY( posY );
-        RibbonButtonDrawer::GradientButton( "Set other", ImVec2( -1, buttonHeight ) );
+        UI::button( "Set other", Vector2f( -1, buttonHeight ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
@@ -519,7 +518,7 @@ void ViewerSettingsPlugin::drawModalExitButton_( float scaling )
     font->Scale = 0.6f;
     ImGui::PushFont( font );
     const float btnSize = 20 * scaling;
-    if ( RibbonButtonDrawer::GradientButton( "\xef\x80\x8d", ImVec2( btnSize , btnSize ) ) )
+    if ( UI::button( "\xef\x80\x8d", Vector2f( btnSize , btnSize ) ) )
         ImGui::CloseCurrentPopup();
     ImGui::PopFont();
     ImGui::SetCursorPos( oldCursorPos );

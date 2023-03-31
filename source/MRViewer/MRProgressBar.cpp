@@ -8,6 +8,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRRibbonConstants.h"
+#include "MRUIStyle.h"
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
@@ -67,7 +68,7 @@ void ProgressBar::setup( float scaling )
             {
                 ImGui::SetCursorPosX( ( ImGui::GetWindowWidth() + ImGui::GetContentRegionAvail().x ) * 0.5f - 75.0f * scaling );
 				const float btnHeight = ImGui::CalcTextSize( "SDC" ).y + cGradientButtonFramePadding * scaling;
-                if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
+                if ( UI::button( "Cancel", Vector2f( 75.0f * scaling, btnHeight ), ImGuiKey_Escape ) )
                     instance.canceled_ = true;
             }
             else

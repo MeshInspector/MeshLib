@@ -1211,17 +1211,29 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
 
     stopUpdatingValids();
 
-    // resize and resizeNoInit since some vertices/faces/edges might be missed
-    edgePerVertex_.resize( size_t( settings.dim.x + 1 ) * ( settings.dim.y + 1 ) );
-    edgePerFace_.resize( 2 * size_t( settings.dim.x ) * settings.dim.y );
+    // we use resizeNoInit because expect vertices/faces/edges to be tightly packed (no deleted elements within valid range)
+    edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
+    edgePerFace_.resizeNoInit( settings.faceIds.tsize );
+    edges_.resizeNoInit( settings.edgeIds.tsize );
 
-    const auto es = 2 * (
-          edgePerFace_.size() / 2   // diagonal edges
-        + edgePerVertex_.size() * 2 // each internal vertex has 4 horizontal/vertical edges, each of which is shared by 2 vertices
-        - ( settings.dim.x + 1 ) - ( settings.dim.y + 1 ) ); // less edges in boundary vertices
-    edges_.reserve( es );
-    while ( edges_.size() < es )
-        (void)makeEdge();
+    auto getVertId = [&]( Vector2i v ) -> VertId
+    {
+        if ( v.x < 0 || v.x > settings.dim.x || v.y < 0 || v.y > settings.dim.y )
+            return VertId();
+        return settings.vertIds.b[ v.x + v.y * ( settings.dim.x + 1 ) ];
+    };
+    auto getFaceId = [&]( Vector2i v, GridSettings::TriType triType ) -> FaceId
+    {
+        if ( v.x < 0 || v.x >= settings.dim.x || v.y < 0 || v.y >= settings.dim.y )
+            return FaceId();
+        return settings.faceIds.b[ 2 * ( v.x + v.y * settings.dim.x ) + (int)triType ];
+    };
+    auto getEdgeId = [&]( Vector2i v, GridSettings::EdgeType edgeType ) -> EdgeId
+    {
+        if ( v.x < 0 || v.x > settings.dim.x || v.y < 0 || v.y > settings.dim.y )
+            return EdgeId();
+        return settings.edgeIds.b[ 4 * ( v.x + v.y * ( settings.dim.x + 1 ) ) + (int)edgeType ];
+    };
 
     struct EdgeFace
     {
@@ -1236,70 +1248,70 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
         for ( pos.y = range.begin(); pos.y < range.end(); ++pos.y )
             for ( pos.x = 0; pos.x <= settings.dim.x; ++pos.x )
             {
-                if ( auto da = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
+                if ( auto da = getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
                 {
-                    if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
+                    if ( const auto fl = getFaceId( pos, GridSettings::TriType::Lower ) )
                         edgePerFace_[fl] = da.sym();
-                    if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
+                    if ( const auto fu = getFaceId( pos, GridSettings::TriType::Upper ) )
                         edgePerFace_[fu] = da;
                 }
-                else if ( auto db = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalB ) )
+                else if ( auto db = getEdgeId( pos, GridSettings::EdgeType::DiagonalB ) )
                 {
-                    if ( const auto fl = settings.getFaceId( pos, GridSettings::TriType::Lower ) )
+                    if ( const auto fl = getFaceId( pos, GridSettings::TriType::Lower ) )
                         edgePerFace_[fl] = db;
-                    if ( const auto fu = settings.getFaceId( pos, GridSettings::TriType::Upper ) )
+                    if ( const auto fu = getFaceId( pos, GridSettings::TriType::Upper ) )
                         edgePerFace_[fu] = db.sym();
                 }
-                const auto v = settings.getVertId( pos );
+                const auto v = getVertId( pos );
                 if ( !v )
                     continue;
                 edgeRing.clear();
 
                 // edge (+1, 0)
-                if ( auto e = settings.getEdgeId( pos, GridSettings::EdgeType::Horizontal ) )
-                    edgeRing.push_back( { e, settings.getFaceId( pos, GridSettings::TriType::Lower ) } );
+                if ( auto e = getEdgeId( pos, GridSettings::EdgeType::Horizontal ) )
+                    edgeRing.push_back( { e, getFaceId( pos, GridSettings::TriType::Lower ) } );
 
                 // edge (+1, +1)
-                if ( auto e = settings.getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
-                    edgeRing.push_back( { e, settings.getFaceId( pos, GridSettings::TriType::Upper ) } );
+                if ( auto e = getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )
+                    edgeRing.push_back( { e, getFaceId( pos, GridSettings::TriType::Upper ) } );
 
                 // edge (0, +1)
-                if ( auto e = settings.getEdgeId( pos, GridSettings::EdgeType::Vertical ) )
+                if ( auto e = getEdgeId( pos, GridSettings::EdgeType::Vertical ) )
                 {
-                    if ( settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalA ) )
-                        edgeRing.push_back( { e, settings.getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Lower ) } );
-                    else if ( settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalB ) )
-                        edgeRing.push_back( { e, settings.getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Upper ) } );
+                    if ( getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalA ) )
+                        edgeRing.push_back( { e, getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Lower ) } );
+                    else if ( getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalB ) )
+                        edgeRing.push_back( { e, getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Upper ) } );
                     else
                         edgeRing.push_back( { e, FaceId{} } );
                 }
 
                 // edge (-1, +1)
-                if ( auto e = settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalB ) )
-                    edgeRing.push_back( { e, settings.getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Lower ) } );
+                if ( auto e = getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::DiagonalB ) )
+                    edgeRing.push_back( { e, getFaceId( pos - Vector2i(1, 0), GridSettings::TriType::Lower ) } );
 
                 // edge (-1, 0)
-                if ( auto e = settings.getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::Horizontal ) )
-                    edgeRing.push_back( { e.sym(), settings.getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Upper ) } );
+                if ( auto e = getEdgeId( pos - Vector2i(1, 0), GridSettings::EdgeType::Horizontal ) )
+                    edgeRing.push_back( { e.sym(), getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Upper ) } );
 
                 // edge (-1, -1)
-                if ( auto e = settings.getEdgeId( pos - Vector2i(1, 1), GridSettings::EdgeType::DiagonalA ) )
-                    edgeRing.push_back( { e.sym(), settings.getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Lower ) } );
+                if ( auto e = getEdgeId( pos - Vector2i(1, 1), GridSettings::EdgeType::DiagonalA ) )
+                    edgeRing.push_back( { e.sym(), getFaceId( pos - Vector2i(1, 1), GridSettings::TriType::Lower ) } );
 
                 // edge (0, -1)
-                if ( auto e = settings.getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::Vertical ) )
+                if ( auto e = getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::Vertical ) )
                 {
-                    if ( settings.getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalA ) )
-                        edgeRing.push_back( { e.sym(), settings.getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Upper ) } );
-                    else if ( settings.getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalB ) )
-                        edgeRing.push_back( { e.sym(), settings.getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Lower ) } );
+                    if ( getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalA ) )
+                        edgeRing.push_back( { e.sym(), getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Upper ) } );
+                    else if ( getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalB ) )
+                        edgeRing.push_back( { e.sym(), getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Lower ) } );
                     else
                         edgeRing.push_back( { e.sym(), FaceId{} } );
                 }
 
                 // edge (+1, -1)
-                if ( auto e = settings.getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalB ) )
-                    edgeRing.push_back( { e.sym(), settings.getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Upper ) } );
+                if ( auto e = getEdgeId( pos - Vector2i(0, 1), GridSettings::EdgeType::DiagonalB ) )
+                    edgeRing.push_back( { e.sym(), getFaceId( pos - Vector2i(0, 1), GridSettings::TriType::Upper ) } );
 
                 if ( edgeRing.empty() )
                 {

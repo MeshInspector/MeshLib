@@ -3,6 +3,7 @@
 #include "MRTriMath.h"
 #include "MRVector2.h"
 #include "MRMeshDelone.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 
@@ -16,122 +17,123 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 {
     MR_TIMER
     Mesh res;
-    res.points.resize( width * height );
+
+    MeshTopology::GridSettings gs =
+    {
+        .dim = Vector2i( (int)width - 1, (int)height - 1 )
+    };
 
     BitSet validGridVerts( width * height );
-
-    for ( int y = 0; y < height; y++ )
+    gs.vertIds.b.resize( width * height );
+    BitSetParallelForAll( validGridVerts, [&]( size_t p )
     {
-        for ( int x = 0; x < width; x++ )
-        {
-            auto vidx = width * y + x;
-            if ( !validator( x, y ) )
-                continue;
-            res.points[VertId( vidx )] = positioner( x, y );
-            validGridVerts.set( vidx );
-        }
-    }
+        auto y = p / width;
+        auto x = p - y * width;
+        if ( validator( x, y ) )
+            validGridVerts.set( p );
+        else
+            gs.vertIds.b[p] = VertId{};
+    } );
 
-    auto getVertId = [&]( Vector2i v )
+    VertId nextVertId{ 0 };
+    for ( auto p : validGridVerts )
+        gs.vertIds.b[p] = nextVertId++;
+
+    const auto vertSize = size_t( nextVertId );
+    gs.vertIds.tsize = vertSize;
+    res.points.resize( vertSize );
+    BitSetParallelFor( validGridVerts, [&]( size_t p )
     {
-        if ( v.x < 0 || v.x >= width || v.y < 0 || v.y >= height )
-            return VertId();
-        auto vidx = width * v.y + v.x;
-        return validGridVerts.test( vidx ) ? VertId( vidx ) : VertId();
-    };
+        auto y = p / width;
+        auto x = p - y * width;
+        res.points[gs.vertIds.b[p]] = positioner( x, y );
+    } );
 
     BitSet validLoUpTris( 2 * ( width - 1 ) * ( height - 1 ) );
     BitSet diagonalA( ( width - 1 ) * ( height - 1 ) ); // if one of triangles is valid
 
-    for ( int y = 0; y + 1 < height; y++ )
+    auto getVertId = [&]( Vector2i pos ) -> VertId
     {
-        for ( int x = 0; x + 1 < width; x++ )
-        {
-            auto hfidx = ( width - 1 ) * y + x;
-
-            const Vector2i p00{ x, y };
-            const Vector2i p01{ x, y + 1 };
-            const Vector2i p10{ x + 1, y };
-            const Vector2i p11{ x + 1, y + 1 };
-
-            const auto v00 = getVertId( p00 );
-            const auto v01 = getVertId( p01 );
-            const auto v10 = getVertId( p10 );
-            const auto v11 = getVertId( p11 );
-            const auto count = v00.valid() + v01.valid() + v10.valid() + v11.valid();
-
-            auto canCreateFace = [&]( Vector2i a, Vector2i b, Vector2i c )
-            {
-                if ( !faceValidator )
-                    return true;
-                return faceValidator( a.x, a.y, b.x, b.y, c.x, c.y );
-            };
-
-            switch ( count )
-            {
-            case 4:
-                // two possible triangles
-                if ( checkDeloneQuadrangle( res.points[v00], res.points[v01], res.points[v11], res.points[v10] ) )
-                {
-                    diagonalA.set( hfidx );
-                    if ( canCreateFace( p11, p01, p00 ) )
-                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
-                    if ( canCreateFace( p11, p00, p10 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
-                }
-                else
-                {
-                    if ( canCreateFace( p01, p00, p10 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
-                    if ( canCreateFace( p01, p10, p11 ) )
-                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
-                }
-                break;
-            case 3:
-                // one possible triangle
-                if ( !v00 )
-                {
-                    if ( canCreateFace( p01, p10, p11 ) )
-                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
-                }
-                else if ( !v01 )
-                {
-                    diagonalA.set( hfidx );
-                    if ( canCreateFace( p11, p00, p10 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
-                }
-                else if ( !v10 )
-                {
-                    diagonalA.set( hfidx );
-                    if ( canCreateFace( p11, p01, p00 ) )
-                        validLoUpTris.set( 2 * hfidx + 1 ); //upper
-                }
-                else if ( !v11 )
-                {
-                    if ( canCreateFace( p01, p00, p10 ) )
-                        validLoUpTris.set( 2 * hfidx ); //lower
-                }
-                break;
-            case 2:
-            case 1:
-            case 0:
-                // no possible triangles
-                break;
-            }
-        }
-    }
-
-    auto getFaceId = [&]( Vector2i v, MeshTopology::GridSettings::TriType tt )
-    {
-        if ( v.x < 0 || v.x + 1 >= width || v.y < 0 || v.y + 1 >= height )
-            return FaceId();
-        auto fidx = 2 * ( ( width - 1 ) * v.y + v.x );
-        if ( tt == MeshTopology::GridSettings::TriType::Upper )
-            ++fidx;
-        return validLoUpTris.test( fidx ) ? FaceId( fidx ) : FaceId();
+        if ( pos.x < 0 || pos.x >= width || pos.y < 0 || pos.y >= height )
+            return VertId();
+        return gs.vertIds.b[pos.x + pos.y * width];
     };
 
-    auto getEdgeId = [&]( Vector2i v, MeshTopology::GridSettings::EdgeType et )
+    gs.faceIds.b.resize( validLoUpTris.size() );
+    BitSetParallelForAll( diagonalA, [&]( size_t p )
+    {
+        const auto y = int( p / ( width - 1 ) );
+        const auto x = int( p - y * ( width - 1 ) );
+        const Vector2i p00{ x, y };
+        const Vector2i p01{ x, y + 1 };
+        const Vector2i p10{ x + 1, y };
+        const Vector2i p11{ x + 1, y + 1 };
+
+        const auto v00 = getVertId( p00 );
+        const auto v01 = getVertId( p01 );
+        const auto v10 = getVertId( p10 );
+        const auto v11 = getVertId( p11 );
+        const auto count = v00.valid() + v01.valid() + v10.valid() + v11.valid();
+
+        auto createFace = [&]( Vector2i a, Vector2i b, Vector2i c, size_t fidx )
+        {
+            if ( !faceValidator || faceValidator( a.x, a.y, b.x, b.y, c.x, c.y ) )
+                validLoUpTris.set( fidx );
+            else
+                gs.faceIds.b[fidx] = FaceId{};
+        };
+
+        switch ( count )
+        {
+        case 4:
+            // two possible triangles
+            if ( checkDeloneQuadrangle( res.points[v00], res.points[v01], res.points[v11], res.points[v10] ) )
+            {
+                diagonalA.set( p );
+                createFace( p11, p01, p00, 2 * p + 1 ); //upper
+                createFace( p11, p00, p10, 2 * p ); //lower
+            }
+            else
+            {
+                createFace( p01, p00, p10, 2 * p ); //lower
+                createFace( p01, p10, p11, 2 * p + 1 ); //upper
+            }
+            break;
+        case 3:
+            // one possible triangle
+            if ( !v00 )
+            {
+                createFace( p01, p10, p11, 2 * p + 1 ); //upper
+            }
+            else if ( !v01 )
+            {
+                diagonalA.set( p );
+                createFace( p11, p00, p10, 2 * p ); //lower
+            }
+            else if ( !v10 )
+            {
+                diagonalA.set( p );
+                createFace( p11, p01, p00, 2 * p + 1 ); //upper
+            }
+            else if ( !v11 )
+            {
+                createFace( p01, p00, p10, 2 * p ); //lower
+            }
+            break;
+        case 2:
+        case 1:
+        case 0:
+            // no possible triangles
+            break;
+        }
+    } );
+
+    FaceId nextFaceId{ 0 };
+    for ( auto p : validLoUpTris )
+        gs.faceIds.b[p] = nextFaceId++;
+    gs.faceIds.tsize = size_t( nextFaceId );
+
+    auto hasEdge = [&]( Vector2i v, MeshTopology::GridSettings::EdgeType et )
     {
         VertId v0;
         if ( et != MeshTopology::GridSettings::EdgeType::DiagonalB )
@@ -139,7 +141,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
         else 
             v0 = getVertId( Vector2i{ v.x + 1, v.y } );
         if ( !v0 )
-            return EdgeId();
+            return false;
 
         VertId v1;
         switch ( et )
@@ -154,39 +156,51 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
             v1 = getVertId( Vector2i{ v.x, v.y + 1 } );
         }
         if ( !v1 )
-            return EdgeId();
+            return false;
 
-        auto ueidx = ( 3 * width - 2 ) * v.y;
         if ( v.y + 1 == height )
         {
-            ueidx += v.x;
             assert ( et == MeshTopology::GridSettings::EdgeType::Horizontal );
             assert ( v.x + 1 < width );
-            return EdgeId( 2 * ueidx );
+            return true;
         }
-        ueidx += 3 * v.x;
         if ( v.x + 1 == width && et != MeshTopology::GridSettings::EdgeType::DiagonalB )
         {
             assert ( et == MeshTopology::GridSettings::EdgeType::Vertical );
-            return EdgeId( 2 * ueidx );
+            return true;
         }
         if ( et == MeshTopology::GridSettings::EdgeType::Horizontal )
-            return EdgeId( 2 * ueidx );
+            return true;
         if ( et == MeshTopology::GridSettings::EdgeType::Vertical )
-            return EdgeId( 2 * ( ueidx + 1 ) );
+            return true;
         auto hfidx = ( width - 1 ) * v.y + v.x;
         if ( !validLoUpTris.test( 2 * hfidx ) && !validLoUpTris.test( 2 * hfidx + 1 ) )
-            return EdgeId();
-        return diagonalA.test( hfidx ) == ( et == MeshTopology::GridSettings::EdgeType::DiagonalA ) ? EdgeId( 2 * ( ueidx + 2 ) ) : EdgeId();
+            return false;
+        return diagonalA.test( hfidx ) == ( et == MeshTopology::GridSettings::EdgeType::DiagonalA );
     };
 
-    MeshTopology::GridSettings gs =
+    BitSet validGridEdges( 4 * width * height );
+    gs.edgeIds.b.resize( 4 * width * height );
+    BitSetParallelForAll( validGridEdges, [&]( size_t loc )
     {
-        .dim = Vector2i( (int)width - 1, (int)height - 1),
-        .getVertId = getVertId,
-        .getEdgeId = getEdgeId,
-        .getFaceId = getFaceId
-    };
+        auto p = loc / 4;
+        auto et = MeshTopology::GridSettings::EdgeType( loc - p * 4 );
+        auto y = int( p / width );
+        auto x = int( p - y * width );
+        if ( hasEdge( { x, y }, et ) )
+            validGridEdges.set( loc );
+        else
+            gs.edgeIds.b[loc] = EdgeId{};
+    } );
+
+    EdgeId nextEdgeId{ 0 };
+    for ( auto p : validGridEdges )
+    {
+        gs.edgeIds.b[p] = nextEdgeId;
+        ++++nextEdgeId;
+    }
+    gs.edgeIds.tsize = size_t( nextEdgeId );
+
     res.topology.buildGridMesh( gs );
     assert( res.topology.checkValidity() );
     return res;
@@ -199,15 +213,15 @@ TEST(MRMesh, makeRegularGridMesh)
          []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } );
      ASSERT_TRUE( m.topology.checkValidity() );
 
-    m = makeRegularGridMesh( 2, 3,
-        []( size_t, size_t ) { return true; },
-        []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } );
-    ASSERT_TRUE( m.topology.checkValidity() );
+     m = makeRegularGridMesh( 2, 3,
+         []( size_t, size_t ) { return true; },
+         []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } );
+     ASSERT_TRUE( m.topology.checkValidity() );
 
-    m = makeRegularGridMesh( 5, 3,
-        []( size_t, size_t ) { return true; },
-        []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } );
-    ASSERT_TRUE( m.topology.checkValidity() );
+     m = makeRegularGridMesh( 5, 3,
+         []( size_t, size_t ) { return true; },
+         []( size_t x, size_t y ) { return Vector3f( (float)x, (float)y, 0 ); } );
+     ASSERT_TRUE( m.topology.checkValidity() );
 }
 
 }

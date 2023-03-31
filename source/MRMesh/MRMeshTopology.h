@@ -8,6 +8,7 @@
 #include "MRMeshTriPoint.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRBuffer.h"
 #include <fstream>
 
 namespace MR
@@ -349,8 +350,10 @@ public:
     {
         /// the number of cells in X and Y dimensions
         Vector2i dim;
-        /// grid coordinates to vertex Id; invalid vertex Id means that this vertex is missing in grid
-        std::function<VertId(Vector2i)> getVertId;
+        /// grid coordinates to vertex Id; invalid vertex Id means that this vertex is missing in grid;
+        /// index is x + y * ( settings.dim.x + 1 )
+        BMap<VertId, size_t> vertIds;
+
         enum class EdgeType
         {
             Horizontal,  // (x,y) - (x+1,y)
@@ -361,16 +364,19 @@ public:
         };
         /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex;
         /// both vertices of valid edge must be valid as well;
-        /// oppositly directed edges must be related by .sym() operation or both must be invalid
-        std::function<EdgeId(Vector2i, EdgeType)> getEdgeId;
+        /// oppositly directed edges must be related by .sym() operation or both must be invalid;
+        /// index is 4 * ( x + y * ( settings.dim.x + 1 ) ) + edgeType
+        BMap<EdgeId, size_t> edgeIds;
+
         enum class TriType
         {
             Lower, // (x,y), (x+1,y), (x+1,y+1) if DiagonalA or (x,y), (x+1,y), (x,y+1) if DiagonalB
             Upper  // (x,y), (x+1,y+1), (x,y+1) if DiagonalA or (x+1,y), (x+1,y+1), (x,y+1) if DiagonalB
         };
         /// grid coordinates of lower-left vertex and triangle-type to faceId;
-        /// all 3 vertices and all 3 edges of valid face must be valid as well
-        std::function<FaceId(Vector2i, TriType)> getFaceId;
+        /// all 3 vertices and all 3 edges of valid face must be valid as well;
+        /// index is 2 * ( x + y * settings.dim.x ) + triType
+        BMap<FaceId, size_t> faceIds;
     };
     // constructs triangular grid mesh topology in parallel
     MRMESH_API void buildGridMesh( const GridSettings & settings );

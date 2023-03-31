@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [ x64, arm ]
+        os: 'x64' # [ x64, arm ]
         config: [Release]
         compiler: [Сlang]
         include:
@@ -25,8 +25,8 @@ jobs:
             c-compiler: /usr/bin/clang
           - os: x64
             runner: macos-latest
-          - os: arm
-            runner: macos-arm-build
+          # - os: arm
+            # runner: macos-arm-build
 
     steps:
       - name: Checkout

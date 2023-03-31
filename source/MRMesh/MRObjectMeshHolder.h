@@ -158,6 +158,8 @@ public:
 
     /// returns cached information about the number of holes in the mesh
     MRMESH_API size_t numHoles() const;
+    /// returns cached information about the number of components in the mesh
+    MRMESH_API size_t numComponents() const;
 
 protected:
     FaceBitSet selectedTriangles_;

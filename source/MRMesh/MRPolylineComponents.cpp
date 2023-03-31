@@ -5,6 +5,7 @@
 #include "MRTimer.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
+#include "MRPch/MRTBB.h"
 
 namespace
 {
@@ -37,6 +38,28 @@ namespace MR
 
 namespace PolylineComponents
 {
+
+size_t getNumComponents( const PolylineTopology& topology )
+{
+    MR_TIMER;
+    auto unionFindStruct = getUnionFindStructure( topology );
+
+    std::atomic<size_t> res{ 0 };
+    tbb::parallel_for( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId( unionFindStruct.size() ) ),
+        [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
+    {
+        size_t myRoots = 0;
+        for ( auto ue = range.begin(); ue < range.end(); ++ue )
+        {
+            if ( !topology.hasEdge( ue ) )
+                continue;
+            if ( ue == unionFindStruct.findUpdateRange( ue, range.begin(), range.end() ) )
+                ++myRoots;
+        }
+        res.fetch_add( myRoots, std::memory_order_relaxed );
+    } );
+    return res;
+}
 
 UndirectedEdgeBitSet getComponent( const PolylineTopology& topology, UndirectedEdgeId id )
 {

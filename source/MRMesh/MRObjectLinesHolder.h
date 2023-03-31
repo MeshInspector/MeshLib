@@ -68,7 +68,9 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
-
+    
+    /// returns cached information about the number of components in the polyline
+    MRMESH_API size_t numComponents() const;
 protected:
     MRMESH_API ObjectLinesHolder( const ObjectLinesHolder& other );
 
@@ -83,6 +85,7 @@ protected:
 
     MRMESH_API virtual void setupRenderObject_() const override;
 
+    mutable std::optional<size_t> numComponents_;
     mutable std::optional<float> totalLength_;
     mutable ViewportProperty<XfBasedCache<Box3f>> worldBox_;
 

@@ -16,6 +16,7 @@
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRUIStyle.h"
 
 namespace ImGui
 {
@@ -876,10 +877,10 @@ bool DragInputInt( const char* label, int* value, float speed /*= 1*/, int min /
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
     ImGui::PushButtonRepeat( true );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "-", ImVec2( sizeSide, sizeSide ) ) )
+    if ( MR::UI::button( "-", MR::Vector2f( sizeSide, sizeSide ) ) )
         --valueRef;
     ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-    if ( MR::RibbonButtonDrawer::GradientButton( "+", ImVec2( sizeSide, sizeSide ) ) )
+    if ( MR::UI::button( "+", MR::Vector2f( sizeSide, sizeSide ) ) )
         ++valueRef;
     ImGui::PopButtonRepeat();
     valueRef = std::clamp( valueRef, min, max );
@@ -1134,7 +1135,7 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
 
     std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
-    if ( RibbonButtonDrawer::GradientButton( "Save Palette as", ImVec2( scaledWidth - 10.0f * menuScaling, 0 ) ) )
+    if ( UI::button( "Save Palette as", Vector2f( scaledWidth - 10.0f * menuScaling, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
     ImGui::SetTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
     ImGui::PopStyleVar();
@@ -1174,7 +1175,7 @@ PaletteChanges Palette(
     
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
-    if ( RibbonButtonDrawer::GradientButtonValid( "Save", valid, ImVec2( btnWidth, 0 ) ) )
+    if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
     {
         std::error_code ec;
         if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
@@ -1211,7 +1212,7 @@ PaletteChanges Palette(
         ImGui::Text( "Palette preset with this name already exists, override?" );
         auto w = GetContentRegionAvail().x;
         auto p = GetStyle().FramePadding.x;
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Yes", ImVec2( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
         {
             auto res = PalettePresets::savePreset( currentPaletteName, palette );
             if ( res.has_value() )
@@ -1227,7 +1228,7 @@ PaletteChanges Palette(
             }
         }
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "No", ImVec2( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -1240,7 +1241,7 @@ PaletteChanges Palette(
 
     ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
+    if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
         ImGui::CloseCurrentPopup();
     ImGui::PopStyleVar();
 
@@ -1262,13 +1263,13 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     float p = ImGui::GetStyle().FramePadding.x;
     auto width = GetContentRegionAvail().x - 3 * p;    
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
+    if ( MR::UI::button( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine( 0, p );
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::button( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine( 0, p );
-    if ( MR::RibbonButtonDrawer::GradientButton( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::button( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine( 0, p );
 
@@ -1276,7 +1277,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::RibbonButtonDrawer::GradientButton( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::button( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
     {
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }
@@ -1315,11 +1316,11 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 
     const float arrowButtonSize = 2.0f * MR::cInputPadding * menuScaling + ImGui::GetTextLineHeight();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling * 0.5f, MR::cDefaultWindowPaddingY * menuScaling } );
-    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x84", { arrowButtonSize, arrowButtonSize } ) )
+    if ( MR::UI::button( "\xef\x84\x84", { arrowButtonSize, arrowButtonSize } ) )
         plane.d -= dragspeed;
     
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
+    if ( MR::UI::button( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
         plane.d += dragspeed;
     ImGui::PopStyleVar();
     if ( iconsFont )
@@ -1335,7 +1336,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
 
     ImGui::SameLine();
-    if ( MR::RibbonButtonDrawer::GradientButton( "Flip", { 60.0f * menuScaling, 0 } ) )
+    if ( MR::UI::button( "Flip", { 60.0f * menuScaling, 0 } ) )
         plane = -plane;
 
     ImGui::PopStyleVar();

@@ -51,6 +51,7 @@
     <ClCompile Include="MRImmediateGL.cpp" />
     <ClCompile Include="MRStatePluginAutoClose.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
+    <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRViewerIO.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="MRStatePluginAutoClose.h" />
     <ClInclude Include="MRSurfacePointPicker.h" />
     <ClInclude Include="MRSwapRootAction.h" />
+    <ClInclude Include="MRUIStyle.h" />
     <ClInclude Include="MRViewer.h" />
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />

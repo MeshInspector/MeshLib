@@ -9,6 +9,7 @@
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonConstants.h"
+#include "MRUIStyle.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -80,9 +81,9 @@ void SaveOnClosePlugin::preDraw_()
 		ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
-        const ImVec2 btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
 
-        if ( RibbonButtonDrawer::GradientButton( "Save", btnSize, ImGuiKey_Enter ) )
+        if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -108,7 +109,7 @@ void SaveOnClosePlugin::preDraw_()
 
         ImGui::SetTooltipIfHovered( "Save the current scene and close the application", scaling );
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButton( "Don't Save", btnSize ) )
+        if ( UI::button( "Don't Save", btnSize ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
@@ -117,7 +118,7 @@ void SaveOnClosePlugin::preDraw_()
         ImGui::SetTooltipIfHovered( "Close the application without saving", scaling );
 
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButton( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }

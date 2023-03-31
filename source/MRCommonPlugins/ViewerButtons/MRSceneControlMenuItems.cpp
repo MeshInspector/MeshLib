@@ -14,6 +14,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRRibbonConstants.h"
+#include "MRViewer/MRUIStyle.h"
 #include <array>
 
 namespace
@@ -113,8 +114,8 @@ void ResetSceneMenuItem::preDraw_()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
-        const ImVec2 btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
-        if ( RibbonButtonDrawer::GradientButton( "Save", btnSize, ImGuiKey_Enter ) )
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
+        if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto savePath = SceneRoot::getScenePath();
             if ( savePath.empty() )
@@ -137,14 +138,14 @@ void ResetSceneMenuItem::preDraw_()
 
         ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Don't Save", btnSize ) )
+        if ( UI::buttonCommonSize( "Don't Save", btnSize ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
         }
         ImGui::SetTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
         ImGui::SameLine();
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
         ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );

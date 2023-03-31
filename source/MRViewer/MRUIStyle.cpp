@@ -121,23 +121,22 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     if ( !texture )
         return ImGui::ButtonValid( label, active, size );
 
-    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
+    StyleParamHolder sh;
+    sh.addColor( ImGuiCol_Button, Color::transparent() );
+    sh.addColor( ImGuiCol_Text, Color::white() );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
 
-    int pushedStyleNum = 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    sh.addVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     if ( size.y == 0 )
     {
         auto framePadding = style.FramePadding;
         framePadding.y = cGradientButtonFramePadding;
         if ( auto menu = getViewerInstance().getMenuPlugin() )
             framePadding.y *= menu->menu_scaling();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-        ++pushedStyleNum;
+        sh.addVar( ImGuiStyleVar_FramePadding, framePadding );
     }
 
     ImVec2 pos = window->DC.CursorPos;
@@ -151,9 +150,7 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
         Color::white().getUInt32(), style.FrameRounding );
 
     auto res = ImGui::ButtonValid( label, active, size );
-
-    ImGui::PopStyleVar( pushedStyleNum );
-    ImGui::PopStyleColor( 2 );
+        
     return res;
 }
 
@@ -185,8 +182,7 @@ bool button( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImG
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
 
-    int pushedStyleNum = 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+    sh.addVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
     auto framePadding = style.FramePadding;
     if ( size.y == 0 )
@@ -199,8 +195,7 @@ bool button( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImG
     {
         framePadding.x = ( size.x - ImGui::CalcTextSize( label ).x ) / 2.f;
     }
-    ++pushedStyleNum;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+    sh.addVar( ImGuiStyleVar_FramePadding, framePadding );
 
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
@@ -213,8 +208,6 @@ bool button( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImG
         Color::white().getUInt32(), style.FrameRounding );
 
     auto res = ImGui::Button( label, size ) || checkKey( key );
-
-    ImGui::PopStyleVar( pushedStyleNum );
 
     return res;
 }

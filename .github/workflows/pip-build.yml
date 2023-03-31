@@ -156,6 +156,12 @@ jobs:
             py-file: "python311"
             embed-version: "3.11.0"
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          # ref: ${{needs.setup.outputs.version_tag}}
+
       - name: Restore Vcpkg Cache
         uses: actions/cache@v3
         id: vcpkg-cache
@@ -220,12 +226,6 @@ jobs:
           echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
           cp -R "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\extras\\visual_studio_integration\\MSBuildExtensions\\." "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\v160\BuildCustomizations"
-
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          # ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1

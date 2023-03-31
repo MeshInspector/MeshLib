@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: 'x64' # [ x64, arm ]
+        os: x64 # [ x64, arm ]
         config: [Release]
         compiler: [Сlang]
         include:

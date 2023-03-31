@@ -97,12 +97,13 @@ jobs:
           MATRIX=" \
           {\"include\":[ \
           {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu\",         \"os\":\"ubuntu-latest\"}, \
-          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu20-pip\",   \"os\":\"ubuntu-latest\", \"build-arg\":\"--build-arg MR_BUILD_STATIC_THIRDPARTY=ON\"},  \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"]}, \
           {\"dockerfile\":\"fedora37Dockerfile\",   \"image\":\"fedora37\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"emscriptenDockerfile\", \"image\":\"emscripten\",     \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu20-wheels-x64\",   \"os\":\"ubuntu-latest\", \"build-arg\":\"--build-arg MR_BUILD_STATIC_THIRDPARTY=ON\"},  \
+          {\"dockerfile\":\"ubuntuDockerfile\",     \"image\":\"ubuntu20-wheels-arm64\", \"os\":[\"self-hosted\", \"linux-arm64\"], \"build-arg\":\"--build-arg MR_BUILD_STATIC_THIRDPARTY=ON\"},  \
           ]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
           echo "$MATRIX"

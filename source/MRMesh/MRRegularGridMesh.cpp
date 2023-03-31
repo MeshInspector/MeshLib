@@ -104,26 +104,32 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
             if ( !v00 )
             {
                 createFace( p01, p10, p11, 2 * p + 1 ); //upper
+                gs.faceIds.b[2 * p] = FaceId{};
             }
             else if ( !v01 )
             {
                 diagonalA.set( p );
                 createFace( p11, p00, p10, 2 * p ); //lower
+                gs.faceIds.b[2 * p + 1] = FaceId{};
             }
             else if ( !v10 )
             {
                 diagonalA.set( p );
                 createFace( p11, p01, p00, 2 * p + 1 ); //upper
+                gs.faceIds.b[2 * p] = FaceId{};
             }
             else if ( !v11 )
             {
                 createFace( p01, p00, p10, 2 * p ); //lower
+                gs.faceIds.b[2 * p + 1] = FaceId{};
             }
             break;
         case 2:
         case 1:
         case 0:
             // no possible triangles
+            gs.faceIds.b[2 * p] = FaceId{};
+            gs.faceIds.b[2 * p + 1] = FaceId{};
             break;
         }
     } );

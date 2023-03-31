@@ -13,18 +13,19 @@ on:
 jobs:
   macos-build-test:
     timeout-minutes: 60
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        os: x64 # [ x64, arm ]
-        config: [Release]
-        compiler: [Сlang]
-        include:
-          - compiler: Сlang
-            cxx-compiler: /usr/bin/clang++
-            c-compiler: /usr/bin/clang
-          - os: x64
-            runner: macos-latest
+    runs-on: macos-latest
+    # runs-on: ${{ matrix.runner }}
+    # strategy:
+      # matrix:
+        # os: [x64] # [ x64, arm ]
+        # config: [Release]
+        # compiler: [Сlang]
+        # include:
+          # - compiler: Сlang
+            # cxx-compiler: /usr/bin/clang++
+            # c-compiler: /usr/bin/clang
+          # - os: x64
+            # runner: macos-latest
           # - os: arm
             # runner: macos-arm-build
 
@@ -40,30 +41,30 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          MESHLIB_BUILD_RELEASE: "ON" # ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: "OFF" # ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: /usr/bin/clang++ # ${{ matrix.cxx-compiler }}
           # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          CMAKE_C_COMPILER: /usr/bin/clang # ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.version }}
 
       - name: Unit Tests
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/Release/bin/MRTest
 
       - name: Python Tests
-        working-directory: ./build/${{ matrix.config }}/bin
+        working-directory: ./build/Release/bin
         run: python3 ./../../../scripts/run_python_test_script.py
 
       - name: Create Pkg
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         run: |
           ./scripts/distribution_apple.sh
-          mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+          mv MeshLib_.pkg meshlib_x64.pkg
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
         uses: actions/upload-artifact@v3
         with:
           name: Distributives
-          path: meshlib_${{matrix.os}}.pkg
+          path: meshlib_x64.pkg
           retention-days: 1

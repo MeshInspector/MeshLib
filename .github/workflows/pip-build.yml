@@ -199,7 +199,7 @@ jobs:
           py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
 
       - name: Setup thirdparty
-        working-directory: C:\workspace\MeshLib\MeshLib\thirdparty\python
+        working-directory: ${{ github.workspace }}\thirdparty\python
         run: |  
           curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
           tar -xf python-embed.zip ${{matrix.py-file}}.zip

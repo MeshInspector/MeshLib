@@ -364,9 +364,8 @@ public:
         };
         /// grid coordinates of lower-left vertex and edge-type to edgeId with the origin in this vertex;
         /// both vertices of valid edge must be valid as well;
-        /// oppositly directed edges must be related by .sym() operation or both must be invalid;
         /// index is 4 * ( x + y * ( settings.dim.x + 1 ) ) + edgeType
-        BMap<EdgeId, size_t> edgeIds;
+        BMap<UndirectedEdgeId, size_t> uedgeIds;
 
         enum class TriType
         {

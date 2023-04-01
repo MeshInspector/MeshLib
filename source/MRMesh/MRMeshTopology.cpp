@@ -1214,7 +1214,7 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
     // we use resizeNoInit because expect vertices/faces/edges to be tightly packed (no deleted elements within valid range)
     edgePerVertex_.resizeNoInit( settings.vertIds.tsize );
     edgePerFace_.resizeNoInit( settings.faceIds.tsize );
-    edges_.resizeNoInit( settings.edgeIds.tsize );
+    edges_.resizeNoInit( 2 * settings.uedgeIds.tsize );
 
     auto getVertId = [&]( Vector2i v ) -> VertId
     {
@@ -1232,7 +1232,8 @@ void MeshTopology::buildGridMesh( const GridSettings & settings )
     {
         if ( v.x < 0 || v.x > settings.dim.x || v.y < 0 || v.y > settings.dim.y )
             return EdgeId();
-        return settings.edgeIds.b[ 4 * ( v.x + v.y * ( settings.dim.x + 1 ) ) + (int)edgeType ];
+        auto ue = settings.uedgeIds.b[ 4 * ( v.x + v.y * ( settings.dim.x + 1 ) ) + (int)edgeType ];
+        return ue ? EdgeId( ue ) : EdgeId();
     };
 
     struct EdgeFace

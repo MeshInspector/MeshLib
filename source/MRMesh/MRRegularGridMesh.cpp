@@ -186,7 +186,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
     };
 
     BitSet validGridEdges( 4 * width * height );
-    gs.edgeIds.b.resize( 4 * width * height );
+    gs.uedgeIds.b.resize( 4 * width * height );
     BitSetParallelForAll( validGridEdges, [&]( size_t loc )
     {
         auto p = loc / 4;
@@ -196,16 +196,13 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
         if ( hasEdge( { x, y }, et ) )
             validGridEdges.set( loc );
         else
-            gs.edgeIds.b[loc] = EdgeId{};
+            gs.uedgeIds.b[loc] = UndirectedEdgeId{};
     } );
 
-    EdgeId nextEdgeId{ 0 };
+    UndirectedEdgeId nextUEdgeId{ 0 };
     for ( auto p : validGridEdges )
-    {
-        gs.edgeIds.b[p] = nextEdgeId;
-        ++++nextEdgeId;
-    }
-    gs.edgeIds.tsize = size_t( nextEdgeId );
+        gs.uedgeIds.b[p] = nextUEdgeId++;
+    gs.uedgeIds.tsize = size_t( nextUEdgeId );
 
     res.topology.buildGridMesh( gs );
     assert( res.topology.checkValidity() );

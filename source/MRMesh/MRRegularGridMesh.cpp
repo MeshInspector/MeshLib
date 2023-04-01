@@ -3,6 +3,7 @@
 #include "MRTriMath.h"
 #include "MRVector2.h"
 #include "MRMeshDelone.h"
+#include "MRGridSettings.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
@@ -18,7 +19,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
     MR_TIMER
     Mesh res;
 
-    MeshTopology::GridSettings gs =
+    GridSettings gs =
     {
         .dim = Vector2i( (int)width - 1, (int)height - 1 )
     };
@@ -139,10 +140,10 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
         gs.faceIds.b[p] = nextFaceId++;
     gs.faceIds.tsize = size_t( nextFaceId );
 
-    auto hasEdge = [&]( Vector2i v, MeshTopology::GridSettings::EdgeType et )
+    auto hasEdge = [&]( Vector2i v, GridSettings::EdgeType et )
     {
         VertId v0;
-        if ( et != MeshTopology::GridSettings::EdgeType::DiagonalB )
+        if ( et != GridSettings::EdgeType::DiagonalB )
             v0 = getVertId( v );
         else 
             v0 = getVertId( Vector2i{ v.x + 1, v.y } );
@@ -152,10 +153,10 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
         VertId v1;
         switch ( et )
         {
-        case MeshTopology::GridSettings::EdgeType::Horizontal:
+        case GridSettings::EdgeType::Horizontal:
             v1 = getVertId( Vector2i{ v.x + 1, v.y } );
             break;
-        case MeshTopology::GridSettings::EdgeType::DiagonalA:
+        case GridSettings::EdgeType::DiagonalA:
             v1 = getVertId( Vector2i{ v.x + 1, v.y + 1 } );
             break;
         default:
@@ -166,23 +167,23 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
 
         if ( v.y + 1 == height )
         {
-            assert ( et == MeshTopology::GridSettings::EdgeType::Horizontal );
+            assert ( et == GridSettings::EdgeType::Horizontal );
             assert ( v.x + 1 < width );
             return true;
         }
-        if ( v.x + 1 == width && et != MeshTopology::GridSettings::EdgeType::DiagonalB )
+        if ( v.x + 1 == width && et != GridSettings::EdgeType::DiagonalB )
         {
-            assert ( et == MeshTopology::GridSettings::EdgeType::Vertical );
+            assert ( et == GridSettings::EdgeType::Vertical );
             return true;
         }
-        if ( et == MeshTopology::GridSettings::EdgeType::Horizontal )
+        if ( et == GridSettings::EdgeType::Horizontal )
             return true;
-        if ( et == MeshTopology::GridSettings::EdgeType::Vertical )
+        if ( et == GridSettings::EdgeType::Vertical )
             return true;
         auto hfidx = ( width - 1 ) * v.y + v.x;
         if ( !validLoUpTris.test( 2 * hfidx ) && !validLoUpTris.test( 2 * hfidx + 1 ) )
             return false;
-        return diagonalA.test( hfidx ) == ( et == MeshTopology::GridSettings::EdgeType::DiagonalA );
+        return diagonalA.test( hfidx ) == ( et == GridSettings::EdgeType::DiagonalA );
     };
 
     BitSet validGridEdges( 4 * width * height );
@@ -190,7 +191,7 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
     BitSetParallelForAll( validGridEdges, [&]( size_t loc )
     {
         auto p = loc / 4;
-        auto et = MeshTopology::GridSettings::EdgeType( loc - p * 4 );
+        auto et = GridSettings::EdgeType( loc - p * 4 );
         auto y = int( p / width );
         auto x = int( p - y * width );
         if ( hasEdge( { x, y }, et ) )

@@ -9,6 +9,7 @@
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRProgressReadWrite.h"
+#include "MRGridSettings.h"
 #include "MRPch/MRTBB.h"
 #include <atomic>
 #include <initializer_list>

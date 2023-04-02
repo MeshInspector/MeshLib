@@ -12,6 +12,15 @@
 namespace MR
 {
 
+const float cRadioInnerSpacingX = 12.f;
+float getScaling()
+{
+    const auto menu = getViewerInstance().getMenuPlugin();
+    if ( menu )
+        return menu->menu_scaling();
+    return 1.f;
+}
+
 std::vector<std::unique_ptr<MR::ImGuiImage>> RibbonButtonDrawer::textures_ = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( RibbonButtonDrawer::TextureType::Count ) );
 
 void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
@@ -81,117 +90,18 @@ std::unique_ptr<MR::ImGuiImage>& RibbonButtonDrawer::GetTexture( TextureType typ
     return textures_[typeInt];
 }
 
-bool RibbonButtonDrawer::GradientButton( const char* label, const ImVec2& size /*= ImVec2( 0, 0 ) */, ImGuiKey key )
-{
-    auto& texture = GetTexture( TextureType::Gradient );
-    auto checkKey = [] ( ImGuiKey passedKey )
-    {
-        if ( passedKey == ImGuiKey_None )
-            return false;
-        if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
-            return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-        return ImGui::IsKeyPressed( passedKey );
-    };
-    if ( !texture )
-        return ImGui::Button( label, size ) || checkKey( key );
-
-    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
-
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
-
-    int pushedStyleNum = 1;
-	ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-
-	auto framePadding = style.FramePadding;
-    if ( size.y == 0 )
-    {
-        framePadding.y = cGradientButtonFramePadding;
-        if ( auto menu = getViewerInstance().getMenuPlugin() )
-            framePadding.y *= menu->menu_scaling();
-    }
-    else if ( size.y > 0 )
-	{
-        framePadding.y = ( size.y - ImGui::CalcTextSize( label ).y ) / 2.f;
-	}
-    if ( size.x > 0 )
-	{
-		framePadding.x = ( size.x - ImGui::CalcTextSize( label ).x ) / 2.f;
-    }
-	++pushedStyleNum;
-	ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-
-    ImVec2 pos = window->DC.CursorPos;
-    ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
-    const ImRect bb( pos, ImVec2( pos.x + realSize.x, pos.y + realSize.y ) );
-
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), style.FrameRounding );
-
-    auto res = ImGui::Button( label, size ) || checkKey( key );
-
-    ImGui::PopStyleVar( pushedStyleNum );
-    ImGui::PopStyleColor( 2 );
-    return res;
-}
-
-bool RibbonButtonDrawer::GradientButtonCommonSize( const char* label, const ImVec2& size, ImGuiKey key )
-{
-    return GradientButton( label, ImVec2( size.x, size.y == 0.0f ? ImGui::GetFrameHeight() : size.y ), key );
-}
-
-bool RibbonButtonDrawer::GradientButtonValid( const char* label, bool valid, const ImVec2& size /* = ImVec2(0, 0) */ )
-{
-    auto& texture = GetTexture( TextureType::Gradient );
-    if ( !texture )
-        return ImGui::ButtonValid( label, valid, size );
-
-    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1, 1, 1, 1 ) );
-
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
-
-    int pushedStyleNum = 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    if ( size.y == 0 )
-    {
-        auto framePadding = style.FramePadding;
-        framePadding.y = cGradientButtonFramePadding;
-        if ( auto menu = getViewerInstance().getMenuPlugin() )
-            framePadding.y *= menu->menu_scaling();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-        ++pushedStyleNum;
-    }
-
-    ImVec2 pos = window->DC.CursorPos;
-    ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
-    const ImRect bb( pos, ImVec2( pos.x + realSize.x, pos.y + realSize.y ) );
-
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), style.FrameRounding );
-
-    auto res = ImGui::ButtonValid( label, valid, size );
-
-    ImGui::PopStyleVar( pushedStyleNum );
-    ImGui::PopStyleColor( 2 );
-    return res;
-}
-
 bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float scaling = getScaling();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * getScaling(), style.ItemInnerSpacing.y * getScaling() ) );
     auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
-        return  ImGui::Checkbox( label, value );
+    {
+        const bool res = ImGui::Checkbox( label, value );
+        ImGui::PopStyleVar();
+        return res;
+    }
 
     const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
@@ -199,12 +109,9 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
     ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
 
-    const auto menu = getViewerInstance().getMenuPlugin();
-    const float scaling = menu ? menu->menu_scaling() : 1.0f;
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImGuiStyle& style = ImGui::GetStyle();
     const float clickSize = ImGui::GetFrameHeight();
 
     ImVec2 pos = window->DC.CursorPos;
@@ -309,6 +216,7 @@ bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
 
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleVar();
     return res;
 }
 
@@ -345,9 +253,15 @@ bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, 
 
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )
 {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * getScaling(), style.ItemInnerSpacing.y * getScaling() ) );
     auto& texture = GetTexture( TextureType::Gradient );
     if ( !texture )
-        return ImGui::RadioButton( label, value, v_button );
+    {
+        const bool res = ImGui::RadioButton( label, value, v_button );
+        ImGui::PopStyleVar();
+        return res;
+    }
 
     const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
@@ -372,7 +286,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
             Color::white().getUInt32(), clickSize * 0.5f );
 
     //code of this lambda is copied from ImGui::RadioBitton in order to decrease size of the central circle
-    auto drawCustomRadioButton = [bgColor, scaling, clickSize]( const char* label, int* v, int v_button )
+    auto drawCustomRadioButton = [bgColor, scaling, clickSize, &style]( const char* label, int* v, int v_button )
     {     
         if ( !ImGui::GetCurrentContext() || !v )
             return false;
@@ -382,7 +296,6 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
         if ( !window || window->SkipItems )
             return false;
 
-        const ImGuiStyle& style = ImGui::GetStyle();
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
@@ -437,6 +350,7 @@ bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int
 
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleVar();
     return res;
 }
 

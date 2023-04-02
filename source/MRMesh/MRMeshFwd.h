@@ -349,6 +349,8 @@ class CircleObject;
 class PlaneObject;
 class SphereObject;
 
+struct Image;
+
 template <typename T>
 struct VoxelsVolume;
 using SimpleVolume = VoxelsVolume<std::vector<float>>;

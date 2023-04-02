@@ -434,6 +434,12 @@ size_t ObjectMeshHolder::numHoles() const
     return meshStat_->numHoles;
 }
 
+size_t ObjectMeshHolder::numComponents() const
+{
+    updateMeshStat_();
+    return meshStat_->numComponents;
+}
+
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 {
     // selected faces and edges can be changed only by the methods of this class, 

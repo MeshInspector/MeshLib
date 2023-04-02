@@ -19,6 +19,7 @@
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
 #include "MRMesh/MRChangeXfAction.h"
+#include "MRUIStyle.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 
@@ -807,7 +808,7 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
         }
     }
 
-    if ( canGroup && RibbonButtonDrawer::GradientButton( "Group", ImVec2( -1, 0 ) ) )
+    if ( canGroup && UI::button( "Group", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
         std::shared_ptr<Object> group = std::make_shared<Object>();
@@ -843,7 +844,7 @@ bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Obje
         }
     }
         canUngroup = !selected[0]->children().empty();
-    if ( canUngroup && RibbonButtonDrawer::GradientButton( "Ungroup", ImVec2( -1, 0 ) ) )
+    if ( canUngroup && UI::button( "Ungroup", Vector2f( -1, 0 ) ) )
     {
         someChanges |= true;
         auto children = selected[0]->children();
@@ -1407,7 +1408,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
-    if ( RibbonButtonDrawer::GradientButton( "Copy", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Copy", Vector2f( buttonSize, 0 ) ) )
     {
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
@@ -1429,7 +1430,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         {
             if ( auto tr = deserializeTransform( root ))
             {
-                if ( RibbonButtonDrawer::GradientButton( "Paste", ImVec2( buttonSize, 0 ) ) )
+                if ( UI::button( "Paste", Vector2f( buttonSize, 0 ) ) )
                 {
                     AppendHistory<ChangeXfAction>( "Change XF", selected );
                     selected->setXf( tr->xf );
@@ -1440,7 +1441,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         }
     }
 
-    if ( RibbonButtonDrawer::GradientButton( "Save to file", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Save to file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = saveFileDialog( { "Transform", {}, { {"JSON (.json)", "*.json"} } } );
         if ( !filename.empty() )
@@ -1457,7 +1458,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         ImGui::CloseCurrentPopup();
     }
 
-    if ( RibbonButtonDrawer::GradientButton( "Load from file", ImVec2( buttonSize, 0 ) ) )
+    if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
         if ( !filename.empty() )
@@ -1501,14 +1502,14 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         if ( item != RibbonSchemaHolder::schema().items.end() &&
             item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
-            RibbonButtonDrawer::GradientButton( "Apply", ImVec2( buttonSize, 0 ) ) )
+            UI::button( "Apply", Vector2f( buttonSize, 0 ) ) )
         {
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SetTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
 
-        if ( RibbonButtonDrawer::GradientButton( "Reset", ImVec2( buttonSize, 0 ) ) )
+        if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
             AppendHistory<ChangeXfAction>( "Reset XF", selected );
             selected->setXf( AffineXf3f() );

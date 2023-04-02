@@ -13,6 +13,7 @@
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewerSettingsPlugin.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -67,7 +68,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
-    if ( RibbonButtonDrawer::GradientButtonValid( "Apply & Save", valid, ImVec2( -1, 0 ) ) )
+    if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
     {
         std::error_code ec;
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
@@ -127,9 +128,9 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
-        const ImVec2 btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p  ) / 2.f, 0 };
 
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
+        if ( UI::buttonCommonSize( "Save", btnSize, ImGuiKey_Enter ) )
         {
             auto error = save_();
             if ( error.empty() )
@@ -141,7 +142,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
             }
         }
         ImGui::SameLine( 0, p );
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }

@@ -352,13 +352,23 @@ public:
         SelectedObjects, // fit only selected objects
         CustomObjectsList // fit only given objects (need additional objects list)
     };
-    struct FitDataParams
+    struct BaseFitParams
     {
         float factor{ 1.f }; // part of the screen for scene location
         // snapView - to snap camera angle to closest canonical quaternion
         // orthographic view: camera moves a bit, fit FOV by the whole width or height
         // perspective view: camera is static, fit FOV to closest border.
         bool snapView{ false };
+
+        // need for fix Clang bug
+        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
+        BaseFitParams( float factor_ = 1.f, bool snapView_ = false ) :
+            factor( factor_ ),
+            snapView( snapView_ )
+        {};
+    };
+    struct FitDataParams : BaseFitParams
+    {
         FitMode mode{ FitMode::Visible }; // fit mode
         std::vector<std::shared_ptr<VisualObject>> objsList; // custom objects list. used only with CustomObjectsList mode
 
@@ -366,13 +376,26 @@ public:
         // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
         FitDataParams( float factor_ = 1.f, bool snapView_ = false, FitMode mode_ = FitMode::Visible,
             const std::vector<std::shared_ptr<VisualObject>>& objsList_ = {} ) :
-            factor( factor_ ),
-            snapView( snapView_ ),
+            BaseFitParams( factor_, snapView_ ),
             mode( mode_ ),
             objsList( objsList_ )
         {};
     };
-    // call fitData and change FOV to match the screen size then
+    struct FitBoxParams : BaseFitParams
+    {
+        Box3f worldBox; // box in world space to fit
+
+        // need for fix Clang bug
+        // some as https://stackoverflow.com/questions/43819314/default-member-initializer-needed-within-definition-of-enclosing-class-outside
+        FitBoxParams( const Box3f& worldBox_, float factor_ = 1.f, bool snapView_ = false ) :
+            BaseFitParams( factor_, snapView_ ),
+            worldBox( worldBox_ )
+        {};
+    };
+
+    // fit view and proj matrices to match the screen size with given box
+    MRVIEWER_API void preciseFitBoxToScreenBorder( const FitBoxParams& params );
+    // fit view and proj matrices to match the screen size with given objects
     MRVIEWER_API void preciseFitDataToScreenBorder( const FitDataParams& params = {} );
 
     // returns viewport width/height ratio
@@ -491,13 +514,15 @@ private:
     Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
 
     /**
-     * @brief find maximum FOV angle allows to keep given visible objects inside the screen
-     * @param selectedPrimitives use only selected primitives of objects in calculation
-     * @param cameraShift should be applied to the current params_.cameraTranslation value for orthographic mode
+     * @brief find maximum FOV angle allows to keep box (space of box depends of viewport params) 
+     * given by getBoxFn visible inside the screen
      * @returns true if all models are inside the projection volume
      */
-    std::pair<float, bool> getZoomFOVtoScreen_( const std::vector<std::shared_ptr<VisualObject>>& objs,
-        bool selectedPrimitives = false, Vector3f* cameraShift = nullptr ) const;
+    std::pair<float, bool> getZoomFOVtoScreen_( std::function<Box3f()> getBoxFn, Vector3f* cameraShift = nullptr ) const;
+    // fit view and proj matrices to match the screen size with boxes returned by getBoxFn
+    // getBoxFn( true ) - always camera space (respecting projection)
+    // getBoxFn( false ) - if orthographic - camera space, otherwise - world space
+    void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV )> getBoxFn, const BaseFitParams& params );
 
     bool rotation_{ false };
     Vector3f rotationPivot_;

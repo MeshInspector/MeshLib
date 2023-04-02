@@ -6,6 +6,7 @@
 #include "MRSceneColors.h"
 #include "MRPch/MRTBB.h"
 #include <filesystem>
+#include "MRPolylineComponents.h"
 
 namespace MR
 {
@@ -54,6 +55,11 @@ std::shared_ptr<Object> ObjectLinesHolder::shallowClone() const
 void ObjectLinesHolder::setDirtyFlags( uint32_t mask )
 {
     VisualObject::setDirtyFlags( mask );
+
+    if ( mask & DIRTY_PRIMITIVES )
+    {
+        numComponents_.reset();
+    }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_PRIMITIVES )
     {
@@ -110,6 +116,14 @@ size_t ObjectLinesHolder::heapBytes() const
     return VisualObject::heapBytes()
         + linesColorMap_.heapBytes()
         + MR::heapBytes( polyline_ );
+}
+
+size_t ObjectLinesHolder::numComponents() const
+{
+    if ( !numComponents_ )
+        numComponents_ = PolylineComponents::getNumComponents( polyline_->topology );
+
+    return *numComponents_;
 }
 
 ObjectLinesHolder::ObjectLinesHolder( const ObjectLinesHolder& other ) :

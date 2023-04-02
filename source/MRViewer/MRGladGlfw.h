@@ -24,7 +24,11 @@ inline int loadGL()
 #ifndef __EMSCRIPTEN__
 #pragma warning(push)
 #pragma warning(disable: 4191) //'type cast': unsafe conversion from 'GLFWglproc (__cdecl *)(const char *)' to 'GLADloadproc'
-    static auto loadRes = gladLoadGLLoader( ( GLADloadproc )glfwGetProcAddress );
+    // thread_local here - because we have two windows in two different threads (main window and splash)
+    // so we need to be sure that each thread loaded gl (it can be called from GUI threads only)
+    //
+    // function is inline to be sure that each dll/so has its own instance of `loadRes`
+    static thread_local auto loadRes = gladLoadGLLoader( ( GLADloadproc )glfwGetProcAddress );
     return loadRes;
 #pragma warning(pop)
 #else

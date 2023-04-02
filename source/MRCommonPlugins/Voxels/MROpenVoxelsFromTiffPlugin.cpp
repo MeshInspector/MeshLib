@@ -10,6 +10,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace MR
 {
@@ -49,7 +50,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
     RibbonButtonDrawer::GradientCheckbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
     ImGui::SetTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
-    if ( RibbonButtonDrawer::GradientButton( "Open Directory", { -1, 0 } ) )
+    if ( UI::button( "Open Directory", { -1, 0 } ) )
     {
         auto directory = openFolderDialog();
         if ( directory.empty() )

@@ -21,15 +21,24 @@ jobs:
   manylinux-pip-build:
     needs: setup
     timeout-minutes: 25
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-ubuntu:latest
-      options: --user root
+      image: ${{ matrix.docker-image }}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
+        platform: ["x86_64", "aarch64"]
         py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
+          - platform: "x86_64"
+            docker-image: "meshlib/meshlib-ubuntu:latest"
+            container-options: "--user root"
+            runner: ubuntu-latest
+          - platform: "aarch64"
+            docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
+            container-options: "--user root"
+            runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -71,9 +80,9 @@ jobs:
           MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/g++-10
+          CMAKE_CXX_COMPILER: /usr/bin/clang++-11
           # not realy needed
-          CMAKE_C_COMPILER: /usr/bin/gcc-10
+          CMAKE_C_COMPILER: /usr/bin/clang-11
 
       - name: Run Tests
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop
@@ -91,12 +100,12 @@ jobs:
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 
           cd ./scripts/wheel/meshlib
           ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
-          ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_x86_64 ./dist/*.whl
+          ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ManyLinux-${{ matrix.py-cmd }}
+          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
@@ -306,15 +315,24 @@ jobs:
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ matrix.os }}
-      options: --user root
+      image: ${{matrix.container-prefix}}${{matrix.os}}
+      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
+        platform: ["x86_64", "aarch64"]
         os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
+          - platform: "x86_64"
+            runner: ubuntu-latest
+            container-options: "--user root"
+            container-prefix: " "
+          - platform: "aarch64"
+            runner: [ 'self-hosted', 'linux-arm64' ]
+            container-options: "--user root"
+            container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"
             py-cmd: "python3.8"
@@ -350,7 +368,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ManyLinux-${{ matrix.py-cmd }}
+          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl

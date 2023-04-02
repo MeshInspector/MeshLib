@@ -163,6 +163,7 @@ bool MouseController::preMouseMove_( int x, int y)
 
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
+    AffineXf3f xf;
     switch ( currentMode_ )
     {
     case MR::MouseMode::Rotation:
@@ -171,11 +172,12 @@ bool MouseController::preMouseMove_( int x, int y)
         float maxDimension = float( std::max( viewer.window_width, viewer.window_height ) );
         auto angle = PI_F * ( Vector2f( currentMousePos_ ) - Vector2f( prevMousePos_ ) ) / maxDimension * 4.0f;
         quat = (
+            quat.inverse() *
             Quaternionf( Vector3f{ 0,1,0 }, angle.x ) *
             Quaternionf( Vector3f{ 1,0,0 }, angle.y ) *
             quat
             ).normalized();
-        viewport.setCameraTrackballAngle( quat );
+        xf = AffineXf3f::linear( Matrix3f( quat ) );
         break;
     }
     case MR::MouseMode::Translation:
@@ -188,14 +190,15 @@ bool MouseController::preMouseMove_( int x, int y)
         auto vpPointMouseDown = viewer.screenToViewport( Vector3f( float( downMousePos_.x ), float( downMousePos_.y ), zpos ), viewport.id );
         auto pos1 = viewport.unprojectFromViewportSpace( vpPoint );
         auto pos0 = viewport.unprojectFromViewportSpace( vpPointMouseDown );
-
-        Vector3f diff = pos1 - pos0;
-        viewport.setCameraTranslation( downTranslation_ + diff );
+        xf = AffineXf3f::translation( downTranslation_ + pos1 - pos0 - viewport.getParameters().cameraTranslation );
         break;
     }
     default:
         break;
     }
+    if ( transformModifierCb_ )
+        transformModifierCb_( xf );
+    viewport.transformView( xf );
     return true;
 }
 
@@ -239,10 +242,15 @@ bool MouseController::mouseScroll_( float delta )
     constexpr float max_angle = 179.99f;
     // divide by 360 instead of 180 to have 0.5 rad (maybe)
     constexpr float d2r = PI_F / 360.0f;
-    viewport.setCameraViewAngle( std::clamp( float( atan( tan( ( viewport.getParameters().cameraViewAngle ) * d2r ) * mult ) / d2r ), min_angle, max_angle ) );
+    auto newFOV = std::clamp( float( atan( tan( ( viewport.getParameters().cameraViewAngle ) * d2r ) * mult ) / d2r ), min_angle, max_angle );
+    if ( fovModifierCb_ )
+        fovModifierCb_( newFOV );
+    viewport.setCameraViewAngle( newFOV );
 
-    Vector3f diff = ( ps - pc ) * ( mult - 1.0f );
-    viewport.setCameraTranslation( viewport.getParameters().cameraTranslation + diff );
+    AffineXf3f xf = AffineXf3f::translation( ( ps - pc ) * ( mult - 1.0f ) );
+    if ( transformModifierCb_ )
+        transformModifierCb_( xf );
+    viewport.transformView( xf );
     return true;
 }
 

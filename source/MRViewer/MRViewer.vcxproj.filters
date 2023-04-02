@@ -68,6 +68,9 @@
     <Filter Include="Requests">
       <UniqueIdentifier>{c21997e0-58df-4ec0-b236-7f69f02151c3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="UIStyle">
+      <UniqueIdentifier>{0cc885c2-7327-42c4-9981-609b4faa2b91}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -255,6 +258,9 @@
     </ClCompile>
     <ClCompile Include="MRToolbar.cpp">
       <Filter>RibbonMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUIStyle.cpp">
+      <Filter>UIStyle</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +487,9 @@
     </ClInclude>
     <ClInclude Include="MRToolbar.h">
       <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUIStyle.h">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

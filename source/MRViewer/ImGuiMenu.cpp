@@ -75,6 +75,7 @@
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
+#include "MRUIStyle.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -635,11 +636,11 @@ void ImGuiMenu::draw_helpers()
         ImGui::Text( "Swapped frames: %zu", viewer->getSwappedFrames() );
         ImGui::Text( "FPS: %zu", viewer->getFPS() );
 
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Reset", ImVec2( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Reset", Vector2f( -1, 0 ) ) )
         {
             viewer->resetAllCounters();
         }
-        if ( RibbonButtonDrawer::GradientButtonCommonSize( "Print time to log", ImVec2( -1, 0 ) ) )
+        if ( UI::buttonCommonSize( "Print time to log", Vector2f( -1, 0 ) ) )
         {
             printTimingTreeAndStop();
         }
@@ -690,7 +691,7 @@ void ImGuiMenu::draw_helpers()
 
         const float btnWidth = cModalButtonWidth * menuScaling;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-        if ( RibbonButtonDrawer::GradientButton( "Ok", ImVec2( btnWidth, 0 ), ImGuiKey_Enter ) )
+        if ( UI::button( "Ok", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
             AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
             obj->setName( popUpRenameBuffer_ );
@@ -698,7 +699,7 @@ void ImGuiMenu::draw_helpers()
         }
         ImGui::SameLine();
         ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-        if ( RibbonButtonDrawer::GradientButton( "Cancel", ImVec2( btnWidth, 0 ), ImGuiKey_Escape ) )
+        if ( UI::button( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
         {
             ImGui::CloseCurrentPopup();
         }
@@ -751,7 +752,7 @@ void ImGuiMenu::draw_helpers()
         }
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-        if ( RibbonButtonDrawer::GradientButton( "Okay", ImVec2( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
+        if ( UI::button( "Okay", Vector2f( -1, 0 ) ) || ImGui::IsKeyPressed( ImGuiKey_Enter ) ||
            ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) )
         {
             storedError_.clear();            
@@ -1383,7 +1384,7 @@ bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& s
         ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = colorDis;
     }
     bool clicked = allowRemoval_ ?
-        RibbonButtonDrawer::GradientButton( "Remove", ImVec2( -1, 0 ) ) :
+        UI::button( "Remove", Vector2f( -1, 0 ) ) :
         ImGui::Button( "Remove", ImVec2( -1, 0 ) );
     if ( clicked )
     {

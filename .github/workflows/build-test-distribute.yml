@@ -31,12 +31,12 @@ jobs:
       BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
   windows-build-test:
-    needs: [ prepare-image, versioning-and-release-url ]
+    needs: [ versioning-and-release-url ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
-      image_tag: ${{needs.prepare-image.outputs.windows_image_tag}}
       version: ${{needs.versioning-and-release-url.outputs.version_tag}}
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    secrets: inherit
 
   ubuntu20-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
@@ -162,7 +162,7 @@ jobs:
           mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm
           mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
-          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
+        # mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
       - name: Upload Distributives
         run: |
@@ -174,8 +174,9 @@ jobs:
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu20-arm64-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_ubuntu22-arm64-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.short_version}}-dev.rpm \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg \
-                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
+                            meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_x64.pkg
+
+        # meshlib_${{needs.versioning-and-release-url.outputs.short_version}}_arm.pkg
 
   update-artifacts:
     timeout-minutes: 15

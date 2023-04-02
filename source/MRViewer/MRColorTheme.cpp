@@ -15,6 +15,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "ImGuiMenu.h"
+#include "MRUIStyle.h"
 #include <imgui.h>
 #include <assert.h>
 #include <fstream>
@@ -185,6 +186,7 @@ void ColorTheme::apply()
         SceneColors::set( SceneColors::Type( i ), instance.sceneColors_[i] );
 
     RibbonButtonDrawer::InitGradientTexture();
+    UI::init();
 
     CommandLoop::appendCommand( [&] ()
     {

@@ -9,6 +9,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRUIStyle.h"
 
 namespace
 {
@@ -60,7 +61,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PopStyleVar();
         RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
-    if ( RibbonButtonDrawer::GradientButton( "Open file", ImVec2( -1, 0 ) ) )
+    if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
         auto path = openFileDialog( { {},{},{{"RAW File","*.raw"}} } );
         if ( !path.empty() )

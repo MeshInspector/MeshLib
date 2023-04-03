@@ -48,8 +48,6 @@ public:
 
     /// draw gradient checkbox with icon (for menu item)
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
-    /// draw gradient radio button
-    MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
     /// draw gradient color edit 4
     MRVIEWER_API static bool GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
 

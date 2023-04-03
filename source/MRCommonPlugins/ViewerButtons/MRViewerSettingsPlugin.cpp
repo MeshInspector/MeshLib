@@ -231,13 +231,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 {
                     if ( i == 0 )
                     {
-                        RibbonButtonDrawer::GradientRadioButton( "Off", &storedSamples_, i );
+                        UI::radioButton( "Off", &storedSamples_, i );
                         ++i;
                     }
                     else
                     {
                         std::string label = 'x' + std::to_string( i );
-                        RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
+                        UI::radioButton( label.c_str(), &storedSamples_, i );
                     }
                     if ( i << 1 <= maxSamples_ )
                         ImGui::SameLine( ( ( ++counter ) * 70.f + style.WindowPadding.x ) * menuScaling );

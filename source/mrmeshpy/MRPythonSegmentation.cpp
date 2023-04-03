@@ -4,6 +4,23 @@
 #include "MRMesh/MRContoursCut.h"
 #include "MRMesh/MRSurroundingContour.h"
 #include "MRMesh/MRFillContourByGraphCut.h"
+#include "MRMesh/MRMeshTrimWithPlane.h"
+
+namespace MR
+{
+
+static void myTrimWithPlane( Mesh& mesh, const Plane3f & plane, MR::FaceMap* mapNew2Old )
+{
+    FaceHashMap new2OldHashMap;
+    trimWithPlane( mesh, plane, (UndirectedEdgeBitSet *)nullptr, mapNew2Old ? &new2OldHashMap : nullptr );
+    if ( mapNew2Old )
+    {
+        for ( auto & [newF, oldF] : new2OldHashMap )
+            mapNew2Old->autoResizeAt( newF ) = oldF;
+    }
+}
+
+} //namespace MR
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
 {
@@ -26,7 +43,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
         pybind11::arg( "topology" ), pybind11::arg( "source" ), pybind11::arg( "sink" ), pybind11::arg( "metric" ),
         "Finds segment that divide mesh on source and sink (source included, sink excluded), by minimizing the sum of metric over the boundary" );
 
-    m.def("cutMeshWithPlane", &MR::cutMeshWithPlane ,
+    m.def("cutMeshWithPlane", &MR::myTrimWithPlane,
         pybind11::arg( "mesh" ), pybind11::arg( "plane" ), pybind11::arg( "mapNew2Old" ) = nullptr,
         "This function cuts mesh with plane, leaving only part of mesh that lay in positive direction of normal\n"
         "\tmesh - Input mesh that will be cut\n"

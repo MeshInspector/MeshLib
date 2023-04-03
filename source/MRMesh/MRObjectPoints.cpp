@@ -99,6 +99,15 @@ void ObjectPoints::swapBase_( Object& other )
         assert( false );
 }
 
+void ObjectPoints::swapSignals_( Object& other )
+{
+    ObjectPointsHolder::swapSignals_( other );
+    if ( auto otherPoints = other.asType<ObjectPoints>() )
+        std::swap( pointsChangedSignal, otherPoints->pointsChangedSignal );
+    else
+        assert( false );
+}
+
 void ObjectPoints::serializeFields_( Json::Value& root ) const
 {
     ObjectPointsHolder::serializeFields_( root );

@@ -36,6 +36,12 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Points"; }
 
+    MRMESH_API virtual void setDirtyFlags( uint32_t mask ) override;
+
+    /// signal about points changing, triggered in setDirtyFlag
+    using PointsChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    PointsChangedSignal pointsChangedSignal;
+
 protected:
     MRMESH_API ObjectPoints( const ObjectPoints& other );
 

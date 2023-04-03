@@ -59,9 +59,9 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::Separator();
     ImGui::Text( "ImGui preset:" );
-    RibbonButtonDrawer::GradientRadioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
+    UI::radioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
     ImGui::SameLine();
-    RibbonButtonDrawer::GradientRadioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
+    UI::radioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
 
     ImGui::Separator();
     UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );

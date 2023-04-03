@@ -41,6 +41,10 @@ inline bool checkbox( const char* label, Getter get, Setter set )
 }
 
 
+/// draw gradient radio button
+MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
+
+
 } // namespace UI
 
 }

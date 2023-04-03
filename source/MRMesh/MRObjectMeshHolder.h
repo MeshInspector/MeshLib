@@ -120,6 +120,9 @@ public:
     virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
 
+    /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );
+
     // ancillary texture can be used to have custom features visualization without affecting real one
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
     virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
@@ -168,10 +171,10 @@ protected:
 
     /// Texture options
     MeshTexture texture_;
-    Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
+    VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
 
     MeshTexture ancillaryTexture_;
-    Vector<UVCoord, VertId> ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
+    VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
 
     struct MeshStat
     {

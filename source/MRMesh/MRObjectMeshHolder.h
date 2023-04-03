@@ -161,6 +161,9 @@ public:
     /// returns cached information about the number of components in the mesh
     MRMESH_API size_t numComponents() const;
 
+    /// signal about face selection changing, triggered in selectFaces
+    using FaceSelectionChangedSignal = boost::signals2::signal<void()>;
+    FaceSelectionChangedSignal faceSelectionChangedSignal;
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
@@ -189,6 +192,9 @@ protected:
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 

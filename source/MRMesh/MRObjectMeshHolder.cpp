@@ -348,6 +348,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
     selectedTriangles_ = std::move( newSelection );
     numSelectedFaces_.reset();
+    faceSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
 
@@ -485,6 +486,15 @@ void ObjectMeshHolder::swapBase_( Object& other )
 {
     if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
         std::swap( *this, *otherMesh );
+    else
+        assert( false );
+}
+
+void ObjectMeshHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
+        std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
     else
         assert( false );
 }

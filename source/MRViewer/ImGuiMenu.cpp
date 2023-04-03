@@ -956,7 +956,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            if ( RibbonButtonDrawer::GradientCheckbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
+            if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
             {
                 object.setVisible( isVisible, viewer->viewport().id );
                 if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
@@ -1318,7 +1318,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     }
     const bool mixedLocking = hasLocked && hasUnlocked;
     bool checked = hasLocked;
-    someChanges |= RibbonButtonDrawer::GradientCheckboxMixed( "Lock Transform", &checked, mixedLocking );
+    someChanges |= UI::checkboxMixed( "Lock Transform", &checked, mixedLocking );
     if ( checked != hasLocked )
         for ( const auto& s : selectedObjs )
             s->setLocked( checked );
@@ -1720,7 +1720,7 @@ float ImGuiMenu::drawTransform_()
             assert( window );
             auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            RibbonButtonDrawer::GradientCheckbox( "Uni-scale", &uniformScale_ );
+            UI::checkbox( "Uni-scale", &uniformScale_ );
             window->DC.CursorPosPrevLine.y -= diff;
             ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
@@ -1855,7 +1855,7 @@ bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObjec
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
-    const bool res = RibbonButtonDrawer::GradientCheckboxMixed( label, &checked, !realRes.second && realRes.first );
+    const bool res = UI::checkboxMixed( label, &checked, !realRes.second && realRes.first );
     if ( checked != realRes.first )
     {
         if ( invert )

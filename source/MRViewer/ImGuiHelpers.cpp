@@ -992,14 +992,14 @@ PaletteChanges Palette(
     bool fixZeroChanged = false;
     if ( fixZero )
     {
-        fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
+        fixZeroChanged = UI::checkbox( "Set Zero to Green", fixZero );
         ImGui::SetTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
     }
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
     const auto& params = palette.getParameters();
 
-    if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
+    if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
@@ -1347,7 +1347,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show Plane", &showPlane ) )
+        if ( MR::UI::checkbox( "Show Plane", &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );     
         ImGui::PopStyleVar();
     }

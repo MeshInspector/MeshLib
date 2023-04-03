@@ -58,7 +58,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
         }
     }
 
-    if ( RibbonButtonDrawer::GradientCheckbox( "Autofit", &isAutofit_ ) )
+    if ( UI::checkbox( "Autofit", &isAutofit_ ) )
         autofit_();
     ImGui::SetTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport.", menuScaling );
 
@@ -70,7 +70,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
 
     // Orthographic view
     bool orth = params.orthographic;
-    RibbonButtonDrawer::GradientCheckbox( "Orthographic view", &orth );
+    UI::checkbox( "Orthographic view", &orth );
     viewer->viewport().setOrthographic( orth );
     ImGui::PopItemWidth();
 

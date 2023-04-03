@@ -45,21 +45,9 @@ public:
     };
     MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetTexture( TextureType type );
 
-    /// draw gradient checkbox
-    MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
+
     /// draw gradient checkbox with icon (for menu item)
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
-    /// draw gradient checkbox with mixed state
-    MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
-    /// draw gradient checkbox
-    template<typename Getter, typename Setter>
-    static bool GradientCheckbox( const char* label, Getter get, Setter set )
-    {
-        bool value = get();
-        bool ret = GradientCheckbox( label, &value );
-        set( value );
-        return ret;
-    }
     /// draw gradient radio button
     MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
     /// draw gradient color edit 4

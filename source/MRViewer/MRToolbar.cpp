@@ -512,7 +512,7 @@ void Toolbar::drawCustomizeItemsList_()
         if ( schemaItem != RibbonSchemaHolder::schema().items.end() )
             checkboxChanged = buttonDrawer.GradientCheckboxItem( schemaItem->second, &itemInQA );
         else
-            checkboxChanged = RibbonButtonDrawer::GradientCheckbox( item.c_str(), &itemInQA );
+            checkboxChanged = UI::checkbox( item.c_str(), &itemInQA );
 
         if ( checkboxChanged )
         {

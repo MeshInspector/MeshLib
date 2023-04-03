@@ -32,7 +32,7 @@ MRVIEWER_API bool checkbox( const char* label, bool* value );
 MRVIEWER_API bool checkboxMixed( const char* label, bool* value, bool mixed );
 /// draw gradient checkbox
 template<typename Getter, typename Setter>
-static bool checkbox( const char* label, Getter get, Setter set )
+inline bool checkbox( const char* label, Getter get, Setter set )
 {
     bool value = get();
     bool ret = checkbox( label, &value );

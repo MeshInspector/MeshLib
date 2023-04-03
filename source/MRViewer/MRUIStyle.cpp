@@ -218,22 +218,18 @@ bool checkbox( const char* label, bool* value )
     const auto menu = getViewerInstance().getMenuPlugin();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * scaling, style.ItemInnerSpacing.y * scaling ) );
     auto& texture = getTexture( TextureType::Gradient );
     if ( !texture )
-    {
-        const bool res = ImGui::Checkbox( label, value );
-        ImGui::PopStyleVar();
-        return res;
-    }
+        return ImGui::Checkbox( label, value );
 
     const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
 
-    ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
+    sh.addColor( ImGuiCol_FrameBg, Color::transparent() );
+    sh.addColor( ImGuiCol_CheckMark, Color::white() );
+    sh.addVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
+    sh.addVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     const float clickSize = ImGui::GetFrameHeight();
@@ -338,9 +334,6 @@ bool checkbox( const char* label, bool* value )
 
     auto res = drawCustomCheckbox( label, value );
 
-    ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor( 2 );
-    ImGui::PopStyleVar();
     return res;
 }
 

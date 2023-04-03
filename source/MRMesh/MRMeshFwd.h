@@ -253,6 +253,10 @@ template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;
 
+/// Coordinates on texture 
+/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
+using UVCoord = Vector2f;
+
 using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
@@ -261,6 +265,8 @@ using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
+using VertColors = Vector<Color, VertId>;
+using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
 template <typename T, typename I> struct MRMESH_CLASS BMap;
@@ -302,10 +308,6 @@ class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
-
-/// Coordinates on texture 
-/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
-using UVCoord = Vector2f;
 
 template<typename T> class UniqueThreadSafeOwner;
 

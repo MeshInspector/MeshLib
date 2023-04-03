@@ -5,12 +5,14 @@
 namespace MR
 {
 
-void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius, const FoundPointCallback& foundCallback )
+void findPointsInBall( const PointCloud& pointCloud, const Vector3f& center, float radius, 
+    const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
-    findPointsInBall( pointCloud.getAABBTree(), center, radius, foundCallback );
+    findPointsInBall( pointCloud.getAABBTree(), center, radius, foundCallback, xf );
 }
 
-void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float radius, const FoundPointCallback& foundCallback )
+void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float radius, 
+    const FoundPointCallback& foundCallback, const AffineXf3f* xf )
 {
     if ( !foundCallback )
     {
@@ -33,7 +35,7 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
 
     auto addSubTask = [&]( AABBTreePoints::NodeId n )
     {
-        float distSq = ( tree.nodes()[n].box.getBoxClosestPointTo( center ) - center ).lengthSq();
+        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( center ) - center ).lengthSq();
         if ( distSq <= radiusSq )
             subtasks[stackSize++] = n;
     };
@@ -49,8 +51,11 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
         {
             auto [first, last] = node.getLeafPointRange();
             for ( int i = first; i < last; ++i )
-                if ( ( orderedPoints[i].coord - center ).lengthSq() <= radiusSq )
-                    foundCallback( orderedPoints[i].id, orderedPoints[i].coord );
+            {
+                auto coord = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;
+                if ( ( coord - center ).lengthSq() <= radiusSq )
+                    foundCallback( orderedPoints[i].id, coord );
+            }
             continue;
         }
 

@@ -47,7 +47,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 1e-3f, 1000 );
 
-    RibbonButtonDrawer::GradientCheckbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
+    UI::checkbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
     ImGui::SetTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
     if ( UI::button( "Open Directory", { -1, 0 } ) )

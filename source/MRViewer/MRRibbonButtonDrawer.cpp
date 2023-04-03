@@ -7,12 +7,12 @@
 #include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
 #include "MRViewerInstance.h"
+#include "MRUIStyle.h"
 #include "imgui_internal.h"
 
 namespace MR
 {
 
-const float cRadioInnerSpacingX = 12.f;
 float getScaling()
 {
     const auto menu = getViewerInstance().getMenuPlugin();
@@ -90,139 +90,10 @@ std::unique_ptr<MR::ImGuiImage>& RibbonButtonDrawer::GetTexture( TextureType typ
     return textures_[typeInt];
 }
 
-bool RibbonButtonDrawer::GradientCheckbox( const char* label, bool* value )
-{
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const float scaling = getScaling();
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( cRadioInnerSpacingX * getScaling(), style.ItemInnerSpacing.y * getScaling() ) );
-    auto& texture = GetTexture( TextureType::Gradient );
-    if ( !texture )
-    {
-        const bool res = ImGui::Checkbox( label, value );
-        ImGui::PopStyleVar();
-        return res;
-    }
-
-    const auto bgColor = ImGui::GetColorU32( ImGuiCol_FrameBg );
-
-    ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4( 0, 0, 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_CheckMark, ImVec4( 1, 1, 1, 1 ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.5f );
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * scaling, cCheckboxPadding * scaling } );
-
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const float clickSize = ImGui::GetFrameHeight();
-
-    ImVec2 pos = window->DC.CursorPos;
-    const ImRect bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
-
-    if ( value && *value )
-        ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-            texture->getImTextureId(),
-            bb.Min, bb.Max,
-            ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-            Color::white().getUInt32(), style.FrameRounding );
-
-    //code of this lambda is copied from ImGui::Checkbox in order to decrease thickness and change appearance of the check mark
-    auto drawCustomCheckbox = [bgColor] ( const char* label, bool* v )
-    {
-        if ( !ImGui::GetCurrentContext() || !v)
-            return false;
-
-        ImGuiContext& g = *ImGui::GetCurrentContext();
-        ImGuiWindow* window = g.CurrentWindow;
-        if ( !window || window->SkipItems )
-            return false;
-
-        const ImGuiStyle& style = ImGui::GetStyle();
-        const ImGuiID id = window->GetID( label );
-        const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
-
-        const float square_sz = ImGui::GetFrameHeight();
-        const ImVec2 pos = window->DC.CursorPos;
-        const ImRect total_bb( pos, ImVec2( pos.x + square_sz + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
-        ImGui::ItemSize( total_bb, style.FramePadding.y );
-        if ( !ImGui::ItemAdd( total_bb, id ) )
-        {
-            IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | ( *v ? ImGuiItemStatusFlags_Checked : 0 ) );
-            return false;
-        }
-
-        bool hovered, held;
-        bool pressed = ImGui::ButtonBehavior( total_bb, id, &hovered, &held );
-        if ( pressed )
-        {
-            *v = !( *v );
-            ImGui::MarkItemEdited( id );
-        }
-
-        const ImRect check_bb( pos, ImVec2( pos.x + square_sz, pos.y + square_sz ) );
-        ImGui::RenderNavHighlight( total_bb, id );
-
-        if ( *v )
-            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg ), true, style.FrameRounding * 0.5f );
-        else
-            ImGui::RenderFrame( check_bb.Min, check_bb.Max, ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : bgColor ), true, style.FrameRounding * 0.5f );
-
-        ImU32 check_col = ImGui::GetColorU32( ImGuiCol_CheckMark );
-        bool mixed_value = ( g.LastItemData.InFlags & ImGuiItemFlags_MixedValue ) != 0;
-        if ( mixed_value )
-        {
-            // Undocumented tristate/mixed/indeterminate checkbox (#2644)
-            // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-            ImVec2 pad( ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ), ImMax( 1.0f, IM_FLOOR( square_sz / 3.6f ) ) );
-            window->DrawList->AddRectFilled( { check_bb.Min.x + pad.x,  check_bb.Min.y + pad.y }, { check_bb.Max.x - pad.x, check_bb.Max.y - pad.y }, check_col, style.FrameRounding );
-        }
-        else if ( *v )
-        {
-            const float pad = ImMax( 1.0f, IM_FLOOR( square_sz / 6.0f ) );
-            auto renderCustomCheckmark = [] ( ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz )
-            {
-                const float thickness = ImMax( sz * 0.15f, 1.0f );
-                sz -= thickness * 0.5f;
-                pos = ImVec2( pos.x + thickness * 0.25f, pos.y + thickness * 0.25f );
-
-                const float half = sz * 0.5f;
-                const float ninth = sz / 9.0f;
-                const ImVec2 startPoint { pos.x + ninth, pos.y + half };
-                const ImVec2 anglePoint { pos.x + half, pos.y + sz - ninth };
-                const ImVec2 endPoint { pos.x + sz - ninth, pos.y + ninth * 2.0f };
-
-                draw_list->PathLineTo( startPoint );
-                draw_list->PathLineTo( anglePoint );
-                draw_list->PathLineTo( endPoint );
-                draw_list->PathStroke( col, 0, thickness );
-
-                const float radius = thickness * 0.5f;
-                draw_list->AddCircleFilled( startPoint, radius, col );
-                draw_list->AddCircleFilled( anglePoint, radius, col );
-                draw_list->AddCircleFilled( endPoint, radius, col );
-            };
-            renderCustomCheckmark( window->DrawList, { check_bb.Min.x +  pad, check_bb.Min.y + pad }, check_col, square_sz - pad * 2.0f );
-        }
-
-        ImVec2 label_pos = ImVec2( check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y );
-        if ( g.LogEnabled )
-            ImGui::LogRenderedText( &label_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]" );
-        if ( label_size.x > 0.0f )
-            ImGui::RenderText( label_pos, label );
-
-        IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | ( *v ? ImGuiItemStatusFlags_Checked : 0 ) );
-        return pressed;
-    };
-
-    auto res = drawCustomCheckbox( label, value );
-
-    ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor( 2 );
-    ImGui::PopStyleVar();
-    return res;
-}
 
 bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const
 {
-    bool res = GradientCheckbox( ( "##" + item.item->name() ).c_str(), value );
+    bool res = UI::checkbox( ( "##" + item.item->name() ).c_str(), value );
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 3;
     ImGui::SameLine( 0.f, spacing );
     const float height = ImGui::GetTextLineHeight();
@@ -232,23 +103,6 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
     std::string name = item.caption.empty() ? item.item->name() : item.caption;
     ImGui::Text( "%s", name.c_str());
     return res;
-}
-
-bool RibbonButtonDrawer::GradientCheckboxMixed( const char* label, bool* value, bool mixed )
-{
-    if ( mixed )
-    {
-        ImGuiContext& g = *ImGui::GetCurrentContext();
-        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
-        g.CurrentItemFlags |= ImGuiItemFlags_MixedValue;
-        const bool changed = GradientCheckbox( label, value );
-        g.CurrentItemFlags = backup_item_flags;
-        return changed;
-    }
-    else
-    {
-        return GradientCheckbox( label, value );
-    }
 }
 
 bool RibbonButtonDrawer::GradientRadioButton( const char* label, int* value, int v_button )

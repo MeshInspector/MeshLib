@@ -18,7 +18,7 @@ static void myTrimWithPlane( Mesh& mesh, const Plane3f & plane, MR::FaceMap* map
         for ( auto & [newF, oldF] : new2OldHashMap )
             mapNew2Old->autoResizeAt( newF ) = oldF;
     }
-};
+}
 
 } //namespace MR
 

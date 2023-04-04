@@ -344,6 +344,9 @@ public:
     /// this is important in parallel algorithms where other edges may change but stable ones will survive
     MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
+    // constructs triangular grid mesh topology in parallel
+    MRMESH_API void buildGridMesh( const GridSettings & settings );
+
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
 

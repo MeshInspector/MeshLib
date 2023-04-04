@@ -19,6 +19,7 @@
 #pragma warning(disable:4275)
 #pragma warning(disable:4127)
 #pragma warning(disable:4355) //'this': used in base member initializer list
+#pragma warning(disable:4459) //declaration of 'compare' hides global declaration
 #pragma warning(disable:4464) //relative include path contains '..'
 #pragma warning(disable:4701) //potentially uninitialized local variable 'inv' used
 #pragma warning(disable:4702) //unreachable code

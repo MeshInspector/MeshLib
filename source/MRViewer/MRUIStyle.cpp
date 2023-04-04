@@ -9,6 +9,16 @@
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
 
+
+ImVec2 operator+( const ImVec2& a, const ImVec2& b )
+{
+    return ImVec2( a.x + b.x, a.y + b.y );
+}
+ImVec2 operator-( const ImVec2& a, const ImVec2& b )
+{
+    return ImVec2( a.x - b.x, a.y - b.y );
+}
+
 namespace MR
 {
 
@@ -20,6 +30,7 @@ enum class TextureType
 {
     Mono,
     Gradient,
+    GradientBtn,
     RainbowRect,
     Count
 };
@@ -67,6 +78,18 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 
+bool checkKey( ImGuiKey passedKey )
+{
+    if ( passedKey == ImGuiKey_None )
+        return false;
+    if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
+        return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+    return ImGui::IsKeyPressed( passedKey );
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+
 void init()
 {
     auto& textureM = getTexture( TextureType::Mono );
@@ -89,6 +112,24 @@ void init()
     };
     data.filter = FilterType::Linear;
     textureG->update( data );
+
+
+    auto& textureGb = getTexture( TextureType::GradientBtn );
+    if ( !textureGb )
+        textureGb = std::make_unique<ImGuiImage>();
+    data.resolution = Vector2i( 4, 2 );
+    data.pixels = {
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnHoverStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnActiveStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnHoverEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnActiveEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableEnd ),
+    };
+    data.filter = FilterType::Linear;
+    textureGb->update( data );
 
 
     auto& textureR = getTexture( TextureType::RainbowRect );
@@ -114,101 +155,79 @@ void init()
     textureR->update( data );
 }
 
-bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/)
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/ )
 {
-    auto& texture = getTexture( TextureType::Gradient );
-    if ( !texture )
-        return ImGui::ButtonValid( label, active, size );
+    // copy from ImGui::ButtonEx and replaced visualize part
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if ( window->SkipItems )
+        return false;
 
-    StyleParamHolder sh;
-    sh.addColor( ImGuiCol_Button, Color::transparent() );
-    sh.addColor( ImGuiCol_Text, Color::white() );
-
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
-
-    sh.addVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-    if ( size.y == 0 )
-    {
-        auto framePadding = style.FramePadding;
-        framePadding.y = cGradientButtonFramePadding;
-        if ( auto menu = getViewerInstance().getMenuPlugin() )
-            framePadding.y *= menu->menu_scaling();
-        sh.addVar( ImGuiStyleVar_FramePadding, framePadding );
-    }
+    const ImGuiID id = window->GetID( label );
+    const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
     ImVec2 pos = window->DC.CursorPos;
-    ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
-    const ImRect bb( pos, ImVec2( pos.x + realSize.x, pos.y + realSize.y ) );
+    if ( ( flags & ImGuiButtonFlags_AlignTextBaseLine ) && style.FramePadding.y < window->DC.CurrLineTextBaseOffset ) // Try to vertically align buttons that are smaller/have no padding so that text baseline matches (bit hacky, since it shouldn't be a flag)
+        pos.y += window->DC.CurrLineTextBaseOffset - style.FramePadding.y;
+    ImVec2 size = ImGui::CalcItemSize( ImVec2(size_arg), label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f );
 
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), style.FrameRounding );
+    const ImRect bb( pos, pos + size );
+    ImGui::ItemSize( size, style.FramePadding.y );
+    if ( !ImGui::ItemAdd( bb, id ) )
+        return false;
 
-    auto res = ImGui::ButtonValid( label, active, size );
-        
-    return res;
+    if ( g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat )
+        flags |= ImGuiButtonFlags_Repeat;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior( bb, id, &hovered, &held, flags );
+
+    // Render
+    ImGui::RenderNavHighlight( bb, id );
+
+    // replaced part
+    auto& texture = getTexture( TextureType::GradientBtn );
+    if ( texture )
+    {
+        const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
+        window->DrawList->AddImageRounded(
+            texture->getImTextureId(),
+            bb.Min, bb.Max,
+            ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
+            Color::white().getUInt32(), style.FrameRounding );
+    }
+    else
+    {
+        const ImGuiCol colIdx = ( !active ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImU32 col = ImGui::GetColorU32( colIdx );
+        ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
+    }
+
+    if ( g.LogEnabled )
+        ImGui::LogSetNextTextDecoration( "[", "]" );
+    StyleParamHolder sh;
+    sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+    ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
+
+    IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
+    return pressed && active;
 }
 
-bool button( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
+bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
-    auto& texture = getTexture( TextureType::Gradient );
-    auto checkKey = [] ( ImGuiKey passedKey )
-    {
-        if ( passedKey == ImGuiKey_None )
-            return false;
-        if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
-            return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-        return ImGui::IsKeyPressed( passedKey );
-    };
-
-    
-    if ( !texture )
-        return ImGui::Button( label, ImVec2( size ) ) || checkKey( key );
-
-    StyleParamHolder sh;
-    sh.addColor( ImGuiCol_Button, Color::transparent() );
-    sh.addColor( ImGuiCol_Text, Color::white() );
-
+    const ImGuiStyle& style = ImGui::GetStyle();
     const auto menu = getViewerInstance().getMenuPlugin();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
+    return buttonEx( label, active, size ) || ( active && checkKey( key ) );
+}
 
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const ImVec2 labelSize = ImGui::CalcTextSize( label, NULL, true );
-
-    sh.addVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-
-    auto framePadding = style.FramePadding;
-    if ( size.y == 0 )
-        framePadding.y = cGradientButtonFramePadding * scaling;
-    else if ( size.y > 0 )
-    {
-        framePadding.y = ( size.y - ImGui::CalcTextSize( label ).y ) / 2.f;
-    }
-    if ( size.x > 0 )
-    {
-        framePadding.x = ( size.x - ImGui::CalcTextSize( label ).x ) / 2.f;
-    }
-    sh.addVar( ImGuiStyleVar_FramePadding, framePadding );
-
-    ImVec2 pos = window->DC.CursorPos;
-    ImVec2 realSize = ImGui::CalcItemSize( size, labelSize.x + style.FramePadding.x * 2.0f, labelSize.y + style.FramePadding.y * 2.0f );
-    const ImRect bb( pos, ImVec2( pos.x + realSize.x, pos.y + realSize.y ) );
-
-    ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddImageRounded(
-        texture->getImTextureId(),
-        bb.Min, bb.Max,
-        ImVec2( 0.5f, 0.25f ), ImVec2( 0.5f, 0.75f ),
-        Color::white().getUInt32(), style.FrameRounding );
-
-    auto res = ImGui::Button( label, size ) || checkKey( key );
-
-    return res;
+bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
+{
+    return buttonEx( label, true, size ) || checkKey( key );
 }
 
 bool checkbox( const char* label, bool* value )

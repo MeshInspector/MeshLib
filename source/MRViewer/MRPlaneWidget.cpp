@@ -41,6 +41,8 @@ void PlaneWidget::definePlane()
     planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
     planeObj_->setBordersColor( SceneColors::get( SceneColors::Type::Labels ) );
     planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
+    planeObj_->setFrontColor( Color::gray(), false );
+    planeObj_->setBackColor( Color::gray() );
     SceneRoot::get().addChild( planeObj_ );
 
     updateWidget_();
@@ -53,6 +55,13 @@ void PlaneWidget::undefinePlane()
     
     planeObj_->detachFromParent();
     planeObj_.reset();    
+}
+
+void PlaneWidget::setLocalMode( bool on )
+{
+    localMode_ = on;
+    if ( localMode_ )
+        localShift_ = 0.0f;
 }
 
 const Plane3f& PlaneWidget::getPlane() const
@@ -130,7 +139,8 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
         definePlane();
         updatePlane( plane_ );
-
+        if ( isInLocalMode() )
+            setLocalMode( 0.0f );
         importPlaneMode_ = false;
         return true;
     }
@@ -193,6 +203,8 @@ bool PlaneWidget::onMouseUp_( Viewer::MouseButton, int )
     if ( angle( -plane_.n, prevNorm ) < angle( plane_.n, prevNorm ) )
         plane_ = -plane_;
     updatePlane( plane_ );
+    if ( isInLocalMode() )
+        setLocalShift( 0.0f );
     return true;
 }
 

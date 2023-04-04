@@ -405,6 +405,7 @@ float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
 
 tl::expected<VertBitSet, std::string> Mesh::findSpikeVertices( float minSumAngle, const VertBitSet * region, ProgressCallback cb ) const
 {
+    MR_TIMER
     const VertBitSet & testVerts = topology.getVertIds( region );
     VertBitSet res( testVerts.size() );
     auto completed = BitSetParallelFor( testVerts, [&]( VertId v )
@@ -506,6 +507,7 @@ private:
 
 UndirectedEdgeBitSet Mesh::findCreaseEdges( float angleFromPlanar ) const
 {
+    MR_TIMER
     assert( angleFromPlanar > 0 && angleFromPlanar < PI );
     const float critCos = std::cos( angleFromPlanar );
     CreaseEdgesCalc calc( *this, critCos );
@@ -970,6 +972,7 @@ Vector3f Mesh::findCenterFromBBox() const
 
 void Mesh::mirror( const Plane3f& plane )
 {
+    MR_TIMER
     for ( auto& p : points )
     {
         p += 2.0f * ( plane.project( p ) - p );

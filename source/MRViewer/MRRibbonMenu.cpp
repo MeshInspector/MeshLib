@@ -1262,12 +1262,12 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::Begin(
         "RibbonScene", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
     drawRibbonSceneListContent_( selectedObjs, allObj );
     drawRibbonSceneInformation_( selectedObjs );
 
-    const auto newSize = ImGui::GetWindowSize();
+    const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
     static bool firstTime = true;
     if ( firstTime )
     {
@@ -1278,7 +1278,6 @@ void RibbonMenu::drawRibbonSceneList_()
         sceneSize_ = newSize;
         fixViewportsSize_( viewerRef.window_width, viewerRef.window_height );
     }
-
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -1308,6 +1307,53 @@ void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object
     sceneOpenCommands_.clear();
 
     reorderSceneIfNeeded_();
+}
+
+Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
+{
+    auto size = sceneSize_;
+
+    auto* window = ImGui::GetCurrentWindow();
+    if ( !window )
+        return size;
+
+    auto scaling = menu_scaling();
+    auto minX = 100.0f * scaling;
+    auto maxX = getViewerInstance().window_width * 0.5f;
+
+    ImRect rectHover;
+    ImRect rectDraw;
+    rectHover.Min = ImGui::GetWindowPos();
+    rectHover.Max = rectHover.Min;
+    rectHover.Min.x += size.x - 3.5f * scaling;
+    rectHover.Max.x += size.x + 3.5f * scaling;
+    rectHover.Max.y += size.y;
+    
+    rectDraw = rectHover;
+    rectDraw.Min.x += 1.5f * scaling;
+    rectDraw.Max.x -= 1.5f * scaling;
+
+    auto backupClipRect = window->ClipRect;
+    window->ClipRect = rectHover;
+    auto resizeId = window->GetID( "##resizePanel" );
+    ImGui::ItemAdd( rectHover, resizeId, nullptr, ImGuiItemFlags_NoNav );
+    bool hovered{ false }, held{ false };
+    ImGui::ButtonBehavior( rectHover, resizeId, &hovered, &held,
+        ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus );
+    window->ClipRect = backupClipRect;
+
+    if ( hovered || held )
+    {
+        ImGui::SetMouseCursor( ImGuiMouseCursor_ResizeEW );
+        auto color = held ? ImGui::GetColorU32( ImGuiCol_ResizeGripActive ) : ImGui::GetColorU32( ImGuiCol_ResizeGripHovered );
+        if ( held )
+            size.x = std::clamp( ImGui::GetMousePos().x, minX, maxX );
+
+        window->DrawList->PushClipRect( ImVec2( 0, 0 ), ImGui::GetMainViewport()->Size );
+        window->DrawList->AddRectFilled( rectDraw.Min, rectDraw.Max, color );
+        window->DrawList->PopClipRect();
+    }
+    return size;
 }
 
 void RibbonMenu::drawRibbonViewportsLabels_()

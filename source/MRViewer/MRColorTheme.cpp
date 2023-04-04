@@ -345,7 +345,17 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "SelectedObjectText",
         "SelectedObjectFrame",
         "GradientStart",
-        "GradientEnd"
+        "GradientEnd",
+
+        "GradBtnStart",
+        "GradBtnHoverStart",
+        "GradBtnActiveStart",
+        "GradBtnDisableStart",
+        "GradBtnEnd",
+        "GradBtnHoverEnd",
+        "GradBtnActiveEnd",
+        "GradBtnDisableEnd",
+        "GradBtnText"
     };
     return colorNames[int( type )];
 }

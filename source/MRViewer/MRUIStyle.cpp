@@ -85,7 +85,7 @@ bool checkKey( ImGuiKey passedKey )
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
         return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
     return ImGui::IsKeyPressed( passedKey );
-};
+}
 
 //////////////////////////////////////////////////////////////////////////
 

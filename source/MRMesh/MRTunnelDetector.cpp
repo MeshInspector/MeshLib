@@ -86,7 +86,6 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     if ( cb && !cb( 2 * step ) )
         return tl::make_unexpected( "Operation was canceled" );
 
-    std::vector<EdgeLoop> res;
     // construct maximal co-tree from the dual mesh edges
     UnionFind<FaceId> cotreeConnectedFace( mp.mesh.topology.lastValidFace() + 1 );
 
@@ -114,6 +113,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         }
     }
 
+    std::vector<EdgeId> joinEdges;
     sb = subprogress( cb, 3.0f * step, 1.0f );
     for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
     {
@@ -127,26 +127,36 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         if ( cotreeConnectedFace.find( l ) == cotreeConnectedFace.find( r ) )
         {
             // l and r are already connected by the co-tree, so adding this edge will introduce a loop
-            const auto o = mp.mesh.topology.org( ec.edge );
-            const auto d = mp.mesh.topology.dest( ec.edge );
-            assert( o != d );
-            assert( !primaryTree.test( ec.edge ) );
-            assert( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) );
-
-            const float numEdges = float( mp.mesh.topology.undirectedEdgeSize() ); // a value large than any loop length in edges
-            auto treeMetric = [numEdges, &primaryTree]( EdgeId e )
-            {
-                return primaryTree.test( e.undirected() ) ? 1.0f : numEdges;
-            };
-            auto tunnel = buildSmallestMetricPath( mp.mesh.topology, treeMetric, d, o );
-            tunnel.push_back( ec.edge );
-            assert( isEdgeLoop( mp.mesh.topology, tunnel ) );
-            res.push_back( std::move( tunnel ) );
+            joinEdges.push_back( ec.edge );
             continue;
         }
         // add edge to the co-tree
         cotreeConnectedFace.unite( l, r );
     }
+
+    std::vector<EdgeLoop> res( joinEdges.size() );
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    {
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            auto edge = joinEdges[i];
+            const auto o = mp.mesh.topology.org( edge );
+            const auto d = mp.mesh.topology.dest( edge );
+            assert( o != d );
+            assert( !primaryTree.test( edge ) );
+            assert( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) );
+
+            const float numEdges = float( mp.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
+            auto treeMetric = [numEdges, &primaryTree]( EdgeId e )
+            {
+                return primaryTree.test( e.undirected() ) ? 1.0f : numEdges;
+            };
+            auto tunnel = buildSmallestMetricPath( mp.mesh.topology, treeMetric, d, o );
+            tunnel.push_back( edge );
+            assert( isEdgeLoop( mp.mesh.topology, tunnel ) );
+            res[i] = std::move( tunnel );
+        }
+    });
 
     if ( cb && !cb( 1.0f ) )
         return tl::make_unexpected( "Operation was canceled" );

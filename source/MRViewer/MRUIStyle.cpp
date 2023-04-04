@@ -78,6 +78,18 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 
+bool checkKey( ImGuiKey passedKey )
+{
+    if ( passedKey == ImGuiKey_None )
+        return false;
+    if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
+        return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+    return ImGui::IsKeyPressed( passedKey );
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+
 void init()
 {
     auto& textureM = getTexture( TextureType::Mono );
@@ -143,9 +155,9 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
-    ImGuiKey key /*= ImGuiKey_None*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/ )
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/ )
 {
+    // copy from ImGui::ButtonEx and replaced visualize part
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if ( window->SkipItems )
         return false;
@@ -174,6 +186,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     // Render
     ImGui::RenderNavHighlight( bb, id );
 
+    // replaced part
     auto& texture = getTexture( TextureType::GradientBtn );
     if ( texture )
     {
@@ -186,7 +199,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     }
     else
     {
-        const ImU32 col = ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImGuiCol colIdx = ( !active ? ImGuiCol_TextDisabled : ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImU32 col = ImGui::GetColorU32( colIdx );
         ImGui::RenderFrame( bb.Min, bb.Max, col, true, style.FrameRounding );
     }
 
@@ -197,16 +211,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
-
-    auto checkKey = [] ( ImGuiKey passedKey )
-    {
-        if ( passedKey == ImGuiKey_None )
-            return false;
-        if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
-            return ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-        return ImGui::IsKeyPressed( passedKey );
-    };
-    return active && ( pressed || checkKey( key ) );
+    return pressed && active;
 }
 
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
@@ -217,7 +222,12 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
-    return buttonEx( label, active, size, key );
+    return buttonEx( label, active, size ) || ( active && checkKey( key ) );
+}
+
+bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
+{
+    return buttonEx( label, true, size ) || checkKey( key );
 }
 
 bool checkbox( const char* label, bool* value )

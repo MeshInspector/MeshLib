@@ -969,7 +969,7 @@ PaletteChanges Palette(
         ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = currentIndex;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
-        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
+        if ( UI::combo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
         {
             if ( presetIndex != currentIndex )
             {
@@ -1031,7 +1031,7 @@ PaletteChanges Palette(
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
 
-    RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
+    UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     ImGui::SetTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     float ranges[4];
     ranges[0] = params.ranges.front();

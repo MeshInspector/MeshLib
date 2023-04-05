@@ -98,7 +98,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         ImGui::SetNextItemWidth( 140.0f * menuScaling );
         auto rotMode = viewportParameters.rotationMode;
-        RibbonButtonDrawer::CustomCombo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
+        UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
         viewer->viewport().rotationCenterMode( rotMode );
 
         ImGui::PushItemWidth( 80 * menuScaling );
@@ -154,7 +154,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         ImGui::SetNextItemWidth( menuWidth * 0.5f );
         int selectedUserIdxBackup = selectedUserPreset_;
-        RibbonButtonDrawer::CustomCombo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
+        UI::combo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
         if ( selectedUserPreset_ != selectedUserIdxBackup )
         {
             if ( selectedUserPreset_ == 0 )

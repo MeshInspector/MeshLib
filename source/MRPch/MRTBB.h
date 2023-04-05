@@ -11,6 +11,7 @@
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 #pragma warning(push)
+#pragma warning(disable: 4459) //declaration of 'compare' hides global declaration
 #pragma warning(disable: 4464) //relative include path contains '..'
 #pragma warning(disable: 4574) //'TBB_USE_DEBUG' is defined to be '0': did you mean to use '#if TBB_USE_DEBUG'?
 #pragma warning(disable: 5215) //a function parameter with a volatile qualified type is deprecated in C++20
@@ -19,6 +20,7 @@
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
+#include <tbb/parallel_sort.h>
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
 #include <tbb/global_control.h>

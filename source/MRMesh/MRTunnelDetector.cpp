@@ -27,6 +27,7 @@ class BasisTunnelsDetector
 public:
     BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
     VoidOrErrStr prepare( ProgressCallback cb );
+    // after prepare(...) region can only shrink, not become larger
     tl::expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
 
 private:
@@ -104,6 +105,9 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     for ( size_t i = 0; i < innerEdges_.size(); ++i)
     {
         const auto& ec = innerEdges_[i];
+        if ( !mp_.mesh.topology.isInnerEdge( ec.edge, mp_.region ) )
+            continue; // region can only shrink, so some more edges become not-inner
+
         const auto o = mp_.mesh.topology.org( ec.edge );
         const auto d = mp_.mesh.topology.dest( ec.edge );
         assert( o != d );
@@ -209,20 +213,27 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
-tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const EdgeMetric & metric, ProgressCallback progressCallback )
+tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, EdgeMetric metric, ProgressCallback progressCallback )
 {
     MR_TIMER;
+    if ( !metric )
+        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
+
     FaceBitSet activeRegion = mp.mesh.topology.getFaceIds( mp.region );
     MeshPart activeMeshPart{ mp.mesh, &activeRegion };
     FaceBitSet tunnelFaces;
     VertBitSet tunnelVerts( mp.mesh.topology.lastValidVert() + 1 );
 
-    float initialProgress = 0.0f;
-    float targetProgress = 0.49f;
+    BasisTunnelsDetector d( activeMeshPart, metric );
+    if ( auto v = d.prepare( subprogress( progressCallback, 0.0f, 0.33f ) ); !v.has_value() )
+        return tl::make_unexpected( std::move( v.error() ) );
+
+    float initialProgress = 0.33f;
+    float targetProgress = 0.66f;
 
     for ( ;; )
     {
-        auto basisTunnels = detectBasisTunnels( activeMeshPart, metric, MR::subprogress(progressCallback, initialProgress, targetProgress) );
+        auto basisTunnels = d.detect( MR::subprogress( progressCallback, initialProgress, targetProgress ) );
         if ( !basisTunnels.has_value() )
             return tl::make_unexpected( basisTunnels.error() );
 
@@ -263,7 +274,7 @@ tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, fl
             }
             addLeftBand( mp.mesh.topology, t, tunnelFaces );
         }
-        activeRegion -= tunnelFaces;
+        activeRegion -= tunnelFaces; // reduce region
         assert( numSelectedTunnels > 0 );
         if ( progressCallback && !progressCallback( targetProgress + 0.01f ) )
             return tl::make_unexpected( "Operation was canceled" );

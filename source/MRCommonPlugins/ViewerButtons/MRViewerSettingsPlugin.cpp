@@ -125,7 +125,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto backgroundColor = backgroundColor_;
 
         ImGui::SameLine( menuWidth * 0.5f );
-        if ( RibbonButtonDrawer::GradientColorEdit4( "Background Color", backgroundColor,
+        if ( UI::colorEdit4( "Background Color", backgroundColor,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
             backgroundColor_ = backgroundColor;
         else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
@@ -267,7 +267,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 } );
             }
             ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
-            RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
+            UI::colorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             
             const char* tooltipsShift[2] = {

@@ -49,6 +49,10 @@ inline bool checkbox( const char* label, Getter get, Setter set )
 MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
 
 
+/// draw gradient color edit 4
+MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None*/ );
+
+
 } // namespace UI
 
 }

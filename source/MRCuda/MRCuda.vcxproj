@@ -89,11 +89,15 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="MRCudaContoursDistanceMap.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCudaBasic.hpp" />
     <ClInclude Include="MRCudaBasic.h" />
+    <ClInclude Include="MRCudaFloat2.cuh" />
     <ClInclude Include="MRCudaTest.h" />
+    <ClInclude Include="MRCudaContoursDistanceMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />

@@ -104,6 +104,8 @@ public:
     MRMESH_API void set( size_t x, size_t y, float val );
     /// sets value in index element
     MRMESH_API void set( size_t i, float val );
+    /// sets all values at one time
+    MRMESH_API void set( std::vector<float> data );
     /// invalidates value in (X,Y) element
     MRMESH_API void unset( size_t x, size_t y );
     /// invalidates value in index element

@@ -1,21 +1,25 @@
-#include "MRCudaPolylineProjection.h"
-#include "MRCudaPolylineStructs.hpp"
+#include "MRCudaContoursDistanceMap.h"
 #include "MRCudaBasic.h"
 #include "MRMesh/MRAABBTreePolyline.h"
-
-#include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include "MRCudaFloat2.cuh"
 
 namespace MR
 {
 namespace Cuda
 {
 
-__device__ float clamp(float x, float l, float u)
+struct Box2
 {
-    return ( ( x < l ) ? l :
-             ( ( x > u ) ? u : x ) );
+    float2 min;
+    float2 max;
+};
+
+struct Node
+{
+    Box2 box;
+    int l, r;
 };
 
 __device__ bool leaf( const Node& node )
@@ -31,31 +35,6 @@ __device__ int leafId( const Node& node )
 __device__ float2 getBoxClosestPointTo( const Box2& box, const float2& pt )
 {
     return { clamp( pt.x, box.min.x, box.max.x ), clamp( pt.y, box.min.y, box.max.y ) };
-}
-
-__device__ float2 operator+( const float2& a, const float2& b )
-{
-    return { a.x + b.x, a.y + b.y };
-}
-
-__device__ float2 operator-( const float2& a, const float2& b )
-{
-    return { a.x - b.x, a.y - b.y };
-}
-
-__device__ float2 operator*( const float2& a, const float k )
-{
-    return { k * a.x , k * a.y };
-}
-
-__device__ float lengthSq( const float2& a )
-{
-    return a.x * a.x + a.y * a.y;
-}
-
-__device__ float dot( const float2& a, const float2& b )
-{
-    return a.x * b.x + a.y * b.y;
 }
 
 using HalfEdgeRecord = int2;
@@ -168,14 +147,14 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
     cudaSetDevice( 0 );
     const size_t size = size_t( params.resolution.x ) * params.resolution.y;
 
-    DynamicArray<float2> cudaPts( polyline.points.size() );
-    cudaMemcpy( cudaPts.data(), polyline.points.data(), polyline.points.size() * sizeof( float2 ), cudaMemcpyHostToDevice );
+    DynamicArray<float2> cudaPts;
+    cudaPts.fromVector( polyline.points.vec_ );    
 
-    DynamicArray<Node> cudaNodes( nodes.size() );
-    cudaMemcpy( cudaNodes.data(), nodes.data(), nodes.size() * sizeof( Node ), cudaMemcpyHostToDevice );
+    DynamicArray<Node> cudaNodes;
+    cudaNodes.fromVector( nodes.vec_ );
 
-    DynamicArray<HalfEdgeRecord> cudaEdges( edges.size() );
-    cudaMemcpy( cudaEdges.data(), edges.data(), edges.size() * sizeof( HalfEdgeRecord ), cudaMemcpyHostToDevice );
+    DynamicArray<HalfEdgeRecord> cudaEdges;
+    cudaEdges.fromVector( edges.vec_ );
 
     DynamicArray<float> cudaRes (size);
 

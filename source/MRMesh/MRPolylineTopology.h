@@ -158,6 +158,7 @@ private:
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
 
 public:
+    /// allows to copy EdgeId -> edge data when necessary
     const auto& edges() const { return edges_; }
 };
 

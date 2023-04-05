@@ -1,5 +1,4 @@
 #include "MRCudaBasic.h"
-#include "MRCudaPolylineStructs.hpp"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -8,52 +7,6 @@ namespace MR
 
 namespace Cuda
 {
-
-template<typename T>
-DynamicArray<T>::DynamicArray( size_t size )
-{
-    resize( size );
-}
-
-template<typename T>
-DynamicArray<T>::DynamicArray( const std::vector<T>& vec )
-{
-    fromVector( vec );
-}
-
-template<typename T>
-DynamicArray<T>::~DynamicArray()
-{
-    resize( 0 );
-}
-
-template<typename T>
-void DynamicArray<T>::fromVector( const std::vector<T>& vec )
-{
-    resize( vec.size() );
-    cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice );
-}
-
-template<typename T>
-void DynamicArray<T>::resize( size_t size )
-{
-    if ( size == size_ )
-        return;
-    if ( size_ != 0 )
-        cudaFree( data_ );
-
-    size_ = size;
-    if ( size_ != 0 )
-        cudaMalloc( ( void** )&data_, size_ * sizeof( T ) );
-}
-
-
-template<typename T>
-void DynamicArray<T>::toVector( std::vector<T>& vec ) const
-{
-    vec.resize( size_ );
-    cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost );
-}
 
 void setToZero( DynamicArrayF& devArray )
 {
@@ -81,12 +34,6 @@ size_t getCudaAvailableMemory()
     // minus extra 128 MB
     return memFree - 128 * 1024 * 1024;
 }
-
-template class DynamicArray<uint16_t>;
-template class DynamicArray<float>;
-template class DynamicArray<Node>;
-template class DynamicArray<float2>;
-template class DynamicArray<int2>;
 
 }
 

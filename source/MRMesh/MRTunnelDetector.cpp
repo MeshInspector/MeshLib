@@ -4,9 +4,13 @@
 #include "MRRegionBoundary.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
+#include "MRExpected.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
+{
+
+namespace
 {
 
 struct EdgeCurvature
@@ -18,72 +22,90 @@ struct EdgeCurvature
     bool operator < ( const EdgeCurvature & b ) const { return asSortablePair() < b.asSortablePair(); }
 };
 
-tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
+class BasisTunnelsDetector
+{
+public:
+    BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
+    VoidOrErrStr prepare( ProgressCallback cb );
+    tl::expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
+
+private:
+    std::vector<EdgeCurvature> innerEdges_; // sorted by metric
+    const MeshPart & mp_;
+    EdgeMetric metric_;
+};
+
+BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric )
+    : mp_( mp )
+    , metric_( std::move( metric ) )
+{
+    assert( metric_ );
+}
+
+VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
 {
     MR_TIMER
-    if ( !metric )
-        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
-    
-    const float step = 0.25f;
 
     // count inner edges
     size_t numInnerEdges = 0;
-    for ( EdgeId e{ 0 }; e < mp.mesh.topology.edgeSize(); e += 2 )
+    for ( EdgeId e{ 0 }; e < mp_.mesh.topology.edgeSize(); e += 2 )
     {
-        if ( mp.mesh.topology.isLoneEdge( e ) || !mp.mesh.topology.isInnerEdge( e, mp.region ) )
+        if ( mp_.mesh.topology.isLoneEdge( e ) || !mp_.mesh.topology.isInnerEdge( e, mp_.region ) )
             continue;
         ++numInnerEdges;
     }
 
-    if ( !reportProgress( cb, step / 4 ) ) 
+    if ( !reportProgress( cb, 0.25f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // collect all mesh inner edges
-    std::vector<EdgeCurvature> innerEdges;
-    innerEdges.reserve( numInnerEdges );
-    for ( EdgeId e{ 0 }; e < mp.mesh.topology.edgeSize(); e += 2 )
+    innerEdges_.clear();
+    innerEdges_.reserve( numInnerEdges );
+    for ( EdgeId e{ 0 }; e < mp_.mesh.topology.edgeSize(); e += 2 )
     {
-        if ( mp.mesh.topology.isLoneEdge( e ) || !mp.mesh.topology.isInnerEdge( e, mp.region ) )
+        if ( mp_.mesh.topology.isLoneEdge( e ) || !mp_.mesh.topology.isInnerEdge( e, mp_.region ) )
             continue;
-        innerEdges.push_back( { e.undirected(), 0.0f } );
+        innerEdges_.push_back( { e.undirected(), 0.0f } );
     }
-    assert( innerEdges.size() == numInnerEdges );
+    assert( innerEdges_.size() == numInnerEdges );
 
-    if ( !reportProgress( cb, step / 2 ) ) 
+    if ( !reportProgress( cb, 0.5f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // compute curvature for every collected edge
-    tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges.size() ), [&](const tbb::blocked_range<size_t> & range)
+    tbb::parallel_for(tbb::blocked_range<size_t>( 0, innerEdges_.size() ), [&](const tbb::blocked_range<size_t> & range)
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            innerEdges[i].metric = metric( innerEdges[i].edge );
+            innerEdges_[i].metric = metric_( innerEdges_[i].edge );
         }
     });
 
-    if ( !reportProgress( cb, 3 * step / 4 ) ) 
+    if ( !reportProgress( cb, 0.75f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // sort edges from most curved to least curved
-    tbb::parallel_sort( innerEdges.begin(), innerEdges.end() );
+    tbb::parallel_sort( innerEdges_.begin(), innerEdges_.end() );
+    return {};
+}
 
-    if ( !reportProgress( cb, step ) ) 
+tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( ProgressCallback cb )
+{
+    MR_TIMER
+
+    if ( !reportProgress( cb, 0.0f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal tree from the primary mesh edges
-    UndirectedEdgeBitSet primaryTree( mp.mesh.topology.undirectedEdgeSize() );
-    UnionFind<VertId> treeConnectedVertices( mp.mesh.topology.lastValidVert() + 1 );
+    UndirectedEdgeBitSet primaryTree( mp_.mesh.topology.undirectedEdgeSize() );
+    UnionFind<VertId> treeConnectedVertices( mp_.mesh.topology.lastValidVert() + 1 );
     // here all edges that do not belong to the tree will be added (in the order from most curved to least curved)
     std::vector<EdgeCurvature> notTreeEdges;
-    auto sb = subprogress( cb, step, 2 * step );
-    for ( size_t i = 0; i < innerEdges.size(); ++i)
+    for ( size_t i = 0; i < innerEdges_.size(); ++i)
     {
-        if ( !reportProgress( sb, float( i ) / innerEdges.size(), i, 128 ) ) 
-            return tl::make_unexpected( "Operation was canceled" );
-
-        const auto& ec = innerEdges[i];
-        const auto o = mp.mesh.topology.org( ec.edge );
-        const auto d = mp.mesh.topology.dest( ec.edge );
+        const auto& ec = innerEdges_[i];
+        const auto o = mp_.mesh.topology.org( ec.edge );
+        const auto d = mp_.mesh.topology.dest( ec.edge );
         assert( o != d );
         if ( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) )
         {
@@ -96,27 +118,24 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         primaryTree.set( ec.edge );
     }
 
-    if ( cb && !cb( 2 * step ) )
+    if ( !reportProgress( cb, 0.25f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal co-tree from the dual mesh edges
-    UnionFind<FaceId> cotreeConnectedFace( mp.mesh.topology.lastValidFace() + 1 );
+    UnionFind<FaceId> cotreeConnectedFace( mp_.mesh.topology.lastValidFace() + 1 );
 
     // consider faces around each hole pre-united
-    std::vector<EdgePath> bounds = findLeftBoundary( mp.mesh.topology, mp.region );
+    std::vector<EdgePath> bounds = findLeftBoundary( mp_.mesh.topology, mp_.region );
 
-    sb = subprogress( cb, 2 * step, 3.0f * step );
     for ( size_t i = 0; i < bounds.size(); ++i )
     {
         const auto& loop = bounds[i];
-        if ( !reportProgress( sb, float( i ) / bounds.size(), i, 128 ) )
-            return tl::make_unexpected( "Operation was canceled" );
         if ( loop.empty() )
             continue;
         FaceId first;
         for ( auto e : loop )
         {
-            auto l = mp.mesh.topology.left( e );
+            auto l = mp_.mesh.topology.left( e );
             if ( !l )
                 continue;
             if ( first )
@@ -126,16 +145,15 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         }
     }
 
+    if ( !reportProgress( cb, 0.5f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     std::vector<EdgeId> joinEdges;
-    sb = subprogress( cb, 3.0f * step, 1.0f );
     for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
     {
-        if ( !reportProgress( sb, float( notTreeEdges.size() - i ) / int( notTreeEdges.size() ), i, 128 ) )
-            return tl::make_unexpected( "Operation was canceled" );
-
         const auto & ec = notTreeEdges[i];
-        const auto l = mp.mesh.topology.left( ec.edge );
-        const auto r = mp.mesh.topology.right( ec.edge );
+        const auto l = mp_.mesh.topology.left( ec.edge );
+        const auto r = mp_.mesh.topology.right( ec.edge );
         assert( l && r && l != r );
         if ( cotreeConnectedFace.find( l ) == cotreeConnectedFace.find( r ) )
         {
@@ -147,26 +165,29 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
         cotreeConnectedFace.unite( l, r );
     }
 
+    if ( !reportProgress( cb, 0.75f ) )
+        return tl::make_unexpected( "Operation was canceled" );
+
     std::vector<EdgeLoop> res( joinEdges.size() );
+    const float numEdges = float( mp_.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
+    auto treeMetric = [numEdges, &primaryTree]( EdgeId e )
+    {
+        return primaryTree.test( e.undirected() ) ? 1.0f : numEdges;
+    };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
     {
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto edge = joinEdges[i];
-            const auto o = mp.mesh.topology.org( edge );
-            const auto d = mp.mesh.topology.dest( edge );
+            const auto o = mp_.mesh.topology.org( edge );
+            const auto d = mp_.mesh.topology.dest( edge );
             assert( o != d );
             assert( !primaryTree.test( edge ) );
             assert( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) );
 
-            const float numEdges = float( mp.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
-            auto treeMetric = [numEdges, &primaryTree]( EdgeId e )
-            {
-                return primaryTree.test( e.undirected() ) ? 1.0f : numEdges;
-            };
-            auto tunnel = buildSmallestMetricPath( mp.mesh.topology, treeMetric, d, o );
+            auto tunnel = buildSmallestMetricPath( mp_.mesh.topology, treeMetric, d, o );
             tunnel.push_back( edge );
-            assert( isEdgeLoop( mp.mesh.topology, tunnel ) );
+            assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
             res[i] = std::move( tunnel );
         }
     });
@@ -174,6 +195,19 @@ tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshP
     return res;
 }
 
+} //anonymous namespace
+
+tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
+{
+    MR_TIMER
+    if ( !metric )
+        metric = discreteMinusAbsMeanCurvatureMetric( mp.mesh );
+
+    BasisTunnelsDetector d( mp, metric );
+    if ( auto v = d.prepare( subprogress( cb, 0.0f, 0.25f ) ); !v.has_value() )
+        return tl::make_unexpected( std::move( v.error() ) );
+    return d.detect( subprogress( cb, 0.25f, 1.0f ) );
+}
 
 tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, float maxTunnelLength, const EdgeMetric & metric, ProgressCallback progressCallback )
 {

@@ -100,13 +100,17 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
     // construct maximal tree from the primary mesh edges
     UndirectedEdgeBitSet primaryTree( mp_.mesh.topology.undirectedEdgeSize() );
     UnionFind<VertId> treeConnectedVertices( mp_.mesh.topology.lastValidVert() + 1 );
-    // here all edges that do not belong to the tree will be added (in the order from most curved to least curved)
-    std::vector<EdgeCurvature> notTreeEdges;
     for ( size_t i = 0; i < innerEdges_.size(); ++i)
     {
         const auto& ec = innerEdges_[i];
+        if ( !ec.edge )
+            continue;
         if ( !mp_.mesh.topology.isInnerEdge( ec.edge, mp_.region ) )
-            continue; // region can only shrink, so some more edges become not-inner
+        {
+            // region can only shrink, so some more edges become not-inner
+            innerEdges_[i] = {}; // invalidate such edges
+            continue; 
+        }
 
         const auto o = mp_.mesh.topology.org( ec.edge );
         const auto d = mp_.mesh.topology.dest( ec.edge );
@@ -114,7 +118,6 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         if ( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) )
         {
             // o and d are already connected by the tree, so adding this edge will introduce a loop
-            notTreeEdges.push_back( ec );
             continue;
         }
         // add edge to the tree, and unite its end vertices
@@ -153,9 +156,14 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         return tl::make_unexpected( "Operation was canceled" );
 
     std::vector<EdgeId> joinEdges;
-    for ( int i = (int)notTreeEdges.size() - 1; i >= 0; --i )
+    // check all edges not from primary tree, and build co-tree
+    for ( int i = (int)innerEdges_.size() - 1; i >= 0; --i )
     {
-        const auto & ec = notTreeEdges[i];
+        const auto & ec = innerEdges_[i];
+        if ( !ec.edge )
+            continue;
+        if ( primaryTree.test( ec.edge ) )
+            continue;
         const auto l = mp_.mesh.topology.left( ec.edge );
         const auto r = mp_.mesh.topology.right( ec.edge );
         assert( l && r && l != r );

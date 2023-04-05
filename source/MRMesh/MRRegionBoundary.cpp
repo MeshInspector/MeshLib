@@ -89,22 +89,25 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
         track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region ); };
     }
 
-    for ( auto f : topology.getFaceIds( region ) )
+    EdgeBitSet bdEdges( topology.edgeSize() );
+    BitSetParallelForAll( bdEdges, [&]( EdgeId e )
     {
-        for ( auto e : leftRing( topology, f ) )
+        if ( topology.isLeftBdEdge( e, region ) )
+            bdEdges.set( e );
+    } );
+
+    for ( auto e : bdEdges )
+    {
+        assert ( topology.isLeftBdEdge( e, region ) );
+        if ( !insert( e ) )
+            continue;
+        auto loop = track( e );
+        for ( int i = 1; i < loop.size(); ++i )
         {
-            if ( !topology.isLeftBdEdge( e, region ) )
-                continue;
-            if ( !insert( e ) )
-                continue;
-            auto loop = track( e );
-            for ( int i = 1; i < loop.size(); ++i )
-            {
-                [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
-                assert( inserted );
-            }
-            res.push_back( std::move( loop ) );
+            [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
+            assert( inserted );
         }
+        res.push_back( std::move( loop ) );
     }
 
     return res;

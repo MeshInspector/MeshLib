@@ -92,7 +92,7 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
     EdgeBitSet bdEdges( topology.edgeSize() );
     BitSetParallelForAll( bdEdges, [&]( EdgeId e )
     {
-        if ( topology.isLeftBdEdge( e, region ) )
+        if ( !topology.isLoneEdge( e ) && topology.isLeftBdEdge( e, region ) )
             bdEdges.set( e );
     } );
 

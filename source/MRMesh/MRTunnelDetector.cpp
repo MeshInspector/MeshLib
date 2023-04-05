@@ -34,6 +34,10 @@ private:
     std::vector<EdgeCurvature> innerEdges_; // sorted by metric
     const MeshPart & mp_;
     EdgeMetric metric_;
+
+    UndirectedEdgeBitSet primaryTree_;
+    UnionFind<VertId> treeConnectedVertices_;
+    UnionFind<FaceId> cotreeConnectedFace_;
 };
 
 BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric )
@@ -98,8 +102,9 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal tree from the primary mesh edges
-    UndirectedEdgeBitSet primaryTree( mp_.mesh.topology.undirectedEdgeSize() );
-    UnionFind<VertId> treeConnectedVertices( mp_.mesh.topology.lastValidVert() + 1 );
+    primaryTree_.clear();
+    primaryTree_.resize( mp_.mesh.topology.undirectedEdgeSize() );
+    treeConnectedVertices_.reset( mp_.mesh.topology.lastValidVert() + 1 );
     for ( size_t i = 0; i < innerEdges_.size(); ++i)
     {
         const auto& ec = innerEdges_[i];
@@ -115,21 +120,21 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         const auto o = mp_.mesh.topology.org( ec.edge );
         const auto d = mp_.mesh.topology.dest( ec.edge );
         assert( o != d );
-        if ( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) )
+        if ( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) )
         {
             // o and d are already connected by the tree, so adding this edge will introduce a loop
             continue;
         }
         // add edge to the tree, and unite its end vertices
-        treeConnectedVertices.unite( o, d );
-        primaryTree.set( ec.edge );
+        treeConnectedVertices_.unite( o, d );
+        primaryTree_.set( ec.edge );
     }
 
     if ( !reportProgress( cb, 0.25f ) )
         return tl::make_unexpected( "Operation was canceled" );
 
     // construct maximal co-tree from the dual mesh edges
-    UnionFind<FaceId> cotreeConnectedFace( mp_.mesh.topology.lastValidFace() + 1 );
+    cotreeConnectedFace_.reset( mp_.mesh.topology.lastValidFace() + 1 );
 
     // consider faces around each hole pre-united
     std::vector<EdgePath> bounds = findLeftBoundary( mp_.mesh.topology, mp_.region );
@@ -146,7 +151,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
             if ( !l )
                 continue;
             if ( first )
-                cotreeConnectedFace.unite( first, l );
+                cotreeConnectedFace_.unite( first, l );
             else
                 first = l;
         }
@@ -162,19 +167,19 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         const auto & ec = innerEdges_[i];
         if ( !ec.edge )
             continue;
-        if ( primaryTree.test( ec.edge ) )
+        if ( primaryTree_.test( ec.edge ) )
             continue;
         const auto l = mp_.mesh.topology.left( ec.edge );
         const auto r = mp_.mesh.topology.right( ec.edge );
         assert( l && r && l != r );
-        if ( cotreeConnectedFace.find( l ) == cotreeConnectedFace.find( r ) )
+        if ( cotreeConnectedFace_.find( l ) == cotreeConnectedFace_.find( r ) )
         {
             // l and r are already connected by the co-tree, so adding this edge will introduce a loop
             joinEdges.push_back( ec.edge );
             continue;
         }
         // add edge to the co-tree
-        cotreeConnectedFace.unite( l, r );
+        cotreeConnectedFace_.unite( l, r );
     }
 
     if ( !reportProgress( cb, 0.75f ) )
@@ -182,9 +187,9 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
 
     std::vector<EdgeLoop> res( joinEdges.size() );
     const float numEdges = float( mp_.mesh.topology.undirectedEdgeSize() ); // a value larger than any loop length in edges
-    auto treeMetric = [numEdges, &primaryTree]( EdgeId e )
+    auto treeMetric = [numEdges, this]( EdgeId e )
     {
-        return primaryTree.test( e.undirected() ) ? 1.0f : numEdges;
+        return primaryTree_.test( e.undirected() ) ? 1.0f : numEdges;
     };
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&]( const tbb::blocked_range<size_t> & range )
     {
@@ -194,8 +199,8 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
             const auto o = mp_.mesh.topology.org( edge );
             const auto d = mp_.mesh.topology.dest( edge );
             assert( o != d );
-            assert( !primaryTree.test( edge ) );
-            assert( treeConnectedVertices.find( o ) == treeConnectedVertices.find( d ) );
+            assert( !primaryTree_.test( edge ) );
+            assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
             auto tunnel = buildSmallestMetricPath( mp_.mesh.topology, treeMetric, d, o );
             tunnel.push_back( edge );

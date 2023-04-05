@@ -49,8 +49,6 @@ public:
     /// draw gradient checkbox with icon (for menu item)
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
 
-//     /// draw custom combo box
-//     MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
     /// draw custom collapsing header
     /// if issueCount is greater than zero, so many red dots will be displayed after text

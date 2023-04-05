@@ -199,7 +199,7 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
             assert( !primaryTree_.test( edge ) );
             assert( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) );
 
-            auto tunnel = buildSmallestMetricPath( mp_.mesh.topology, treeMetric, d, o );
+            auto tunnel = buildSmallestMetricPathBiDir( mp_.mesh.topology, treeMetric, d, o );
             tunnel.push_back( edge );
             assert( isEdgeLoop( mp_.mesh.topology, tunnel ) );
             res[i] = std::move( tunnel );

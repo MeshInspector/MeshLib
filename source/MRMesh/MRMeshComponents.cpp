@@ -140,7 +140,7 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
         if ( faceRoot < 0 )
             faceRoot = unionFindStruct.find( s );
         else
-            faceRoot = unionFindStruct.unite( faceRoot, s );
+            faceRoot = unionFindStruct.unite( faceRoot, s ).first;
     }
 
     const auto& allRoots = unionFindStruct.roots();
@@ -232,7 +232,7 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
         if ( vertRoot < 0 )
             vertRoot = unionFindStruct.find( s );
         else
-            vertRoot = unionFindStruct.unite( vertRoot, s );
+            vertRoot = unionFindStruct.unite( vertRoot, s ).first;
     }
 
     const auto& allRoots = unionFindStruct.roots();

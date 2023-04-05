@@ -1,6 +1,7 @@
 #pragma once
 #include "imgui.h"
 #include "exports.h"
+#include <cstring>
 
 namespace MR
 {
@@ -54,7 +55,7 @@ MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEdit
 
 /// draw combo box
 MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::string>& options,
-    bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = std::string( "Not selected" ) );
+    bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 } // namespace UI
 

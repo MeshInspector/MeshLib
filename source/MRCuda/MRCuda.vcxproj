@@ -89,11 +89,14 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="MRCudaPolylineProjection.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
     <ClInclude Include="MRCudaBasic.h" />
+    <ClInclude Include="MRCudaPolylineStructs.hpp" />
     <ClInclude Include="MRCudaTest.h" />
+    <ClInclude Include="MRCudaPolylineProjection.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />

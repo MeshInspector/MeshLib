@@ -142,7 +142,11 @@ private:
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
 
-        bool operator ==( const HalfEdgeRecord & b ) const = default;
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && org == b.org;
+        }
+
     };
 
     /// edges_: EdgeId -> edge data
@@ -152,6 +156,9 @@ private:
     Vector<EdgeId, VertId> edgePerVertex_;
     VertBitSet validVerts_; ///< each true bit here corresponds to valid element in edgePerVertex_
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
+
+public:
+    const auto& edges() const { return edges_; }
 };
 
 template<typename T, typename F1, typename F2>

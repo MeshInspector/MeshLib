@@ -1,4 +1,5 @@
 #include "MRCudaBasic.h"
+#include "MRCudaPolylineStructs.hpp"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -83,6 +84,9 @@ size_t getCudaAvailableMemory()
 
 template class DynamicArray<uint16_t>;
 template class DynamicArray<float>;
+template class DynamicArray<Node>;
+template class DynamicArray<float2>;
+template class DynamicArray<int2>;
 
 }
 

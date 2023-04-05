@@ -48,8 +48,8 @@ public:
 
     /// draw gradient checkbox with icon (for menu item)
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
-    /// draw gradient color edit 4
-    MRVIEWER_API static bool GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
+//     /// draw gradient color edit 4
+//     MRVIEWER_API static bool GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
 
     /// draw custom combo box
     MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );

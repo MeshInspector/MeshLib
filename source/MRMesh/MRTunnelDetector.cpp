@@ -120,13 +120,12 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         const auto o = mp_.mesh.topology.org( ec.edge );
         const auto d = mp_.mesh.topology.dest( ec.edge );
         assert( o != d );
-        if ( treeConnectedVertices_.find( o ) == treeConnectedVertices_.find( d ) )
+        if ( !treeConnectedVertices_.unite( o, d ).second )
         {
             // o and d are already connected by the tree, so adding this edge will introduce a loop
             continue;
         }
-        // add edge to the tree, and unite its end vertices
-        treeConnectedVertices_.unite( o, d );
+        // now o and d are united; add edge to the tree
         primaryTree_.set( ec.edge );
     }
 
@@ -172,14 +171,12 @@ tl::expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( P
         const auto l = mp_.mesh.topology.left( ec.edge );
         const auto r = mp_.mesh.topology.right( ec.edge );
         assert( l && r && l != r );
-        if ( cotreeConnectedFace_.find( l ) == cotreeConnectedFace_.find( r ) )
+        if ( !cotreeConnectedFace_.unite( l, r ).second )
         {
             // l and r are already connected by the co-tree, so adding this edge will introduce a loop
             joinEdges.push_back( ec.edge );
             continue;
         }
-        // add edge to the co-tree
-        cotreeConnectedFace_.unite( l, r );
     }
 
     if ( !reportProgress( cb, 0.75f ) )

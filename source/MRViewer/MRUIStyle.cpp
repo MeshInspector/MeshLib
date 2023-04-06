@@ -818,8 +818,6 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
-    ImGui::PopStyleVar();
-
     if ( !res )
         return false;
 

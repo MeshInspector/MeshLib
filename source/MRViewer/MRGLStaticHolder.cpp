@@ -1254,6 +1254,7 @@ void sortedInsert(inout uint fragsInds[MAX_FRAGMENTS], uint nodeInd, inout int c
 	}
 }
 
+// separate function to work-around weird behavior on AMD video cards
 vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int count)
 {
     vec4 color = vec4(0, 0, 0, 0);

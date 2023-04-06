@@ -558,6 +558,7 @@ jobs:
           failOnError: false
 
       - name: Delete all ManyLinux
+        if: ${{ false }}
         uses: geekyeggo/delete-artifact@v2
         with:
           name: ManyLinux-*

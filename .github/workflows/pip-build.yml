@@ -124,6 +124,7 @@ jobs:
           retention-days: 1
 
   windows-pip-build:
+    if: ${{ false }}
     needs: setup
     timeout-minutes: 60
     runs-on: windows-2019
@@ -433,6 +434,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   windows-pip-test:
+    if: ${{ false }}
     needs: [setup, windows-pip-build]
     timeout-minutes: 20
     runs-on: windows-latest

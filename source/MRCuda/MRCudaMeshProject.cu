@@ -207,7 +207,7 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
     }
 }
 
-std::vector<MR::MeshProjectionResult> findProjections( const std::vector<Vector3f> points, const MR::Mesh& mesh, float upDistLimitSq, float loDistLimitSq )
+std::vector<MR::MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, const MR::Mesh& mesh, float upDistLimitSq, float loDistLimitSq )
 {
     const AABBTree& tree = mesh.getAABBTree();
     const auto& nodes = tree.nodes();

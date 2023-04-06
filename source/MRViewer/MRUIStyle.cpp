@@ -765,6 +765,82 @@ bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /
     return value_changed;
 }
 
+void DrawCustomArrow( ImDrawList* drawList, const ImVec2& startPoint, const ImVec2& midPoint, const ImVec2& endPoint, ImU32 col, float thickness )
+{
+    drawList->PathLineTo( startPoint );
+    drawList->PathLineTo( midPoint );
+    drawList->PathLineTo( endPoint );
+    drawList->PathStroke( col, 0, thickness );
+
+    const float radius = thickness * 0.5f;
+    drawList->AddCircleFilled( startPoint, radius, col );
+    drawList->AddCircleFilled( midPoint, radius, col );
+    drawList->AddCircleFilled( endPoint, radius, col );
+}
+
+bool combo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview /*= true*/,
+    const std::vector<std::string>& tooltips /*= {}*/, const std::string& defaultText /*= "Not selected" */ )
+{
+    assert( tooltips.empty() || tooltips.size() == options.size() );
+
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_FramePadding, StyleConsts::CustomCombo::framePadding );
+
+    auto context = ImGui::GetCurrentContext();
+    ImGuiWindow* window = context->CurrentWindow;
+    const auto& style = ImGui::GetStyle();
+    const ImVec2 pos = window->DC.CursorPos;
+    const float arrowSize = 2 * style.FramePadding.y + ImGui::GetTextLineHeight();
+    if ( !showPreview )
+        ImGui::PushItemWidth( arrowSize + style.FramePadding.x * 0.5f );
+
+    float itemWidth = ( context->NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth ) ? context->NextItemData.Width : window->DC.ItemWidth;
+    const ImRect boundingBox( pos, { pos.x + itemWidth, pos.y + arrowSize } );
+    const ImRect arrowBox( { pos.x + boundingBox.GetWidth() - boundingBox.GetHeight() * 6.0f / 7.0f, pos.y }, boundingBox.Max );
+
+    auto res = ImGui::BeginCombo( label, nullptr, ImGuiComboFlags_NoArrowButton );
+    if ( showPreview )
+    {
+        const char* previewText = ( v && *v >= 0 ) ? options[*v].data() : defaultText.data();
+        ImGui::RenderTextClipped( { boundingBox.Min.x + style.FramePadding.x, boundingBox.Min.y + style.FramePadding.y }, { boundingBox.Max.x - arrowSize, boundingBox.Max.y }, previewText, nullptr, nullptr );
+    }
+
+    const float halfHeight = arrowBox.GetHeight() * 0.5f;
+    const float arrowHeight = arrowBox.GetHeight() * 5.0f / 42.0f;
+    const float arrowWidth = arrowBox.GetWidth() * 2.0f / 15.0f;
+
+    const float thickness = ImMax( arrowBox.GetHeight() * 0.075f, 1.0f );
+
+    const ImVec2 arrowPos{ arrowBox.Min.x, arrowBox.Min.y - thickness };
+    const ImVec2 startPoint{ arrowPos.x + arrowWidth, arrowPos.y + halfHeight };
+    const ImVec2 midPoint{ arrowPos.x + 2 * arrowWidth, arrowPos.y + halfHeight + arrowHeight };
+    const ImVec2 endPoint{ arrowPos.x + 3 * arrowWidth, arrowPos.y + halfHeight };
+
+    DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+
+    ImGui::PopStyleVar();
+
+    if ( !res )
+        return false;
+
+    for ( int i = 0; i < int( options.size() ); ++i )
+    {
+        ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+        if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
+            *v = i;
+
+        if ( !tooltips.empty() )
+            ImGui::SetTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
+
+        ImGui::PopID();
+    }
+
+    ImGui::EndCombo();
+    if ( !showPreview )
+        ImGui::PopItemWidth();
+    return true;
+}
+
 } // namespace UI
 
 }

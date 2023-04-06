@@ -1,6 +1,7 @@
 #pragma once
-#include "imgui.h"
 #include "exports.h"
+#include "imgui.h"
+#include <string>
 
 namespace MR
 {
@@ -52,6 +53,9 @@ MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
 /// draw gradient color edit 4
 MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None*/ );
 
+/// draw combo box
+MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::string>& options,
+    bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
 } // namespace UI
 

@@ -33,7 +33,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushItemWidth( 220.0f * menuScaling );
-    RibbonButtonDrawer::CustomCombo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
     if ( selectedUserPreset_ != selectedUserIdxBackup )
         update_();
     ImGui::Separator();

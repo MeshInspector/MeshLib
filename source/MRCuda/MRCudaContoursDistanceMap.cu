@@ -3,7 +3,7 @@
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "device_launch_parameters.h"
 
-#include "MRCudaFloat2.cuh"
+#include "MRCudaFloat.cuh"
 
 namespace MR
 {
@@ -16,18 +16,18 @@ struct Box2
     float2 max;
 };
 
-struct Node
+struct Node2
 {
     Box2 box;
     int l, r;
 };
 
-__device__ bool leaf( const Node& node )
+__device__ bool leaf( const Node2& node )
 {
     return node.r < 0;
 }
 
-__device__ int leafId( const Node& node )
+__device__ int leafId( const Node2& node )
 {
     return node.l;
 }
@@ -52,7 +52,7 @@ __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, con
     return a * ( 1 - ratio ) + b * ratio;
 }
 
-__global__ void kernel( const float2 originPoint, const int2 resolution, const float2 pixelSize, const Node* nodes, const float2* polylinePoints, const HalfEdgeRecord* edges, float* dists, const size_t size )
+__global__ void kernel( const float2 originPoint, const int2 resolution, const float2 pixelSize, const Node2* nodes, const float2* polylinePoints, const HalfEdgeRecord* edges, float* dists, const size_t size )
 {
     if ( size == 0 )
     {
@@ -150,7 +150,7 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
     DynamicArray<float2> cudaPts;
     cudaPts.fromVector( polyline.points.vec_ );    
 
-    DynamicArray<Node> cudaNodes;
+    DynamicArray<Node2> cudaNodes;
     cudaNodes.fromVector( nodes.vec_ );
 
     DynamicArray<HalfEdgeRecord> cudaEdges;

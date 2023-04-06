@@ -1280,6 +1280,8 @@ void main(void)
       discard;
 
     uint fragsInds [MAX_FRAGMENTS];
+    // suppress 'used uninitialized' warning; init values are not used
+    fragsInds[0] = 0;
     int count = 0;
     // get the index of the head of the list
     uint n = imageLoad ( heads, ivec2 ( gl_FragCoord.xy ) ).r;

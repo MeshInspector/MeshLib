@@ -476,6 +476,15 @@ size_t ObjectMeshHolder::numComponents() const
     return meshStat_->numComponents;
 }
 
+size_t ObjectMeshHolder::numHandles() const
+{
+    if ( !mesh_ )
+        return 0;
+    updateMeshStat_();
+    int EulerCharacteristic = mesh_->topology.numValidFaces() + (int)meshStat_->numHoles + mesh_->topology.numValidVerts() - (int)meshStat_->numUndirectedEdges;
+    return meshStat_->numComponents - EulerCharacteristic / 2;
+}
+
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 {
     // selected faces and edges can be changed only by the methods of this class, 

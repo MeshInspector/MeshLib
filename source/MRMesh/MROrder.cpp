@@ -5,12 +5,6 @@
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
-
-#pragma warning(push)
-#pragma warning(disable: 4464)
-#include <tbb/parallel_sort.h>
-#pragma warning(pop)
-
 #include <algorithm>
 #include <span>
 

@@ -344,6 +344,9 @@ public:
     /// this is important in parallel algorithms where other edges may change but stable ones will survive
     MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
+    // constructs triangular grid mesh topology in parallel
+    MRMESH_API void buildGridMesh( const GridSettings & settings );
+
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;
 
@@ -368,7 +371,10 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord & b ) const = default;
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+        }
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };

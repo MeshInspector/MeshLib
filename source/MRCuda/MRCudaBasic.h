@@ -9,16 +9,16 @@ namespace Cuda
 {
 // This struct is present to simplify GPU memory control
 template<typename T>
-class MRCUDA_CLASS DynamicArray
+class DynamicArray
 {
 public:
     DynamicArray() = default;
     // malloc given size on GPU
-    MRCUDA_API DynamicArray( size_t size );
+    DynamicArray( size_t size );
     // copy given vector to GPU
-    MRCUDA_API DynamicArray( const std::vector<T>& vec );
+    DynamicArray( const std::vector<T>& vec );
     // free this array from GPU (if needed)
-    MRCUDA_API ~DynamicArray();
+    ~DynamicArray();
 
     DynamicArray( const DynamicArray& ) = delete;
     DynamicArray( DynamicArray&& ) = delete;
@@ -26,11 +26,15 @@ public:
     DynamicArray& operator=( const DynamicArray& other ) = delete;
 
     // copy given vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
-    MRCUDA_API void fromVector( const std::vector<T>& vec );
+    template <typename U>
+    void fromVector( const std::vector<U>& vec );
+
     // copy this GPU array to given vector
-    MRCUDA_API void toVector( std::vector<T>& vec ) const;
+    template <typename U>
+    void toVector( std::vector<U>& vec ) const;
+
     // resize (free and malloc againg if size inconsistent) this GPU array (if size == 0 free it (if needed))
-    MRCUDA_API void resize( size_t size );
+    void resize( size_t size );
 
     // pointer to GPU array
     T* data() { return data_; }
@@ -44,8 +48,8 @@ private:
     size_t size_{ 0 };
 };
 
-using DynamicArrayU16 = DynamicArray<uint16_t>;
-using DynamicArrayF = DynamicArray<float>;
+using DynamicArrayU16 = MR::Cuda::DynamicArray<uint16_t>;
+using DynamicArrayF = MR::Cuda::DynamicArray<float>;
 
 // Sets all float values of GPU array to zero
 MRCUDA_API void setToZero( DynamicArrayF& devArray );
@@ -58,3 +62,5 @@ MRCUDA_API size_t getCudaAvailableMemory();
 }
 
 }
+
+#include "MRCudaBasic.hpp"

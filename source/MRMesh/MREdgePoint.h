@@ -40,7 +40,10 @@ struct EdgePointPair
     EdgePoint b;
     EdgePointPair() = default;
     EdgePointPair( EdgePoint ia, EdgePoint ib ) : a( ia ), b( ib ) {}
-    bool operator==( const EdgePointPair& rhs ) const = default;
+    bool operator==( const EdgePointPair& rhs ) const
+    {
+        return a == rhs.a && b == rhs.b;
+    }
 };
 
 /// returns true if points a and b are located on a boundary of the same triangle;

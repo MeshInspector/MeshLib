@@ -58,6 +58,8 @@ constexpr float cModalWindowPaddingX = 28.0f;
 constexpr float cModalWindowPaddingY = 20.0f;
 constexpr float cModalButtonWidth = 104.0f;
 
+const float cRadioInnerSpacingX = 12.f;
+
 namespace StyleConsts
 {
 

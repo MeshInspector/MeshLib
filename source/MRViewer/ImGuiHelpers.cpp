@@ -969,7 +969,7 @@ PaletteChanges Palette(
         ImGui::SetNextItemWidth( scaledWidth );
         int presetIndex = currentIndex;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
-        if ( RibbonButtonDrawer::CustomCombo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
+        if ( UI::combo( "Load preset", &presetIndex, presets, true, {}, "Select Palette Preset" ) )
         {
             if ( presetIndex != currentIndex )
             {
@@ -992,14 +992,14 @@ PaletteChanges Palette(
     bool fixZeroChanged = false;
     if ( fixZero )
     {
-        fixZeroChanged = RibbonButtonDrawer::GradientCheckbox( "Set Zero to Green", fixZero );
+        fixZeroChanged = UI::checkbox( "Set Zero to Green", fixZero );
         ImGui::SetTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
     }
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
     const auto& params = palette.getParameters();
 
-    if ( RibbonButtonDrawer::GradientCheckbox( "Discrete Palette", &isDiscrete ) )
+    if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
         changes |= int( PaletteChanges::Texture );
@@ -1031,7 +1031,7 @@ PaletteChanges Palette(
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
 
-    RibbonButtonDrawer::CustomCombo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
+    UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     ImGui::SetTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     float ranges[4];
     ranges[0] = params.ranges.front();
@@ -1253,10 +1253,13 @@ PaletteChanges Palette(
 
 void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
 {
+    float dragspeed = planeWidget.box().diagonal() * 1e-3f;
     auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
     {
         planeWidget.definePlane();
-        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().center() ) );
+        planeWidget.updatePlane( MR::Plane3f::fromDirAndPt( normal, planeWidget.box().min - normal * dragspeed ) );
+        if ( planeWidget.isInLocalMode() )
+            planeWidget.setLocalShift( 0.0f );
     };
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
@@ -1297,16 +1300,17 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         return;
     }
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cInputPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cGradientButtonFramePadding * menuScaling } );
 
+    auto localShift = planeWidget.getLocalShift();
     auto planeBackUp = planeWidget.getPlane();
     auto plane = planeWidget.getPlane();
 
-    float dragspeed = planeWidget.box().diagonal() * 1e-3f;
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
     ImGui::DragFloatValid3( "Norm", &plane.n.x, 0.001f );
     ImGui::PushButtonRepeat( true );
 
+    const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * menuScaling + ImGui::GetTextLineHeight();
     ImFont* iconsFont = MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::Icons );
     if ( iconsFont )
     {
@@ -1314,14 +1318,16 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         ImGui::PushFont( iconsFont );
     }
 
-    const float arrowButtonSize = 2.0f * MR::cInputPadding * menuScaling + ImGui::GetTextLineHeight();
+    auto& shift = planeWidget.isInLocalMode() ? localShift : plane.d;
+    auto shiftBackUp = shift;
+
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { MR::cDefaultItemSpacing * menuScaling * 0.5f, MR::cDefaultWindowPaddingY * menuScaling } );
     if ( MR::UI::button( "\xef\x84\x84", { arrowButtonSize, arrowButtonSize } ) )
-        plane.d -= dragspeed;
+        shift -= dragspeed;
     
     ImGui::SameLine();
     if ( MR::UI::button( "\xef\x84\x85", { arrowButtonSize, arrowButtonSize } ) )
-        plane.d += dragspeed;
+        shift += dragspeed;
     ImGui::PopStyleVar();
     if ( iconsFont )
     {
@@ -1333,7 +1339,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PopButtonRepeat();
 
     ImGui::SetNextItemWidth( 80.0f * menuScaling );
-    ImGui::DragFloatValid( "Shift", &plane.d, dragspeed );
+    ImGui::DragFloatValid( "Shift", &shift, dragspeed );
 
     ImGui::SameLine();
     if ( MR::UI::button( "Flip", { 60.0f * menuScaling, 0 } ) )
@@ -1347,9 +1353,15 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();
-        if ( MR::RibbonButtonDrawer::GradientCheckbox( "Show Plane", &showPlane ) )
+        if ( MR::UI::checkbox( "Show Plane", &showPlane ) )
             planeWidget.getPlaneObject()->setVisible( showPlane );     
         ImGui::PopStyleVar();
+    }
+
+    if ( planeWidget.isInLocalMode() && shiftBackUp != shift )
+    {
+        planeWidget.setLocalShift( shift );
+        plane.d += ( shift - shiftBackUp );
     }
 
     if ( planeBackUp != plane )

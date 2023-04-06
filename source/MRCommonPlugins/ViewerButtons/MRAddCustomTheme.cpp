@@ -33,7 +33,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     int selectedUserIdxBackup = selectedUserPreset_;
     ImGui::PushItemWidth( 220.0f * menuScaling );
-    RibbonButtonDrawer::CustomCombo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
+    UI::combo( "Ribbon theme preset", &selectedUserPreset_, userThemesPresets_ );
     if ( selectedUserPreset_ != selectedUserIdxBackup )
         update_();
     ImGui::Separator();
@@ -59,12 +59,12 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::Separator();
     ImGui::Text( "ImGui preset:" );
-    RibbonButtonDrawer::GradientRadioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
+    UI::radioButton( "Dark", ( int* ) &preset_, int( ColorTheme::Preset::Dark ) );
     ImGui::SameLine();
-    RibbonButtonDrawer::GradientRadioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
+    UI::radioButton( "Light", ( int* ) &preset_, int( ColorTheme::Preset::Light ) );
 
     ImGui::Separator();
-    RibbonButtonDrawer::GradientCheckbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
+    UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );

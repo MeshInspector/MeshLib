@@ -98,21 +98,21 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         ImGui::SetNextItemWidth( 140.0f * menuScaling );
         auto rotMode = viewportParameters.rotationMode;
-        RibbonButtonDrawer::CustomCombo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
+        UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
         viewer->viewport().rotationCenterMode( rotMode );
 
         ImGui::PushItemWidth( 80 * menuScaling );
 
         bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show Axes", &showAxes );
+        UI::checkbox( "Show Axes", &showAxes );
         viewer->viewport().showAxes( showAxes );
 
         bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show Global Basis", &showGlobalBasis );
+        UI::checkbox( "Show Global Basis", &showGlobalBasis );
         viewer->viewport().showGlobalBasis( showGlobalBasis );
 
         bool showRotCenter = viewer->rotationSphere->isVisible( viewer->viewport().id );
-        RibbonButtonDrawer::GradientCheckbox( "Show Rotation Center", &showRotCenter );
+        UI::checkbox( "Show Rotation Center", &showRotCenter );
         viewer->viewport().showRotationCenter( showRotCenter );
 
         ImGui::PopItemWidth();
@@ -125,7 +125,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         auto backgroundColor = backgroundColor_;
 
         ImGui::SameLine( menuWidth * 0.5f );
-        if ( RibbonButtonDrawer::GradientColorEdit4( "Background Color", backgroundColor,
+        if ( UI::colorEdit4( "Background Color", backgroundColor,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel ) )
             backgroundColor_ = backgroundColor;
         else if ( !ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) )
@@ -144,7 +144,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ImGui::SetNextItemWidth( w / 2.0f );
             ImGui::DragFloatValid( "##ClippingPlaneD", &plane.d, 1e-3f );
             ImGui::SameLine();
-            RibbonButtonDrawer::GradientCheckbox( "Show##ClippingPlane", &showPlane );
+            UI::checkbox( "Show##ClippingPlane", &showPlane );
             viewer->viewport().setClippingPlane( plane );
             viewer->viewport().showClippingPlane( showPlane );
         }
@@ -154,7 +154,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         ImGui::SetNextItemWidth( menuWidth * 0.5f );
         int selectedUserIdxBackup = selectedUserPreset_;
-        RibbonButtonDrawer::CustomCombo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
+        UI::combo( "Color theme", &selectedUserPreset_, userThemesPresets_ );
         if ( selectedUserPreset_ != selectedUserIdxBackup )
         {
             if ( selectedUserPreset_ == 0 )
@@ -196,17 +196,17 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
         if ( ribbonMenu_ )
         {
-            RibbonButtonDrawer::GradientCheckbox( "Make Visible on Select",
+            UI::checkbox( "Make Visible on Select",
                                                   std::bind( &RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1 ) );
-            RibbonButtonDrawer::GradientCheckbox( "Deselect on Hide",
+            UI::checkbox( "Deselect on Hide",
                                                   std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                   std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
         }
 
         bool flatShading = SceneSettings::get( SceneSettings::Type::MeshFlatShading );
         bool flatShadingBackup = flatShading;
-        RibbonButtonDrawer::GradientCheckbox( "Default Shading Flat", &flatShading );
+        UI::checkbox( "Default Shading Flat", &flatShading );
         if ( flatShadingBackup != flatShading )
             SceneSettings::set( SceneSettings::Type::MeshFlatShading, flatShading );
 
@@ -214,7 +214,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         {
             bool alphaSortBackUp = viewer->isAlphaSortEnabled();
             bool alphaBoxVal = alphaSortBackUp;
-            RibbonButtonDrawer::GradientCheckbox( "Alpha Sort", &alphaBoxVal );
+            UI::checkbox( "Alpha Sort", &alphaBoxVal );
             if ( alphaBoxVal != alphaSortBackUp )
                 viewer->enableAlphaSort( alphaBoxVal );
         }
@@ -231,13 +231,13 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 {
                     if ( i == 0 )
                     {
-                        RibbonButtonDrawer::GradientRadioButton( "Off", &storedSamples_, i );
+                        UI::radioButton( "Off", &storedSamples_, i );
                         ++i;
                     }
                     else
                     {
                         std::string label = 'x' + std::to_string( i );
-                        RibbonButtonDrawer::GradientRadioButton( label.c_str(), &storedSamples_, i );
+                        UI::radioButton( label.c_str(), &storedSamples_, i );
                     }
                     if ( i << 1 <= maxSamples_ )
                         ImGui::SameLine( ( ( ++counter ) * 70.f + style.WindowPadding.x ) * menuScaling );
@@ -258,7 +258,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
         {
             bool isEnableShadows = shadowGl_->isEnabled();
-            RibbonButtonDrawer::GradientCheckbox( "Enabled", &isEnableShadows );
+            UI::checkbox( "Enabled", &isEnableShadows );
             if ( isEnableShadows != shadowGl_->isEnabled() )
             {
                 CommandLoop::appendCommand( [shadowGl = shadowGl_.get(), isEnableShadows] ()
@@ -267,7 +267,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 } );
             }
             ImGui::SameLine( menuWidth * 0.25f + style.WindowPadding.x + 2 * menuScaling );
-            RibbonButtonDrawer::GradientColorEdit4( "Shadow Color", shadowGl_->shadowColor,
+            UI::colorEdit4( "Shadow Color", shadowGl_->shadowColor,
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
             
             const char* tooltipsShift[2] = {
@@ -463,7 +463,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
         ImGui::SameLine( windowSize.x * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );
-        changed = RibbonButtonDrawer::GradientCheckbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
+        changed = UI::checkbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
         if ( changed )
             value = valueAbs * ( inverse ? -1.f : 1.f );
         anyChanged = anyChanged || changed;
@@ -485,7 +485,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
 
 #ifdef _WIN32
     ImGui::NewLine();
-    if ( RibbonButtonDrawer::GradientCheckbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
+    if ( UI::checkbox( "Zoom by mouse wheel", &activeMouseScrollZoom_ ) )
     {
         if ( auto spaceMouseHandler = getViewerInstance().getSpaceMouseHandler() )
         {

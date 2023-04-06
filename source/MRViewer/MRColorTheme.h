@@ -111,6 +111,16 @@ public:
         GradientStart,
         GradientEnd,
 
+        GradBtnStart,
+        GradBtnHoverStart,
+        GradBtnActiveStart,
+        GradBtnDisableStart,
+        GradBtnEnd,
+        GradBtnHoverEnd,
+        GradBtnActiveEnd,
+        GradBtnDisableEnd,
+        GradBtnText,
+
         Count
     };
     // Getter and setter for ribbon colors

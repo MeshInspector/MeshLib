@@ -45,7 +45,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
-    RibbonButtonDrawer::GradientCheckbox( "Auto parameters", &autoMode_ );
+    UI::checkbox( "Auto parameters", &autoMode_ );
     ImGui::PopStyleVar();
     ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
@@ -59,7 +59,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
-        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
+        UI::combo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {

@@ -120,6 +120,9 @@ public:
     virtual void setUVCoords( Vector<UVCoord, VertId> uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     void updateUVCoords( Vector<UVCoord, VertId>& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
 
+    /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
+    MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );
+
     // ancillary texture can be used to have custom features visualization without affecting real one
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }
     virtual void setAncillaryTexture( MeshTexture texture ) { ancillaryTexture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
@@ -158,7 +161,12 @@ public:
 
     /// returns cached information about the number of holes in the mesh
     MRMESH_API size_t numHoles() const;
+    /// returns cached information about the number of components in the mesh
+    MRMESH_API size_t numComponents() const;
 
+    /// signal about face selection changing, triggered in selectFaces
+    using FaceSelectionChangedSignal = boost::signals2::signal<void()>;
+    FaceSelectionChangedSignal faceSelectionChangedSignal;
 protected:
     FaceBitSet selectedTriangles_;
     UndirectedEdgeBitSet selectedEdges_;
@@ -166,10 +174,10 @@ protected:
 
     /// Texture options
     MeshTexture texture_;
-    Vector<UVCoord, VertId> uvCoordinates_; ///< vertices coordinates in texture
+    VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
 
     MeshTexture ancillaryTexture_;
-    Vector<UVCoord, VertId> ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
+    VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture
 
     struct MeshStat
     {
@@ -187,6 +195,9 @@ protected:
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual tl::expected<std::future<void>, std::string> serializeModel_( const std::filesystem::path& path ) const override;
 

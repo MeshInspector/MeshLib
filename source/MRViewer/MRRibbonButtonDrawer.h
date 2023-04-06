@@ -45,28 +45,10 @@ public:
     };
     MRVIEWER_API static std::unique_ptr<ImGuiImage>& GetTexture( TextureType type );
 
-    /// draw gradient checkbox
-    MRVIEWER_API static bool GradientCheckbox( const char* label, bool* value );
+
     /// draw gradient checkbox with icon (for menu item)
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
-    /// draw gradient checkbox with mixed state
-    MRVIEWER_API static bool GradientCheckboxMixed( const char* label, bool* value, bool mixed );
-    /// draw gradient checkbox
-    template<typename Getter, typename Setter>
-    static bool GradientCheckbox( const char* label, Getter get, Setter set )
-    {
-        bool value = get();
-        bool ret = GradientCheckbox( label, &value );
-        set( value );
-        return ret;
-    }
-    /// draw gradient radio button
-    MRVIEWER_API static bool GradientRadioButton( const char* label, int* v, int valButton );
-    /// draw gradient color edit 4
-    MRVIEWER_API static bool GradientColorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
 
-    /// draw custom combo box
-    MRVIEWER_API static bool CustomCombo( const char* label, int* v, const std::vector<std::string>& options, bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
 
     /// draw custom collapsing header
     /// if issueCount is greater than zero, so many red dots will be displayed after text

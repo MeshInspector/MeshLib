@@ -10,10 +10,11 @@
 #include "MRViewportId.h"
 #include "MRSceneSettings.h"
 #include "MRHeapBytes.h"
+#include "MRStringConvert.h"
+#include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRStringConvert.h"
 #include <filesystem>
 
 namespace MR
@@ -269,6 +270,40 @@ ObjectMeshHolder::ObjectMeshHolder()
     setFlatShading( SceneSettings::get( SceneSettings::Type::MeshFlatShading ) );
 }
 
+void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
+{
+    MR_TIMER
+
+    setColoringType( src.getColoringType() );
+    setTexture( src.getTexture() );
+
+    const auto& srcUVCoords = src.getUVCoords();
+    const auto& srcColorMap = src.getVertsColorMap();
+    const auto lastVert = src.mesh()->topology.lastValidVert();
+    const bool updateUV = lastVert < srcUVCoords.size();
+    const bool updateColorMap = lastVert < srcColorMap.size();
+
+    if ( !updateUV && !updateColorMap )
+        return;
+
+    VertUVCoords uvCoords( thisToSrc.size() );
+    VertColors colorMap( thisToSrc.size() );
+
+    tbb::parallel_for( tbb::blocked_range<VertId>( VertId( 0 ), VertId( uvCoords.size() ) ), [&uvCoords, &srcUVCoords, &thisToSrc, &colorMap, &srcColorMap, updateUV, updateColorMap] ( const tbb::blocked_range<VertId>& range )
+    {
+        for ( VertId id = range.begin(); id < range.end(); ++id )
+        {
+            if ( updateUV )
+                uvCoords[id] = srcUVCoords[thisToSrc[id]];
+            if ( updateColorMap )
+                colorMap[id] = srcColorMap[thisToSrc[id]];
+        }
+    } );
+
+    setUVCoords( std::move( uvCoords ) );
+    setVertsColorMap( std::move( colorMap ) );
+}
+
 uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
 {
     auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
@@ -348,6 +383,7 @@ void ObjectMeshHolder::selectFaces( FaceBitSet newSelection )
 {
     selectedTriangles_ = std::move( newSelection );
     numSelectedFaces_.reset();
+    faceSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
 
@@ -434,6 +470,12 @@ size_t ObjectMeshHolder::numHoles() const
     return meshStat_->numHoles;
 }
 
+size_t ObjectMeshHolder::numComponents() const
+{
+    updateMeshStat_();
+    return meshStat_->numComponents;
+}
+
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask )
 {
     // selected faces and edges can be changed only by the methods of this class, 
@@ -479,6 +521,15 @@ void ObjectMeshHolder::swapBase_( Object& other )
 {
     if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
         std::swap( *this, *otherMesh );
+    else
+        assert( false );
+}
+
+void ObjectMeshHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherMesh = other.asType<ObjectMeshHolder>() )
+        std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
     else
         assert( false );
 }

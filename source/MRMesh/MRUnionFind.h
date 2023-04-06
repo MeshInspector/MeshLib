@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector.h"
+#include <utility>
 
 namespace MR
 {
@@ -27,25 +28,26 @@ public:
         sizes_.clear();
         sizes_.resize( size, 1 );
     }
-    /// unite two elements, returns new common root
-    I unite( I first, I second )
+    /// unite two elements,
+    /// \return first: new common root, second: true = union was done, false = first and second were already united
+    std::pair<I,bool> unite( I first, I second )
     {
         auto firstRoot = updateRoot_( first );
         auto secondRoot = updateRoot_( second );
         if ( firstRoot == secondRoot )
-            return firstRoot;
+            return { firstRoot, false };
         /// select root by size for best performance
         if ( sizes_[firstRoot] < sizes_[secondRoot] )
         {
             roots_[firstRoot] = secondRoot;
             sizes_[secondRoot] += sizes_[firstRoot];
-            return secondRoot;
+            return { secondRoot, true };
         }
         else
         {
             roots_[secondRoot] = firstRoot;
             sizes_[firstRoot] += sizes_[secondRoot];
-            return firstRoot;
+            return { firstRoot, true };
         }
     }
     /// returns true if given two elements are from one component

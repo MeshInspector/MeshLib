@@ -140,6 +140,12 @@ void DistanceMap::set( size_t i, float val )
     data_[i] = val;
 }
 
+void DistanceMap::set( std::vector<float> data )
+{
+    assert( data.size() == data_.size() );
+    data_ = std::move( data );
+}
+
 void DistanceMap::unset( size_t x, size_t y )
 {
     data_[ toIndex( { int( x ), int( y ) } ) ] = NOT_VALID_VALUE;

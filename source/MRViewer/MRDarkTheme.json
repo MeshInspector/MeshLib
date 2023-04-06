@@ -210,6 +210,61 @@
 			"b": 169,
 			"g": 77,
 			"r": 0
+		},
+
+		"GradBtnStart": {
+			"a": 255,
+			"b": 255,
+			"g": 131,
+			"r": 27
+		},
+		"GradBtnHoverStart": {
+			"a": 255,
+			"b": 255,
+			"g": 147,
+			"r": 56
+		},
+		"GradBtnActiveStart": {
+			"a": 255,
+			"b": 255,
+			"g": 157,
+			"r": 74
+		},
+		"GradBtnDisableStart": {
+			"a": 255,
+			"b": 105,
+			"g": 99,
+			"r": 95
+		},
+		"GradBtnEnd": {
+			"a": 255,
+			"b": 169,
+			"g": 77,
+			"r": 0
+		},
+		"GradBtnHoverEnd": {
+			"a": 255,
+			"b": 200,
+			"g": 91,
+			"r": 0
+		},
+		"GradBtnActiveEnd": {
+			"a": 255,
+			"b": 230,
+			"g": 105,
+			"r": 0
+		},
+		"GradBtnDisableEnd": {
+			"a": 255,
+			"b": 105,
+			"g": 99,
+			"r": 95
+		},
+		"GradBtnText": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
 		}
 	},
 	"Viewport Colors": {

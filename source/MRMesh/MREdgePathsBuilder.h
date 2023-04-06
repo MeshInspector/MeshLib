@@ -27,7 +27,9 @@ struct VertPathInfo
     bool isStart() const { return !back.valid(); }
 };
 
-using VertPathInfoMap = ParallelHashMap<VertId, VertPathInfo>;
+// ParallelHashMap here was significantly slower (especially in debug version of tunnel detection),
+// probably because of more allocations
+using VertPathInfoMap = HashMap<VertId, VertPathInfo>;
 
 /// the class is responsible for finding smallest metric edge paths on a mesh
 template<class MetricToPenalty>

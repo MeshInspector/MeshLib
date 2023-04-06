@@ -59,7 +59,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
-        RibbonButtonDrawer::CustomCombo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
+        UI::combo( "Scalar Type", ( int* )&parameters_.scalarType, cScalarTypeNames );
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {

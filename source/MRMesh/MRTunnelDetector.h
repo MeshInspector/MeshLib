@@ -18,7 +18,7 @@ MRMESH_API tl::expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( 
 
 /// returns tunnels as a number of faces;
 /// if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere
-MRMESH_API tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart& mp, float maxTunnelLength, const EdgeMetric& metric = {}, ProgressCallback progressCallback = {} );
+MRMESH_API tl::expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart& mp, float maxTunnelLength, EdgeMetric metric = {}, ProgressCallback progressCallback = {} );
 
 /// \}
 

@@ -25,6 +25,8 @@ public:
     [[nodiscard]] MRMESH_API EdgeId lastNotLoneEdge() const;
     /// remove all lone edges from given set
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
+    /// allows to copy edges data when necessary
+    [[nodiscard]] const auto& edges() const { return edges_; }
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
     /// returns the number of allocated edge records
@@ -371,7 +373,10 @@ private:
         VertId org;  ///< vertex at the origin of the edge
         FaceId left; ///< face at the left of the edge
 
-        bool operator ==( const HalfEdgeRecord & b ) const = default;
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+        }
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };

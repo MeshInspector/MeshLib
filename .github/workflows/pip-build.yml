@@ -124,7 +124,6 @@ jobs:
           retention-days: 1
 
   windows-pip-build:
-    if: ${{ false }}
     needs: setup
     timeout-minutes: 60
     runs-on: windows-2019
@@ -193,7 +192,6 @@ jobs:
       - name: Setup python
         working-directory: C:\vcpkg\installed\x64-windows-meshlib
         run: |
-          choco uninstall python python3 -y
           choco install python3 --version=${{matrix.py-version}} -y
           powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
           py -${{matrix.py-version}} -m pip install --upgrade pip
@@ -434,7 +432,6 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   windows-pip-test:
-    if: ${{ false }}
     needs: [setup, windows-pip-build]
     timeout-minutes: 20
     runs-on: windows-latest

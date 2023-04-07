@@ -13,11 +13,11 @@ void negatePicture( Image& image )
 {
     cudaSetDevice( 0 );
 
-    DynamicArray<uint8_t> cudaArray;
-    cudaArray.fromBytes( ( const uint8_t* )image.pixels.data(), image.pixels.size() * sizeof( MR::Color ) );
+    DynamicArray<Cuda::Color> cudaArray;
+    cudaArray.fromVector( image.pixels );
 
     negatePictureKernel( cudaArray );
-    cudaArray.toBytes( ( uint8_t* )image.pixels.data() );
+    cudaArray.toVector( image.pixels );
 }
 }
 

@@ -73,7 +73,8 @@ jobs:
       - name: Pip setup
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt 
+          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ matrix.py-cmd }} -m pip install pytest 
 
       - name: Install thirdparty libs
         run: |
@@ -208,6 +209,7 @@ jobs:
           powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -Destination lib"
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
+          py -${{matrix.py-version}} -m pip install pytest
 
       - name: Setup thirdparty
         working-directory: ${{ github.workspace }}\thirdparty\python
@@ -330,6 +332,7 @@ jobs:
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ matrix.py-cmd }} -m pip install pytest
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
 
       - name: Install thirdparty libs
@@ -429,6 +432,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v3
@@ -470,7 +474,8 @@ jobs:
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip uninstall -y meshlib
-          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt     
+          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
+          py -${{matrix.py-version}} -m pip install pytest
 
       - name: Install Meshlib wheel
         shell: pwsh
@@ -519,6 +524,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+          ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v3

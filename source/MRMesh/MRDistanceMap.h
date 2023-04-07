@@ -236,6 +236,9 @@ struct [[nodiscard]] ContoursDistanceMapOptions
     const DistanceMapToWorld& params, float isoValue, bool useDepth = false );
 [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
 
+/// constructs an offset contour for given polyline
+[[nodiscard]] MRMESH_API Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset );
+
 /**
  * \brief computes the union of the shapes bounded by input 2d contours
  * \return the boundary of the union

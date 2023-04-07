@@ -67,6 +67,7 @@ jobs:
       - name: Pip setup
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
+          ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Meshlib wheel install
         run:  ${{ matrix.py-cmd }} -m pip install meshlib
@@ -96,7 +97,8 @@ jobs:
 
       - name: Pip setup
         run: |
-          py -${{matrix.py-version}} -m pip install --upgrade pip 
+          py -${{matrix.py-version}} -m pip install --upgrade pip
+          py -${{matrix.py-version}} -m pip install pytest 
           py -${{matrix.py-version}} -m pip install meshlib
 
       - name: Run Python tests
@@ -122,7 +124,9 @@ jobs:
         run: brew install python@${{matrix.py-version}}
 
       - name: Pip setup
-        run: python${{matrix.py-version}} -m pip install --upgrade pip
+        run: |
+          python${{matrix.py-version}} -m pip install --upgrade pip
+          python${{matrix.py-version}} -m pip install pytest
 
       - name: Meshlib wheel install
         run:  python${{matrix.py-version}} -m pip install meshlib

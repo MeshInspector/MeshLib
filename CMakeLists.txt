@@ -199,6 +199,7 @@ else()
 endif()
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRCuda ./MRCuda)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)

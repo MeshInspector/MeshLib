@@ -2,8 +2,8 @@
 #include "MRCudaBasic.h"
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "device_launch_parameters.h"
-
 #include "MRCudaFloat.cuh"
+#include <float.h>
 
 namespace MR
 {

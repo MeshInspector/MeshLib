@@ -37,13 +37,18 @@ inline void DynamicArray<T>::fromVector( const std::vector<U>& vec )
 
 
 template <typename T>
-inline void DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
+void DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
 {
     assert( numBytes % sizeof( T ) == 0 );
     resize( numBytes / sizeof( T ) );
     cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice );
 }
 
+template <typename T>
+void DynamicArray<T>::toBytes( uint8_t* data )
+{
+    cudaMemcpy( data, data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost );
+}
 
 template<typename T>
 void DynamicArray<T>::resize( size_t size )

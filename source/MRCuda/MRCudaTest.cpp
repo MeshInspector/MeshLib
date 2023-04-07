@@ -17,6 +17,7 @@ void negatePicture( Image& image )
     cudaArray.fromBytes( ( const uint8_t* )image.pixels.data(), image.pixels.size() * sizeof( MR::Color ) );
 
     negatePictureKernel( cudaArray );
+    cudaArray.toBytes( ( uint8_t* )image.pixels.data() );
 }
 }
 

@@ -37,6 +37,7 @@ IF(APPLE)
 ELSE()
 	target_link_libraries(${PROJECT_NAME} PRIVATE
 		MRMesh
+		MRCuda
 		MRViewer
 		imgui
 		)

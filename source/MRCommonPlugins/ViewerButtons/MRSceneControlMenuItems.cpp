@@ -136,19 +136,19 @@ void ResetSceneMenuItem::preDraw_()
             } );
         }
 
-        ImGui::SetTooltipIfHovered( "Save current scene and then remove all objects", scaling );
+        UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Don't Save", btnSize ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();
         }
-        ImGui::SetTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
+        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        ImGui::SetTooltipIfHovered( "Do not remove any objects, return back", scaling );
+        UI::setTooltipIfHovered( "Do not remove any objects, return back", scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

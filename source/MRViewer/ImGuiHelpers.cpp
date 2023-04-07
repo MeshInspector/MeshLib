@@ -236,84 +236,6 @@ void PlotCustomHistogram( const char* str_id,
     }
 }
 
-bool InputTextCentered( const char* label, std::string& str, float width, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
-{
-    const auto& style = ImGui::GetStyle();
-    const auto& viewer = MR::Viewer::instanceRef();
-    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
-    
-    SetNextItemWidth( actualWidth );
-    if ( actualWidth > estimatedSize.x )
-        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
-
-    bool res =  InputText( label, str, flags, callback, user_data );
-
-    if ( actualWidth > estimatedSize.x )
-        PopStyleVar();
-    return res;
-}
-
-void InputTextCenteredReadOnly( const char* label, const std::string& str, float width, const std::optional<ImVec4>& textColor )
-{
-    const auto& style = ImGui::GetStyle();
-    const auto& viewer = MR::Viewer::instanceRef();
-    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
-    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
-
-    SetNextItemWidth( actualWidth );
-    if ( actualWidth > estimatedSize.x )
-        PushStyleVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
-
-    if ( textColor )
-    {
-        PushStyleColor( ImGuiCol_Text, *textColor );
-    }
-    else
-    {
-        auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        transparentColor.w *= 0.5f;
-        PushStyleColor( ImGuiCol_Text, transparentColor );
-    }
-    InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
-    ImGui::PopStyleColor();
-    ImGui::SameLine();
-
-    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
-        ImGui::Text( "%s", label );
-
-    if ( actualWidth > estimatedSize.x )
-        PopStyleVar();
-}
-
-MRVIEWER_API void TransparentText( const char* fmt, ... )
-{
-    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-    transparentColor.w *= 0.5f;
-    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
-    va_list args;
-    va_start( args, fmt );
-    TextV( fmt, args );
-    va_end( args );
-    ImGui::PopStyleColor();
-}
-
-MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... )
-{
-    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-    transparentColor.w *= 0.5f;
-    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
-    va_list args;
-    va_start( args, fmt );
-    TextWrappedV( fmt, args );
-    va_end( args );
-    ImGui::PopStyleColor();
-}
-
 bool DragFloatValid( const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
     bool res = DragFloat( label, v, v_speed, v_min, v_max, format, flags );
@@ -787,22 +709,6 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     return true;
 }
 
-bool ButtonValid( const char* label, bool valid, const ImVec2& size )
-{
-    if ( !valid )
-    {
-        const auto color = GetStyle().Colors[ImGuiCol_TextDisabled];
-        PushStyleColor( ImGuiCol_Button, color );
-        PushStyleColor( ImGuiCol_ButtonActive, color );
-        PushStyleColor( ImGuiCol_ButtonHovered, color );
-    }
-    bool res = Button( label, size ) && valid;
-    if ( !valid )
-        PopStyleColor( 3 );
-
-    return res;
-}
-
 bool InputIntBitSet( const char* label, int* v, const MR::BitSet& bs, int step /*= 1*/, int step_fast /*= 100*/, ImGuiInputTextFlags flags /*= 0 */ )
 {
     int& value = *v;
@@ -985,7 +891,7 @@ PaletteChanges Palette(
             CloseCurrentPopup();
         }
         ImGui::PopStyleVar();
-        ImGui::SetTooltipIfHovered( "Load one of custom presets", menuScaling );
+        UI::setTooltipIfHovered( "Load one of custom presets", menuScaling );
     }
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cSeparateBlocksSpacing * menuScaling, cSeparateBlocksSpacing * menuScaling } );
@@ -993,7 +899,7 @@ PaletteChanges Palette(
     if ( fixZero )
     {
         fixZeroChanged = UI::checkbox( "Set Zero to Green", fixZero );
-        ImGui::SetTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
+        UI::setTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
     }
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
 
@@ -1005,7 +911,7 @@ PaletteChanges Palette(
         changes |= int( PaletteChanges::Texture );
         presetName.clear();
     }
-    ImGui::SetTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
+    UI::setTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
     if ( isDiscrete )
     {
         ImGui::SameLine();
@@ -1020,7 +926,7 @@ PaletteChanges Palette(
             changes |= int( PaletteChanges::Texture );
             presetName.clear();
         }
-        ImGui::SetTooltipIfHovered( "Number of discrete levels", menuScaling );
+        UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
         ImGui::PopStyleVar();
     }
 
@@ -1032,7 +938,7 @@ PaletteChanges Palette(
     ImGui::PushItemWidth( scaledWidth );
 
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
-    ImGui::SetTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
+    UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     float ranges[4];
     ranges[0] = params.ranges.front();
     ranges[3] = params.ranges.back();
@@ -1137,7 +1043,7 @@ PaletteChanges Palette(
     std::string popupName = std::string( "Save Palette##Config" ) + std::string( label );
     if ( UI::button( "Save Palette as", Vector2f( scaledWidth - 10.0f * menuScaling, 0 ) ) )
         ImGui::OpenPopup( popupName.c_str() );
-    ImGui::SetTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
+    UI::setTooltipIfHovered( "Save the current palette settings to file. You can load it later as a preset.", menuScaling );
     ImGui::PopStyleVar();
 
     ImVec2 windowSize( cModalWindowWidth * menuScaling, 0.0f );
@@ -1200,7 +1106,7 @@ PaletteChanges Palette(
     ImGui::PopStyleVar();
     if ( !valid )
     {
-        SetTooltipIfHovered( currentPaletteName.empty() ?
+        UI::setTooltipIfHovered( currentPaletteName.empty() ?
             "Cannot save palette with empty name" :
             "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
     }
@@ -1386,71 +1292,6 @@ MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& si
     const auto& io = ImGui::GetIO();
     return  { int( ( io.MousePos.x - imagePos.x ) / size.x * image.getImageWidth() ), int( ( size.y - io.MousePos.y + imagePos.y ) / size.y * image.getImageHeight() ) };
 }
-
-void SetTooltipIfHovered( const std::string& text, float scaling )
-{
-    if ( !ImGui::IsItemHovered() || ImGui::IsItemActive() )
-        return;
-    assert( scaling > 0.f );
-
-    // default ImGui values
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
-
-    constexpr float cMaxWidth = 400.f;
-    const auto& style = ImGui::GetStyle();
-    auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
-    ImGui::SetNextWindowSize( ImVec2{ textSize.x + style.WindowPadding.x * 2, 0 } );
-
-    ImGui::BeginTooltip();
-    ImGui::TextWrapped( "%s", text.c_str() );
-    ImGui::EndTooltip();
-
-    ImGui::PopStyleVar( 2 );
-}
-
-void Separator( float scaling, const std::string& text, int issueCount )
-{
-    const auto& style = ImGui::GetStyle();
-    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
-    }
-    
-    if ( text.empty() )
-    {
-        ImGui::Separator();
-    }
-    else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
-    {
-        ImGui::TableNextColumn();
-        ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
-        ImGui::Text( "%s", text.c_str());
-        ImGui::SameLine();
-        if ( issueCount >= 0 )
-        {
-            ImGui::PushStyleColor( ImGuiCol_FrameBg, issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f} : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f } );            
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
-            const std::string issue = std::to_string( issueCount );
-            const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
-            ImGui::InputTextCenteredReadOnly( "##IssueCount", issue.data(), width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
-            ImGui::PopStyleColor();
-        }
-        ImGui::PopFont();
-
-        ImGui::TableNextColumn();
-        auto width = ImGui::GetWindowWidth();
-        ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );
-        ImGui::Separator();
-        ImGui::EndTable();
-    }
-
-    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
-    {
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
-    }
-}
-
 
 void Spinner( float radius, float scaling )
 {

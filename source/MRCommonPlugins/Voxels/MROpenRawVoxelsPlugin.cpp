@@ -47,7 +47,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { cCheckboxPadding * menuScaling, cCheckboxPadding * menuScaling } );
     UI::checkbox( "Auto parameters", &autoMode_ );
     ImGui::PopStyleVar();
-    ImGui::SetTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
+    UI::setTooltipIfHovered( "Use this flag to parse RAW parameters from filename.", menuScaling );
     ImGui::Separator();
 
     if ( !autoMode_ )

@@ -189,7 +189,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             {
                 item->second.item->action();
             }
-            ImGui::SetTooltipIfHovered( item->second.tooltip, menuScaling );
+            UI::setTooltipIfHovered( item->second.tooltip, menuScaling );
         }
 
         ImGui::Separator();
@@ -225,7 +225,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 auto backUpSamples = storedSamples_;
                 ImGui::Separator();
                 ImGui::Text( "Multisample anti-aliasing (MSAA):" );
-                ImGui::SetTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
+                UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
                 int counter = 0;
                 for ( int i = 0; i <= maxSamples_; i <<= 1 )
                 {
@@ -250,9 +250,9 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     needReset_ = storedSamples_ != curSamples_;
                 }
                 if ( gpuOverridesMSAA_ )
-                    ImGui::TransparentTextWrapped( "GPU multisampling settings override application value." );
+                    UI::transparentTextWrapped( "GPU multisampling settings override application value." );
                 if ( needReset_ )
-                    ImGui::TransparentTextWrapped( "Application requires restart to apply this change" );
+                    UI::transparentTextWrapped( "Application requires restart to apply this change" );
             }
         }
         if ( shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" ) )
@@ -280,7 +280,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             float quality = shadowGl_->getQuality();
             ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
             ImGui::PopItemWidth();
-            ImGui::SetTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
+            UI::setTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
             shadowGl_->setQuality( quality );
         }
     }
@@ -496,7 +496,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float scaling )
             }
         }
     }
-    ImGui::SetTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
+    UI::setTooltipIfHovered( "This mode is NOT recommended if you have 3Dconnexion driver installed, which sends mouse wheel fake events resulting in double reaction on SpaceMouse movement and camera tremble.", scaling );
 #endif
 
     if ( anyChanged )

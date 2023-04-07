@@ -25,7 +25,6 @@ jobs:
         id: get-latest-tag
 
   manylinux-pip-build:
-    if: ${{ false }}
     needs: setup
     timeout-minutes: 25
     runs-on: ${{ matrix.runner }}

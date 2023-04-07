@@ -1274,6 +1274,9 @@ Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offs
     };
 
     ContoursDistanceMapOptions options;
+    //compute precise distances only in the cells crossed by offset-isoline
+    options.maxDist = offset + pixelSize;
+    options.minDist = std::max( offset - pixelSize, 0.0f );
 
     const auto distanceMap = distanceMapFromContours( polyline, params, options );
 

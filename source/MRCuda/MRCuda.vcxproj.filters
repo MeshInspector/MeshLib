@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="MRCudaTest.cu">
+      <Filter>CudaTest</Filter>
+    </CudaCompile>
+    <CudaCompile Include="MRCudaContoursDistanceMap.cu">
+      <Filter>PolylineProject</Filter>
+    </CudaCompile>
+    <CudaCompile Include="MRCudaMeshProject.cu">
+      <Filter>MeshProject</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MRCudaTest.cpp">
+      <Filter>CudaTest</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaBasic.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaContoursDisntaceMap.cpp">
+      <Filter>PolylineProject</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaMeshProject.cpp">
+      <Filter>MeshProject</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCudaTest.h">
+      <Filter>CudaTest</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaTest.cuh">
+      <Filter>CudaTest</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaContoursDistanceMap.h">
+      <Filter>PolylineProject</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaBasic.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaBasic.hpp">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaFloat.cuh">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaMeshProject.h">
+      <Filter>MeshProject</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaContoursDistanceMap.cuh">
+      <Filter>PolylineProject</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaMeshProject.cuh">
+      <Filter>MeshProject</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CudaTest">
+      <UniqueIdentifier>{94e64b1d-68d9-4840-a9a6-604cf08763a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PolylineProject">
+      <UniqueIdentifier>{74b4c63d-a992-4970-ae29-086c0bcb732c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Basic">
+      <UniqueIdentifier>{1c50f71d-47b8-4731-af22-fd25ee5c40a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MeshProject">
+      <UniqueIdentifier>{4e9398df-4c38-45e8-819c-dfcdda2a4093}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

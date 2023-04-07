@@ -29,6 +29,9 @@ public:
     template <typename U>
     void fromVector( const std::vector<U>& vec );
 
+    // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
+    void fromBytes( const uint8_t* data, size_t numBytes );
+
     // copy this GPU array to given vector
     template <typename U>
     void toVector( std::vector<U>& vec ) const;

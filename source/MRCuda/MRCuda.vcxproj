@@ -86,10 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="MRCudaMeshProject.cu" />
-    <CudaCompile Include="MRCudaTest.cu">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xcudafe "--diag_suppress=implicit_return_from_non_void_function" %(AdditionalOptions)</AdditionalOptions>
-    </CudaCompile>
+    <CudaCompile Include="MRCudaTest.cu" />
     <CudaCompile Include="MRCudaContoursDistanceMap.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -97,12 +94,18 @@
     <ClInclude Include="MRCudaBasic.hpp" />
     <ClInclude Include="MRCudaBasic.h" />
     <ClInclude Include="MRCudaFloat.cuh" />
+    <ClInclude Include="MRCudaMeshProject.cuh" />
     <ClInclude Include="MRCudaMeshProject.h" />
+    <ClInclude Include="MRCudaContoursDistanceMap.cuh" />
+    <ClInclude Include="MRCudaTest.cuh" />
     <ClInclude Include="MRCudaTest.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaBasic.cpp" />
+    <ClCompile Include="MRCudaContoursDisntaceMap.cpp" />
+    <ClCompile Include="MRCudaMeshProject.cpp" />
+    <ClCompile Include="MRCudaTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">

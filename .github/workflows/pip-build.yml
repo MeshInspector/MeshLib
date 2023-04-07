@@ -205,7 +205,7 @@ jobs:
           powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\* -Destination C:\${{matrix.py-dir}}\include"
           powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\include"
           powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\include\include"
-          powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\libs\libs"
+          powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\libs"
           powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -Destination lib"
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
@@ -244,7 +244,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Build
-        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -p:PythonDllPath=C:\${{matrix.py-dir}}\${{matrix.py-file}}.dll -p:PythonIncludePath=C:\${{matrix.py-dir}}\include\
+        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
       - name: Run Test
         working-directory: source\x64\Release

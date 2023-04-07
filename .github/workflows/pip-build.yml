@@ -256,7 +256,7 @@ jobs:
 
       - name: Python Tests
         working-directory: source\x64\Release
-        run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py
+        run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py -cmd ${{ matrix.py-version }}
 
       - name: Create and fix Wheel
         run: |

@@ -117,9 +117,10 @@ PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Po
 template<typename V>
 PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
     const V& pt, const Polyline<V>& polyline, 
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, /*< offset for each edge of polyline */ 
-    float upDistLimit /*= FLT_MAX*/, /*< upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point */ 
-    AffineXf<V>* xf /*= nullptr */ )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge,
+    float upDistLimit,
+    AffineXf<V>* xf,
+    float loDistLimit )
 {
     const AABBTreePolyline<V>& tree = polyline.getAABBTree();
 
@@ -209,6 +210,8 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
                 res.dist = dist;
                 res.point = proj;
                 res.line = lineId;
+                if ( dist <= loDistLimit )
+                    break;
             }
             continue;
         }
@@ -226,15 +229,15 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 }
 
 Polyline2ProjectionWithOffsetResult findProjectionOnPolyline2WithOffset( const Vector2f& pt, const Polyline2& polyline,
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf2f* xf )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf2f* xf, float loDistLimit )
 {
-    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf );
+    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf, loDistLimit );
 }
 
 PolylineProjectionWithOffsetResult3 findProjectionOnPolylineWithOffset( const Vector3f& pt, const Polyline3& polyline,
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf3f* xf )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf3f* xf, float loDistLimit )
 {
-    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf );
+    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf, loDistLimit );
 }
 
 PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )

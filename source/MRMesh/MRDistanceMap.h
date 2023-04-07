@@ -203,6 +203,10 @@ struct [[nodiscard]] ContoursDistanceMapOptions
     const PixelBitSet* region{ nullptr };
     /// optional output vector of closest polyline edge per each pixel of distance map
     std::vector<UndirectedEdgeId>* outClosestEdges{ nullptr };
+    /// minimum absolute value in a pixel of distance map (lower values can be present but they are not precise)
+    float minDist{ 0 };
+    /// maximum absolute value in a pixel of distance map (larger values cannot be present)
+    float maxDist{ FLT_MAX };
 };
 
 /**

@@ -404,6 +404,7 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options )
 {
+    MR_TIMER
     assert( polyline.topology.isConsistentlyOriented() );
 
     if ( options.offsetParameters )
@@ -427,6 +428,9 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     DistanceMap distMap( params.resolution.x, params.resolution.y );
     if ( !polyline.topology.lastNotLoneEdge().valid())
         return distMap;
+
+    const auto maxDistSq = sqr( options.maxDist );
+    const auto minDistSq = sqr( options.minDist );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -442,11 +446,11 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
             Polyline2ProjectionWithOffsetResult res;
             if ( options.offsetParameters )
             {
-                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset );
+                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset, options.maxDist, nullptr, options.minDist );
             }
             else
             {
-                auto noOffsetRes = findProjectionOnPolyline2( p, polyline );
+                auto noOffsetRes = findProjectionOnPolyline2( p, polyline, maxDistSq, nullptr, minDistSq );
                 res.line = noOffsetRes.line;
                 res.point = noOffsetRes.point;
                 res.dist = std::sqrt( noOffsetRes.distSq );

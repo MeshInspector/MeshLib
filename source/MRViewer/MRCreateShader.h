@@ -7,7 +7,15 @@
 namespace MR
 {
 
-using DisabledWarnings = std::vector<int>;
+struct ShaderWarning
+{
+	// number is presented in some of gpu shader compilations output
+	int number{0};
+	// some part of warning line to find
+	std::string line;
+};
+
+using DisabledWarnings = std::vector<ShaderWarning>;
 
 // This function creates shader and logs output
 void createShader( const std::string& shader_name,

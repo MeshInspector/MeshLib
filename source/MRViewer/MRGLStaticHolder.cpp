@@ -1379,7 +1379,7 @@ void main(void)
 
     DisabledWarnings warns = {};
     if ( type == TransparencyOverlayQuad )
-        warns.push_back( 7050 );
+        warns.push_back( { 7050,"used uninitialized" } );
 
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );
 }

@@ -1,7 +1,6 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRDistanceMap.h"
 
 namespace MR { namespace Cuda {
 

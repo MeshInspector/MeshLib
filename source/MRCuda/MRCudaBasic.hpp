@@ -1,5 +1,7 @@
 #pragma once
 #include "cuda_runtime.h"
+#include <assert.h>
+
 namespace MR
 {
 
@@ -32,6 +34,16 @@ inline void DynamicArray<T>::fromVector( const std::vector<U>& vec )
     resize( vec.size() );
     cudaMemcpy( data_, vec.data(), size_ * sizeof( T ), cudaMemcpyHostToDevice );
 }
+
+
+template <typename T>
+inline void DynamicArray<T>::fromBytes( const uint8_t* data, size_t numBytes )
+{
+    assert( numBytes % sizeof( T ) == 0 );
+    resize( numBytes / sizeof( T ) );
+    cudaMemcpy( data_, data, numBytes, cudaMemcpyHostToDevice );
+}
+
 
 template<typename T>
 void DynamicArray<T>::resize( size_t size )

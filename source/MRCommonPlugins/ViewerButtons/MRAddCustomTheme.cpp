@@ -14,10 +14,6 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
-#include "MRMesh/MRImageLoad.h"
-#include "MRMesh/MRImageSave.h"
-#include "MRCuda/MRCudaTest.h"
-#include "MRViewer/MRFileDialog.h"
 
 namespace MR
 {
@@ -72,12 +68,6 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
     ImGui::InputText( "Theme name", themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
-    if ( UI::button( "Negate picture", valid, Vector2f( -1, 0 ) ) )
-    {
-        auto image = *ImageLoad::fromAnySupportedFormat(openFileDialog());
-        MR::Cuda::negatePicture( image );
-        ImageSave::toAnySupportedFormat(image,saveFileDialog());
-    }
     if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
     {
         std::error_code ec;

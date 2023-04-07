@@ -1244,4 +1244,42 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
 }
 
+Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset )
+{
+    MR_TIMER
+
+    assert( offset > 0.f );
+
+    const auto box = polyline.computeBoundingBox();
+    const auto size = box.size();
+
+    const auto padding = offset + 2 * pixelSize;
+
+    ContourToDistanceMapParams params;
+    params.pixelSize = {
+        pixelSize,
+        pixelSize,
+    };
+    params.resolution = {
+        int( ( size.x + 2 * padding ) / pixelSize ),
+        int( ( size.y + 2 * padding ) / pixelSize ),
+    };
+    params.orgPoint = {
+        box.min.x - padding,
+        box.min.y - padding,
+    };
+
+    ContoursDistanceMapOptions options;
+
+    const auto distanceMap = distanceMapFromContours( polyline, params, options );
+
+    auto isoline = distanceMapTo2DIsoPolyline( distanceMap, offset );
+
+    DistanceMapToWorld distanceMapToWorld( params );
+    for ( auto& p : isoline.points )
+        p = Vector2f( distanceMapToWorld.toWorld( p.x, p.y, 0 ) );
+
+    return isoline;
+}
+
 } //namespace MR

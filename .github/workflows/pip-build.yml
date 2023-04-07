@@ -189,13 +189,14 @@ jobs:
           Xcopy C:\vcpkg\vcpkg-export-20230329-153927.1.0.0 C:\vcpkg /E/H/C/I/y
 
       - uses: actions/setup-python@v4
+        id: setup-python
         with:
           python-version: ${{matrix.py-version}}
 
       - name: Setup python
         working-directory: C:\vcpkg\installed\x64-windows-meshlib
         run: |
-          powershell.exe -c "Copy-Item -Path C:\${{matrix.py-dir}}\libs\${{matrix.py-file}}.lib -Destination lib"
+          powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -Destination lib"
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
 

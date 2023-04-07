@@ -12,7 +12,7 @@ namespace MR
 {
 
 template<typename V, typename F>
-PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyline<V> & tree, float upDistLimitSq, AffineXf<V>* xf, F && edgeToEndPoints )
+PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyline<V> & tree, float upDistLimitSq, AffineXf<V>* xf, F && edgeToEndPoints, float loDistLimitSq )
 {
     PolylineProjectionResult<V> res;
     res.distSq = upDistLimitSq;
@@ -78,6 +78,8 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
                 res.distSq = distSq;
                 res.point = proj;
                 res.line = lineId;
+                if ( distSq <= loDistLimitSq )
+                    break;
             }
             continue;
         }
@@ -94,30 +96,31 @@ PolylineProjectionResult<V> findProjectionCore( const V& pt, const AABBTreePolyl
     return res;
 }
 
-PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& pt, const Polyline2& polyline, float upDistLimitSq, AffineXf2f* xf )
+PolylineProjectionResult2 findProjectionOnPolyline2( const Vector2f& pt, const Polyline2& polyline, float upDistLimitSq, AffineXf2f* xf, float loDistLimitSq )
 {
     return findProjectionCore( pt, polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector2f & a, Vector2f & b ) 
     {
         a = polyline.orgPnt( ue );
         b = polyline.destPnt( ue );
-    } );
+    }, loDistLimitSq );
 }
 
-PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline, float upDistLimitSq, AffineXf3f* xf )
+PolylineProjectionResult3 findProjectionOnPolyline( const Vector3f& pt, const Polyline3& polyline, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
 {
     return findProjectionCore( pt, polyline.getAABBTree(), upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
     {
         a = polyline.orgPnt( ue );
         b = polyline.destPnt( ue );
-    } );
+    }, loDistLimitSq );
 }
 
 template<typename V>
 PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
     const V& pt, const Polyline<V>& polyline, 
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, /*< offset for each edge of polyline */ 
-    float upDistLimit /*= FLT_MAX*/, /*< upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimit and no valid point */ 
-    AffineXf<V>* xf /*= nullptr */ )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge,
+    float upDistLimit,
+    AffineXf<V>* xf,
+    float loDistLimit )
 {
     const AABBTreePolyline<V>& tree = polyline.getAABBTree();
 
@@ -207,6 +210,8 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
                 res.dist = dist;
                 res.point = proj;
                 res.line = lineId;
+                if ( dist <= loDistLimit )
+                    break;
             }
             continue;
         }
@@ -224,24 +229,24 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 }
 
 Polyline2ProjectionWithOffsetResult findProjectionOnPolyline2WithOffset( const Vector2f& pt, const Polyline2& polyline,
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf2f* xf )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf2f* xf, float loDistLimit )
 {
-    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf );
+    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf, loDistLimit );
 }
 
 PolylineProjectionWithOffsetResult3 findProjectionOnPolylineWithOffset( const Vector3f& pt, const Polyline3& polyline,
-    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf3f* xf )
+    const Vector<float, UndirectedEdgeId>& offsetPerEdge, float upDistLimit, AffineXf3f* xf, float loDistLimit )
 {
-    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf );
+    return findProjectionOnPolylineWithOffsetT( pt, polyline, offsetPerEdge, upDistLimit, xf, loDistLimit );
 }
 
-PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf )
+PolylineProjectionResult3 findProjectionOnMeshEdges( const Vector3f& pt, const Mesh& mesh, const AABBTreePolyline3& tree, float upDistLimitSq, AffineXf3f* xf, float loDistLimitSq )
 {
     return findProjectionCore( pt, tree, upDistLimitSq, xf, [&]( UndirectedEdgeId ue, Vector3f & a, Vector3f & b ) 
     {
         a = mesh.orgPnt( ue );
         b = mesh.destPnt( ue );
-    } );
+    }, loDistLimitSq );
 }
 
 template<typename V>

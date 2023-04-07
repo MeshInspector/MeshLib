@@ -404,6 +404,7 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options )
 {
+    MR_TIMER
     assert( polyline.topology.isConsistentlyOriented() );
 
     if ( options.offsetParameters )
@@ -427,6 +428,9 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     DistanceMap distMap( params.resolution.x, params.resolution.y );
     if ( !polyline.topology.lastNotLoneEdge().valid())
         return distMap;
+
+    const auto maxDistSq = sqr( options.maxDist );
+    const auto minDistSq = sqr( options.minDist );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -442,11 +446,11 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
             Polyline2ProjectionWithOffsetResult res;
             if ( options.offsetParameters )
             {
-                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset );
+                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset, options.maxDist, nullptr, options.minDist );
             }
             else
             {
-                auto noOffsetRes = findProjectionOnPolyline2( p, polyline );
+                auto noOffsetRes = findProjectionOnPolyline2( p, polyline, maxDistSq, nullptr, minDistSq );
                 res.line = noOffsetRes.line;
                 res.point = noOffsetRes.point;
                 res.dist = std::sqrt( noOffsetRes.distSq );
@@ -1242,6 +1246,47 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
     mapB.negate();
     mapA.mergeMax( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
+}
+
+Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset )
+{
+    MR_TIMER
+
+    assert( offset > 0.f );
+
+    const auto box = polyline.computeBoundingBox();
+    const auto size = box.size();
+
+    const auto padding = offset + 2 * pixelSize;
+
+    ContourToDistanceMapParams params;
+    params.pixelSize = {
+        pixelSize,
+        pixelSize,
+    };
+    params.resolution = {
+        int( ( size.x + 2 * padding ) / pixelSize ),
+        int( ( size.y + 2 * padding ) / pixelSize ),
+    };
+    params.orgPoint = {
+        box.min.x - padding,
+        box.min.y - padding,
+    };
+
+    ContoursDistanceMapOptions options;
+    //compute precise distances only in the cells crossed by offset-isoline
+    options.maxDist = offset + pixelSize;
+    options.minDist = std::max( offset - pixelSize, 0.0f );
+
+    const auto distanceMap = distanceMapFromContours( polyline, params, options );
+
+    auto isoline = distanceMapTo2DIsoPolyline( distanceMap, offset );
+
+    DistanceMapToWorld distanceMapToWorld( params );
+    for ( auto& p : isoline.points )
+        p = Vector2f( distanceMapToWorld.toWorld( p.x, p.y, 0 ) );
+
+    return isoline;
 }
 
 } //namespace MR

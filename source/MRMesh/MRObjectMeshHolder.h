@@ -163,6 +163,8 @@ public:
     MRMESH_API size_t numHoles() const;
     /// returns cached information about the number of components in the mesh
     MRMESH_API size_t numComponents() const;
+    /// returns cached information about the number of handles in the mesh
+    MRMESH_API size_t numHandles() const;
 
     /// signal about face selection changing, triggered in selectFaces
     using FaceSelectionChangedSignal = boost::signals2::signal<void()>;

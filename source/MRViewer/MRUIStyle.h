@@ -51,7 +51,7 @@ MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
 
 
 /// draw gradient color edit 4
-MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags /*= ImGuiColorEditFlags_None*/ );
+MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
 
 /// draw combo box
 MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::string>& options,

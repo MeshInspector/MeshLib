@@ -58,9 +58,8 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
 
     if ( mesh_ )
     {
-        updateMeshStat_();
-
-        res.push_back( "components: " + std::to_string( meshStat_->numComponents ) );
+        res.push_back( "components: " + std::to_string( numComponents() ) );
+        res.push_back( "handles: " + std::to_string( numHandles() ) );
 
         if ( mesh_->points.size() != mesh_->topology.vertSize() ||
              mesh_->points.capacity() != mesh_->topology.vertCapacity() )

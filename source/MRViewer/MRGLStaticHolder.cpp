@@ -1205,9 +1205,9 @@ void GLStaticHolder::createShader_( ShaderType type )
 #define MAX_FRAGMENTS 18
 
 // made as macro to have it inline
-#define swapNodes(a, b) \
+#define swapNodesInd(a, b) \
 { \
-	Node tmp = a; \
+	uint tmp = a; \
 	a = b; \
 	b = tmp; \
 }
@@ -1231,27 +1231,46 @@ layout (binding = 0, std430 ) buffer Lists
     Node nodes [];
 };
 
-void sortedInsert(inout Node frags[MAX_FRAGMENTS], Node node, inout int count) 
+void sortedInsert(inout uint fragsInds[MAX_FRAGMENTS], uint nodeInd, inout int count) 
 {
 	if (count == MAX_FRAGMENTS) 
 	{
-		if (node.depth < frags[count - 1].depth) 
+		if (nodes[nodeInd].depth < nodes[fragsInds[count - 1]].depth) 
 		{
-			swapNodes(node, frags[count - 1]);
+			swapNodesInd(nodeInd, fragsInds[count - 1]);
 		}
 	}
 	else 
 	{
-		frags[count] = node;
+		fragsInds[count] = nodeInd;
 		count++;
 	}
 
 	uint i = count - 1;
-	while (i > 0 && frags[i].depth < frags[i - 1].depth)
+	while (i > 0 && nodes[fragsInds[i]].depth < nodes[fragsInds[i - 1]].depth)
 	{
-		swapNodes(frags[i], frags[i - 1]);
+		swapNodesInd(fragsInds[i], fragsInds[i - 1]);
 		i--;
 	}
+}
+
+// separate function to work-around weird behavior on AMD video cards
+vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int count)
+{
+    vec4 color = vec4(0, 0, 0, 0);
+    
+    for ( int i = count - 1; i >= 0; i-- )
+    {
+        float destA = color.a;
+        vec4 fragColor = nodes[fragsInds[i]].color;
+        color.a = fragColor.a + destA * ( 1.0 - fragColor.a );
+        if ( color.a == 0.0 )
+          color.rgb = vec3(0);
+        else
+          color.rgb = mix(color.rgb*destA,fragColor.rgb,fragColor.a)/color.a;
+    }
+
+    return color;
 }
 
 void main(void)
@@ -1260,7 +1279,9 @@ void main(void)
     if (nodesCounter == 0)
       discard;
 
-    Node frags [MAX_FRAGMENTS];
+    uint fragsInds [MAX_FRAGMENTS];
+    // suppress 'used uninitialized' warning; init values are not used
+    fragsInds[0] = 0;
     int count = 0;
     // get the index of the head of the list
     uint n = imageLoad ( heads, ivec2 ( gl_FragCoord.xy ) ).r;
@@ -1268,28 +1289,17 @@ void main(void)
     // sort linked list to array
     while ( n != 0xFFFFFFFF )
     {
-        Node node = nodes[n];
-        sortedInsert(frags, node, count);
-        n = node.next;
+        sortedInsert(fragsInds, n, count);
+        n = nodes[n].next;
     }
     
-    if (count == 0)
-      discard;
+    if ( count == 0 )
+        discard;
     
     // traverse the array, and combine the colors using the alpha channel    
-    color = vec4(0, 0, 0, 0);
+    color = blendColor(fragsInds, count);
     
-    for ( int i = count-1; i >= 0; i-- )
-    {
-        float destA = color.a;
-        color.a = frags[i].color.a + destA * ( 1.0 - frags[i].color.a );
-        if ( color.a == 0.0 )
-          color.rgb = vec3(0);
-        else
-          color.rgb = mix(color.rgb*destA,frags[i].color.rgb,frags[i].color.a)/color.a;
-    }
-    
-    gl_FragDepth = frags[count-1].depth;
+    gl_FragDepth = nodes[fragsInds[0]].depth;
 }
 )";
         }
@@ -1369,7 +1379,7 @@ void main(void)
 
     DisabledWarnings warns = {};
     if ( type == TransparencyOverlayQuad )
-        warns.push_back( 7050 );
+        warns.push_back( { 7050,"used uninitialized" } );
 
     createShader( getShaderName( type ), vertexShader, fragmentShader, shadersIds_[type], warns );
 }

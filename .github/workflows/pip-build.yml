@@ -38,11 +38,11 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11"]
         include:
           - platform: "x86_64"
-            docker-image: "meshlib/meshlib-ubuntu20-wheels-x64:test-Static-OpenVdb-linkage"
+            docker-image: "meshlib/meshlib-ubuntu:latest"
             container-options: "--user root"
             runner: ubuntu-latest
           - platform: "aarch64"
-            docker-image: "meshlib/meshlib-ubuntu20-wheels-arm64:test-Static-OpenVdb-linkage"
+            docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
             container-options: "--user root"
             runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"

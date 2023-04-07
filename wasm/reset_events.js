@@ -180,7 +180,12 @@ var updateEvents = function () {
         } else {
             sx = event.deltaX
         }
-        getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
+        if (typeof (dynCall_vidd) == 'undefined')
+            getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
+        else
+            (function(a1, a2, a3) {
+                dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
+            })(GLFW.active.id, sx, sy);
         preventFunc(event)
     }
 

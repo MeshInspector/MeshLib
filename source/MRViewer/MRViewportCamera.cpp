@@ -204,11 +204,6 @@ void Viewport::setRotationPivot_( const Vector3f& point )
 // ================================================================
 // projection part
 
-const Matrix4f& Viewport::getViewMatrix() const
-{
-    return viewM;
-}
-
 AffineXf3f Viewport::getUnscaledViewXf() const
 {
     // TODO. Try to find better normalize way
@@ -219,21 +214,10 @@ AffineXf3f Viewport::getUnscaledViewXf() const
     return res;
 }
 
-AffineXf3f Viewport::getViewXf() const
-{
-    return AffineXf3f( viewM );
-}
-const Matrix4f& Viewport::getProjMatrix() const
-{
-    return projM;
-}
-Matrix4f Viewport::getFullViewportMatrix() const
-{
-    return projM * viewM;
-}
 Matrix4f Viewport::getFullViewportInversedMatrix() const
 {
-    return (projM * viewM).inverse();
+    // compute inverse in double precision to avoid NaN for very small scales
+    return Matrix4f( ( Matrix4d( projM ) * Matrix4d( viewM ) ).inverse() );
 }
 
 Vector3f Viewport::getUpDirection() const
@@ -260,6 +244,7 @@ Line3f Viewport::unprojectPixelRay( const Vector2f& viewportPoint ) const
     clipFar.z = 1.0f;
     auto p = M( clipNear );
     auto d = M( clipFar ) - p;
+    assert ( !std::isnan( d.x ) );
     return Line3f( p, d );
 }
 

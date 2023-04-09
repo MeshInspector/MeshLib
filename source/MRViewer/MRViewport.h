@@ -267,13 +267,7 @@ public:
     // returns orthonormal matrix with translation
     MRVIEWER_API AffineXf3f getUnscaledViewXf() const;
     // converts directly from the view matrix
-    MRVIEWER_API AffineXf3f getViewXf() const;
-
-    // returns pure matrices. If you are going to use it for manual points transformation, you do something wrong probably
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getViewMatrix() const;
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getProjMatrix() const;
+    AffineXf3f getViewXf() const { return AffineXf3f( viewM ); }
 
     // returns Y axis of view matrix. Shows Up direction with zoom-depended length
     MRVIEWER_API Vector3f getUpDirection() const;
@@ -462,7 +456,7 @@ private:
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
     // Z axis from Dnear(-1.f) to Dfar(1.f)
-    Matrix4f getFullViewportMatrix() const;
+    Matrix4f getFullViewportMatrix() const { return projM * viewM; }
     Matrix4f getFullViewportInversedMatrix() const;
 
     ViewportRectangle viewportRect_;

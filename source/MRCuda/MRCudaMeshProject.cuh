@@ -1,6 +1,6 @@
 #pragma once
 #include "MRCudaFloat.cuh"
-#include "MRCudaBasic.h"
+#include "MRCudaBasic.cuh"
 
 namespace MR
 {

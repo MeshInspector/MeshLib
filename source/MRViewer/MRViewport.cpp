@@ -65,7 +65,7 @@ void Viewport::shut()
 void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer, bool alphaSort ) const
 {
     auto modelTemp = Matrix4f( xf );
-    auto normTemp = viewM * modelTemp;
+    auto normTemp = viewM_ * modelTemp;
     if ( normTemp.det() == 0 )
     {
         auto norm = normTemp.norm();
@@ -84,7 +84,7 @@ void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf, bool forceZBu
 
     RenderParams params
     {
-        {viewM.data(), modelTemp.data(), projM.data(), normM.data(),
+        {viewM_.data(), modelTemp.data(), projM.data(), normM.data(),
         id, params_.clippingPlane, toVec4<int>( viewportRect_ )},
         params_.lightPosition, forceZBuffer, alphaSort
     };
@@ -134,7 +134,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
+        {viewM_.data(),projM.data(),toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id};
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
@@ -234,7 +234,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
 
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM.data(),projM.data(),toVec4<int>( viewportRect_ )},
+        {viewM_.data(),projM.data(),toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
@@ -303,9 +303,9 @@ void Viewport::setLinesWithColors( const ViewportLinesWithColors& linesWithColor
     viewportGL_.setLinesWithColors( linesWithColors );
 }
 
-void Viewport::setupView() const
+void Viewport::setupView()
 {
-    setupViewMatrix();
+    setupViewMatrix_();
     setupProjMatrix();
     setupStaticProjMatrix();
 }
@@ -484,7 +484,7 @@ void Viewport::draw_axes() const
 {
     if ( Viewer::constInstance()->basisAxes->isVisible( id ) )
     {
-        auto fullInversedM = (staticProj * viewM).inverse();
+        auto fullInversedM = (staticProj * viewM_).inverse();
         auto transBase = fullInversedM( viewportSpaceToClipSpace( relPoseBase ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( relPoseSide ) );
 

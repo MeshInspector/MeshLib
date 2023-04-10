@@ -54,7 +54,7 @@ void Viewport::setupViewMatrix_()
         rotateView_();
 }
 
-void Viewport::setupProjMatrix() const
+void Viewport::setupProjMatrix_()
 {
     if ( params_.orthographic )
     {
@@ -62,12 +62,12 @@ void Viewport::setupProjMatrix() const
         float angle = 0.5f * params_.cameraViewAngle / 180.0f * PI_F;
         float h = tan( angle );
         float d = h * width( viewportRect_ ) / height( viewportRect_ );
-        projM( 0, 0 ) = 1.f / d; projM( 0, 1 ) = 0.f; projM( 0, 2 ) = 0.f; projM( 0, 3 ) = 0.f;
-        projM( 1, 0 ) = 0.f; projM( 1, 1 ) = 1.f / h; projM( 1, 2 ) = 0.f; projM( 1, 3 ) = 0.f;
-        projM( 2, 0 ) = 0.f; projM( 2, 1 ) = 0.f;
-        projM( 2, 2 ) = -2.f / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 2, 3 ) = -( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 3, 0 ) = 0.f; projM( 3, 1 ) = 0.f; projM( 3, 2 ) = 0.f; projM( 3, 3 ) = 1.f;
+        projM_( 0, 0 ) = 1.f / d; projM_( 0, 1 ) = 0.f; projM_( 0, 2 ) = 0.f; projM_( 0, 3 ) = 0.f;
+        projM_( 1, 0 ) = 0.f; projM_( 1, 1 ) = 1.f / h; projM_( 1, 2 ) = 0.f; projM_( 1, 3 ) = 0.f;
+        projM_( 2, 0 ) = 0.f; projM_( 2, 1 ) = 0.f;
+        projM_( 2, 2 ) = -2.f / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 2, 3 ) = -( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 3, 0 ) = 0.f; projM_( 3, 1 ) = 0.f; projM_( 3, 2 ) = 0.f; projM_( 3, 3 ) = 1.f;
     }
     else
     {
@@ -75,25 +75,25 @@ void Viewport::setupProjMatrix() const
         float angle = 0.5f * params_.cameraViewAngle / 180.0f * PI_F;
         float h = tan( angle ) * params_.cameraDnear;
         float d = h * width( viewportRect_ ) / height( viewportRect_ );
-        projM( 0, 0 ) = params_.cameraDnear / d; projM( 0, 1 ) = 0.f; projM( 0, 2 ) = 0.f; projM( 0, 3 ) = 0.f;
-        projM( 1, 0 ) = 0.f; projM( 1, 1 ) = params_.cameraDnear / h; projM( 1, 2 ) = 0.f; projM( 1, 3 ) = 0.f;
-        projM( 2, 0 ) = 0.f; projM( 2, 1 ) = 0.f;
-        projM( 2, 2 ) = ( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDnear - params_.cameraDfar );
-        projM( 2, 3 ) = -2.f * ( params_.cameraDfar * params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
-        projM( 3, 0 ) = 0.f; projM( 3, 1 ) = 0.f; projM( 3, 2 ) = -1.f; projM( 3, 3 ) = 0.f;
+        projM_( 0, 0 ) = params_.cameraDnear / d; projM_( 0, 1 ) = 0.f; projM_( 0, 2 ) = 0.f; projM_( 0, 3 ) = 0.f;
+        projM_( 1, 0 ) = 0.f; projM_( 1, 1 ) = params_.cameraDnear / h; projM_( 1, 2 ) = 0.f; projM_( 1, 3 ) = 0.f;
+        projM_( 2, 0 ) = 0.f; projM_( 2, 1 ) = 0.f;
+        projM_( 2, 2 ) = ( params_.cameraDfar + params_.cameraDnear ) / ( params_.cameraDnear - params_.cameraDfar );
+        projM_( 2, 3 ) = -2.f * ( params_.cameraDfar * params_.cameraDnear ) / ( params_.cameraDfar - params_.cameraDnear );
+        projM_( 3, 0 ) = 0.f; projM_( 3, 1 ) = 0.f; projM_( 3, 2 ) = -1.f; projM_( 3, 3 ) = 0.f;
     }
 }
 
-void Viewport::setupStaticProjMatrix() const
+void Viewport::setupStaticProjMatrix_()
 {
     float h = (cameraEye - cameraCenter).length();
     float d = h * width( viewportRect_ ) / height( viewportRect_ );
-    staticProj( 0, 0 ) = 1.f / d; staticProj( 0, 1 ) = 0.f; staticProj( 0, 2 ) = 0.f; staticProj( 0, 3 ) = 0.f;
-    staticProj( 1, 0 ) = 0.f; staticProj( 1, 1 ) = 1.f / h; staticProj( 1, 2 ) = 0.f; staticProj( 1, 3 ) = 0.f;
-    staticProj( 2, 0 ) = 0.f; staticProj( 2, 1 ) = 0.f;
-    staticProj( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
-    staticProj( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
-    staticProj( 3, 0 ) = 0.f; staticProj( 3, 1 ) = 0.f; staticProj( 3, 2 ) = 0.f; staticProj( 3, 3 ) = 1.f;
+    staticProj_( 0, 0 ) = 1.f / d; staticProj_( 0, 1 ) = 0.f; staticProj_( 0, 2 ) = 0.f; staticProj_( 0, 3 ) = 0.f;
+    staticProj_( 1, 0 ) = 0.f; staticProj_( 1, 1 ) = 1.f / h; staticProj_( 1, 2 ) = 0.f; staticProj_( 1, 3 ) = 0.f;
+    staticProj_( 2, 0 ) = 0.f; staticProj_( 2, 1 ) = 0.f;
+    staticProj_( 2, 2 ) = -2.f / (params_.cameraDfar - params_.cameraDnear);
+    staticProj_( 2, 3 ) = -(params_.cameraDfar + params_.cameraDnear) / (params_.cameraDfar - params_.cameraDnear);
+    staticProj_( 3, 0 ) = 0.f; staticProj_( 3, 1 ) = 0.f; staticProj_( 3, 2 ) = 0.f; staticProj_( 3, 3 ) = 1.f;
 }
 
 // ================================================================
@@ -215,7 +215,7 @@ AffineXf3f Viewport::getUnscaledViewXf() const
 Matrix4f Viewport::getFullViewportInversedMatrix() const
 {
     // compute inverse in double precision to avoid NaN for very small scales
-    return Matrix4f( ( Matrix4d( projM ) * Matrix4d( viewM_ ) ).inverse() );
+    return Matrix4f( ( Matrix4d( projM_ ) * Matrix4d( viewM_ ) ).inverse() );
 }
 
 Vector3f Viewport::getUpDirection() const

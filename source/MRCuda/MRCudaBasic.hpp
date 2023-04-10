@@ -58,7 +58,6 @@ void DynamicArray<T>::resize( size_t size )
         cudaMalloc( ( void** )&data_, size_ * sizeof( T ) );
 }
 
-
 template<typename T>
 template<typename U>
 void DynamicArray<T>::toVector( std::vector<U>& vec ) const
@@ -66,6 +65,13 @@ void DynamicArray<T>::toVector( std::vector<U>& vec ) const
     static_assert ( sizeof( T ) == sizeof( U ) );
     vec.resize( size_ );
     cudaMemcpy( vec.data(), data_, size_ * sizeof( T ), cudaMemcpyDeviceToHost );
+}
+
+inline void setToZero( DynamicArrayF& devArray )
+{
+    if ( devArray.size() == 0 )
+        return;
+    cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) );
 }
 
 }

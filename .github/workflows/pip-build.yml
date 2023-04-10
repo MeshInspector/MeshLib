@@ -197,16 +197,6 @@ jobs:
       - name: Setup python
         working-directory: C:\vcpkg\installed\x64-windows-meshlib
         run: |
-          powershell.exe -c "ls -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\"
-          powershell.exe -c "ls -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs"
-          powershell.exe -c "New-Item -Type Directory -Path C:\${{matrix.py-dir}}"
-          powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\* -Destination C:\${{matrix.py-dir}}\"
-          powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\* -Destination C:\${{matrix.py-dir}}\libs"
-          powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\* -Destination C:\${{matrix.py-dir}}\include"
-          powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\include"
-          powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\include\include"
-          powershell.exe -c "ls -Path C:\${{matrix.py-dir}}\libs"
-          powershell.exe -c "Copy-Item -Path c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -Destination lib"
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
           py -${{matrix.py-version}} -m pip install pytest

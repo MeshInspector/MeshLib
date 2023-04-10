@@ -232,7 +232,11 @@ public:
 
         Plane3f clippingPlane{Vector3f::plusX(), 0.0f};
 
-        mutable AffineXf3f globalBasisAxesXf; // xf representing scale of global basis in this viewport (changes each frame)
+         // xf representing scale of global basis in this viewport
+        AffineXf3f globalBasisAxesXf() const
+        {
+            return AffineXf3f::linear( Matrix3f::scale( objectScale * 0.5f ) );
+        }
         mutable AffineXf3f basisAxesXf; // xf representing scale and translation of basis in this viewport (changes each frame)
 
         enum class RotationCenterMode

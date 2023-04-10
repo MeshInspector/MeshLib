@@ -523,8 +523,7 @@ void Viewport::draw_global_basis() const
     if ( !Viewer::instance()->globalBasisAxes->isVisible( id ) )
         return;
 
-    params_.globalBasisAxesXf = AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) );
-    draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf );
+    draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
 }
 
 void Viewport::draw_lines( void ) const

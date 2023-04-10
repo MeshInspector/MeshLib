@@ -1359,9 +1359,9 @@ void Viewer::drawScene() const
     resetRedraw_();
 }
 
-void Viewer::setupScene() const
+void Viewer::setupScene()
 {
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
         viewport.clear_framebuffers();

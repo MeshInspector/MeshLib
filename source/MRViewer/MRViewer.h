@@ -155,7 +155,7 @@ public:
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene() const;
     // Setup viewports views
-    MRVIEWER_API void setupScene() const;
+    MRVIEWER_API void setupScene();
     // OpenGL context resize
     MRVIEWER_API void resize( int w, int h ); // explicitly set window size
     MRVIEWER_API void postResize( int w, int h ); // external resize due to user interaction

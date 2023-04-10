@@ -1184,7 +1184,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 valueStr += std::to_string( value );
                 labelStr += title;
 
-                ImGui::InputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+                UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
             }
         };
 
@@ -1200,7 +1200,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 renameBuffer_ = pObj->name();
                 lastRenameObj_ = pObj;
             }
-            if ( !ImGui::InputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( !UI::inputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
             {
                 if ( renameBuffer_ == pObj->name() )
                 {
@@ -1260,11 +1260,11 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
             {
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
+                UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
                 ImGui::SameLine();
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
+                UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
                 ImGui::SameLine();
-                ImGui::InputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
+                UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
 
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::Text( "%s", title.c_str() );
@@ -1722,7 +1722,7 @@ float ImGuiMenu::drawTransform_()
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
             UI::checkbox( "Uni-scale", &uniformScale_ );
             window->DC.CursorPosPrevLine.y -= diff;
-            ImGui::SetTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
+            UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
             const char* tooltipsRotation[3] = {

@@ -1553,7 +1553,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SetTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
 
         if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
@@ -1561,7 +1561,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SetTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
     }
     ImGui::EndPopup();
     return true;
@@ -1830,7 +1830,7 @@ void RibbonMenu::drawShortcutsWindow_()
             {
                 // draw category line
                 ImGui::PushFont( fontManager_.getFontByType( MR::RibbonFontManager::FontType::BigSemiBold ) );
-                ImGui::Separator( scaling, ShortcutManager::categoryNames[int( category )].c_str() );
+                UI::separator( scaling, ShortcutManager::categoryNames[int( category )].c_str() );
                 ImGui::PopFont();
                 lastCategory = category;
             }

@@ -80,15 +80,6 @@ inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags f
   return false;
 }
 
-MRVIEWER_API bool InputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL );
-
-/// draw read-only text box with text aligned by center
-MRVIEWER_API void InputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {} );
-
-/// similar to ImGui::Text but use current text color with alpha channel = 0.5
-MRVIEWER_API void TransparentText( const char* fmt, ... );
-/// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
-MRVIEWER_API void TransparentTextWrapped( const char* fmt, ... );
 
 /// similar to ImGui::DragFloat but
 /// 1) value on output is forced to be in [min,max] range;
@@ -202,9 +193,6 @@ MRVIEWER_API void EndCustomStatePlugin();
 /// starts modal window with no animation for background
 MRVIEWER_API bool BeginModalNoAnimation( const char* label, bool* open = nullptr, ImGuiWindowFlags flags = 0 );
 
-/// draw a button, which can be disabled (valid = false)
-MRVIEWER_API bool ButtonValid( const char* label, bool valid, const ImVec2& size = ImVec2(0, 0) );
-
 /// Input int according valid from BitSet
 /// \brief same as ImGui::InputInt
 /// \return true if value was changed and valid
@@ -266,14 +254,7 @@ MRVIEWER_API void Image( const MR::ImGuiImage& image, const ImVec2& size, const 
 
 /// get image coordinates under cursor considering Y-direction flipping
 MRVIEWER_API MR::Vector2i GetImagePointerCoord( const MR::ImGuiImage& image, const ImVec2& size, const ImVec2& imagePos );
-
-/// draw tooltip only if current item is hovered
-MRVIEWER_API void SetTooltipIfHovered( const std::string& text, float scaling );
-///add text with separator line 
-/// if issueCount is greater than zero, this number will be displayed in red color after the text. 
-/// If it equals zero - in green color
-/// Otherwise it will not be displayed
-MRVIEWER_API void Separator( float scaling, const std::string& text = "", int issueCount = -1 );
+ 
 
 /// draw spinner in given place, radius with respect to scaling
 MRVIEWER_API void Spinner( float radius, float scaling );
@@ -284,10 +265,5 @@ MRVIEWER_API bool ModalBigTitle( const char* title, float scaling );
 /// draw exit button with close cross (i.e. for settings modal popup )
 MRVIEWER_API bool ModalExitButton( float scaling );
 
-[[deprecated( "use implicit cast instead" )]]
-inline ImVec2 toImVec2( const MR::Vector2f& in )
-{
-    return ImVec2( in.x, in.y );
-}
 
 } // namespace ImGui

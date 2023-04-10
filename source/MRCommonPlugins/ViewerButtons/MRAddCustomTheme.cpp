@@ -87,7 +87,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( !valid )
     {
-        ImGui::SetTooltipIfHovered( themeName_.empty() ?
+        UI::setTooltipIfHovered( themeName_.empty() ?
             "Cannot save theme with empty name" :
             "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
     }

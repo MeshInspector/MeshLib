@@ -4,6 +4,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
 #include "MRViewerInstance.h"
+#include "MRRibbonFontManager.h"
 #include "MRViewer.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
@@ -828,7 +829,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
             *v = i;
 
         if ( !tooltips.empty() )
-            ImGui::SetTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
+            UI::setTooltipIfHovered( tooltips[i], Viewer::instanceRef().getMenuPlugin()->menu_scaling() );
 
         ImGui::PopID();
     }
@@ -837,6 +838,144 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     if ( !showPreview )
         ImGui::PopItemWidth();
     return true;
+}
+
+bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
+    ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= NULL*/, void* user_data /*= NULL */ )
+{
+    const auto& style = ImGui::GetStyle();
+    const auto& viewer = MR::Viewer::instanceRef();
+    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
+    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
+
+    ImGui::SetNextItemWidth( actualWidth );
+    StyleParamHolder sh;
+    if ( actualWidth > estimatedSize.x )
+        sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
+    return ImGui::InputText( label, str, flags, callback, user_data );
+}
+
+void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
+{
+    const auto& style = ImGui::GetStyle();
+    const auto& viewer = MR::Viewer::instanceRef();
+    const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
+    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
+
+    ImGui::SetNextItemWidth( actualWidth );
+    StyleParamHolder sh;
+    if ( actualWidth > estimatedSize.x )
+        sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+
+    if ( textColor )
+    {
+        ImGui::PushStyleColor( ImGuiCol_Text, *textColor );
+    }
+    else
+    {
+        auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+        transparentColor.w *= 0.5f;
+        ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    }
+    ImGui::InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+
+    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
+        ImGui::Text( "%s", label );
+
+}
+
+void transparentText( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    ImGui::TextV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
+void transparentTextWrapped( const char* fmt, ... )
+{
+    auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    transparentColor.w *= 0.5f;
+    ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
+    va_list args;
+    va_start( args, fmt );
+    ImGui::TextWrappedV( fmt, args );
+    va_end( args );
+    ImGui::PopStyleColor();
+}
+
+void setTooltipIfHovered( const std::string& text, float scaling )
+{
+    if ( !ImGui::IsItemHovered() || ImGui::IsItemActive() )
+        return;
+    assert( scaling > 0.f );
+
+    // default ImGui values
+    StyleParamHolder sh;
+    sh.addVar( ImGuiStyleVar_FramePadding, { 4.0f * scaling, 5.0f * scaling } );
+    sh.addVar( ImGuiStyleVar_WindowPadding, { 8.0f * scaling, 8.0f * scaling } );
+
+    constexpr float cMaxWidth = 400.f;
+    const auto& style = ImGui::GetStyle();
+    auto textSize = ImGui::CalcTextSize( text.c_str(), nullptr, false, cMaxWidth * scaling - style.WindowPadding.x * 2 );
+    ImGui::SetNextWindowSize( ImVec2{ textSize.x + style.WindowPadding.x * 2, 0 } );
+
+    ImGui::BeginTooltip();
+    ImGui::TextWrapped( "%s", text.c_str() );
+    ImGui::EndTooltip();
+}
+
+void separator( float scaling, const std::string& text /*= ""*/, int issueCount /*= -1 */ )
+{
+    const auto& style = ImGui::GetStyle();
+    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
+    }
+    
+    if ( text.empty() )
+    {
+        ImGui::Separator();
+    }
+    else if ( ImGui::BeginTable( (std::string("SeparatorTable_") + text).c_str(), 2, ImGuiTableFlags_SizingFixedFit ) )
+    {
+        ImGui::TableNextColumn();
+        ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+        ImGui::Text( "%s", text.c_str());
+        ImGui::SameLine();
+        if ( issueCount >= 0 )
+        {
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f} : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f } );            
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - ImGui::GetTextLineHeight() * 0.5f + style.FramePadding.y * 0.5f );
+            const std::string issue = std::to_string( issueCount );
+            const float width = std::max( 20.0f * scaling, ImGui::CalcTextSize( issue.data() ).x + 2.0f * style.FramePadding.x );
+            UI::inputTextCenteredReadOnly( "##IssueCount", issue, width, ImGui::GetStyleColorVec4(ImGuiCol_Text) );
+            ImGui::PopStyleColor();
+        }
+        ImGui::PopFont();
+
+        ImGui::TableNextColumn();
+        auto width = ImGui::GetWindowWidth();
+        ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round(ImGui::GetTextLineHeight() * 0.5f) } );
+        ImGui::Separator();
+        ImGui::EndTable();
+    }
+
+    if ( ImGui::GetStyle().ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling - ImGui::GetStyle().ItemSpacing.y );
+    }
 }
 
 } // namespace UI

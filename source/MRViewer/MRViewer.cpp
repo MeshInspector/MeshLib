@@ -1203,7 +1203,7 @@ bool Viewer::needRedraw_() const
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
-void Viewer::resetRedraw_() const
+void Viewer::resetRedraw_()
 {
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();

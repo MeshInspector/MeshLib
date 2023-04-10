@@ -2,6 +2,7 @@
 #include "exports.h"
 #include "imgui.h"
 #include <string>
+#include <optional>
 
 namespace MR
 {

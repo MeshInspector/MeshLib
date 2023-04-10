@@ -324,7 +324,7 @@ public:
     //   points: if depth test is on
     //   rotation center
     //   global basis
-    void preDraw() const;
+    void preDraw();
     // draws viewport primitives:
     //   lines: if depth test is off
     //   points: if depth test is off
@@ -465,8 +465,7 @@ private:
 
     ViewportRectangle viewportRect_;
 
-    mutable ViewportGL viewportGL_;  //is mutable because if not initialized,
-    //then it will need to be initialized in constant methods (preDraw()).
+    ViewportGL viewportGL_;
 
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;

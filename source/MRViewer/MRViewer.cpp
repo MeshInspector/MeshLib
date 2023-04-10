@@ -1320,13 +1320,13 @@ void Viewer::draw_( bool force )
     isInDraw_ = false;
 }
 
-void Viewer::drawScene() const
+void Viewer::drawScene()
 {
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
     int numTransparent = 0;
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
         viewport.preDraw();
 
     preDrawPostViewportSignal();

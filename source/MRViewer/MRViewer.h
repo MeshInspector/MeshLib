@@ -153,7 +153,7 @@ public:
     MRVIEWER_API void emsDraw( bool force = false );
 #endif
     // Draw 3d scene without UI
-    MRVIEWER_API void drawScene() const;
+    MRVIEWER_API void drawScene();
     // Setup viewports views
     MRVIEWER_API void setupScene();
     // OpenGL context resize

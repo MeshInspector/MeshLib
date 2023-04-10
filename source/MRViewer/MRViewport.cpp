@@ -495,13 +495,13 @@ void Viewport::draw_axes() const
         auto transSide = fullInversedM( viewportSpaceToClipSpace( relPoseSide ) );
 
         float scale = (transSide - transBase).length();
-        params_.basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf, staticProj_, true );
-        draw( *Viewer::constInstance()->basisAxes, params_.basisAxesXf, staticProj_ );
+        const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, true );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
         for ( const auto& child : getViewerInstance().basisAxes->children() )
         {
             if ( auto visualChild = child->asType<VisualObject>() )
-                draw( *visualChild, params_.basisAxesXf, staticProj_ );
+                draw( *visualChild, basisAxesXf, staticProj_ );
         }
     }
 }

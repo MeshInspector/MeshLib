@@ -316,7 +316,7 @@ void Viewport::setupView()
     setupStaticProjMatrix_();
 }
 
-void Viewport::preDraw() const 
+void Viewport::preDraw()
 {
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();

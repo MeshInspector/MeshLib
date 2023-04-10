@@ -595,7 +595,8 @@ const std::array<Vector2i, 4> cPixelNeighbors{
     Vector2i{1,1}
 };
 
-// each vector contains pairs of edge verts
+// contains indices in `cEdgeIndicesMap` (needed to capture vertices indices from SeparationPointMap)
+// each to represent edge in result topology
 using TopologyPlan = std::vector<int>;
 const std::array<TopologyPlan, 16> cTopologyTable = {
     TopologyPlan{},

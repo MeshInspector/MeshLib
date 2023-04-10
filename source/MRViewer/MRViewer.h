@@ -628,7 +628,7 @@ private:
     bool tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor );
 
     bool needRedraw_() const;
-    void resetRedraw_() const;
+    void resetRedraw_();
 
     enum class VisualObjectRenderType
     {

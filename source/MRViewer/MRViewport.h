@@ -204,7 +204,7 @@ public:
     ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM_.data(), toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
-    void resetRedrawFlag() const { needRedraw_ = false; }
+    void resetRedrawFlag() { needRedraw_ = false; }
     // ------------------- Properties
 
     // Unique identifier
@@ -527,7 +527,7 @@ private:
     Vector2f static_viewport_point;
     float distToSceneCenter_;
 
-    mutable bool needRedraw_{false};
+    bool needRedraw_{false};
 
     // world bounding box of scene objects visible in this viewport
     Box3f sceneBox_;

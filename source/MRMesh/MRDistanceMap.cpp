@@ -554,10 +554,10 @@ std::vector<Vector3f> edgePointsFromContours( const Polyline2& polyline, float p
     return edgePoints;
 }
 
-namespace MarchingCubes2Helper
+namespace MarchingSquaresHelper
 {
 
-enum NeighborDir
+enum class NeighborDir
 {
     X, Y, Count
 };
@@ -566,9 +566,8 @@ enum NeighborDir
 struct SeparationPoint
 {
     Vector2f position; // coordinate
-    bool low{ false }; // orientation: true means that base pixel has lower value
     VertId vid; // any valid VertId is ok
-    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
+    // each SeparationPointMap element has two SeparationPoint, it is not guaranteed that all three are valid (at least one is)
     // so there are some points present in map that are not valid
     explicit operator bool() const
     {
@@ -596,31 +595,32 @@ const std::array<Vector2i, 4> cPixelNeighbors{
     Vector2i{1,1}
 };
 
+// each vector contains pairs of edge verts
 using TopologyPlan = std::vector<int>;
 const std::array<TopologyPlan, 16> cTopologyTable = {
-TopologyPlan{},
-TopologyPlan{1, 0},
-TopologyPlan{0, 3},
-TopologyPlan{1, 3},
-TopologyPlan{2, 1},
-TopologyPlan{2, 0},
-TopologyPlan{0, 1, 2, 3}, // undetermined
-TopologyPlan{2, 3},
-TopologyPlan{3, 2},
-TopologyPlan{1, 0, 3, 2}, // undetermined
-TopologyPlan{0, 2},
-TopologyPlan{1, 2},
-TopologyPlan{3, 1},
-TopologyPlan{3, 0},
-TopologyPlan{0, 1},
-TopologyPlan{}
+    TopologyPlan{},
+    TopologyPlan{1, 0},
+    TopologyPlan{0, 3},
+    TopologyPlan{1, 3},
+    TopologyPlan{2, 1},
+    TopologyPlan{2, 0},
+    TopologyPlan{0, 1, 2, 3}, // undetermined
+    TopologyPlan{2, 3},
+    TopologyPlan{3, 2},
+    TopologyPlan{1, 0, 3, 2}, // undetermined
+    TopologyPlan{0, 2},
+    TopologyPlan{1, 2},
+    TopologyPlan{3, 1},
+    TopologyPlan{3, 0},
+    TopologyPlan{0, 1},
+    TopologyPlan{}
 };
 
 SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, NeighborDir dir, float isoValue )
 {
     const auto v0 = dm.getValue( p.x, p.y );
     auto p1 = p;
-    p1[dir]++;
+    p1[int( dir )]++;
     if ( p1.x >= dm.resX() || p1.y >= dm.resY() )
         return {};
     const auto v1 = dm.getValue( p1.x, p1.y );
@@ -635,8 +635,7 @@ SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, N
     SeparationPoint res;
     res.position = ( 1.0f - ratio ) * Vector2f( p ) +
         ratio * Vector2f( p1 ) + Vector2f::diagonal( 0.5f );
-    res.low = low0;
-    res.vid = VertId( 0 );// real number now is not important, only that it is valid
+    res.vid =0_v;// real number now is not important, only that it is valid
     return res;
 }
 
@@ -644,7 +643,7 @@ SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, N
 
 Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue )
 {
-    using namespace MarchingCubes2Helper;
+    using namespace MarchingSquaresHelper;
     MR_NAMED_TIMER( "distanceMapTo2DIsoPolyline" );
     const size_t resX = distMap.resX();
     const size_t resY = distMap.resY();
@@ -678,7 +677,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            for ( int n = NeighborDir::X; n < NeighborDir::Count; ++n )
+            for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 SeparationPoint separation = findSeparationPoint( distMap, pos, NeighborDir( n ), isoValue );
                 if ( separation )
@@ -723,19 +722,19 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;
-    for ( auto& perTrheadNum : perThreadVertNumeration )
+    for ( auto& perThreadNum : perThreadVertNumeration )
     {
         // remove empty
-        perTrheadNum.erase( std::remove_if( perTrheadNum.begin(), perTrheadNum.end(),
+        perThreadNum.erase( std::remove_if( perThreadNum.begin(), perThreadNum.end(),
             [] ( const auto& obj )
         {
             return obj.numVerts == 0;
-        } ), perTrheadNum.end() );
-        if ( perTrheadNum.empty() )
+        } ), perThreadNum.end() );
+        if ( perThreadNum.empty() )
             continue;
         // accum not empty
         resultVertNumeration.insert( resultVertNumeration.end(),
-            std::make_move_iterator( perTrheadNum.begin() ), std::make_move_iterator( perTrheadNum.end() ) );
+            std::make_move_iterator( perThreadNum.begin() ), std::make_move_iterator( perThreadNum.end() ) );
     }
     // sort by voxel index
     std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
@@ -783,13 +782,13 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         {
             if ( iter == hmap.cend() )
                 return false;
-            return bool( iter->second[NeighborDir::Y] );
+            return bool( iter->second[int( NeighborDir::Y )] );
         }
         case 2: // y + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return bool( iter->second[NeighborDir::X] );
+            return bool( iter->second[int( NeighborDir::X )] );
         }
         default:
             return false;
@@ -858,12 +857,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
             {
                 const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                 const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
-                assert( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
-                assert( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
+                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
 
                 lines.emplace_back( std::array<VertId, 2>{ 
-                    iters[interIndex0]->second[dir0].vid,
-                        iters[interIndex1]->second[dir1].vid
+                    iters[interIndex0]->second[int( dir0 )].vid,
+                        iters[interIndex1]->second[int( dir1 )].vid
                 } );
             }
         }
@@ -902,7 +901,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         {
             for ( auto& separation : subSet )
             {
-                for ( int i = 0; i < NeighborDir::Count; ++i )
+                for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                     if ( separation.second[i].vid.valid() )
                         polyline.points[separation.second[i].vid] = separation.second[i].position;
             }

@@ -79,9 +79,12 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clear_framebuffers() const;
 
-    // Draw everything
-    // forceZbuffer - rewrite Z buffer anyway
-    MRVIEWER_API void draw( const VisualObject& data, const AffineXf3f& xf, bool forceZBuffer = false, bool alphaSort = false ) const;
+    /// Draw given object;
+    /// \param forceZbuffer rewrite Z buffer anyway
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer = false, bool alphaSort = false ) const;
+
+    /// Draw given object with given projection matrix
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, bool forceZBuffer = false, bool alphaSort = false ) const;
 
     // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     MRVIEWER_API const ViewportPointsWithColors& getPointsWithColors() const;
@@ -198,7 +201,7 @@ public:
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }
+    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM_.data(), toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
@@ -261,7 +264,7 @@ public:
 private:
     // Save the OpenGL transformation matrices used for the previous rendering pass
     Matrix4f viewM_;
-    mutable Matrix4f projM;
+    Matrix4f projM_;
 
 public:
     // returns orthonormal matrix with translation
@@ -450,14 +453,14 @@ private:
     AffineXf3f getViewXf_() const;
 
     // initializes proj matrix based on camera angle and viewport rectangle size
-    void setupProjMatrix() const;
+    void setupProjMatrix_();
     // initializes proj matrix for static view objects (like corner axes)
-    void setupStaticProjMatrix() const;
+    void setupStaticProjMatrix_();
 
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
     // Z axis from Dnear(-1.f) to Dfar(1.f)
-    Matrix4f getFullViewportMatrix() const { return projM * viewM_; }
+    Matrix4f getFullViewportMatrix() const { return projM_ * viewM_; }
     Matrix4f getFullViewportInversedMatrix() const;
 
     ViewportRectangle viewportRect_;
@@ -481,7 +484,7 @@ private:
     void draw_axes() const;
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
-    mutable Matrix4f staticProj;
+    Matrix4f staticProj_;
     Vector3f relPoseBase;
     Vector3f relPoseSide;
 

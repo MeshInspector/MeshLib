@@ -56,8 +56,7 @@ setuptools.setup(
     ],
     python_requires='>=3.8',
     install_requires=[
-        'numpy>=1.21.0',
-        'pytest>=7.1.0',
+        'numpy>=1.19.0',
     ],
     project_urls={  # Optional
         "Bug Reports": "https://github.com/MeshInspector/MeshLib/issues",

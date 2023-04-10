@@ -1,43 +1,29 @@
-#include "MRCudaContoursDistanceMap.h"
+#include "MRCudaContoursDistanceMap.cuh"
 #include "MRCudaBasic.h"
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "device_launch_parameters.h"
 
-#include "MRCudaFloat2.cuh"
+#include "MRCudaFloat.cuh"
 
 namespace MR
 {
 namespace Cuda
 {
 
-struct Box2
+__device__ bool Node2::leaf() const
 {
-    float2 min;
-    float2 max;
-};
-
-struct Node
-{
-    Box2 box;
-    int l, r;
-};
-
-__device__ bool leaf( const Node& node )
-{
-    return node.r < 0;
+    return r < 0;
 }
 
-__device__ int leafId( const Node& node )
+__device__ int Node2::leafId() const
 {
-    return node.l;
+    return l;
 }
 
-__device__ float2 getBoxClosestPointTo( const Box2& box, const float2& pt )
+__device__ float2 Box2::getBoxClosestPointTo( const float2& pt ) const
 {
-    return { clamp( pt.x, box.min.x, box.max.x ), clamp( pt.y, box.min.y, box.max.y ) };
+    return { clamp( pt.x, min.x, max.x ), clamp( pt.y, min.y, max.y ) };
 }
-
-using HalfEdgeRecord = int2;
 
 __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, const float2& b )
 {
@@ -52,7 +38,10 @@ __device__ float2 closestPointOnLineSegm( const float2& pt, const float2& a, con
     return a * ( 1 - ratio ) + b * ratio;
 }
 
-__global__ void kernel( const float2 originPoint, const int2 resolution, const float2 pixelSize, const Node* nodes, const float2* polylinePoints, const HalfEdgeRecord* edges, float* dists, const size_t size )
+__global__ void kernel( 
+    const float2 originPoint, const int2 resolution, const float2 pixelSize, 
+    const Node2* nodes, const float2* polylinePoints, const PolylineHalfEdgeRecord* edges, float* dists, 
+    const size_t size )
 {
     if ( size == 0 )
     {
@@ -95,7 +84,7 @@ __global__ void kernel( const float2 originPoint, const int2 resolution, const f
 
     auto getSubTask = [&] ( int n )
     {
-        return SubTask{ n, lengthSq( getBoxClosestPointTo( nodes[n].box, pt ) - pt ) };
+        return SubTask{ n, lengthSq( nodes[n].box.getBoxClosestPointTo( pt ) - pt ) };
     };
 
     addSubTask( getSubTask( 0 ) );
@@ -107,9 +96,9 @@ __global__ void kernel( const float2 originPoint, const int2 resolution, const f
         if ( s.distSq >= resDistSq )
             continue;
 
-        if ( leaf( node ) )
+        if ( node.leaf() )
         {
-            const auto lineId = leafId( node );
+            const auto lineId = node.leafId();
             float2 a = polylinePoints[edges[2 * lineId].y];
             float2 b = polylinePoints[edges[2 * lineId + 1].y];
             auto proj = closestPointOnLineSegm( pt, a, b );
@@ -138,38 +127,19 @@ __global__ void kernel( const float2 originPoint, const int2 resolution, const f
     dists[index] = sqrt( resDistSq );
 }
 
-DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const ContourToDistanceMapParams& params )
-{    
-    const auto& tree = polyline.getAABBTree();
-    const auto& nodes = tree.nodes();
-    const auto& edges = polyline.topology.edges();
-
-    cudaSetDevice( 0 );
-    const size_t size = size_t( params.resolution.x ) * params.resolution.y;
-
-    DynamicArray<float2> cudaPts;
-    cudaPts.fromVector( polyline.points.vec_ );    
-
-    DynamicArray<Node> cudaNodes;
-    cudaNodes.fromVector( nodes.vec_ );
-
-    DynamicArray<HalfEdgeRecord> cudaEdges;
-    cudaEdges.fromVector( edges.vec_ );
-
-    DynamicArray<float> cudaRes (size);
-
+void contoursDistanceMapProjectionKernel( 
+    const float2 originPoint, const int2 resolution, const float2 pixelSize,
+    const Node2* nodes, const float2* polylinePoints, const PolylineHalfEdgeRecord* edges, float* dists,
+    const size_t size )
+{
     int maxThreadsPerBlock = 0;
     cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
 
     // kernel
-    kernel << <numBlocks, maxThreadsPerBlock >> > ( { params.orgPoint.x + params.pixelSize.x * 0.5f, params.orgPoint.y + params.pixelSize.y * 0.5f }, { params.resolution.x, params.resolution.y }, { params.pixelSize.x, params.pixelSize.y }, cudaNodes.data(), cudaPts.data(), cudaEdges.data(), cudaRes.data(), size );
-    DistanceMap res( params.resolution.x, params.resolution.y );
-    std::vector<float> vec( size );
-    cudaRes.toVector( vec );
-    res.set( std::move( vec ) );
-
-    return res;
+    kernel << <numBlocks, maxThreadsPerBlock >> > ( 
+        originPoint, resolution, pixelSize,
+        nodes, polylinePoints, edges, dists, size );
 }
 
 }

@@ -203,6 +203,10 @@ struct [[nodiscard]] ContoursDistanceMapOptions
     const PixelBitSet* region{ nullptr };
     /// optional output vector of closest polyline edge per each pixel of distance map
     std::vector<UndirectedEdgeId>* outClosestEdges{ nullptr };
+    /// minimum value (or absolute value if offsetParameters == nullptr) in a pixel of distance map (lower values can be present but they are not precise)
+    float minDist{ 0 };
+    /// maximum value (or absolute value if offsetParameters == nullptr) in a pixel of distance map (larger values cannot be present)
+    float maxDist{ FLT_MAX };
 };
 
 /**
@@ -231,6 +235,9 @@ struct [[nodiscard]] ContoursDistanceMapOptions
 [[nodiscard]] MRMESH_API std::pair<Polyline2, AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
     const DistanceMapToWorld& params, float isoValue, bool useDepth = false );
 [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
+
+/// constructs an offset contour for given polyline
+[[nodiscard]] MRMESH_API Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset );
 
 /**
  * \brief computes the union of the shapes bounded by input 2d contours

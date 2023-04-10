@@ -46,8 +46,10 @@ var updateEvents = function () {
     Module["canvas"].removeEventListener("mousemove", GLFW.onMousemove, true);
     Module["canvas"].removeEventListener("mousedown", GLFW.onMouseButtonDown, true);
     Module["canvas"].removeEventListener("mouseup", GLFW.onMouseButtonUp, true);
+    Module["canvas"].removeEventListener("wheel", GLFW.onMouseWheel, true);
+    Module["canvas"].removeEventListener("mousewheel", GLFW.onMouseWheel, true);
 
-    // make own touch events callbacks    
+    // make own touch events callbacks
     var touchEventProcess = function (event, funcName) {
         var rect = Module["canvas"].getBoundingClientRect();
         var coords = getPos(event, rect);
@@ -160,11 +162,40 @@ var updateEvents = function () {
             })(GLFW.active.id, Browser.mouseX, Browser.mouseY);
     }
 
+    GLFW.onMouseWheel = function (event) {
+        // This is copypasted from Emscripten-generated JS code,
+        // except we changed `event.preventDefault()` to `preventFunc(event)`.
+        var delta = -Browser.getMouseWheelDelta(event);
+        delta = delta == 0 ? 0 :
+            delta > 0 ? Math.max(delta, 1) :
+                Math.min(delta, -1);
+        GLFW.wheelPos += delta;
+        if (!GLFW.active || !GLFW.active.scrollFunc ||
+            event.target != Module['canvas'])
+            return;
+        var sx = 0;
+        var sy = delta;
+        if (event.type == 'mousewheel') {
+            sx = event.wheelDeltaX
+        } else {
+            sx = event.deltaX
+        }
+        if (typeof (dynCall_vidd) == 'undefined')
+            getWasmTableEntry(GLFW.active.scrollFunc)(GLFW.active.id, sx, sy);
+        else
+            (function(a1, a2, a3) {
+                dynCall_vidd.apply(null, [GLFW.active.scrollFunc, a1, a2, a3])
+            })(GLFW.active.id, sx, sy);
+        preventFunc(event)
+    }
+
     // add new events
     Module["canvas"].addEventListener("pointermove", GLFW.onMousemove, true);
     Module["canvas"].addEventListener("pointerdown", GLFW.onMouseButtonDown, true);
     Module["canvas"].addEventListener("pointercancel", GLFW.onMouseButtonUp, true);
     Module["canvas"].addEventListener("pointerup", GLFW.onMouseButtonUp, true);
+    Module["canvas"].addEventListener("wheel", GLFW.onMouseWheel, true);
+    Module["canvas"].addEventListener("mousewheel", GLFW.onMouseWheel, true);
     // prevent others
     Module["canvas"].addEventListener("touchmove", preventFunc, true);
     Module["canvas"].addEventListener("touchstart", preventFunc, true);
@@ -174,7 +205,6 @@ var updateEvents = function () {
     Module["canvas"].addEventListener("mousemove", preventFunc, true);
     Module["canvas"].addEventListener("mousedown", preventFunc, true);
     Module["canvas"].addEventListener("mouseup", preventFunc, true);
-
 }
 
 var updateCalculateMouseEvent = function () {

@@ -198,7 +198,7 @@ public:
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }
+    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() const { needRedraw_ = false; }
@@ -260,20 +260,14 @@ public:
 
 private:
     // Save the OpenGL transformation matrices used for the previous rendering pass
-    mutable Matrix4f viewM;
+    Matrix4f viewM_;
     mutable Matrix4f projM;
 
 public:
     // returns orthonormal matrix with translation
     MRVIEWER_API AffineXf3f getUnscaledViewXf() const;
     // converts directly from the view matrix
-    MRVIEWER_API AffineXf3f getViewXf() const;
-
-    // returns pure matrices. If you are going to use it for manual points transformation, you do something wrong probably
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getViewMatrix() const;
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getProjMatrix() const;
+    AffineXf3f getViewXf() const { return AffineXf3f( viewM_ ); }
 
     // returns Y axis of view matrix. Shows Up direction with zoom-depended length
     MRVIEWER_API Vector3f getUpDirection() const;
@@ -321,7 +315,7 @@ public:
     MRVIEWER_API std::vector<Vector3f> viewportSpaceToClipSpace( const std::vector<Vector3f>& p ) const;
 
     // updates view and projection matrices due to camera parameters (called each frame)
-    void setupView() const;
+    void setupView();
     // draws viewport primitives:
     //   lines: if depth test is on
     //   points: if depth test is on
@@ -446,11 +440,12 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
-    // Get current rotaion pivot in world space
+    // Get current rotation pivot in world space
     MRVIEWER_API Vector3f getRotationPivot() const;
+
 private:
     // initializes view matrix based on camera position
-    void setupViewMatrix() const;
+    void setupViewMatrix_();
     // returns world space to camera space transformation
     AffineXf3f getViewXf_() const;
 
@@ -462,7 +457,7 @@ private:
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
     // Z axis from Dnear(-1.f) to Dfar(1.f)
-    Matrix4f getFullViewportMatrix() const;
+    Matrix4f getFullViewportMatrix() const { return projM * viewM_; }
     Matrix4f getFullViewportInversedMatrix() const;
 
     ViewportRectangle viewportRect_;
@@ -498,7 +493,7 @@ private:
     // Receives point in scene coordinates, that should appear static on a screen, while rotation
     void setRotationPivot_( const Vector3f& point );
     void updateSceneBox_();
-    void rotateView_() const;
+    void rotateView_();
 
     enum class Space
     {

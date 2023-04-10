@@ -35,7 +35,7 @@ AffineXf3f Viewport::getViewXf_() const
 
 Vector3f Viewport::getCameraPoint() const
 {
-    AffineXf3f xfInv = AffineXf3f( viewM ).inverse();
+    AffineXf3f xfInv = AffineXf3f( viewM_ ).inverse();
     return xfInv.b;
 }
 
@@ -46,9 +46,9 @@ void Viewport::setCameraPoint( const Vector3f& cameraWorldPos )
     needRedraw_ = true;
 }
 
-void Viewport::setupViewMatrix() const
+void Viewport::setupViewMatrix_()
 {
-    viewM = getViewXf_();
+    viewM_ = getViewXf_();
 
     if ( rotation_ )
         rotateView_();
@@ -140,12 +140,12 @@ void Viewport::setRotation( bool state )
     static_point_ = worldToCameraSpace( rotationPivot_ );
 }
 
-void Viewport::rotateView_() const
+void Viewport::rotateView_()
 {
     // TODO: try to simplify
-    AffineXf3f xf(viewM);
+    AffineXf3f xf(viewM_);
     Vector3f shift = static_point_ - xf.A * rotationPivot_;
-    viewM.setTranslation( shift );
+    viewM_.setTranslation( shift );
 
     auto line = unprojectPixelRay( static_viewport_point );
     line.d = line.d.normalized();
@@ -165,11 +165,9 @@ void Viewport::rotateView_() const
 
     // changing translation should not really be here, so const cast is OK
     // meanwhile it is because we need to keep distance(camera, scene center) static
-    Vector3f* transConstCasted = const_cast<Vector3f*>( &params_.cameraTranslation );
-    *transConstCasted = Matrix3f( params_.cameraTrackballAngle.inverse() ) * (shift + cameraEye);
-    *transConstCasted = params_.cameraTranslation / params_.cameraZoom;
-    assert( !std::isnan( transConstCasted->x ) );
-    viewM.setTranslation( shift );
+    params_.cameraTranslation = Matrix3f( params_.cameraTrackballAngle.inverse() ) * ( shift + cameraEye ) / params_.cameraZoom;
+    assert( !std::isnan( params_.cameraTranslation.x ) );
+    viewM_.setTranslation( shift );
 }
 
 void Viewport::transformView( const AffineXf3f & xf )
@@ -204,51 +202,35 @@ void Viewport::setRotationPivot_( const Vector3f& point )
 // ================================================================
 // projection part
 
-const Matrix4f& Viewport::getViewMatrix() const
-{
-    return viewM;
-}
-
 AffineXf3f Viewport::getUnscaledViewXf() const
 {
     // TODO. Try to find better normalize way
-    AffineXf3f res( viewM );
+    AffineXf3f res( viewM_ );
     res.A.x = res.A.x.normalized();
     res.A.y = res.A.y.normalized();
     res.A.z = res.A.z.normalized();
     return res;
 }
 
-AffineXf3f Viewport::getViewXf() const
-{
-    return AffineXf3f( viewM );
-}
-const Matrix4f& Viewport::getProjMatrix() const
-{
-    return projM;
-}
-Matrix4f Viewport::getFullViewportMatrix() const
-{
-    return projM * viewM;
-}
 Matrix4f Viewport::getFullViewportInversedMatrix() const
 {
-    return (projM * viewM).inverse();
+    // compute inverse in double precision to avoid NaN for very small scales
+    return Matrix4f( ( Matrix4d( projM ) * Matrix4d( viewM_ ) ).inverse() );
 }
 
 Vector3f Viewport::getUpDirection() const
 {
-    Vector3f res = Vector3f( viewM.y.x, viewM.y.y, viewM.y.z ).normalized();
+    Vector3f res = Vector3f( viewM_.y.x, viewM_.y.y, viewM_.y.z ).normalized();
     return res;
 }
 Vector3f Viewport::getRightDirection() const
 {
-    Vector3f res = Vector3f( viewM.x.x, viewM.x.y, viewM.x.z ).normalized();
+    Vector3f res = Vector3f( viewM_.x.x, viewM_.x.y, viewM_.x.z ).normalized();
     return res;
 }
 Vector3f Viewport::getBackwardDirection() const
 {
-    Vector3f res = Vector3f( viewM.z.x, viewM.z.y, viewM.z.z ).normalized();
+    Vector3f res = Vector3f( viewM_.z.x, viewM_.z.y, viewM_.z.z ).normalized();
     return res;
 }
 
@@ -260,12 +242,13 @@ Line3f Viewport::unprojectPixelRay( const Vector2f& viewportPoint ) const
     clipFar.z = 1.0f;
     auto p = M( clipNear );
     auto d = M( clipFar ) - p;
+    assert ( !std::isnan( d.x ) );
     return Line3f( p, d );
 }
 
 Vector3f Viewport::worldToCameraSpace( const Vector3f& p ) const
 {
-    return viewM(p);
+    return viewM_(p);
 }
 
 std::vector<Vector3f> Viewport::worldToCameraSpace( const std::vector<Vector3f>& points ) const

@@ -58,6 +58,9 @@ jobs:
             py-tag: "cp311"
             py-cmd: "python3.11"
     steps:
+      - name: Git - add safe directory
+        run: git config --global --add safe.directory ${{github.workspace}}/*
+
       - name: Checkout
         uses: actions/checkout@v3
         with:

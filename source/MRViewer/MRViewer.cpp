@@ -1203,7 +1203,7 @@ bool Viewer::needRedraw_() const
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
-void Viewer::resetRedraw_() const
+void Viewer::resetRedraw_()
 {
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
@@ -1320,13 +1320,13 @@ void Viewer::draw_( bool force )
     isInDraw_ = false;
 }
 
-void Viewer::drawScene() const
+void Viewer::drawScene()
 {
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
     int numTransparent = 0;
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
         viewport.preDraw();
 
     preDrawPostViewportSignal();
@@ -1359,9 +1359,9 @@ void Viewer::drawScene() const
     resetRedraw_();
 }
 
-void Viewer::setupScene() const
+void Viewer::setupScene()
 {
-    for ( const auto& viewport : viewport_list )
+    for ( auto& viewport : viewport_list )
     {
         viewport.setupView();
         viewport.clear_framebuffers();

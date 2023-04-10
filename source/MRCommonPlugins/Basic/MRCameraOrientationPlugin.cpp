@@ -24,17 +24,17 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
     ImGui::DragFloatValid3( "Position", &position_.x );
-    ImGui::SetTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated.", menuScaling );
+    UI::setTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated.", menuScaling );
 
     ImGui::DragFloatValid3( "Direction", &direction_.x );
-    ImGui::SetTooltipIfHovered( "Forward direction of the camera in world space.", menuScaling );
+    UI::setTooltipIfHovered( "Forward direction of the camera in world space.", menuScaling );
 
     ImGui::DragFloatValid3( "Up", &upDir_.x );
-    ImGui::SetTooltipIfHovered( "Up direction of the camera in world space.", menuScaling );
+    UI::setTooltipIfHovered( "Up direction of the camera in world space.", menuScaling );
 
     if ( UI::button( "Orthonormalize", Vector2f( -1, 0 ) ) )
         upDir_ = cross( cross( direction_, upDir_ ), direction_ ).normalized();
-    ImGui::SetTooltipIfHovered( "Recalculate vector to orthonormal\n"
+    UI::setTooltipIfHovered( "Recalculate vector to orthonormal\n"
                                 "saving plane (direction, up)", menuScaling );
 
     float w = ImGui::GetContentRegionAvail().x;
@@ -60,7 +60,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
 
     if ( UI::checkbox( "Autofit", &isAutofit_ ) )
         autofit_();
-    ImGui::SetTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport.", menuScaling );
+    UI::setTooltipIfHovered( "If enabled, it automatically selects best camera location to see whole scene in the viewport.", menuScaling );
 
     ImGui::PushItemWidth( 80 * menuScaling );
     auto params = viewer->viewport().getParameters();

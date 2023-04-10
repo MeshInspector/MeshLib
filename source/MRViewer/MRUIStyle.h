@@ -2,6 +2,7 @@
 #include "exports.h"
 #include "imgui.h"
 #include <string>
+#include <optional>
 
 namespace MR
 {
@@ -46,9 +47,9 @@ inline bool checkbox( const char* label, Getter get, Setter set )
 }
 
 
+
 /// draw gradient radio button
 MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
-
 
 /// draw gradient color edit 4
 MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );
@@ -56,6 +57,32 @@ MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEdit
 /// draw combo box
 MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::string>& options,
     bool showPreview = true, const std::vector<std::string>& tooltips = {}, const std::string& defaultText = "Not selected" );
+
+
+
+/// draw input text box with text aligned by center
+MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL );
+
+/// draw read-only text box with text aligned by center
+MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {} );
+
+/// similar to ImGui::Text but use current text color with alpha channel = 0.5
+MRVIEWER_API void transparentText( const char* fmt, ... );
+/// similar to ImGui::TextWrapped but use current text color with alpha channel = 0.5
+MRVIEWER_API void transparentTextWrapped( const char* fmt, ... );
+
+
+
+
+/// draw tooltip only if current item is hovered
+MRVIEWER_API void setTooltipIfHovered( const std::string& text, float scaling );
+
+///add text with separator line 
+/// if issueCount is greater than zero, this number will be displayed in red color after the text. 
+/// If it equals zero - in green color
+/// Otherwise it will not be displayed
+MRVIEWER_API void separator( float scaling, const std::string& text = "", int issueCount = -1 );
+
 
 } // namespace UI
 

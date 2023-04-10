@@ -237,7 +237,6 @@ public:
         {
             return AffineXf3f::linear( Matrix3f::scale( objectScale * 0.5f ) );
         }
-        mutable AffineXf3f basisAxesXf; // xf representing scale and translation of basis in this viewport (changes each frame)
 
         enum class RotationCenterMode
         {

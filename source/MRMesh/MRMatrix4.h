@@ -74,6 +74,7 @@ struct Matrix4
     void setTranslation( const Vector3<T>& t ) noexcept;
 
     constexpr T* data() { return (T*) (&x); };
+    constexpr const T* data() const { return (T*) (&x); };
     Matrix4 & operator +=( const Matrix4<T> & b ) { x += b.x; y += b.y; z += b.z; w += b.w; return * this; }
     Matrix4 & operator -=( const Matrix4<T> & b ) { x -= b.x; y -= b.y; z -= b.z; w -= b.w; return * this; }
     Matrix4 & operator *=( T b ) { x *= b; y *= b; z *= b; w *= b; return * this; }

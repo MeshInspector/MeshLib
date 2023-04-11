@@ -404,6 +404,7 @@ DistanceMap computeDistanceMapD( const MeshPart& mp, const MeshToDistanceMapPara
 DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToDistanceMapParams& params,
     const ContoursDistanceMapOptions& options )
 {
+    MR_TIMER
     assert( polyline.topology.isConsistentlyOriented() );
 
     if ( options.offsetParameters )
@@ -427,6 +428,9 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
     DistanceMap distMap( params.resolution.x, params.resolution.y );
     if ( !polyline.topology.lastNotLoneEdge().valid())
         return distMap;
+
+    const auto maxDistSq = sqr( options.maxDist );
+    const auto minDistSq = sqr( options.minDist );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -442,11 +446,11 @@ DistanceMap distanceMapFromContours( const Polyline2& polyline, const ContourToD
             Polyline2ProjectionWithOffsetResult res;
             if ( options.offsetParameters )
             {
-                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset );
+                res = findProjectionOnPolyline2WithOffset( p, polyline, options.offsetParameters->perEdgeOffset, options.maxDist, nullptr, options.minDist );
             }
             else
             {
-                auto noOffsetRes = findProjectionOnPolyline2( p, polyline );
+                auto noOffsetRes = findProjectionOnPolyline2( p, polyline, maxDistSq, nullptr, minDistSq );
                 res.line = noOffsetRes.line;
                 res.point = noOffsetRes.point;
                 res.dist = std::sqrt( noOffsetRes.distSq );
@@ -550,181 +554,365 @@ std::vector<Vector3f> edgePointsFromContours( const Polyline2& polyline, float p
     return edgePoints;
 }
 
+namespace MarchingSquaresHelper
+{
+
+enum class NeighborDir
+{
+    X, Y, Count
+};
+
+// point between two neighbor voxels
+struct SeparationPoint
+{
+    Vector2f position; // coordinate
+    VertId vid; // any valid VertId is ok
+    // each SeparationPointMap element has two SeparationPoint, it is not guaranteed that all three are valid (at least one is)
+    // so there are some points present in map that are not valid
+    explicit operator bool() const
+    {
+        return vid.valid();
+    }
+};
+
+using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
+using SeparationPointMap = ParallelHashMap<size_t, SeparationPointSet>;
+
+// lookup table from
+// http://paulbourke.net/geometry/polygonise/
+using EdgeDirIndex = std::pair<int, NeighborDir>;
+constexpr std::array<EdgeDirIndex, 4> cEdgeIndicesMap = {
+   EdgeDirIndex{0,NeighborDir::X},
+   EdgeDirIndex{0,NeighborDir::Y},
+   EdgeDirIndex{2,NeighborDir::X},
+   EdgeDirIndex{1,NeighborDir::Y}
+};
+
+const std::array<Vector2i, 4> cPixelNeighbors{
+    Vector2i{0,0},
+    Vector2i{1,0},
+    Vector2i{0,1},
+    Vector2i{1,1}
+};
+
+// contains indices in `cEdgeIndicesMap` (needed to capture vertices indices from SeparationPointMap)
+// each to represent edge in result topology
+using TopologyPlan = std::vector<int>;
+const std::array<TopologyPlan, 16> cTopologyTable = {
+    TopologyPlan{},
+    TopologyPlan{1, 0},
+    TopologyPlan{0, 3},
+    TopologyPlan{1, 3},
+    TopologyPlan{2, 1},
+    TopologyPlan{2, 0},
+    TopologyPlan{0, 1, 2, 3}, // undetermined
+    TopologyPlan{2, 3},
+    TopologyPlan{3, 2},
+    TopologyPlan{1, 0, 3, 2}, // undetermined
+    TopologyPlan{0, 2},
+    TopologyPlan{1, 2},
+    TopologyPlan{3, 1},
+    TopologyPlan{3, 0},
+    TopologyPlan{0, 1},
+    TopologyPlan{}
+};
+
+SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, NeighborDir dir, float isoValue )
+{
+    const auto v0 = dm.getValue( p.x, p.y );
+    auto p1 = p;
+    p1[int( dir )]++;
+    if ( p1.x >= dm.resX() || p1.y >= dm.resY() )
+        return {};
+    const auto v1 = dm.getValue( p1.x, p1.y );
+    if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
+        return {};
+    const bool low0 = v0 < isoValue;
+    const bool low1 = v1 < isoValue;
+    if ( low0 == low1 )
+        return {};
+
+    const float ratio = std::abs( isoValue - v0 ) / std::abs( v1 - v0 );
+    SeparationPoint res;
+    res.position = ( 1.0f - ratio ) * Vector2f( p ) +
+        ratio * Vector2f( p1 ) + Vector2f::diagonal( 0.5f );
+    res.vid =0_v;// real number now is not important, only that it is valid
+    return res;
+}
+
+}
+
 Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue )
 {
+    using namespace MarchingSquaresHelper;
     MR_NAMED_TIMER( "distanceMapTo2DIsoPolyline" );
     const size_t resX = distMap.resX();
     const size_t resY = distMap.resY();
     if ( resX == 0 || resY == 0 )
         return {};
+
     const size_t size = resX * resY;
-
-    struct SeparationPoint 
+    auto toPos = [resX] ( size_t ind )->Vector2i
     {
-        Vector2f coord;
-        VertId id;
-        bool low{ false }; // true means that left/down vert of edge is lower than iso when right/up is higher
-                           // false means that left/down vert of edge is higher than iso when right/up is lower
+        return { int( ind % resX ),int( ind / resX ) };
     };
-    auto horizontalEdgesSize = ( resX - 1 ) * resY;
-    std::vector<SeparationPoint> separationPoints( horizontalEdgesSize + resX * ( resY - 1 ) );
-    tbb::enumerable_thread_specific<size_t> numValidVertsPerThread( 0 );
-    auto setupSeparation = [&] ( size_t x0, size_t y0, size_t x1, size_t y1 )
+    auto toId = [resX] ( const Vector2i& pos )->size_t
     {
-        const auto v0 = distMap.getValue( x0, y0 );
-        const auto v1 = distMap.getValue( x1, y1 );
-        if ( v0 == NOT_VALID_VALUE || v1 == NOT_VALID_VALUE )
-            return 0;
-        const bool low0 = v0 < isoValue;
-        const bool low1 = v1 < isoValue;
-        if ( low0 == low1 )
-            return 0;
-
-        const float ratio = std::abs( isoValue - v0 ) / std::abs( v1 - v0 );
-        size_t index = 0;
-        if ( x1 == x0 )
-        {
-            // vertical edge
-            assert( y1 == y0 + 1 );
-            index = horizontalEdgesSize + x0 + y0 * resX;
-        }
-        else
-        {
-            // horizontal edge
-            assert( y1 == y0 );
-            assert( x1 == x0 + 1 );
-            index = x0 + y0 * ( resX - 1 );
-        }
-        separationPoints[index].id = VertId( 0 );// real number now is not important, only that it is valid
-        separationPoints[index].low = low0;
-        separationPoints[index].coord = ( 1.0f - ratio ) * Vector2f( float( x0 ), float( y0 ) ) +
-            ratio * Vector2f( float( x1 ), float( y1 ) ) + Vector2f::diagonal( 0.5f );
-        return 1;
+        return pos.x + pos.y * size_t( resX );
     };
-    // fill separationPoints
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, resY ), [&] ( const tbb::blocked_range<size_t>& range )
+
+    SeparationPointMap hmap;
+    const auto subcnt = hmap.subcnt();
+    // find all separate points
+    // fill map in parallel
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        size_t counter{ 0 };
-        for ( size_t y = range.begin(); y < range.end() && y + 1 < resY; ++y )
-            for ( size_t x = 0; x < resX; x++ )
-                counter += setupSeparation( x, y, x, y + 1 );
-        for ( size_t y = range.begin(); y < range.end(); ++y )
-            for ( size_t x = 0; x + 1 < resX; x++ )
-                counter += setupSeparation( x, y, x + 1, y );
-        numValidVertsPerThread.local() += counter;
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t i = 0; i < size; ++i )
+        {
+            auto pos = toPos( i );
+
+            auto hashval = hmap.hash( i );
+            if ( hmap.subidx( hashval ) != range.begin() )
+                continue;
+
+            SeparationPointSet set;
+            bool atLeastOneOk = false;
+            for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+            {
+                SeparationPoint separation = findSeparationPoint( distMap, pos, NeighborDir( n ), isoValue );
+                if ( separation )
+                {
+                    set[n] = std::move( separation );
+                    atLeastOneOk = true;
+                }
+            }
+            if ( !atLeastOneOk )
+                continue;
+            hmap.insert( { i, set } );
+        }
     } );
-    size_t numValidVerts = 0;
-    for ( const auto& num : numValidVertsPerThread )
-        numValidVerts += num;
 
-    Polyline2 polyline;
-    polyline.points.resize( numValidVerts );
-    VertId indexVert;
-    for ( auto& sp : separationPoints )
+    // numerate verts in parallel (to have packed polyline as result, determined numeration independent of thread number)
+    struct VertsNumeration
     {
-        if ( !sp.id )
+        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
+        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
+        size_t initIndex{ 0 };
+        size_t numVerts{ 0 };
+    };
+    using PerThreadVertNumeration = std::vector<VertsNumeration>;
+    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ),
+        [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto& localNumeration = perThreadVertNumeration.local();
+        localNumeration.emplace_back( range.begin(), 0 );
+        auto& thisRangeNumeration = localNumeration.back().numVerts;
+        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
+        {
+            // as far as map is filled, change of each individual value should be safe
+            auto mapIter = hmap.find( ind );
+            if ( mapIter == hmap.cend() )
+                continue;
+            for ( auto& dir : mapIter->second )
+                if ( dir )
+                    dir.vid = VertId( thisRangeNumeration++ );
+        }
+    }, tbb::static_partitioner() );// static_partitioner to have bigger grains
+
+    // organize vert numeration
+    std::vector<VertsNumeration> resultVertNumeration;
+    for ( auto& perThreadNum : perThreadVertNumeration )
+    {
+        // remove empty
+        perThreadNum.erase( std::remove_if( perThreadNum.begin(), perThreadNum.end(),
+            [] ( const auto& obj )
+        {
+            return obj.numVerts == 0;
+        } ), perThreadNum.end() );
+        if ( perThreadNum.empty() )
             continue;
-        sp.id = ++indexVert;
-        polyline.points[indexVert] = sp.coord;
+        // accum not empty
+        resultVertNumeration.insert( resultVertNumeration.end(),
+            std::make_move_iterator( perThreadNum.begin() ), std::make_move_iterator( perThreadNum.end() ) );
     }
-
-    struct Line
+    // sort by voxel index
+    std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
     {
-        VertId begin, end;
-    };
-    std::vector<Line> lines( size * 2 );
+        return l.initIndex < r.initIndex;
+    } );
 
-    SeparationPoint dummyPoint;
-
-    auto findSeparation = [&] ( size_t x0, size_t y0, size_t x1, size_t y1 )->const SeparationPoint&
+    auto getVertIndexShiftForPixelId = [&] ( size_t ind )
     {
-        if ( x1 == resX || y1 == resY )
-            return dummyPoint;
-        size_t index = 0;
-        if ( x1 == x0 )
+        size_t shift = 0;
+        for ( int i = 1; i < resultVertNumeration.size(); ++i )
         {
-            // vertical edge
-            assert( y1 == y0 + 1 );
-            index = horizontalEdgesSize + x0 + y0 * resX;
+            if ( ind >= resultVertNumeration[i].initIndex )
+                shift += resultVertNumeration[i - 1].numVerts;
         }
-        else
-        {
-            // horizontal edge
-            assert( y1 == y0 );
-            assert( x1 == x0 + 1 );
-            index = x0 + y0 * ( resX - 1 );
-        }
-        return separationPoints[index];
+        return VertId( shift );
     };
-    // find lines in each pixel independently
+
+    // update map with determined vert indices
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+    [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        assert( range.begin() + 1 == range.end() );
+        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        {
+            // const_cast here is safe, we don't write to map, just change internal data
+            for ( auto& [ind, set] : const_cast< SeparationPointMap::EmbeddedSet& >( subSet ) )
+            {
+                auto vertShift = getVertIndexShiftForPixelId( ind );
+                for ( auto& sepPoint : set )
+                    if ( sepPoint )
+                        sepPoint.vid += vertShift;
+            }
+        } );
+    } );
+
+    // check neighbor iterator valid
+    auto checkIter = [&] ( const auto& iter, int mode ) -> bool
+    {
+        switch ( mode )
+        {
+        case 0: // base pixel
+            return iter != hmap.cend();
+        case 1: // x + 1 pixel
+        {
+            if ( iter == hmap.cend() )
+                return false;
+            return bool( iter->second[int( NeighborDir::Y )] );
+        }
+        case 2: // y + 1 voxel
+        {
+            if ( iter == hmap.cend() )
+                return false;
+            return bool( iter->second[int( NeighborDir::X )] );
+        }
+        default:
+            return false;
+        }
+    };
+
+    // Topology by table
+    struct TopologyData
+    {
+        size_t initInd{ 0 }; // this is needed to have determined topology independent of threads number
+        std::vector<std::array<VertId, 2>> lines;
+    };
+
+    using PerThreadTopologyData = std::vector<TopologyData>;
+    tbb::enumerable_thread_specific<PerThreadTopologyData> topologyPerThread;
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, size ), [&] ( const tbb::blocked_range<size_t>& range )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        // setup local triangulation
+        auto& localTopologyData = topologyPerThread.local();
+        localTopologyData.emplace_back();
+        auto& thisLineData = localTopologyData.back();
+        thisLineData.initInd = range.begin();
+        auto& lines = thisLineData.lines;
+
+        // cell data
+        std::array<SeparationPointMap::const_iterator, 3> iters;
+        std::array<bool, 3> iterStatus;
+        unsigned char pixelConfiguration;
+        for ( size_t ind = range.begin(); ind < range.end(); ++ind )
         {
-            size_t x = i % resX;
-            size_t y = i / resX;
-            const auto& lowEdgeRes = findSeparation( x, y, x + 1, y );
-            const auto& rightEdgeRes = findSeparation( x + 1, y, x + 1, y + 1 );
-            const auto& upEdgeRes = findSeparation( x, y + 1, x + 1, y + 1 );
-            const auto& leftEdgeRes = findSeparation( x, y, x, y + 1 );
-            if ( !lowEdgeRes.id && !rightEdgeRes.id && !upEdgeRes.id && !leftEdgeRes.id )
-                continue; // none
-            auto& firstLine = lines[UndirectedEdgeId( 2 * i )];
-            if ( lowEdgeRes.id && rightEdgeRes.id && upEdgeRes.id && leftEdgeRes.id )
+            Vector2i basePos = toPos( ind );
+            if ( basePos.x >= resX || basePos.y >= resY )
+                continue;
+
+            bool pixelValid = false;
+            for ( int i = 0; i < iters.size(); ++i )
             {
-                // undetermined case, prefer left-lower and right-upper
-                firstLine.begin = leftEdgeRes.id;
-                firstLine.end = lowEdgeRes.id;
-				
-                lines[UndirectedEdgeId( 2 * i + 1 )].begin = rightEdgeRes.id;
-                lines[UndirectedEdgeId( 2 * i + 1 )].end = upEdgeRes.id;
-                if ( !leftEdgeRes.low )
+                iters[i] = hmap.find( toId( basePos + cPixelNeighbors[i] ) );
+                iterStatus[i] = checkIter( iters[i], i );
+                if ( !pixelValid && iterStatus[i] )
+                    pixelValid = true;
+            }
+            if ( !pixelValid )
+                continue;
+            pixelConfiguration = 0;
+            [[maybe_unused]] bool atLeastOneNan = false;
+            for ( int i = 0; i < cPixelNeighbors.size(); ++i )
+            {
+                auto pos = basePos + cPixelNeighbors[i];
+                float value = distMap.getValue( pos.x, pos.y );
+                if ( value == NOT_VALID_VALUE )
                 {
-                    std::swap( firstLine.begin, firstLine.end );
-                    std::swap( lines[UndirectedEdgeId( 2 * i + 1 )].begin, lines[UndirectedEdgeId( 2 * i + 1 )].end );
+                    pixelValid = false;
+                    break;
                 }
-                continue;
+                if ( value >= isoValue )
+                    continue;
+                pixelConfiguration |= ( 1 << i );
             }
-            if ( lowEdgeRes.id && ( leftEdgeRes.id || upEdgeRes.id || rightEdgeRes.id ) )
-            {
-                if ( leftEdgeRes.id )
-                    firstLine.begin = leftEdgeRes.id;
-                else if ( upEdgeRes.id )
-                    firstLine.begin = upEdgeRes.id;
-                else if ( rightEdgeRes.id )
-                    firstLine.begin = rightEdgeRes.id;
-                firstLine.end = lowEdgeRes.id;
-                if ( !lowEdgeRes.low )
-                    std::swap( firstLine.begin, firstLine.end );
+
+            if ( !pixelValid )
                 continue;
-            }
-            if ( leftEdgeRes.id && ( upEdgeRes.id || rightEdgeRes.id ) )
+
+            const auto& plan = cTopologyTable[pixelConfiguration];
+            for ( int i = 0; i < plan.size(); i += 2 )
             {
-                if ( upEdgeRes.id )
-                    firstLine.begin = upEdgeRes.id;
-                else if ( rightEdgeRes.id )
-                    firstLine.begin = rightEdgeRes.id;
-                firstLine.end = leftEdgeRes.id;
-                if ( leftEdgeRes.low )
-                    std::swap( firstLine.begin, firstLine.end );
-                continue;
-            }
-            if ( upEdgeRes.id && rightEdgeRes.id )
-            {
-                firstLine.begin = upEdgeRes.id;
-                firstLine.end = rightEdgeRes.id;
-                if ( !upEdgeRes.low )
-                    std::swap( firstLine.begin, firstLine.end );
-                continue;
+                const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+
+                lines.emplace_back( std::array<VertId, 2>{ 
+                    iters[interIndex0]->second[int( dir0 )].vid,
+                        iters[interIndex1]->second[int( dir1 )].vid
+                } );
             }
         }
     } );
 
-    polyline.topology.vertResize( polyline.points.size() );
-    for ( const auto & l : lines )
+    // organize per thread topology
+    std::vector<TopologyData> resTopologyData;
+    for ( auto& threadTopologyData : topologyPerThread )
     {
-        if ( l.begin && l.end )
-            polyline.topology.makeEdge( l.begin, l.end );
+        // remove empty
+        threadTopologyData.erase( std::remove_if( threadTopologyData.begin(), threadTopologyData.end(),
+            [] ( const auto& obj )
+        {
+            return obj.lines.empty();
+        } ), threadTopologyData.end() );
+        if ( threadTopologyData.empty() )
+            continue;
+        // accum not empty
+        resTopologyData.insert( resTopologyData.end(),
+            std::make_move_iterator( threadTopologyData.begin() ), std::make_move_iterator( threadTopologyData.end() ) );
+    }
+    // sort by pixel index
+    std::sort( resTopologyData.begin(), resTopologyData.end(), [] ( const auto& l, const auto& r )
+    {
+        return l.initInd < r.initInd;
+    } );
+
+    Polyline2 polyline;
+    polyline.points.resize( size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts );
+    polyline.topology.vertResize( polyline.points.size() );
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
+        [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        assert( range.begin() + 1 == range.end() );
+        hmap.with_submap( range.begin(), [&] ( const SeparationPointMap::EmbeddedSet& subSet )
+        {
+            for ( auto& separation : subSet )
+            {
+                for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
+                    if ( separation.second[i].vid.valid() )
+                        polyline.points[separation.second[i].vid] = separation.second[i].position;
+            }
+        } );
+    } );
+
+    for ( auto& [ind, lines] : resTopologyData )
+    {
+        for ( const auto& line : lines )
+            polyline.topology.makeEdge( line[0], line[1] );
     }
     assert( polyline.topology.isConsistentlyOriented() );
 
@@ -1242,6 +1430,47 @@ Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contours
     mapB.negate();
     mapA.mergeMax( mapB );
     return distanceMapTo2DIsoPolyline( mapA, params, offsetInside );
+}
+
+Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset )
+{
+    MR_TIMER
+
+    assert( offset > 0.f );
+
+    const auto box = polyline.computeBoundingBox();
+    const auto size = box.size();
+
+    const auto padding = offset + 2 * pixelSize;
+
+    ContourToDistanceMapParams params;
+    params.pixelSize = {
+        pixelSize,
+        pixelSize,
+    };
+    params.resolution = {
+        int( ( size.x + 2 * padding ) / pixelSize ),
+        int( ( size.y + 2 * padding ) / pixelSize ),
+    };
+    params.orgPoint = {
+        box.min.x - padding,
+        box.min.y - padding,
+    };
+
+    ContoursDistanceMapOptions options;
+    //compute precise distances only in the cells crossed by offset-isoline
+    options.maxDist = offset + pixelSize;
+    options.minDist = std::max( offset - pixelSize, 0.0f );
+
+    const auto distanceMap = distanceMapFromContours( polyline, params, options );
+
+    auto isoline = distanceMapTo2DIsoPolyline( distanceMap, offset );
+
+    DistanceMapToWorld distanceMapToWorld( params );
+    for ( auto& p : isoline.points )
+        p = Vector2f( distanceMapToWorld.toWorld( p.x, p.y, 0 ) );
+
+    return isoline;
 }
 
 } //namespace MR

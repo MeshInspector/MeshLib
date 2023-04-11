@@ -114,7 +114,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
 namespace MarchingCubesHelper
 {
 
-enum NeighborDir
+enum class NeighborDir
 {
     X, Y, Z, Count
 };
@@ -123,7 +123,6 @@ enum NeighborDir
 struct SeparationPoint
 {
     Vector3f position; // coordinate
-    bool low{ false }; // orientation: true means that baseVoxelId has lower value
     VertId vid; // any valid VertId is ok
     // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
     // so there are some points present in map that are not valid
@@ -445,12 +444,12 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
 {
     auto basePos = indexer.toPos( base );
     auto shift = ( 1 << params.neighborVoxExp );
-    if ( basePos[dir] + shift >= volume.dims[dir] )
+    if ( basePos[int( dir )] + shift >= volume.dims[int( dir )] )
         return {};
     auto coord = openvdb::Coord{ basePos.x + minCoord.x(),basePos.y + minCoord.y(),basePos.z + minCoord.z() };
     const auto& valueB = acc.getValue( coord );// volume.data[base];
     auto nextCoord = coord;
-    nextCoord[dir] += shift;
+    nextCoord[int( dir )] += shift;
     const auto& valueD = acc.getValue( nextCoord );// volume.data[nextId];
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
@@ -459,7 +458,6 @@ SeparationPoint findSeparationPoint( const VdbVolume& volume, const ConstAccesso
         return {};
 
     SeparationPoint res;
-    res.low = bLower;
     Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.basis.b + params.basis.A * coordF;
@@ -474,8 +472,8 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
 {
     auto basePos = indexer.toPos( base );
     auto nextPos = basePos;
-    nextPos[dir] += ( 1 << params.neighborVoxExp );
-    if ( nextPos[dir] >= volume.dims[dir] )
+    nextPos[int( dir )] += ( 1 << params.neighborVoxExp );
+    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return {};
     const auto& valueB = volume.data[base];
     const auto& valueD = volume.data[indexer.toVoxelId( nextPos ).get()];
@@ -488,7 +486,6 @@ SeparationPoint findSeparationPoint( const SimpleVolume& volume,
         return {};
 
     SeparationPoint res;
-    res.low = bLower;
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.basis.b + params.basis.A * coordF;
@@ -549,7 +546,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            for ( int n = NeighborDir::X; n < NeighborDir::Count; ++n )
+            for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 SeparationPoint separation;
                 if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -613,19 +610,19 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
 
     // organize vert numeration
     std::vector<VertsNumeration> resultVertNumeration;
-    for ( auto& perTrheadNum : perThreadVertNumeration )
+    for ( auto& perThreadNum : perThreadVertNumeration )
     {
         // remove empty
-        perTrheadNum.erase( std::remove_if( perTrheadNum.begin(), perTrheadNum.end(),
+        perThreadNum.erase( std::remove_if( perThreadNum.begin(), perThreadNum.end(),
             [] ( const auto& obj )
         {
             return obj.numVerts == 0;
-        } ), perTrheadNum.end() );
-        if ( perTrheadNum.empty() )
+        } ), perThreadNum.end() );
+        if ( perThreadNum.empty() )
             continue;
         // accum not empty
         resultVertNumeration.insert( resultVertNumeration.end(),
-            std::make_move_iterator( perTrheadNum.begin() ), std::make_move_iterator( perTrheadNum.end() ) );
+            std::make_move_iterator( perThreadNum.begin() ), std::make_move_iterator( perThreadNum.end() ) );
     }
     // sort by voxel index
     std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
@@ -677,37 +674,37 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::Y] || iter->second[NeighborDir::Z];
+            return iter->second[int( NeighborDir::Y )] || iter->second[int( NeighborDir::Z )];
         }
         case 2: // y + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X] || iter->second[NeighborDir::Z];
+            return iter->second[int( NeighborDir::X )] || iter->second[int( NeighborDir::Z )];
         }
         case 3: // x + 1, y + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return bool( iter->second[NeighborDir::Z] );
+            return bool( iter->second[int( NeighborDir::Z )] );
         }
         case 4: // z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return iter->second[NeighborDir::X] || iter->second[NeighborDir::Y];
+            return iter->second[int( NeighborDir::X )] || iter->second[int( NeighborDir::Y )];
         }
         case 5: // x + 1, z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return bool( iter->second[NeighborDir::Y] );
+            return bool( iter->second[int( NeighborDir::Y )] );
         }
         case 6: // y + 1, z + 1 voxel
         {
             if ( iter == hmap.cend() )
                 return false;
-            return bool( iter->second[NeighborDir::X] );
+            return bool( iter->second[int( NeighborDir::X )] );
         }
         default:
             return false;
@@ -835,9 +832,9 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                         const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
                         // `iterStatus` indicates that current voxel has valid point for desired triangulation
                         // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
                     }
                 }
             }
@@ -852,21 +849,21 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                 const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                 const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                 const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                assert( iterStatus[interIndex0] && iters[interIndex0]->second[dir0].vid );
-                assert( iterStatus[interIndex1] && iters[interIndex1]->second[dir1].vid );
-                assert( iterStatus[interIndex2] && iters[interIndex2]->second[dir2].vid );
+                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
+                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
+                assert( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
 
                 if ( params.lessInside )
                     t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[dir0].vid,
-                    iters[interIndex2]->second[dir2].vid,
-                    iters[interIndex1]->second[dir1].vid
+                    iters[interIndex0]->second[int( dir0 )].vid,
+                    iters[interIndex2]->second[int( dir2 )].vid,
+                    iters[interIndex1]->second[int( dir1 )].vid
                     } );
                 else
                     t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[dir0].vid,
-                    iters[interIndex1]->second[dir1].vid,
-                    iters[interIndex2]->second[dir2].vid
+                    iters[interIndex0]->second[int( dir0 )].vid,
+                    iters[interIndex1]->second[int( dir1 )].vid,
+                    iters[interIndex2]->second[int( dir2 )].vid
                     } );
                 if ( params.outVoxelPerFaceMap )
                     faceMap.emplace_back( VoxelId{ ind } );
@@ -926,7 +923,7 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
         {
             for ( auto& separation : subSet )
             {
-                for ( int i = 0; i < NeighborDir::Count; ++i )
+                for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                     if ( separation.second[i].vid.valid() )
                         result.points[separation.second[i].vid] = separation.second[i].position;
             }

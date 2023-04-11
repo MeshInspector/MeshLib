@@ -54,6 +54,9 @@
     <ClInclude Include="MRCudaMeshProject.cuh">
       <Filter>MeshProject</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaBasic.cuh">
+      <Filter>Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">

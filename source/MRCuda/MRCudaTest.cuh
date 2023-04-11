@@ -1,5 +1,5 @@
 #pragma once
-#include "MRCudaBasic.h"
+#include "MRCudaBasic.cuh"
 
 namespace MR
 {

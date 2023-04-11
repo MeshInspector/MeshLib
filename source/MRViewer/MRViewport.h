@@ -79,9 +79,12 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clear_framebuffers() const;
 
-    // Draw everything
-    // forceZbuffer - rewrite Z buffer anyway
-    MRVIEWER_API void draw( const VisualObject& data, const AffineXf3f& xf, bool forceZBuffer = false, bool alphaSort = false ) const;
+    /// Draw given object;
+    /// \param forceZbuffer rewrite Z buffer anyway
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer = false, bool alphaSort = false ) const;
+
+    /// Draw given object with given projection matrix
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, bool forceZBuffer = false, bool alphaSort = false ) const;
 
     // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     MRVIEWER_API const ViewportPointsWithColors& getPointsWithColors() const;
@@ -198,10 +201,10 @@ public:
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM.data(), projM.data(), toVec4<int>( viewportRect_ ) }; }
+    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM_.data(), toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
-    void resetRedrawFlag() const { needRedraw_ = false; }
+    void resetRedrawFlag() { needRedraw_ = false; }
     // ------------------- Properties
 
     // Unique identifier
@@ -229,8 +232,11 @@ public:
 
         Plane3f clippingPlane{Vector3f::plusX(), 0.0f};
 
-        mutable AffineXf3f globalBasisAxesXf; // xf representing scale of global basis in this viewport (changes each frame)
-        mutable AffineXf3f basisAxesXf; // xf representing scale and translation of basis in this viewport (changes each frame)
+         // xf representing scale of global basis in this viewport
+        AffineXf3f globalBasisAxesXf() const
+        {
+            return AffineXf3f::linear( Matrix3f::scale( objectScale * 0.5f ) );
+        }
 
         enum class RotationCenterMode
         {
@@ -260,20 +266,14 @@ public:
 
 private:
     // Save the OpenGL transformation matrices used for the previous rendering pass
-    mutable Matrix4f viewM;
-    mutable Matrix4f projM;
+    Matrix4f viewM_;
+    Matrix4f projM_;
 
 public:
     // returns orthonormal matrix with translation
     MRVIEWER_API AffineXf3f getUnscaledViewXf() const;
     // converts directly from the view matrix
-    MRVIEWER_API AffineXf3f getViewXf() const;
-
-    // returns pure matrices. If you are going to use it for manual points transformation, you do something wrong probably
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getViewMatrix() const;
-    [[deprecated]]
-    MRVIEWER_API const Matrix4f& getProjMatrix() const;
+    AffineXf3f getViewXf() const { return AffineXf3f( viewM_ ); }
 
     // returns Y axis of view matrix. Shows Up direction with zoom-depended length
     MRVIEWER_API Vector3f getUpDirection() const;
@@ -321,13 +321,13 @@ public:
     MRVIEWER_API std::vector<Vector3f> viewportSpaceToClipSpace( const std::vector<Vector3f>& p ) const;
 
     // updates view and projection matrices due to camera parameters (called each frame)
-    void setupView() const;
+    void setupView();
     // draws viewport primitives:
     //   lines: if depth test is on
     //   points: if depth test is on
     //   rotation center
     //   global basis
-    void preDraw() const;
+    void preDraw();
     // draws viewport primitives:
     //   lines: if depth test is off
     //   points: if depth test is off
@@ -446,29 +446,29 @@ public:
     // note: this can make camera clip objects (as far as distance to scene center is not fixed)
     MRVIEWER_API void cameraRotateAround( const Line3f& axis, float angle );
 
-    // Get current rotaion pivot in world space
+    // Get current rotation pivot in world space
     MRVIEWER_API Vector3f getRotationPivot() const;
+
 private:
     // initializes view matrix based on camera position
-    void setupViewMatrix() const;
+    void setupViewMatrix_();
     // returns world space to camera space transformation
     AffineXf3f getViewXf_() const;
 
     // initializes proj matrix based on camera angle and viewport rectangle size
-    void setupProjMatrix() const;
+    void setupProjMatrix_();
     // initializes proj matrix for static view objects (like corner axes)
-    void setupStaticProjMatrix() const;
+    void setupStaticProjMatrix_();
 
     // use this matrix to convert world 3d point to clip point
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), X axis from bottom(-1.f) to top(1.f),
     // Z axis from Dnear(-1.f) to Dfar(1.f)
-    Matrix4f getFullViewportMatrix() const;
+    Matrix4f getFullViewportMatrix() const { return projM_ * viewM_; }
     Matrix4f getFullViewportInversedMatrix() const;
 
     ViewportRectangle viewportRect_;
 
-    mutable ViewportGL viewportGL_;  //is mutable because if not initialized,
-    //then it will need to be initialized in constant methods (preDraw()).
+    ViewportGL viewportGL_;
 
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;
@@ -486,7 +486,7 @@ private:
     void draw_axes() const;
     // This matrix should be used for a static objects
     // For example, basis axes in the corner
-    mutable Matrix4f staticProj;
+    Matrix4f staticProj_;
     Vector3f relPoseBase;
     Vector3f relPoseSide;
 
@@ -498,7 +498,7 @@ private:
     // Receives point in scene coordinates, that should appear static on a screen, while rotation
     void setRotationPivot_( const Vector3f& point );
     void updateSceneBox_();
-    void rotateView_() const;
+    void rotateView_();
 
     enum class Space
     {
@@ -530,7 +530,7 @@ private:
     Vector2f static_viewport_point;
     float distToSceneCenter_;
 
-    mutable bool needRedraw_{false};
+    bool needRedraw_{false};
 
     // world bounding box of scene objects visible in this viewport
     Box3f sceneBox_;

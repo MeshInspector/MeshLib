@@ -8,13 +8,6 @@ namespace MR
 namespace Cuda
 {
 
-void setToZero( DynamicArrayF& devArray )
-{
-    if ( devArray.size() == 0 )
-        return;
-    cudaMemset( devArray.data(), 0, devArray.size() * sizeof( float ) );
-}
-
 bool isCudaAvailable()
 {
     int n;

@@ -1,6 +1,7 @@
 #pragma once
 #include "cuda_runtime.h"
 #include <assert.h>
+#include <stdint.h>
 
 namespace MR
 {

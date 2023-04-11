@@ -45,3 +45,8 @@ RUN dnf -y update && \
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \
     sudo ldconfig
+
+RUN sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora37/x86_64/cuda-fedora37.repo \
+  && sudo dnf clean all \
+  && sudo dnf -y module install nvidia-driver:latest-dkms \
+  && sudo dnf -y install cuda

@@ -26,7 +26,7 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM ubuntu:22.04 AS production
+FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
@@ -47,7 +47,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl \
+        tzdata git sudo time python3-pip xvfb curl wget \
  && ./scripts/install_apt_requirements.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
@@ -55,6 +55,20 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -y gh \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+#update cmake
+RUN apt remove --purge --auto-remove -y cmake \
+ && apt update \
+ && sudo apt install -y software-properties-common lsb-release \
+ && sudo apt clean all \
+ && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+ && sudo apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" \
+ && sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA \
+ && apt update \
+ && apt install -y kitware-archive-keyring \
+ && rm /etc/apt/trusted.gpg.d/kitware.gpg \
+ && apt update \
+ && apt install -y cmake
 
 RUN ./scripts/install_thirdparty.sh && \
     echo '/usr/local/lib' | tee -a  /etc/ld.so.conf && \

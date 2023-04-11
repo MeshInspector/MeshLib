@@ -17,6 +17,57 @@
 namespace MR
 {
 
+class FromOxyPlaneCalculator
+{
+public:
+    void addLineSegm( const Vector3d & a, const Vector3d & b )
+    {
+        sumPts_ += a;
+        sumPts_ += b;
+        numPts_ += 2;
+        sumCross_ += cross( a, b );
+    }
+    void addLineSegm( const Vector3f & a, const Vector3f & b )
+    {
+        addLineSegm( Vector3d( a ), Vector3d( b ) );
+    }
+    AffineXf3d getXf() const
+    {
+        if ( numPts_ <= 0 )
+            return {};
+        auto planeNormal = sumCross_.normalized();
+        auto center = sumPts_ / double( numPts_ );
+        return { Matrix3d::rotation( Vector3d::plusZ(), planeNormal ), center };
+    }
+
+private:
+    Vector3d sumPts_;
+    Vector3d sumCross_;
+    int numPts_ = 0;
+};
+
+AffineXf3f getXfFromOxyPlane( const Mesh& mesh, const std::vector<EdgePath>& paths )
+{
+    FromOxyPlaneCalculator c;
+    for ( const auto& path : paths )
+    {
+        for ( const auto& edge : path )
+            c.addLineSegm( mesh.orgPnt( edge ), mesh.destPnt( edge ) );
+    }
+    return AffineXf3f( c.getXf() );
+}
+
+AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
+{
+    FromOxyPlaneCalculator c;
+    for ( const auto& contour : contours )
+    {
+        for ( int i = 0; i + 1 < contour.size(); ++i )
+            c.addLineSegm( contour[i], contour[i + 1] );
+    }
+    return AffineXf3f( c.getXf() );
+}
+
 VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
@@ -45,17 +96,8 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     for ( int i = 0; i < paths.size(); ++i )
         paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
 
-    // calculate plane normal
-    Vector3f planeNormal;
-    for ( const auto& path : paths )
-    {
-        for ( const auto& edge : path )
-            planeNormal += cross( mesh.orgPnt( edge ), mesh.destPnt( edge ) );
-    }
-    planeNormal = planeNormal.normalized();
-
     // find transformation from world to plane space and back
-    const auto planeXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), planeNormal ), mesh.orgPnt( paths[0][0] ) );
+    const auto planeXf = getXfFromOxyPlane( mesh, paths );
     const auto planeXfInv = planeXf.inverse();
 
     // make contours2D (on plane) from border rings (in world)

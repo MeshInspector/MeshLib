@@ -15,4 +15,10 @@ namespace MR
  */
 MRMESH_API VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
+/// computes the transformation that maps
+/// O into center mass of contours' points
+/// OXY into best plane containing the points
+MRMESH_API AffineXf3f getXfFromOxyPlane( const Contours3f& contours );
+MRMESH_API AffineXf3f getXfFromOxyPlane( const Mesh& mesh, const std::vector<EdgePath>& paths );
+
 }

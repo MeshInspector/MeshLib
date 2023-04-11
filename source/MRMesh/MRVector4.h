@@ -6,7 +6,7 @@
 namespace MR
 {
 
-/// three-dimensional vector
+/// four-dimensional vector
 /// \ingroup VectorGroup
 template <typename T>
 struct Vector4
@@ -133,9 +133,9 @@ template <typename T>
 inline auto begin( Vector4<T> & v ) { return &v[0]; }
 
 template <typename T> 
-inline auto end( const Vector4<T> & v ) { return &v[3]; }
+inline auto end( const Vector4<T> & v ) { return &v[4]; }
 template <typename T> 
-inline auto end( Vector4<T> & v ) { return &v[3]; }
+inline auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}
 

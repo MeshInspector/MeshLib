@@ -72,7 +72,7 @@ jobs:
         id: select-tag
         run: |
           echo "image_tag=$([ ${{steps.linux-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
-          echo "cuda")" >> $GITHUB_OUTPUT
+          echo "latest")" >> $GITHUB_OUTPUT
 
       - name: Set image tag base path
         id: set-path

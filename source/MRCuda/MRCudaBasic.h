@@ -6,6 +6,7 @@ namespace MR
 
 namespace Cuda
 {
+
 // Returns true if Cuda is present on this GPU
 MRCUDA_API bool isCudaAvailable();
 

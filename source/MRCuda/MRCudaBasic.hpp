@@ -9,6 +9,50 @@ namespace Cuda
 {
 
 template<typename T>
+template<typename U>
+AutoPtr<T>::AutoPtr( const U* pHost )
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    if ( pHost )
+    {
+        cudaMalloc( &data_, sizeof( T ) );
+        cudaMemcpy( data_, pHost, sizeof( T ), cudaMemcpyHostToDevice );
+    }
+}
+
+template <typename T>
+AutoPtr<T>::~AutoPtr()
+{
+    if ( data_ )
+        cudaFree( data_ );
+}
+
+template <typename T>
+T* AutoPtr<T>::get()
+{
+    return data_;
+}
+
+template <typename T>
+const T* AutoPtr<T>::get() const
+{
+    return data_;
+}
+
+template<typename T>
+template<typename U>
+std::shared_ptr<U> AutoPtr<T>::convert()
+{
+    static_assert ( sizeof( T ) == sizeof( U ) );
+    if ( !data_ )
+        return nullptr;
+    
+    std::shared_ptr<U> res = std::make_shared<U>();
+    cudaMemcpy( res.get(), data_, sizeof( T ), cudaMemcpyDeviceToHost );
+    return res;
+}
+
+template<typename T>
 DynamicArray<T>::DynamicArray( size_t size )
 {
     resize( size );

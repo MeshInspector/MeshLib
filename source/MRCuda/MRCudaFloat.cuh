@@ -60,7 +60,7 @@ __device__ inline float lengthSq( const float3& a )
 
 __device__ inline float dot( const float3& a, const float3& b )
 {
-    return a.x * b.x + a.y * b.y + a.z ;
+    return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 

@@ -1,11 +1,46 @@
 #pragma once
 #include <vector>
+#include <memory>
 
 namespace MR
 {
 
 namespace Cuda
 {
+template<typename T>
+class AutoPtr
+{
+public:
+    AutoPtr() = default;
+
+    template<typename U>
+    AutoPtr( const U* pHost );
+
+    ~AutoPtr();
+
+    AutoPtr( const AutoPtr& ) = delete;
+    AutoPtr( AutoPtr&& ) = delete;
+    AutoPtr& operator=( const AutoPtr& ) = delete;
+    AutoPtr& operator=( AutoPtr&& ) = delete;
+
+    T* get();
+    const T* get() const;
+
+    template<typename U>
+    std::shared_ptr<U> convert();
+
+    operator bool() const
+    {
+        return ( bool ) data_;
+    }
+
+    AutoPtr& operator*()
+    {
+        return *data_;
+    }
+private:
+    T* data_{ nullptr };
+};
 // This struct is present to simplify GPU memory control
 template<typename T>
 class DynamicArray

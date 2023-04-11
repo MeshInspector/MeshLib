@@ -35,11 +35,18 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Lines"; }
 
+    /// signal about lines changing, triggered in setDirtyFlag
+    using LinesChangedSignal = boost::signals2::signal<void( uint32_t mask )>;
+    LinesChangedSignal linesChangedSignal;
+
 protected:
     MRMESH_API ObjectLines( const ObjectLines& other );
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;
+    /// swaps signals, used in `swap` function to return back signals after `swapBase_`
+    /// pls call Parent::swapSignals_ first when overriding this function
+    MRMESH_API virtual void swapSignals_( Object& other ) override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };

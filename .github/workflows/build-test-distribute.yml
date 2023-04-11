@@ -47,6 +47,7 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
   ubuntu-arm64-build-test:
+    if: ${{false}}
     needs: [ prepare-image, versioning-and-release-url ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:

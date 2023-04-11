@@ -356,6 +356,10 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
 
                 for ( size_t y = 0; y < params.resolution.y; y++ )
                 {
+                    if ( x==8 && y==3) {
+                        int a = 5;
+                        ++a;
+                    }
                     Vector3<T> rayOri = Vector3<T>( ori ) +
                         Vector3<T>( params.xRange ) * ( ( T( x ) + T( 0.5 ) ) * xStep_1 ) +
                         Vector3<T>( params.yRange ) * ( ( T( y ) + T( 0.5 ) ) * yStep_1 );

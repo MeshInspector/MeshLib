@@ -137,7 +137,7 @@ std::optional<Mesh> PlanarTriangulator::run()
     
         triangulateMonotoneBlock_( dirE );
     }
-    makeDeloneEdgeFlips( mesh_, {}, 100 );
+    makeDeloneEdgeFlips( mesh_, {}, 300 );
 
     return std::move( mesh_ ); // move here to avoid copy of class member
 }

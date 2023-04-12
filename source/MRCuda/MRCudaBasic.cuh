@@ -7,37 +7,27 @@ namespace MR
 
 namespace Cuda
 {
+// This struct simplifies GPU memory control on single object
 template<typename T>
 class AutoPtr
 {
 public:
     AutoPtr() = default;
-
+    // malloc memory and copy object from host. sizeof(T) must be equal to sizeof(U)
     template<typename U>
     AutoPtr( const U* pHost );
-
+    //free memory from GPU
     ~AutoPtr();
 
     AutoPtr( const AutoPtr& ) = delete;
     AutoPtr( AutoPtr&& ) = delete;
     AutoPtr& operator=( const AutoPtr& ) = delete;
     AutoPtr& operator=( AutoPtr&& ) = delete;
-
+    // returns raw pointer to use it in kernel
     T* get();
+    // returns const raw pointer to use it in kernel
     const T* get() const;
 
-    template<typename U>
-    std::shared_ptr<U> convert();
-
-    operator bool() const
-    {
-        return ( bool ) data_;
-    }
-
-    AutoPtr& operator*()
-    {
-        return *data_;
-    }
 private:
     T* data_{ nullptr };
 };
@@ -50,7 +40,8 @@ public:
     // malloc given size on GPU
     DynamicArray( size_t size );
     // copy given vector to GPU
-    DynamicArray( const std::vector<T>& vec );
+    template <typename U>
+    DynamicArray( const std::vector<U>& vec );
     // free this array from GPU (if needed)
     ~DynamicArray();
 

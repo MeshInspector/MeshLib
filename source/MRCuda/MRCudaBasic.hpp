@@ -40,26 +40,14 @@ const T* AutoPtr<T>::get() const
 }
 
 template<typename T>
-template<typename U>
-std::shared_ptr<U> AutoPtr<T>::convert()
-{
-    static_assert ( sizeof( T ) == sizeof( U ) );
-    if ( !data_ )
-        return nullptr;
-    
-    std::shared_ptr<U> res = std::make_shared<U>();
-    cudaMemcpy( res.get(), data_, sizeof( T ), cudaMemcpyDeviceToHost );
-    return res;
-}
-
-template<typename T>
 DynamicArray<T>::DynamicArray( size_t size )
 {
     resize( size );
 }
 
 template<typename T>
-DynamicArray<T>::DynamicArray( const std::vector<T>& vec )
+template<typename U>
+DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
 {
     fromVector( vec );
 }

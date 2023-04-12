@@ -7,12 +7,12 @@
 namespace MR
 {
 
-void MeshProjector::updateMeshData( std::shared_ptr<const Mesh> mesh, std::string& )
+void MeshProjector::updateMeshData( std::shared_ptr<const Mesh> mesh )
 {
     mesh_ = mesh;
 }
 
-std::vector<MeshProjectionResult> MeshProjector::findProjections( const std::vector<Vector3f>& points, const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq, std::vector<std::string>& log)
+std::vector<MeshProjectionResult> MeshProjector::findProjections( const std::vector<Vector3f>& points, const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq )
 {
     const auto start = std::chrono::steady_clock::now();    
     
@@ -25,7 +25,6 @@ std::vector<MeshProjectionResult> MeshProjector::findProjections( const std::vec
     } );
     
     const auto duration = std::chrono::steady_clock::now() - start;
-    log.push_back( std::string( "Without CUDA " + std::to_string( std::chrono::duration_cast< std::chrono::microseconds >( duration ).count() ) + "mcs elapsed" ) );
 
     return projResults;
 }

@@ -1,0 +1,26 @@
+#pragma once
+#include "exports.h"
+#include "MRMeshFwd.h"
+#include <string>
+namespace MR
+{
+
+class IMeshProjector
+{
+public:
+
+    virtual ~IMeshProjector() = default;
+    virtual void updateMeshData( std::shared_ptr<const Mesh> mesh, std::string& log ) = 0;
+    virtual std::vector<MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq, std::vector<std::string>& log ) = 0;
+};
+
+class MeshProjector : public IMeshProjector
+{
+    std::shared_ptr<const Mesh> mesh_;
+public:
+
+    MRMESH_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh, std::string& log ) override;
+    MRMESH_API virtual std::vector<MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq, std::vector<std::string>& log ) override;
+};
+
+}

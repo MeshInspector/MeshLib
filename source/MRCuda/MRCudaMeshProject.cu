@@ -213,8 +213,7 @@ void meshProjectionKernel( const float3* points,
 {
     int maxThreadsPerBlock = 0;
     cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
-    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-
+    int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;    
     kernel << <numBlocks, maxThreadsPerBlock >> > ( points, nodes, meshPoints, edges, edgePerFace, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
 }
 

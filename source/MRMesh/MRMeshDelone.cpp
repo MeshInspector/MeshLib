@@ -114,6 +114,8 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 
     UndirectedEdgeBitSet flipCandidates;
     flipCandidates.resize( mesh.topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates;
+    nextFlipCandidates.resize( mesh.topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )
@@ -121,10 +123,13 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
         if ( progressCallback && !progressCallback( float( iter ) / numIters ) )
             return flipsDone;
 
-        BitSetParallelForAll( flipCandidates, [&] ( UndirectedEdgeId e )
+        flipCandidates.reset();
+        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
         {
-            flipCandidates.set( e, !checkDeloneQuadrangleInMesh( mesh, e, settings ) );
+            if ( !checkDeloneQuadrangleInMesh( mesh, e, settings ) )
+                flipCandidates.set( e );
         } );
+        nextFlipCandidates.reset();
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : flipCandidates )
         {
@@ -132,10 +137,14 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
                 continue;
 
             mesh.topology.flipEdge( e );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ) ).undirected() );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ) ).undirected() );
+            nextFlipCandidates.set( mesh.topology.next( EdgeId( e ).sym() ).undirected() );
+            nextFlipCandidates.set( mesh.topology.prev( EdgeId( e ).sym() ).undirected() );
             ++flipsDone;
         }
         if ( flipsDoneBeforeThisIter == flipsDone )
-            break; 
+            break;
     }
     return flipsDone;
 }

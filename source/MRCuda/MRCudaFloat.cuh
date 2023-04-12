@@ -11,7 +11,7 @@ __device__ inline float clamp( float x, float l, float u )
 {
     return ( ( x < l ) ? l :
              ( ( x > u ) ? u : x ) );
-};
+}
 
 __device__ inline float2 operator+( const float2& a, const float2& b )
 {

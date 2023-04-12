@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <stdint.h>
 
 namespace MR
 {
@@ -55,6 +56,9 @@ public:
 
     // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
     void fromBytes( const uint8_t* data, size_t numBytes );
+
+    // copy given data to CPU (data should be already allocated)
+    void toBytes( uint8_t* data );
 
     // copy this GPU array to given vector
     template <typename U>

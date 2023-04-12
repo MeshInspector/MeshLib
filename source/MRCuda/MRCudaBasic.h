@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+
 #include "exports.h"
 
 namespace MR

@@ -7,8 +7,13 @@ namespace MR
 namespace Cuda
 {
 
+struct Color
+{
+    uint8_t r, g, b, a;
+};
+
 // call simple kernel that negate each pixel chanell in parallel
-void negatePictureKernel( DynamicArray<uint8_t>& data );
+void negatePictureKernel( DynamicArray<Color>& data );
 
 }
 

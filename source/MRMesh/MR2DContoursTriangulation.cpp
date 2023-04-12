@@ -6,11 +6,13 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRConstants.h"
+#include "MRRegionBoundary.h"
 #include "MRMeshFixer.h"
 #include "MREdgeIterator.h"
 #include "MRMeshMetrics.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshDelone.h"
+#include "MR2to3.h"
 #include <queue>
 #include <algorithm>
 #include <limits>
@@ -61,6 +63,9 @@ private:
 
     // merging same vertices can make multiple edges, so clear it and update winding modifiers for merged edges
     void removeMultipleAfterMerge_();
+
+    void triangulateMonotoneBlock_( EdgeId holeEdgeId );
+    std::vector<int> reflexChainCache_;
 
     struct LoneRightmostLeft
     {
@@ -116,6 +121,7 @@ std::optional<Mesh> PlanarTriangulator::run()
             return {};
     }
     // triangulate
+    reflexChainCache_.reserve( 256 ); // reserve once to have less allocations later
     for ( auto e : undirectedEdges( mesh_.topology ) )
     {
         auto dirE = EdgeId( e << 1 );
@@ -128,12 +134,10 @@ std::optional<Mesh> PlanarTriangulator::run()
             continue;
         if ( !windingInfo_[e].inside() )
             continue;
-        FillHoleParams params;
-        // as far as we call makeDeloneEdgeFlips, degenerated faces is not real problem
-        params.metric = getMinAreaMetric( mesh_ );
-        fillHole( mesh_, dirE, params );
+    
+        triangulateMonotoneBlock_( dirE );
     }
-    makeDeloneEdgeFlips( mesh_, {}, 100 );
+    makeDeloneEdgeFlips( mesh_, {}, 300 );
 
     return std::move( mesh_ ); // move here to avoid copy of class member
 }
@@ -301,6 +305,136 @@ void PlanarTriangulator::removeMultipleAfterMerge_()
             mesh_.topology.splice( mesh_.topology.prev( e.sym() ), e.sym() );
             assert( mesh_.topology.isLoneEdge( e ) );
         }
+    }
+}
+
+// find detailed explanation:
+// https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
+void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
+{
+    MR_TIMER;
+    auto holeLoop = trackRightBoundaryLoop( mesh_.topology, holeEdgeId );
+    auto lessPred = [&] ( EdgeId l, EdgeId r )
+    {
+        return ComaparableVertId( &mesh_, mesh_.topology.org( l ) ) < ComaparableVertId( &mesh_, mesh_.topology.org( r ) );
+    };
+    auto minMaxIt = std::minmax_element( holeLoop.begin(), holeLoop.end(), lessPred );
+
+    int loopSize = int( holeLoop.size() );
+    int minIndex = int( std::distance( holeLoop.begin(), minMaxIt.first ) );
+    int maxIndex = int( std::distance( holeLoop.begin(), minMaxIt.second ) );
+    auto nextLowerLoopInd = [&] ( int curIdx ) { return ( curIdx + 1 ) % loopSize; };
+    auto nextUpperLoopInd = [&] ( int curIdx ) { return ( curIdx - 1 + loopSize ) % loopSize; };
+
+    auto isReflex = [&] ( int prev, int cur, int next, bool lowerChain )
+    {
+        Vector2f prevP = to2dim( mesh_.orgPnt( holeLoop[prev] ) );
+        Vector2f curP = to2dim( mesh_.orgPnt( holeLoop[cur] ) );
+        Vector2f nextP = to2dim( mesh_.orgPnt( holeLoop[next] ) );
+        return ( cross( nextP - curP, prevP - curP ) <= 0.0f ) == lowerChain;
+    };
+
+    auto addDiagonal = [&] ( int cur, int prev, bool lowerChain )->bool
+    {
+        auto& tp = mesh_.topology;
+        if ( tp.prev( holeLoop[cur].sym() ) == holeLoop[prev] ||
+            tp.next( holeLoop[cur] ).sym() == holeLoop[prev] )
+        {
+            tp.setLeft( holeLoop[cur], tp.addFaceId() );
+            return true; // terminate
+        }
+
+        auto newE = tp.makeEdge();
+        tp.splice( holeLoop[cur], newE );
+        tp.splice( holeLoop[prev], newE.sym() );
+        if ( lowerChain )
+        {
+            tp.setLeft( newE, tp.addFaceId() );
+            holeLoop[prev] = newE.sym();
+        }
+        else
+        {
+            tp.setLeft( newE.sym(), tp.addFaceId() );
+            holeLoop[cur] = newE;
+        }
+        return false;
+    };
+
+    int curIndex = minIndex;
+    int curLower = minIndex;
+    int curUpper = minIndex;
+
+    auto& reflexChain = reflexChainCache_;
+    reflexChain.resize( 0 );
+    reflexChain.push_back( curIndex );
+    bool reflexChainLower{ false };
+    for ( ; ;)
+    {
+        assert( !reflexChain.empty() );
+        // find current vertex on sweep line
+        int nextLower = nextLowerLoopInd( curLower );
+        int nextUpper = nextUpperLoopInd( curUpper );
+        bool currentOnLower = lessPred( holeLoop[nextLower], holeLoop[nextUpper] );
+        if ( currentOnLower )
+        {
+            // shift by lower chain
+            if ( curLower != maxIndex )
+            {
+                curIndex = nextLower;
+                curLower = nextLower;
+            }
+        }
+        else
+        {
+            // shift by upper chain
+            if ( curUpper != maxIndex )
+            {
+                curIndex = nextUpper;
+                curUpper = nextUpper;
+            }
+        }
+        if ( curIndex == maxIndex )
+        {
+            currentOnLower = !reflexChainLower;
+        }
+
+        if ( reflexChain.size() == 1 ) // initial vertex
+        {
+            reflexChainLower = currentOnLower;
+            reflexChain.push_back( curIndex );
+            continue;
+        }
+
+        // process current vertex
+        if ( currentOnLower == reflexChainLower ) // same chain Case 2
+        {
+            int prevChain = reflexChain[int( reflexChain.size() ) - 2];
+            int curChain = reflexChain[int( reflexChain.size() ) - 1];
+            while ( !isReflex( prevChain, curChain, curIndex, currentOnLower ) )
+            {
+                addDiagonal( curIndex, prevChain, currentOnLower );
+                reflexChain.resize( int( reflexChain.size() ) - 1 );
+                if ( reflexChain.size() < 2 )
+                    break;
+                prevChain = reflexChain[int( reflexChain.size() ) - 2];
+                curChain = reflexChain[int( reflexChain.size() ) - 1];
+            }
+        }
+        else // other chain Case 1
+        {
+            bool terminate = false;
+            for ( int i = 1; i < reflexChain.size(); ++i )
+            {
+                assert( !terminate );
+                terminate = addDiagonal( curIndex, reflexChain[i], currentOnLower );
+            }
+            if ( terminate )
+                break;
+            std::swap( reflexChain.front(), reflexChain.back() );
+            reflexChain.resize( 1 );
+            reflexChainLower = currentOnLower;
+        }
+        reflexChain.push_back( curIndex );
     }
 }
 

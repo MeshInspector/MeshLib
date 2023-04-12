@@ -535,24 +535,11 @@ std::vector<tl::expected<LoadDCMResult, std::string>> loadDCMFolderTree( const s
 {
     MR_TIMER;
     std::vector<tl::expected<LoadDCMResult, std::string>> res;
-    bool anySuccessLoad{ false };
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
-        auto loadRes = loadDCMFolder( dir, maxNumThreads, cb );
-        if ( loadRes.has_value() )
-        {
-            res.push_back( *loadRes );
-            anySuccessLoad = true;
-        }
-        else
-        {
-            const std::string str = "loadDCMFolder: there is no dcm file in folder:";
-            if ( anySuccessLoad && loadRes.error().substr( 0, str.size() ) == str )
-                return true;
-            res.push_back( loadRes );
-            if ( loadRes.error() == "Loading canceled" )
-                return false;
-        }
+        res.push_back( loadDCMFolder( dir, maxNumThreads, cb ) );
+        if ( !res.back().has_value() && res.back().error() == "Loading canceled" )
+            return false;
         return true;
     };
     if ( !tryLoadDir( path ) )

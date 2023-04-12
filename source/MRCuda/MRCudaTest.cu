@@ -21,13 +21,13 @@ __global__ void negateKernel( uint8_t* imagePtr, const int size )
     imagePtr[ind + 2] = 255 - imagePtr[ind + 2];
 }
 
-void negatePictureKernel( DynamicArray<uint8_t>& data )
+void negatePictureKernel( DynamicArray<Color>& data )
 {
     int maxThreadsPerBlock = 0;
     cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
     int numBlocks = ( int( data.size() ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
     // kernel
-    negateKernel << <numBlocks, maxThreadsPerBlock >> > ( data.data(), int( data.size() ) );
+    negateKernel << <numBlocks, maxThreadsPerBlock >> > ( ( uint8_t* )data.data(), int( data.size() ) );
 }
 
 }

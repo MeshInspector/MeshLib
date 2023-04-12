@@ -14,7 +14,7 @@
 		{
 			"Name": "Open directory",
 			"Caption": "Open Directory",
-			"Tooltip": "Select root directory or directory with dcm scan slices in dialog and open it in viewer window.",
+			"Tooltip": "Load all supported files from given directory and subdirectories.",
 			"Icon": "\uF07C"
 		},
 		{

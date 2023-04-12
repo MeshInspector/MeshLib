@@ -312,6 +312,7 @@ bool OpenDICOMsMenuItem::action()
         auto loadRes = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
         if ( !loadRes.empty() )
         {
+            bool anySuccess = std::any_of( loadRes.begin(), loadRes.end(), []( const auto & r ) { return r.has_value(); } );
             std::vector<std::shared_ptr<ObjectVoxels>> voxelObjects;
             ProgressBar::setTaskCount( (int)loadRes.size() * 2 + 1 );
             std::string errors;
@@ -352,9 +353,9 @@ bool OpenDICOMsMenuItem::action()
                     errors += ( !errors.empty() ? "\n" : "" ) + getCancelMessage( directory );
                     break;
                 }
-                else
+                else if ( !anySuccess )
                 {
-                    errors += res.error();
+                    errors += ( !errors.empty() ? "\n" : "" ) + res.error();
                 }
             }
             return [viewer, voxelObjects, errors] ()

@@ -210,9 +210,9 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 }
 
 #if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
-void sOpenVoxels( const std::filesystem::path & directory, const std::string & simpleError )
+void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
-    ProgressBar::orderWithMainThreadPostProcessing( "Open Voxels", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
+    ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
     {
         ProgressBar::nextTask( "Load DICOM Folder" );
         auto loadRes = VoxelsLoad::loadDCMFolderTree( directory, 4, ProgressBar::callBackSetProgress );
@@ -269,10 +269,10 @@ void sOpenVoxels( const std::filesystem::path & directory, const std::string & s
             }
             return [viewer, voxelObjects, errors] ()
             {
-                SCOPED_HISTORY( "Open Voxels" );
+                SCOPED_HISTORY( "Open DICOMs" );
                 for ( auto & obj : voxelObjects )
                 {
-                    AppendHistory<ChangeSceneAction>( "Open Voxels", obj, ChangeSceneAction::Type::AddObject );
+                    AppendHistory<ChangeSceneAction>( "Open DICOMs", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f }  );
@@ -329,7 +329,7 @@ bool OpenDirectoryMenuItem::action()
 #if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
         else
         {
-            sOpenVoxels( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
+            sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
         }
 #endif
     }
@@ -347,7 +347,7 @@ bool OpenDICOMsMenuItem::action()
     auto directory = openFolderDialog();
     if ( directory.empty() )
         return false;
-    sOpenVoxels( directory, "No voxel files can be open from the directory:\n" + utf8string( directory ) );
+    sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
     return false;
 }
 #endif

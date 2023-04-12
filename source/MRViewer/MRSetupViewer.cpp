@@ -61,6 +61,7 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 
 void ViewerSetup::setupExtendedLibraries() const
 {
+#ifndef __EMSCRIPTEN__
     const auto pluginLibraryList = getPluginLibraryList();
     if ( !pluginLibraryList )
         return;
@@ -84,6 +85,7 @@ void ViewerSetup::setupExtendedLibraries() const
         }
 #endif
     }
+#endif
 }
 
 }

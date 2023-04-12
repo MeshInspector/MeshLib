@@ -33,7 +33,6 @@ std::vector<MR::MeshProjectionResult> findProjections(
     meshProjectionKernel( cudaPoints.data(), cudaNodes.data(), cudaMeshPoints.data(), cudaEdges.data(), cudaEdgePerFace.data(), cudaRes.data(), cudaXfPtr.get(), cudaRefXfPtr.get(), upDistLimitSq, loDistLimitSq, size );
     std::vector<MR::MeshProjectionResult> res;
     cudaRes.toVector( res );
-
     return res;
 }
 

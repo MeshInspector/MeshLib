@@ -220,4 +220,3 @@ void meshProjectionKernel( const float3* points,
 
 }}
 
-

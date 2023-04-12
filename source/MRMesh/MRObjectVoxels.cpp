@@ -10,12 +10,13 @@
 #include "MRSerializer.h"
 #include "MRMeshNormals.h"
 #include "MRTimer.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRStringConvert.h"
-#include "MRPch/MRTBB.h"
-#include "MRPch/MRAsyncLaunchType.h"
 #include "MROpenVDBHelper.h"
+#include "MRPch/MRTBB.h"
+#include "MRPch/MRJson.h"
+#include "MRPch/MRAsyncLaunchType.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
 #include <thread>
 

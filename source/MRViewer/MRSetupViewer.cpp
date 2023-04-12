@@ -1,6 +1,7 @@
 #include "MRSetupViewer.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSystem.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
@@ -11,6 +12,7 @@
 #include <Windows.h>
 #else
 #include <dlfcn.h>
+#include <glob.h>
 #endif
 
 namespace MR
@@ -61,12 +63,13 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 
 void ViewerSetup::setupExtendedLibraries() const
 {
+#if _WIN32
     const auto pluginLibraryList = getPluginLibraryList();
     if ( !pluginLibraryList )
         return;
     for (const auto& pluginLib : *pluginLibraryList)
     {
-#if _WIN32
+
         auto result = LoadLibraryW( pluginLib.wstring().c_str() );
         if ( !result )
         {
@@ -74,16 +77,28 @@ void ViewerSetup::setupExtendedLibraries() const
             spdlog::error( "Load library {} error: {}", utf8string( pluginLib ), error );
             assert( false );
         }
+    }
 #else
-        void* result = dlopen( utf8string( pluginLib ).c_str(), RTLD_LAZY );
+    glob_t glob_result;
+    memset( &glob_result, 0, sizeof(glob_result) );
+#if defined __APPLE__
+    const std::string pattern = std::string( GetLibsDirectory() ) + "libMR*Plugins.dylib";
+#else
+    const std::string pattern = std::string( GetLibsDirectory() ) + "libMR*Plugins.so";
+#endif
+    glob( pattern.c_str(), GLOB_TILDE, nullptr, &glob_result );
+    for ( size_t i = 0; i < glob_result.gl_pathc; ++i )
+    {
+        std::filesystem::path pluginLib( glob_result.gl_pathv[i] );
+        spdlog::info( "Loading library {} ", utf8string( pluginLib.filename() ) );
+        auto result = dlopen( utf8string( pluginLib ).c_str(), RTLD_LAZY );
         if ( !result )
         {
-            auto error = dlerror();
-            spdlog::error( "Load library {} error: {}", utf8string( pluginLib ), error );
+            spdlog::error( "Load library {} error: {}", utf8string( pluginLib ), dlerror() );
             assert( false );
         }
-#endif
     }
+    globfree(&glob_result);
+#endif
 }
-
 }

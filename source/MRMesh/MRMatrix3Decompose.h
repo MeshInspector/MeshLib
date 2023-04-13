@@ -1,6 +1,9 @@
 #pragma once
 
 #include "MRMesh/MRToFromEigen.h"
+
+#pragma warning(push)
+#pragma warning(disable:5054)  //operator '&': deprecated between enumerations of different types
 #include <Eigen/Dense>
 
 namespace MR
@@ -42,3 +45,5 @@ bool isRigid( const Matrix3<T>& m )
 }
 
 } // namespace MR
+
+#pragma warning(pop)

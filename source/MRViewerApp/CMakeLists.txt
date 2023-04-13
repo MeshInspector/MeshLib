@@ -6,9 +6,7 @@ project (MeshViewer CXX)
 
 add_executable(${PROJECT_NAME} MRViewerApp.cpp)
 
-file(GLOB LIB_LIST "../*.json")
 file(GLOB PNGS "*.png")
-file(COPY ${LIB_LIST} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${PNGS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 IF(MR_EMSCRIPTEN)

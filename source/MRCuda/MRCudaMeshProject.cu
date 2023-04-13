@@ -1,28 +1,27 @@
 #include "MRCudaMeshProject.cuh"
-#include "MRCudaMeshProject.h"
 #include "MRMesh/MRAABBTree.h"
 #include "device_launch_parameters.h"
 
 namespace MR { namespace Cuda {
 
-__device__ float3 CudaXf::tr( const float3& pt ) const
+__device__ float3 Matrix4::transform( const float3& pt ) const
 {
     float3 res = { dot( x, pt ), dot( y, pt ), dot( z, pt ) };
     res = res + b;
     return res;
 }
 
-__device__ Box3 CudaXf::tr( const Box3& box ) const
+__device__ Box3 Matrix4::transform( const Box3& box ) const
 {
     Box3 res;
-    res.include( tr( float3{ box.min.x, box.min.y, box.min.z } ) );
-    res.include( tr( float3{ box.min.x, box.min.y, box.max.z } ) );
-    res.include( tr( float3{ box.min.x, box.max.y, box.min.z } ) );
-    res.include( tr( float3{ box.min.x, box.max.y, box.max.z } ) );
-    res.include( tr( float3{ box.max.x, box.min.y, box.min.z } ) );
-    res.include( tr( float3{ box.max.x, box.min.y, box.max.z } ) );
-    res.include( tr( float3{ box.max.x, box.max.y, box.min.z } ) );
-    res.include( tr( float3{ box.max.x, box.max.y, box.max.z } ) );
+    res.include( transform( float3{ box.min.x, box.min.y, box.min.z } ) );
+    res.include( transform( float3{ box.min.x, box.min.y, box.max.z } ) );
+    res.include( transform( float3{ box.min.x, box.max.y, box.min.z } ) );
+    res.include( transform( float3{ box.min.x, box.max.y, box.max.z } ) );
+    res.include( transform( float3{ box.max.x, box.min.y, box.min.z } ) );
+    res.include( transform( float3{ box.max.x, box.min.y, box.max.z } ) );
+    res.include( transform( float3{ box.max.x, box.max.y, box.min.z } ) );
+    res.include( transform( float3{ box.max.x, box.max.y, box.max.z } ) );
     return res;
 }
 
@@ -107,7 +106,7 @@ __device__ ClosestPointRes closestPointInTriangle( const float3& p, const float3
     return { { v, w }, a + ab * v + ac * w };
 }
 
-__global__ void kernel( const float3* points, const Node3* nodes, const float3* meshPoints, const HalfEdgeRecord* edges, const int* edgePerFace, MeshProjectionResult* resVec, const CudaXf* xf, const CudaXf* refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
+__global__ void kernel( const float3* points, const Node3* nodes, const float3* meshPoints, const HalfEdgeRecord* edges, const int* edgePerFace, MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
     if ( size == 0 )
     {
@@ -119,7 +118,7 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
     if ( index >= size )
         return;
 
-    const auto pt = xf ? xf->tr( points[index] ) : points[index];
+    const auto pt = xf.isIdentity ? points[index] : xf.transform( points[index] );
     auto& res = resVec[index];
     res.distSq = upDistLimitSq;    
     res.mtp.edgeId = -1;
@@ -145,7 +144,7 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
 
     auto getSubTask = [&] ( int n )
     {
-        const auto box = refXf ? refXf->tr( nodes[n].box ) : nodes[n].box;
+        const auto box = refXf.isIdentity ? nodes[n].box : refXf.transform( nodes[n].box );
         float distSq = lengthSq( box.getBoxClosestPointTo( pt ) - pt );
         return SubTask{ n, distSq };
     };
@@ -170,11 +169,11 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
             edge = edges[edge ^ 1].prev;
             float3 c = meshPoints[edges[edge].org];
 
-            if ( refXf )
+            if ( !refXf.isIdentity )
             {
-                a = refXf->tr( a );
-                b = refXf->tr( b );
-                c = refXf->tr( c );
+                a = refXf.transform( a );
+                b = refXf.transform( b );
+                c = refXf.transform( c );
             }
             
             // compute the closest point in double-precision, because float might be not enough
@@ -209,7 +208,7 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
 
 void meshProjectionKernel( const float3* points, 
                            const Node3* nodes, const float3* meshPoints, const HalfEdgeRecord* edges, const int* edgePerFace, 
-                           MeshProjectionResult* resVec, const CudaXf* xf, const CudaXf* refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
+                           MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
     int maxThreadsPerBlock = 0;
     cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );

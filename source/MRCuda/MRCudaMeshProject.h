@@ -4,16 +4,20 @@
 
 namespace MR { namespace Cuda {
 
-/// Computes distance of 2d contours according to ContourToDistanceMapParams
-struct MeshData;
+struct MeshProjectorData;
+/// Computes the closest point on mesh to each of given points on GPU
 class MeshProjector : public IMeshProjector
 {
-    std::shared_ptr<MeshData> meshData_;
+    std::shared_ptr<MeshProjectorData> meshData_;
 
 public:
     MRCUDA_API MeshProjector();
+    /// update transforms applied to the points and to the referencing mesh
+    MRCUDA_API virtual void updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf ) override;
+    /// update all data related to the referencing mesh
     MRCUDA_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) override;
-    MRCUDA_API virtual std::vector<MR::MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq ) override;
+    /// Computes the closest point on mesh to each of given points
+    MRCUDA_API virtual std::vector<MR::MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq ) override;
 };
 
 

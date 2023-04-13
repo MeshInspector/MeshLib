@@ -2,6 +2,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRCudaMeshProject.cuh"
+#include "MRMesh/MRMatrix3Decompose.h"
 #include <chrono>
 namespace MR
 {
@@ -9,17 +10,49 @@ namespace MR
 namespace Cuda
 {
 
-struct MeshData
+struct MeshProjectorData
 {
+    DynamicArray<float3> cudaPoints;
+    DynamicArray<MeshProjectionResult> cudaResult;
     DynamicArray<float3> cudaMeshPoints;
     DynamicArray<Node3> cudaNodes;
     DynamicArray<HalfEdgeRecord> cudaEdges;
     DynamicArray<int> cudaEdgePerFace;
+
+    Matrix4 xf;
+    Matrix4 refXf;
 };
 
 MeshProjector::MeshProjector()
 {
-    meshData_ = std::make_shared<MeshData>();
+    meshData_ = std::make_shared<MeshProjectorData>();
+}
+
+void MeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
+{
+    const auto getCudaMatrix = [] ( const AffineXf3f& xf )
+    {
+        Matrix4 res;
+        res.x.x = xf.A.x.x; res.x.y = xf.A.x.y; res.x.z = xf.A.x.z;
+        res.y.x = xf.A.y.x; res.y.y = xf.A.y.y; res.y.z = xf.A.y.z;
+        res.z.x = xf.A.z.x; res.z.y = xf.A.z.y; res.z.z = xf.A.z.z;
+        res.b.x = xf.b.x; res.b.y = xf.b.y; res.b.z = xf.b.z;
+        res.isIdentity = false;
+        return res;
+    };
+
+    if ( !isRigid( refObjXf.A ) )
+    {
+        meshData_->refXf = getCudaMatrix( refObjXf );
+        if ( objXf != AffineXf3f{} )
+            meshData_->xf = getCudaMatrix( objXf );
+
+        return;
+    }
+
+    const auto temp = refObjXf.inverse() * objXf;
+    if ( temp != AffineXf3f{} )
+        meshData_->xf = getCudaMatrix( temp );
 }
 
 void MeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
@@ -40,20 +73,17 @@ void MeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
 }
 
 std::vector<MR::MeshProjectionResult> MeshProjector::findProjections(
-     const std::vector<Vector3f>& points,  const AffineXf3f* xf, const AffineXf3f* refXfPtr, float upDistLimitSq, float loDistLimitSq )
+     const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
 {
     cudaSetDevice( 0 );    
     
     const size_t size = points.size();
-    DynamicArray<float3> cudaPoints( points );    
-    DynamicArray<MeshProjectionResult> cudaRes( size );
+    meshData_->cudaPoints.fromVector( points );
+    meshData_->cudaResult.resize( size );
 
-    AutoPtr<CudaXf> cudaXfPtr = AutoPtr<CudaXf>( xf );
-    AutoPtr<CudaXf> cudaRefXfPtr = AutoPtr<CudaXf>( refXfPtr );
-
-    meshProjectionKernel( cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaEdges.data(), meshData_->cudaEdgePerFace.data(), cudaRes.data(), cudaXfPtr.get(), cudaRefXfPtr.get(), upDistLimitSq, loDistLimitSq, size );
+    meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaEdges.data(), meshData_->cudaEdgePerFace.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
     std::vector<MR::MeshProjectionResult> res;
-    cudaRes.toVector( res );    
+    meshData_->cudaResult.toVector( res );
     return res;
 }
 

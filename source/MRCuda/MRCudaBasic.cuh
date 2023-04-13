@@ -7,30 +7,6 @@ namespace MR
 
 namespace Cuda
 {
-// This struct simplifies GPU memory control on single object
-template<typename T>
-class AutoPtr
-{
-public:
-    AutoPtr() = default;
-    // malloc memory and copy object from host. sizeof(T) must be equal to sizeof(U)
-    template<typename U>
-    AutoPtr( const U* pHost );
-    //free memory from GPU
-    ~AutoPtr();
-
-    AutoPtr( const AutoPtr& ) = delete;
-    AutoPtr( AutoPtr&& ) = delete;
-    AutoPtr& operator=( const AutoPtr& ) = delete;
-    AutoPtr& operator=( AutoPtr&& ) = delete;
-    // returns raw pointer to use it in kernel
-    T* get();
-    // returns const raw pointer to use it in kernel
-    const T* get() const;
-
-private:
-    T* data_{ nullptr };
-};
 // This struct is present to simplify GPU memory control
 template<typename T>
 class DynamicArray

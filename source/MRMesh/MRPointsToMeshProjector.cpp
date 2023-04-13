@@ -3,7 +3,6 @@
 #include "MRPch/MRTBB.h"
 #include "MRAffineXf3.h"
 #include "MRMatrix3Decompose.h"
-#include <chrono>
 
 namespace MR
 {
@@ -20,9 +19,7 @@ void PointsToMeshProjector::updateTransforms( const AffineXf3f& objXf, const Aff
 }
 
 std::vector<MeshProjectionResult> PointsToMeshProjector::findProjections( const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
-{
-    const auto start = std::chrono::steady_clock::now();
-    
+{    
     std::vector<MeshProjectionResult> projResults( points.size() );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&] ( const tbb::blocked_range<size_t>& range )
@@ -30,8 +27,6 @@ std::vector<MeshProjectionResult> PointsToMeshProjector::findProjections( const 
         for ( size_t i = range.begin(); i < range.end(); ++i )
             projResults[i] = findProjection( ( xf_ != AffineXf3f{} ) ? ( xf_ )( points[VertId( i )] ) : points[VertId( i )], * mesh_, upDistLimitSq, refXfPtr_, loDistLimitSq );
     } );
-    
-    const auto duration = std::chrono::steady_clock::now() - start;
 
     return projResults;
 }

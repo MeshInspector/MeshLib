@@ -20,7 +20,7 @@ public:
                                   float upDistLimitSq, float loDistLimitSq ) = 0;
 };
 /// Computes the closest point on mesh to each of given points on CPU
-class PointsToMeshProjector : public IPointsToMeshProjector
+class MRMESH_CLASS PointsToMeshProjector : public IPointsToMeshProjector
 {
     std::shared_ptr<const Mesh> mesh_;
     AffineXf3f xf_;

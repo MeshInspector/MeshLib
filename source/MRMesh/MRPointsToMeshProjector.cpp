@@ -16,7 +16,7 @@ void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& 
 {
     result.resize( points.size() );
 
-    refXfPtr_ = isRigid( refObjXf.A ) ? nullptr : const_cast< AffineXf3f* >( &refObjXf );
+    refXfPtr_ = isRigid( refObjXf.A ) ? nullptr : &refObjXf;
     xf_ = refXfPtr_ ? objXf : refObjXf.inverse() * objXf;
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&] ( const tbb::blocked_range<size_t>& range )

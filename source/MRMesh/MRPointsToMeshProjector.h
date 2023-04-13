@@ -26,7 +26,7 @@ class PointsToMeshProjector : public IPointsToMeshProjector
     AffineXf3f* refXfPtr_ = nullptr;
 public:
     /// update transforms applied to the points and to the referencing mesh
-    MRMESH_API virtual void updateTransforms( const AffineXf3f& worldXf, const AffineXf3f& worldRefXf );
+    MRMESH_API virtual void updateTransforms( const AffineXf3f& worldXf, const AffineXf3f& worldRefXf ) override;
     /// update all data related to the referencing mesh
     MRMESH_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) override;
     /// Computes the closest point on mesh to each of given points

@@ -87,6 +87,19 @@ size_t MeshTopology::computeNotLoneUndirectedEdges() const
     [] ( auto a, auto b ) { return a + b; } );
 }
 
+UndirectedEdgeBitSet MeshTopology::findNotLoneUndirectedEdges() const
+{
+    MR_TIMER
+
+    UndirectedEdgeBitSet res( undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        if ( !isLoneEdge( ue ) )
+            res.set( ue );
+    } );
+    return res;
+}
+
 size_t MeshTopology::heapBytes() const
 {
     return

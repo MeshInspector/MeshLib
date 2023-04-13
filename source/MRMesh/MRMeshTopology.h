@@ -37,6 +37,8 @@ public:
     [[nodiscard]] size_t undirectedEdgeCapacity() const { return edges_.capacity() >> 1; }
     /// computes the number of not-lone (valid) undirected edges
     [[nodiscard]] MRMESH_API size_t computeNotLoneUndirectedEdges() const;
+    /// finds and returns all not-lone (valid) undirected edges
+    [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findNotLoneUndirectedEdges() const;
     /// sets the capacity of half-edges vector
     void edgeReserve( size_t newCapacity ) { edges_.reserve( newCapacity ); }
     /// returns true if given edge is within valid range and not-lone

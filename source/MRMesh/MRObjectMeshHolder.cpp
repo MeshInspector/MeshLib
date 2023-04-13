@@ -421,7 +421,13 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
 size_t ObjectMeshHolder::numSelectedFaces() const
 {
     if ( !numSelectedFaces_ )
+    {
         numSelectedFaces_ = selectedTriangles_.count();
+#ifndef NDEBUG
+        // check that there are no selected invalid faces
+        assert( !mesh_ || !( selectedTriangles_ - mesh_->topology.getValidFaces() ).any() );
+#endif
+    }
 
     return *numSelectedFaces_;
 }
@@ -429,7 +435,13 @@ size_t ObjectMeshHolder::numSelectedFaces() const
 size_t ObjectMeshHolder::numSelectedEdges() const
 {
     if ( !numSelectedEdges_ )
+    {
         numSelectedEdges_ = selectedEdges_.count();
+#ifndef NDEBUG
+        // check that there are no selected invalid edges
+        assert( !mesh_ || !( selectedEdges_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+#endif
+    }
 
     return *numSelectedEdges_;
 }
@@ -437,7 +449,13 @@ size_t ObjectMeshHolder::numSelectedEdges() const
 size_t ObjectMeshHolder::numCreaseEdges() const
 {
     if ( !numCreaseEdges_ )
+    {
         numCreaseEdges_ = creases_.count();
+#ifndef NDEBUG
+        // check that there are no invalid edges among creases
+        assert( !mesh_ || !( creases_ - mesh_->topology.findNotLoneUndirectedEdges() ).any() );
+#endif
+    }
 
     return *numCreaseEdges_;
 }

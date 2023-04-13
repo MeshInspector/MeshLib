@@ -86,6 +86,7 @@ void ViewerSetup::setupExtendedLibraries() const
             lib2priority.emplace_back( fileJson.value()["LibName"].asString(), fileJson.value()["Order"].asInt() );
         }
     }
+    // sort by ascending priority
     std::sort( lib2priority.begin(), lib2priority.end(), []( auto& lhv, auto& rhv) { return lhv.second < rhv.second; } );
 
     for (const auto& [libName, priority] : lib2priority) {

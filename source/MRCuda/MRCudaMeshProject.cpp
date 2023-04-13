@@ -28,8 +28,28 @@ PointsToMeshProjector::PointsToMeshProjector()
     meshData_ = std::make_shared<MeshProjectorData>();
 }
 
-void PointsToMeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
+void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
 {
+    if ( !mesh )
+        return;
+
+    const AABBTree& tree = mesh->getAABBTree();
+    const auto& nodes = tree.nodes();
+    const auto& meshPoints = mesh->points;
+    const auto& edges = mesh->topology.edges();
+    const auto& edgePerFace = mesh->topology.edgePerFace();
+
+    meshData_->cudaMeshPoints.fromVector( meshPoints.vec_ );
+    meshData_->cudaNodes.fromVector( nodes.vec_ );
+    meshData_->cudaEdges.fromVector( edges.vec_ );
+    meshData_->cudaEdgePerFace.fromVector( edgePerFace.vec_ );
+}
+
+void PointsToMeshProjector::findProjections(
+      std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq )
+{
+    cudaSetDevice( 0 );
+
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {
         Matrix4 res;
@@ -53,38 +73,14 @@ void PointsToMeshProjector::updateTransforms( const AffineXf3f& objXf, const Aff
     const auto temp = refObjXf.inverse() * objXf;
     if ( temp != AffineXf3f{} )
         meshData_->xf = getCudaMatrix( temp );
-}
-
-void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
-{
-    if ( !mesh )
-        return;
-
-    const AABBTree& tree = mesh->getAABBTree();
-    const auto& nodes = tree.nodes();
-    const auto& meshPoints = mesh->points;
-    const auto& edges = mesh->topology.edges();
-    const auto& edgePerFace = mesh->topology.edgePerFace();
-
-    meshData_->cudaMeshPoints.fromVector( meshPoints.vec_ );
-    meshData_->cudaNodes.fromVector( nodes.vec_ );
-    meshData_->cudaEdges.fromVector( edges.vec_ );
-    meshData_->cudaEdgePerFace.fromVector( edgePerFace.vec_ );
-}
-
-std::vector<MR::MeshProjectionResult> PointsToMeshProjector::findProjections(
-     const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
-{
-    cudaSetDevice( 0 );    
     
     const size_t size = points.size();
+    res.resize( size );
     meshData_->cudaPoints.fromVector( points );
     meshData_->cudaResult.resize( size );
 
     meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaEdges.data(), meshData_->cudaEdgePerFace.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
-    std::vector<MR::MeshProjectionResult> res;
     meshData_->cudaResult.toVector( res );
-    return res;
 }
 
 }

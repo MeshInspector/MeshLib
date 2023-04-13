@@ -373,6 +373,7 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
         // find current vertex on sweep line
         int nextLower = nextLowerLoopInd( curLower );
         int nextUpper = nextUpperLoopInd( curUpper );
+        // assert that polygon is monotone
         assert( lessPred( holeLoop[curLower], holeLoop[nextLower] ) );
         assert( lessPred( holeLoop[curUpper], holeLoop[nextUpper] ) );
         bool currentOnLower = lessPred( holeLoop[nextLower], holeLoop[nextUpper] );

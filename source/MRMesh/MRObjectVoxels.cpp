@@ -10,12 +10,13 @@
 #include "MRSerializer.h"
 #include "MRMeshNormals.h"
 #include "MRTimer.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
 #include "MRStringConvert.h"
-#include "MRPch/MRTBB.h"
-#include "MRPch/MRAsyncLaunchType.h"
 #include "MROpenVDBHelper.h"
+#include "MRPch/MRTBB.h"
+#include "MRPch/MRJson.h"
+#include "MRPch/MRAsyncLaunchType.h"
+#include "MRPch/MRSpdlog.h"
 #include <filesystem>
 #include <thread>
 
@@ -554,8 +555,12 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
-    res.push_back( "dims: (" + std::to_string( vdbVolume_.dims.x ) + ", " + std::to_string( vdbVolume_.dims.y ) + ", " + std::to_string( vdbVolume_.dims.z ) + ")" );
-    res.push_back( "voxel size: (" + std::to_string( vdbVolume_.voxelSize.x ) + ", " + std::to_string( vdbVolume_.voxelSize.y ) + ", " + std::to_string( vdbVolume_.voxelSize.z ) + ")" );
+    res.push_back( fmt::format( "dims: ({}, {}, {})", vdbVolume_.dims.x, vdbVolume_.dims.y, vdbVolume_.dims.z ) );
+    res.push_back( fmt::format( "voxel size: ({:.3}, {:.3}, {:.3})", vdbVolume_.voxelSize.x, vdbVolume_.voxelSize.y, vdbVolume_.voxelSize.z ) );
+    res.push_back( fmt::format( "volume: ({:.3}, {:.3}, {:.3})", 
+        vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
+        vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
+        vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );
     res.push_back( "iso-value: " + std::to_string( isoValue_ ) );
     return res;
 }

@@ -1,4 +1,4 @@
-#include "MRCudaMeshProject.cuh"
+#include "MRCudaPointsToMeshProjector.cuh"
 #include "MRMesh/MRAABBTree.h"
 #include "device_launch_parameters.h"
 

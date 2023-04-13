@@ -1,7 +1,7 @@
-#include "MRCudaMeshProject.h"
+#include "MRCudaPointsToMeshProjector.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTree.h"
-#include "MRCudaMeshProject.cuh"
+#include "MRCudaPointsToMeshProjector.cuh"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include <chrono>
 namespace MR

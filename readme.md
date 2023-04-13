@@ -132,6 +132,7 @@ pip install --upgrade pip
 pip install meshlib
 ```
 
+See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Build with VS2019 on Windows

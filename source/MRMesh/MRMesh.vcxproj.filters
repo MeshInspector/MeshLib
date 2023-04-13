@@ -934,7 +934,7 @@
     <ClInclude Include="MRGridSettings.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshProjector.h">
+    <ClInclude Include="MRPointsToMeshProjector.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1552,7 +1552,7 @@
     <ClCompile Include="MRFastWindingNumber.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshProjector.cpp">
+    <ClCompile Include="MRPointsToMeshProjector.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>

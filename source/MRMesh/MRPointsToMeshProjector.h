@@ -7,11 +7,10 @@
 namespace MR
 {
 /// Abstract class, computes the closest point on mesh to each of given points. Pure virtual finctions must be implemented
-class IMeshProjector
+class IPointsToMeshProjector
 {
 public:
-
-    virtual ~IMeshProjector() = default;
+    virtual ~IPointsToMeshProjector() = default;
     /// update transforms applied to the points and to the referencing mesh
     virtual void updateTransforms( const AffineXf3f& worldXf, const AffineXf3f& worldRefXf ) = 0;
     /// update all data related to the referencing mesh
@@ -20,7 +19,7 @@ public:
     virtual std::vector<MeshProjectionResult> findProjections( const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq ) = 0;
 };
 /// Computes the closest point on mesh to each of given points on CPU
-class MeshProjector : public IMeshProjector
+class PointsToMeshProjector : public IPointsToMeshProjector
 {
     std::shared_ptr<const Mesh> mesh_;
     AffineXf3f xf_;

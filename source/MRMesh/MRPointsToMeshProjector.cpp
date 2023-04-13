@@ -1,4 +1,4 @@
-#include "MRMeshProjector.h"
+#include "MRPointsToMeshProjector.h"
 #include "MRMesh.h"
 #include "MRPch/MRTBB.h"
 #include "MRAffineXf3.h"
@@ -8,18 +8,18 @@
 namespace MR
 {
 
-void MeshProjector::updateMeshData( std::shared_ptr<const Mesh> mesh )
+void PointsToMeshProjector::updateMeshData( std::shared_ptr<const Mesh> mesh )
 {
     mesh_ = mesh;
 }
 
-void MeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
+void PointsToMeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
 {    
     refXfPtr_ = isRigid( refObjXf.A ) ? nullptr : const_cast<AffineXf3f*>( &refObjXf );
     xf_ = refXfPtr_ ? objXf : refObjXf.inverse() * objXf;
 }
 
-std::vector<MeshProjectionResult> MeshProjector::findProjections( const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
+std::vector<MeshProjectionResult> PointsToMeshProjector::findProjections( const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
 {
     const auto start = std::chrono::steady_clock::now();
     

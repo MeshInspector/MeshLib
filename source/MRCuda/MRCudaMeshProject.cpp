@@ -23,12 +23,12 @@ struct MeshProjectorData
     Matrix4 refXf;
 };
 
-MeshProjector::MeshProjector()
+PointsToMeshProjector::PointsToMeshProjector()
 {
     meshData_ = std::make_shared<MeshProjectorData>();
 }
 
-void MeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
+void PointsToMeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f& refObjXf )
 {
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {
@@ -55,7 +55,7 @@ void MeshProjector::updateTransforms( const AffineXf3f& objXf, const AffineXf3f&
         meshData_->xf = getCudaMatrix( temp );
 }
 
-void MeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
+void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
 {
     if ( !mesh )
         return;
@@ -72,7 +72,7 @@ void MeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
     meshData_->cudaEdgePerFace.fromVector( edgePerFace.vec_ );
 }
 
-std::vector<MR::MeshProjectionResult> MeshProjector::findProjections(
+std::vector<MR::MeshProjectionResult> PointsToMeshProjector::findProjections(
      const std::vector<Vector3f>& points, float upDistLimitSq, float loDistLimitSq )
 {
     cudaSetDevice( 0 );    

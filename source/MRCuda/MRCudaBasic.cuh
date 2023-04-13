@@ -16,7 +16,8 @@ public:
     // malloc given size on GPU
     DynamicArray( size_t size );
     // copy given vector to GPU
-    DynamicArray( const std::vector<T>& vec );
+    template <typename U>
+    DynamicArray( const std::vector<U>& vec );
     // free this array from GPU (if needed)
     ~DynamicArray();
 

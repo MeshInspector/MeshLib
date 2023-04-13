@@ -16,7 +16,8 @@ DynamicArray<T>::DynamicArray( size_t size )
 }
 
 template<typename T>
-DynamicArray<T>::DynamicArray( const std::vector<T>& vec )
+template<typename U>
+DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
 {
     fromVector( vec );
 }

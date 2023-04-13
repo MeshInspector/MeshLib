@@ -7,7 +7,7 @@
     <CudaCompile Include="MRCudaContoursDistanceMap.cu">
       <Filter>PolylineProject</Filter>
     </CudaCompile>
-    <CudaCompile Include="MRCudaMeshProject.cu">
+    <CudaCompile Include="MRCudaPointsToMeshProjector.cu">
       <Filter>MeshProject</Filter>
     </CudaCompile>
   </ItemGroup>
@@ -21,7 +21,7 @@
     <ClCompile Include="MRCudaContoursDisntaceMap.cpp">
       <Filter>PolylineProject</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaMeshProject.cpp">
+    <ClCompile Include="MRCudaPointsToMeshProjector.cpp">
       <Filter>MeshProject</Filter>
     </ClCompile>
   </ItemGroup>
@@ -45,13 +45,13 @@
     <ClInclude Include="MRCudaFloat.cuh">
       <Filter>Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRCudaMeshProject.h">
+    <ClInclude Include="MRCudaPointsToMeshProjector.h">
       <Filter>MeshProject</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaContoursDistanceMap.cuh">
       <Filter>PolylineProject</Filter>
     </ClInclude>
-    <ClInclude Include="MRCudaMeshProject.cuh">
+    <ClInclude Include="MRCudaPointsToMeshProjector.cuh">
       <Filter>MeshProject</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaBasic.cuh">

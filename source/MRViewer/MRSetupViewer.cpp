@@ -1,6 +1,7 @@
 #include "MRSetupViewer.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSystem.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
@@ -62,30 +63,62 @@ void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 void ViewerSetup::setupExtendedLibraries() const
 {
 #ifndef __EMSCRIPTEN__
-    const auto pluginLibraryList = getPluginLibraryList();
-    if ( !pluginLibraryList )
-        return;
-    for (const auto& pluginLib : *pluginLibraryList)
+    // get library names and their loading priority from *.ui.json files
+    std::vector<std::pair<std::string, int>> lib2priority;
+    std::error_code ec;
+    for ( auto it = std::filesystem::directory_iterator( GetResourcesDirectory(), ec ); !ec && it != std::filesystem::end( it ); it.increment( ec ) )
     {
-#if _WIN32
-        auto result = LoadLibraryW( pluginLib.wstring().c_str() );
-        if ( !result )
+        if ( it->path().u8string().ends_with( asU8String( ".ui.json" ) ) )
         {
-            auto error = GetLastError();
-            spdlog::error( "Load library {} error: {}", utf8string( pluginLib ), error );
-            assert( false );
+            auto fileJson = deserializeJsonValue( it->path() );
+            if ( !fileJson  )
+            {
+                spdlog::error( "JSON ({}) deserialize error: {}", utf8string( it->path().filename() ), fileJson.error() );
+                assert( false );
+                continue;
+            }
+            if ( !fileJson.value()["LibName"].isString() || !fileJson.value()["Order"].isInt())
+            {
+                spdlog::info( "JSON ({}) format error. Please, check the values of 'LibName' and/or 'Order' fields.", utf8string( it->path().filename() ), fileJson.error() );
+                assert( false );
+                continue;
+            }
+            lib2priority.emplace_back( fileJson.value()["LibName"].asString(), fileJson.value()["Order"].asInt() );
         }
-#else
-        void* result = dlopen( utf8string( pluginLib ).c_str(), RTLD_LAZY );
-        if ( !result )
-        {
-            auto error = dlerror();
-            spdlog::error( "Load library {} error: {}", utf8string( pluginLib ), error );
-            assert( false );
-        }
-#endif
     }
+    // sort by ascending priority
+    std::sort( lib2priority.begin(), lib2priority.end(), []( auto& lhv, auto& rhv) { return lhv.second < rhv.second; } );
+
+    for (const auto& [libName, priority] : lib2priority) {
+        std::filesystem::path pluginPath = GetLibsDirectory();
+#if _WIN32
+        pluginPath /= libName + ".dll" ;
+#elif defined __APPLE__
+        pluginPath /= "lib" + libName + ".dylib" ;
+#else
+        pluginPath /= "lib" + libName + ".so";
 #endif
+        if ( exists(pluginPath) )
+        {
+            spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
+#if _WIN32
+            auto result = LoadLibraryW( pluginPath.wstring().c_str() );
+            if ( !result )
+            {
+                spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), GetLastError() );
+                assert( false );
+            }
+#else
+            auto result = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
+            if ( !result )
+            {
+                spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), dlerror() );
+                assert( false );
+            }
+#endif
+        }
+    }
+#endif // ifndef __EMSCRIPTEN__
+}
 }
 
-}

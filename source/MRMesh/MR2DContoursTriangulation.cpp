@@ -81,7 +81,6 @@ private:
         float yPos{ FLT_MAX };
         LoneRightmostLeft loneRightmostLeft;
     };
-    LoneRightmostLeft lastLoneRightmostLeft_;
     std::vector<ActiveEdgeInfo> activeSweepEdges_;
     bool processOneVert_( VertId v );
     bool resolveIntersectios_();
@@ -374,6 +373,9 @@ void PlanarTriangulator::triangulateMonotoneBlock_( EdgeId holeEdgeId )
         // find current vertex on sweep line
         int nextLower = nextLowerLoopInd( curLower );
         int nextUpper = nextUpperLoopInd( curUpper );
+        // assert that polygon is monotone
+        assert( lessPred( holeLoop[curLower], holeLoop[nextLower] ) );
+        assert( lessPred( holeLoop[curUpper], holeLoop[nextUpper] ) );
         bool currentOnLower = lessPred( holeLoop[nextLower], holeLoop[nextUpper] );
         if ( currentOnLower )
         {
@@ -522,9 +524,11 @@ bool PlanarTriangulator::processOneVert_( VertId v )
         EdgeId helperId;
         auto& upper = activeSweepEdges_[activeVPosition + 1];
         auto& lower = activeSweepEdges_[activeVPosition];
-        if ( lastLoneRightmostLeft_.id && lastLoneRightmostLeft_.upper == upper.id && lastLoneRightmostLeft_.lower == lower.id )
+        if ( upper.loneRightmostLeft.id && upper.loneRightmostLeft.id == lower.loneRightmostLeft.id &&
+             upper.loneRightmostLeft.upper == upper.id && upper.loneRightmostLeft.lower == lower.id )
         {
-            helperId = lastLoneRightmostLeft_.id;
+            assert( lower.loneRightmostLeft.upper == upper.id && lower.loneRightmostLeft.lower == lower.id );
+            helperId = upper.loneRightmostLeft.id;
         }
         else
         {
@@ -536,8 +540,8 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 helperId = lower.id;
         }
         assert( helperId );
-        if ( helperId == lastLoneRightmostLeft_.id )
-            lastLoneRightmostLeft_.id = upper.loneRightmostLeft.id = lower.loneRightmostLeft.id = EdgeId{};
+        if ( helperId == upper.loneRightmostLeft.id )
+            upper.loneRightmostLeft.id = lower.loneRightmostLeft.id = EdgeId{};
         auto newE = mesh_.topology.makeEdge();
         mesh_.topology.splice( helperId, newE );
         mesh_.topology.splice( mesh_.topology.prev( rightGoingEdges[lowestRight].id ), newE.sym() );
@@ -591,13 +595,6 @@ bool PlanarTriangulator::processOneVert_( VertId v )
                 upperEdgeInfo.loneRightmostLeft.id = EdgeId{};
             }
         }
-        if ( lastLoneRightmostLeft_.id && 
-            mesh_.topology.dest( lastLoneRightmostLeft_.upper ) == v &&
-            mesh_.topology.dest( lastLoneRightmostLeft_.lower ) == v )
-        {
-            connect( lastLoneRightmostLeft_ );
-            lastLoneRightmostLeft_.id = EdgeId{};
-        }
     }
 
     // insert right going to active
@@ -617,7 +614,6 @@ bool PlanarTriangulator::processOneVert_( VertId v )
 
         activeSweepEdges_[activeVPosition].loneRightmostLeft = loneRightmostLeft;
         activeSweepEdges_[activeVPosition + 1].loneRightmostLeft = loneRightmostLeft;
-        lastLoneRightmostLeft_ = std::move( loneRightmostLeft );
     }
 
     int windingLast = 0;

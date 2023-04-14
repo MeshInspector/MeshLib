@@ -16,17 +16,11 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
     fonts_ = {};
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
-    const ImWchar charRangesSmall[] = {
-        0x0020, 0x00FF, // Basic Latin + Latin Supplement
-        0x0400, 0x04FF, // Cyrillic
-        0x2000, 0x20FF, // Extended
-        0,
-    };
 
     for ( int i = 0; i<int( FontType::Count ); ++i )
     {
         if ( i == int( FontType::Monospace ) )
-            loadFont_( FontType::Monospace, charRangesSmall, scaling );
+            loadFont_( FontType::Monospace, ImGui::GetIO().Fonts->GetGlyphRangesDefault(), scaling );
         if ( i == int( FontType::Icons ) )
             loadFont_( FontType::Icons, iconRanges, scaling );
         else

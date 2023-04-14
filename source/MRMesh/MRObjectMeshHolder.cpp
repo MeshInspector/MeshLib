@@ -152,8 +152,14 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 
     if ( mesh_ )
     {
+        selectedTriangles_ &= mesh_->topology.getValidFaces();
+
+        const auto notLoneEdges = mesh_->topology.findNotLoneUndirectedEdges();
         deserializeViaVerticesFromJson( root["SelectionEdgeBitSet"], selectedEdges_, mesh_->topology );
+        selectedEdges_ &= notLoneEdges;
+
         deserializeViaVerticesFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_, mesh_->topology );
+        creases_ &= notLoneEdges;
     }
     else
     {

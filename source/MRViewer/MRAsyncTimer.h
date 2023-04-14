@@ -46,23 +46,23 @@ private:
 };
 
 #ifndef __EMSCRIPTEN__
-// Complete order in given time
-// may know only one order in a time
+// Complete given command in given time
+// may know only one command at a time
 // terminate listener in destructor
-class MRVIEWER_CLASS AsyncOrder
+class MRVIEWER_CLASS AsyncRequest
 {
 public:
-    MRVIEWER_API AsyncOrder();
-    MRVIEWER_API ~AsyncOrder();
+    MRVIEWER_API AsyncRequest();
+    MRVIEWER_API ~AsyncRequest();
     using Command = std::function<void()>;
 
-    // order command execution, forgetting about previous command
+    // requests command execution, forgetting about previous command
     // note that command will be executed from the listener thread
-    MRVIEWER_API void order( const Time& time, Command command );
+    MRVIEWER_API void request( const Time& time, Command command );
 
-    // order command execution only if no order waiting
+    // requests command execution only if no request waiting
     // note that command will be executed from the listener thread
-    MRVIEWER_API void orderIfNotSet( const Time& time, Command command );
+    MRVIEWER_API void requestIfNotSet( const Time& time, Command command );
 
     // clears command
     MRVIEWER_API void reset();

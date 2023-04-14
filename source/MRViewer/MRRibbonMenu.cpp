@@ -402,7 +402,7 @@ void RibbonMenu::drawCollapseButton_()
             collapseState_ = CollapseState::Opened;
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
             openedTimer_ = openedMaxSecs_;
-            asyncOrder_.reset();
+            asyncRequest_.reset();
         }
         ImGui::PopFont();
         if ( ImGui::IsItemHovered() )
@@ -440,7 +440,7 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-            asyncOrder_.reset();
+            asyncRequest_.reset();
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -453,7 +453,7 @@ void RibbonMenu::drawCollapseButton_()
             EM_ASM( postEmptyEvent( $0, 2 ), int( openedTimer_ * 1000 ) );
 #pragma clang diagnostic pop
 #endif
-            asyncOrder_.orderIfNotSet(
+            asyncRequest_.requestIfNotSet(
                 std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ),
                 [] ()
             {

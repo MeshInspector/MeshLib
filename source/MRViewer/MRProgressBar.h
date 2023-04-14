@@ -62,21 +62,20 @@ private:
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;
-    class FrameOrder
+    class FrameRedrawRequest
     {
     public:
         void reset();
-        void orderFrame();
-        void completeOrder();
+        void requestFrame();
     private:
-        std::atomic<bool> frameOrder_{ false };
-        std::chrono::time_point<std::chrono::system_clock> lastOrderdTime_;
+        std::atomic<bool> frameRequested_{ false };
+        std::chrono::time_point<std::chrono::system_clock> lastRequestTime_;
 #ifndef __EMSCRIPTEN__
-        AsyncOrder asyncOrder_;
+        AsyncRequest asyncRequest_;
 #endif
     };
 
-    FrameOrder frameOrder_;
+    FrameRedrawRequest frameRequest_;
 
     std::thread thread_;
     TaskWithMainThreadPostProcessing task_;

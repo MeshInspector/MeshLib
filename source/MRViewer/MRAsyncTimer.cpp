@@ -62,11 +62,11 @@ auto AsyncTimer::waitBlocking() -> Event
 }
 
 #ifndef __EMSCRIPTEN__
-AsyncOrder::AsyncOrder()
+AsyncRequest::AsyncRequest()
 {
     listenerThread_ = std::thread( [this] ()
     {
-        MR::SetCurrentThreadName( "AsyncOrder timer thread" );
+        MR::SetCurrentThreadName( "AsyncRequest timer thread" );
         while ( timer_.waitBlocking() != AsyncTimer::Event::Terminate )
         {
             auto cmd = loadCommand_();
@@ -79,38 +79,38 @@ AsyncOrder::AsyncOrder()
     } );
 }
 
-AsyncOrder::~AsyncOrder()
+AsyncRequest::~AsyncRequest()
 {
     timer_.terminate();
     listenerThread_.join();
 }
 
-void AsyncOrder::order( const Time& time, Command command )
+void AsyncRequest::request( const Time& time, Command command )
 {
     timer_.setTime( time );
     storeCommand_( command );
 }
 
-void AsyncOrder::orderIfNotSet( const Time& time, Command command )
+void AsyncRequest::requestIfNotSet( const Time& time, Command command )
 {
     if ( timer_.setTimeIfNotSet( time ) )
         storeCommand_( command );
 }
 
-void AsyncOrder::reset()
+void AsyncRequest::reset()
 {
     timer_.resetTime();
     storeCommand_( {} );
 
 }
 
-MR::AsyncOrder::Command AsyncOrder::loadCommand_()
+MR::AsyncRequest::Command AsyncRequest::loadCommand_()
 {
     std::unique_lock lock( cmdMutex_ );
     return command_;
 }
 
-void AsyncOrder::storeCommand_( Command command )
+void AsyncRequest::storeCommand_( Command command )
 {
     std::unique_lock lock( cmdMutex_ );
     command_ = command;

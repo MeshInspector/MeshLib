@@ -209,7 +209,7 @@ private:
 
     Toolbar toolbar_;
 #ifndef __EMSCRIPTEN__
-    AsyncOrder asyncOrder_;
+    AsyncRequest asyncRequest_;
 #endif // !__EMSCRIPTEN__
 };
 

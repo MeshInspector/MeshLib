@@ -82,7 +82,7 @@ void ProgressBar::setup( float scaling )
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
         if ( instance.progress_ >= 1.0f )
-            instance.frameOrder_.orderFrame();
+            instance.frameRequest_.requestFrame();
 #endif
         if ( instance.finished_ )
         {
@@ -331,7 +331,7 @@ void ProgressBar::FrameRedrawRequest::requestFrame()
     // do not do it too frequently not to overload the renderer
     auto now = std::chrono::system_clock::now();
     const auto minInterval = std::chrono::milliseconds( 100 );
-    if ( lastRequestTime_ + minInterval > now )
+    if ( lastDrawedTime_ + minInterval > now )
     {
         bool testFrameOrder = false;
         if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
@@ -359,7 +359,7 @@ void ProgressBar::finish_()
 
 void ProgressBar::FrameRedrawRequest::reset()
 {
-    lastRequestTime_ = std::chrono::system_clock::now();
+    lastDrawedTime_ = std::chrono::system_clock::now();
     bool testFrameOrder = true;
     frameRequested_.compare_exchange_strong( testFrameOrder, false );
 }

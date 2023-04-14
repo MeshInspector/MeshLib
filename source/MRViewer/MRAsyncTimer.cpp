@@ -1,4 +1,5 @@
 #include "MRAsyncTimer.h"
+#include "MRMesh/MRSystem.h"
 
 namespace MR
 {
@@ -10,14 +11,16 @@ void AsyncTimer::setTime( const std::chrono::time_point<std::chrono::system_cloc
     cvar_.notify_one();
 }
 
-void AsyncTimer::setTimeIfNotSet( const std::chrono::time_point<std::chrono::system_clock> & time )
+bool AsyncTimer::setTimeIfNotSet( const std::chrono::time_point<std::chrono::system_clock> & time )
 {
     std::unique_lock lock( mutex_ );
     if ( !time_ )
     {
         time_ = time;
         cvar_.notify_one();
+        return true;
     }
+    return false;
 }
 
 void AsyncTimer::resetTime()
@@ -58,4 +61,60 @@ auto AsyncTimer::waitBlocking() -> Event
     }
 }
 
+#ifndef __EMSCRIPTEN__
+AsyncRequest::AsyncRequest()
+{
+    listenerThread_ = std::thread( [this] ()
+    {
+        MR::SetCurrentThreadName( "AsyncRequest timer thread" );
+        while ( timer_.waitBlocking() != AsyncTimer::Event::Terminate )
+        {
+            auto cmd = loadCommand_();
+            if ( cmd )
+            {
+                cmd();
+                storeCommand_( {} );
+            }
+        }
+    } );
+}
+
+AsyncRequest::~AsyncRequest()
+{
+    timer_.terminate();
+    listenerThread_.join();
+}
+
+void AsyncRequest::request( const Time& time, Command command )
+{
+    timer_.setTime( time );
+    storeCommand_( command );
+}
+
+void AsyncRequest::requestIfNotSet( const Time& time, Command command )
+{
+    if ( timer_.setTimeIfNotSet( time ) )
+        storeCommand_( command );
+}
+
+void AsyncRequest::reset()
+{
+    timer_.resetTime();
+    storeCommand_( {} );
+
+}
+
+MR::AsyncRequest::Command AsyncRequest::loadCommand_()
+{
+    std::unique_lock lock( cmdMutex_ );
+    return command_;
+}
+
+void AsyncRequest::storeCommand_( Command command )
+{
+    std::unique_lock lock( cmdMutex_ );
+    command_ = command;
+}
+
+#endif
 } //namespace MR

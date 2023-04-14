@@ -93,31 +93,6 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-RibbonMenu::RibbonMenu()
-{
-#ifndef __EMSCRIPTEN__
-    timerThread_ = std::thread( [this] ()
-    {
-        MR::SetCurrentThreadName( "RibbonMenu timer thread" );
-        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
-        {
-            CommandLoop::appendCommand( [] ()
-            {
-                getViewerInstance().incrementForceRedrawFrames();
-            } );
-        }
-    } );
-#endif
-}
-
-RibbonMenu::~RibbonMenu()
-{
-    asyncTimer_.terminate();
-#ifndef __EMSCRIPTEN__
-    timerThread_.join();
-#endif
-}
-
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
     ImGuiMenu::init( _viewer );
@@ -427,7 +402,9 @@ void RibbonMenu::drawCollapseButton_()
             collapseState_ = CollapseState::Opened;
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
             openedTimer_ = openedMaxSecs_;
-            asyncTimer_.resetTime();
+#ifndef __EMSCRIPTEN__
+            asyncRequest_.reset();
+#endif
         }
         ImGui::PopFont();
         if ( ImGui::IsItemHovered() )
@@ -465,7 +442,9 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-            asyncTimer_.resetTime();
+#ifndef __EMSCRIPTEN__
+            asyncRequest_.reset();
+#endif
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -477,8 +456,17 @@ void RibbonMenu::drawCollapseButton_()
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
             EM_ASM( postEmptyEvent( $0, 2 ), int( openedTimer_ * 1000 ) );
 #pragma clang diagnostic pop
+#else
+            asyncRequest_.requestIfNotSet(
+                std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ),
+                [] ()
+            {
+                CommandLoop::appendCommand( [] ()
+                {
+                    getViewerInstance().incrementForceRedrawFrames();
+                } );
+            } );
 #endif
-            asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ) );
             if ( openedTimer_ <= 0.0f )
                 collapseState_ = CollapseState::Closed;
         }

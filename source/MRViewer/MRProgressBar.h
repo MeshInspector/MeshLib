@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRAsyncTimer.h"
 #include <imgui.h>
 #include <functional>
 #include <atomic>
@@ -56,13 +57,29 @@ private:
     void tryRunTask_();
     void tryRunTaskWithSehHandler_();
 
-    void postEvent_();
     void finish_();
 
     float progress_;
     int currentTask_, taskCount_;
     std::string taskName_, title_;
-    std::chrono::time_point<std::chrono::system_clock> lastPostEvent_;
+    class FrameOrder
+    {
+    public:
+        FrameOrder();
+        ~FrameOrder();
+        void reset();
+        void orderFrame();
+        void completeOrder();
+    private:
+        std::atomic<bool> frameOrder_{ false };
+        std::chrono::time_point<std::chrono::system_clock> lastOrderdTime_;
+#ifndef __EMSCRIPTEN__
+        AsyncTimer asyncTimer_;
+        std::thread timerThread_;
+#endif
+    };
+
+    FrameOrder frameOrder_;
 
     std::thread thread_;
     TaskWithMainThreadPostProcessing task_;

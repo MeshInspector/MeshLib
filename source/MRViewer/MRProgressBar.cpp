@@ -47,6 +47,8 @@ void ProgressBar::setup( float scaling )
     instance.setupId_ = ImGui::GetID( buf );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
     {
+        instance.frameOrder_.completeOrder();
+
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         if ( instance.taskCount_ > 1 )
         {
@@ -59,7 +61,7 @@ void ProgressBar::setup( float scaling )
         ImGui::ProgressBar( progress, ImVec2( 250.0f * scaling, 0.0f ), buf );
         // this is needed to prevent events race and redraw after progress bar is finished
         if ( progress >= 1.0f )
-            getViewerInstance().incrementForceRedrawFrames();
+            instance.frameOrder_.orderFrame();
         ImGui::Separator();
 
         if ( instance.allowCancel_ )
@@ -80,7 +82,7 @@ void ProgressBar::setup( float scaling )
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
         if ( instance.progress_ >= 1.0f )
-            getViewerInstance().incrementForceRedrawFrames();
+            instance.orderFrame_();
 #endif
         if ( instance.finished_ )
         {
@@ -150,7 +152,7 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
         instance.title_ = nameStr;
 
         ImGui::OpenPopup( instance.setupId_ );
-        instance.lastPostEvent_ = std::chrono::system_clock::now();
+        instance.frameOrder_.reset();
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
         instance.thread_ = std::thread( [&instance] ()
         {
@@ -189,14 +191,14 @@ float ProgressBar::getProgress()
 bool ProgressBar::setProgress( float p )
 {
     instance_().progress_ = p;
-    instance_().postEvent_();
+    instance_().frameOrder_.orderFrame();
     return !instance_().canceled_;
 }
 
 void ProgressBar::addProgress( float p )
 {
     instance_().progress_ += p;
-    instance_().postEvent_();
+    instance_().frameOrder_.orderFrame();
 }
 
 void ProgressBar::setTaskCount( int n )
@@ -324,21 +326,70 @@ void ProgressBar::tryRunTaskWithSehHandler_()
     finish_();
 }
 
-void ProgressBar::postEvent_()
+void ProgressBar::FrameOrder::orderFrame()
 {
     // do not do it too frequently not to overload the renderer
     auto now = std::chrono::system_clock::now();
     const auto minInterval = std::chrono::milliseconds( 100 );
-    if ( lastPostEvent_ + minInterval > now )
+    if ( lastOrderdTime_ + minInterval > now )
+    {
+        bool testFrameOrder = false;
+        if ( frameOrder_.compare_exchange_strong( testFrameOrder, true ) )
+        {
+            // make order
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+            EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval ) );
+#pragma clang diagnostic pop
+#else
+            asyncTimer_.setTimeIfNotSet( now + minInterval );
+#endif
+        }
         return;
-    lastPostEvent_ = now;
+    }
+    lastOrderdTime_ = now;
     getViewerInstance().postEmptyEvent();
+}
+
+
+void ProgressBar::FrameOrder::completeOrder()
+{
+    bool testFrameOrder = true;
+    frameOrder_.compare_exchange_strong( testFrameOrder, false );
 }
 
 void ProgressBar::finish_()
 {
     finished_ = true;
-    getViewerInstance().postEmptyEvent();
+    frameOrder_.orderFrame();
+}
+
+ProgressBar::FrameOrder::FrameOrder()
+{
+#ifndef __EMSCRIPTEN__
+    timerThread_ = std::thread( [this] ()
+    {
+        MR::SetCurrentThreadName( "RibbonMenu timer thread" );
+        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
+        {
+            getViewerInstance().postEmptyEvent();
+        }
+    } );
+#endif
+}
+
+ProgressBar::FrameOrder::~FrameOrder()
+{
+#ifndef __EMSCRIPTEN__
+    asyncTimer_.terminate();
+    timerThread_.join();
+#endif
+}
+
+void ProgressBar::FrameOrder::reset()
+{
+    lastOrderdTime_ = std::chrono::system_clock::now();
 }
 
 }

@@ -16,13 +16,21 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
     fonts_ = {};
 
     const ImWchar iconRanges[] = { 0xe005, 0xf8ff, 0 };
+    const ImWchar charRangesSmall[] = {
+        0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0x0400, 0x04FF, // Cyrillic
+        0x2000, 0x20FF, // Extended
+        0,
+    };
 
     for ( int i = 0; i<int( FontType::Count ); ++i )
     {
-        if ( i != int( FontType::Icons ) )
-            loadFont_( FontType( i ), charRanges, scaling );
-        else
+        if ( i == int( FontType::Monospace ) )
+            loadFont_( FontType::Monospace, charRangesSmall, scaling );
+        if ( i == int( FontType::Icons ) )
             loadFont_( FontType::Icons, iconRanges, scaling );
+        else
+            loadFont_( FontType( i ), charRanges, scaling );
     }
     ImGui::GetIO().Fonts->Build();
 }
@@ -171,6 +179,17 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
         ImGui::GetIO().Fonts->AddFontFromFileTTF(
             utf8string( fontPath ).c_str(), cHeadlineFontSize * scaling,
+            &config, ranges );
+        fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
+    }
+    else if ( type == FontType::Monospace )
+    {
+        auto fontPath = GetFontsDirectory() / "NotoSansMono-Regular.ttf";
+        ImFontConfig config;
+        config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
+        config.GlyphOffset = ImVec2( 1 * scaling, -2 * scaling );
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+            utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }

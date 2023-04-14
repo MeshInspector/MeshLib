@@ -32,6 +32,16 @@ body {
     overflow: hidden
 }
 
+.dark-theme {
+    background-color: #1c1f24
+}
+
+@media (prefers-color-scheme: light) {
+    .dark-theme.adaptive-theme {
+        background-color: #eef0f5
+    }
+}
+
 .emscripten {
     padding-right: 0;
     margin-left: auto;
@@ -55,67 +65,73 @@ canvas.emscripten {
 }
 
 .spinner {
-    height: 30px;
-    width: 30px;
-    margin: 0;
-    margin-top: 20px;
-    margin-left: 20px;
-    display: inline-block;
-    vertical-align: top;
+    height: 26px;
+    width: 26px;
     -webkit-animation: rotation .8s linear infinite;
     -moz-animation: rotation .8s linear infinite;
     -o-animation: rotation .8s linear infinite;
     animation: rotation .8s linear infinite;
-    border-left: 5px solid #ebebeb;
-    border-right: 5px solid #ebebeb;
-    border-bottom: 5px solid #ebebeb;
-    border-top: 5px solid #787878;
-    border-radius: 100%;
-    background-color: #bdd72e
+    background-image: url('spinner.svg');
+    position: absolute;
+    top:50%;
+    left:50%;
+    margin-top: -57px;
+    margin-left: -13px;
+}
+
+.logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    background-image: url('logo.svg');
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-164px);
 }
 
 @-webkit-keyframes rotation {
     from {
-        -webkit-transform: rotate(0)
+        -webkit-transform: rotate(360deg)
     }
 
     to {
-        -webkit-transform: rotate(360deg)
+        -webkit-transform: rotate(0)
     }
 }
 
 @-moz-keyframes rotation {
     from {
-        -moz-transform: rotate(0)
+        -moz-transform: rotate(360deg)
     }
 
     to {
-        -moz-transform: rotate(360deg)
+        -moz-transform: rotate(0)
     }
 }
 
 @-o-keyframes rotation {
     from {
-        -o-transform: rotate(0)
+        -o-transform: rotate(360deg)
     }
 
     to {
-        -o-transform: rotate(360deg)
+        -o-transform: rotate(0)
     }
 }
 
 @keyframes rotation {
     from {
-        transform: rotate(0)
+        transform: rotate(360deg)
     }
 
     to {
-        transform: rotate(360deg)
+        transform: rotate(0)
     }
 }
 
 #status {
-    display: inline-block;
+    display: none;
     vertical-align: top;
     margin-top: 30px;
     margin-left: 20px;
@@ -124,6 +140,10 @@ canvas.emscripten {
 }
 
 #progress {
-    height: 20px;
-    width: 300px
+    height: 8px;
+    width: 300px;
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
 }

@@ -39,7 +39,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: Distributives
 
@@ -112,7 +112,7 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: Distributives
 

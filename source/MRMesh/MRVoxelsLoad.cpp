@@ -964,15 +964,22 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
 }
 #endif // MRMESH_NO_TIFF
 
-tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path, const RawParameters& params,
+tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
-    if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 ||
-        params.voxelSize.x == 0.0f || params.voxelSize.y == 0.0f || params.voxelSize.z == 0.0f )
-        return tl::make_unexpected( "Bad parameters for reading " + utf8string( path.filename() ) );
-    SimpleVolume outVolume;
-    outVolume.dims = params.dimensions;
-    outVolume.voxelSize = params.voxelSize;
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+    return addFileNameInError( loadRaw( in, params, cb ), file );
+}
+
+tl::expected<VdbVolume, std::string> loadRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+{
+    if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
+        return tl::make_unexpected( "Wrong volume dimension parameter value" );
+
+    if ( params.voxelSize.x <= 0 || params.voxelSize.y <= 0 || params.voxelSize.z <= 0 )
+        return tl::make_unexpected( "Wrong voxel size parameter value" );
 
     int unitSize = 0;
     switch ( params.scalarType )
@@ -1009,9 +1016,12 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
         break;
     default:
         assert( false );
-        return tl::make_unexpected( "Bad parameters for reading " + utf8string( path.filename() ) );
+        return tl::make_unexpected( "Wrong scalar type parameter value" );
     }
 
+    SimpleVolume outVolume;
+    outVolume.dims = params.dimensions;
+    outVolume.voxelSize = params.voxelSize;
     outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y * outVolume.dims.z );
     char* outPointer{ nullptr };
     std::vector<char> data;
@@ -1022,13 +1032,13 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
         data.resize( outVolume.data.size() * unitSize );
         outPointer = data.data();
     }
-    std::ifstream infile( path, std::ios::binary );
+
     int xyDimsUnit = params.dimensions.x * params.dimensions.y * unitSize;
     for ( int z = 0; z < params.dimensions.z; ++z )
     {
         int shift = xyDimsUnit * z;
-        if ( !infile.read( outPointer + shift, xyDimsUnit ) )
-            return tl::make_unexpected( "Cannot read file: " + utf8string( path ) );
+        if ( !in.read( outPointer + shift, xyDimsUnit ) )
+            return tl::make_unexpected( "Read error" );
         if ( cb )
             cb( ( z + 1.0f ) / float( params.dimensions.z ) );
     }

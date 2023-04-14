@@ -83,9 +83,9 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
                 
                 if ( autoMode )
-                    res = VoxelsLoad::loadRaw( path, ProgressBar::callBackSetProgress );
+                    res = VoxelsLoad::fromRaw( path, ProgressBar::callBackSetProgress );
                 else
-                    res = VoxelsLoad::loadRaw( path, params, ProgressBar::callBackSetProgress );
+                    res = VoxelsLoad::fromRaw( path, params, ProgressBar::callBackSetProgress );
 
                 if ( ProgressBar::isCanceled() )
                 {

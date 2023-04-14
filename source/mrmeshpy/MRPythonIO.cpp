@@ -264,7 +264,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 {
     m.def( "loadVoxels",
-        MR::decorateExpected( ( tl::expected<VdbVolume, std::string>( * )( const std::filesystem::path&, const ProgressCallback& ) )& MR::VoxelsLoad::loadRaw ),
+        MR::decorateExpected( ( tl::expected<VdbVolume, std::string>( * )( const std::filesystem::path&, const ProgressCallback& ) )& MR::VoxelsLoad::fromRaw ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load raw voxels file, parsing parameters from name." );
 } )

@@ -69,7 +69,7 @@ private:
         void requestFrame();
     private:
         std::atomic<bool> frameRequested_{ false };
-        std::chrono::time_point<std::chrono::system_clock> lastDrawedTime_;
+        std::atomic < std::chrono::time_point<std::chrono::system_clock>> lastDrawnTime_;
 #ifndef __EMSCRIPTEN__
         AsyncRequest asyncRequest_;
 #endif

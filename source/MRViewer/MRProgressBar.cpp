@@ -331,7 +331,7 @@ void ProgressBar::FrameRedrawRequest::requestFrame()
     // do not do it too frequently not to overload the renderer
     auto now = std::chrono::system_clock::now();
     const auto minInterval = std::chrono::milliseconds( 100 );
-    if ( lastDrawedTime_ + minInterval > now )
+    if ( lastDrawnTime_.load( std::memory_order::relaxed ) + minInterval > now )
     {
         bool testFrameOrder = false;
         if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
@@ -359,7 +359,7 @@ void ProgressBar::finish_()
 
 void ProgressBar::FrameRedrawRequest::reset()
 {
-    lastDrawedTime_ = std::chrono::system_clock::now();
+    lastDrawnTime_ = std::chrono::system_clock::now();
     bool testFrameOrder = true;
     frameRequested_.compare_exchange_strong( testFrameOrder, false );
 }

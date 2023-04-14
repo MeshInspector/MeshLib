@@ -1045,10 +1045,10 @@ tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParamet
         outPointer = data.data();
     }
 
-    int xyDimsUnit = params.dimensions.x * params.dimensions.y * unitSize;
+    size_t xyDimsUnit = size_t( params.dimensions.x ) * params.dimensions.y * unitSize;
     for ( int z = 0; z < params.dimensions.z; ++z )
     {
-        int shift = xyDimsUnit * z;
+        size_t shift = xyDimsUnit * z;
         if ( !in.read( outPointer + shift, xyDimsUnit ) )
             return tl::make_unexpected( "Read error" );
         if ( cb )
@@ -1088,7 +1088,7 @@ tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParamet
         else if ( params.scalarType == RawParameters::ScalarType::UInt64 )
             max = std::numeric_limits<uint64_t>::max();
         auto converter = getTypeConverter( params.scalarType, max - min, min );
-        for ( int i = 0; i < outVolume.data.size(); ++i )
+        for ( size_t i = 0; i < outVolume.data.size(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );
             outVolume.data[i] = value;

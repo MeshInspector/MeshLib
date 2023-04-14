@@ -65,8 +65,6 @@ private:
     class FrameOrder
     {
     public:
-        FrameOrder();
-        ~FrameOrder();
         void reset();
         void orderFrame();
         void completeOrder();
@@ -74,8 +72,7 @@ private:
         std::atomic<bool> frameOrder_{ false };
         std::chrono::time_point<std::chrono::system_clock> lastOrderdTime_;
 #ifndef __EMSCRIPTEN__
-        AsyncTimer asyncTimer_;
-        std::thread timerThread_;
+        AsyncOrder asyncOrder_;
 #endif
     };
 

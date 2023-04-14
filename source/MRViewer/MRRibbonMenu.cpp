@@ -93,31 +93,6 @@ void changeSelection( bool selectNext, int mod )
     }
 }
 
-RibbonMenu::RibbonMenu()
-{
-#ifndef __EMSCRIPTEN__
-    timerThread_ = std::thread( [this] ()
-    {
-        MR::SetCurrentThreadName( "RibbonMenu timer thread" );
-        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
-        {
-            CommandLoop::appendCommand( [] ()
-            {
-                getViewerInstance().incrementForceRedrawFrames();
-            } );
-        }
-    } );
-#endif
-}
-
-RibbonMenu::~RibbonMenu()
-{
-    asyncTimer_.terminate();
-#ifndef __EMSCRIPTEN__
-    timerThread_.join();
-#endif
-}
-
 void RibbonMenu::init( MR::Viewer* _viewer )
 {
     ImGuiMenu::init( _viewer );
@@ -427,7 +402,7 @@ void RibbonMenu::drawCollapseButton_()
             collapseState_ = CollapseState::Opened;
             fixViewportsSize_( Viewer::instanceRef().window_width, Viewer::instanceRef().window_height );
             openedTimer_ = openedMaxSecs_;
-            asyncTimer_.resetTime();
+            asyncOrder_.reset();
         }
         ImGui::PopFont();
         if ( ImGui::IsItemHovered() )
@@ -465,7 +440,7 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-            asyncTimer_.resetTime();
+            asyncOrder_.reset();
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -478,7 +453,16 @@ void RibbonMenu::drawCollapseButton_()
             EM_ASM( postEmptyEvent( $0, 2 ), int( openedTimer_ * 1000 ) );
 #pragma clang diagnostic pop
 #endif
-            asyncTimer_.setTimeIfNotSet( std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ) );
+            asyncOrder_.orderIfNotSet(
+                std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedTimer_ * 1000 ) ),
+                [] ()
+            {
+                CommandLoop::appendCommand( [] ()
+                {
+                    getViewerInstance().incrementForceRedrawFrames();
+                } );
+            } );
+
             if ( openedTimer_ <= 0.0f )
                 collapseState_ = CollapseState::Closed;
         }

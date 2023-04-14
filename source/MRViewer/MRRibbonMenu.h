@@ -23,9 +23,6 @@ class Object;
 class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
 {
 public:
-    MRVIEWER_API RibbonMenu();
-    MRVIEWER_API virtual ~RibbonMenu();
-
     MRVIEWER_API virtual void init( MR::Viewer* _viewer ) override;
 
     MRVIEWER_API virtual void shutdown() override;
@@ -211,9 +208,9 @@ private:
     RibbonButtonDrawer buttonDrawer_;
 
     Toolbar toolbar_;
-
-    AsyncTimer asyncTimer_;
-    std::thread timerThread_;
+#ifndef __EMSCRIPTEN__
+    AsyncOrder asyncOrder_;
+#endif // !__EMSCRIPTEN__
 };
 
 template<typename T>

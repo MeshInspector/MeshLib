@@ -82,7 +82,7 @@ void ProgressBar::setup( float scaling )
 #else
         ImGui::Text( "Operation is in progress, please wait..." );
         if ( instance.progress_ >= 1.0f )
-            instance.orderFrame_();
+            instance.frameOrder_.orderFrame();
 #endif
         if ( instance.finished_ )
         {
@@ -340,10 +340,10 @@ void ProgressBar::FrameOrder::orderFrame()
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-            EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval ) );
+            EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
 #pragma clang diagnostic pop
 #else
-            asyncTimer_.setTimeIfNotSet( now + minInterval );
+            asyncOrder_.orderIfNotSet( now + minInterval, [] () { getViewerInstance().postEmptyEvent(); } );
 #endif
         }
         return;
@@ -363,28 +363,6 @@ void ProgressBar::finish_()
 {
     finished_ = true;
     frameOrder_.orderFrame();
-}
-
-ProgressBar::FrameOrder::FrameOrder()
-{
-#ifndef __EMSCRIPTEN__
-    timerThread_ = std::thread( [this] ()
-    {
-        MR::SetCurrentThreadName( "RibbonMenu timer thread" );
-        while ( asyncTimer_.waitBlocking() != AsyncTimer::Event::Terminate )
-        {
-            getViewerInstance().postEmptyEvent();
-        }
-    } );
-#endif
-}
-
-ProgressBar::FrameOrder::~FrameOrder()
-{
-#ifndef __EMSCRIPTEN__
-    asyncTimer_.terminate();
-    timerThread_.join();
-#endif
 }
 
 void ProgressBar::FrameOrder::reset()

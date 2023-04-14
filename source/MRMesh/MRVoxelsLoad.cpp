@@ -70,7 +70,8 @@ namespace VoxelsLoad
 const IOFilters Filters =
 {
     {"Raw (.raw)","*.raw"},
-    {"OpenVDB (.vdb)","*.vdb"}
+    {"OpenVDB (.vdb)","*.vdb"},
+    {"Micro CT (.gav)","*.gav"},
 };
 
 struct SliceInfoBase
@@ -584,7 +585,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFile( const std::filesystem::pat
 }
 #endif // MRMESH_NO_DICOM
 
-tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
+tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -685,7 +686,7 @@ tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& path,
     }
     outParams.scalarType = RawParameters::ScalarType::Float32;
 
-    return loadRaw( filepathToOpen, outParams, cb );
+    return fromRaw( filepathToOpen, outParams, cb );
 }
 
 tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
@@ -758,16 +759,27 @@ tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem
     return res;
 }
 
+inline tl::expected<std::vector<VdbVolume>, std::string> toSingleElementVector( tl::expected<VdbVolume, std::string> v )
+{
+    if ( !v.has_value() )
+        return tl::make_unexpected( std::move( v.error() ) );
+    return std::vector<VdbVolume>{ std::move( v.value() ) };
+}
+
 tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
+    if ( ext == ".raw" )
+        return toSingleElementVector( fromRaw( path, cb ) );
     if ( ext == ".vdb" )
         return fromVdb( path, cb );
-    else
-        return tl::make_unexpected( std::string( "Unsupported file extension" ) );
+    if ( ext == ".gav" )
+        return toSingleElementVector( fromGav( path, cb ) );
+
+    return tl::make_unexpected( std::string( "Unsupported file extension" ) );
 }
 
 struct TiffParams
@@ -964,16 +976,16 @@ tl::expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& set
 }
 #endif // MRMESH_NO_TIFF
 
-tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& file, const RawParameters& params,
+tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return tl::make_unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-    return addFileNameInError( loadRaw( in, params, cb ), file );
+    return addFileNameInError( fromRaw( in, params, cb ), file );
 }
 
-tl::expected<VdbVolume, std::string> loadRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
 {
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
         return tl::make_unexpected( "Wrong volume dimension parameter value" );

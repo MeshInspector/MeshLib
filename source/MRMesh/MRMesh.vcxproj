@@ -484,6 +484,7 @@
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />
     <ClCompile Include="MRObjectVoxels.cpp" />
+    <ClCompile Include="MRVoxelsLoadGav.cpp" />
     <ClCompile Include="MRVoxelsSave.cpp" />
     <ClCompile Include="MRSymbolMesh.cpp" />
     <ClCompile Include="MRSystem.cpp" />

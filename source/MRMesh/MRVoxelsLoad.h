@@ -68,20 +68,26 @@ struct RawParameters
     } scalarType{ ScalarType::Float32 };
 };
 /// Load raw voxels from file with provided parameters
-MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& file, const RawParameters& params,
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 /// Load raw voxels from stream with provided parameters;
 /// important on Windows: in stream must be open in binary mode
-MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( std::istream& in, const RawParameters& params,
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 
 /// Load raw voxels file, parsing parameters from name 
-MRMESH_API tl::expected<VdbVolume, std::string> loadRaw( const std::filesystem::path& file,
+MRMESH_API tl::expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
 /// Load raw voxels OpenVDB file
 MRMESH_API tl::expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
+
+/// Load voxel from Gav-file with micro CT reconstruction
+MRMESH_API tl::expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );
+/// Load voxel from Gav-stream with micro CT reconstruction
+MRMESH_API tl::expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb = {} );
+
 
 /// Detects the format from file extension and loads voxels from it
 MRMESH_API tl::expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& file,

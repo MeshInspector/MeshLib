@@ -189,7 +189,7 @@ public:
 
     /// returns the current shininess visual value
     float getShininess() const { return shininess_; }
-    /// gets the current shininess visual value
+    /// sets shininess visual value of the object with given argument
     virtual void setShininess( float shininess ) { shininess_ = shininess; needRedraw_ = true; }
 
     /// returns intensity of reflections

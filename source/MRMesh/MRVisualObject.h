@@ -184,7 +184,7 @@ public:
 
     /// returns the current coloring mode of the object
     ColoringType getColoringType() const { return coloringType_; }
-    /// sets the current coloring mode of the object
+    /// sets coloring mode of the object with given argument
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
 
     /// returns the current shininess visual value

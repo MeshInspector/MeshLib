@@ -791,6 +791,7 @@ void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char
 
 void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
 {
+    std::unique_lock lock( mutex_ );
     if ( queue_.empty() || !skipable || !lastSkipable_ )
         queue_.emplace( std::move( event ) );
     else
@@ -800,6 +801,7 @@ void Viewer::EventQueue::emplace( NamedEvent event, bool skipable )
 
 void Viewer::EventQueue::execute()
 {
+    std::unique_lock lock( mutex_ );
     while ( !queue_.empty() )
     {
         if ( queue_.front().cb )
@@ -810,11 +812,13 @@ void Viewer::EventQueue::execute()
 
 bool Viewer::EventQueue::empty() const
 {
+    std::unique_lock lock( mutex_ );
     return queue_.empty();
 }
 
 void Viewer::EventQueue::popByName( const std::string& name )
 {
+    std::unique_lock lock( mutex_ );
     while ( !queue_.empty() && queue_.front().name == name )
         queue_.pop();
 }

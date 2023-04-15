@@ -21,6 +21,7 @@
 #include <boost/signals2/signal.hpp>
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 #include <queue>
 
 struct GLFWwindow;
@@ -549,7 +550,7 @@ public:
             EventCallback cb;
         };
         // emplace event at the end of the queue
-        // replace last skipabl with new skipable
+        // replace last skipable with new skipable
         MRVIEWER_API void emplace( NamedEvent event, bool skipable = false );
         // execute all events in queue
         MRVIEWER_API void execute();
@@ -557,6 +558,7 @@ public:
         MRVIEWER_API void popByName( const std::string& name );
         MRVIEWER_API bool empty() const;
     private:
+        mutable std::mutex mutex_;
         std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;

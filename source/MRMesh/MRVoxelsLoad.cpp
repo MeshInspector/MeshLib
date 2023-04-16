@@ -202,22 +202,44 @@ bool isDICOMFile( const std::filesystem::path& path )
     auto tags = {
         gdcm::Tag( 0x0002, 0x0002 ), // media storage
         gdcm::Tag( 0x0008, 0x0016 ), // media storage
-        gdcm::Tag( 0x0028, 0x0004 ),// is for PhotometricInterpretation
+        gdcm::Keywords::PhotometricInterpretation::GetTag(),
         gdcm::Keywords::ImagePositionPatient::GetTag(), // is for image origin in mm
         gdcm::Tag( 0x0028, 0x0010 ),gdcm::Tag( 0x0028, 0x0011 ),gdcm::Tag( 0x0028, 0x0008 )}; // is for dimensions
     if ( !ir.ReadSelectedTags( tags ) )
         return false;
     gdcm::MediaStorage ms;
-    //spdlog::info( "File {}: ms={}", utf8string( path ), (int)ms );
     ms.SetFromFile( ir.GetFile() );
-    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage )
+
+    // skip unsupported media storage
+    if ( ms == gdcm::MediaStorage::MediaStorageDirectoryStorage || ms == gdcm::MediaStorage::SecondaryCaptureImageStorage
+        || ms == gdcm::MediaStorage::BasicTextSR )
+    {
+        spdlog::warn( "DICOM file {} has unsupported media storage {}", utf8string( path ), (int)ms );
         return false;
+    }
+
+    // unfortunatly gdcm::ImageHelper::GetPhotometricInterpretationValue returns something even if no data in the file
+    if ( !gdcm::ImageHelper::GetPointerFromElement( gdcm::Keywords::PhotometricInterpretation::GetTag(), ir.GetFile() ) )
+    {
+        spdlog::warn( "DICOM file {} does not have Photometric Interpretation", utf8string( path ) );
+        return false;
+    }
+
     auto photometric = gdcm::ImageHelper::GetPhotometricInterpretationValue( ir.GetFile() );
     if ( photometric != gdcm::PhotometricInterpretation::MONOCHROME2 &&
          photometric != gdcm::PhotometricInterpretation::MONOCHROME1 )
+    {
+        spdlog::warn( "DICOM file {} has Photometric Interpretation other than Monochrome", utf8string( path ) );
         return false;
+    }
+
     auto dims = gdcm::ImageHelper::GetDimensionsValue( ir.GetFile() );
-    assert( dims.size() == 3 );
+    if ( dims.size() != 3 )
+    {
+        spdlog::warn( "DICOM file {} has Dimensions Value other than 3", utf8string( path ) );
+        return false;
+    }
+
     return true;
 }
 
@@ -240,7 +262,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
 
     if ( !ir.Read() )
     {
-        spdlog::error( "loadSingle: cannot read file: {}", utf8string( path ) );
+        spdlog::error( "Cannot read image from DICOM file {}", utf8string( path ) );
         return res;
     }
 

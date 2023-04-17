@@ -1,8 +1,9 @@
 #include "MRPointsToMeshProjector.h"
 #include "MRMesh.h"
-#include "MRPch/MRTBB.h"
 #include "MRAffineXf3.h"
 #include "MRMatrix3Decompose.h"
+#include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -14,6 +15,7 @@ void PointsToMeshProjector::updateMeshData( std::shared_ptr<const Mesh> mesh )
 
 void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
+    MR_TIMER
     result.resize( points.size() );
 
     refXfPtr_ = isRigid( refObjXf.A ) ? nullptr : &refObjXf;

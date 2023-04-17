@@ -1,9 +1,11 @@
 #include "MRCudaPointsToMeshProjector.h"
+#include "MRCudaPointsToMeshProjector.cuh"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTree.h"
-#include "MRCudaPointsToMeshProjector.cuh"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRTimer.h"
 #include <chrono>
+
 namespace MR
 {
 
@@ -48,6 +50,7 @@ void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh
 void PointsToMeshProjector::findProjections(
       std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f& objXf, const AffineXf3f& refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
+    MR_TIMER
     cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )

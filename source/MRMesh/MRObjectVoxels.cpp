@@ -506,7 +506,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::saveRaw( filename, vdbVolume_ ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::toRawAutoname( vdbVolume_, filename ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )

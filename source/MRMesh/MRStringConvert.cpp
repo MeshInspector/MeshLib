@@ -84,7 +84,7 @@ char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int pr
     assert( digitsAfterPoint >= 0 && digitsAfterPoint <= 9 );
     double cmp = 1;
     int digitsBeforePoint = 0;
-    while ( digitsBeforePoint < precision && v >= cmp )
+    while ( digitsBeforePoint < precision && std::abs( v ) >= cmp )
     {
         cmp *= 10;
         ++digitsBeforePoint;

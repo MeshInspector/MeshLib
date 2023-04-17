@@ -58,15 +58,14 @@ void Config::reset( const std::filesystem::path& filePath )
         else
         {
             config_ = std::move( readRes.value() );
-            filePath_ = filePath;
         }
     }
     else
     {
         if ( loggerHandle_ )
             loggerHandle_->warn( "Failed to open json config file " + utf8string( Config::filePath_ ) );
-        filePath_ = filePath;
     }
+    filePath_ = filePath;
 }
 
 Config& Config::instance()

@@ -170,6 +170,9 @@
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansMono-Regular.ttf">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSansSC-Regular.otf">
       <FileType>Document</FileType>
     </CopyFileToFolders>

@@ -558,7 +558,8 @@ public:
         MRVIEWER_API void popByName( const std::string& name );
         MRVIEWER_API bool empty() const;
     private:
-        mutable std::mutex mutex_;
+        // important for wasm to be recursive
+        mutable std::recursive_mutex mutex_;
         std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;

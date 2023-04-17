@@ -92,6 +92,7 @@ void ProgressBar::setup( float scaling )
                 instance.onFinish_ = {};
             }
             ImGui::CloseCurrentPopup();
+            getViewerInstance().incrementForceRedrawFrames( 2, true );
         }
         ImGui::EndPopup();
     }

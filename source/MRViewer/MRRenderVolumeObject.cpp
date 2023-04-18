@@ -118,6 +118,7 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
 
     const auto& voxelSize = objVoxels_->vdbVolume().voxelSize;
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), std::min( { voxelSize.x, voxelSize.y, voxelSize.z } ) ) );
 
     constexpr std::array<float, 24> cubePoints =
     {
@@ -197,12 +198,25 @@ void RenderVolumeObject::bindVolume_( bool picker )
         auto size = realMinMax[1] - realMinMax[0];
         int minIndex = int( ( params.min - realMinMax[0] ) / size * denseMap.size() );
         int maxIndex = int( ( params.max - realMinMax[0] ) / size * denseMap.size() );
-        if ( params.type == ObjectVoxels::VolumeRenderingParams::Type::GrayShades )
+        auto diff = maxIndex - minIndex;
+        auto getAlpha = [&] ( float ratio )->uint8_t
+        {
+            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::Constant )
+                return params.alphaLimit;
+            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::LinearIncreasing )
+                return uint8_t( ratio * float( params.alphaLimit ) );
+            if ( params.alphaType == ObjectVoxels::VolumeRenderingParams::AlphaType::LinearDecreasing )
+                return uint8_t( ( 1.0f - ratio ) * float( params.alphaLimit ) );
+            return 0;
+        };
+        if ( params.lutType == ObjectVoxels::VolumeRenderingParams::LutType::GrayShades )
         {
             for ( int i = 0; i < denseMap.size(); ++i )
             {
                 bool zeroAlpha = i < minIndex || i > maxIndex;
-                denseMap[i] = Color( 255 - i, 255 - i, 255 - i, zeroAlpha ? 0 : params.alpha );
+                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
+                uint8_t color = uint8_t( ratio * 255.0f );
+                denseMap[i] = Color( color, color, color, zeroAlpha ? 0 : getAlpha( ratio ) );
             }
         }
         else
@@ -218,20 +232,20 @@ void RenderVolumeObject::bindVolume_( bool picker )
             };
             for ( int i = 0; i < denseMap.size(); ++i )
             {
-                auto diff = maxIndex - minIndex;
                 bool zeroAlpha = i < minIndex || i > maxIndex || diff <= 0;
                 if ( zeroAlpha )
                 {
                     denseMap[i] = Color( 0, 0, 0, 0 );
                     continue;
                 }
-                float ratio = float( i - minIndex ) / float( diff ) * float( rainbow.size() );
-                const auto& startColor = rainbow[int( std::floor( ratio ) )];
-                const auto& stopColor = rainbow[int( std::ceil( ratio ) )];
-                ratio = ratio - std::floor( ratio );
+                float ratio = std::clamp( float( i - minIndex ) / float( diff ), 0.0f, 1.0f );
+                float colorRatio = ratio * float( rainbow.size() );
+                const auto& startColor = rainbow[int( std::floor( colorRatio ) )];
+                const auto& stopColor = rainbow[int( std::ceil( colorRatio ) )];
+                colorRatio = colorRatio - std::floor( colorRatio );
 
-                denseMap[i] = startColor * ( 1.0f - ratio ) + stopColor * ratio;
-                denseMap[i].a = params.alpha;
+                denseMap[i] = startColor * ( 1.0f - colorRatio ) + stopColor * colorRatio;
+                denseMap[i].a = getAlpha( ratio );
             }
         }
         denseMap_.loadData(

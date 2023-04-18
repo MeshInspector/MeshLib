@@ -147,7 +147,6 @@ canvas.emscripten {
     top: 50%;
     border-radius: 8px;
     transform: translate(-50%, -50%);
-    visibility: hidden;
 }
 
 .dark-progress {

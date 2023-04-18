@@ -47,10 +47,11 @@ var statusElement = document.getElementById("status")
                     Module.setStatus.last.text = e,
                     t ? (e = t[1],
                         setWasmLoadProgress(100 * parseInt(t[2]) / parseInt(t[4])),
-                        spinnerElement.hidden = !1) : (clearWasmLoadProgress(),
+                        spinnerElement.hidden = !1) : (
                             e || (spinnerElement.style.display = "none",
                                 statusElement.style.display = "none",
                                 logoElement.style.display = "none",
+                                clearWasmLoadProgress(),
                                 postWasmLoad()
                             )),
                     statusElement.innerHTML = e)

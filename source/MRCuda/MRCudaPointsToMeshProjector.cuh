@@ -28,13 +28,9 @@ struct Node3
     __device__ int leafId() const;
 };
 
-// mesh topology data, maby can be simplified to have less data transfers between CPU and GPU
-struct HalfEdgeRecord
+struct FaceToThreeVerts
 {
-    int next;
-    int prev;
-    int org;
-    int left;
+    int verts[3];
 };
 
 // GPU analog of CPU PointOnFace struct
@@ -47,7 +43,7 @@ struct PointOnFace
 // GPU analog of CPU MeshTriPoint struct
 struct MeshTriPoint
 {
-    int edgeId;
+    int unused = -1; //always -1, but necessary to have the same size as MeshTriPoint in CPU
     float a;
     float b;
 };
@@ -56,7 +52,7 @@ struct MeshTriPoint
 struct MeshProjectionResult
 {
     PointOnFace proj;
-    MeshTriPoint mtp;
+    MeshTriPoint tp;
     float distSq;
 };
 
@@ -76,7 +72,7 @@ struct Matrix4
 
 // calls mesh projection kernel for each point in parallel
 void meshProjectionKernel( const float3* points,
-                           const Node3* nodes, const float3* meshPoints, const HalfEdgeRecord* edges, const int* edgePerFace,
+                           const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size );
 
 }

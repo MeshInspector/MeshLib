@@ -94,7 +94,8 @@ VoxelGraphCut::VoxelGraphCut( const SimpleVolume & densityVolume, float k )
 
     // prevent infinite capacities
     constexpr float maxCapacity = FLT_MAX / 10;
-    const float maxDelta = log( maxCapacity ) / k;
+    const float maxDelta = log( maxCapacity ) / std::abs( k );
+    //spdlog::info( "maxDelta={}", maxDelta );
 
     auto capacity = [=]( float densityFrom, float densityTo )
     {

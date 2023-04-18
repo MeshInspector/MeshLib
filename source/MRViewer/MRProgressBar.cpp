@@ -341,7 +341,7 @@ void ProgressBar::FrameRedrawRequest::requestFrame()
 #ifdef __EMSCRIPTEN__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-            EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
+            MAIN_THREAD_EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
 #pragma clang diagnostic pop
 #else
             asyncRequest_.requestIfNotSet( now + minInterval, [] () { getViewerInstance().postEmptyEvent(); } );

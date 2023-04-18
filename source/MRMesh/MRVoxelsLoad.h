@@ -31,10 +31,7 @@ struct LoadDCMResult
     std::string name;
 };
 
-/// Loads data from DICOM file(s) to SimpleVolume
-/// SimpleVolume dimensions: x,y equals to x,y dimensions of DICOM picture,
-///                          z - number of pictures loaded
-/// Files in folder are sorted by names
+/// Loads data from DICOM file(s)
 MRMESH_API tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 

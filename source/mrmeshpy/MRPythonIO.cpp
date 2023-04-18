@@ -267,4 +267,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         MR::decorateExpected( ( tl::expected<VdbVolume, std::string>( * )( const std::filesystem::path&, const ProgressCallback& ) )& MR::VoxelsLoad::fromRaw ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load raw voxels file, parsing parameters from name." );
+
+    pybind11::class_<MR::VoxelsLoad::LoadDCMResult>( m, "LoadDCMResult" ).
+        def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
+        def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name );
+
+    m.def( "loadDCMFolder", MR::decorateExpected( &MR::VoxelsLoad::loadDCMFolder ),
+        pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
+        "Loads data from DICOM file(s)" );
 } )

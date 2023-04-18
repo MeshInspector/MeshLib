@@ -114,17 +114,23 @@ public:
     struct VolumeRenderingParams
     {
         // coloring type
-        enum class Type
+        enum class LutType
         {
             GrayShades,
             Rainbow
-        } type{ Type::Rainbow };
+        } lutType{ LutType::Rainbow };
         // minimum colored value (voxels with lower values are transparent)
         float min{ 0.0f };
         // maximum colored value (voxels with higher values are transparent)
         float max{ 0.0f };
-        // opacity of texture
-        uint8_t alpha{ 10 };
+        // type of alpha function on texture
+        enum class AlphaType
+        {
+            Constant,
+            LinearIncreasing,
+            LinearDecreasing
+        } alphaType{ AlphaType::Constant };
+        uint8_t alphaLimit{ 10 };
         bool operator==( const VolumeRenderingParams& )const = default;
     };
     const VolumeRenderingParams& getVolumeRenderingParams() const { return volumeRenderingParams_; }

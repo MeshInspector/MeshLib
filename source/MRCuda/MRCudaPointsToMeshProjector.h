@@ -9,9 +9,10 @@ struct MeshProjectorData;
 class PointsToMeshProjector : public IPointsToMeshProjector
 {
     std::shared_ptr<MeshProjectorData> meshData_;
+    std::shared_ptr<const Mesh> mesh_;
 
 public:
-    MRCUDA_API PointsToMeshProjector();    
+    MRCUDA_API PointsToMeshProjector();
     /// update all data related to the referencing mesh
     MRCUDA_API virtual void updateMeshData( std::shared_ptr<const Mesh> mesh ) override;
     /// <summary>

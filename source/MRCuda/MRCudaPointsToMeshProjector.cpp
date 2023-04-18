@@ -4,7 +4,7 @@
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRTimer.h"
-#include <chrono>
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -18,8 +18,7 @@ struct MeshProjectorData
     DynamicArray<MeshProjectionResult> cudaResult;
     DynamicArray<float3> cudaMeshPoints;
     DynamicArray<Node3> cudaNodes;
-    DynamicArray<HalfEdgeRecord> cudaEdges;
-    DynamicArray<int> cudaEdgePerFace;
+    DynamicArray<FaceToThreeVerts> cudaFaces;
 
     Matrix4 xf;
     Matrix4 refXf;
@@ -33,18 +32,21 @@ PointsToMeshProjector::PointsToMeshProjector()
 void PointsToMeshProjector::updateMeshData( std::shared_ptr<const MR::Mesh> mesh )
 {
     if ( !mesh )
+    {
+        mesh_.reset();
         return;
+    }
 
     const AABBTree& tree = mesh->getAABBTree();
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh->points;
-    const auto& edges = mesh->topology.edges();
-    const auto& edgePerFace = mesh->topology.edgePerFace();
+    const auto tris = mesh->topology.getTriangulation();
 
     meshData_->cudaMeshPoints.fromVector( meshPoints.vec_ );
     meshData_->cudaNodes.fromVector( nodes.vec_ );
-    meshData_->cudaEdges.fromVector( edges.vec_ );
-    meshData_->cudaEdgePerFace.fromVector( edgePerFace.vec_ );
+    meshData_->cudaFaces.fromVector( tris.vec_ );
+
+    mesh_ = std::move( mesh );
 }
 
 void PointsToMeshProjector::findProjections(
@@ -82,8 +84,23 @@ void PointsToMeshProjector::findProjections(
     meshData_->cudaPoints.fromVector( points );
     meshData_->cudaResult.resize( size );
 
-    meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaEdges.data(), meshData_->cudaEdgePerFace.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
+    meshProjectionKernel( meshData_->cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), meshData_->cudaResult.data(), meshData_->xf, meshData_->refXf, upDistLimitSq, loDistLimitSq, size );
     meshData_->cudaResult.toVector( res );
+
+    // put valid edge in MeshTriPoints
+    assert( mesh_ );
+    if ( !mesh_ )
+        return;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, res.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( res[i].proj.face )
+                res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
+            else
+                assert( !res[i].mtp.e );
+        }
+    } );
 }
 
 }

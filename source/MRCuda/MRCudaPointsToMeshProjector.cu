@@ -119,8 +119,8 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
         return;
 
     const auto pt = xf.isIdentity ? points[index] : xf.transform( points[index] );
-    auto& res = resVec[index];
-    res.distSq = upDistLimitSq;    
+    MeshProjectionResult res;
+    res.distSq = upDistLimitSq;
     res.mtp.edgeId = -1;
     res.proj.faceId = -1;
     struct SubTask
@@ -204,6 +204,7 @@ __global__ void kernel( const float3* points, const Node3* nodes, const float3* 
         addSubTask( s1 ); // larger distance to look later
         addSubTask( s2 ); // smaller distance to look first
     }
+    resVec[index] = res;
 }
 
 void meshProjectionKernel( const float3* points, 

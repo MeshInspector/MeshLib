@@ -25,6 +25,11 @@ MRMESH_API VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::fi
 /// Save voxels in raw format with each value as 32-bit float in given binary stream
 MRMESH_API VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
+/// Save voxels in Gav-format in given file
+MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback = {} );
+/// Save voxels in Gav-format in given binary stream
+MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
+
 /// Save vdb voxels file, using openVdb methods
 MRMESH_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );

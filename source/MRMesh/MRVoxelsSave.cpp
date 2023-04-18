@@ -9,10 +9,12 @@
 #include "MRMeshTexture.h"
 #include "MRTimer.h"
 #include "MRPch/MROpenvdb.h"
+#include "MRPch/MRJson.h"
 #include <fmt/format.h>
 #include <openvdb/io/File.h>
 #include <fstream>
 #include <filesystem>
+#include <sstream>
 
 #if FMT_VERSION < 80000
     const std::string & runtime( const std::string & str )
@@ -34,7 +36,8 @@ namespace VoxelsSave
 const IOFilters Filters = 
 {
     {"Raw (.raw)","*.raw"},
-    {"OpenVDB (.vdb)","*.vdb"}
+    {"OpenVDB (.vdb)","*.vdb"},
+    {"Micro CT (.gav)","*.gav"}
 };
 
 VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
@@ -121,7 +124,56 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
 
     return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
 }
- 
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return addFileNameInError( toGav( vdbVolume, out, callback ), file );
+}
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+{
+    MR_TIMER
+    Json::Value headerJson;
+    headerJson["ValueType"] = "Float";
+
+    Json::Value dimsJson;
+    dimsJson["X"] = vdbVolume.dims.x;
+    dimsJson["Y"] = vdbVolume.dims.y;
+    dimsJson["Z"] = vdbVolume.dims.z;
+    headerJson["Dimensions"] = dimsJson;
+
+    Json::Value voxJson;
+    voxJson["X"] = vdbVolume.voxelSize.x;
+    voxJson["Y"] = vdbVolume.voxelSize.y;
+    voxJson["Z"] = vdbVolume.voxelSize.z;
+    headerJson["VoxelSize"] = voxJson;
+
+    Json::Value rangeJson;
+    rangeJson["Min"] = vdbVolume.min;
+    rangeJson["Max"] = vdbVolume.max;
+    headerJson["Range"] = rangeJson;
+
+    std::ostringstream oss;
+    Json::StreamWriterBuilder builder;
+    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
+    if ( writer->write( headerJson, &oss ) != 0 || !oss )
+        return tl::make_unexpected( "Header composition error" );
+
+    const auto header = oss.str();
+    const auto headerLen = uint32_t( header.size() );
+    out.write( (const char*)&headerLen, sizeof( headerLen ) );
+    out.write( header.data(), headerLen );
+    if ( !out )
+        return tl::make_unexpected( "Header write error" );
+    
+    return toRawFloat( vdbVolume, out, callback );
+}
+
 VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
@@ -146,6 +198,8 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
 
     if ( ext == ".raw" )
         return toRawAutoname( vdbVolume, file, callback );
+    else if ( ext == ".gav" )
+        return toGav( vdbVolume, file, callback );
     else if ( ext == ".vdb" )
         return toVdb( vdbVolume, file, callback );
     else

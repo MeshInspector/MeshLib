@@ -19,9 +19,9 @@ void BitSetParallelForAll( const BS & bs, F f )
 {
     using IndexType = typename BS::IndexType;
 
-    const int endBlock = int( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, endBlock ), 
-        [&]( const tbb::blocked_range<int> & range )
+    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ), 
+        [&]( const tbb::blocked_range<size_t> & range )
         {
             IndexType id{ range.begin() * BitSet::bits_per_block };
             const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
@@ -47,16 +47,16 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
 
     using IndexType = typename BS::IndexType;
 
-    const int endBlock = int( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
     auto mainThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
-    tbb::parallel_for( tbb::blocked_range<int>( 0, endBlock ),
-        [&] ( const tbb::blocked_range<int>& range )
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
         IndexType id{ range.begin() * BitSet::bits_per_block };
         const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
-        auto idBegin = int( id );
-        auto idRange = float( int( idEnd ) - idBegin );
+        auto idBegin = size_t( id );
+        auto idRange = float( size_t( idEnd ) - idBegin );
         for ( ; id < idEnd; ++id )
         {
             if ( !keepGoing.load( std::memory_order_relaxed ) )
@@ -64,7 +64,7 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
             f( id );
             if ( std::this_thread::get_id() == mainThreadId )
             {
-                if ( !progressCb( float( int( id ) - idBegin ) / idRange ) )
+                if ( !progressCb( float( size_t( id ) - idBegin ) / idRange ) )
                     keepGoing.store( false, std::memory_order_relaxed );
             }
         }

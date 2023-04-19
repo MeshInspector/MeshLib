@@ -63,6 +63,21 @@ __device__ inline float dot( const float3& a, const float3& b )
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+__device__ inline float3 cross( const float3& a, const float3& b )
+{
+    return make_float3(
+        a.y*b.z - a.z*b.y,
+        a.z*b.x - a.x*b.z,
+        a.x*b.y - a.y*b.x
+    );
+}
 
+__device__ inline float3 normalize( const float3& v )
+{
+    float invLen = 1.0f / sqrtf( lengthSq( v ) );
+    return v * invLen;
 }
-}
+
+} //namespace Cuda
+
+} //namespace MR

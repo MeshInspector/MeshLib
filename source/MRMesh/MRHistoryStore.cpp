@@ -1,5 +1,6 @@
 #include "MRHistoryStore.h"
 #include "MRCombinedHistoryAction.h"
+#include "MRPch/MRSpdlog.h"
 #include <cassert>
 
 namespace MR
@@ -19,6 +20,7 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
         scopedBlock_.push_back( action );
         return;
     }
+    spdlog::info( "History action append: \"{}\"", action->name() );
 
     stack_.resize( firstRedoIndex_ + 1 );
     stack_[firstRedoIndex_] = action;
@@ -74,7 +76,10 @@ bool HistoryStore::undo()
         return false;
     assert( stack_.size() >= firstRedoIndex_ );
     if ( stack_[firstRedoIndex_ - 1] )
+    {
+        spdlog::info( "History action undo: \"{}\"", stack_[firstRedoIndex_ - 1]->name() );
         stack_[firstRedoIndex_ - 1]->action( HistoryAction::Type::Undo );
+    }
     --firstRedoIndex_;
     changedSignal( *this, ChangeType::Undo );
     return true;
@@ -85,7 +90,10 @@ bool HistoryStore::redo()
     if ( firstRedoIndex_ >= stack_.size() )
         return false;
     if ( stack_[firstRedoIndex_] )
+    {
+        spdlog::info( "History action redo: \"{}\"", stack_[firstRedoIndex_]->name() );
         stack_[firstRedoIndex_]->action( HistoryAction::Type::Redo );
+    }
     ++firstRedoIndex_;
     changedSignal( *this, ChangeType::Redo );
     return true;

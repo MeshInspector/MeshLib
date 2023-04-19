@@ -87,14 +87,14 @@ __device__ ClosestPointRes closestPointInTriangle( const float3& p, const float3
     }
 
     const float vb = d5 * d2 - d1 * d6;
-    if ( vb <= 0 && d2 >= 0 && d6 <= 0 )
+    if ( vb <= 0 && d6 <= 0 )
     {
         const float v = d2 / ( d2 - d6 );
         return { { 0, v }, a + ac * v };
     }
 
     const float va = d3 * d6 - d5 * d4;
-    if ( va <= 0 && ( d4 - d3 ) >= 0 && ( d5 - d6 ) >= 0 )
+    if ( va <= 0 )
     {
         const float v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
         return { { 1 - v, v }, b + ( c - b ) * v };

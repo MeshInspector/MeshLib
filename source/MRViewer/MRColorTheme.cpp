@@ -420,8 +420,12 @@ void ColorTheme::resetImGuiStyle()
     style.Colors[ImGuiCol_FrameBg] = ImVec4( frameBg.x, frameBg.y, frameBg.z, frameBg.w );
     style.Colors[ImGuiCol_Header] = ImVec4( headerBg.x, headerBg.y, headerBg.z, headerBg.w );
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
+    style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
 
+    style.ScrollbarSize = 8.0f;
+    style.ScrollbarRounding = 4.0f;
     style.FrameRounding = 5.0f;
+    style.GrabRounding = style.FrameRounding;
     style.FramePadding.y = 5.0f;
     style.ItemSpacing.y = 6.0f;
 

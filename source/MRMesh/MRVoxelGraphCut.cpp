@@ -66,9 +66,9 @@ private:
     std::deque<SeqVoxelId> active_;
     std::vector<SeqVoxelId> orphans_;
     //statistics:
-    int growths_ = 0;
-    int augmentations_ = 0;
-    int adoptions_ = 0;
+    size_t growths_ = 0;
+    size_t augmentations_ = 0;
+    size_t adoptions_ = 0;
     double totalFlow_ = 0;
     //std::ofstream f_{R"(D:\logs\voxelgc.txt)"};
 
@@ -92,6 +92,8 @@ private:
     bool isGrandparent_( SeqVoxelId s, SeqVoxelId sGrand ) const;
     // checks that there is not saturated path from f to a root
     bool checkNotSaturatedPath_( SeqVoxelId s, Side side ) const;
+    // print current statistics in spdlog
+    void logStatistics_() const;
 };
 
 void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
@@ -102,12 +104,18 @@ void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const Voxel
     region.resize( size_, true );
     region -= sourceSeeds;
     region -= sinkSeeds;
-    const auto sz0 = region.count();
+    const auto cnt0 = region.count();
     expandVoxelsMask( region, *this );
-    const auto sz = region.count();
-    spdlog::info( "VoxelGraphCut: {} voxels to classify, {} including extra layer", sz0, sz );
+    const auto cnt = region.count();
+    const auto srcCnt = sourceSeeds.count();
+    const auto snkCnt = sinkSeeds.count();
+    spdlog::info( "VoxelGraphCut: {} ({:.3}%) source voxels, {} ({:.3}%) sink voxels, {} ({:.3}%) voxels to classify, {} ({:.3}%) including extra layer", 
+        srcCnt, float( 100 * srcCnt ) / size_,
+        snkCnt, float( 100 * snkCnt ) / size_,
+        cnt0, float( 100 * cnt0 ) / size_,
+        cnt, float( 100 * cnt ) / size_ );
 
-    seq2voxel_.reserve( sz );
+    seq2voxel_.reserve( cnt );
     voxel2seq_.resize( size_ );
     for ( auto vid : region )
     {
@@ -263,19 +271,20 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
     if ( cb && !cb( 0.5f ) )
         return VoxelBitSet{};
     
-    for ( int i = 0; !active_.empty(); ++i )
+    for ( size_t i = 0; !active_.empty(); ++i )
     {
-        if ( cb && ( i % 128 == 0 ) )
+        constexpr size_t STEP = 1024ull * 1024;
+        if ( cb && ( i % STEP == 0 ) )
         {
             progress += ( targetProgress - progress ) * 0.5f;
             if ( !cb( progress ) )
                 return tl::make_unexpected( "Operation was canceled" );
         }
-
         auto f = active_.front();
         active_.pop_front();
         processActive_( f );
     }
+    logStatistics_();
 
     if ( cb && !cb( targetProgress ) )
         return tl::make_unexpected( "Operation was canceled" );
@@ -284,17 +293,16 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
     for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
         if ( voxelData_[s].side() == Side::Source )
             res.set( seq2voxel_[s] );
-    std::stringstream ss;
-    ss << "VoxelGraphCut statisitcs:\n"
-        "  res.count: " << res.count() << "\n"
-        "  source seed count: " << sourceSeeds.count() << "\n"
-        "  sink seed count: " << sinkSeeds.count() << "\n"
-        "  growths: " << growths_ << "\n"
-        "  augmentations: " << augmentations_ << "\n"
-        "  adoptions: " << adoptions_ << "\n"
-        "  total flow: " << totalFlow_ << std::endl;
-    spdlog::info( ss.str() );
+    const auto resCnt = res.count();
+    spdlog::info( "VoxelGraphCut result: {} ({:.3}%) source voxels, {} ({:.3}%) sink voxels",
+        resCnt, float( 100 * resCnt ) /size_,
+        size_ - resCnt, float( 100 * ( size_ - resCnt ) ) /size_ );
     return res;
+}
+
+void VoxelGraphCut::logStatistics_() const
+{
+    spdlog::info( "VoxelGraphCut: {} augmentations, {} growths, {} adoptions; total flow = {} ", augmentations_, growths_, adoptions_, totalFlow_ );
 }
 
 inline float VoxelGraphCut::edgeCapacity_( Side side, SeqVoxelId s, OutEdge vOutEdge, SeqVoxelId neis )
@@ -373,6 +381,9 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
         if ( minResidualCapacity == 0 )
             break;
         ++augmentations_;
+        constexpr size_t STEP = 1024ull * 1024;
+        if ( augmentations_ % STEP == 0 )
+            logStatistics_();
 
         for ( auto s = sSource;; )
         {

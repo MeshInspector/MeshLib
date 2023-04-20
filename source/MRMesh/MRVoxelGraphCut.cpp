@@ -186,7 +186,7 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
         }
     }
 
-    for ( int i = 0; ; ++i )
+    for (;;)
     {
         auto top = minPathCapacity.setTopValue( -1.0f );
         const SeqVoxelId s{ top.id };

@@ -252,7 +252,10 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
 
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
+    
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, int( buffer.glSize() ) ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )

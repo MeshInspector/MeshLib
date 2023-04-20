@@ -99,7 +99,10 @@ void RenderLinesObject::render( const RenderParams& renderParams )
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, lineIndicesSize_ );
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
+
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
     GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
 
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
@@ -133,8 +136,10 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
-    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
 
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
     // Fedor: should not we draw points here as well?
 }
 

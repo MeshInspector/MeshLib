@@ -193,9 +193,8 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
 static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
-static EM_BOOL emsStaticDraw( double, void* ptr )
+static EM_BOOL emsEmptyCallback( double, void* )
 {
-    MR::getViewerInstance().emsDraw( bool( ptr ) );
     return EM_TRUE;
 }
 #endif
@@ -1254,38 +1253,27 @@ void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const Affine
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
 }
 
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-void Viewer::emsDraw( bool force )
-{
-    draw_( force );
-}
-#endif
-
 void Viewer::draw( bool force )
 {
 #ifdef __EMSCRIPTEN__
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
-    if ( forceRedrawFramesWithoutSwap_ == 0 )
+    if ( draw_( true ) )
     {
-        emscripten_request_animation_frame( emsStaticDraw, force ? ( void* ) 1 : nullptr ); // call with swap
+        emscripten_request_animation_frame( emsEmptyCallback, nullptr ); // call with swap
         emscripten_sleep( minEmsSleep );
     }
-    else
-        draw_( true );
 #else
-    while ( forceRedrawFramesWithoutSwap_ > 0 )
-        draw_( true );
-    draw_( true );
+    while ( !draw_( true ) );
 #endif
 #else
     draw_( force );
 #endif
 }
 
-void Viewer::draw_( bool force )
+bool Viewer::draw_( bool force )
 {
     if ( !force && !needRedraw_() )
-        return;
+        return false;
 
     if ( !isInDraw_ )
         isInDraw_ = true;
@@ -1294,7 +1282,7 @@ void Viewer::draw_( bool force )
         spdlog::error( "Recursive draw call is not allowed" );
         assert( false );
         // if this happens try to use CommandLoop instead of in draw call
-        return;
+        return false;
     }
 
     frameCounter_.startDraw();
@@ -1322,6 +1310,7 @@ void Viewer::draw_( bool force )
         glfwSwapBuffers( window );
     frameCounter_.endDraw( swapped );
     isInDraw_ = false;
+    return ( window && swapped );
 }
 
 void Viewer::drawScene()
@@ -1424,7 +1413,7 @@ void Viewer::postResize( int w, int h )
     if ( isLaunched_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
-        do draw( true ); while ( !isCurrentFrameSwapping() );
+        while ( !draw_( true ) );
     }
 #endif
 }

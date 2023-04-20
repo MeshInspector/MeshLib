@@ -48,6 +48,7 @@ private:
 static_assert( sizeof( VoxelData ) == 1 );
 
 class SeqVoxelTag;
+/// sequential id of a voxel in the region of interest (which is typically much smaller then the whole volume)
 using SeqVoxelId = Id<SeqVoxelTag>;
 
 class VoxelGraphCut : public VolumeIndexer

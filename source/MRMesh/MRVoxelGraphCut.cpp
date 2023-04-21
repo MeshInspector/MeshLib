@@ -389,10 +389,10 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
         {
             assert( voxelData_[s].side() == Side::Source );
             auto edgeToParent = voxelData_[s].parent();
-            const auto v = seq2voxel_[s];
-            auto vParent = getNeighbor( v, edgeToParent );
-            if ( !vParent )
+            if ( edgeToParent == OutEdge::Invalid )
                 break;
+            const auto v = seq2voxel_[s];
+            auto vParent = getExistingNeighbor( v, edgeToParent );
             auto sParent = voxel2seq_[vParent];
             assert( sParent );
             minResidualCapacity = std::min( minResidualCapacity, capacity_[ sParent ].forOutEdge[ (int)opposite( edgeToParent ) ] );
@@ -402,10 +402,10 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
         {
             assert( voxelData_[s].side() == Side::Sink );
             auto edgeToParent = voxelData_[s].parent();
-            const auto v = seq2voxel_[s];
-            auto vParent = getNeighbor( v, edgeToParent );
-            if ( !vParent )
+            if ( edgeToParent == OutEdge::Invalid )
                 break;
+            const auto v = seq2voxel_[s];
+            auto vParent = getExistingNeighbor( v, edgeToParent );
             auto sParent = voxel2seq_[vParent];
             assert( sParent );
             minResidualCapacity = std::min( minResidualCapacity, capacity_[ s ].forOutEdge[ (int) edgeToParent ] );
@@ -423,10 +423,10 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
         {
             assert( voxelData_[s].side() == Side::Source );
             auto edgeToParent = voxelData_[s].parent();
-            const auto v = seq2voxel_[s];
-            auto vParent = getNeighbor( v, edgeToParent );
-            if ( !vParent )
+            if ( edgeToParent == OutEdge::Invalid )
                 break;
+            const auto v = seq2voxel_[s];
+            auto vParent = getExistingNeighbor( v, edgeToParent );
             auto sParent = voxel2seq_[vParent];
             assert( sParent );
             capacity_[ s ].forOutEdge[ (int) edgeToParent ] += minResidualCapacity;
@@ -442,10 +442,10 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
         {
             assert( voxelData_[s].side() == Side::Sink );
             auto edgeToParent = voxelData_[s].parent();
-            const auto v = seq2voxel_[s];
-            auto vParent = getNeighbor( v, edgeToParent );
-            if ( !vParent )
+            if ( edgeToParent == OutEdge::Invalid )
                 break;
+            const auto v = seq2voxel_[s];
+            auto vParent = getExistingNeighbor( v, edgeToParent );
             auto sParent = voxel2seq_[vParent];
             assert( sParent );
             capacity_[ sParent ].forOutEdge[ (int)opposite( edgeToParent ) ] += minResidualCapacity;
@@ -546,9 +546,9 @@ bool VoxelGraphCut::isGrandparent_( SeqVoxelId s, SeqVoxelId sGrand ) const
     while ( s != sGrand )
     {
         auto edgeToParent = voxelData_[s].parent();
-        auto vParent = getNeighbor( seq2voxel_[s], edgeToParent );
-        if ( !vParent )
+        if ( edgeToParent == OutEdge::Invalid )
             return false;
+        auto vParent = getExistingNeighbor( seq2voxel_[s], edgeToParent );
         s = voxel2seq_[vParent];
         assert( s );
     }
@@ -563,10 +563,10 @@ bool VoxelGraphCut::checkNotSaturatedPath_( SeqVoxelId s, Side side ) const
         const auto & vd = voxelData_[s];
         assert( vd.side() == side );
         auto edgeToParent = vd.parent();
-        const auto v = seq2voxel_[s];
-        auto vParent = getNeighbor( v, edgeToParent );
-        if ( !vParent )
+        if ( edgeToParent == OutEdge::Invalid )
             return true;
+        const auto v = seq2voxel_[s];
+        auto vParent = getExistingNeighbor( v, edgeToParent );
         auto sParent = voxel2seq_[vParent];
         assert( sParent );
         if ( side == Side::Source )

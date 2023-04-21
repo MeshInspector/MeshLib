@@ -208,12 +208,14 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
 
         bool neiboursOtherSide = false;
         const auto v = seq2voxel_[s];
+        const auto pos = toPos( v );
+        const auto bdPos = isBdVoxel( pos );
         const bool vIsSeed = sourceSeeds.test( v ) || sinkSeeds.test( v );
         for ( auto e : all6Edges )
         {
             if ( e == edgeToParent )
                 continue;
-            auto neiv = getNeighbor( v, e );
+            auto neiv = getNeighbor( v, pos, bdPos, e );
             if ( !neiv )
                 continue;
             auto neis = voxel2seq_[neiv];
@@ -324,14 +326,15 @@ void VoxelGraphCut::processActive_( SeqVoxelId s )
         return; // voxel has changed the side since the moment it was put in the queue
 
     auto v = seq2voxel_[s];
-    auto pos = toPos( v );
+    const auto pos = toPos( v );
+    const auto bdPos = isBdVoxel( pos );
     auto edgeToParent = vd.parent();
 
     for ( auto e : all6Edges )
     {
         if ( e == edgeToParent )
             continue;
-        auto neiv = getNeighbor( v, pos, e );
+        auto neiv = getNeighbor( v, pos, bdPos, e );
         if ( !neiv )
             continue;
         auto neis = voxel2seq_[neiv];
@@ -476,9 +479,10 @@ void VoxelGraphCut::adopt_()
         assert( vd.parent() == OutEdge::Invalid );
         const auto v = seq2voxel_[s];
         const auto pos = toPos( v );
+        const auto bdPos = isBdVoxel( pos );
         for ( auto e : all6Edges )
         {
-            auto neiv = getNeighbor( v, pos, e );
+            auto neiv = getNeighbor( v, pos, bdPos, e );
             if ( !neiv )
                 continue;
             const auto neis = voxel2seq_[neiv];
@@ -508,7 +512,7 @@ void VoxelGraphCut::adopt_()
             float bestCapacity = 0;
             for ( auto e : all6Edges )
             {
-                auto neiv = getNeighbor( v, pos, e );
+                auto neiv = getNeighbor( v, pos, bdPos, e );
                 if ( !neiv )
                     continue;
                 const auto neis = voxel2seq_[neiv];

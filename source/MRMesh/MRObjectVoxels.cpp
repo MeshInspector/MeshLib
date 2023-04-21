@@ -145,8 +145,8 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( std::move( downsampledGrid ), 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-        if ( !meshRes.has_value() )
+        meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
             return tl::make_unexpected( meshRes.error() );
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );

@@ -47,7 +47,7 @@ class SaveObjectMenuItem : public RibbonMenuItem,
     , SceneStateExactCheck<1, ObjectPoints>
     , SceneStateExactCheck<1, ObjectDistanceMap>
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-    , SceneStateExactCheck<1, ObjectVoxels> 
+    , SceneStateExactCheck<1, ObjectVoxels, NoVisualRepresentationCheck>
 #endif
     >
 {

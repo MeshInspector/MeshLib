@@ -56,11 +56,14 @@ public:
     /// returns id of v's neighbor specified by the edge
     VoxelId getNeighbor( VoxelId v, OutEdge toNei ) const { return getNeighbor( v, toPos( v ), toNei ); }
     MRMESH_API VoxelId getNeighbor( VoxelId v, const Vector3i & pos, OutEdge toNei ) const;
+    /// returns id of v's neighbor specified by the edge, which is known to exist (so skipping a lot of checks)
+    VoxelId getExistingNeighbor( VoxelId v, OutEdge toNei ) const;
 
 protected:
     Vector3i dims_;
     size_t sizeXY_ = 0; ///< = dims_.x * dims_.y
     size_t size_ = 0; ///< = dims_.x * dims_.y * dims_.z
+    int neiInc_[ OutEdgeCount ] = {};
 };
 
 inline VolumeIndexer::VolumeIndexer( const Vector3i & dims ) 
@@ -68,6 +71,12 @@ inline VolumeIndexer::VolumeIndexer( const Vector3i & dims )
     , sizeXY_( size_t( dims_.x ) * dims_.y ) 
     , size_( sizeXY_ * dims_.z ) 
 { 
+    neiInc_[(int)OutEdge::PlusZ]  = (int)sizeXY_;
+    neiInc_[(int)OutEdge::MinusZ] =-(int)sizeXY_;
+    neiInc_[(int)OutEdge::PlusY] =  dims_.x;
+    neiInc_[(int)OutEdge::MinusY] =-dims_.x;
+    neiInc_[(int)OutEdge::PlusX] =  1;
+    neiInc_[(int)OutEdge::MinusX] =-1;
 }
 
 inline Vector3i VolumeIndexer::toPos( VoxelId id ) const
@@ -83,6 +92,12 @@ inline Vector3i VolumeIndexer::toPos( VoxelId id ) const
 inline VoxelId VolumeIndexer::toVoxelId( const Vector3i & pos ) const
 {
     return VoxelId{ pos.x + pos.y * size_t(dims_.x) + pos.z * sizeXY_ };
+}
+
+inline VoxelId VolumeIndexer::getExistingNeighbor( VoxelId v, OutEdge toNei ) const
+{ 
+    assert( toNei > OutEdge::Invalid && toNei < OutEdge::Count );
+    return VoxelId( size_t( v ) + neiInc_[(int)toNei] ); 
 }
 
 /// expands VoxelBitSet with given number of steps

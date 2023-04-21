@@ -151,6 +151,7 @@ void ObjectTransformWidget::reset()
     disconnect();
     xfValidatorConnection_.disconnect();
 
+    modesValidator_ = {};
     startModifyCallback_ = {};
     stopModifyCallback_ = {};
     addXfCallback_ = {};
@@ -234,18 +235,16 @@ void ObjectTransformWidget::setParams( const Params & params )
     makeControls_();
 }
 
-void ObjectTransformWidget::setTransformMode( uint8_t mask )
+void ObjectTransformWidget::setTransformMode( uint8_t mask, ViewportId vpId )
 {
     if ( !controlsRoot_ )
         return;
-    if ( transformModeMask_ == mask )
+    if ( transformModeMask_.get( vpId ) == mask )
         return;
 
-    transformModeMask_ = mask;
+    transformModeMask_.set( mask, vpId );
 
-    auto visMask = controlsRoot_->visibilityMask();
-    
-    updateVisualTransformMode_( transformModeMask_, visMask );
+    updateVisualTransformMode_( mask, vpId ? vpId : controlsRoot_->visibilityMask() );    
 }
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
@@ -256,6 +255,41 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
 AffineXf3f ObjectTransformWidget::getControlsXf( ViewportId id ) const
 {
     return controlsRoot_->xf( id );
+}
+
+ObjectTransformWidget::ModesValidator ObjectTransformWidget::ThresholdDotValidator( float thresholdDot )
+{
+    if ( thresholdDot <= 0.0f )
+        return {};
+    return [thresholdDot] ( const ObjectTransformWidget& widget, ViewportId vpId )
+    {
+        const auto& xf = widget.getControlsXf( vpId );
+        auto transformedCenter = xf( widget.getCenter() );
+        auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
+        auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
+
+        uint8_t showMask = FullMask;
+
+        bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot;
+        bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot;
+        bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot;
+
+        if ( xHide )
+            showMask &= ~RotX;
+        if ( yHide )
+            showMask &= ~RotY;
+        if ( zHide )
+            showMask &= ~RotZ;
+
+        if ( xHide && yHide )
+            showMask &= ~MoveZ;
+        if ( xHide && zHide )
+            showMask &= ~MoveY;
+        if ( yHide && zHide )
+            showMask &= ~MoveX;
+
+        return showMask;
+    };
 }
 
 void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& obj )
@@ -319,33 +353,9 @@ void ObjectTransformWidget::preDraw_()
     auto vpmask = controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports();
     for ( auto vpId : vpmask )
     {
-        auto showMask = transformModeMask_;
-
-        if ( thresholdDot_ > 0.0f )
-        {
-            const auto& xf = controlsRoot_->xf( vpId );
-            auto transformedCenter = xf( center_ );
-            auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
-            auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
-
-            bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot_;
-            bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot_;
-            bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot_;
-
-            if ( xHide )
-                showMask &= ~RotX;
-            if ( yHide )
-                showMask &= ~RotY;
-            if ( zHide )
-                showMask &= ~RotZ;
-
-            if ( xHide && yHide )
-                showMask &= ~MoveZ;
-            if ( xHide && zHide )
-                showMask &= ~MoveY;
-            if ( yHide && zHide )
-                showMask &= ~MoveX;
-        }
+        auto showMask = transformModeMask_.get( vpId );
+        if ( modesValidator_ )
+            showMask &= modesValidator_( *this, vpId );
         updateVisualTransformMode_( showMask, vpId );
     }
 }

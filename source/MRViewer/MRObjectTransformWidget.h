@@ -5,6 +5,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRViewer.h"
 #include "MRMesh/MRHistoryAction.h"
+#include "MRMesh/MRViewportProperty.h"
 #include <boost/signals2/signal.hpp>
 #include <array>
 #include <functional>
@@ -26,7 +27,8 @@ public:
         RotZ = 0x4,
         MoveX = 0x8,
         MoveY = 0x10,
-        MoveZ = 0x20
+        MoveZ = 0x20,
+        FullMask = 0x3f
     };
     struct Params
     {
@@ -69,10 +71,13 @@ public:
     // set current parameters of this widget
     MRVIEWER_API void setParams( const Params & );
 
+    // returns center of the widget in local space
+    const Vector3f& getCenter() const { return center_; }
+
     // Returns current transform mode mask
-    uint8_t getTransformModeMask() const { return transformModeMask_; }
+    uint8_t getTransformModeMask( ViewportId id = {} ) const { return transformModeMask_.get( id ); }
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
-    MRVIEWER_API void setTransformMode( uint8_t mask );
+    MRVIEWER_API void setTransformMode( uint8_t mask, ViewportId id = {} );
 
     // Enables or disables pick through mode, in this mode controls will be picked even if they are occluded by other objects
     void setPickThrough( bool on ) { pickThrough_ = on; }
@@ -102,10 +107,13 @@ public:
     MRVIEWER_API void setControlsXf( const AffineXf3f& xf, ViewportId id = {} );
     MRVIEWER_API AffineXf3f getControlsXf( ViewportId id = {} ) const;
 
-    // Returns threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
-    float getThresholdDot() const { return thresholdDot_; }
-    // Sets threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
-    void setThresholdDot( float thresholdDot ) { thresholdDot_ = thresholdDot; }
+    // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
+    // if not set, full mask is return
+    using ModesValidator = std::function<uint8_t( const ObjectTransformWidget&, ViewportId )>;
+    void setTransformModesValidator( ModesValidator validator ) { modesValidator_ = validator; }
+
+    // returns ModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
+    MRVIEWER_API static ModesValidator ThresholdDotValidator( float thresholdDot );
 
     // Subscribes to object visibility, and behave like its child
     // if obj argument is null, stop following
@@ -242,10 +250,12 @@ private:
     float startAngle_ = 0;
     float accumAngle_ = 0;
 
-    uint8_t transformModeMask_ = 0x3f;
+    ViewportProperty<uint8_t> transformModeMask_{ FullMask };
     float thresholdDot_{ 0.0f };
     bool picked_{ false };
     bool pickThrough_{ false };
+
+    ModesValidator modesValidator_;
 
     std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;

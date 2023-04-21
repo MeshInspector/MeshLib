@@ -1,7 +1,8 @@
 #pragma once
+#include "exports.h"
+#include "MRGladGlfw.h"
 #include <string>
 #include <vector>
-#include "MRGladGlfw.h"
 
 
 namespace MR
@@ -18,12 +19,12 @@ struct ShaderWarning
 using DisabledWarnings = std::vector<ShaderWarning>;
 
 // This function creates shader and logs output
-void createShader( const std::string& shader_name,
+MRVIEWER_API void createShader( const std::string& shader_name,
 	const std::string& vert_source,
 	const std::string& frag_source,
 	GLuint& prog_id,
 	const DisabledWarnings& suppressedWarns = {} );
 
 // Destroys shader program
-void destroyShader( GLuint id );
+MRVIEWER_API void destroyShader( GLuint id );
 }

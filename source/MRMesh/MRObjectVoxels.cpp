@@ -137,7 +137,8 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
 {
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
-    auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+    auto voxelSize = vdbVolume_.voxelSize;
+    auto meshRes = gridToMesh( vdbVolume_.data, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
     if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
         return tl::make_unexpected( meshRes.error() );
 
@@ -145,7 +146,8 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( downsampledGrid, 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        voxelSize *= 2.0f;
+        meshRes = gridToMesh( downsampledGrid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
         if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
             return tl::make_unexpected( meshRes.error() );
     }

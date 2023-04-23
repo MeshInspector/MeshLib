@@ -75,7 +75,7 @@ private:
     // return edge capacity:
     //   from v to vnei for Source side and
     //   from vnei to v for Sink side
-    float edgeCapacity_( Side side, SeqVoxelId s, OutEdge vOutEdge, SeqVoxelId seiv );
+    float edgeCapacity_( Side side, SeqVoxelId s, OutEdge vOutEdge, SeqVoxelId seiv ) const;
     // resizes all data members and fills voxel2seq_, seq2voxel_
     void fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds );
     // fill capacity_
@@ -94,6 +94,8 @@ private:
     bool checkNotSaturatedPath_( SeqVoxelId s, Side side ) const;
     // print current statistics in spdlog
     void logStatistics_() const;
+    // visits all voxels to measure the properties of current cut
+    void computeCurrentCut_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds ) const;
 };
 
 void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
@@ -118,7 +120,7 @@ void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const Voxel
     seq2voxel_.reserve( cnt );
     voxel2seq_.resize( size_ );
     for ( auto vid : region )
-    {
+{
         voxel2seq_[ vid ] = SeqVoxelId( seq2voxel_.size() );
         seq2voxel_.push_back( vid );
     }
@@ -184,12 +186,12 @@ bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const 
     {
         const auto v = seq2voxel_[s];
         if ( sourceSeeds.test( v ) )
-        {
+    {
             voxelData_[s].setSide( Side::Source );
             minPathCapacity.setLargerValue( s, FLT_MAX );
-        }
+    }
         else if ( sinkSeeds.test( v ) )
-        {
+    {
             voxelData_[s].setSide( Side::Sink );
             minPathCapacity.setLargerValue( s, FLT_MAX );
         }
@@ -263,10 +265,11 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
     fillCapacities_( densityVolume, k );
     if ( !reportProgress( cb, 2.0f / 6 ) )
         return tl::make_unexpected( "Operation was canceled" );
-
+    
     buildInitialForest_( sourceSeeds, sinkSeeds );
     if ( !reportProgress( cb, 3.0f / 6 ) )
         return tl::make_unexpected( "Operation was canceled" );
+    computeCurrentCut_( sourceSeeds, sinkSeeds );
     
     float progress = 0.5f;
     const float targetProgress = 1.0f;
@@ -287,6 +290,7 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
         processActive_( f );
     }
     logStatistics_();
+    computeCurrentCut_( sourceSeeds, sinkSeeds );
 
     if ( cb && !cb( targetProgress ) )
         return tl::make_unexpected( "Operation was canceled" );
@@ -307,7 +311,49 @@ void VoxelGraphCut::logStatistics_() const
     spdlog::info( "VoxelGraphCut: {} augmentations, {} growths, {} adoptions; total flow = {} ", augmentations_, growths_, adoptions_, totalFlow_ );
 }
 
-inline float VoxelGraphCut::edgeCapacity_( Side side, SeqVoxelId s, OutEdge vOutEdge, SeqVoxelId neis )
+void VoxelGraphCut::computeCurrentCut_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds ) const
+{
+    MR_TIMER
+    size_t numVoxels[3] = {};
+    size_t totalCutEdges = 0;
+    size_t unsaturatedCutEdges = 0;
+    double cutCapacity = 0;
+    for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
+    {
+        const auto side = voxelData_[s].side();
+        ++numVoxels[(int)side+1];
+        if ( side != Side::Source )
+            continue;
+        const auto v = seq2voxel_[s];
+        const auto pos = toPos( v );
+        const auto bdPos = isBdVoxel( pos );
+        const bool vIsSourceSeed = sourceSeeds.test( v );
+        for ( auto e : all6Edges )
+        {
+            auto neiv = getNeighbor( v, pos, bdPos, e );
+            if ( !neiv )
+                continue;
+            auto neis = voxel2seq_[neiv];
+            if ( !neis )
+                continue;
+            if ( voxelData_[neis].side() != Side::Sink )
+                continue;
+            if ( vIsSourceSeed && sinkSeeds.test( neiv ) )
+                continue;
+            ++totalCutEdges;
+            const float edgeCapacity = edgeCapacity_( Side::Source, s, e, neis );
+            if ( edgeCapacity > 0 )
+            {
+                ++unsaturatedCutEdges;
+                cutCapacity += edgeCapacity;
+            }
+        }
+    }
+    spdlog::info( "VoxelGraphCut region: {} unknown voxels, {} source voxels, {} sink voxels", numVoxels[0], numVoxels[1], numVoxels[2] );
+    spdlog::info( "VoxelGraphCut cut: {} total cut edges, {} unsaturated cut edges, cut capacity = {}", totalCutEdges, unsaturatedCutEdges, cutCapacity );
+}
+
+inline float VoxelGraphCut::edgeCapacity_( Side side, SeqVoxelId s, OutEdge vOutEdge, SeqVoxelId neis ) const
 {
     assert( s && neis );
     assert( getNeighbor( seq2voxel_[s], vOutEdge ) == seq2voxel_[neis] );
@@ -480,6 +526,9 @@ void VoxelGraphCut::adopt_()
         const auto v = seq2voxel_[s];
         const auto pos = toPos( v );
         const auto bdPos = isBdVoxel( pos );
+        OutEdge bestParent = OutEdge::Invalid, bestOtherSideParent = OutEdge::Invalid;
+        float bestCapacity = 0, bestOtherSideCapacity = 0;
+        bool directChild[OutEdgeCount] = {};
         for ( auto e : all6Edges )
         {
             auto neiv = getNeighbor( v, pos, bdPos, e );
@@ -489,57 +538,65 @@ void VoxelGraphCut::adopt_()
             if ( !neis )
                 continue;
             const auto & neid = voxelData_[neis];
-            if ( neid.side() != side )
+            if ( neid.side() == Side::Unknown )
                 continue;
-            float capacity = edgeCapacity_( side, neis, opposite( e ), s );
-            if ( capacity > 0 )
+            if ( opposite( e ) == neid.parent() )
             {
-                if ( isGrandparent_( neis, s ) )
-                    active_.push_front( neis );
-                else
+                assert( neid.side() == side );
+                directChild[(int)e] = true;
+                continue;
+            }
+            if ( neid.side() == side )
+            {
+                float capacity = edgeCapacity_( side, neis, opposite( e ), s );
+                if ( capacity > 0 && ( bestCapacity == 0 || capacity < bestCapacity ) && !isGrandparent_( neis, s ) )
                 {
-                    voxelData_[s].setParent( e );
-                    assert( checkNotSaturatedPath_( s, side ) );
-                    break;
+                    bestParent = e;
+                    bestCapacity = capacity;
+                }
+            }
+            else
+            {
+                float capacity = edgeCapacity_( opposite( side ), neis, opposite( e ), s );
+                if ( capacity > 0 && ( bestOtherSideCapacity == 0 || capacity < bestOtherSideCapacity ) )
+                {
+                    bestOtherSideParent = e;
+                    bestOtherSideCapacity = capacity;
                 }
             }
         }
-        if ( voxelData_[s].parent() == OutEdge::Invalid )
+        if ( bestParent != OutEdge::Invalid )
         {
-            // parent has not been found
-            vd.setSide( Side::Unknown );
-            OutEdge bestOtherSideParent = OutEdge::Invalid;
-            float bestCapacity = 0;
+            vd.setParent( bestParent );
+            assert( checkNotSaturatedPath_( s, side ) );
+            active_.push_front( s );
+        }
+        else
+        {
             for ( auto e : all6Edges )
             {
-                auto neiv = getNeighbor( v, pos, bdPos, e );
-                if ( !neiv )
+                if ( !directChild[(int)e] )
                     continue;
+                auto neiv = getExistingNeighbor( v, e );
                 const auto neis = voxel2seq_[neiv];
-                if ( !neis )
-                    continue;
-                const auto & neid = voxelData_[neis];
-                if ( opposite( e ) == neid.parent() )
-                {
-                    assert( neid.side() == side );
-                    voxelData_[neis].setParent( OutEdge::Invalid );
-                    orphans_.push_back( neis );
-                }
-                if ( neid.side() == opposite( side ) )
-                {
-                    float capacity = edgeCapacity_( side, s, e, neis );
-                    if ( capacity > bestCapacity )
-                    {
-                        bestOtherSideParent = e;
-                        bestCapacity = capacity;
-                    }
-                }
-                if ( bestOtherSideParent != OutEdge::Invalid )
-                {
-                    vd.setSide( opposite( side ) );
-                    vd.setParent( bestOtherSideParent );
-                    active_.push_back( s );
-                }
+                assert( neis );
+                [[maybe_unused]] const auto & neid = voxelData_[neis];
+                assert( opposite( e ) == neid.parent() );
+                assert( neid.side() == side );
+                voxelData_[neis].setParent( OutEdge::Invalid );
+                orphans_.push_back( neis );
+            }
+            if ( bestOtherSideParent != OutEdge::Invalid )
+            {
+                vd.setSide( opposite( side ) );
+                vd.setParent( bestOtherSideParent );
+                assert( checkNotSaturatedPath_( s, opposite( side ) ) );
+                active_.push_back( s );
+            }
+            else
+            {
+                vd.setSide( Side::Unknown );
+                vd.setParent( OutEdge::Invalid );
             }
         }
     }

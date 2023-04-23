@@ -371,8 +371,7 @@ void VoxelGraphCut::findActiveVoxels_()
     for ( auto s : active )
     {
         active_.push_back( s );
-        const auto side = voxelData_[s].side();
-        assert ( side == Side::Source );
+        assert ( voxelData_[s].side() == Side::Source );
         const auto v = seq2voxel_[s];
         const auto pos = toPos( v );
         const auto bdPos = isBdVoxel( pos );

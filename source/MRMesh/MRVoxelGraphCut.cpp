@@ -3,8 +3,8 @@
 #include "MRBitSet.h"
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
-#include "MRHeap.h"
 #include "MRVolumeIndexer.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <deque>
@@ -50,6 +50,7 @@ static_assert( sizeof( VoxelData ) == 1 );
 class SeqVoxelTag;
 /// sequential id of a voxel in the region of interest (which is typically much smaller then the whole volume)
 using SeqVoxelId = Id<SeqVoxelTag>;
+using SeqVoxelBitSet = TaggedBitSet<SeqVoxelTag>;
 
 class VoxelGraphCut : public VolumeIndexer
 {
@@ -63,6 +64,7 @@ private:
     Vector<VoxelId, SeqVoxelId> seq2voxel_;
     Vector<VoxelOutEdgeCapacity, SeqVoxelId> capacity_;
     Vector<VoxelData, SeqVoxelId> voxelData_;
+    SeqVoxelBitSet sourceSeeds_, sinkSeeds_;
     std::deque<SeqVoxelId> active_;
     std::vector<SeqVoxelId> orphans_;
     //statistics:
@@ -81,7 +83,7 @@ private:
     // fill capacity_
     void fillCapacities_( const SimpleVolume & densityVolume, float k );
     // constructs initial forest of paths processing vertices in min-edge-capacity-in-path-till-vertex order
-    bool buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds );
+    bool buildInitialForest_();
     // process neighborhood of given active voxel
     void processActive_( SeqVoxelId s );
     // augment the path joined at neighbor voxels vSource and vSink
@@ -94,8 +96,9 @@ private:
     bool checkNotSaturatedPath_( SeqVoxelId s, Side side ) const;
     // print current statistics in spdlog
     void logStatistics_() const;
-    // visits all voxels to measure the properties of current cut
-    void computeCurrentCut_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds ) const;
+    // visits all voxels to find active voxels, where augmentation is necessary;
+    // also measures and logs the properties of the current cut
+    void findActiveVoxels_();
 };
 
 void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
@@ -125,6 +128,32 @@ void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const Voxel
         seq2voxel_.push_back( vid );
     }
     voxelData_.resize( seq2voxel_.size() );
+    sourceSeeds_.resize( seq2voxel_.size() );
+    sinkSeeds_.resize( seq2voxel_.size() );
+
+    assert( size_ == sourceSeeds.size() );
+    assert( size_ == sinkSeeds.size() );
+    assert( sourceSeeds.any() );
+    assert( sinkSeeds.any() );
+    assert( ( sourceSeeds & sinkSeeds ).count() == 0 );
+    BitSetParallelForAll( sourceSeeds_, [&]( SeqVoxelId s )
+    {
+        auto v = seq2voxel_[s];
+        if ( sourceSeeds.test( v ) )
+        {
+            voxelData_[s].setSide( Side::Source );
+            sourceSeeds_.set( s );
+        }
+    } );
+    BitSetParallelForAll( sinkSeeds_, [&]( SeqVoxelId s )
+    {
+        auto v = seq2voxel_[s];
+        if ( sinkSeeds.test( v ) )
+        {
+            voxelData_[s].setSide( Side::Sink );
+            sinkSeeds_.set( s );
+        }
+    } );
 }
 
 void VoxelGraphCut::fillCapacities_( const SimpleVolume & densityVolume, float k )
@@ -170,82 +199,64 @@ void VoxelGraphCut::fillCapacities_( const SimpleVolume & densityVolume, float k
     } );
 }
 
-bool VoxelGraphCut::buildInitialForest_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
+bool VoxelGraphCut::buildInitialForest_()
 {
     MR_TIMER
 
-    assert( size_ == sourceSeeds.size() );
-    assert( size_ == sinkSeeds.size() );
-    assert( sourceSeeds.any() );
-    assert( sinkSeeds.any() );
-    assert( ( sourceSeeds & sinkSeeds ).count() == 0 );
-
-    Heap<float, SeqVoxelId> minPathCapacity( seq2voxel_.size() );
-
-    for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
+    SeqVoxelBitSet toFill;
+    toFill.resize( seq2voxel_.size(), true );
+    toFill -= sourceSeeds_;
+    toFill -= sinkSeeds_;
+    SeqVoxelBitSet nextToFill = toFill;
+    int layers = 0;
+    auto cnt = toFill.count();
+    for ( ;; ++layers )
     {
-        const auto v = seq2voxel_[s];
-        if ( sourceSeeds.test( v ) )
-    {
-            voxelData_[s].setSide( Side::Source );
-            minPathCapacity.setLargerValue( s, FLT_MAX );
-    }
-        else if ( sinkSeeds.test( v ) )
-    {
-            voxelData_[s].setSide( Side::Sink );
-            minPathCapacity.setLargerValue( s, FLT_MAX );
-        }
-    }
-
-    for (;;)
-    {
-        auto top = minPathCapacity.setTopValue( -1.0f );
-        const SeqVoxelId s{ top.id };
-        const auto c{ top.val };
-        if ( c <= 0 )
-            break;
-        const auto side = voxelData_[s].side();
-        assert( side != Side::Unknown );
-        const auto edgeToParent = voxelData_[s].parent();
-
-        bool neiboursOtherSide = false;
-        const auto v = seq2voxel_[s];
-        const auto pos = toPos( v );
-        const auto bdPos = isBdVoxel( pos );
-        const bool vIsSeed = sourceSeeds.test( v ) || sinkSeeds.test( v );
-        for ( auto e : all6Edges )
+        //spdlog::info( "VoxelGraphCut layer #{}: {} voxels to fill", layers, cnt );
+        BitSetParallelFor( toFill, [&]( SeqVoxelId s )
         {
-            if ( e == edgeToParent )
-                continue;
-            auto neiv = getNeighbor( v, pos, bdPos, e );
-            if ( !neiv )
-                continue;
-            auto neis = voxel2seq_[neiv];
-            if ( !neis )
-                continue;
-            auto currNeiC = minPathCapacity.value( neis );
-            if ( currNeiC < 0 )
+            auto & vd = voxelData_[s];
+            assert( vd.side() == Side::Unknown );
+            const auto v = seq2voxel_[s];
+            const auto pos = toPos( v );
+            const auto bdPos = isBdVoxel( pos );
+            Side bestSide = Side::Unknown;
+            OutEdge bestParent = OutEdge::Invalid;
+            float bestCapacity = 0;
+            for ( auto e : all6Edges )
             {
-                if ( voxelData_[neis].side() != side )
+                auto neiv = getNeighbor( v, pos, bdPos, e );
+                if ( !neiv )
+                    continue;
+                auto neis = voxel2seq_[neiv];
+                if ( !neis )
+                    continue;
+                if ( toFill.test( neis ) )
+                    continue;
+                const auto neiSide = voxelData_[neis].side();
+                assert ( neiSide != Side::Unknown );
+                auto capacity = edgeCapacity_( neiSide, neis, opposite( e ), s );
+                if ( capacity > 0 && ( bestCapacity == 0 || capacity < bestCapacity ) )
                 {
-                    assert( voxelData_[neis].side() == opposite( side ) );
-                    if ( !vIsSeed || !( sourceSeeds.test( neiv ) || sinkSeeds.test( neiv ) ) )
-                        neiboursOtherSide = true;
+                    bestCapacity = capacity;
+                    bestParent = e;
+                    bestSide = neiSide;
                 }
-                continue;
             }
-            const float edgeCapacity = edgeCapacity_( side, s, e, neis );
-            const float neic = std::min( c, edgeCapacity );
-            if ( neic > currNeiC )
+            if ( bestParent != OutEdge::Invalid )
             {
-                voxelData_[neis].setSide( side );
-                voxelData_[neis].setParent( opposite( e ) );
-                minPathCapacity.setLargerValue( neis, neic );
+                vd.setSide( bestSide );
+                vd.setParent( bestParent );
+                nextToFill.reset( s );
             }
-        }
-        if ( neiboursOtherSide )
-            active_.push_back( s );
+        } );
+        auto cnt1 = nextToFill.count();
+        if ( cnt == cnt1 )
+            break;
+        toFill = nextToFill;
+        cnt = cnt1;
     }
+    spdlog::info( "VoxelGraphCut: {} initial layers", layers );
 
     return true;
 }
@@ -266,10 +277,10 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
     if ( !reportProgress( cb, 2.0f / 6 ) )
         return tl::make_unexpected( "Operation was canceled" );
     
-    buildInitialForest_( sourceSeeds, sinkSeeds );
+    buildInitialForest_();
     if ( !reportProgress( cb, 3.0f / 6 ) )
         return tl::make_unexpected( "Operation was canceled" );
-    computeCurrentCut_( sourceSeeds, sinkSeeds );
+    findActiveVoxels_();
     
     float progress = 0.5f;
     const float targetProgress = 1.0f;
@@ -290,7 +301,7 @@ tl::expected<VoxelBitSet, std::string> VoxelGraphCut::fill( const SimpleVolume &
         processActive_( f );
     }
     logStatistics_();
-    computeCurrentCut_( sourceSeeds, sinkSeeds );
+    findActiveVoxels_();
 
     if ( cb && !cb( targetProgress ) )
         return tl::make_unexpected( "Operation was canceled" );
@@ -311,23 +322,20 @@ void VoxelGraphCut::logStatistics_() const
     spdlog::info( "VoxelGraphCut: {} augmentations, {} growths, {} adoptions; total flow = {} ", augmentations_, growths_, adoptions_, totalFlow_ );
 }
 
-void VoxelGraphCut::computeCurrentCut_( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds ) const
+void VoxelGraphCut::findActiveVoxels_()
 {
     MR_TIMER
-    size_t numVoxels[3] = {};
-    size_t totalCutEdges = 0;
-    size_t unsaturatedCutEdges = 0;
-    double cutCapacity = 0;
-    for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
+
+    SeqVoxelBitSet active( seq2voxel_.size() );
+    BitSetParallelForAll( active, [&]( SeqVoxelId s )
     {
         const auto side = voxelData_[s].side();
-        ++numVoxels[(int)side+1];
         if ( side != Side::Source )
-            continue;
+            return;
         const auto v = seq2voxel_[s];
         const auto pos = toPos( v );
         const auto bdPos = isBdVoxel( pos );
-        const bool vIsSourceSeed = sourceSeeds.test( v );
+        const bool vIsSourceSeed = sourceSeeds_.test( s );
         for ( auto e : all6Edges )
         {
             auto neiv = getNeighbor( v, pos, bdPos, e );
@@ -338,7 +346,47 @@ void VoxelGraphCut::computeCurrentCut_( const VoxelBitSet & sourceSeeds, const V
                 continue;
             if ( voxelData_[neis].side() != Side::Sink )
                 continue;
-            if ( vIsSourceSeed && sinkSeeds.test( neiv ) )
+            if ( vIsSourceSeed && sinkSeeds_.test( neis ) )
+                continue;
+            const float edgeCapacity = edgeCapacity_( Side::Source, s, e, neis );
+            if ( edgeCapacity > 0 )
+            {
+                active.set( s );
+                break;
+            }
+        }
+    } );
+
+    size_t numVoxels[3] = {};
+    for ( SeqVoxelId s( 0 ); s < seq2voxel_.size(); ++s )
+    {
+        const auto side = voxelData_[s].side();
+        ++numVoxels[(int)side+1];
+    }
+
+    size_t totalCutEdges = 0;
+    size_t unsaturatedCutEdges = 0;
+    double cutCapacity = 0;
+    assert( active_.empty() );
+    for ( auto s : active )
+    {
+        active_.push_back( s );
+        assert ( voxelData_[s].side() == Side::Source );
+        const auto v = seq2voxel_[s];
+        const auto pos = toPos( v );
+        const auto bdPos = isBdVoxel( pos );
+        const bool vIsSourceSeed = sourceSeeds_.test( s );
+        for ( auto e : all6Edges )
+        {
+            auto neiv = getNeighbor( v, pos, bdPos, e );
+            if ( !neiv )
+                continue;
+            auto neis = voxel2seq_[neiv];
+            if ( !neis )
+                continue;
+            if ( voxelData_[neis].side() != Side::Sink )
+                continue;
+            if ( vIsSourceSeed && sinkSeeds_.test( neis ) )
                 continue;
             ++totalCutEdges;
             const float edgeCapacity = edgeCapacity_( Side::Source, s, e, neis );
@@ -349,7 +397,7 @@ void VoxelGraphCut::computeCurrentCut_( const VoxelBitSet & sourceSeeds, const V
             }
         }
     }
-    spdlog::info( "VoxelGraphCut region: {} unknown voxels, {} source voxels, {} sink voxels", numVoxels[0], numVoxels[1], numVoxels[2] );
+    spdlog::info( "VoxelGraphCut region: {} unknown voxels, {} source voxels, {} sink voxels, {} active voxels", numVoxels[0], numVoxels[1], numVoxels[2], active_.size() );
     spdlog::info( "VoxelGraphCut cut: {} total cut edges, {} unsaturated cut edges, cut capacity = {}", totalCutEdges, unsaturatedCutEdges, cutCapacity );
 }
 
@@ -415,6 +463,8 @@ void VoxelGraphCut::augment_( SeqVoxelId sSource, OutEdge vSourceOutEdge, SeqVox
 {
     assert( sSource && sSink );
     assert( getNeighbor( seq2voxel_[sSource], vSourceOutEdge ) == seq2voxel_[sSink] );
+    if ( sourceSeeds_.test( sSource ) && sinkSeeds_.test( sSink ) )
+        return;
     auto & srcD = voxelData_[sSource];
     auto & snkD = voxelData_[sSink];
 

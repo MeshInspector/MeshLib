@@ -7,7 +7,7 @@ namespace MR
 namespace Cuda
 {
 
-__device__ inline float clamp( float x, float l, float u )
+__host__ __device__ inline float clamp( float x, float l, float u )
 {
     return ( ( x < l ) ? l :
              ( ( x > u ) ? u : x ) );
@@ -38,32 +38,43 @@ __device__ inline float dot( const float2& a, const float2& b )
     return a.x * b.x + a.y * b.y;
 }
 
-__device__ inline float3 operator+( const float3& a, const float3& b )
+__host__ __device__ inline float3 operator+( const float3& a, const float3& b )
 {
     return { a.x + b.x, a.y + b.y, a.z + b.z };
 }
 
-__device__ inline float3 operator-( const float3& a, const float3& b )
+__host__ __device__ inline float3 operator-( const float3& a, const float3& b )
 {
     return { a.x - b.x, a.y - b.y, a.z - b.z };
 }
 
-__device__ inline float3 operator*( const float3& a, const float k )
+__host__ __device__ inline float3 operator*( const float3& a, const float k )
 {
     return { k * a.x , k * a.y, k * a.z };
 }
 
-__device__ inline float lengthSq( const float3& a )
+__host__ __device__ inline float3 operator/( const float3& a, const float k )
+{
+    return { k / a.x , k / a.y, k / a.z };
+}
+
+__host__ __device__ inline float lengthSq( const float3& a )
 {
     return a.x * a.x + a.y * a.y + a.z * a.z;
 }
 
-__device__ inline float dot( const float3& a, const float3& b )
+__host__ __device__ inline float length( const float3& a )
+{
+    return sqrt( a.x * a.x + a.y * a.y + a.z * a.z );
+}
+
+
+__host__ __device__ inline float dot( const float3& a, const float3& b )
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-__device__ inline float3 cross( const float3& a, const float3& b )
+__host__ __device__ inline float3 cross( const float3& a, const float3& b )
 {
     return make_float3(
         a.y*b.z - a.z*b.y,
@@ -72,7 +83,7 @@ __device__ inline float3 cross( const float3& a, const float3& b )
     );
 }
 
-__device__ inline float3 normalize( const float3& v )
+__host__ __device__ inline float3 normalize( const float3& v )
 {
     float invLen = 1.0f / sqrtf( lengthSq( v ) );
     return v * invLen;

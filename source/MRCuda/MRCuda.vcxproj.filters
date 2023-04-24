@@ -10,6 +10,7 @@
     <CudaCompile Include="MRCudaPointsToMeshProjector.cu">
       <Filter>MeshProject</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaFastWindingNumber.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -24,6 +25,7 @@
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp">
       <Filter>MeshProject</Filter>
     </ClCompile>
+    <ClCompile Include="MRCudaFastWindingNumber.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -55,6 +57,11 @@
       <Filter>MeshProject</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaBasic.cuh">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaFastWindingNumber.h" />
+    <ClInclude Include="MRCudaFastWindingNumber.cuh" />
+    <ClInclude Include="MRCudaMesh.cuh">
       <Filter>Basic</Filter>
     </ClInclude>
   </ItemGroup>

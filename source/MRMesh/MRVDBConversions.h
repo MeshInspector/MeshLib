@@ -87,7 +87,7 @@ MRMESH_API tl::expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, in
 /// set signs for unsigned distance field grid using refMesh FastWindingNumber;
 /// \param meshToVoxelsXf defines the mapping from mesh reference from to grid reference frame
 MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
-    const AffineXf3f& meshToGridXf = {}, ProgressCallback cb = {} );
+    const AffineXf3f& meshToGridXf = {}, bool isCudaEnabled = false, ProgressCallback cb = {} );
 
 // performs convention from mesh to levelSet and back with offsetA, and than same with offsetB
 // allowed only for closed meshes

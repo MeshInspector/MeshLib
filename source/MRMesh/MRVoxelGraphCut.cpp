@@ -143,7 +143,6 @@ void VoxelGraphCut::fillVoxel2seq_( const VoxelBitSet & sourceSeeds, const Voxel
             const auto v = seq2voxel_[s];
             const auto pos = toPos( v );
             const auto bdPos = isBdVoxel( pos );
-            const bool vIsSourceSeed = sourceSeeds_.test( s );
             for ( auto e : all6Edges )
             {
                 auto neiv = getNeighbor( v, pos, bdPos, e );
@@ -362,7 +361,6 @@ void VoxelGraphCut::findActiveVoxels_()
         if ( side != Side::Source )
             return;
         const auto & ns = neighbors_[s];
-        const auto v = seq2voxel_[s];
         const bool vIsSourceSeed = sourceSeeds_.test( s );
         for ( auto e : all6Edges )
         {
@@ -396,7 +394,6 @@ void VoxelGraphCut::findActiveVoxels_()
     {
         assert ( voxelData_[s].side() == Side::Source );
         const auto & ns = neighbors_[s];
-        const auto v = seq2voxel_[s];
         const bool vIsSourceSeed = sourceSeeds_.test( s );
         for ( auto e : all6Edges )
         {

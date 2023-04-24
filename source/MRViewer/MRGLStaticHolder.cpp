@@ -168,6 +168,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
+  uniform bool mirrored;
   uniform sampler2D tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
@@ -219,7 +220,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
 
-    if ( gl_FrontFacing == invertNormals )
+    bool invNorms = invertNormals;
+    if ( mirrored )
+    {
+        dot_prod = -dot_prod;
+        invNorms = !invNorms;
+    }
+    if ( gl_FrontFacing == invNorms )
         if ( !selected )
             colorCpy = backColor;
         else
@@ -304,6 +311,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
+  uniform bool mirrored;
   uniform sampler2D tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
@@ -359,7 +367,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       uint block = texelFetch( selection, ivec2( index % uint(texSize.x), index / uint(texSize.x) ), 0 ).r;
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
-    if ( gl_FrontFacing == invertNormals )
+    bool invNorms = invertNormals;
+    if ( mirrored )
+    {
+        dot_prod = -dot_prod;
+        invNorms = !invNorms;
+    }
+    if ( gl_FrontFacing == invNorms )
         if ( !selected )
             colorCpy = backColor;
         else
@@ -460,6 +474,7 @@ void GLStaticHolder::createShader_( ShaderType type )
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
+  uniform bool mirrored;
   uniform sampler2D tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
@@ -510,7 +525,13 @@ void GLStaticHolder::createShader_( ShaderType type )
       uint block = texelFetch( selection, ivec2( index % uint(texSize.x), index / uint(texSize.x) ), 0 ).r;
       selected = bool( block & uint( 1 << (primitiveId % 32u) ) );
     }
-    if ( gl_FrontFacing == invertNormals )
+    bool invNorms = invertNormals;
+    if ( mirrored )
+    {
+        dot_prod = -dot_prod;
+        invNorms = !invNorms;
+    }
+    if ( gl_FrontFacing == invNorms )
         if ( !selected )
             colorCpy = backColor;
         else

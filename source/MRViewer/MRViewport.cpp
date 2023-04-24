@@ -90,7 +90,7 @@ void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix
 
     RenderParams params
     {
-        {viewM_.data(), modelTemp.data(), projM.data(), normM.data(),
+        {viewM_, modelTemp, projM, &normM,
         id, params_.clippingPlane, toVec4<int>( viewportRect_ )},
         params_.lightPosition, forceZBuffer, alphaSort
     };
@@ -140,7 +140,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
     std::vector<Vector2i> picks( viewportPoints.size() );
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM_.data(),projM_.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id};
 
     for ( int i = 0; i < viewportPoints.size(); ++i )
@@ -240,7 +240,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
 
     ViewportGL::PickParameters params{
         renderVector,
-        {viewM_.data(),projM_.data(),toVec4<int>( viewportRect_ )},
+        {viewM_,projM_,toVec4<int>( viewportRect_ )},
         params_.clippingPlane,id };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );

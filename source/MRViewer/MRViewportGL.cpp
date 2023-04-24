@@ -131,8 +131,8 @@ void ViewportGL::drawLines( const RenderParams& params ) const
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::AdditionalLines );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "offset" ), params.zOffset * params.cameraZoom ) );
 
@@ -193,8 +193,8 @@ void ViewportGL::drawPoints( const RenderParams& params ) const
     auto shader = params.zOffset == 0.0f ? GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPointsNoOffset ) : GLStaticHolder::getShaderId( GLStaticHolder::AdditionalPoints );
     GL_EXEC( glUseProgram( shader ) );
 
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrixPtr ) );
-    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrixPtr ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, params.viewMatrix.data() ) );
+    GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, params.projMatrix.data() ) );
 
     if ( params.zOffset != 0.0f )
     {
@@ -471,7 +471,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
             continue;
         auto& obj = *objPtr;
         auto modelTemp = Matrix4f( obj.worldXf( params.viewportId ) );
-        obj.renderForPicker( { params.baseRenderParams.viewMatrixPtr, modelTemp.data(), params.baseRenderParams.projMatrixPtr ,nullptr,
+        obj.renderForPicker( { params.baseRenderParams.viewMatrix, modelTemp, params.baseRenderParams.projMatrix,nullptr,
                              params.viewportId, params.clippingPlane,params.baseRenderParams.viewport }, i );
     }
     pickFBO_.bind( true );

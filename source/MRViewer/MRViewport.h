@@ -201,7 +201,7 @@ public:
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
     // returns base render params for immediate draw and for internal lines and points draw
-    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_.data(), projM_.data(), toVec4<int>( viewportRect_ ) }; }
+    ViewportGL::BaseRenderParams getBaseRenderParams() const { return { viewM_, projM_, toVec4<int>( viewportRect_ ) }; }
 
     bool getRedrawFlag() const { return needRedraw_; }
     void resetRedrawFlag() { needRedraw_ = false; }

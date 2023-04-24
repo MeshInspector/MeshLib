@@ -67,8 +67,8 @@ public:
 
     struct BaseRenderParams
     {
-        const float* viewMatrixPtr{nullptr}; // pointer to view matrix
-        const float* projMatrixPtr{nullptr}; // pointer to projection matrix
+        const Matrix4f& viewMatrix;
+        const Matrix4f& projMatrix;
         Vector4i viewport;          // viewport x0, y0, width, height
     };
 

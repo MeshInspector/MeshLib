@@ -11,10 +11,10 @@ namespace MR
 
 struct BaseRenderParams
 {
-    const float* viewMatrixPtr{ nullptr };  // pointer to view matrix
-    const float* modelMatrixPtr{ nullptr }; // pointer to model matrix
-    const float* projMatrixPtr{ nullptr };  // pointer to projection matrix
-    const float* normMatrixPtr{ nullptr };  // pointer to norm matrix (this is used to simplify lighting calculations)
+    const Matrix4f& viewMatrix;
+    const Matrix4f& modelMatrix;
+    const Matrix4f& projMatrix;
+    const Matrix4f* normMatrixPtr{ nullptr }; // optional normal matrix
     ViewportId viewportId;       // id of current viewport
     const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
     Vector4i viewport;           // viewport x0, y0, width, height

@@ -215,30 +215,30 @@ bool VoxelGraphCut::buildInitialForest_()
     {
         //spdlog::info( "VoxelGraphCut layer #{}: {} voxels to fill", layers, cnt );
         BitSetParallelFor( toFill, [&]( SeqVoxelId s )
-    {
+        {
             auto & vd = voxelData_[s];
             assert( vd.side() == Side::Unknown );
-        const auto v = seq2voxel_[s];
-        const auto pos = toPos( v );
-        const auto bdPos = isBdVoxel( pos );
+            const auto v = seq2voxel_[s];
+            const auto pos = toPos( v );
+            const auto bdPos = isBdVoxel( pos );
             Side bestSide = Side::Unknown;
             OutEdge bestParent = OutEdge::Invalid;
             float bestCapacity = 0;
-        for ( auto e : all6Edges )
-        {
-            auto neiv = getNeighbor( v, pos, bdPos, e );
-            if ( !neiv )
-                continue;
-            auto neis = voxel2seq_[neiv];
-            if ( !neis )
-                continue;
+            for ( auto e : all6Edges )
+            {
+                auto neiv = getNeighbor( v, pos, bdPos, e );
+                if ( !neiv )
+                    continue;
+                auto neis = voxel2seq_[neiv];
+                if ( !neis )
+                    continue;
                 if ( toFill.test( neis ) )
                     continue;
                 const auto neiSide = voxelData_[neis].side();
                 assert ( neiSide != Side::Unknown );
                 auto capacity = edgeCapacity_( neiSide, neis, opposite( e ), s );
                 if ( capacity > 0 && ( bestCapacity == 0 || capacity < bestCapacity ) )
-            {
+                {
                     bestCapacity = capacity;
                     bestParent = e;
                     bestSide = neiSide;
@@ -256,7 +256,7 @@ bool VoxelGraphCut::buildInitialForest_()
             break;
         toFill = nextToFill;
         cnt = cnt1;
-        }
+    }
     spdlog::info( "VoxelGraphCut: {} initial layers", layers );
 
     return true;

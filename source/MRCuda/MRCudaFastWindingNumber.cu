@@ -149,7 +149,7 @@ namespace Cuda
                                           const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                           float* resVec, float beta )
     {
-        const size_t size = dims.x * dims.y * dims.z;
+        const size_t size = size_t( dims.x ) * dims.y * dims.z;
         int maxThreadsPerBlock = 0;
         cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;

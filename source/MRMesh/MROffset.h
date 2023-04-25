@@ -10,8 +10,6 @@
 namespace MR
 {
 
-class IFastWindingNumber;
-
 struct BaseOffsetParameters
 {
     // Size of voxel in grid conversions

@@ -23,6 +23,7 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
 
 void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
 {
+    MR_TIMER
     dipoles.resize( tree_.nodes().size() );
 
     // compute dipole data for tree leaves
@@ -80,7 +81,6 @@ FastWindingNumber::FastWindingNumber( const Mesh & mesh ) :
 IFastWindingNumber( mesh ), 
 tree_( mesh.getAABBTree() )
 {
-    MR_TIMER
     calcDipoles( dipoles_, tree_, mesh_ );
 }
 

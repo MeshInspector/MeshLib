@@ -100,7 +100,7 @@
     <ClInclude Include="MRCudaFastWindingNumber.cuh" />
     <ClInclude Include="MRCudaFastWindingNumber.h" />
     <ClInclude Include="MRCudaFloat.cuh" />
-    <ClInclude Include="MRCudaMesh.cuh" />
+    <ClInclude Include="MRCudaMath.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.cuh" />

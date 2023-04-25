@@ -6,6 +6,7 @@
 
 namespace MR
 {
+/// Abstract class for fast approximate computation of winding number for a mesh (using its AABB tree). Pure virtual finctions must be implemented
 class IFastWindingNumber
 {
 protected:
@@ -39,11 +40,38 @@ public:
     : mesh_( mesh )
     {}
     virtual ~IFastWindingNumber() = default;
-
+    /// <summary>
+    /// calculates winding numbers for a vector of points
+    /// </summary>
+    /// <param name="res">resulting winding numbers, will be resized automatically</param>
+    /// <param name="points">incoming points</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
+    /// <param name="skipFace">this triangle (if it is close to \param q) will be skipped from summation</param>
     virtual void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) = 0;
+    /// <summary>
+    /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
+    /// </summary>
+    /// <param name="res">resulting bit set</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     virtual void  calcSelfIntersections( FaceBitSet& res, float beta ) = 0;
+    /// <summary>
+    /// calculates winding numbers for each point in a three-dimensional grid
+    /// </summary>
+    /// <param name="res">resulting winding numbers, will be resized automatically</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="minCoord">minimal coordinates of grid points</param>
+    /// <param name="voxelSize">size of voxel</param>
+    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     virtual void  calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) = 0;
 
+    /// <summary>
+    /// calculates dipoles for given mesh and AABB-tree
+    /// </summary>
+    /// <param name="dipoles"></param>
+    /// <param name="tree"></param>
+    /// <param name="mesh"></param>
+    /// <returns></returns>
     static MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh );
 };
 /// three vector3-coordinates describing a triangle geometry

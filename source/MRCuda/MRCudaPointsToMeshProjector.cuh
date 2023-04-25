@@ -1,7 +1,7 @@
 #pragma once
 #include "MRCudaFloat.cuh"
 #include "MRCudaBasic.cuh"
-#include "MRCudaMesh.cuh"
+#include "MRCudaMath.cuh"
 namespace MR
 {
 

@@ -1,6 +1,6 @@
 #include "MRCudaFastWindingNumber.h"
 #include "MRCudaFastWindingNumber.cuh"
-#include "MRCudaMesh.cuh"
+#include "MRCudaMath.cuh"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRTimer.h"

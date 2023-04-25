@@ -10,7 +10,9 @@
     <CudaCompile Include="MRCudaPointsToMeshProjector.cu">
       <Filter>MeshProject</Filter>
     </CudaCompile>
-    <CudaCompile Include="MRCudaFastWindingNumber.cu" />
+    <CudaCompile Include="MRCudaFastWindingNumber.cu">
+      <Filter>FastWindingNumber</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -25,7 +27,9 @@
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp">
       <Filter>MeshProject</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaFastWindingNumber.cpp" />
+    <ClCompile Include="MRCudaFastWindingNumber.cpp">
+      <Filter>FastWindingNumber</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -59,10 +63,14 @@
     <ClInclude Include="MRCudaBasic.cuh">
       <Filter>Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRCudaFastWindingNumber.h" />
-    <ClInclude Include="MRCudaFastWindingNumber.cuh" />
-    <ClInclude Include="MRCudaMesh.cuh">
+    <ClInclude Include="MRCudaMath.cuh">
       <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaFastWindingNumber.cuh">
+      <Filter>FastWindingNumber</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaFastWindingNumber.h">
+      <Filter>FastWindingNumber</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -77,6 +85,9 @@
     </Filter>
     <Filter Include="MeshProject">
       <UniqueIdentifier>{4e9398df-4c38-45e8-819c-dfcdda2a4093}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FastWindingNumber">
+      <UniqueIdentifier>{5ad9dab8-7adb-49c4-a7da-3416d396c89a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

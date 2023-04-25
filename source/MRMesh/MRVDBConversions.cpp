@@ -12,7 +12,6 @@
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
 #include <thread>
-#include <chrono>
 
 namespace MR
 {
@@ -403,14 +402,11 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     const size_t volume = activeBox.volume();
 
     std::vector<float> windVals;
-   if ( !fwn )
+    if ( !fwn )
         fwn = std::make_shared<FastWindingNumber>( refMesh );
 
-    const auto t0 = std::chrono::steady_clock::now();
     fwn->calcFromGrid( windVals, Vector3i{ dims.x(),  dims.y(), dims.z() }, Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, voxelSize, gridToMeshXf, 2.0f );  
-    const auto t1 = std::chrono::steady_clock::now();
-    const auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( t1 - t0 ).count();
-    spdlog::info( std::string( "calcFromGrid elapsed " ) + std::to_string( ms ) + std::string( " ms" ) );
+    
     tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), volume ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {

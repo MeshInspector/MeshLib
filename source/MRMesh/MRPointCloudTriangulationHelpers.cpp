@@ -6,6 +6,7 @@
 #include "MRBestFit.h"
 #include "MRPlane3.h"
 #include "MRTriMath.h"
+#include "MRGeodesicPath.h"
 #include <algorithm>
 #include <queue>
 #include <numeric>
@@ -30,8 +31,8 @@ bool flipPossibility( const Vector3f& a, const Vector3f& b, const Vector3f& c, c
 
     if ( planeDist * planeDist > ( b - d ).lengthSq() )
         return true;
-
-    if ( ( c - a ).lengthSq() < ( 0.5f * ( b + d ) - a ).lengthSq() )
+    
+    if ( !isUnfoldQuadrangleConvex( a, b, c, d ) )
         return false;
     return true;
 }
@@ -44,7 +45,7 @@ float deloneFlipProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c,
     return metricAC - metricBD;
 }
 
-// check that edge angle is less then critical, and C point is further than B and D
+// check that edge angle is less then critical
 float trisAngleProfit( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d, float critAng )
 {
     auto ac = ( c - a );
@@ -110,6 +111,11 @@ struct FanOptimizerQueueElement
     float weight{ 0.0f }; // profit of flipping this edge
     std::list<int>::const_iterator pIt; // iterator to get neighbors
     int id{ -1 }; // id in FanOptimizer::angleOrder_, to check if this element is still present in FanOptimizer::presentNeighbors_
+
+    // needed to remove outdated queue elements
+    int prevId{ -1 }; // id of prev neighbor
+    int nextId{ -1 }; // id of next neighbor
+
     bool stable{ false }; // if this flag is true, edge cannot be flipped
     bool operator < ( const FanOptimizerQueueElement& other ) const
     {
@@ -118,6 +124,13 @@ struct FanOptimizerQueueElement
         return stable;
     }
     bool operator==( const FanOptimizerQueueElement& other ) const = default;
+
+    bool isOutdated( const std::list<int>& list ) const
+    {
+        auto next = *cycleNext( list, pIt );
+        auto prev = *cyclePrev( list, pIt );
+        return next != nextId || prev != prevId;
+    }
 };
 
 class FanOptimizer
@@ -157,13 +170,15 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_(
     FanOptimizerQueueElement res;
     res.pIt = it;
     res.id = *it;
+    res.nextId = *cycleNext( list, it );
+    res.prevId = *cyclePrev( list, it );
     const auto& a = points_[centerVert_];
-    const auto& b = points_[getVertByPos_( *cycleNext( list, it ) )];
-    const auto& c = points_[getVertByPos_( *it )];
-    const auto& d = points_[getVertByPos_( *cyclePrev( list, it ) )];
+    const auto& b = points_[getVertByPos_( res.nextId )];
+    const auto& c = points_[getVertByPos_( res.id )];
+    const auto& d = points_[getVertByPos_( res.prevId )];
 
     const auto& aNorm = normals_[centerVert_];
-    const auto& cNorm = normals_[getVertByPos_( *it )];
+    const auto& cNorm = normals_[getVertByPos_( res.id )];
 
     float normVal = ( c - a ).length();
     if ( normVal == 0.0f )
@@ -237,13 +252,14 @@ TriangulatedFan FanOptimizer::optimize( int steps, float critAng )
         queue_.pop();
         if ( !presentNeighbors_.test( topEl.id ) )
             continue; // this vert was erased
-        auto recalcEl = calcQueueElement_( posList, topEl.pIt, critAng );
-        if ( topEl != recalcEl )
+        if ( topEl.isOutdated( posList ) )
             continue; // topEl is not valid, because its neighbor was erased
         if ( topEl.stable )
             break; // topEl valid and fan is stable
-        auto left = cycleNext( posList, topEl.pIt );
-        auto right = cyclePrev( posList, topEl.pIt );
+
+        auto nextIt = cycleNext( posList, topEl.pIt ); // store before erase
+        auto prevIt = cyclePrev( posList, topEl.pIt ); // store before erase
+
         posList.erase( topEl.pIt );
         presentNeighbors_.reset( topEl.id );
         allRemoves++;
@@ -254,10 +270,8 @@ TriangulatedFan FanOptimizer::optimize( int steps, float critAng )
             posList.clear();
             break;
         }
-        auto leftEl = calcQueueElement_( posList, left, critAng );
-        auto rightEl = calcQueueElement_( posList, right, critAng );
-        queue_.push( leftEl );
-        queue_.push( rightEl );
+        queue_.emplace( calcQueueElement_( posList, nextIt, critAng ) );
+        queue_.emplace( calcQueueElement_( posList, prevIt, critAng ) );
     }
 
     res.optimized.resize( posList.size() );

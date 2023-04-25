@@ -53,20 +53,6 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     data_->cudaResult.toVector( res );
 }
 
-float triangleSolidAngle1( const float3& p, const float3& tri0, const float3& tri1, const float3& tri2 )
-{
-    const auto mx = tri0 - p;
-    const auto my = tri1 - p;
-    const auto mz = tri2 - p;
-
-    const auto x = length( mx );
-    const auto y = length( my );
-    const auto z = length( mz );
-
-    auto den = x * y * z + dot( mx, my ) * z + dot( my, mz ) * x + dot( mz, mx ) * y;
-    return 2 * std::atan2( mx.x * ( my.y * mz.z - my.z * mz.y ) - mx.y * ( my.x * mz.z - my.z * mz.x ) + mx.z * ( my.x * mz.y - my.y * mz.x ), den );
-}
-
 void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
 {
     cudaSetDevice( 0 );

@@ -24,7 +24,7 @@ struct BaseOffsetParameters
 
     // Progress callback 
     ProgressCallback callBack{};
-
+    /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
 };
 

@@ -10,6 +10,8 @@
 namespace MR
 {
 
+class IFastWindingNumber;
+
 struct BaseOffsetParameters
 {
     // Size of voxel in grid conversions
@@ -22,6 +24,8 @@ struct BaseOffsetParameters
 
     // Progress callback 
     ProgressCallback callBack{};
+
+    std::shared_ptr<IFastWindingNumber> fwn;
 };
 
 // This struct represents parameters for offsetting with voxels conversions

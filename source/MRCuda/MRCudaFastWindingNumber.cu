@@ -9,7 +9,7 @@ namespace Cuda
 { 
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
 
-    __host__ __device__ float Dipole::w( const float3& q ) const
+    __device__ float Dipole::w( const float3& q ) const
     {
         const auto dp = pos() - q;
         const auto d = length( dp );
@@ -100,36 +100,7 @@ namespace Cuda
             return;
 
         const auto q = ( meshPoints[face.verts[0]] + meshPoints[face.verts[1]] + meshPoints[face.verts[2]] ) / 3.0f;
-        auto& res = resVec[index];
-        //processPoint( point, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
-        constexpr int MaxStackSize = 32; // to avoid allocations
-        int subtasks[MaxStackSize];
-        int stackSize = 0;
-        subtasks[stackSize++] = 0;
-
-        while ( stackSize > 0 )
-        {
-            const auto i = subtasks[--stackSize];
-            const auto& node = nodes[i];
-            const auto& d = dipoles[i];
-            if ( d.goodApprox( q, beta ) )
-            {
-                res += d.w( q );
-                continue;
-            }
-            if ( !node.leaf() )
-            {
-                // recurse deeper
-                subtasks[stackSize++] = node.r; // to look later
-                subtasks[stackSize++] = node.l; // to look first
-                continue;
-            }
-           // if ( node.leafId() != skipFace )
-           // {
-                const auto faceVerts = faces[node.leafId()];
-                res += INV_4PI * triangleSolidAngle( q, meshPoints[faceVerts.verts[0]], meshPoints[faceVerts.verts[1]], meshPoints[faceVerts.verts[2]] );
-           // }
-        }
+        processPoint( q, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
     }
 
     __global__ void kernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
@@ -149,7 +120,7 @@ namespace Cuda
         const int sizeXY = dims.x * dims.y;
         const int sumZ = int( index % sizeXY );
         const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( index / sizeXY ) };
-        const float3 point{ minCoord.x + voxel.x * voxelSize.x, minCoord.y + voxel.y * voxelSize.y, minCoord.z + voxel.z * voxelSize.z };
+        const float3 point{ ( minCoord.x + voxel.x ) * voxelSize.x, ( minCoord.y + voxel.y ) * voxelSize.y, ( minCoord.z + voxel.z ) * voxelSize.z };
         const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
         processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );

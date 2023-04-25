@@ -10,6 +10,9 @@
 
 namespace MR
 {
+
+class IFastWindingNumber;
+
 // closed surface is required
 // surfaceOffset - number voxels around surface to calculate distance in (should be positive)
 // returns null if was canceled by progress callback
@@ -87,14 +90,14 @@ MRMESH_API tl::expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, in
 /// set signs for unsigned distance field grid using refMesh FastWindingNumber;
 /// \param meshToVoxelsXf defines the mapping from mesh reference from to grid reference frame
 MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
-    const AffineXf3f& meshToGridXf = {}, bool isCudaEnabled = false, ProgressCallback cb = {} );
+    const AffineXf3f& meshToGridXf = {}, std::shared_ptr<IFastWindingNumber> pFwn = {}, ProgressCallback cb = {} );
 
 // performs convention from mesh to levelSet and back with offsetA, and than same with offsetB
 // allowed only for closed meshes
 // adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
 //                       (curvature can be lost on high values)
 MRMESH_API tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
-    float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f, ProgressCallback cb = {} );
+    float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );
 
 }
 #endif

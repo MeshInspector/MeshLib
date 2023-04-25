@@ -380,15 +380,13 @@ tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
     return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, isoValue, adaptivity, cb );
 }
 
-VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, bool, ProgressCallback cb /*= {} */ )
+VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
-    const auto gridToMeshXf = meshToGridXf.inverse();
-
-    FastWindingNumber fwn( refMesh );
+    const auto gridToMeshXf = meshToGridXf.inverse();    
 
     auto activeBox = grid->evalActiveVoxelBoundingBox();
     // make dense topology tree to copy its nodes topology to original grid
@@ -405,14 +403,14 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     const size_t volume = activeBox.volume();
 
     std::vector<float> windVals;
+   if ( !fwn )
+        fwn = std::make_shared<FastWindingNumber>( refMesh );
+
     const auto t0 = std::chrono::steady_clock::now();
-    const auto logs = fwn.calcFromGrid( windVals, Vector3i{ dims.x(),  dims.y(), dims.z() }, Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, voxelSize, meshToGridXf, 2.0f );
+    fwn->calcFromGrid( windVals, Vector3i{ dims.x(),  dims.y(), dims.z() }, Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, voxelSize, gridToMeshXf, 2.0f );  
     const auto t1 = std::chrono::steady_clock::now();
-
-    for ( const auto& log : logs )
-        spdlog::info( log );
-
-    spdlog::info( std::string( " calcFromGrid elapsed " ) + std::to_string( std::chrono::duration_cast< std::chrono::milliseconds >( t1 - t0 ).count() ) + std::string( " ms" ) );
+    const auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( t1 - t0 ).count();
+    spdlog::info( std::string( "calcFromGrid elapsed " ) + std::to_string( ms ) + std::string( " ms" ) );
     tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), volume ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -427,11 +425,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
             for ( int j = 0; j < 3; ++j )
                 coord[j] += pos[j];
 
-            auto windVal = windVals[i];
-            auto coord3i = Vector3i( coord.x(), coord.y(), coord.z() );
-            auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
-            const auto windValOld = fwn.calc( meshToGridXf( pointInSpace ), 2.0f );
-            windVal = std::clamp( 1.0f - 2.0f * windVal, -1.0f, 1.0f );
+            auto windVal = std::clamp( 1.0f - 2.0f * windVals[i], -1.0f, 1.0f );
             if ( windVal < 0.0f )
                 windVal *= -windVal;
             else
@@ -451,7 +445,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
 }
 
 tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
-    float offsetA, float offsetB, float adaptivity, ProgressCallback cb /*= {} */ )
+    float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
 
@@ -487,7 +481,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     if ( needSignUpdate )
     {
         sp = subprogress( cb, 0.2f, 0.3f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, false, sp );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, fwn, sp );
         if ( !signRes.has_value() )
             return tl::make_unexpected( signRes.error() );
     }

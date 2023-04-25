@@ -15,17 +15,17 @@ struct Dipole
     float area = 0;
     float3 dirArea;
     float rr = 0; // maximum squared distance from pos to any corner of the bounding box
-    __host__ __device__ float3 pos() const
+    __device__ float3 pos() const
     {
         return area > 0 ? areaPos / area : areaPos;
     }
     /// returns true if this dipole is good approximation for a point \param q
-    __host__ __device__ bool goodApprox( const float3& q, float beta ) const
+    __device__ bool goodApprox( const float3& q, float beta ) const
     {
         return lengthSq( q - pos() ) > beta * beta * rr;
     }
     /// contribution of this dipole to the winding number at point \param q
-    __host__ __device__ float w( const float3& q ) const;
+    __device__ float w( const float3& q ) const;
 };
 
 void fastWindingNumberFromVectorKernel( const float3* points, const Dipole* dipoles,

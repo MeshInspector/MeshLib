@@ -165,8 +165,10 @@ void FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta )
     } );
 }
 
-std::vector<std::string> FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
 {
+    MR_TIMER
+
     const size_t size = dims.x * dims.y * dims.z;
     res.resize( size );
     VolumeIndexer indexer( dims );
@@ -184,8 +186,6 @@ std::vector<std::string> FastWindingNumber::calcFromGrid( std::vector<float>& re
             res[i] = calc( gridToMeshXf( pointInSpace ), beta );
         }
     } );
-
-    return {};
 }
 
 TEST(MRMesh, TriangleSolidAngle) 

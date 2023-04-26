@@ -53,10 +53,21 @@ __device__ inline float3 operator*( const float3& a, const float k )
     return { k * a.x , k * a.y, k * a.z };
 }
 
+__device__ inline float3 operator/( const float3& a, const float k )
+{
+    return { a.x / k , a.y / k, a.z / k };
+}
+
 __device__ inline float lengthSq( const float3& a )
 {
     return a.x * a.x + a.y * a.y + a.z * a.z;
 }
+
+__device__ inline float length( const float3& a )
+{
+    return sqrt( a.x * a.x + a.y * a.y + a.z * a.z );
+}
+
 
 __device__ inline float dot( const float3& a, const float3& b )
 {

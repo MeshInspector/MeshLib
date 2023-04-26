@@ -6,6 +6,7 @@
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRBox.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
@@ -378,15 +379,13 @@ tl::expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
     return gridToMesh( std::move( vdbVolume.data ), vdbVolume.voxelSize, isoValue, adaptivity, cb );
 }
 
-VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, ProgressCallback cb /*= {} */ )
+VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
-    const auto gridToMeshXf = meshToGridXf.inverse();
-
-    FastWindingNumber fwn( refMesh );
+    const auto gridToMeshXf = meshToGridXf.inverse();    
 
     auto activeBox = grid->evalActiveVoxelBoundingBox();
     // make dense topology tree to copy its nodes topology to original grid
@@ -400,7 +399,15 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     auto minCoord = activeBox.min();
     auto dims = activeBox.dim();
     VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size_t( activeBox.volume() ) ),
+    const size_t volume = activeBox.volume();
+
+    std::vector<float> windVals;
+    if ( !fwn )
+        fwn = std::make_shared<FastWindingNumber>( refMesh );
+
+    fwn->calcFromGrid( windVals, Vector3i{ dims.x(),  dims.y(), dims.z() }, Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, voxelSize, gridToMeshXf, 2.0f );  
+    
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), volume ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         auto accessor = grid->getAccessor();
@@ -414,10 +421,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
             for ( int j = 0; j < 3; ++j )
                 coord[j] += pos[j];
 
-            auto coord3i = Vector3i( coord.x(), coord.y(), coord.z() );
-            auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
-            auto windVal = fwn.calc( gridToMeshXf( pointInSpace ), 2.0f );
-            windVal = std::clamp( 1.0f - 2.0f * windVal, -1.0f, 1.0f );
+            auto windVal = std::clamp( 1.0f - 2.0f * windVals[i], -1.0f, 1.0f );
             if ( windVal < 0.0f )
                 windVal *= -windVal;
             else
@@ -437,7 +441,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
 }
 
 tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
-    float offsetA, float offsetB, float adaptivity, ProgressCallback cb /*= {} */ )
+    float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
 
@@ -473,7 +477,7 @@ tl::expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, co
     if ( needSignUpdate )
     {
         sp = subprogress( cb, 0.2f, 0.3f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, sp );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, fwn, sp );
         if ( !signRes.has_value() )
             return tl::make_unexpected( signRes.error() );
     }

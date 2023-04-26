@@ -399,7 +399,7 @@ void VoxelGraphCut::buildInitialForest( const SeqVoxelSpan & span )
     toFill -= sourceSeeds_;
     toFill -= sinkSeeds_;
     SeqVoxelBitSet nextToFill = toFill;
-    int layers = 0;
+    [[maybe_unused]] int layers = 0;
     auto cnt = toFill.count();
     for ( ;; ++layers )
     {

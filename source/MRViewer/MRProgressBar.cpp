@@ -191,15 +191,13 @@ float ProgressBar::getProgress()
 
 bool ProgressBar::setProgress( float p )
 {
-    instance_().progress_ = p;
-    instance_().frameRequest_.requestFrame();
-    return !instance_().canceled_;
-}
-
-void ProgressBar::addProgress( float p )
-{
-    instance_().progress_ += p;
-    instance_().frameRequest_.requestFrame();
+    auto& instance = instance_();
+    auto progress = instance.progress_;
+    if ( int( progress * 100.0f ) != int( p * 100.0f ) )
+        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, int( p * 100.0f ) );
+    instance.progress_ = p;
+    instance.frameRequest_.requestFrame();
+    return !instance.canceled_;
 }
 
 void ProgressBar::setTaskCount( int n )
@@ -231,29 +229,12 @@ bool ProgressBar::callBackSetProgress( float p )
     return !instance.canceled_;
 }
 
-bool ProgressBar::callBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = true;
-    instance.addProgress( p );
-    return !instance.canceled_;
-}
-
 bool ProgressBar::simpleCallBackSetProgress( float p )
 {
     auto& instance = instance_();
     instance.allowCancel_ = false;
     instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
-}
-
-bool ProgressBar::simpleCallBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = false;
-    instance.addProgress( p );
-    return true; // no cancel
-
 }
 
 ProgressBar& ProgressBar::ProgressBar::instance_()

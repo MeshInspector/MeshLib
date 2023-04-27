@@ -138,8 +138,6 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     localMinMax.second = dist;
             }
             res.data[i] = dist;
-            if ( i == 31399 )
-                i = i;
             if ( params.cb && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( float( i ) / float( range.size() ) ) )

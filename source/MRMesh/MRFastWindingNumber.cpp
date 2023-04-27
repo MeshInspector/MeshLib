@@ -212,12 +212,8 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
             const auto pointInSpace = mult( voxelSize, coord );
             const auto transformedPoint = gridToMeshXf( pointInSpace );
             res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
-            const auto fwn = calc( transformedPoint, beta );
-            if ( fwn > 0.5f )
+            if ( calc( transformedPoint, beta ) > 0.5f )
                 res[i] = -res[i];
-
-            if ( i == 31399 )
-                i = i;
         }
     } );
 }

@@ -85,7 +85,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     localMinMax.second = dist;
             }
             res.data[i] = dist;
-            if ( params.cb && std::this_thread::get_id() == mainThreadId && ( ( i % 1000 ) == 0 ) )
+            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( float( i ) / float( range.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
@@ -561,12 +561,12 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                 }
             }
 
-            if ( params.cb && std::this_thread::get_id() == mainThreadId &&
+            if ( params.cb && ( ( i % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId &&
                 ( lastSubMap == -1 || lastSubMap == range.begin() ) )
             {
                 if ( lastSubMap == -1 )
                     lastSubMap = int( range.begin() );
-                if ( ( ( i % 1000 ) == 0 ) && !params.cb( 0.3f * float( i ) / float( indexer.size() ) ) )
+                if ( !params.cb( 0.3f * float( i ) / float( indexer.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
             }
 
@@ -761,9 +761,9 @@ std::optional<Mesh> volumeToMesh( const V& volume, const VolumeToMeshParams& par
                     voxelValid = true;
             }
 
-            if ( params.cb && std::this_thread::get_id() == mainThreadId )
+            if ( params.cb && ( ( ind % 1024 ) == 0 ) && std::this_thread::get_id() == mainThreadId )
             {
-                if ( ( ( ind % 1000 ) == 0 ) && !params.cb( 0.5f + 0.35f * float( ind ) / float( range.size() ) ) )
+                if ( !params.cb( 0.5f + 0.35f * float( ind ) / float( range.size() ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
             }
 

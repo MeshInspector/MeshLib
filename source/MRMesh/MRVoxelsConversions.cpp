@@ -14,8 +14,6 @@
 #include <limits>
 #include <optional>
 #include <thread>
-#include <chrono>
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -81,11 +79,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             fwn = std::make_shared<FastWindingNumber>( mesh );
 
         constexpr float beta = 2;
-        const auto t0 = std::chrono::steady_clock::now();
         fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), params.basis, beta, params.maxDistSq, params.minDistSq );
-        const auto t1 = std::chrono::steady_clock::now();
-        const auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( t1 - t0 ).count();
-        spdlog::info( std::string( "calcFromGridWithDistances elapsed " ) + std::to_string( ms ) + std::string( " ms" ) );
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();

@@ -18,6 +18,46 @@
 namespace MR
 {
 
+class MinMaxCalc
+{
+public:
+    MinMaxCalc( const std::vector<float>& vec )
+    : vec_( vec )
+    {}
+
+    MinMaxCalc(const MinMaxCalc& other, tbb::split)
+    : min_(other.min_)
+    , max_(other.max_)
+    ,vec_( other.vec_)
+    {}
+
+    void operator()( const tbb::blocked_range<size_t>& r )
+    {
+        for ( auto i = r.begin(); i < r.end(); ++i )
+        {
+            if ( vec_[i] < min_ )
+                min_ = vec_[i];
+
+            if ( vec_[i] > max_ )
+                max_ = vec_[i];
+        }
+    }
+
+    void join( const MinMaxCalc& other )
+    {
+        min_ = std::min( min_, other.min_ );
+        max_ = std::max( max_, other.max_ );
+    }
+
+    float min() { return min_; }
+    float max() { return max_; }
+
+private:
+    float min_{ FLT_MAX };
+    float max_{ -FLT_MAX };
+    const std::vector<float>& vec_;
+};
+
 std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSimpleVolumeParams& params /*= {} */ )
 {
     MR_TIMER
@@ -31,9 +71,21 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
 
     // used in Winding rule mode
     const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
-    std::optional<FastWindingNumber> fwn;
+    
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
-        fwn.emplace( mesh );
+    {
+        auto fwn = params.fwn;
+        if ( !fwn )
+            fwn = std::make_shared<FastWindingNumber>( mesh );
+
+        constexpr float beta = 2;
+        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), params.basis, beta, params.maxDistSq, params.minDistSq );
+        MinMaxCalc minMaxCalc( res.data );
+        tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
+        res.min = minMaxCalc.min();
+        res.max = minMaxCalc.max();
+        return res;
+    }
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
@@ -70,11 +122,6 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                         return true;
                     } );
                     changeSign = numInters % 2 == 1; // inside
-                }
-                else if ( params.signMode == SignDetectionMode::HoleWindingRule )
-                {
-                    constexpr float beta = 2;
-                    changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside
                 }
                 if ( changeSign )
                     dist = -dist;

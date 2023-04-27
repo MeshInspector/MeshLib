@@ -135,6 +135,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.signMode = *params.simpleVolumeSignMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.fwn = params.fwn;
         
         auto volume = meshToSimpleVolume( mesh, msParams );
         if ( !volume )

@@ -5,6 +5,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRBitSetParallelFor.h"
 #include "MRVolumeIndexer.h"
+#include "MRMeshProject.h"
 
 namespace MR
 {
@@ -184,6 +185,35 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
             auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
             auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
             res[i] = calc( gridToMeshXf( pointInSpace ), beta );
+        }
+    } );
+}
+
+void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
+{
+    MR_TIMER
+
+    const size_t size = dims.x * dims.y * dims.z;
+    res.resize( size );
+    VolumeIndexer indexer( dims );
+
+    MeshPart mp( mesh_ );
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            auto pos = indexer.toPos( VoxelId( i ) );
+            auto coord = minCoord;
+            for ( int j = 0; j < 3; ++j )
+                coord[j] += pos[j];
+
+            //auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
+            const auto pointInSpace = mult( voxelSize, coord );
+            const auto transformedPoint = gridToMeshXf( pointInSpace );
+            res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
+            if ( calc( transformedPoint, beta ) > 0.5f )
+                res[i] = -res[i];
         }
     } );
 }

@@ -14,6 +14,8 @@
 #include <limits>
 #include <optional>
 #include <thread>
+#include <chrono>
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -79,8 +81,11 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             fwn = std::make_shared<FastWindingNumber>( mesh );
 
         constexpr float beta = 2;
-        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), res.voxelSize, params.basis, beta, params.maxDistSq, params.minDistSq );
-
+        const auto t0 = std::chrono::steady_clock::now();
+        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), params.basis, beta, params.maxDistSq, params.minDistSq );
+        const auto t1 = std::chrono::steady_clock::now();
+        const auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( t1 - t0 ).count();
+        spdlog::info( std::string( "calcFromGridWithDistances elapsed " ) + std::to_string( ms ) + std::string( " ms" ) );
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();
@@ -91,10 +96,6 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
     tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
-
-    std::optional<FastWindingNumber> fwn;
-    if ( params.signMode == SignDetectionMode::HoleWindingRule )
-        fwn.emplace( mesh );
 
     auto core = [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -127,11 +128,6 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                         return true;
                     } );
                     changeSign = numInters % 2 == 1; // inside
-                }
-                else if ( params.signMode == SignDetectionMode::HoleWindingRule )
-                {
-                    constexpr float beta = 2;
-                    changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside
                 }
                 if ( changeSign )
                     dist = -dist;

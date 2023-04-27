@@ -101,7 +101,7 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 {
     MR_TIMER
 
-        cudaSetDevice( 0 );
+    cudaSetDevice( 0 );
 
     const auto getCudaMatrix = [] ( const AffineXf3f& xf )
     {

@@ -64,9 +64,9 @@ private:
         void reset();
         void requestFrame();
     private:
-        std::atomic<bool> frameRequested_{ false };
-        std::atomic < std::chrono::time_point<std::chrono::system_clock>> lastDrawnTime_;
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+        std::atomic<bool> frameRequested_{ false }; // not to order too often
+#else
         AsyncRequest asyncRequest_;
 #endif
     };

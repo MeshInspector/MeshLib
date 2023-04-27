@@ -64,9 +64,9 @@ namespace Cuda
         }
     }
 
-    __device__ float calcDistance( const float3& pt, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces )
+    __device__ float calcDistance( const float3& pt, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, float maxDistSq, float minDistSq )
     {
-        float resSq = FLT_MAX;
+        float resSq = maxDistSq;
         struct SubTask
         {
             int n;
@@ -116,7 +116,8 @@ namespace Cuda
                 float distSq = lengthSq( closestPointRes.proj - pt );
                 if ( distSq < resSq )
                     resSq = distSq;
-                
+                if ( distSq <= minDistSq )
+                    break;
                 continue;
             }
 
@@ -199,7 +200,7 @@ namespace Cuda
 
     __global__ void kernelWithDistances( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                             const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                            float* resVec, float beta, size_t size )
+                            float* resVec, float beta, float maxDistSq, float minDistSq, size_t size )
     {
         if ( size == 0 )
         {
@@ -218,7 +219,7 @@ namespace Cuda
         const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
         float& res = resVec[index];
-        res = calcDistance( transformedPoint, nodes, meshPoints, faces );
+        res = calcDistance( transformedPoint, nodes, meshPoints, faces, maxDistSq, minDistSq );
 
         float fwn{ 0 };
         processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, beta, index );
@@ -258,13 +259,13 @@ namespace Cuda
 
     void fastWindingNumberFromGridWithDistancesKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                           const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                          float* resVec, float beta )
+                                          float* resVec, float beta, float maxDistSq, float minDistSq )
     {
         const size_t size = size_t( dims.x ) * dims.y * dims.z;
         int maxThreadsPerBlock = 0;
         cudaDeviceGetAttribute( &maxThreadsPerBlock, cudaDevAttrMaxThreadsPerBlock, 0 );
         int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-        kernelWithDistances << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );
+        kernelWithDistances << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
     }
 }
 }

@@ -79,7 +79,7 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
             fwn = std::make_shared<FastWindingNumber>( mesh );
 
         constexpr float beta = 2;
-        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), res.voxelSize, params.basis, beta );
+        fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), res.voxelSize, params.basis, beta, params.maxDistSq, params.minDistSq );
 
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );

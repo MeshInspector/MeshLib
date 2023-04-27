@@ -74,7 +74,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) = 0;
+    virtual void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq ) = 0;
 
     /// <summary>
     /// calculates dipoles for given mesh and AABB-tree
@@ -134,7 +134,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta );
+    MRMESH_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq );
     
 private:
     const AABBTree & tree_;

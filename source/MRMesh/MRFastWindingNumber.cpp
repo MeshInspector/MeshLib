@@ -189,7 +189,7 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     } );
 }
 
-void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq )
 {
     MR_TIMER
 
@@ -210,7 +210,7 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 
             auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
             auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
-            res[i] = sqrt( findProjection( pointInSpace, mp ).distSq );
+            res[i] = sqrt( findProjection( pointInSpace, mp, maxDistSq, nullptr, minDistSq ).distSq );
             if ( calc( gridToMeshXf( pointInSpace ), beta ) > 0.5f )
                 res[i] = -res[i];            
         }

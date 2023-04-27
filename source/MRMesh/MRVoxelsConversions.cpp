@@ -31,9 +31,16 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
 
     // used in Winding rule mode
     const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
-    std::optional<FastWindingNumber> fwn;
+    
+    auto fwn = params.fwn;
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
-        fwn.emplace( mesh );
+    {
+        if ( !fwn )
+            fwn = std::make_shared<FastWindingNumber>( mesh );
+
+        std::vector<float> distances;
+        fwn->calcFromGridWithDistances( distances, res.dims, Vector3f::diagonal( 0.5f ), res.voxelSize, params.basis, 2.0f );
+    }
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();

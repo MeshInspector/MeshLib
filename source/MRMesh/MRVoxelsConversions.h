@@ -26,6 +26,8 @@ struct MeshToSimpleVolumeParams : BaseVolumeConversionParams
     float maxDistSq{ FLT_MAX };
     /// the method to compute distance sign
     SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
+
+    std::shared_ptr<IFastWindingNumber> fwn;
 };
 
 // Callback type for positioning marching cubes vertices

@@ -66,6 +66,17 @@ public:
     virtual void  calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) = 0;
 
     /// <summary>
+    /// calculates distances and winding numbers for each point in a three-dimensional grid
+    /// </summary>
+    /// <param name="res">resulting signed distances, will be resized automatically</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="minCoord">minimal coordinates of grid points</param>
+    /// <param name="voxelSize">size of voxel</param>
+    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
+    virtual void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) = 0;
+
+    /// <summary>
     /// calculates dipoles for given mesh and AABB-tree
     /// </summary>
     /// <param name="dipoles"></param>
@@ -114,6 +125,16 @@ public:
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRMESH_API void calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) override;
+    /// <summary>
+    /// calculates distances and winding numbers for each point in a three-dimensional grid
+    /// </summary>
+    /// <param name="res">resulting signed distances, will be resized automatically</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="minCoord">minimal coordinates of grid points</param>
+    /// <param name="voxelSize">size of voxel</param>
+    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
+    MRMESH_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta );
     
 private:
     const AABBTree & tree_;

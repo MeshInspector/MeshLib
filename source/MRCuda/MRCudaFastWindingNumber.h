@@ -40,6 +40,16 @@ public:
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRCUDA_API void calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) override;
+    /// <summary>
+    /// calculates winding numbers for each point in a three-dimensional grid
+    /// </summary>
+    /// <param name="res">resulting winding numbers, will be resized automatically</param>
+    /// <param name="dims">dimensions of the grid</param>
+    /// <param name="minCoord">minimal coordinates of grid points</param>
+    /// <param name="voxelSize">size of voxel</param>
+    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
+    MRCUDA_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta ) override;
 };
 
 }

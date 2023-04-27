@@ -97,5 +97,31 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     data_->cudaResult.toVector( res );
 }
 
+void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta )
+{
+    MR_TIMER
+
+        cudaSetDevice( 0 );
+
+    const auto getCudaMatrix = [] ( const AffineXf3f& xf )
+    {
+        Matrix4 res;
+        res.x.x = xf.A.x.x; res.x.y = xf.A.x.y; res.x.z = xf.A.x.z;
+        res.y.x = xf.A.y.x; res.y.y = xf.A.y.y; res.y.z = xf.A.y.z;
+        res.z.x = xf.A.z.x; res.z.y = xf.A.z.y; res.z.z = xf.A.z.z;
+        res.b.x = xf.b.x; res.b.y = xf.b.y; res.b.z = xf.b.z;
+        res.isIdentity = false;
+        return res;
+    };
+
+    const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
+    const size_t size = size_t( dims.x ) * dims.y * dims.z;
+    data_->cudaResult.resize( size );
+    fastWindingNumberFromGridWithDistancesKernel( int3{ dims.x, dims.y, dims.z }, float3{ minCoord.x, minCoord.y, minCoord.z }, float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+                                     data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta );
+
+    data_->cudaResult.toVector( res );
+}
+
 }
 }

@@ -95,5 +95,61 @@ struct Matrix4
     }
 };
 
+struct ClosestPointRes
+{
+    float2 bary;
+    float3 proj;
+};
+
+__device__ inline ClosestPointRes closestPointInTriangle( const float3& p, const float3& a, const float3& b, const float3& c )
+{
+    const float3 ab = b - a;
+    const float3 ac = c - a;
+    const float3 ap = p - a;
+
+    const float d1 = dot( ab, ap );
+    const float d2 = dot( ac, ap );
+    if ( d1 <= 0 && d2 <= 0 )
+        return { { 0, 0 }, a };
+
+    const float3 bp = p - b;
+    const float d3 = dot( ab, bp );
+    const float d4 = dot( ac, bp );
+    if ( d3 >= 0 && d4 <= d3 )
+        return { { 1, 0 }, b };
+
+    const float3 cp = p - c;
+    const float d5 = dot( ab, cp );
+    const float d6 = dot( ac, cp );
+    if ( d6 >= 0 && d5 <= d6 )
+        return { { 0, 1 }, c };
+
+    const float vc = d1 * d4 - d3 * d2;
+    if ( vc <= 0 && d1 >= 0 && d3 <= 0 )
+    {
+        const float v = d1 / ( d1 - d3 );
+        return { { v, 0 }, a + ab * v };
+    }
+
+    const float vb = d5 * d2 - d1 * d6;
+    if ( vb <= 0 && d6 <= 0 )
+    {
+        const float v = d2 / ( d2 - d6 );
+        return { { 0, v }, a + ac * v };
+    }
+
+    const float va = d3 * d6 - d5 * d4;
+    if ( va <= 0 )
+    {
+        const float v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
+        return { { 1 - v, v }, b + ( c - b ) * v };
+    }
+
+    const float denom = 1 / ( va + vb + vc );
+    const float v = vb * denom;
+    const float w = vc * denom;
+    return { { v, w }, a + ab * v + ac * w };
+}
+
 }
 }

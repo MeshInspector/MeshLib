@@ -96,7 +96,7 @@ public:
     VoxelBitSet getResult( const VoxelBitSet & sourceSeeds ) const;
 
 private:
-    phmap::flat_hash_map<VoxelId, SeqVoxelId> toSeqId_;
+    ParallelHashMap<VoxelId, SeqVoxelId> toSeqId_;
     Vector<VoxelId, SeqVoxelId> seq2voxel_;
 
     // neighbors:
@@ -112,8 +112,12 @@ private:
     SeqVoxelBitSet active_, cutNeis_;
     //std::ofstream f_{R"(D:\logs\voxelgc.txt)"};
 
-    // allocates all supplementary vectors
+    /// allocates all supplementary vectors
     void allocate_( size_t numVoxels );
+    /// creates mapping: SeqVoxelId -> VoxelId
+    void fillSeq2voxel_( const VoxelBitSet & region );
+    /// creates the opposite mapping: VoxelId -> SeqVoxelId
+    void fillToSeqId_();
     /// fills neighbors for given voxel
     void setupNeighbors_( SeqVoxelId s );
     // returns ids of all 6 neighbor voxels (or invalid ids if some of them are missing)
@@ -185,6 +189,35 @@ void VoxelGraphCut::allocate_( size_t numVoxels )
     capacity_.resize( numVoxels );
 }
 
+void VoxelGraphCut::fillSeq2voxel_( const VoxelBitSet & region )
+{
+    MR_TIMER
+    for ( auto vid : region )
+        seq2voxel_.push_back( vid );
+}
+
+void VoxelGraphCut::fillToSeqId_()
+{
+    MR_TIMER
+    const auto subcnt = toSeqId_.subcnt();
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt ), [&]( const tbb::blocked_range<size_t> & range )
+    {
+        assert( range.begin() + 1 == range.end() );
+        for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
+        {
+            for ( SeqVoxelId s(0); s < seq2voxel_.size(); ++s )
+            {
+                auto v = seq2voxel_[s];
+                auto hashval = toSeqId_.hash( v );
+                auto idx = toSeqId_.subidx( hashval );
+                if ( idx != myPartId )
+                    continue;
+                toSeqId_[v] = s;
+            }
+        }
+    } );
+}
+
 void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
 {
     MR_TIMER
@@ -205,11 +238,8 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
         cnt, float( 100 * cnt ) / size_ );
 
     allocate_( cnt );
-    for ( auto vid : region )
-    {
-        toSeqId_[ vid ] = SeqVoxelId( seq2voxel_.size() );
-        seq2voxel_.push_back( vid );
-    }
+    fillSeq2voxel_( region );
+    fillToSeqId_();
 
     assert( size_ == sourceSeeds.size() );
     assert( size_ == sinkSeeds.size() );

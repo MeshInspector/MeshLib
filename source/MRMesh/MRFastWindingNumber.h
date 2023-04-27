@@ -134,7 +134,7 @@ public:
     /// <param name="voxelSize">size of voxel</param>
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq );
+    MRMESH_API void calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq ) override;
     
 private:
     const AABBTree & tree_;

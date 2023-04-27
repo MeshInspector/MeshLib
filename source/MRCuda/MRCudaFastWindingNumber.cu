@@ -257,7 +257,7 @@ namespace Cuda
         kernel << <numBlocks, maxThreadsPerBlock >> > ( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
     }
 
-    void fastWindingNumberFromGridWithDistancesKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+    void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                           const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                           float* resVec, float beta, float maxDistSq, float minDistSq )
     {

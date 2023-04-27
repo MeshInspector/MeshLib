@@ -117,7 +117,7 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     data_->cudaResult.resize( size );
-    fastWindingNumberFromGridWithDistancesKernel( int3{ dims.x, dims.y, dims.z }, float3{ minCoord.x, minCoord.y, minCoord.z }, float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+    signedDistanceKernel( int3{ dims.x, dims.y, dims.z }, float3{ minCoord.x, minCoord.y, minCoord.z }, float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
                                      data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, maxDistSq, minDistSq );
 
     data_->cudaResult.toVector( res );

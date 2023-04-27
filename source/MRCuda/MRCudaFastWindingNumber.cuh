@@ -40,8 +40,9 @@ void fastWindingNumberFromGridKernel( int3 gridSize, float3 minCoord, float3 vox
                                       const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                       float* resVec, float beta );
 
-// calls fast winding number for each point in three-dimensional grid
-void fastWindingNumberFromGridWithDistancesKernel( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+
+/// calls fast winding number for each point in three-dimensional grid to get sign
+void signedDistanceKernel( int3 gridSize, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
                                       const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                       float* resVec, float beta, float maxDistSq, float minDistSq );
 

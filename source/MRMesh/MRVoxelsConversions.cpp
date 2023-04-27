@@ -84,13 +84,17 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
         MinMaxCalc minMaxCalc( res.data );
         tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, res.data.size() ), minMaxCalc );
         res.min = minMaxCalc.min();
-        res.min = minMaxCalc.max();
+        res.max = minMaxCalc.max();
         return res;
     }
 
     std::atomic<bool> keepGoing{ true };
     auto mainThreadId = std::this_thread::get_id();
     tbb::enumerable_thread_specific<std::pair<float, float>> minMax( std::pair<float, float>{ FLT_MAX, -FLT_MAX } );
+
+    std::optional<FastWindingNumber> fwn;
+    if ( params.signMode == SignDetectionMode::HoleWindingRule )
+        fwn.emplace( mesh );
 
     auto core = [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -124,6 +128,11 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     } );
                     changeSign = numInters % 2 == 1; // inside
                 }
+                else if ( params.signMode == SignDetectionMode::HoleWindingRule )
+                {
+                    constexpr float beta = 2;
+                    changeSign = fwn->calc( voxelCenter, beta ) > 0.5f; // inside
+                }
                 if ( changeSign )
                     dist = -dist;
                 auto& localMinMax = minMax.local();
@@ -133,6 +142,8 @@ std::optional<SimpleVolume> meshToSimpleVolume( const Mesh& mesh, const MeshToSi
                     localMinMax.second = dist;
             }
             res.data[i] = dist;
+            if ( i == 31399 )
+                i = i;
             if ( params.cb && std::this_thread::get_id() == mainThreadId )
             {
                 if ( !params.cb( float( i ) / float( range.size() ) ) )

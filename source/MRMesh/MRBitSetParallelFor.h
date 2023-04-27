@@ -12,6 +12,25 @@ namespace MR
 /// \addtogroup BasicGroup
 /// \{
 
+/// executes given function f for each index in [begin, end) in parallel threads;
+/// it is guaranteed that every individual block in BitSet is processed by one thread only
+template <typename IndexType, typename F>
+void BitSetParallelForAll( IndexType begin, IndexType end, F f )
+{
+    const size_t beginBlock = begin / BitSet::bits_per_block;
+    const size_t endBlock = ( size_t( end ) + BitSet::bits_per_block - 1 ) / BitSet::bits_per_block;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ), 
+        [&]( const tbb::blocked_range<size_t> & range )
+        {
+            IndexType id{ range.begin() > beginBlock ? range.begin() * BitSet::bits_per_block : begin };
+            const IndexType idEnd{ range.end() < endBlock ? range.end() * BitSet::bits_per_block : end };
+            for ( ; id < idEnd; ++id )
+            {
+                f( id );
+            }
+        } );
+}
+
 /// executes given function f for each bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F>
@@ -23,7 +42,7 @@ void BitSetParallelForAll( const BS & bs, F f )
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ), 
         [&]( const tbb::blocked_range<size_t> & range )
         {
-            IndexType id{ range.begin() * BitSet::bits_per_block };
+            IndexType id{ range.begin() * BS::bits_per_block };
             const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
             for ( ; id < idEnd; ++id )
             {
@@ -53,7 +72,7 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb )
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
-        IndexType id{ range.begin() * BitSet::bits_per_block };
+        IndexType id{ range.begin() * BS::bits_per_block };
         const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
         auto idBegin = size_t( id );
         auto idRange = float( size_t( idEnd ) - idBegin );

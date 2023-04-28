@@ -228,11 +228,18 @@ public:
         mInTree( other.mInTree ),
         mInAcc( mInTree ),
         mInterrupt( other.mInterrupt ),
-        mProgress( other.mProgress )
+        mProgress( other.mProgress ),
+        mProgressThreadId( other.mProgressThreadId ),
+        mInterruptedWithProgress( other.mInterruptedWithProgress )
     {}
 
     void setInterrupt( const InterruptFunc& f ) { mInterrupt = f; }
-    void setProgressFn( const ProgressFunc& f ) { mProgress = f; }
+    /// Setup progress callback and mark this thread id as progress thread id
+    void setProgressFn( const ProgressFunc& f ) 
+    {
+        mProgress = f;
+        mProgressThreadId = std::this_thread::get_id();
+    }
 
     /// Transform each leaf node in the given range.
     void operator()( const LeafRange& rCRef )
@@ -311,14 +318,23 @@ public:
 
     Proc mProc;
 private:
-    bool interrupt() const { return mInterrupt && mInterrupt(); }
-    bool setProgress(size_t l, size_t t) const { return mProgress && mProgress( l, t ); }
+    bool interrupt() const
+    {
+        return ( mInterrupt && mInterrupt() ) || mInterruptedWithProgress;
+    }
+    bool setProgress( size_t l, size_t t )
+    {
+        mInterruptedWithProgress = mProgress && std::this_thread::get_id() == mProgressThreadId && !mProgress( l, t );
+        return !mInterruptedWithProgress;
+    }
 
     openvdb::math::CoordBBox mBBox;
     const TreeT& mInTree;
     TreeAccessor mInAcc;
     InterruptFunc mInterrupt;
     ProgressFunc mProgress;
+    std::thread::id mProgressThreadId;
+    bool mInterruptedWithProgress{ false };
 
     size_t leafCount = 0;
     size_t tileCount = 0;

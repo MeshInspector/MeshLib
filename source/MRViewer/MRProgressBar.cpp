@@ -140,6 +140,8 @@ void ProgressBar::orderWithMainThreadPostProcessing( const char* name, TaskWithM
             return;
 
         instance.progress_ = 0.0f;
+        instance.prevPercent_ = -1;
+        instance.percents_.store( -1 );
 
         instance.task_ = task;
         instance.currentTask_ = 0;
@@ -192,9 +194,14 @@ float ProgressBar::getProgress()
 bool ProgressBar::setProgress( float p )
 {
     auto& instance = instance_();
-    auto progress = instance.progress_;
-    if ( int( progress * 100.0f ) != int( p * 100.0f ) )
-        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, int( p * 100.0f ) );
+    assert( instance.thread_.get_id() == std::this_thread::get_id() );
+    int percent = int( p * 100.0f );
+    if ( instance.prevPercent_ != percent &&
+        instance.percents_.compare_exchange_strong( instance.prevPercent_, percent ) )
+    {
+        instance.prevPercent_ = percent;
+        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, percent );
+    }
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
     return !instance.canceled_;

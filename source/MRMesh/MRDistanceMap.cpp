@@ -821,7 +821,7 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
         for ( size_t ind = range.begin(); ind < range.end(); ++ind )
         {
             Vector2i basePos = toPos( ind );
-            if ( basePos.x >= resX || basePos.y >= resY )
+            if ( basePos.x + 1 >= resX || basePos.y + 1 >= resY )
                 continue;
 
             bool pixelValid = false;
@@ -892,7 +892,8 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue
     } );
 
     Polyline2 polyline;
-    polyline.points.resize( size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts );
+    size_t pointsSize = resultVertNumeration.empty() ? 0 : size_t( getVertIndexShiftForPixelId( size ) ) + resultVertNumeration.back().numVerts;
+    polyline.points.resize( pointsSize );
     polyline.topology.vertResize( polyline.points.size() );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, subcnt, 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )

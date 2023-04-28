@@ -21,7 +21,9 @@ struct Interrupter
 {
     Interrupter( ProgressCallback cb ) :
         cb_{ cb }
-    {};
+    {
+        progressThreadId_ = std::this_thread::get_id();
+    };
 
     void start( const char* name = nullptr )
     {
@@ -32,7 +34,7 @@ struct Interrupter
     bool wasInterrupted( int percent = -1 )
     {
         wasInterrupted_ = false;
-        if ( cb_ )
+        if ( cb_ && progressThreadId_ == std::this_thread::get_id() )
             wasInterrupted_ = !cb_( float( std::clamp( percent, 0, 100 ) ) / 100.0f );
         return wasInterrupted_;
     }
@@ -43,6 +45,7 @@ struct Interrupter
 private:
     bool wasInterrupted_{ false };
     ProgressCallback cb_;
+    std::thread::id progressThreadId_;
 };
 
 void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,

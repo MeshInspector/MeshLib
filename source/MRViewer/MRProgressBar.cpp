@@ -192,9 +192,12 @@ float ProgressBar::getProgress()
 bool ProgressBar::setProgress( float p )
 {
     auto& instance = instance_();
-    auto progress = instance.progress_;
-    if ( int( progress * 100.0f ) != int( p * 100.0f ) )
-        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, int( p * 100.0f ) );
+    assert( instance.thread_.get_id() == std::this_thread::get_id() );
+    int newPercents = int( p * 100.0f );
+    int percents = instance.percents_;
+    if ( percents != newPercents && instance.percents_.compare_exchange_strong( percents, newPercents ) )
+        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, newPercents );
+
     instance.progress_ = p;
     instance.frameRequest_.requestFrame();
     return !instance.canceled_;

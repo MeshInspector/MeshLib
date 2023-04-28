@@ -291,7 +291,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
             if ( menu )
                 menu->showErrorModal( "Cannot open given folder, find more in log." );
         };
-    }, 2 );
+    }, 3 );
 }
 #endif
 

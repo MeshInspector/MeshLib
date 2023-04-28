@@ -404,53 +404,21 @@ void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /
     HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
     
 
-    std::function<bool( size_t, size_t )> progressFn;
-    if ( size.tile )
+    if ( size.tile > 0 )
     {
         typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
         tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
         typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-
-        std::atomic<size_t> tileDone = 0;
-        if ( cb )
-        {
-            if ( !size.leaf )
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize );
-                };
-            else
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize / 2.f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
         tbb::parallel_reduce( tileRangeMain, calc );
     }
 
-    if ( size.leaf )
+    if ( size.leaf > 0 )
     {
         typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        std::atomic<size_t> leafDone = 0;
-        if ( cb )
-        {
-            if ( !size.tile )
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize );
-                };
-            else
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize / 2.f + 0.5f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
         tbb::parallel_reduce( leafRangeMain, calc );
     }
 

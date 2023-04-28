@@ -73,6 +73,9 @@ private:
 
     FrameRedrawRequest frameRequest_;
 
+    // parameter is needed for logging progress
+    std::atomic<int> percents_;
+
     std::thread thread_;
     TaskWithMainThreadPostProcessing task_;
     std::function<void()> onFinish_;

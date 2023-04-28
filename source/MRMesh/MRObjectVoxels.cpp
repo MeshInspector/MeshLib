@@ -404,27 +404,21 @@ void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /
     HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
     
 
-    if ( size.tile )
+    if ( size.tile > 0 )
     {
         typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
         tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
         typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-        if ( size.tile > 0 )
-        {
-            calc.setProgressHolder(
-                std::make_shared<RangeProgress>( subprogress( cb, 0.0f, 0.5f ), size.tile, RangeProgress::Mode::Tiles ) );
-        }
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
         tbb::parallel_reduce( tileRangeMain, calc );
     }
 
-    if ( size.leaf )
+    if ( size.leaf > 0 )
     {
         typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        if ( size.leaf > 0 )
-        {
-            calc.setProgressHolder(
-                std::make_shared<RangeProgress>( subprogress( cb, 0.5f, 1.0f ), size.leaf, RangeProgress::Mode::Leaves ) );
-        }
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
         tbb::parallel_reduce( leafRangeMain, calc );
     }
 

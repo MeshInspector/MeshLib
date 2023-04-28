@@ -34,6 +34,8 @@ public:
     MRMESH_API BitSet & operator |= ( const BitSet & b );
     MRMESH_API BitSet & operator ^= ( const BitSet & b );
     MRMESH_API BitSet & operator -= ( const BitSet & b );
+    /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
+    MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
     /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
     [[nodiscard]] MRMESH_API IndexType find_last() const;
@@ -109,6 +111,8 @@ public:
     TaggedBitSet & operator |= ( const TaggedBitSet & b ) { base::operator |= ( b ); return * this; }
     TaggedBitSet & operator ^= ( const TaggedBitSet & b ) { base::operator ^= ( b ); return * this; }
     TaggedBitSet & operator -= ( const TaggedBitSet & b ) { base::operator -= ( b ); return * this; }
+    /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
+    TaggedBitSet & subtract( const TaggedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }

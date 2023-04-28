@@ -36,6 +36,15 @@ BitSet & BitSet::operator -= ( const BitSet & rhs )
     return *this;
 }
 
+BitSet & BitSet::subtract( const BitSet & b, int bShiftInBlocks )
+{
+    const auto beginBlock = std::max( 0, bShiftInBlocks );
+    const auto endBlock = std::clamp( b.num_blocks() + bShiftInBlocks, size_t(0), num_blocks() );
+    for ( size_type i = beginBlock; i < endBlock; ++i )
+        m_bits[i] &= ~b.m_bits[i - bShiftInBlocks];
+    return *this;
+}
+
 bool operator == ( const BitSet & a, const BitSet & b )
 {
     if ( a.size() == b.size() )

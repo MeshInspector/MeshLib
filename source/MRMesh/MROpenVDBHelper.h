@@ -271,7 +271,7 @@ public:
         mInTree( other.mInTree ),
         mInAcc( mInTree ),
         mInterrupt( other.mInterrupt ),
-        mInterruptedByProgress{ other.mInterruptedByProgress },
+        mCanceled{ other.mCanceled },
         mProgress( other.mProgress )
     {}
 
@@ -357,7 +357,7 @@ public:
 private:
     bool interrupt() const
     {
-        return mInterruptedByProgress || ( mInterrupt && mInterrupt() );
+        return mCanceled || ( mInterrupt && mInterrupt() );
     }
     bool setProgress( size_t l, size_t t )
     {
@@ -365,15 +365,15 @@ private:
             return true;
         mProgress->add( l, t );
         if ( !mProgress->reportProgress() )
-            mInterruptedByProgress = true;
-        return !mInterruptedByProgress;
+            mCanceled = true;
+        return !mCanceled;
     }
 
     openvdb::math::CoordBBox mBBox;
     const TreeT& mInTree;
     TreeAccessor mInAcc;
     InterruptFunc mInterrupt;
-    bool mInterruptedByProgress{ false };
+    bool mCanceled{ false };
     std::shared_ptr<RangeProgress> mProgress;
 
     size_t leafCount = 0;

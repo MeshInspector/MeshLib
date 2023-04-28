@@ -30,8 +30,8 @@ BitSet & BitSet::operator ^= ( const BitSet & rhs )
 
 BitSet & BitSet::operator -= ( const BitSet & rhs )
 {
-    resize( std::max( size(), rhs.size() ) );
-    for ( size_type i = 0; i < rhs.num_blocks(); ++i )
+    const auto endBlock = std::min( num_blocks(), rhs.num_blocks() );
+    for ( size_type i = 0; i < endBlock; ++i )
         m_bits[i] &= ~rhs.m_bits[i];
     return *this;
 }

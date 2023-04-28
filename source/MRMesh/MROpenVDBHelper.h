@@ -197,9 +197,12 @@ void translateToZero( GredT& grid)
     grid.setTree( outTreePtr );
 }
 
+/// This class holds single progress counter for all parallel_reduce threads
+/// but report progress only in main thread
 class RangeProgress
 {
 public:
+    // Mode of parallel_reduce
     enum class Mode
     {
         Leaves,
@@ -212,6 +215,8 @@ public:
     {
         progressThreadId_ = std::this_thread::get_id();
     }
+    // if leaves mode add `l` to counter,
+    // if tiles mode - add `t` to counter
     void add( size_t l, size_t t )
     {
         if ( mode_ == Mode::Leaves )
@@ -219,6 +224,7 @@ public:
         else
             counter_.fetch_add( t );
     }
+    // retorts progress if called from main thread, otherwise do nothing
     bool reportProgress() const
     {
         if ( !cb_ )

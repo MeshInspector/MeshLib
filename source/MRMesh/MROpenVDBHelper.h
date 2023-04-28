@@ -3,6 +3,7 @@
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"
 #include "openvdb/tree/ValueAccessor.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -196,6 +197,42 @@ void translateToZero( GredT& grid)
     grid.setTree( outTreePtr );
 }
 
+class RangeProgress
+{
+public:
+    enum class Mode
+    {
+        Leaves,
+        Tiles
+    };
+    RangeProgress( ProgressCallback cb, size_t size, Mode mode ) :
+        size_{ size },
+        cb_{ cb },
+        mode_{ mode }
+    {
+        progressThreadId_ = std::this_thread::get_id();
+    }
+    void add( size_t l, size_t t )
+    {
+        if ( mode_ == Mode::Leaves )
+            counter_.fetch_add( l );
+        else
+            counter_.fetch_add( t );
+    }
+    bool reportProgress() const
+    {
+        if ( !cb_ )
+            return true;
+        return progressThreadId_ == std::this_thread::get_id() && cb_( float( counter_.load() ) / float( size_ ) );
+    }
+private:
+    std::atomic<size_t> counter_{ 0 };
+    size_t size_{ 0 };
+    ProgressCallback cb_;
+    std::thread::id progressThreadId_;
+    Mode mode_;
+};
+
 /**
  * @brief Class to use in tbb::parallel_reduce for tree operations that do not require an output tree
  * @tparam TreeT tree type
@@ -206,7 +243,7 @@ class RangeProcessorSingle
 {
 public:
     using InterruptFunc = std::function<bool( void )>;
-    using ProgressFunc = std::function<bool( size_t, size_t )>;
+    using ProgressHolder = std::shared_ptr<RangeProgress>;
 
     using ValueT = typename TreeT::ValueType;
 
@@ -228,18 +265,12 @@ public:
         mInTree( other.mInTree ),
         mInAcc( mInTree ),
         mInterrupt( other.mInterrupt ),
-        mProgress( other.mProgress ),
-        mProgressThreadId( other.mProgressThreadId ),
-        mInterruptedWithProgress( other.mInterruptedWithProgress )
+        mInterruptedByProgress{ other.mInterruptedByProgress },
+        mProgress( other.mProgress )
     {}
 
     void setInterrupt( const InterruptFunc& f ) { mInterrupt = f; }
-    /// Setup progress callback and mark this thread id as progress thread id
-    void setProgressFn( const ProgressFunc& f ) 
-    {
-        mProgress = f;
-        mProgressThreadId = std::this_thread::get_id();
-    }
+    void setProgressHolder( ProgressHolder progressHolder ) { mProgress = progressHolder; }
 
     /// Transform each leaf node in the given range.
     void operator()( const LeafRange& rCRef )
@@ -320,21 +351,24 @@ public:
 private:
     bool interrupt() const
     {
-        return ( mInterrupt && mInterrupt() ) || mInterruptedWithProgress;
+        return mInterruptedByProgress || ( mInterrupt && mInterrupt() );
     }
     bool setProgress( size_t l, size_t t )
     {
-        mInterruptedWithProgress = mProgress && std::this_thread::get_id() == mProgressThreadId && !mProgress( l, t );
-        return !mInterruptedWithProgress;
+        if ( !mProgress )
+            return true;
+        mProgress->add( l, t );
+        if ( !mProgress->reportProgress() )
+            mInterruptedByProgress = true;
+        return !mInterruptedByProgress;
     }
 
     openvdb::math::CoordBBox mBBox;
     const TreeT& mInTree;
     TreeAccessor mInAcc;
     InterruptFunc mInterrupt;
-    ProgressFunc mProgress;
-    std::thread::id mProgressThreadId;
-    bool mInterruptedWithProgress{ false };
+    bool mInterruptedByProgress{ false };
+    std::shared_ptr<RangeProgress> mProgress;
 
     size_t leafCount = 0;
     size_t tileCount = 0;

@@ -16,6 +16,9 @@ var addKeyboardEvents = function () {
         window.addEventListener("keyup", GLFW.onKeyup, true);
         keyboardEventsArePresent = true;
     }
+    // enforce several frames to toggle animation when popup closed
+    for (var i = 0;i<500;i+=100)
+        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
 };
 
 var createPopup = function (closeId, label, width, height, center = true) {

@@ -29,6 +29,7 @@ struct LoadDCMResult
 {
     VdbVolume vdbVolume;
     std::string name;
+    AffineXf3f xf;
 };
 
 /// Loads data from DICOM file(s)

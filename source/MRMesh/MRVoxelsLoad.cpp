@@ -286,7 +286,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     gdcm::Attribute<0x0020,0x0032> atPos;
     atPos.SetFromDataElement( dePosition );
     for (int i = 0; i < 3; ++i) {
-      imagePosition[i] = atPos.GetValue(i);
+        imagePosition[i] = float( atPos.GetValue( i ) );
     }
 
     gdcm::DataElement deRows = ds.GetDataElement( gdcm::Tag( 0x0028, 0x0010 ) );
@@ -308,19 +308,19 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     gdcm::Attribute<0x0020,0x0037> atOri;
     atOri.SetFromDataElement( deOri );
     for (int i = 0; i < 3; ++i)
-        rowDirection[i] = atOri.GetValue(i);
+        rowDirection[i] = float( atOri.GetValue( i ) );
     for (int i = 0; i < 3; ++i)
-        colDirection[i] = atOri.GetValue(3 + i);
+        colDirection[i] = float( atOri.GetValue( 3 + i ) );
 
     gdcm::DataElement dePixel = ds.GetDataElement( gdcm::Tag( 0x0028, 0x0030 ) );
     gdcm::Attribute<0x0028,0x0030> atPixel;
     atPixel.SetFromDataElement( dePixel );
     for (int i = 0; i < 2; ++i)
-        pixelSpacing[i] = atPixel.GetValue(i);
+        pixelSpacing[i] = float( atPixel.GetValue( i ) );
 
 
-    float rowSpacing = atPixel.GetValue(0);
-    float colSpacing = atPixel.GetValue(1);
+    float rowSpacing = float( atPixel.GetValue( 0 ) );
+    float colSpacing = float( atPixel.GetValue( 1 ) );
 
     res.oriA = { rowDirection[0] * pixelSpacing[0], rowDirection[1] * pixelSpacing[0], rowDirection[2] * pixelSpacing[0] };
     res.oriB = { colDirection[0] * pixelSpacing[1], colDirection[1] * pixelSpacing[1], colDirection[2] * pixelSpacing[1] };

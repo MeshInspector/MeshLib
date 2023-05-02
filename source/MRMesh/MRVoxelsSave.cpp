@@ -10,23 +10,11 @@
 #include "MRTimer.h"
 #include "MRPch/MROpenvdb.h"
 #include "MRPch/MRJson.h"
-#include <fmt/format.h>
+#include "MRPch/MRSpdlog.h"
 #include <openvdb/io/File.h>
 #include <fstream>
 #include <filesystem>
 #include <sstream>
-
-#if FMT_VERSION < 80000
-    const std::string & runtime( const std::string & str )
-{
-    return str;
-}
-#else
-auto runtime( const std::string & str )
-{
-    return fmt::runtime( str );
-}
-#endif
 
 namespace MR
 {
@@ -290,7 +278,7 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     const size_t maxNumChars = std::to_string( numSlices ).size();
     for ( int i = 0; i < numSlices; ++i )
     {
-        const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        const auto res = saveSliceToImage( settings.path / fmt::format( runtimeFmt( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
         if ( !res )
             return res;
 

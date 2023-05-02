@@ -24,3 +24,18 @@
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic pop
 #endif
+
+namespace MR
+{
+#if FMT_VERSION < 80000
+inline const std::string& runtimeFmt( const std::string& str )
+{
+    return str;
+}
+#else
+inline auto runtimeFmt( const std::string& str )
+{
+    return fmt::runtime( str );
+}
+#endif
+}

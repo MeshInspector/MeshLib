@@ -103,4 +103,16 @@ inline std::string getCancelMessage( const std::filesystem::path& path )
     return "Loading canceled: " + utf8string( path );
 }
 
+#if FMT_VERSION < 80000
+inline const std::string& runtimeFmt( const std::string& str )
+{
+    return str;
+}
+#else
+inline auto runtimeFmt( const std::string& str )
+{
+    return fmt::runtime( str );
+}
+#endif
+
 }

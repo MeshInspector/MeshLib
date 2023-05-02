@@ -1291,11 +1291,11 @@ float ImGuiMenu::drawSelectionInformation_()
 
     auto drawVec3 = [&style] ( std::string title, auto& value, float width, const char* formatStr )
     {
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( formatStr, value.x ), width );
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
         ImGui::SameLine();
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( formatStr, value.y ), width );
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
         ImGui::SameLine();
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( formatStr, value.z ), width );
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.z ), width );
 
         ImGui::SameLine( 0, style.ItemInnerSpacing.x );
         ImGui::Text( "%s", title.c_str() );

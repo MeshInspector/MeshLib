@@ -79,6 +79,12 @@ constexpr int power = 6;
 constexpr int numSubtasks = 1 << power;
 static_assert( numSubtasks == 64 );
 
+struct ComputedFlow
+{
+    double outSource = 0; // total flow exiting all sources
+    double inSink = 0;    // total flow entering all sinks
+};
+
 class VoxelGraphCut : public VolumeIndexer
 {
 public:
@@ -94,7 +100,7 @@ public:
     /// returns optimal subdivision of all region voxels on subtasks
     const std::vector<Subtask> & getSubtasks() const { return subtasks_; }
     /// sets edge capacities among all voxel
-    void setupCapacities( const SimpleVolume & densityVolume, float k );
+    void setupCapacities( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds );
     /// fills neighbor-related data structures
     void setupNeighbors();
     /// removes all references from span-voxels to out-of-span voxels
@@ -107,6 +113,8 @@ public:
     VoidOrErrStr segment( Context & context );
     /// obtain result of segmentation
     VoxelBitSet getResult( const VoxelBitSet & sourceSeeds ) const;
+    /// visits all sources/sinks to find the amount of flow
+    ComputedFlow computeFlow() const;
 
 private:
     ParallelHashMap<VoxelId, SeqVoxelId> toSeqId_;
@@ -154,6 +162,8 @@ private:
     // visits all voxels in given span to find active voxels, where augmentation is necessary;
     // also measures and logs the properties of the current cut
     void findActiveVoxels_( Context & context );
+    // creates subtasks including all region voxels
+    void makeSubtasks_();
     // given voxels, rearrange them and create subtasks
     void makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size_t stSize );
     // partition given blocks on two parts, returns the split index in between
@@ -273,7 +283,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
     allocate_( cnt );
     fillSeq2voxel_( region );
     subtasks_.resize( numSubtasks );
-    makeSubtasks_( getFullSpan(), subtasks_.data(), subtasks_.size() );
+    makeSubtasks_();
     fillToSeqId_();
 
     assert( size_ == sourceSeeds.size() );
@@ -363,9 +373,14 @@ void VoxelGraphCut::cutOutOfSpanNeiNeighbors( Context & context )
     } );
 }
 
-void VoxelGraphCut::makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size_t stSize )
+void VoxelGraphCut::makeSubtasks_()
 {
     MR_TIMER
+    makeSubtasks_( getFullSpan(), subtasks_.data(), subtasks_.size() );
+}
+
+void VoxelGraphCut::makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size_t stSize )
+{
     assert( stSize >= 1 );
     if ( stSize == 1 )
     {
@@ -383,9 +398,49 @@ void VoxelGraphCut::makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size
     group.wait();
 }
 
-Box3i VoxelGraphCut::computeBbox_( const SeqVoxelSpan & span ) const
+ComputedFlow VoxelGraphCut::computeFlow() const
 {
     MR_TIMER
+    return tbb::parallel_reduce( tbb::blocked_range( SeqVoxelId( 0 ), SeqVoxelId( seq2voxel_.size() ) ), ComputedFlow{},
+    [&] ( const tbb::blocked_range<SeqVoxelId> range, ComputedFlow localAcc )
+    {
+        for ( SeqVoxelId s = range.begin(); s < range.end(); ++s )
+        {
+            if ( sourceSeeds_.test( s ) )
+            {
+                const auto & ns = getNeighbors_( s );
+                for ( int i = 0; i < OutEdgeCount; ++i )
+                    if ( auto neis = ns[i] )
+                    {
+                        localAcc.outSource += capacity_[neis].forOutEdge[(int)opposite( OutEdge( i ) )]; // exiting flow is equal to entering capacity
+                        if ( parent_[neis] == s )
+                            localAcc.outSource += capacity_[s].forOutEdge[i] - capacityToParent_[neis];
+                    }
+            }
+            else if ( sinkSeeds_.test( s ) )
+            {
+                const auto & ns = getNeighbors_( s );
+                for ( int i = 0; i < OutEdgeCount; ++i )
+                    if ( auto neis = ns[i] )
+                    {
+                        localAcc.inSink += capacity_[s].forOutEdge[i]; // entering flow is equal to exiting capacity
+                        if ( parent_[neis] == s )
+                            localAcc.inSink += capacity_[neis].forOutEdge[(int)opposite( OutEdge( i ) )] - capacityToParent_[neis];
+                    }
+            }
+        }
+        return localAcc;
+    },
+    [&] ( ComputedFlow a, const ComputedFlow& b )
+    {
+        a.outSource += b.outSource;
+        a.inSink += b.inSink;
+        return a;
+    } );
+}
+
+Box3i VoxelGraphCut::computeBbox_( const SeqVoxelSpan & span ) const
+{
     return tbb::parallel_reduce( tbb::blocked_range( span.begin, span.end ), Box3i{},
     [&] ( const tbb::blocked_range<SeqVoxelId> range, Box3i localAcc )
     {
@@ -402,7 +457,6 @@ Box3i VoxelGraphCut::computeBbox_( const SeqVoxelSpan & span ) const
 
 SeqVoxelId VoxelGraphCut::partitionVoxels_( const SeqVoxelSpan & span )
 {
-    MR_TIMER
     const auto box = computeBbox_( span );
     auto boxDiag = box.max - box.min;
     const int splitAxis = int( std::max_element( begin( boxDiag ), end( boxDiag ) ) - begin( boxDiag ) );
@@ -411,7 +465,6 @@ SeqVoxelId VoxelGraphCut::partitionVoxels_( const SeqVoxelSpan & span )
 
 SeqVoxelId VoxelGraphCut::partitionVoxelsByAxis_( const SeqVoxelSpan & span, int axis )
 {
-    MR_TIMER
     auto mid = span.begin + ( span.end - span.begin ) / 2;
     mid = SeqVoxelId( mid / BitSet::bits_per_block * BitSet::bits_per_block );
     assert( mid >= span.begin && mid < span.end );
@@ -436,7 +489,7 @@ SeqVoxelId VoxelGraphCut::partitionVoxelsByAxis_( const SeqVoxelSpan & span, int
     return mid;
 }
 
-void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k )
+void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds )
 {
     MR_TIMER
 
@@ -457,22 +510,26 @@ void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k
     {
         for ( SeqVoxelId sid = range.begin(); sid != range.end(); ++sid )
         {
+            if ( sinkSeeds_.test( sid ) )
+                continue; // no exiting edges from sinks
             auto & cap = capacity_[sid];
             const auto vid = seq2voxel_[sid];
-            auto density = densityVolume.data[vid];
-            auto pos = toPos( vid );
-            if ( pos.x > 0 )
-                cap.forOutEdge[( int )OutEdge::MinusX] = capacity( density, densityVolume.data[vid - size_t( 1 )] );
-            if ( pos.x + 1 < dims_.x )
-                cap.forOutEdge[( int )OutEdge::PlusX] = capacity( density, densityVolume.data[vid + size_t( 1 )] );
-            if ( pos.y > 0 )
-                cap.forOutEdge[( int )OutEdge::MinusY] = capacity( density, densityVolume.data[vid - size_t( dims_.x )] );
-            if ( pos.y + 1 < dims_.y )
-                cap.forOutEdge[( int )OutEdge::PlusY] = capacity( density, densityVolume.data[vid + size_t( dims_.x )] );
-            if ( pos.z > 0 )
-                cap.forOutEdge[ (int)OutEdge::MinusZ ] = capacity( density, densityVolume.data[ vid - sizeXY_ ] );
-            if ( pos.z + 1 < dims_.z )
-                cap.forOutEdge[ (int)OutEdge::PlusZ ] = capacity( density, densityVolume.data[ vid + sizeXY_ ] );
+            const auto density = densityVolume.data[vid];
+            const auto pos = toPos( vid );
+            const auto bdPos = isBdVoxel( pos );
+            const bool vIsSource = sourceSeeds_.test( sid );
+            for ( int i = 0; i < OutEdgeCount; ++i )
+            {
+                const auto e = OutEdge( i );
+                auto neiv = getNeighbor( vid, pos, bdPos, e );
+                if ( !neiv )
+                    continue;
+                if ( sourceSeeds.test( neiv ) )
+                    continue; // no entering edges to sources
+                if ( vIsSource && sinkSeeds.test( neiv ) )
+                    continue; // no direct source-sink edges
+                cap.forOutEdge[i] = capacity( density, densityVolume.data[neiv] );
+            }
         }
     } );
 }
@@ -612,7 +669,6 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
         const auto side = voxelData_[s].side();
         if ( side == Side::Unknown )
             return;
-        const bool vIsSeed = sourceSeeds_.test( s ) || sinkSeeds_.test( s );
         const auto & ns = getNeighbors_( s );
         for ( int i = 0; i < OutEdgeCount; ++i )
         {
@@ -621,8 +677,6 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
                 continue;
             const auto neiSide = voxelData_[neis].side();
             if ( side == neiSide || ( side == Side::Sink && neiSide == Side::Source ) )
-                continue;
-            if ( vIsSeed && ( sourceSeeds_.test( neis ) || sinkSeeds_.test( neis ) ) )
                 continue;
             const auto e = OutEdge( i );
             const float edgeCapacity = edgeCapacity_( side, s, e, neis );
@@ -652,7 +706,6 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
             const auto s = context.span.toSeqId( p );
             const auto side = voxelData_[s].side();
             assert( side != Side::Unknown );
-            const bool vIsSeed = sourceSeeds_.test( s ) || sinkSeeds_.test( s );
             const auto & ns = getNeighbors_( s );
             for ( int i = 0; i < OutEdgeCount; ++i )
             {
@@ -661,8 +714,6 @@ void VoxelGraphCut::findActiveVoxels_( Context & context )
                     continue;
                 const auto neiSide = voxelData_[neis].side();
                 if ( side == neiSide || ( side == Side::Sink && neiSide == Side::Source ) )
-                    continue;
-                if ( vIsSeed && ( sourceSeeds_.test( neis ) || sinkSeeds_.test( neis ) ) )
                     continue;
                 ++totalCutEdges;
                 const auto e = OutEdge( i );
@@ -807,8 +858,6 @@ void VoxelGraphCut::augment_( Context & context, SeqVoxelId sSource, OutEdge vSo
 {
     assert( sSource && sSink );
     assert( getNeighbor( seq2voxel_[sSource], vSourceOutEdge ) == seq2voxel_[sSink] );
-    if ( sourceSeeds_.test( sSource ) && sinkSeeds_.test( sSink ) )
-        return;
     auto & srcD = voxelData_[sSource];
     auto & snkD = voxelData_[sSink];
 
@@ -1043,7 +1092,7 @@ tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolu
     if ( !reportProgress( cb, 2.0f / 16 ) )
         return tl::make_unexpected( "Operation was canceled" );
 
-    vgc.setupCapacities( densityVolume, k );
+    vgc.setupCapacities( densityVolume, k, sourceSeeds, sinkSeeds );
     if ( !reportProgress( cb, 3.0f / 16 ) )
         return tl::make_unexpected( "Operation was canceled" );
 
@@ -1106,6 +1155,8 @@ tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolu
         if ( !reportProgress( cb, 1.0f / ( power + 1 ) ) )
             return tl::make_unexpected( "Operation was canceled" );
     }
+    auto cflow = vgc.computeFlow();
+    spdlog::info( "VoxelGraphCut: flow-exiting-sources={}, flow-entering-sinks={}", cflow.outSource, cflow.inSink );
     return vgc.getResult( sourceSeeds );
 }
 

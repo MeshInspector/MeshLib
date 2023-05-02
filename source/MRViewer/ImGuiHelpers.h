@@ -237,6 +237,7 @@ MRVIEWER_API PaletteChanges Palette(
     float width,
     float menuScaling,
     bool* fixZero = nullptr,
+    std::function<void()> onFixZeroChanged = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),

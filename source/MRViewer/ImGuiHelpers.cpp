@@ -846,6 +846,7 @@ PaletteChanges Palette(
     float width,
     float menuScaling,
     bool* fixZero,
+    std::function<void()> onFixZeroChanged,
     float speed,
     float min,
     float max,
@@ -901,13 +902,12 @@ PaletteChanges Palette(
         fixZeroChanged = UI::checkbox( "Set Zero to Green", fixZero );
         UI::setTooltipIfHovered( "If checked, zero value always will be green", menuScaling );
     }
-    const auto& params = palette.getParameters();
-    const auto onFixZeroChanged = palette.onFixZeroChanged();
+    
     if ( fixZeroChanged && onFixZeroChanged )
         onFixZeroChanged();
 
     bool isDiscrete = palette.getTexture().filter == FilterType::Discrete;
-
+    const auto& params = palette.getParameters();
 
     if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
     {

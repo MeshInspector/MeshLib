@@ -26,11 +26,8 @@ void Palette::setBaseColors( const std::vector<Color>& colors )
     updateDiscretizatedColors_();
 }
 
-void Palette::setRangeMinMax( float min, float max, bool fixZero )
+void Palette::setRangeMinMax( float min, float max )
 {
-    if ( fixZero )
-        ( fabs( min ) > fabs( max ) ) ? max = -min : min = -max;
-
     setRangeLimits_( { min, max } );
 }
 

@@ -46,7 +46,7 @@ public:
      * @brief set range limits for palette (need for find color by value)
      * @detail all palette colors are evenly distributed between min and max
      */
-    MRVIEWER_API void setRangeMinMax( float min, float max, bool fixZero = false );
+    MRVIEWER_API void setRangeMinMax( float min, float max );
     /**
      * @brief set range limits for palette (need for find color by value)
      * @detail two half palette colors are evenly distributed between MinNeg / MaxNeg and MinPos / MaxPos
@@ -117,9 +117,6 @@ public:
     // sets maximal label count
     MRVIEWER_API void setMaxLabelCount( int val );
 
-    std::function<void()> onFixZeroChanged() { return onFixZeroChanged_; }
-    void setOnFixZeroChanged( std::function<void()> onFixZeroChanged ) { onFixZeroChanged_ = onFixZeroChanged; }
-
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
 
@@ -151,8 +148,6 @@ private:
     bool useCustomLabels_ = false;
 
     int maxLabelCount_ = 0;
-
-    std::function<void()> onFixZeroChanged_ = nullptr;
 
     static void resizeCallback_( ImGuiSizeCallbackData* data );
 };

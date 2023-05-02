@@ -398,7 +398,7 @@ void VoxelGraphCut::makeSubtasks_( const SeqVoxelSpan & span, Subtask * st, size
     group.wait();
 }
 
-ComputedFlow VoxelGraphCut::computeFlow() const
+[[maybe_unused]] ComputedFlow VoxelGraphCut::computeFlow() const
 {
     MR_TIMER
     return tbb::parallel_reduce( tbb::blocked_range( SeqVoxelId( 0 ), SeqVoxelId( seq2voxel_.size() ) ), ComputedFlow{},
@@ -501,7 +501,7 @@ void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k
     auto capacity = [=]( float densityFrom, float densityTo )
     {
         const auto delta = densityTo - densityFrom;
-        if ( delta > maxDelta )
+        if ( k > 0 && delta > maxDelta || k < 0 && delta < -maxDelta )
             return maxCapacity;
         return std::exp( k * delta );
     };
@@ -1155,8 +1155,8 @@ tl::expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolu
         if ( !reportProgress( cb, 1.0f / ( power + 1 ) ) )
             return tl::make_unexpected( "Operation was canceled" );
     }
-    auto cflow = vgc.computeFlow();
-    spdlog::info( "VoxelGraphCut: flow-exiting-sources={}, flow-entering-sinks={}", cflow.outSource, cflow.inSink );
+    //auto cflow = vgc.computeFlow();
+    //spdlog::info( "VoxelGraphCut: flow-exiting-sources={}, flow-entering-sinks={}", cflow.outSource, cflow.inSink );
     return vgc.getResult( sourceSeeds );
 }
 

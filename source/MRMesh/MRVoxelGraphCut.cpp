@@ -501,7 +501,7 @@ void VoxelGraphCut::setupCapacities( const SimpleVolume & densityVolume, float k
     auto capacity = [=]( float densityFrom, float densityTo )
     {
         const auto delta = densityTo - densityFrom;
-        if ( k > 0 && delta > maxDelta || k < 0 && delta < -maxDelta )
+        if ( ( k > 0 && delta > maxDelta ) || ( k < 0 && delta < -maxDelta ) )
             return maxCapacity;
         return std::exp( k * delta );
     };

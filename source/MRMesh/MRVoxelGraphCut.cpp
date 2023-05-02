@@ -812,6 +812,9 @@ void VoxelGraphCut::augment_( Context & context, SeqVoxelId sSource, OutEdge vSo
     auto & srcD = voxelData_[sSource];
     auto & snkD = voxelData_[sSink];
 
+    // zero means "need update"
+    float sourceCapacity = 0;
+    float sinkCapacity = 0;
     for ( ;; )
     {
         assert( srcD.side() == Side::Source );
@@ -819,34 +822,51 @@ void VoxelGraphCut::augment_( Context & context, SeqVoxelId sSource, OutEdge vSo
         assert( checkNotSaturatedPath_( sSource, Side::Source ) );
         assert( checkNotSaturatedPath_( sSink, Side::Sink ) );
 
-        auto minResidualCapacity = capacity_[ sSource ].forOutEdge[ (int)vSourceOutEdge ];
-        assert( minResidualCapacity >= 0 );
-        if ( minResidualCapacity == 0 )
+        const auto joinCapacity = capacity_[ sSource ].forOutEdge[ (int)vSourceOutEdge ];
+        assert( joinCapacity >= 0 );
+        if ( joinCapacity == 0 )
             break;
         ++context.stat.augmentations;
 
-        for ( auto s = sSource;; )
+        if ( sourceCapacity <= 0 )
         {
-            assert( voxelData_[s].side() == Side::Source );
-            auto sParent = parent_[s];
-            if ( !sParent )
-                break;
-            minResidualCapacity = std::min( minResidualCapacity, capacityToParent_[s] );
-            s = sParent;
+            sourceCapacity = FLT_MAX;
+            for ( auto s = sSource;; )
+            {
+                assert( voxelData_[s].side() == Side::Source );
+                auto sParent = parent_[s];
+                if ( !sParent )
+                    break;
+                sourceCapacity = std::min( sourceCapacity, capacityToParent_[s] );
+                assert( sourceCapacity > 0 );
+                s = sParent;
+            }
         }
-        for ( auto s = sSink;; )
+        if ( sinkCapacity <= 0 )
         {
-            assert( voxelData_[s].side() == Side::Sink );
-            auto sParent = parent_[s];
-            if ( !sParent )
-                break;
-            minResidualCapacity = std::min( minResidualCapacity, capacityToParent_[s] );
-            s = sParent;
+            sinkCapacity = FLT_MAX;
+            for ( auto s = sSink;; )
+            {
+                assert( voxelData_[s].side() == Side::Sink );
+                auto sParent = parent_[s];
+                if ( !sParent )
+                    break;
+                sinkCapacity = std::min( sinkCapacity, capacityToParent_[s] );
+                assert( sinkCapacity > 0 );
+                s = sParent;
+            }
         }
+
+        auto minResidualCapacity = std::min( { sinkCapacity, sourceCapacity, joinCapacity } );
+        assert( minResidualCapacity >= 0 );
+        if ( minResidualCapacity == 0 )
+            break;
 
         assert( minResidualCapacity > 0 );
         capacity_[ sSource ].forOutEdge[ (int)vSourceOutEdge ] -= minResidualCapacity;
         capacity_[ sSink ].forOutEdge[ (int)opposite( vSourceOutEdge ) ] += minResidualCapacity;
+        sourceCapacity -= minResidualCapacity;
+        sinkCapacity -= minResidualCapacity;
         context.stat.totalFlow += minResidualCapacity;
         //f_ << totalFlow_ << '\t' << minResidualCapacity << '\n';
 

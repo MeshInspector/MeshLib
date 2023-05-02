@@ -78,6 +78,7 @@
 #include "MRUIStyle.h"
 
 #ifndef __EMSCRIPTEN__
+#include "MRMesh/MRObjectVoxels.h"
 #include <fmt/chrono.h>
 #endif
 
@@ -1098,195 +1099,231 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
 float ImGuiMenu::drawSelectionInformation_()
 {
-    const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
     auto& style = ImGui::GetStyle();
 
     float resultHeight = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
-    if ( drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
-    {
-        ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
-        int fieldCount = 6;
+    if ( !drawCollapsingHeader_( "Information", ImGuiTreeNodeFlags_DefaultOpen ) )
+        return resultHeight;
 
-        size_t totalPoints = 0;
-        size_t totalSelectedPoints = 0;
-        for ( auto pObj : getAllObjectsInTree<ObjectPoints>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+    int fieldCount = 6;
+    // Points info
+    size_t totalPoints = 0;
+    size_t totalSelectedPoints = 0;
+    // Meshes and lines info
+    size_t totalFaces = 0;
+    size_t totalSelectedFaces = 0;
+    size_t totalVerts = 0;
+#ifndef __EMSCRIPTEN__
+    // Voxels info
+    Vector3i dimensions;
+#endif
+    // Scene info
+    Vector3f bsize;
+    Vector3f wbsize;
+    std::string bsizeStr;
+    std::string wbsizeStr;
+    selectionBbox_ = Box3f{};
+    selectionWorldBox_ = {};
+
+    for ( auto obj : selectedObjs )
+    {
+        // Scene info update
+        if ( auto vObj = obj->asType<VisualObject>() )
+        {
+            selectionBbox_.include( vObj->getBoundingBox() );
+            selectionWorldBox_.include( vObj->getWorldBox() );
+        }
+
+        // Typed info
+        if ( auto pObj = obj->asType<ObjectPoints>() )
         {
             totalPoints += pObj->numValidPoints();
             totalSelectedPoints += pObj->numSelectedPoints();
         }
-        if ( totalPoints )
-            ++fieldCount;
-
-        selectionBbox_ = Box3f{};
-        selectionWorldBox_ = {};
-        for ( auto pObj : selectedVisualObjs )
+        else if ( auto mObj = obj->asType<ObjectMesh>() )
         {
-            selectionBbox_.include( pObj->getBoundingBox() );
-            selectionWorldBox_.include( pObj->getWorldBox() );
-        }
-        
-        Vector3f bsize;
-        Vector3f wbsize;
-        std::string bsizeStr;
-        std::string wbsizeStr;        
-
-        if ( selectionWorldBox_.valid() )
-        {
-            bsize = selectionBbox_.size();
-            bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
-            wbsize = selectionWorldBox_.size();
-            wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
-            if ( bsizeStr != wbsizeStr )
-                ++fieldCount;
-        }            
-
-        const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
-        const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
-            style.FramePadding.y * fieldCount * 2 +
-            style.ItemSpacing.y + 
-            smallItemSpacingY * ( fieldCount + 1 );
-        resultHeight += infoHeight + style.ItemSpacing.y;
-
-        ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
-        // Compute total faces/verts in selected objects
-        size_t totalFaces = 0;
-        size_t totalSelectedFaces = 0;
-        size_t totalVerts = 0;
-        for ( auto pObj : getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
-        {
-            if ( auto mesh = pObj->mesh() )
+            if ( auto mesh = mObj->mesh() )
             {
                 totalFaces += mesh->topology.numValidFaces();
-                totalSelectedFaces += pObj->numSelectedFaces();
+                totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
             }
         }
-        for ( auto pObj : getAllObjectsInTree<ObjectLines>( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+        else if ( auto lObj = obj->asType<ObjectLines>() )
         {
-            if ( auto polyline = pObj->polyline() )
+            if ( auto polyline = lObj->polyline() )
             {
                 totalVerts += polyline->topology.numValidVerts();
             }
-        }        
-
-        auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
-        {
-            if ( value )
-            {
-                std::string valueStr;
-                std::string labelStr;
-                if ( selected )
-                {
-                    valueStr = std::to_string( selected ) + " / ";
-                    labelStr = "Selected / ";
-                }
-                valueStr += std::to_string( value );
-                labelStr += title;
-
-                UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
-            }
-        };
-
-        if ( selectedVisualObjs.size() > 1 )
-        {
-            drawPrimitivesInfo( "Objects", selectedVisualObjs.size() );
         }
-        else if ( auto pObj = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selected ) )
+#ifndef __EMSCRIPTEN__
+        else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
-            auto lastRenameObj = lastRenameObj_.lock();
-            if ( lastRenameObj != pObj )
+            auto newDims = vObj->dimensions();
+            if ( dimensions == Vector3i() )
             {
-                renameBuffer_ = pObj->name();
-                lastRenameObj_ = pObj;
+                dimensions = newDims;
             }
-            if ( !UI::inputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
+            else if ( dimensions != newDims )
             {
-                if ( renameBuffer_ == pObj->name() )
-                {
-                    // clear the pointer to reload the name on next frame (if it was changed from outside)
-                    lastRenameObj_.reset();
-                }
+                dimensions = Vector3i::diagonal( -1 );
             }
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
+        }
+#endif
+    }
+    if ( totalPoints )
+        ++fieldCount;
+    if ( selectionWorldBox_.valid() )
+    {
+        bsize = selectionBbox_.size();
+        bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
+        wbsize = selectionWorldBox_.size();
+        wbsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", wbsize.x, wbsize.y, wbsize.z );
+        if ( bsizeStr != wbsizeStr )
+            ++fieldCount;
+    }
+#ifndef __EMSCRIPTEN__
+    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    {
+        ++fieldCount;
+    }
+#endif
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, 12.0f );
+    const float smallItemSpacingY = 0.25f * cDefaultItemSpacing * menu_scaling();
+    const float infoHeight = ImGui::GetTextLineHeight() * fieldCount +
+        style.FramePadding.y * fieldCount * 2 +
+        style.ItemSpacing.y +
+        smallItemSpacingY * ( fieldCount + 1 );
+    resultHeight += infoHeight + style.ItemSpacing.y;
+
+    ImGui::BeginChild( "SceneInformation", ImVec2( 0, infoHeight ), false, ImGuiWindowFlags_HorizontalScrollbar );
+
+    auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
+    {
+        if ( value )
+        {
+            std::string valueStr;
+            std::string labelStr;
+            if ( selected )
             {
-                AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
-                pObj->setName( renameBuffer_ );
+                valueStr = std::to_string( selected ) + " / ";
+                labelStr = "Selected / ";
+            }
+            valueStr += std::to_string( value );
+            labelStr += title;
+
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+        }
+    };
+
+    if ( selectedObjs.size() > 1 )
+    {
+        drawPrimitivesInfo( "Objects", selectedObjs.size() );
+    }
+    else if ( !selectedObjs.empty() )
+    {
+        auto pObj = selectedObjs.front();
+        auto lastRenameObj = lastRenameObj_.lock();
+        if ( lastRenameObj != pObj )
+        {
+            renameBuffer_ = pObj->name();
+            lastRenameObj_ = pObj;
+        }
+        if ( !UI::inputTextCentered( "Object Name", renameBuffer_, getSceneInfoItemWidth_(), ImGuiInputTextFlags_AutoSelectAll ) )
+        {
+            if ( renameBuffer_ == pObj->name() )
+            {
+                // clear the pointer to reload the name on next frame (if it was changed from outside)
                 lastRenameObj_.reset();
             }
-
-            if ( auto pObjLabel = std::dynamic_pointer_cast<ObjectLabel>( pObj ) )
-            {
-                if ( pObjLabel != oldLabelParams_.obj )
-                {
-                    oldLabelParams_.obj = pObjLabel;
-                    const auto& positionedText = pObjLabel->getLabel();
-                    oldLabelParams_.lastLabel = positionedText.text;
-                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
-                }
-
-                if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
-                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
-                if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
-                {
-                    pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
-                    AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
-                    pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
-                    oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
-                } else if ( !ImGui::IsItemActive() )
-                {
-                    const auto& positionedText = pObjLabel->getLabel();
-                    oldLabelParams_.lastLabel = positionedText.text;
-                    oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
-                }
-            }
-            else if ( oldLabelParams_.obj )
-            {
-                oldLabelParams_.obj.reset();
-            }
         }
-        else
-            lastRenameObj_.reset();
-
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
-
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
-        drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
-
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
-
-        if ( selectionBbox_.valid() )
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            auto drawVec3 = [&style] ( std::string title, Vector3f& value, float width )
-            {
-                UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format("{:.3f}", value.x), width);
-                ImGui::SameLine();
-                UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( "{:.3f}", value.y ), width );
-                ImGui::SameLine();
-                UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( "{:.3f}", value.z ), width );
-
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::Text( "%s", title.c_str() );
-            };
-
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
-            const float fieldWidth = getSceneInfoItemWidth_( 3 );
-            drawVec3( "Box min", selectionBbox_.min, fieldWidth );
-            drawVec3( "Box max", selectionBbox_.max, fieldWidth );
-            drawVec3( "Box size", bsize, fieldWidth );
-
-            if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-                drawVec3( "World box size", wbsize, fieldWidth );
-
-            ImGui::PopStyleVar();
+            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
+            pObj->setName( renameBuffer_ );
+            lastRenameObj_.reset();
         }
 
-        ImGui::PopStyleVar();
-        ImGui::Dummy( ImVec2( 0, 0 ) );
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
+        if ( auto pObjLabel = std::dynamic_pointer_cast< ObjectLabel >( pObj ) )
+        {
+            if ( pObjLabel != oldLabelParams_.obj )
+            {
+                oldLabelParams_.obj = pObjLabel;
+                const auto& positionedText = pObjLabel->getLabel();
+                oldLabelParams_.lastLabel = positionedText.text;
+                oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
+            }
+
+            if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+                pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+            if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
+            {
+                pObjLabel->setLabel( { oldLabelParams_.lastLabel, pObjLabel->getLabel().position } );
+                AppendHistory( std::make_shared<ChangeLabelAction>( "Change label", pObjLabel ) );
+                pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
+                oldLabelParams_.lastLabel = oldLabelParams_.labelBuffer;
+            }
+            else if ( !ImGui::IsItemActive() )
+            {
+                const auto& positionedText = pObjLabel->getLabel();
+                oldLabelParams_.lastLabel = positionedText.text;
+                oldLabelParams_.labelBuffer = oldLabelParams_.lastLabel;
+            }
+        }
+        else if ( oldLabelParams_.obj )
+        {
+            oldLabelParams_.obj.reset();
+        }
     }
+    else
+        lastRenameObj_.reset();
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
+
+    drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
+    drawPrimitivesInfo( "Vertices", totalVerts );
+    drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 2 * smallItemSpacingY );
+
+    auto drawVec3 = [&style] ( std::string title, auto& value, float width, const char* formatStr )
+    {
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( formatStr, value.x ), width );
+        ImGui::SameLine();
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( formatStr, value.y ), width );
+        ImGui::SameLine();
+        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( formatStr, value.z ), width );
+
+        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+        ImGui::Text( "%s", title.c_str() );
+    };
+
+    const float fieldWidth = getSceneInfoItemWidth_( 3 );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemInnerSpacing.x, style.ItemSpacing.y } );
+#ifndef __EMSCRIPTEN__
+    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    {
+        drawVec3( "Dimensions", dimensions, fieldWidth,"{}" );
+    }
+#endif
+    if ( selectionBbox_.valid() )
+    {
+        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
+        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
+        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
+
+        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
+    }
+    ImGui::PopStyleVar();
+
+    ImGui::PopStyleVar();
+    ImGui::Dummy( ImVec2( 0, 0 ) );
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
 
     return resultHeight;
 }

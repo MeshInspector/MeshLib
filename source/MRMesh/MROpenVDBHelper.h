@@ -227,9 +227,9 @@ public:
     // retorts progress if called from main thread, otherwise do nothing
     bool reportProgress() const
     {
-        if ( !cb_ )
+        if ( !cb_ || progressThreadId_ != std::this_thread::get_id() )
             return true;
-        return progressThreadId_ == std::this_thread::get_id() && cb_( float( counter_.load() ) / float( size_ ) );
+        return cb_( float( counter_.load() ) / float( size_ ) );
     }
 private:
     std::atomic<size_t> counter_{ 0 };
@@ -289,7 +289,7 @@ public:
             if ( interrupt() ) break;
             if ( !( leafCount & 0x400 ) )
             {
-                if ( setProgress( leafCount - leafCountLast, tileCount ) )
+                if ( !setProgress( leafCount - leafCountLast, tileCount ) )
                     break;
                 else
                     leafCountLast = leafCount;
@@ -320,7 +320,7 @@ public:
             if ( interrupt() ) break;
             if ( !( tileCount & 0x400 ) )
             {
-                if ( setProgress( leafCount, tileCount - tileCountLast ) )
+                if ( !setProgress( leafCount, tileCount - tileCountLast ) )
                     break;
                 else
                     tileCountLast = tileCount;

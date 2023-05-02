@@ -73,8 +73,8 @@ canvas.emscripten {
     animation: rotation .8s linear infinite;
     background-image: url('spinner.svg');
     position: absolute;
-    top:50%;
-    left:50%;
+    top: 50%;
+    left: 50%;
     margin-top: -57px;
     margin-left: -13px;
 }
@@ -85,9 +85,9 @@ canvas.emscripten {
     object-fit: contain;
     background-image: url('logo.svg');
     position: absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-164px);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -164px);
 }
 
 @-webkit-keyframes rotation {
@@ -139,11 +139,32 @@ canvas.emscripten {
     color: #787878
 }
 
-#progress {
-    height: 8px;
-    width: 300px;
+.progress-bg {
     position: absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
+    width: 300px;
+    height: 8px;
+    left: 50%;
+    top: 50%;
+    border-radius: 8px;
+    transform: translate(-50%, -50%);
+}
+
+.dark-progress {
+    background-color: #000;
+}
+
+@media (prefers-color-scheme: light) {
+    .dark-progress.adaptive-progress {
+        background-color: #dbdde5
+    }
+}
+
+.progress {
+    position: relative;
+    width: 0%;
+    height: 8px;
+    left: 0;
+    top: 0;
+    border-radius: 8px;
+    background-image: linear-gradient(to bottom, #1b83ff, #004da9), linear-gradient(to bottom, #1b83ff, #004da9);
 }

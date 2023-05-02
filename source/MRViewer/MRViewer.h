@@ -150,9 +150,6 @@ public:
 
     // Draw everything
     MRVIEWER_API void draw( bool force = false );
-#if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-    MRVIEWER_API void emsDraw( bool force = false );
-#endif
     // Draw 3d scene without UI
     MRVIEWER_API void drawScene();
     // Setup viewports views
@@ -558,7 +555,8 @@ public:
         MRVIEWER_API void popByName( const std::string& name );
         MRVIEWER_API bool empty() const;
     private:
-        mutable std::mutex mutex_;
+        // important for wasm to be recursive
+        mutable std::recursive_mutex mutex_;
         std::queue<NamedEvent> queue_;
         bool lastSkipable_{false};
     } eventQueue;
@@ -585,7 +583,8 @@ private:
     static void emsMainInfiniteLoop();
 #endif
 #endif
-    void draw_( bool force );
+    // returns true if was swapped
+    bool draw_( bool force );
 
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };

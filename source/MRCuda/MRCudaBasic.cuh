@@ -53,10 +53,15 @@ public:
     {
         return data_;
     }
-    // size of GPU array
+    // size of GPU array in elements
     size_t size() const
     {
         return size_;
+    }
+    // size of GPU array in bytes
+    size_t bytes() const
+    {
+        return size_ * sizeof( T );
     }
 
 private:

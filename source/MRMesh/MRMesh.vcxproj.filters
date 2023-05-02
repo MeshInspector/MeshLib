@@ -915,7 +915,6 @@
     <ClInclude Include="MREdgeMetric.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRGltfSerializer.h" />
     <ClInclude Include="MRFastWindingNumber.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -936,6 +935,9 @@
     </ClInclude>
     <ClInclude Include="MRPointsToMeshProjector.h">
       <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGltfSerializer.h">
+      <Filter>Source Files\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1548,7 +1550,6 @@
     <ClCompile Include="MREdgeMetric.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRGltfSerializer.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1556,6 +1557,9 @@
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsLoadGav.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGltfSerializer.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>

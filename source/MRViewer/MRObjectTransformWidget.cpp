@@ -104,7 +104,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf 
     if ( controlsRoot_ )
         reset();
 
-    center_ = box.center();
+    params_.center = box.center();
     boxDiagonal_ = box.size();
     if ( params_.radius < 0.0f )
         params_.radius = boxDiagonal_.length() * 0.5f;
@@ -151,6 +151,7 @@ void ObjectTransformWidget::reset()
     disconnect();
     xfValidatorConnection_.disconnect();
 
+    modesValidator_ = {};
     startModifyCallback_ = {};
     stopModifyCallback_ = {};
     addXfCallback_ = {};
@@ -228,24 +229,28 @@ void ObjectTransformWidget::setRadius( float radius )
     makeControls_();
 }
 
+void ObjectTransformWidget::setCenter( const Vector3f& center )
+{
+    params_.center = center;
+    makeControls_();
+}
+
 void ObjectTransformWidget::setParams( const Params & params )
 {
     params_ = params;
     makeControls_();
 }
 
-void ObjectTransformWidget::setTransformMode( uint8_t mask )
+void ObjectTransformWidget::setTransformMode( uint8_t mask, ViewportId vpId )
 {
     if ( !controlsRoot_ )
         return;
-    if ( transformModeMask_ == mask )
+    if ( transformModeMask_.get( vpId ) == mask )
         return;
 
-    transformModeMask_ = mask;
+    transformModeMask_.set( mask, vpId );
 
-    auto visMask = controlsRoot_->visibilityMask();
-    
-    updateVisualTransformMode_( transformModeMask_, visMask );
+    updateVisualTransformMode_( mask, vpId ? vpId : controlsRoot_->visibilityMask() );    
 }
 
 void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
@@ -256,6 +261,41 @@ void ObjectTransformWidget::setControlsXf( const AffineXf3f& xf, ViewportId id )
 AffineXf3f ObjectTransformWidget::getControlsXf( ViewportId id ) const
 {
     return controlsRoot_->xf( id );
+}
+
+ObjectTransformWidget::ModesValidator ObjectTransformWidget::ThresholdDotValidator( float thresholdDot )
+{
+    if ( thresholdDot <= 0.0f )
+        return {};
+    return [thresholdDot] ( const ObjectTransformWidget& widget, ViewportId vpId )
+    {
+        const auto& xf = widget.getControlsXf( vpId );
+        auto transformedCenter = xf( widget.getCenter() );
+        auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
+        auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
+
+        uint8_t showMask = FullMask;
+
+        bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot;
+        bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot;
+        bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot;
+
+        if ( xHide )
+            showMask &= ~RotX;
+        if ( yHide )
+            showMask &= ~RotY;
+        if ( zHide )
+            showMask &= ~RotZ;
+
+        if ( xHide && yHide )
+            showMask &= ~MoveZ;
+        if ( xHide && zHide )
+            showMask &= ~MoveY;
+        if ( yHide && zHide )
+            showMask &= ~MoveX;
+
+        return showMask;
+    };
 }
 
 void ObjectTransformWidget::followObjVisibility( const std::weak_ptr<Object>& obj )
@@ -319,33 +359,9 @@ void ObjectTransformWidget::preDraw_()
     auto vpmask = controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports();
     for ( auto vpId : vpmask )
     {
-        auto showMask = transformModeMask_;
-
-        if ( thresholdDot_ > 0.0f )
-        {
-            const auto& xf = controlsRoot_->xf( vpId );
-            auto transformedCenter = xf( center_ );
-            auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
-            auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
-
-            bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot_;
-            bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot_;
-            bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot_;
-
-            if ( xHide )
-                showMask &= ~RotX;
-            if ( yHide )
-                showMask &= ~RotY;
-            if ( zHide )
-                showMask &= ~RotZ;
-
-            if ( xHide && yHide )
-                showMask &= ~MoveZ;
-            if ( xHide && zHide )
-                showMask &= ~MoveY;
-            if ( yHide && zHide )
-                showMask &= ~MoveX;
-        }
+        auto showMask = transformModeMask_.get( vpId );
+        if ( modesValidator_ )
+            showMask &= modesValidator_( *this, vpId );
         updateVisualTransformMode_( showMask, vpId );
     }
 }
@@ -434,8 +450,8 @@ void ObjectTransformWidget::makeControls_()
         auto transPolyline = std::make_shared<Polyline3>();
         std::vector<Vector3f> translationPoints = 
         { 
-            center_ - params_.radius * params_.negativeLineExtension * baseAxis[i],
-            center_ + params_.radius * params_.positiveLineExtension * baseAxis[i]
+            params_.center - params_.radius * params_.negativeLineExtension * baseAxis[i],
+            params_.center + params_.radius * params_.positiveLineExtension * baseAxis[i]
         };
         transPolyline->addFromPoints( translationPoints.data(), translationPoints.size() );
         translateLines_[i]->setPolyline( transPolyline );
@@ -443,7 +459,7 @@ void ObjectTransformWidget::makeControls_()
         translateControls_[i]->setMesh( std::make_shared<Mesh>(
             makeArrow( translationPoints[0], translationPoints[1], params_.width, params_.coneRadiusFactor * params_.width, params_.coneSizeFactor * params_.width ) ) );
 
-        auto xf = AffineXf3f::translation( center_ ) *
+        auto xf = AffineXf3f::translation( params_.center ) *
             AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), baseAxis[i] ) );
 
         if ( !rotateControls_[i] )
@@ -619,7 +635,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
         xf( translateLines_[int( ax )]->polyline()->points.vec_[1] ),
         line.p, line.p + line.d
     );
-    auto centerTransformed = xf( center_ );
+    auto centerTransformed = xf( params_.center );
 
     if ( press )
     {
@@ -641,7 +657,7 @@ void ObjectTransformWidget::processScaling_( ObjectTransformWidget::Axis ax, boo
     {
         auto scale = Vector3f::diagonal( 1.f );
         scale[int( ax )] = scaleFactor;
-        auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), center_ ) * xf.inverse();
+        auto addXf = xf * AffineXf3f::xfAround( Matrix3f::scale( scale ), params_.center ) * xf.inverse();
         addXf_( addXf );
     }
     else
@@ -685,7 +701,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     auto prevXf = controlsRoot_->xf( viewport.id );
     auto zeroPoint = prevXf( rotateLines_[int( ax )]->polyline()->points.vec_[0] );
     auto norm = prevXf.A * translateLines_[int( ax )]->polyline()->edgeVector( 0_e );
-    auto centerTransformed = prevXf( center_ );
+    auto centerTransformed = prevXf( params_.center );
     auto angle = findAngleDegOfPick( centerTransformed, zeroPoint, norm, line, viewport, viewportPoint );
 
     if ( press )
@@ -713,7 +729,7 @@ void ObjectTransformWidget::processRotation_( Axis ax, bool press )
     if ( accumAngle_ < 0.0f )
         step = -1;
 
-    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - center_ ).length();
+    auto radius = ( rotateLines_[0]->polyline()->points.vec_[0] - params_.center ).length();
     Vector3f basisXTransfomed;
     Vector3f basisYTransfomed;
     if ( ax == X )
@@ -762,7 +778,7 @@ void ObjectTransformWidget::setControlsXf_( const AffineXf3f& xf, bool updateSca
     Vector3f invScaling{ 1.f / scaling.x.x, 1.f / scaling.y.y, 1.f / scaling.z.z };
 
     approvedChange_ = true;
-    controlsRoot_->setXf( scaledXf_.get( id ) * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), center_ ), id );
+    controlsRoot_->setXf( scaledXf_.get( id ) * AffineXf3f::xfAround( Matrix3f::scale( invScaling ) * Matrix3f::scale( uniformScaling ), params_.center ), id );
     approvedChange_ = false;
 }
 

@@ -191,15 +191,16 @@ float ProgressBar::getProgress()
 
 bool ProgressBar::setProgress( float p )
 {
-    instance_().progress_ = p;
-    instance_().frameRequest_.requestFrame();
-    return !instance_().canceled_;
-}
+    auto& instance = instance_();
+    assert( instance.thread_.get_id() == std::this_thread::get_id() );
+    int newPercents = int( p * 100.0f );
+    int percents = instance.percents_;
+    if ( percents != newPercents && instance.percents_.compare_exchange_strong( percents, newPercents ) )
+        spdlog::info( "Operation progress: \"{}\" - {}%", instance.title_, newPercents );
 
-void ProgressBar::addProgress( float p )
-{
-    instance_().progress_ += p;
-    instance_().frameRequest_.requestFrame();
+    instance.progress_ = p;
+    instance.frameRequest_.requestFrame();
+    return !instance.canceled_;
 }
 
 void ProgressBar::setTaskCount( int n )
@@ -231,29 +232,12 @@ bool ProgressBar::callBackSetProgress( float p )
     return !instance.canceled_;
 }
 
-bool ProgressBar::callBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = true;
-    instance.addProgress( p );
-    return !instance.canceled_;
-}
-
 bool ProgressBar::simpleCallBackSetProgress( float p )
 {
     auto& instance = instance_();
     instance.allowCancel_ = false;
     instance.setProgress( ( p + float( instance.currentTask_ - 1 ) ) / instance.taskCount_ );
     return true; // no cancel
-}
-
-bool ProgressBar::simpleCallBackAddProgress( float p )
-{
-    auto& instance = instance_();
-    instance.allowCancel_ = false;
-    instance.addProgress( p );
-    return true; // no cancel
-
 }
 
 ProgressBar& ProgressBar::ProgressBar::instance_()
@@ -330,26 +314,23 @@ void ProgressBar::tryRunTaskWithSehHandler_()
 void ProgressBar::FrameRedrawRequest::requestFrame()
 {
     // do not do it too frequently not to overload the renderer
-    auto now = std::chrono::system_clock::now();
-    const auto minInterval = std::chrono::milliseconds( 100 );
-    if ( lastDrawnTime_.load( std::memory_order::relaxed ) + minInterval > now )
-    {
-        bool testFrameOrder = false;
-        if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
-        {
-            // make request
+    constexpr auto minInterval = std::chrono::milliseconds( 100 );
+    // make request
 #ifdef __EMSCRIPTEN__
+    bool testFrameOrder = false;
+    if ( frameRequested_.compare_exchange_strong( testFrameOrder, true ) )
+    {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-            EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
+        MAIN_THREAD_EM_ASM( postEmptyEvent( $0, 2 ), int( minInterval.count() ) );
 #pragma clang diagnostic pop
-#else
-            asyncRequest_.requestIfNotSet( now + minInterval, [] () { getViewerInstance().postEmptyEvent(); } );
-#endif
-        }
-        return;
     }
-    getViewerInstance().postEmptyEvent();
+#else
+    asyncRequest_.requestIfNotSet( std::chrono::system_clock::now() + minInterval, [] ()
+    {
+        getViewerInstance().postEmptyEvent();
+    } );
+#endif
 }
 
 void ProgressBar::finish_()
@@ -360,9 +341,10 @@ void ProgressBar::finish_()
 
 void ProgressBar::FrameRedrawRequest::reset()
 {
-    lastDrawnTime_ = std::chrono::system_clock::now();
+#ifdef __EMSCRIPTEN__
     bool testFrameOrder = true;
     frameRequested_.compare_exchange_strong( testFrameOrder, false );
+#endif
 }
 
 }

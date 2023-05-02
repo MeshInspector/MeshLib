@@ -84,7 +84,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
         for ( auto& c : ext )
             c = ( char )tolower( c );
 
-        result = VoxelsSave::toAnySupportedFormat( filename, objVoxels->vdbVolume(), callback );
+        result = VoxelsSave::toAnySupportedFormat( objVoxels->vdbVolume(), filename, callback );
     }
 #endif
 

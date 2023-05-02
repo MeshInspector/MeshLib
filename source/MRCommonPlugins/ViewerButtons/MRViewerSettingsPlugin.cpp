@@ -386,10 +386,10 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float scaling )
         ImGui::SetCursorPosY( posY + cGradientButtonFramePadding * scaling / 2.f );
         ImGui::Text( "%s", modeName.c_str() );
         ImGui::SameLine();
-        ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f );
+        ImGui::SetCursorPosX( windowSize.x * 0.5f - 50.0f * scaling );
         ImGui::Text( "%s", ctrlStr.c_str() );
         ImGui::SameLine();
-        ImGui::SetCursorPosX( windowSize.x - 150.0f );
+        ImGui::SetCursorPosX( windowSize.x - 150.0f * scaling );
 
 		ImGui::SetCursorPosY( posY );
         UI::button( "Set other", Vector2f( -1, buttonHeight ) );

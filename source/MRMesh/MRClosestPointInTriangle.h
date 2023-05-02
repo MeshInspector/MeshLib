@@ -53,15 +53,17 @@ static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<
     }
 
     const T vb = d5 * d2 - d1 * d6;
-    if ( vb <= 0 && d2 >= 0 && d6 <= 0 )
+    if ( vb <= 0 && d6 <= 0 )
     {
+        assert( d2 >= 0 );
         const T v = d2 / ( d2 - d6 );
         return { a + v * ac, { 0, v } };
     }
 
     const T va = d3 * d6 - d5 * d4;
-    if ( va <= 0 && ( d4 - d3 ) >= 0 && ( d5 - d6 ) >= 0 )
+    if ( va <= 0 )
     {
+        assert( d4 >= d3 && d5 >= d6 );
         const T v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
         return { b + v * ( c - b ), { 1 - v, v } };
     }

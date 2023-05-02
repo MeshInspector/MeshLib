@@ -30,9 +30,18 @@ BitSet & BitSet::operator ^= ( const BitSet & rhs )
 
 BitSet & BitSet::operator -= ( const BitSet & rhs )
 {
-    resize( std::max( size(), rhs.size() ) );
-    for ( size_type i = 0; i < rhs.num_blocks(); ++i )
+    const auto endBlock = std::min( num_blocks(), rhs.num_blocks() );
+    for ( size_type i = 0; i < endBlock; ++i )
         m_bits[i] &= ~rhs.m_bits[i];
+    return *this;
+}
+
+BitSet & BitSet::subtract( const BitSet & b, int bShiftInBlocks )
+{
+    const auto beginBlock = std::max( 0, bShiftInBlocks );
+    const auto endBlock = std::clamp( b.num_blocks() + bShiftInBlocks, size_t(0), num_blocks() );
+    for ( size_type i = beginBlock; i < endBlock; ++i )
+        m_bits[i] &= ~b.m_bits[i - bShiftInBlocks];
     return *this;
 }
 

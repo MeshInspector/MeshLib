@@ -69,7 +69,7 @@ tl::expected<Mesh, std::string> offsetMesh( const MeshPart & mp, float offset, c
     {
         // Compute signs for initially unsigned distance field
         auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, sp );
+        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, params.fwn, sp );
         if ( !signRes.has_value() )
             return tl::make_unexpected( signRes.error() );
     }
@@ -91,7 +91,7 @@ tl::expected<Mesh, std::string> doubleOffsetMesh( const MeshPart& mp, float offs
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.callBack );
+    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, params.adaptivity, params.fwn, params.callBack );
 }
 
 tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset, 
@@ -135,6 +135,7 @@ tl::expected<Mesh, std::string> mcOffsetMesh( const Mesh& mesh, float offset,
         msParams.signMode = *params.simpleVolumeSignMode;
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.fwn = params.fwn;
         
         auto volume = meshToSimpleVolume( mesh, msParams );
         if ( !volume )

@@ -1109,11 +1109,17 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
 
 void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
 {
-    if ( item->isActive() || available )
-    {
-        ImGui::CloseCurrentPopup();
-        item->action();
-    }
+    bool wasActive = item->isActive();
+    if ( !wasActive && !available )
+        return;
+    ImGui::CloseCurrentPopup();
+    // take name before, because item can become invalid during `action`
+    auto name = item->name();
+    bool stateChanged = item->action();
+    if ( !stateChanged )
+        spdlog::info( "Action item: \"{}\"", name );
+    else
+        spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
 }
 
 void RibbonMenu::changeTab_( int newTab )
@@ -1222,7 +1228,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
             }
 
             if ( !statePlugin->dialogIsOpen() )
-                itemPtr.item->action();
+                itemPressed_( itemPtr.item, true );
             else if ( prevFrameObjectsCache_ != selectedObjectsCache_ )
                 statePlugin->updateSelection( selectedObjectsCache_ );
         }

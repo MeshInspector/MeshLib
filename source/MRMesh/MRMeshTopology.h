@@ -94,8 +94,11 @@ public:
     void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
     void getTriVerts( FaceId f, VertId (&v)[3] ) const { getTriVerts( f, v[0], v[1], v[2] ); }
     void getTriVerts( FaceId f, ThreeVertIds & v ) const { getTriVerts( f, v[0], v[1], v[2] ); }
-    /// returns all valid triangle vertices
+    /// returns three vertex ids for valid triangles, invalid triangles are skipped
     [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
+    /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
+    /// vertex ids for invalid triangles are undefined, and shall not be read
+    [[nodiscard]] MRMESH_API Triangulation getTriangulation() const;
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;

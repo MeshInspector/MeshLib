@@ -273,6 +273,20 @@ std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
     return res;
 }
 
+Triangulation MeshTopology::getTriangulation() const
+{
+    MR_TIMER
+    Triangulation res;
+    res.resize( faceSize() ); //TODO: resizeNoInit
+    assert( updateValids_ );
+    BitSetParallelFor( validFaces_, [&]( FaceId f )
+    {
+        getTriVerts( f, res[f] );
+    } );
+
+    return res;
+}
+
 bool MeshTopology::isLeftQuad( EdgeId a ) const
 {
     assert( a.valid() );

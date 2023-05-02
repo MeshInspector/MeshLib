@@ -36,6 +36,7 @@ std::string getVolumeFragmentShader()
 
   uniform vec4 viewport;
   uniform vec3 voxelSize;
+  uniform float step;
 
   uniform sampler3D volume;
   uniform sampler2D denseMap;
@@ -71,7 +72,7 @@ std::string getVolumeFragmentShader()
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
     vec3 textCoord = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
-    vec3 rayStep = 0.5 * length( voxelSize ) * normRayDir;
+    vec3 rayStep = step * normRayDir;
     rayStart = rayStart - rayStep * 0.5;
     vec3 diagonal = maxPoint - minPoint;
     while ( outColor.a < 1.0 )

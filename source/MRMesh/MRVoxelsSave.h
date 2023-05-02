@@ -18,17 +18,24 @@ namespace VoxelsSave
 
 MRMESH_API extern const IOFilters Filters;
 
-/// Save raw voxels file, writing parameters in name
-MRMESH_API VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume,
-                                                    ProgressCallback callback = {} );
+/// Save raw voxels file, writing parameters in file name
+MRMESH_API VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+                                       ProgressCallback callback = {} );
+
+/// Save voxels in raw format with each value as 32-bit float in given binary stream
+MRMESH_API VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
+
+/// Save voxels in Gav-format in given file
+MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback = {} );
+/// Save voxels in Gav-format in given binary stream
+MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
 /// Save vdb voxels file, using openVdb methods
-MRMESH_API VoidOrErrStr toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume,
-                                                    ProgressCallback callback = {} );
+MRMESH_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+                               ProgressCallback callback = {} );
 
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
-                                                                 ProgressCallback callback = {} );
-
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+                                              ProgressCallback callback = {} );
 
 /// save the slice by the active plane through the sliceNumber to an image file
 MRMESH_API VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );

@@ -7,23 +7,14 @@
 #include "MRProgressReadWrite.h"
 #include "MRColor.h"
 #include "MRMeshTexture.h"
+#include "MRTimer.h"
 #include "MRPch/MROpenvdb.h"
-#include <fmt/format.h>
+#include "MRPch/MRJson.h"
+#include "MRPch/MRSpdlog.h"
+#include <openvdb/io/File.h>
 #include <fstream>
 #include <filesystem>
-#include "openvdb/io/File.h"
-
-#if FMT_VERSION < 80000
-    const std::string & runtime( const std::string & str )
-{
-    return str;
-}
-#else
-auto runtime( const std::string & str )
-{
-    return fmt::runtime( str );
-}
-#endif
+#include <sstream>
 
 namespace MR
 {
@@ -33,17 +24,49 @@ namespace VoxelsSave
 const IOFilters Filters = 
 {
     {"Raw (.raw)","*.raw"},
-    {"OpenVDB (.vdb)","*.vdb"}
+    {"OpenVDB (.vdb)","*.vdb"},
+    {"Micro CT (.gav)","*.gav"}
 };
 
-VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback callback )
+VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
-    if ( path.empty() )
+    MR_TIMER
+    const auto& grid = vdbVolume.data;
+    auto accessor = grid->getConstAccessor();
+    const auto& dims = vdbVolume.dims;
+
+    // this coping block allow us to write data to disk faster
+    std::vector<float> buffer( size_t( dims.x )*dims.y*dims.z );
+    size_t dimsXY = size_t( dims.x )*dims.y;
+
+    for ( int z = 0; z < dims.z; ++z )
     {
-        return tl::make_unexpected( "Path is empty" );
+        for ( int y = 0; y < dims.y; ++y )
+        {
+            for ( int x = 0; x < dims.x; ++x )
+                {
+                buffer[z*dimsXY + y * dims.x + x] = accessor.getValue( {x,y,z} );
+            }
+        }
     }
 
-    auto ext = utf8string( path.extension() );
+    if ( !writeByBlocks( out, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
+        return tl::make_unexpected( std::string( "Saving canceled" ) );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Stream write error" ) );
+
+    return {};
+}
+
+VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+    if ( file.empty() )
+    {
+        return tl::make_unexpected( "Filename is empty" );
+    }
+
+    auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char) tolower( c );
 
@@ -57,10 +80,10 @@ VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVol
     const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
     {
-        return tl::make_unexpected(  "VdbVolume is empty" );
+        return tl::make_unexpected( "VdbVolume is empty" );
     }
 
-    auto parentPath = path.parent_path();
+    auto parentPath = file.parent_path();
     std::error_code ec;
     if ( !std::filesystem::is_directory( parentPath, ec ) )
     {
@@ -80,52 +103,69 @@ VoidOrErrStr saveRaw( const std::filesystem::path& path, const VdbVolume& vdbVol
     const auto& voxSize = vdbVolume.voxelSize;
     prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
     prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
-    prefix << utf8string( path.filename() );                        // name
+    prefix << utf8string( file.filename() );                        // name
 
     std::filesystem::path outPath = parentPath / prefix.str();
-    std::ofstream outFile( outPath, std::ios::binary );
-    if ( !outFile )
-    {
-        std::stringstream ss;
-        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
-        return tl::make_unexpected( ss.str() );
-    }
+    std::ofstream out( outPath, std::ios::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );
 
-    const auto& grid = vdbVolume.data;
-    auto accessor = grid->getConstAccessor();
-
-    // this coping block allow us to write data to disk faster
-    std::vector<float> buffer( size_t( dims.x )*dims.y*dims.z );
-    size_t dimsXY = size_t( dims.x )*dims.y;
-
-    for ( int z = 0; z < dims.z; ++z )
-    {
-        for ( int y = 0; y < dims.y; ++y )
-        {
-            for ( int x = 0; x < dims.x; ++x )
-                {
-                buffer[z*dimsXY + y * dims.x + x] = accessor.getValue( {x,y,z} );
-            }
-        }
-    }
-
-    if ( !writeByBlocks( outFile, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
-        return tl::make_unexpected( std::string( "Saving canceled" ) );
-    if ( !outFile )
-    {
-        std::stringstream ss;
-        ss << "Cannot write file: " << utf8string( outPath ) << std::endl;
-        return tl::make_unexpected( ss.str() );
-    }
-
-    if ( callback )
-        callback( 1.f );
-    return {};
+    return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
 }
- 
-VoidOrErrStr toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolume, ProgressCallback /*callback*/ /*= {} */ )
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
-    openvdb::io::File file( path.string() );
+    MR_TIMER
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return tl::make_unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return addFileNameInError( toGav( vdbVolume, out, callback ), file );
+}
+
+VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+{
+    MR_TIMER
+    Json::Value headerJson;
+    headerJson["ValueType"] = "Float";
+
+    Json::Value dimsJson;
+    dimsJson["X"] = vdbVolume.dims.x;
+    dimsJson["Y"] = vdbVolume.dims.y;
+    dimsJson["Z"] = vdbVolume.dims.z;
+    headerJson["Dimensions"] = dimsJson;
+
+    Json::Value voxJson;
+    voxJson["X"] = vdbVolume.voxelSize.x;
+    voxJson["Y"] = vdbVolume.voxelSize.y;
+    voxJson["Z"] = vdbVolume.voxelSize.z;
+    headerJson["VoxelSize"] = voxJson;
+
+    Json::Value rangeJson;
+    rangeJson["Min"] = vdbVolume.min;
+    rangeJson["Max"] = vdbVolume.max;
+    headerJson["Range"] = rangeJson;
+
+    std::ostringstream oss;
+    Json::StreamWriterBuilder builder;
+    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
+    if ( writer->write( headerJson, &oss ) != 0 || !oss )
+        return tl::make_unexpected( "Header composition error" );
+
+    const auto header = oss.str();
+    const auto headerLen = uint32_t( header.size() );
+    out.write( (const char*)&headerLen, sizeof( headerLen ) );
+    out.write( header.data(), headerLen );
+    if ( !out )
+        return tl::make_unexpected( "Header write error" );
+    
+    return toRawFloat( vdbVolume, out, callback );
+}
+
+VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
+{
+    MR_TIMER
+    openvdb::io::File file( utf8string( filename ) );
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
     gridPtr->setTree( vdbVolume.data->treePtr() );
     gridPtr->setGridClass( vdbVolume.data->getGridClass() );
@@ -137,17 +177,19 @@ VoidOrErrStr toVdb( const std::filesystem::path& path, const VdbVolume& vdbVolum
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const VdbVolume& vdbVolume,
-                                                      ProgressCallback callback /*= {} */ )
+VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+                                   ProgressCallback callback /*= {} */ )
 {
-    auto ext = utf8string( path.extension() );
+    auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
     if ( ext == ".raw" )
-        return saveRaw( path, vdbVolume, callback );
+        return toRawAutoname( vdbVolume, file, callback );
+    else if ( ext == ".gav" )
+        return toGav( vdbVolume, file, callback );
     else if ( ext == ".vdb" )
-        return toVdb( path, vdbVolume, callback );
+        return toVdb( vdbVolume, file, callback );
     else
         return tl::make_unexpected( std::string( "unsupported file extension" ) );
 }
@@ -236,7 +278,7 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     const size_t maxNumChars = std::to_string( numSlices ).size();
     for ( int i = 0; i < numSlices; ++i )
     {
-        const auto res = saveSliceToImage( settings.path / fmt::format( runtime( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
+        const auto res = saveSliceToImage( settings.path / fmt::format( runtimeFmt( settings.format ), i, maxNumChars ), vdbVolume, settings.slicePlane, i );
         if ( !res )
             return res;
 

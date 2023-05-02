@@ -137,7 +137,8 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
 {
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
-    auto meshRes = gridToMesh( vdbVolume_.data, vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+    auto voxelSize = vdbVolume_.voxelSize;
+    auto meshRes = gridToMesh( vdbVolume_.data, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
     if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
         return tl::make_unexpected( meshRes.error() );
 
@@ -145,8 +146,9 @@ tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSur
     while ( !meshRes.has_value() )
     {
         downsampledGrid = resampled( downsampledGrid, 2.0f );
-        meshRes = gridToMesh( std::move( downsampledGrid ), 2.0f * vdbVolume_.voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
-        if ( !meshRes.has_value() )
+        voxelSize *= 2.0f;
+        meshRes = gridToMesh( downsampledGrid, voxelSize, maxSurfaceTriangles_, iso, 0.0f, cb );
+        if ( !meshRes.has_value() && meshRes.error() == "Operation was canceled." )
             return tl::make_unexpected( meshRes.error() );
     }
     return std::make_shared<Mesh>( std::move( meshRes.value() ) );
@@ -402,53 +404,21 @@ void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /
     HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
     
 
-    std::function<bool( size_t, size_t )> progressFn;
-    if ( size.tile )
+    if ( size.tile > 0 )
     {
         typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
         tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
         typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-
-        std::atomic<size_t> tileDone = 0;
-        if ( cb )
-        {
-            if ( !size.leaf )
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize );
-                };
-            else
-                progressFn = [cb, tileSize = size.tile, &tileDone]( size_t, size_t t )
-                {
-                    tileDone += t;
-                    return !cb( float( tileDone ) / tileSize / 2.f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
         tbb::parallel_reduce( tileRangeMain, calc );
     }
 
-    if ( size.leaf )
+    if ( size.leaf > 0 )
     {
         typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        std::atomic<size_t> leafDone = 0;
-        if ( cb )
-        {
-            if ( !size.tile )
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize );
-                };
-            else
-                progressFn = [cb, leafSize = size.leaf, &leafDone]( size_t l, size_t )
-                {
-                    leafDone += l;
-                    return !cb( float( leafDone ) / leafSize / 2.f + 0.5f );
-                };
-            calc.setProgressFn( progressFn );
-        }
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
         tbb::parallel_reduce( leafRangeMain, calc );
     }
 
@@ -506,7 +476,7 @@ tl::expected<std::future<void>, std::string> ObjectVoxels::serializeModel_( cons
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::saveRaw( filename, vdbVolume_ ); } );
+        [this, filename = utf8string( path ) + ".raw"]() { MR::VoxelsSave::toRawAutoname( vdbVolume_, filename ); } );
 }
 
 void ObjectVoxels::deserializeFields_( const Json::Value& root )
@@ -561,7 +531,9 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
         vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
         vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
         vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );
-    res.push_back( "iso-value: " + std::to_string( isoValue_ ) );
+    res.push_back( fmt::format( "min-value: {:.3}", vdbVolume_.min ) );
+    res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
+    res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );
     return res;
 }
 

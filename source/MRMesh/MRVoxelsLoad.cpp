@@ -23,7 +23,7 @@
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 #include <MRPch/MRTBB.h>
-
+#include "MRStreamOperators.h"
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF
@@ -249,11 +249,7 @@ struct DCMFileLoadResult
     float min = FLT_MAX;
     float max = -FLT_MAX;
     std::string seriesDescription;
-    Vector3f pos;
-    //Vector3f tmp;
-    Vector3f oriA;
-    Vector3f oriB;
-    Vector3f oriC;
+    AffineXf3f xf;
 };
 
 DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolume& data, size_t offset )
@@ -281,85 +277,27 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         res.seriesDescription = descVal;
     }
 
-    Vector3f imagePosition;
-    gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Tag( 0x0020, 0x032 ) );
+    gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
     gdcm::Attribute<0x0020,0x0032> atPos;
     atPos.SetFromDataElement( dePosition );
     for (int i = 0; i < 3; ++i) {
-        imagePosition[i] = float( atPos.GetValue( i ) );
+        res.xf.b[i] = float( atPos.GetValue( i ) );
     }
+    res.xf.b /= 1000.0f;
 
-    gdcm::DataElement deRows = ds.GetDataElement( gdcm::Tag( 0x0028, 0x0010 ) );
-    gdcm::Attribute<0x0028,0x0010> rowsAttr;
-    rowsAttr.SetFromDataElement( deRows );
-    unsigned int rows = rowsAttr.GetValue();
-
-    gdcm::DataElement deCols = ds.GetDataElement( gdcm::Tag( 0x0028, 0x0011 ) );
-    gdcm::Attribute<0x0028,0x0011> colsAttr;
-    colsAttr.SetFromDataElement( deCols );
-    unsigned int columns = colsAttr.GetValue();
-
-    Vector3f rowDirection;
-    Vector3f colDirection;
-    //Vector3f oriC;
-    Vector2f pixelSpacing;
-
-    gdcm::DataElement deOri = ds.GetDataElement( gdcm::Tag( 0x0020, 0x0037 ) );
+    gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
     gdcm::Attribute<0x0020,0x0037> atOri;
     atOri.SetFromDataElement( deOri );
     for (int i = 0; i < 3; ++i)
-        rowDirection[i] = float( atOri.GetValue( i ) );
+        res.xf.A.x[i] = float( atOri.GetValue( i ) );
     for (int i = 0; i < 3; ++i)
-        colDirection[i] = float( atOri.GetValue( 3 + i ) );
+        res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
 
-    gdcm::DataElement dePixel = ds.GetDataElement( gdcm::Tag( 0x0028, 0x0030 ) );
-    gdcm::Attribute<0x0028,0x0030> atPixel;
-    atPixel.SetFromDataElement( dePixel );
-    for (int i = 0; i < 2; ++i)
-        pixelSpacing[i] = float( atPixel.GetValue( i ) );
+    res.xf.A.x.normalized();
+    res.xf.A.y.normalized();
+    res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
+    res.xf.A = res.xf.A.transposed();
 
-
-    float rowSpacing = float( atPixel.GetValue( 0 ) );
-    float colSpacing = float( atPixel.GetValue( 1 ) );
-
-    res.oriA = { rowDirection[0] * pixelSpacing[0], rowDirection[1] * pixelSpacing[0], rowDirection[2] * pixelSpacing[0] };
-    res.oriB = { colDirection[0] * pixelSpacing[1], colDirection[1] * pixelSpacing[1], colDirection[2] * pixelSpacing[1] };
-
-    auto row_len = sqrt(res.oriA[0] * res.oriA[0] + res.oriA[1] * res.oriA[1] + res.oriA[2] * res.oriA[2]);
-    for (int i = 0; i < 3; ++i)
-        res.oriA[i] = res.oriA[i] / row_len;
-
-    auto col_len = sqrt(res.oriB[0] * res.oriB[0] + res.oriB[1] * res.oriB[1] + res.oriB[2] * res.oriB[2]);
-    for (int i = 0; i < 3; ++i)
-        res.oriB[i] = res.oriB[i] / col_len;
-
-    res.oriC = cross(res.oriA, res.oriB);
-    //oriC = cross(rowDirection, colDirection);
-    Vector3f center = 0.5f * ((rows - 1) * 1.0f * rowSpacing * rowDirection + (columns - 1) * 1.0f * colSpacing * colDirection);
-    res.pos = center + imagePosition;
-    res.pos /= 1000.0f;
-    //res.pos = imagePosition / 1000.0f;
-
-/*
-    res.oriA = { oriA[0], oriB[0], oriC[0] };
-    res.oriB = { oriA[1], oriB[1], oriC[1] };
-    res.oriC = { oriA[2], oriB[2], oriC[2] };
-  */
-/*
-    res.oriB = { rowDirection[0] * pixelSpacing[0], rowDirection[1] * pixelSpacing[0], rowDirection[2] * pixelSpacing[0] };
-    res.oriA = { colDirection[0] * pixelSpacing[1], colDirection[1] * pixelSpacing[1], colDirection[2] * pixelSpacing[1] };
-    res.oriC = cross(colDirection, rowDirection);
-
-    res.oriB = { rowDirection[0], rowDirection[1], rowDirection[2] };
-    res.oriA = { colDirection[0], colDirection[1], colDirection[2]};
-    res.oriC = cross(colDirection, rowDirection);
-    //res.oriC = -oriC;
-    //res.oriC = { 0.0f, 0.0f, 0.0f };
-
-     res.oriA = oriA;
-    res.oriB = oriB;
-    res.oriC = oriC;
-     */
     const auto& gimage = ir.GetImage();
     auto dimsNum = gimage.GetNumberOfDimensions();
     const unsigned* dims = gimage.GetDimensions();
@@ -636,14 +574,7 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
     else
         res.name = firstRes.seriesDescription;
 
-    res.xf =  AffineXf3f::linear({ firstRes.oriA, firstRes.oriB, firstRes.oriC }).inverse();
-    //res.b =  (slicesRes[slicesRes.size() - 1].pos + slicesRes[0].pos) / 2.0f;
-    //res.xf.b[2] = (slicesRes[slicesRes.size() - 1].pos)[2];
-    /*if (slicesRes.size() % 2 == 1)
-        res.xf.b = slicesRes[slicesRes.size()/ 2].pos;
-    else
-        res.xf.b = (slicesRes[slicesRes.size() / 2 - 1].pos + slicesRes[slicesRes.size() / 2].pos) / 2.0f;
-    */
+    res.xf = firstRes.xf;
     return res;
 }
 

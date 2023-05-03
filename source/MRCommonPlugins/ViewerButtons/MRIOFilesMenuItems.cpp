@@ -252,6 +252,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     }
                     
                     obj->select( true );
+                    obj->setXf( res->xf );
                     voxelObjects.push_back( obj );
                 }
                 else if ( ProgressBar::isCanceled() )

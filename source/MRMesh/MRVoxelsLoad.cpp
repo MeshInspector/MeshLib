@@ -23,7 +23,6 @@
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 #include <MRPch/MRTBB.h>
-
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF
@@ -249,6 +248,7 @@ struct DCMFileLoadResult
     float min = FLT_MAX;
     float max = -FLT_MAX;
     std::string seriesDescription;
+    AffineXf3f xf;
 };
 
 DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolume& data, size_t offset )
@@ -275,6 +275,27 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         auto descVal = desc.GetValue();
         res.seriesDescription = descVal;
     }
+
+    gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
+    gdcm::Keywords::ImagePositionPatient atPos;
+    atPos.SetFromDataElement( dePosition );
+    for (int i = 0; i < 3; ++i) {
+        res.xf.b[i] = float( atPos.GetValue( i ) );
+    }
+    res.xf.b /= 1000.0f;
+
+    gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
+    gdcm::Keywords::ImageOrientationPatient atOri;
+    atOri.SetFromDataElement( deOri );
+    for (int i = 0; i < 3; ++i)
+        res.xf.A.x[i] = float( atOri.GetValue( i ) );
+    for (int i = 0; i < 3; ++i)
+        res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
+
+    res.xf.A.x.normalized();
+    res.xf.A.y.normalized();
+    res.xf.A.z = cross( res.xf.A.x, res.xf.A.y );
+    res.xf.A = res.xf.A.transposed();
 
     const auto& gimage = ir.GetImage();
     auto dimsNum = gimage.GetNumberOfDimensions();
@@ -551,6 +572,8 @@ tl::expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::p
         res.name = utf8string( files.front().stem() );
     else
         res.name = firstRes.seriesDescription;
+
+    res.xf = firstRes.xf;
     return res;
 }
 

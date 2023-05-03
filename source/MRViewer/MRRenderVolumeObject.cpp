@@ -156,7 +156,12 @@ void RenderVolumeObject::render_( const BaseRenderParams& renderParams, unsigned
     GL_EXEC( glDisable( GL_MULTISAMPLE ) );
     GL_EXEC( glEnable( GL_CULL_FACE ) );
     GL_EXEC( glCullFace( GL_BACK ) );
+
+    // currently only less supported for volume rendering
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Less ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+
     GL_EXEC( glDisable( GL_CULL_FACE ) );
     GL_EXEC( glEnable( GL_MULTISAMPLE ) );
 }

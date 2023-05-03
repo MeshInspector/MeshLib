@@ -103,9 +103,9 @@ void RenderLinesObject::render( const RenderParams& renderParams )
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, lineIndicesSize_ );
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
 
-    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
@@ -140,9 +140,9 @@ void RenderLinesObject::renderPicker( const BaseRenderParams& parameters, unsign
 
     GL_EXEC( glLineWidth( objLines_->getLineWidth() ) );
 
-    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( parameters.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
     // Fedor: should not we draw points here as well?
 }
 
@@ -280,7 +280,9 @@ void RenderLinesObject::drawPoints_( const RenderParams& renderParams )
 #else
     GL_EXEC( glPointSize( pointSize ) );
 #endif
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )lineIndicesSize_ * 2, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderLinesObject::initBuffers_()

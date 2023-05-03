@@ -104,7 +104,9 @@ void RenderPointsObject::render( const RenderParams& renderParams )
 #else
     GL_EXEC( glPointSize( objPoints_->getPointSize() ) );
 #endif
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsigned geomId )
@@ -137,7 +139,9 @@ void RenderPointsObject::renderPicker( const BaseRenderParams& parameters, unsig
 #else
     GL_EXEC( glPointSize( objPoints_->getPointSize() ) );
 #endif
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 size_t RenderPointsObject::heapBytes() const

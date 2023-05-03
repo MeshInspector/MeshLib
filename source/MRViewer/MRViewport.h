@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRViewportGL.h"
+#include "MRMesh/MRIRenderObject.h"
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRPointOnFace.h>
@@ -79,12 +80,13 @@ public:
     // Clear the frame buffers
     MRVIEWER_API void clear_framebuffers() const;
 
-    /// Draw given object;
-    /// \param forceZbuffer rewrite Z buffer anyway
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, bool forceZBuffer = false, bool alphaSort = false ) const;
+    /// Draw given object
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, 
+        DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     /// Draw given object with given projection matrix
-    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, bool forceZBuffer = false, bool alphaSort = false ) const;
+    MRVIEWER_API void draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM, 
+         DepthFuncion depthFunc = DepthFuncion::Default, bool alphaSort = false ) const;
 
     // Returns visual points with corresponding colors (pair<vector<Vector3f>,vector<Vector4f>>)
     MRVIEWER_API const ViewportPointsWithColors& getPointsWithColors() const;

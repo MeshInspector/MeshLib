@@ -1,5 +1,5 @@
 #pragma once
-
+#include "MRMesh/MRIRenderObject.h"
 #include "MRGladGlfw.h"
 #include "exports.h"
 #include "MRMesh/MRColor.h"
@@ -247,6 +247,43 @@ inline GLint bindVertexAttribArray(
         .isColor = std::is_same_v<Color, T>
     };
     return bindVertexAttribArray( settings );
+}
+
+// return real GL value for DepthFuncion
+// default is less
+inline int getDepthFunctionLess( DepthFuncion funcType )
+{
+    switch ( funcType )
+    {
+    case DepthFuncion::Default:
+    case DepthFuncion::Less:
+        return GL_LESS;
+    case DepthFuncion::Never:
+        return GL_NEVER;
+    case DepthFuncion::LessOrEqual:
+        return GL_LEQUAL;
+    case DepthFuncion::Equal:
+        return GL_EQUAL;
+    case DepthFuncion::GreaterOrEqual:
+        return GL_GEQUAL;
+    case DepthFuncion::Greater:
+        return GL_GREATER;
+    case DepthFuncion::Always:
+        return GL_ALWAYS;
+    case DepthFuncion::NotEqual:
+        return GL_NOTEQUAL;
+    default:
+        return 0;
+    }
+}
+
+// return real GL value for DepthFuncion
+// default is less or equal
+inline int getDepthFunctionLEqual( DepthFuncion funcType )
+{
+    if ( funcType == DepthFuncion::Default )
+        return GL_LEQUAL;
+    return getDepthFunctionLess( funcType );
 }
 
 } //namespace MR

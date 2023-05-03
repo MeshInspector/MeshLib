@@ -4,6 +4,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRRibbonButtonDrawer.h"
+#include "MRMesh/MRIRenderObject.h"
 #include "ImGuiHelpers.h"
 #include "MRUIStyle.h"
 #include <GLFW/glfw3.h>
@@ -13,7 +14,7 @@ namespace MR
 
 void DemoPlugin::draw_()
 {
-    viewer->viewport().draw( *demoSphere_, demoSphere_->xf(), true );
+    viewer->viewport().draw( *demoSphere_, demoSphere_->xf(), DepthFuncion::Always );
     viewer->viewport().draw( *demoSphere_, demoSphere_->xf() );
 }
 

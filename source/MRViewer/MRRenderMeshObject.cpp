@@ -119,16 +119,9 @@ void RenderMeshObject::render( const RenderParams& renderParams )
         GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || 
             objMesh_->hasAncillaryTexture() ) );
 
-        if ( renderParams.forceZBuffer )
-        {
-            GL_EXEC( glDepthFunc( GL_ALWAYS ) );
-        }
-        else
-        {
-            GL_EXEC( glDepthFunc( GL_LESS ) );
-        }
-
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
         drawMesh_( true, renderParams.viewportId );
+        GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
     }
     // Render wireframe
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
@@ -173,7 +166,9 @@ void RenderMeshObject::renderPicker( const BaseRenderParams& parameters, unsigne
         parameters.clipPlane.n.x, parameters.clipPlane.n.y, parameters.clipPlane.n.z, parameters.clipPlane.d ) );
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     drawMesh_( true, parameters.viewportId, true );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 size_t RenderMeshObject::heapBytes() const
@@ -257,9 +252,9 @@ void RenderMeshObject::renderEdges_( const RenderParams& renderParams, GLuint va
     GLfloat width = objMesh_->getEdgeWidth() * 5;
     GL_EXEC( glLineWidth( GLfloat( width ) ) );
     
-    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawArrays( GL_LINES, 0, int( buffer.glSize() ) ) );
-    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
@@ -299,7 +294,9 @@ void RenderMeshObject::renderMeshEdges_( const RenderParams& renderParams )
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::LineElementsNum, edgeIndicesSize_ );
 
     GL_EXEC( glLineWidth( GLfloat( objMesh_->getEdgeWidth() ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, int( 2 * edgeIndicesSize_ ), GL_UNSIGNED_INT, nullptr ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
 }
 
 void RenderMeshObject::bindMesh_( bool alphaSort )

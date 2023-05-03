@@ -173,7 +173,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
     MR::Mesh res;
     res.points.resize( shape.x * shape.y );
     tbb::parallel_for( tbb::blocked_range<int>( 0, int( res.points.size() ) ),
-        [&] (const tbb::blocked_range<int>& range )
+        [&] ( const tbb::blocked_range<int>& range )
     {
         for ( int i = range.begin(); i < range.end(); ++i )
         {
@@ -207,7 +207,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
     }
 
     res.topology = MR::MeshBuilder::fromTriangles( t );
-   
+
     MR::MeshBuilder::uniteCloseVertices( res, std::numeric_limits<float>::epsilon() );
 
     if ( res.volume() < 0.0f )
@@ -316,7 +316,7 @@ MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
             assert( false );
         }
     };
-    
+
     // verts to points part
     MR::Contour2f inputContour;
     fillFloatVec( inputContour, infoPoints );
@@ -334,20 +334,25 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     // Allocate and initialize some data;
     const int size = numFaces * 3;
     int* data = new int[size];
-    BitSetParallelForAll( validFaces, [&] ( FaceId f )
+    tbb::parallel_for( tbb::blocked_range<int>( 0, numFaces ),
+    [&] ( const tbb::blocked_range<int>& range )
     {
-        auto ind = f * 3;
-        if ( validFaces.test( f ) )
+        for ( int i = range.begin(); i < range.end(); ++i )
         {
-            VertId v[3];
-            topology.getTriVerts( f, v );
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = v[vi];
-        }
-        else
-        {
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = 0;
+            FaceId f = FaceId( i );
+            int ind = 3 * i;
+            if ( validFaces.test( f ) )
+            {
+                VertId v[3];
+                topology.getTriVerts( f, v );
+                for ( int vi = 0; vi < 3; ++vi )
+                    data[ind + vi] = v[vi];
+            }
+            else
+            {
+                for ( int vi = 0; vi < 3; ++vi )
+                    data[ind + vi] = 0;
+            }
         }
     } );
 
@@ -360,7 +365,7 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     } );
 
     return pybind11::array_t<int>(
-        { numFaces, 3}, // shape
+        { numFaces, 3 }, // shape
         { 3 * sizeof( int ), sizeof( int ) }, // C-style contiguous strides for int
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
@@ -515,8 +520,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )
 {
-    m.def( "pointCloudFromPoints", &pointCloudFromNP, 
-        pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{}, 
+    m.def( "pointCloudFromPoints", &pointCloudFromNP,
+        pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{},
         "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
 } )
 

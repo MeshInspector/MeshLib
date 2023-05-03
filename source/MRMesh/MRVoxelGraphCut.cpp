@@ -978,7 +978,7 @@ void VoxelGraphCut::adopt_( Context & context )
             OutEdge e = OutEdge::Invalid;
             auto operator <=>( const OutCapacity & ) const = default;
         };
-        OutCapacity outCapacity[OutEdgeCount] = {};
+        OutCapacity outCapacity[OutEdgeCount];
         int numOut = 0;
         bool grandChild[OutEdgeCount] = {};
         const auto & ns = getNeighbors_( s );

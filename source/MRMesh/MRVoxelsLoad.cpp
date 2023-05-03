@@ -278,7 +278,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     }
 
     gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
-    gdcm::Attribute<0x0020,0x0032> atPos;
+    gdcm::Keywords::ImagePositionPatient atPos;
     atPos.SetFromDataElement( dePosition );
     for (int i = 0; i < 3; ++i) {
         res.xf.b[i] = float( atPos.GetValue( i ) );
@@ -286,7 +286,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
     res.xf.b /= 1000.0f;
 
     gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
-    gdcm::Attribute<0x0020,0x0037> atOri;
+    gdcm::Keywords::ImageOrientationPatient atOri;
     atOri.SetFromDataElement( deOri );
     for (int i = 0; i < 3; ++i)
         res.xf.A.x[i] = float( atOri.GetValue( i ) );

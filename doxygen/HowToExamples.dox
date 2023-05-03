@@ -255,6 +255,7 @@ fig = go.Figure(data=[
 
 fig.show()
 \endcode
+\image html plotly_visualization.png "Plotly visualization" width = 300cm
 
 \sa \ref EmbendedPythonOverview
 */

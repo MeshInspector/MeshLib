@@ -135,6 +135,7 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
 
 tl::expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ )
 {
+    MR_TIMER
     if ( !vdbVolume_.data )
         return tl::make_unexpected("No VdbVolume available");
     auto voxelSize = vdbVolume_.voxelSize;

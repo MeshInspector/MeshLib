@@ -2,7 +2,7 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"
 #include "MRVolumeIndexer.h"
 #include "MRMeshProject.h"
@@ -28,25 +28,21 @@ void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, c
     dipoles.resize( tree_.nodes().size() );
 
     // compute dipole data for tree leaves
-    tbb::parallel_for( tbb::blocked_range<NodeId>( NodeId{ 0 }, dipoles.endId() ),
-        [&] ( const tbb::blocked_range<NodeId>& range )
+    ParallelFor( dipoles, [&]( NodeId i )
     {
-        for ( NodeId i = range.begin(); i < range.end(); ++i )
+        const auto& node = tree_[i];
+        if ( !node.leaf() )
+            return;
+        const FaceId f = node.leafId();
+        const auto da = 0.5f * mesh.dirDblArea( f );
+        const auto a = da.length();
+        const auto ap = a * mesh.triCenter( f );
+        dipoles[i] = Dipole
         {
-            const auto& node = tree_[i];
-            if ( !node.leaf() )
-                continue;
-            const FaceId f = node.leafId();
-            const auto da = 0.5f * mesh.dirDblArea( f );
-            const auto a = da.length();
-            const auto ap = a * mesh.triCenter( f );
-            dipoles[i] = Dipole
-            {
-                .areaPos = ap,
-                .area = a,
-                .dirArea = da
-            };
-        }
+            .areaPos = ap,
+            .area = a,
+            .dirArea = da
+        };
     } );
 
     // compute dipole data for not-leaf tree nodes
@@ -66,15 +62,11 @@ void IFastWindingNumber::calcDipoles( Dipoles& dipoles, const AABBTree& tree_, c
     }
 
     // compute distance to farthest corner for all nodes
-    tbb::parallel_for( tbb::blocked_range<NodeId>( NodeId{ 0 }, dipoles.endId() ),
-        [&] ( const tbb::blocked_range<NodeId>& range )
+    ParallelFor( dipoles, [&]( NodeId i )
     {
-        for ( NodeId i = range.begin(); i < range.end(); ++i )
-        {
-            const auto& node = tree_[i];
-            auto& d = dipoles[i];
-            d.rr = distToFarthestCornerSq( node.box, d.pos() );
-        }
+        const auto& node = tree_[i];
+        auto& d = dipoles[i];
+        d.rr = distToFarthestCornerSq( node.box, d.pos() );
     } );
 }
 
@@ -148,10 +140,9 @@ float FastWindingNumber::calc( const Vector3f & q, float beta, FaceId skipFace )
 void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace )
 {
     res.resize( points.size() );
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( points, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-            res[i] = calc( points[i], beta, skipFace );
+        res[i] = calc( points[i], beta, skipFace );
     } );
 }
 
@@ -173,19 +164,16 @@ void FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& d
     const size_t size = dims.x * dims.y * dims.z;
     res.resize( size );
     VolumeIndexer indexer( dims );
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), size, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto pos = indexer.toPos( VoxelId( i ) );
-            auto coord = minCoord;
-            for ( int j = 0; j < 3; ++j )
-                coord[j] += pos[j];
+        auto pos = indexer.toPos( VoxelId( i ) );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
 
-            auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
-            auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
-            res[i] = calc( gridToMeshXf( pointInSpace ), beta );
-        }
+        auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
+        auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
+        res[i] = calc( gridToMeshXf( pointInSpace ), beta );
     } );
 }
 
@@ -199,22 +187,19 @@ void FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, cons
 
     MeshPart mp( mesh_ );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), size ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), size, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto pos = indexer.toPos( VoxelId( i ) );
-            auto coord = minCoord;
-            for ( int j = 0; j < 3; ++j )
-                coord[j] += pos[j];
+        auto pos = indexer.toPos( VoxelId( i ) );
+        auto coord = minCoord;
+        for ( int j = 0; j < 3; ++j )
+            coord[j] += pos[j];
 
-            //auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
-            const auto pointInSpace = mult( voxelSize, coord );
-            const auto transformedPoint = gridToMeshXf( pointInSpace );
-            res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
-            if ( calc( transformedPoint, beta ) > 0.5f )
-                res[i] = -res[i];
-        }
+        //auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
+        const auto pointInSpace = mult( voxelSize, coord );
+        const auto transformedPoint = gridToMeshXf( pointInSpace );
+        res[i] = sqrt( findProjection( transformedPoint, mp, maxDistSq, nullptr, minDistSq ).distSq );
+        if ( calc( transformedPoint, beta ) > 0.5f )
+            res[i] = -res[i];
     } );
 }
 

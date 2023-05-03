@@ -23,7 +23,6 @@
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 #include <MRPch/MRTBB.h>
-#include "MRStreamOperators.h"
 #ifndef MRMESH_NO_TIFF
 #include <tiffio.h>
 #endif // MRMESH_NO_TIFF

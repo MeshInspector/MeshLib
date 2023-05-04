@@ -262,6 +262,9 @@
     <ClCompile Include="MRUIStyle.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRShaderBlocks.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -490,6 +493,9 @@
     </ClInclude>
     <ClInclude Include="MRUIStyle.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShaderBlocks.h">
+      <Filter>Render\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -16,6 +16,7 @@ struct MeshVisualizePropertyType : VisualizeMaskType
         Edges,
         SelectedFaces,
         SelectedEdges,
+        EnableShading,
         FlatShading,
         OnlyOddFragments,
         BordersHighlight,
@@ -222,6 +223,11 @@ protected:
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
+
+    // really it shoud be one enum Shading {None, Flat, Smooth, Crease} 
+    // but for back capability it is easier to add global flag
+    ViewportMask shadingEnabled_ = ViewportMask::all();
+
     ViewportMask onlyOddFragments_;
 
     ViewportProperty<Color> edgesColor_;

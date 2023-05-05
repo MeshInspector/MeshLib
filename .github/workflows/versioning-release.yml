@@ -46,7 +46,7 @@ jobs:
         id: version
         with:
           tag_prefix: "v"
-          version_format: "v${major}.${minor}.${patch}.${increment}"
+          version_format: "${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: false
           #namespace: ${{inputs.version-namespace}}

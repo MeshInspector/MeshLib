@@ -167,9 +167,9 @@ void PlotCustomHistogram( const char* str_id,
         drawList->AddRect( rect.Min, rect.Max, GetColorU32( ImGuiCol_Border ), style.FrameRounding, ImDrawFlags_RoundCornersAll, border_size );
     }
 
-    const int values_count_min = 1;
-    // -1 is not allowed because of marking [0] bar
-    int idx_hovered = std::numeric_limits<int>::min();
+    constexpr int bar_halfthickness = 2;
+    int idx_hovered = -bar_halfthickness;
+    constexpr int values_count_min = 1;
     if ( values_count >= values_count_min )
     {
         int res_w = std::min( (int) frame_size.x, values_count );
@@ -218,7 +218,6 @@ void PlotCustomHistogram( const char* str_id,
             {
                 if ( pos1.x >= pos0.x + 2.0f )
                     pos1.x -= 1.0f;
-                const int bar_halfthickness = 2;
                 auto getBarColor = [&](const int v1_idx)
                 {
                     if (abs(v1_idx - idx_hovered) < bar_halfthickness)

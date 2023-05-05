@@ -535,7 +535,7 @@ jobs:
 
   upload-to-release:
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
-    timeout-minutes: 10
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts

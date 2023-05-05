@@ -276,21 +276,27 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, SimpleVolum
         res.seriesDescription = descVal;
     }
 
-    gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
-    gdcm::Keywords::ImagePositionPatient atPos;
-    atPos.SetFromDataElement( dePosition );
-    for (int i = 0; i < 3; ++i) {
-        res.xf.b[i] = float( atPos.GetValue( i ) );
+    if( ds.FindDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() ) )
+    {
+        gdcm::DataElement dePosition = ds.GetDataElement( gdcm::Keywords::ImagePositionPatient::GetTag() );
+        gdcm::Keywords::ImagePositionPatient atPos;
+        atPos.SetFromDataElement( dePosition );
+        for (int i = 0; i < 3; ++i) {
+            res.xf.b[i] = float( atPos.GetValue( i ) );
+        }
+        res.xf.b /= 1000.0f;
     }
-    res.xf.b /= 1000.0f;
 
-    gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
-    gdcm::Keywords::ImageOrientationPatient atOri;
-    atOri.SetFromDataElement( deOri );
-    for (int i = 0; i < 3; ++i)
-        res.xf.A.x[i] = float( atOri.GetValue( i ) );
-    for (int i = 0; i < 3; ++i)
-        res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
+    if( ds.FindDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() ) )
+    {
+        gdcm::DataElement deOri = ds.GetDataElement( gdcm::Keywords::ImageOrientationPatient::GetTag() );
+        gdcm::Keywords::ImageOrientationPatient atOri;
+        atOri.SetFromDataElement( deOri );
+        for (int i = 0; i < 3; ++i)
+            res.xf.A.x[i] = float( atOri.GetValue( i ) );
+        for (int i = 0; i < 3; ++i)
+            res.xf.A.y[i] = float( atOri.GetValue( 3 + i ) );
+    }
 
     res.xf.A.x.normalized();
     res.xf.A.y.normalized();

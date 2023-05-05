@@ -72,7 +72,7 @@ jobs:
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}
         with:
           name: Release ${{steps.version-tag.outputs.short_version}}
-          tag_name: ${{steps.version-tag.outputs.short_version}}
+          tag_name: ${{steps.version.outputs.version}}
           draft: true
           prerelease: false
           body: |

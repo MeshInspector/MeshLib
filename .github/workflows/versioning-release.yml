@@ -49,7 +49,7 @@ jobs:
         id: version
         with:
           tag_prefix: "v"
-          version_format: "${major}.${minor}.${patch}.${increment}"
+          version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true
           namespace: ${{inputs.version-namespace}}
@@ -57,7 +57,7 @@ jobs:
       - name: Set version tag
         id: version-tag
         run: |
-          version_tag=${{steps.version.outputs.version}}
+          version_tag=${{steps.version.outputs.version_tag}}
           version_tag=${version_tag%%-*}
           echo "version_tag=${version_tag}" >> $GITHUB_OUTPUT
           short_version=${version_tag%.*}

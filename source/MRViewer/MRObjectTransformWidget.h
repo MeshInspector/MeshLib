@@ -14,29 +14,120 @@
 namespace MR
 {
 
-// Visual widget to modify transform
-// present in scene (ancillary), subscribes to viewer events
-class MRVIEWER_CLASS ObjectTransformWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener, PreDrawListener, DrawListener>
+enum class TransformAxis {
+    X, Y, Z, Count
+};
+
+enum class ControlBit
+{
+    None = 0,
+    RotX = 0x1,
+    RotY = 0x2,
+    RotZ = 0x4,
+    RotMask = RotX | RotY | RotZ,
+    MoveX = 0x8,
+    MoveY = 0x10,
+    MoveZ = 0x20,
+    MoveMask = MoveX | MoveY | MoveZ,
+    FullMask = RotMask | MoveMask
+};
+
+// This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
+// if not set, full mask is return
+using TransformModesValidator = std::function<uint8_t( const Vector3f& center, const AffineXf3f& xf, ViewportId )>;
+
+
+// Interface class for ObjectTransformWidget custom visualization
+class MRVIEWER_CLASS ITransformControls
 {
 public:
-    enum Axis { X, Y, Z, Count };
-    enum TransformMode
+    virtual ~ITransformControls() = default;
+    
+    // get center of the widget in local space
+    const Vector3f& getCenter() const { return center_; }
+    MRVIEWER_API void setCenter( const Vector3f& center );
+    // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
+    // if not set, full mask is return
+    void setTransformModesValidator( TransformModesValidator validator ) { validator_ = validator; }
+
+    // Enables or disables pick through mode, in this mode controls will be picked even if they are occluded by other objects
+    void setPickThrough( bool on ) { pickThrough_ = on; }
+    bool getPickThrough() const { return pickThrough_; }
+
+    // Returns currently hovered control
+    ControlBit getHoveredControl() const { return hoveredControl_; }
+
+    // Called once on widget created to init internal objects
+    virtual void init( std::shared_ptr<Object> parent ) = 0;
+    // Called right after init and can be called on some internal actions to recreate 
+    // objects visualization
+    virtual void update() = 0;
+    // Called for hover checks
+    void hover() { hoveredControl_ = hover_( pickThrough_ ); }
+    // This is called to stop drawing active visualization when modification is stopped
+    void stopModify() { stopModify_(); hover(); }
+
+    // Called each frame for each viewport to update available transformation modes
+    MRVIEWER_API void updateVisualTransformMode( uint8_t showMask, ViewportMask viewportMask, const AffineXf3f& xf );
+
+    // One have to implement these functions to have visualization of translation and rotation
+    virtual void updateTranslation( TransformAxis ax, const Vector3f& startMove, const Vector3f& endMove ) = 0;
+    // xf - widget current xf
+    virtual void updateRotation( TransformAxis ax, const AffineXf3f& xf, float startAngle, float endAngle ) = 0;
+
+    // build-in history action class for change center
+    class ChangeCenterAction : public HistoryAction
     {
-        RotX = 0x1,
-        RotY = 0x2,
-        RotZ = 0x4,
-        MoveX = 0x8,
-        MoveY = 0x10,
-        MoveZ = 0x20,
-        FullMask = 0x3f
+    public:
+        ChangeCenterAction( const std::string& name, ITransformControls& controls ) :
+            controls_{ controls },
+            name_{ name }{ center_ = controls.getCenter(); }
+
+        virtual std::string name() const override { return name_; }
+
+        virtual void action( HistoryAction::Type ) override 
+        {
+            auto center = controls_.getCenter();
+            controls_.setCenter( center_ );
+            center_ = center;
+        }
+
+        [[nodiscard]] virtual size_t heapBytes() const override { return name_.capacity(); }
+
+    private:
+        ITransformControls& controls_;
+        Vector3f center_;
+        std::string name_;
     };
-    struct Params
+protected:
+    // one have to implement this function
+    // it can change internal visualization and return currently hovered control
+    virtual ControlBit hover_( bool pickThrough ) = 0;
+    // one have to implement this function
+    // it can change internal visualization
+    // called when modification is stopped
+    virtual void stopModify_() = 0;
+    // one have to implement this function
+    // it can be called in each frame (each viewport if needed) to update transform mode in different viewports
+    virtual void updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask ) = 0;
+private:
+    Vector3f center_;
+
+    ControlBit hoveredControl_;
+    bool pickThrough_{ false };
+    TransformModesValidator validator_;
+};
+
+// Basic implementation of ITransformControls
+class MRVIEWER_CLASS TransformControls : public ITransformControls
+{
+public:
+    struct MRVIEWER_CLASS VisualParams
     {
+        // updates radius and width with given box
+        MRVIEWER_API void update( const Box3f& box );
         float radius{ -1.0f };
         float width{ -1.0f };
-        // by default - center of given box
-        // updated in create function
-        Vector3f center;
         /// the product of this factor and width gives cone radius of the arrows
         float coneRadiusFactor{ 1.35f };
         /// the product of this factor and width gives cone size of the arrows
@@ -46,46 +137,69 @@ public:
         /// extension of the translation line in the positive direction relative to the radius
         float positiveLineExtension{ 1.3f };
         /// colors of widget
-        std::array<Color, size_t( Axis::Count )> rotationColors{ Color::red(),Color::green(),Color::blue() };
-        std::array<Color, size_t( Axis::Count )> translationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, size_t( TransformAxis::Count )> rotationColors{ Color::red(),Color::green(),Color::blue() };
+        std::array<Color, size_t( TransformAxis::Count )> translationColors{ Color::red(),Color::green(),Color::blue() };
         Color helperLineColor{ Color::black() };
         Color activeLineColor{ Color::white() };
     };
-    // Creates transform widget around given box and applies given xf
-    // subscribes to viewer events
-    MRVIEWER_API void create( const Box3f& box, const AffineXf3f& xf );
-    // Removes widget from scene and clears all widget objects
-    // unsubscribes from viewer events
-    MRVIEWER_API void reset();
+    MRVIEWER_API void setVisualParams( const VisualParams& params );
+    const VisualParams& getVisualParams() const { return params_; }
+
+    MRVIEWER_API virtual ~TransformControls();
+
+    MRVIEWER_API virtual void init( std::shared_ptr<Object> parent ) override;
+    MRVIEWER_API virtual void update() override;
 
     // get current width of widget controls
     // negative value means that controls are not setup
     float getWidth() const { return params_.width; }
-    // get current radius of widget controls
-    // negative value means that controls are not setup
-    float getRadius() const { return params_.radius; }
-    // get center of the widget in local space
-    const Vector3f& getCenter() const { return params_.center; }
-    // gets current parameters of this widget
-    const Params & getParams() const { return params_; }
-
     // set width for this widget
     MRVIEWER_API void setWidth( float width );
-    // set radius for this widget
-    MRVIEWER_API void setRadius( float radius );
-    // set center in local space for this widget
-    MRVIEWER_API void setCenter( const Vector3f& center );
-    // set current parameters of this widget
-    MRVIEWER_API void setParams( const Params & );
+
+    MRVIEWER_API virtual void updateTranslation( TransformAxis ax, const Vector3f& startMove, const Vector3f& endMove ) override;
+    MRVIEWER_API virtual void updateRotation( TransformAxis ax, const AffineXf3f& xf, float startAngle, float endAngle ) override;
+    
+    // returns TransformModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
+    MRVIEWER_API static TransformModesValidator ThresholdDotValidator( float thresholdDot );
+private:
+    MRVIEWER_API virtual ControlBit hover_( bool pickThrough ) override;
+    MRVIEWER_API virtual void stopModify_() override;
+    MRVIEWER_API virtual void updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask ) override;
+
+    VisualParams params_;
+
+    // Control objects
+    std::array<std::shared_ptr<ObjectMesh>, size_t( TransformAxis::Count )> translateControls_;
+    std::array<std::shared_ptr<ObjectMesh>, size_t( TransformAxis::Count )> rotateControls_;
+
+    // if active line is visible, other lines are not
+    std::shared_ptr<ObjectLines> activeLine_;
+    std::array<std::shared_ptr<ObjectLines>, size_t( TransformAxis::Count )> translateLines_;
+    std::array<std::shared_ptr<ObjectLines>, size_t( TransformAxis::Count )> rotateLines_;
+
+    std::shared_ptr<ObjectMesh> hoveredObject_;
+    int findHoveredIndex_() const;
+    void setActiveLineFromPoints_( const Contour3f& points );
+};
+
+// Visual widget to modify transform
+// present in scene (ancillary), subscribes to viewer events
+class MRVIEWER_CLASS ObjectTransformWidget : public MultiListener<MouseDownListener, MouseMoveListener, MouseUpListener, PreDrawListener, DrawListener>
+{
+public:
+    // Creates transform widget around given box and applies given xf
+    // subscribes to viewer events
+    // controls: class that is responsiple for visualizatoin
+    // if controls is empty default TransformControls is used
+    MRVIEWER_API void create( const Box3f& box, const AffineXf3f& xf, std::shared_ptr<ITransformControls> controls = {} );
+    // Removes widget from scene and clears all widget objects
+    // unsubscribes from viewer events
+    MRVIEWER_API void reset();
 
     // Returns current transform mode mask
     uint8_t getTransformModeMask( ViewportId id = {} ) const { return transformModeMask_.get( id ); }
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
     MRVIEWER_API void setTransformMode( uint8_t mask, ViewportId id = {} );
-
-    // Enables or disables pick through mode, in this mode controls will be picked even if they are occluded by other objects
-    void setPickThrough( bool on ) { pickThrough_ = on; }
-    bool getPickThrough() const { return pickThrough_; }
 
     // Transform operation applying to object while dragging an axis. This parameter does not apply to active operation.
     enum AxisTransformMode
@@ -105,19 +219,16 @@ public:
     // Returns root object of widget
     std::shared_ptr<Object> getRootObject() const { return controlsRoot_; }
 
+    // Returns controls object, that visualize widget
+    std::shared_ptr<ITransformControls> getControls() const { return controls_; }
+    template<typename T>
+    std::shared_ptr<T> getControlsAs() const { return std::dynamic_pointer_cast< T >( controls_ ); }
+
     // Changes controls xf (controls will affect object in basis of new xf)
     // note that rotation is applied around 0 coordinate in world space, so use xfAround to process rotation around user defined center
     // non-uniform scale will be converted to uniform one based on initial box diagonal
     MRVIEWER_API void setControlsXf( const AffineXf3f& xf, ViewportId id = {} );
     MRVIEWER_API AffineXf3f getControlsXf( ViewportId id = {} ) const;
-
-    // This lambda is called in each frame, and returns transform mode mask for this frame in given viewport
-    // if not set, full mask is return
-    using ModesValidator = std::function<uint8_t( const ObjectTransformWidget&, ViewportId )>;
-    void setTransformModesValidator( ModesValidator validator ) { modesValidator_ = validator; }
-
-    // returns ModesValidator by threshold dot value (this value is duty for hiding widget controls that have small projection on screen)
-    MRVIEWER_API static ModesValidator ThresholdDotValidator( float thresholdDot );
 
     // Subscribes to object visibility, and behave like its child
     // if obj argument is null, stop following
@@ -182,38 +293,6 @@ public:
         ViewportProperty<AffineXf3f> scaledXf_;
         std::string name_;
     };
-    class ChangeParamsAction : public HistoryAction
-    {
-    public:
-        ChangeParamsAction( const std::string& name, ObjectTransformWidget& widget ) :
-            widget_{ widget },
-            name_{ name }
-        {
-            params_ = widget_.getParams();
-        }
-
-        virtual std::string name() const override
-        {
-            return name_;
-        }
-
-        virtual void action( HistoryAction::Type ) override
-        {
-            auto params = widget_.getParams();
-            widget_.setParams( params_ );
-            params_ = params;
-        }
-
-        [[nodiscard]] virtual size_t heapBytes() const override
-        {
-            return name_.capacity();
-        }
-
-    private:
-        ObjectTransformWidget& widget_;
-        Params params_;
-        std::string name_;
-    };
 private:
     MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
@@ -221,41 +300,23 @@ private:
     MRVIEWER_API virtual void preDraw_() override;
     MRVIEWER_API virtual void draw_() override;
 
-    void passiveMove_();
     void activeMove_( bool press = false );
 
-    void processScaling_( Axis ax, bool press );
-    void processTranslation_( Axis ax, bool press );
-    void processRotation_( Axis ax, bool press );
+    void processScaling_( TransformAxis ax, bool press );
+    void processTranslation_( TransformAxis ax, bool press );
+    void processRotation_( TransformAxis ax, bool press );
 
     void setControlsXf_( const AffineXf3f& xf, bool updateScaled, ViewportId id = {} );
 
     std::weak_ptr<Object> visibilityParent_;
-    std::shared_ptr<ObjectMesh> currentObj_;
-
-    void updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask );
-
-    void setActiveLineFromPoints_( const std::vector<Vector3f>& points );
 
     // undiformAddXf - for ActiveEditMode::ScalingMode only, to scale widget uniformly
     void addXf_( const AffineXf3f& addXf );
     void stopModify_();
 
-    int findCurrentObjIndex_() const;
-
-    void makeControls_();
-
-    Params params_;
-
     // main object that holds all other controls
     std::shared_ptr<Object> controlsRoot_;
-    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> translateControls_;
-    std::array<std::shared_ptr<ObjectMesh>, size_t( Axis::Count )> rotateControls_;
-
-    // if active line is visible, other lines are not
-    std::shared_ptr<ObjectLines> activeLine_;
-    std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> translateLines_;
-    std::array<std::shared_ptr<ObjectLines>, size_t( Axis::Count )> rotateLines_;
+    std::shared_ptr<ITransformControls> controls_;
 
     AxisTransformMode axisTransformMode_{ AxisTranslation };
 
@@ -279,16 +340,13 @@ private:
     Vector3f prevScaling_;
     Vector3f startTranslation_;
     Vector3f prevTranslation_;
-    AffineXf3f startRotXf_;
+    float accumShift_ = 0;
+
     float startAngle_ = 0;
     float accumAngle_ = 0;
 
-    ViewportProperty<uint8_t> transformModeMask_{ FullMask };
-    float thresholdDot_{ 0.0f };
+    ViewportProperty<uint8_t> transformModeMask_{ uint8_t( ControlBit::FullMask ) };
     bool picked_{ false };
-    bool pickThrough_{ false };
-
-    ModesValidator modesValidator_;
 
     std::function<void( float )> scaleTooltipCallback_;
     std::function<void( float )> translateTooltipCallback_;

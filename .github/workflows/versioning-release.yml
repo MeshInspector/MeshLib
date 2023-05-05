@@ -46,6 +46,7 @@ jobs:
         with:
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
+          search_commit_body: false
           #namespace: ${{inputs.version-namespace}}
 
       - name: Set version tag

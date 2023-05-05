@@ -194,9 +194,7 @@ void PlotCustomHistogram( const char* str_id,
         const float t_step = 1.0f / (float) res_w;
         const float inv_scale = ( scale_min == scale_max ) ? 0.0f : ( 1.0f / ( scale_max - scale_min ) );
 
-        float v0 = values_getter(( 0 + values_offset ) % values_count );
         float t0 = 0.0f;
-        ImVec2 tp0 = ImVec2( t0, 1.0f - std::clamp( ( v0 - scale_min ) * inv_scale, 0.0f, 1.0f ) );                       // Point in the normalized space of our target rectangle
         float histogram_zero_line_t = ( scale_min * scale_max < 0.0f ) ? ( -scale_min * inv_scale ) : ( scale_min < 0.0f ? 0.0f : 1.0f );   // Where does the zero line stands
 
         const ImU32 col_base = GetColorU32( ImGuiCol_PlotHistogram );
@@ -209,12 +207,13 @@ void PlotCustomHistogram( const char* str_id,
             const float t1 = t0 + t_step;
             const int v1_idx = (int) ( t0 * item_count + 0.5f );
             IM_ASSERT( v1_idx >= 0 && v1_idx < values_count );
-            const float v1 = values_getter( ( v1_idx + values_offset + 1 ) % values_count );
-            const ImVec2 tp1 = ImVec2( t1, 1.0f - std::clamp( ( v1 - scale_min ) * inv_scale, 0.0f, 1.0f ) );
+
+            float val = values_getter( v1_idx + values_offset );
+            float top = 1.0f - std::clamp( ( val - scale_min ) * inv_scale, 0.0f, 1.0f );
 
             // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
-            ImVec2 pos0 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * tp0.x, innerMin.y + ( innerMax.y - innerMin.y ) * tp0.y );
-            ImVec2 pos1 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * tp1.x, innerMin.y + ( innerMax.y - innerMin.y ) * histogram_zero_line_t );
+            ImVec2 pos0 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * t0, innerMin.y + ( innerMax.y - innerMin.y ) * top );
+            ImVec2 pos1 = ImVec2( innerMin.x + ( innerMax.x - innerMin.x ) * t1, innerMin.y + ( innerMax.y - innerMin.y ) * histogram_zero_line_t );
             {
                 if ( pos1.x >= pos0.x + 2.0f )
                     pos1.x -= 1.0f;
@@ -230,7 +229,6 @@ void PlotCustomHistogram( const char* str_id,
             }
 
             t0 = t1;
-            tp0 = tp1;
         }
     }
 }

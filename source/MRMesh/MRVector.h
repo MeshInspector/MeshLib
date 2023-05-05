@@ -117,7 +117,7 @@ public:
     [[nodiscard]] const_reference  back() const { return vec_.back(); }
     [[nodiscard]]       reference  back()       { return vec_.back(); }
     /// returns the identifier of the first element
-    [[nodiscard]] I beginId() const { return I{ 0 }; }
+    [[nodiscard]] I beginId() const { return I{ size_t(0) }; }
     /// returns the identifier of the back() element
     [[nodiscard]] I backId() const { assert( !vec_.empty() ); return I{ vec_.size() - 1 }; }
     /// returns backId() + 1

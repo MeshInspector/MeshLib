@@ -42,7 +42,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: master
 
       - name: Versioning
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
@@ -52,8 +51,8 @@ jobs:
           tag_prefix: "v"
           version_format: "${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
-          search_commit_body: false
-          #namespace: ${{inputs.version-namespace}}
+          search_commit_body: true
+          namespace: ${{inputs.version-namespace}}
 
       - name: Set version tag
         id: version-tag
@@ -65,16 +64,15 @@ jobs:
           echo "short_version=${short_version}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        if: ${{ false }}
-        #if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.UPLOAD_ARTIFACTS }}
         id: create_release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version.outputs.version}}
+          RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}
         with:
           name: Release ${{steps.version-tag.outputs.short_version}}
-          tag_name: ${{steps.version.outputs.version }}
+          tag_name: ${{steps.version-tag.outputs.short_version}}
           draft: true
           prerelease: false
           body: |
